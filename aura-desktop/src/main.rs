@@ -2,10 +2,34 @@ use std::net::TcpListener as StdTcpListener;
 use std::path::PathBuf;
 
 use tao::event::{Event, WindowEvent};
-use tao::event_loop::{ControlFlow, EventLoop};
+use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
 use tao::window::WindowBuilder;
 use tokio::net::TcpListener;
 use wry::WebViewBuilder;
+
+#[derive(Debug)]
+enum UserEvent {
+    Minimize,
+    Maximize,
+    Close,
+    DragWindow,
+}
+
+fn ipc_handler(proxy: EventLoopProxy<UserEvent>) -> impl Fn(wry::http::Request<String>) + 'static {
+    move |req: wry::http::Request<String>| {
+        let msg = req.body().trim();
+        let event = match msg {
+            "minimize" => Some(UserEvent::Minimize),
+            "maximize" => Some(UserEvent::Maximize),
+            "close" => Some(UserEvent::Close),
+            "drag" => Some(UserEvent::DragWindow),
+            _ => None,
+        };
+        if let Some(e) = event {
+            let _ = proxy.send_event(e);
+        }
+    }
+}
 
 fn default_data_dir() -> PathBuf {
     dirs::data_local_dir()
@@ -72,15 +96,20 @@ fn main() {
         .recv()
         .expect("server thread failed before becoming ready");
 
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    let proxy = event_loop.create_proxy();
+
     let window = WindowBuilder::new()
-        .with_title("Aura")
+        .with_title("AURA")
+        .with_decorations(false)
         .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0))
         .build(&event_loop)
         .expect("failed to build window");
 
     let _webview = {
-        let builder = WebViewBuilder::new().with_url(&url);
+        let builder = WebViewBuilder::new()
+            .with_url(&url)
+            .with_ipc_handler(ipc_handler(proxy));
 
         #[cfg(not(target_os = "linux"))]
         let webview = builder.build(&window).expect("failed to build webview");
@@ -99,12 +128,22 @@ fn main() {
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
-        if let Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } = event
-        {
-            *control_flow = ControlFlow::Exit;
+        match event {
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                *control_flow = ControlFlow::Exit;
+            }
+            Event::UserEvent(user_event) => match user_event {
+                UserEvent::Minimize => window.set_minimized(true),
+                UserEvent::Maximize => window.set_maximized(!window.is_maximized()),
+                UserEvent::Close => *control_flow = ControlFlow::Exit,
+                UserEvent::DragWindow => {
+                    let _ = window.drag_window();
+                }
+            },
+            _ => {}
         }
     });
 }
