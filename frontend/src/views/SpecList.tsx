@@ -5,7 +5,8 @@ import type { EngineEvent } from "../types/events";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
-import { Page, PageEmptyState, Item, Text } from "@cypher-asi/zui";
+import { Explorer, PageEmptyState, Spinner } from "@cypher-asi/zui";
+import type { ExplorerNode } from "@cypher-asi/zui";
 import { FileText } from "lucide-react";
 
 export function SpecList() {
@@ -72,33 +73,54 @@ export function SpecList() {
     return () => unsubs.forEach((fn) => fn());
   }, [projectId, subscribe, fetchSpecs]);
 
-  const handleSelect = (spec: Spec) => {
-    setSelectedId(spec.spec_id);
-    sidekick.viewSpec(spec);
+  const specById = useMemo(
+    () => new Map(mergedSpecs.map((s) => [s.spec_id, s])),
+    [mergedSpecs],
+  );
+
+  const explorerData: ExplorerNode[] = useMemo(
+    () =>
+      mergedSpecs.map((spec) => ({
+        id: spec.spec_id,
+        label: spec.title,
+        metadata: { type: "spec" },
+      })),
+    [mergedSpecs],
+  );
+
+  const handleSelect = (ids: string[]) => {
+    const id = ids[0];
+    if (!id) return;
+    const spec = specById.get(id);
+    if (spec) {
+      setSelectedId(id);
+      sidekick.viewSpec(spec);
+    }
   };
 
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (mergedSpecs.length === 0) {
+    return (
+      <PageEmptyState
+        icon={<FileText size={32} />}
+        title="No specs generated"
+        description="Use the chat to generate specs for this project."
+      />
+    );
+  }
+
   return (
-    <Page title="Specs" subtitle={`${mergedSpecs.length} spec files`} isLoading={loading}>
-      {mergedSpecs.length === 0 ? (
-        <PageEmptyState
-          icon={<FileText size={32} />}
-          title="No specs generated"
-          description='Use the chat to generate specs for this project.'
-        />
-      ) : (
-        mergedSpecs.map((spec) => (
-          <Item
-            key={spec.spec_id}
-            selected={spec.spec_id === selectedId}
-            onClick={() => handleSelect(spec)}
-          >
-            <Item.Icon>
-              <Text variant="muted" size="xs" as="span">{spec.order_index + 1}</Text>
-            </Item.Icon>
-            <Item.Label>{spec.title}</Item.Label>
-          </Item>
-        ))
-      )}
-    </Page>
+    <Explorer
+      data={explorerData}
+      searchable
+      searchPlaceholder="Search specs..."
+      enableDragDrop={false}
+      enableMultiSelect={false}
+      defaultSelectedIds={selectedId ? [selectedId] : undefined}
+      onSelect={handleSelect}
+    />
   );
 }
