@@ -474,6 +474,19 @@ declare module "@cypher-asi/zui" {
 
   export function Explorer(props: ExplorerProps): JSX.Element;
 
+  // Toggle
+  export type ToggleSize = "sm" | "md";
+  export type ToggleVariant = "default" | "accent";
+
+  export interface ToggleProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "type"> {
+    size?: ToggleSize;
+    variant?: ToggleVariant;
+    label?: string;
+    labelPosition?: "left" | "right";
+  }
+
+  export const Toggle: React.ForwardRefExoticComponent<ToggleProps & React.RefAttributes<HTMLInputElement>>;
+
   // Utilities
   export function cn(...args: (string | undefined | null | false)[]): string;
 }
