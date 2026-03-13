@@ -1,51 +1,63 @@
 import { createContext, useContext, useCallback, useState, useRef, useEffect, type ReactNode } from "react";
 import type { Spec } from "../types";
 
-type SidekickMode = "idle" | "streaming" | "viewing" | "info";
+type SidekickTab = "specs" | "tasks" | "progress";
 
-interface SidekickState {
-  isOpen: boolean;
-  mode: SidekickMode;
-  title: string;
+interface ChatState {
+  isStreaming: boolean;
+  streamTitle: string;
   streamedText: string;
   streamStage: string;
   tokenCount: number;
   savedSpecs: Spec[];
-  selectedSpec: Spec | null;
-  infoContent: ReactNode;
 }
 
-interface SidekickActions {
+interface PanelState {
+  activeTab: SidekickTab;
+  selectedSpec: Spec | null;
+  infoContent: ReactNode;
+  showInfo: boolean;
+}
+
+interface ChatActions {
   startStreaming: (title: string) => void;
   appendDelta: (text: string) => void;
   setStreamStage: (stage: string) => void;
   setTokenCount: (count: number) => void;
   appendSavedSpec: (spec: Spec) => void;
   finishStreaming: () => void;
-  viewSpec: (spec: Spec) => void;
-  showInfo: (title: string, content: ReactNode) => void;
-  toggleInfo: (title: string, content: ReactNode) => void;
-  close: () => void;
 }
 
-type SidekickContextValue = SidekickState & SidekickActions;
+interface PanelActions {
+  setActiveTab: (tab: SidekickTab) => void;
+  viewSpec: (spec: Spec) => void;
+  clearSpec: () => void;
+  toggleInfo: (title: string, content: ReactNode) => void;
+}
 
-const INITIAL_STATE: SidekickState = {
-  isOpen: false,
-  mode: "idle",
-  title: "",
+type SidekickContextValue = ChatState & PanelState & ChatActions & PanelActions;
+
+const INITIAL_CHAT: ChatState = {
+  isStreaming: false,
+  streamTitle: "",
   streamedText: "",
   streamStage: "",
   tokenCount: 0,
   savedSpecs: [],
+};
+
+const INITIAL_PANEL: PanelState = {
+  activeTab: "specs",
   selectedSpec: null,
   infoContent: null,
+  showInfo: false,
 };
 
 const SidekickContext = createContext<SidekickContextValue | null>(null);
 
 export function SidekickProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<SidekickState>(INITIAL_STATE);
+  const [chat, setChat] = useState<ChatState>(INITIAL_CHAT);
+  const [panel, setPanel] = useState<PanelState>(INITIAL_PANEL);
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
 
@@ -61,16 +73,13 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    setState({
-      isOpen: true,
-      mode: "streaming",
-      title,
+    setChat({
+      isStreaming: true,
+      streamTitle: title,
       streamedText: "",
       streamStage: "",
       tokenCount: 0,
       savedSpecs: [],
-      selectedSpec: null,
-      infoContent: null,
     });
   }, []);
 
@@ -80,104 +89,75 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
         const snapshot = streamBufferRef.current;
-        setState((prev) =>
-          prev.mode === "streaming" ? { ...prev, streamedText: snapshot } : prev,
+        setChat((prev) =>
+          prev.isStreaming ? { ...prev, streamedText: snapshot } : prev,
         );
       });
     }
   }, []);
 
   const setStreamStage = useCallback((stage: string) => {
-    setState((prev) =>
-      prev.mode === "streaming" ? { ...prev, streamStage: stage } : prev,
+    setChat((prev) =>
+      prev.isStreaming ? { ...prev, streamStage: stage } : prev,
     );
   }, []);
 
   const setTokenCount = useCallback((count: number) => {
-    setState((prev) =>
-      prev.mode === "streaming" ? { ...prev, tokenCount: count } : prev,
+    setChat((prev) =>
+      prev.isStreaming ? { ...prev, tokenCount: count } : prev,
     );
   }, []);
 
   const appendSavedSpec = useCallback((spec: Spec) => {
-    setState((prev) =>
-      prev.mode === "streaming"
+    setChat((prev) =>
+      prev.isStreaming
         ? { ...prev, savedSpecs: [...prev.savedSpecs, spec] }
         : prev,
     );
   }, []);
 
   const finishStreaming = useCallback(() => {
-    setState((prev) =>
-      prev.mode === "streaming" ? { ...prev, mode: "idle" } : prev,
+    setChat((prev) =>
+      prev.isStreaming ? { ...prev, isStreaming: false } : prev,
     );
   }, []);
 
-  const viewSpec = useCallback((spec: Spec) => {
-    setState({
-      isOpen: true,
-      mode: "viewing",
-      title: spec.title,
-      streamedText: "",
-      streamStage: "",
-      tokenCount: 0,
-      savedSpecs: [],
-      selectedSpec: spec,
-      infoContent: null,
-    });
+  const setActiveTab = useCallback((tab: SidekickTab) => {
+    setPanel((prev) => ({ ...prev, activeTab: tab, selectedSpec: null, showInfo: false }));
   }, []);
 
-  const showInfo = useCallback((title: string, content: ReactNode) => {
-    setState({
-      isOpen: true,
-      mode: "info",
-      title,
-      streamedText: "",
-      streamStage: "",
-      tokenCount: 0,
-      savedSpecs: [],
-      selectedSpec: null,
-      infoContent: content,
-    });
+  const viewSpec = useCallback((spec: Spec) => {
+    setPanel((prev) => ({ ...prev, selectedSpec: spec, showInfo: false }));
+  }, []);
+
+  const clearSpec = useCallback(() => {
+    setPanel((prev) => ({ ...prev, selectedSpec: null }));
   }, []);
 
   const toggleInfo = useCallback((title: string, content: ReactNode) => {
-    setState((prev) => {
-      if (prev.isOpen && prev.mode === "info") {
-        return INITIAL_STATE;
+    setPanel((prev) => {
+      if (prev.showInfo) {
+        return { ...prev, showInfo: false, infoContent: null };
       }
-      return {
-        isOpen: true,
-        mode: "info",
-        title,
-        streamedText: "",
-        streamStage: "",
-        tokenCount: 0,
-        savedSpecs: [],
-        selectedSpec: null,
-        infoContent: content,
-      };
+      return { ...prev, showInfo: true, infoContent: content };
     });
-  }, []);
-
-  const close = useCallback(() => {
-    setState(INITIAL_STATE);
   }, []);
 
   return (
     <SidekickContext.Provider
       value={{
-        ...state,
+        ...chat,
+        ...panel,
         startStreaming,
         appendDelta,
         setStreamStage,
         setTokenCount,
         appendSavedSpec,
         finishStreaming,
+        setActiveTab,
         viewSpec,
-        showInfo,
+        clearSpec,
         toggleInfo,
-        close,
       }}
     >
       {children}
