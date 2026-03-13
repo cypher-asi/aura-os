@@ -2,7 +2,6 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { Sidebar, Tabs, Button, Text, Menu } from "@cypher-asi/zui";
 import { Play, Archive, Info, ArrowLeft, Ellipsis } from "lucide-react";
 import { useSidekick } from "../context/SidekickContext";
@@ -137,6 +136,7 @@ export function Sidekick() {
       header={
         <div className={styles.panelHeader}>
           <Tabs
+            className={styles.tabsNoBorder}
             tabs={[
               { id: "specs", label: "Specs" },
               { id: "tasks", label: "Tasks" },
@@ -147,10 +147,38 @@ export function Sidekick() {
           />
           <div className={styles.actions}>
             <Button variant="filled" size="sm" iconOnly icon={<Play size={16} />} onClick={navigateToExecution} title="Start Dev Loop" />
-            {project.current_status !== "archived" && (
-              <Button variant="danger" size="sm" iconOnly icon={<Archive size={16} />} onClick={handleArchive} title="Archive" />
-            )}
-            <Button variant="ghost" size="sm" iconOnly icon={<Info size={16} />} onClick={() => toggleInfo("Project Info", null)} title="Project Info" />
+            <div ref={moreBtnRef} className={styles.moreButtonWrap}>
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<Ellipsis size={16} />}
+                onClick={() => setMoreOpen((v) => !v)}
+                title="More actions"
+              />
+              {moreOpen && (
+                <div className={styles.moreMenu}>
+                  <Menu
+                    items={[
+                      ...(project.current_status !== "archived"
+                        ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
+                        : []),
+                      { id: "info", label: "Project Info", icon: <Info size={14} /> },
+                    ]}
+                    onChange={(id) => {
+                      setMoreOpen(false);
+                      if (id === "archive") handleArchive();
+                      if (id === "info") toggleInfo("Project Info", null);
+                    }}
+                    background="solid"
+                    border="solid"
+                    rounded="md"
+                    width={180}
+                    isOpen
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       }
