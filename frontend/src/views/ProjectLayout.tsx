@@ -67,7 +67,9 @@ export function ProjectLayout() {
       onProgress(stage) {
         sidekick.setStreamStage(stage);
       },
-      onDelta() {},
+      onDelta(text) {
+        sidekick.appendDelta(text);
+      },
       onGenerating(tokens) {
         sidekick.setTokenCount(tokens);
       },
