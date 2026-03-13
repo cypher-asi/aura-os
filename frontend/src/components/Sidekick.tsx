@@ -136,7 +136,6 @@ export function Sidekick() {
       header={
         <div className={styles.panelHeader}>
           <Tabs
-            className={styles.tabsNoBorder}
             tabs={[
               { id: "specs", label: "Specs" },
               { id: "tasks", label: "Tasks" },

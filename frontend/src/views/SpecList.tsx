@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../api/client";
 import type { Spec } from "../types";
 import type { EngineEvent } from "../types/events";
@@ -11,11 +11,18 @@ import { FileText } from "lucide-react";
 export function SpecList() {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
-  const [specs, setSpecs] = useState<Spec[]>([]);
+  const [localSpecs, setLocalSpecs] = useState<Spec[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { subscribe } = useEventContext();
   const sidekick = useSidekick();
+
+  const mergedSpecs = useMemo(() => {
+    const map = new Map<string, Spec>();
+    for (const s of localSpecs) map.set(s.spec_id, s);
+    for (const s of sidekick.specs) map.set(s.spec_id, s);
+    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
+  }, [localSpecs, sidekick.specs]);
 
   const fetchSpecs = useCallback(
     (autoSelect?: boolean) => {
@@ -24,7 +31,7 @@ export function SpecList() {
         .listSpecs(projectId)
         .then((s) => {
           const sorted = s.sort((a, b) => a.order_index - b.order_index);
-          setSpecs(sorted);
+          setLocalSpecs(sorted);
           if (autoSelect && sorted.length > 0) {
             setSelectedId(sorted[0].spec_id);
             sidekick.viewSpec(sorted[0]);
@@ -38,19 +45,19 @@ export function SpecList() {
 
   useEffect(() => {
     fetchSpecs();
-  }, [fetchSpecs, sidekick.refreshKey]);
+  }, [fetchSpecs]);
 
   useEffect(() => {
     const unsubs = [
       subscribe("spec_gen_started", (e: EngineEvent) => {
         if (e.project_id === projectId) {
-          setSpecs([]);
+          setLocalSpecs([]);
           setSelectedId(null);
         }
       }),
       subscribe("spec_saved", (e: EngineEvent) => {
         if (e.project_id === projectId && e.spec) {
-          setSpecs((prev) => {
+          setLocalSpecs((prev) => {
             if (prev.some((s) => s.spec_id === e.spec!.spec_id)) return prev;
             return [...prev, e.spec!].sort((a, b) => a.order_index - b.order_index);
           });
@@ -71,15 +78,15 @@ export function SpecList() {
   };
 
   return (
-    <Page title="Specs" subtitle={`${specs.length} spec files`} isLoading={loading}>
-      {specs.length === 0 ? (
+    <Page title="Specs" subtitle={`${mergedSpecs.length} spec files`} isLoading={loading}>
+      {mergedSpecs.length === 0 ? (
         <PageEmptyState
           icon={<FileText size={32} />}
           title="No specs generated"
           description='Use the chat to generate specs for this project.'
         />
       ) : (
-        specs.map((spec) => (
+        mergedSpecs.map((spec) => (
           <Item
             key={spec.spec_id}
             selected={spec.spec_id === selectedId}
