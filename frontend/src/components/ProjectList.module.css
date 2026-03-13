@@ -2,3 +2,23 @@
   position: fixed;
   z-index: 9999;
 }
+
+.sessionList {
+  padding-left: var(--space-4);
+}
+
+.sessionPlusBtn {
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show + button on hover of the parent Item */
+:global([data-component="item"]):hover .sessionPlusBtn {
+  opacity: 1;
+}
+
+.noSessions {
+  padding: var(--space-1) var(--space-4);
+  font-style: italic;
+}
