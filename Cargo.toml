@@ -1,0 +1,3 @@
+[workspace]
+members = ["aura-core", "aura-settings", "aura-store"]
+resolver = "2"
