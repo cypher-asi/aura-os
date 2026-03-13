@@ -1,4 +1,4 @@
-use aura_core::{AgentStatus, ProjectId, TaskStatus};
+use aura_core::{AgentStatus, OrgId, ProjectId, TaskStatus};
 use aura_settings::SettingsError;
 use aura_store::StoreError;
 
@@ -94,6 +94,24 @@ pub enum ChatError {
     NotFound,
     #[error("settings error: {0}")]
     Settings(#[from] SettingsError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum OrgError {
+    #[error("store error: {0}")]
+    Store(#[from] StoreError),
+    #[error("org not found: {0}")]
+    NotFound(OrgId),
+    #[error("forbidden: {0}")]
+    Forbidden(String),
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
+    #[error("invite not found")]
+    InviteNotFound,
+    #[error("invite expired or revoked")]
+    InviteInvalid,
+    #[error("already a member")]
+    AlreadyMember,
 }
 
 #[derive(Debug, thiserror::Error)]
