@@ -44,6 +44,7 @@ fn make_spec(project_id: ProjectId, order: u32) -> Spec {
         title: format!("Spec {order}"),
         order_index: order,
         markdown_contents: "test".into(),
+        sprint_id: None,
         created_at: now,
         updated_at: now,
     }

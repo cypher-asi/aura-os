@@ -108,7 +108,7 @@ export function SprintList() {
           description="Create a sprint to organize your project work."
         />
         <div className={styles.addButtonCenter}>
-          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={handleAdd}>
+          <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={handleAdd}>
             Add Sprint
           </Button>
         </div>

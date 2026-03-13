@@ -31,6 +31,7 @@ fn make_spec(project_id: ProjectId) -> Spec {
         title: "Test Spec".into(),
         order_index: 0,
         markdown_contents: "# Spec\nTest contents".into(),
+        sprint_id: None,
         created_at: now,
         updated_at: now,
     }

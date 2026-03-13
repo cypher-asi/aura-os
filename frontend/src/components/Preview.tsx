@@ -17,7 +17,7 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
   const projectId = ctx?.project.project_id;
   const [title, setTitle] = useState(sprint.title);
   const [prompt, setPrompt] = useState(sprint.prompt);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setTitle(sprint.title);

@@ -129,6 +129,7 @@ fn sample_spec(project_id: ProjectId) -> Spec {
         title: "Core Domain Types".into(),
         order_index: 0,
         markdown_contents: "# Spec 01\nDetails...".into(),
+        sprint_id: None,
         created_at: now,
         updated_at: now,
     }

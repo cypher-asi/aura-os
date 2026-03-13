@@ -362,6 +362,7 @@ impl SpecGenerationService {
                                     "## Purpose\n\n{}\n\n{}",
                                     raw.purpose, raw.markdown
                                 ),
+                                sprint_id: None,
                                 created_at: now,
                                 updated_at: now,
                             };
@@ -709,6 +710,7 @@ impl SpecGenerationService {
                 title: r.title,
                 order_index: i as u32,
                 markdown_contents: format!("## Purpose\n\n{}\n\n{}", r.purpose, r.markdown),
+                sprint_id: None,
                 created_at: now,
                 updated_at: now,
             })
