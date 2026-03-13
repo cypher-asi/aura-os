@@ -89,6 +89,12 @@
   margin-bottom: 12px;
 }
 
+.infoArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
 @keyframes pulseFade {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }

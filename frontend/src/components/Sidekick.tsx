@@ -15,6 +15,7 @@ export function Sidekick() {
     streamStage,
     tokenCount,
     selectedSpec,
+    infoContent,
     close,
   } = useSidekick();
 
@@ -71,6 +72,12 @@ export function Sidekick() {
                 {selectedSpec.markdown_contents}
               </ReactMarkdown>
             </div>
+          </div>
+        )}
+
+        {mode === "info" && infoContent && (
+          <div className={styles.infoArea}>
+            {infoContent}
           </div>
         )}
       </div>
