@@ -5,7 +5,9 @@ use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
 use tao::window::WindowBuilder;
 use tokio::net::TcpListener;
-use wry::WebViewBuilder;
+use wry::{WebContext, WebViewBuilder};
+
+const PREFERRED_PORT: u16 = 19847;
 
 #[derive(Debug)]
 enum UserEvent {
@@ -66,12 +68,15 @@ fn main() {
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
 
     let db_path = data_dir.join("db");
+    let webview_data_dir = data_dir.join("webview");
     let frontend_dir = find_frontend_dir();
 
-    // Bind to port 0 to let the OS pick an available port, then hand
-    // the listener to the background Axum server.
-    let std_listener =
-        StdTcpListener::bind("127.0.0.1:0").expect("failed to bind to an available port");
+    // Try the preferred fixed port so the WebView origin stays consistent
+    // across restarts (localStorage is scoped per-origin including port).
+    // Fall back to an OS-assigned port if the preferred one is occupied.
+    let std_listener = StdTcpListener::bind(format!("127.0.0.1:{PREFERRED_PORT}"))
+        .or_else(|_| StdTcpListener::bind("127.0.0.1:0"))
+        .expect("failed to bind to an available port");
     std_listener
         .set_nonblocking(true)
         .expect("failed to set non-blocking");
@@ -106,8 +111,10 @@ fn main() {
         .build(&event_loop)
         .expect("failed to build window");
 
+    let mut web_context = WebContext::new(Some(webview_data_dir));
+
     let _webview = {
-        let builder = WebViewBuilder::new()
+        let builder = WebViewBuilder::new_with_web_context(&mut web_context)
             .with_url(&url)
             .with_ipc_handler(ipc_handler(proxy));
 
