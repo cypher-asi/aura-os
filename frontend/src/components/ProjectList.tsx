@@ -79,10 +79,19 @@ export function ProjectList() {
   }, [fetchProjects]);
 
   useEffect(() => {
-    if (projectId && !(projectId in sessionsByProject)) {
+    if (!projectId) return;
+    if (!(projectId in sessionsByProject)) {
       fetchSessions(projectId);
+      return;
     }
-  }, [projectId]);
+    if (chatSessionId) {
+      const cached = sessionsByProject[projectId] ?? [];
+      const found = cached.some((s) => s.chat_session_id === chatSessionId);
+      if (!found) {
+        fetchSessions(projectId);
+      }
+    }
+  }, [projectId, chatSessionId]);
 
   useEffect(() => {
     if (!ctxMenu) return;
