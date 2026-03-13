@@ -8,6 +8,7 @@ import { StatusBadge } from "./StatusBadge";
 import { SpecList } from "../views/SpecList";
 import { TaskList } from "../views/TaskList";
 import { ProgressDashboard } from "../views/ProgressDashboard";
+import { SidekickLog } from "../views/SidekickLog";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
@@ -88,6 +89,7 @@ export function Sidekick() {
     specs: <SpecList />,
     tasks: <TaskList />,
     progress: <ProgressDashboard />,
+    log: <SidekickLog />,
   };
 
   return (
@@ -108,9 +110,10 @@ export function Sidekick() {
               { id: "specs", label: "Specs" },
               { id: "tasks", label: "Tasks" },
               { id: "progress", label: "Progress" },
+              { id: "log", label: "Log" },
             ]}
             value={activeTab}
-            onChange={(id) => setActiveTab(id as "specs" | "tasks" | "progress")}
+            onChange={(id) => setActiveTab(id as "specs" | "tasks" | "progress" | "log")}
             className={styles.tabsFullBleed}
             tabClassName={styles.sidekickTab}
           />

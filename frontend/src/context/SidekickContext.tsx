@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
 import type { ChatSession, Spec, Task } from "../types";
 
-type SidekickTab = "specs" | "tasks" | "progress";
+type SidekickTab = "specs" | "tasks" | "progress" | "log";
 
 export type PreviewItem =
   | { kind: "spec"; spec: Spec }
