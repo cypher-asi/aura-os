@@ -99,6 +99,8 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  deleteProject: (id: ProjectId) =>
+    apiFetch<void>(`/api/projects/${id}`, { method: "DELETE" }),
   archiveProject: (id: ProjectId) =>
     apiFetch<Project>(`/api/projects/${id}/archive`, { method: "POST" }),
 
