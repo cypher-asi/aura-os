@@ -85,6 +85,23 @@ export interface ProjectProgress {
   completion_percentage: number;
 }
 
+export interface ChatSession {
+  chat_session_id: string;
+  project_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  message_id: string;
+  chat_session_id: string;
+  project_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  created_at: string;
+}
+
 export interface ApiError {
   error: string;
   code: string;

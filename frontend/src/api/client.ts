@@ -9,6 +9,8 @@ import type {
   Task,
   Agent,
   Session,
+  ChatSession,
+  ChatMessage,
   ApiKeyInfo,
   ProjectProgress,
   ApiError,
@@ -74,6 +76,15 @@ export interface SpecGenStreamCallbacks {
   onTaskSaved: (task: Task) => void;
   onComplete: (specs: Spec[]) => void;
   onError: (message: string) => void;
+}
+
+export interface ChatStreamCallbacks {
+  onDelta: (text: string) => void;
+  onSpecSaved?: (spec: Spec) => void;
+  onTaskSaved?: (task: Task) => void;
+  onMessageSaved?: (message: ChatMessage) => void;
+  onError: (message: string) => void;
+  onDone?: () => void;
 }
 
 export const api = {
@@ -184,6 +195,70 @@ export const api = {
   listSessions: (projectId: ProjectId, agentId: AgentId) =>
     apiFetch<Session[]>(
       `/api/projects/${projectId}/agents/${agentId}/sessions`,
+    ),
+
+  // Chat Sessions
+  createChatSession: (projectId: ProjectId, title: string) =>
+    apiFetch<ChatSession>(`/api/projects/${projectId}/chat-sessions`, {
+      method: "POST",
+      body: JSON.stringify({ title }),
+    }),
+  listChatSessions: (projectId: ProjectId) =>
+    apiFetch<ChatSession[]>(`/api/projects/${projectId}/chat-sessions`),
+  deleteChatSession: (projectId: ProjectId, chatSessionId: string) =>
+    apiFetch<void>(`/api/projects/${projectId}/chat-sessions/${chatSessionId}`, {
+      method: "DELETE",
+    }),
+  getChatMessages: (projectId: ProjectId, chatSessionId: string) =>
+    apiFetch<ChatMessage[]>(
+      `/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages`,
+    ),
+  sendMessageStream: (
+    projectId: ProjectId,
+    chatSessionId: string,
+    content: string,
+    action: string | null,
+    cb: ChatStreamCallbacks,
+    signal?: AbortSignal,
+  ) =>
+    streamSSE<"delta" | "spec_saved" | "task_saved" | "message_saved" | "error" | "done">(
+      `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
+      {
+        method: "POST",
+        body: JSON.stringify({ content, action }),
+      },
+      {
+        onEvent(eventType, data) {
+          const d = data as Record<string, unknown>;
+          switch (eventType) {
+            case "delta":
+              cb.onDelta(d.text as string);
+              break;
+            case "spec_saved":
+              cb.onSpecSaved?.(d.spec as Spec);
+              break;
+            case "task_saved":
+              cb.onTaskSaved?.(d.task as Task);
+              break;
+            case "message_saved":
+              cb.onMessageSaved?.(d.message as ChatMessage);
+              break;
+            case "error":
+              cb.onError(d.message as string);
+              break;
+            case "done":
+              cb.onDone?.();
+              break;
+          }
+        },
+        onError(err) {
+          cb.onError(err.message);
+        },
+        onDone() {
+          cb.onDone?.();
+        },
+      },
+      signal,
     ),
 
   // Loop
