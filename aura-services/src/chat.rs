@@ -24,6 +24,7 @@ pub enum ChatStreamEvent {
     SpecSaved(Spec),
     TaskSaved(Task),
     MessageSaved(ChatMessage),
+    TitleUpdated(ChatSession),
     Error(String),
     Done,
 }
@@ -65,6 +66,20 @@ impl ChatService {
         };
         self.store.put_chat_session(&session)?;
         info!(%project_id, session_id = %session.chat_session_id, "Chat session created");
+        Ok(session)
+    }
+
+    pub fn update_session_title(
+        &self,
+        project_id: &ProjectId,
+        chat_session_id: &ChatSessionId,
+        title: &str,
+    ) -> Result<ChatSession, ChatError> {
+        let mut session = self.store.get_chat_session(project_id, chat_session_id)?;
+        session.title = title.to_string();
+        session.updated_at = Utc::now();
+        self.store.put_chat_session(&session)?;
+        info!(%project_id, %chat_session_id, title, "Chat session title updated");
         Ok(session)
     }
 
