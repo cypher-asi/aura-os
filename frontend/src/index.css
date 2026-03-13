@@ -14,6 +14,7 @@ html, body, #root {
 
 .titlebar-drag {
   -webkit-app-region: drag;
+  height: var(--control-height-md);
 }
 
 .titlebar-no-drag {
