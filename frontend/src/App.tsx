@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { EventProvider } from "./context/EventContext";
 import { AppShell } from "./components/AppShell";
 import { HomeView } from "./views/HomeView";
-import { NewProjectView } from "./views/NewProjectView";
 import { ProjectLayout } from "./views/ProjectLayout";
 import { ChatView } from "./components/ChatView";
 import { SettingsView } from "./views/SettingsView";
@@ -15,7 +14,6 @@ export default function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<HomeView />} />
-            <Route path="new-project" element={<NewProjectView />} />
             <Route path="settings" element={<SettingsView />} />
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<Navigate to="chat" replace />} />
