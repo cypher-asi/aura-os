@@ -99,9 +99,11 @@ export function SpecList() {
     }
   };
 
-  const showEmpty = useDelayedEmpty(mergedSpecs.length === 0, loading);
+  const isEmpty = mergedSpecs.length === 0;
+  const showEmpty = useDelayedEmpty(isEmpty, loading);
 
-  if (showEmpty) {
+  if (isEmpty) {
+    if (!showEmpty) return null;
     return (
       <PageEmptyState
         icon={<FileText size={32} />}

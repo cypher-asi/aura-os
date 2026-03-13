@@ -92,9 +92,11 @@ export function TaskList() {
     [explorerData],
   );
 
-  const showEmpty = useDelayedEmpty(tasks.length === 0, loading);
+  const isEmpty = tasks.length === 0;
+  const showEmpty = useDelayedEmpty(isEmpty, loading);
 
-  if (showEmpty) {
+  if (isEmpty) {
+    if (!showEmpty) return null;
     return (
       <PageEmptyState
         icon={<ListTodo size={32} />}
