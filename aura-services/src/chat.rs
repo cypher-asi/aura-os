@@ -255,6 +255,7 @@ impl ChatService {
         }
 
         if !accumulated.is_empty() {
+            let assistant_reply = accumulated.clone();
             let assistant_msg = ChatMessage {
                 message_id: ChatMessageId::new(),
                 chat_session_id: *chat_session_id,
@@ -267,6 +268,68 @@ impl ChatService {
                 error!(%project_id, error = %e, "Failed to save assistant message");
             } else {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
+            }
+
+            self.maybe_generate_title(
+                project_id,
+                chat_session_id,
+                &api_key,
+                &messages,
+                &assistant_reply,
+                tx,
+            )
+            .await;
+        }
+    }
+
+    async fn maybe_generate_title(
+        &self,
+        project_id: &ProjectId,
+        chat_session_id: &ChatSessionId,
+        api_key: &str,
+        messages: &[ChatMessage],
+        assistant_reply: &str,
+        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+    ) {
+        let session = match self.store.get_chat_session(project_id, chat_session_id) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        if session.title != "New Chat" {
+            return;
+        }
+
+        let first_user_msg = messages
+            .iter()
+            .find(|m| m.role == ChatRole::User)
+            .map(|m| m.content.as_str())
+            .unwrap_or("");
+        let reply_preview: String = assistant_reply.chars().take(300).collect();
+
+        let title_prompt = format!(
+            "User: {first_user_msg}\n\nAssistant: {reply_preview}\n\n\
+             Generate a concise 3-6 word title for this conversation. \
+             Return ONLY the title text, no quotes or punctuation at the end."
+        );
+
+        match self
+            .claude_client
+            .complete(api_key, "You generate short chat titles.", &title_prompt, 30)
+            .await
+        {
+            Ok(title) => {
+                let title = title.trim().trim_matches('"').to_string();
+                match self.update_session_title(project_id, chat_session_id, &title) {
+                    Ok(updated) => {
+                        let _ = tx.send(ChatStreamEvent::TitleUpdated(updated));
+                    }
+                    Err(e) => {
+                        error!(%project_id, error = %e, "Failed to update session title");
+                    }
+                }
+            }
+            Err(e) => {
+                error!(%project_id, error = %e, "Failed to generate session title");
             }
         }
     }
