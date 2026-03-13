@@ -50,7 +50,7 @@ export function SettingsView() {
 
   return (
     <Page title="Settings" subtitle="Manage your Claude API key">
-      <Panel variant="solid" border="solid" borderRadius="md" style={{ maxWidth: 560, padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+      <Panel variant="solid" border="solid" borderRadius="md" style={{ maxWidth: 560, padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <Heading level={4}>Claude API Key</Heading>
 
         {info && info.status !== "not_set" && (

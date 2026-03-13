@@ -95,7 +95,7 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
           </Item>
         ))}
         {tasks.length === 0 && (
-          <Text variant="muted" size="sm" align="center" style={{ padding: "var(--space-5)" }}>
+          <Text variant="muted" size="sm" align="center" style={{ padding: "var(--space-4)" }}>
             No tasks
           </Text>
         )}

@@ -39,7 +39,7 @@ export function NewProjectView() {
     <div>
       <PageHeader title="New Project" subtitle="Create a new project to start building" />
       <form onSubmit={handleSubmit} style={{ maxWidth: 560 }}>
-        <Panel variant="solid" border="solid" borderRadius="md" style={{ padding: "var(--space-6)", display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+        <Panel variant="solid" border="solid" borderRadius="md" style={{ padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
           <div>
             <Label size="sm" uppercase={false} style={{ display: "block", marginBottom: "var(--space-1)" }}>Project Name *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My Awesome App" autoFocus />

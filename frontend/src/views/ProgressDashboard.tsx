@@ -37,7 +37,7 @@ export function ProgressDashboard() {
       subtitle={progress ? `${progress.done_tasks} of ${progress.total_tasks} tasks complete` : undefined}
       isLoading={loading}
     >
-      <div style={{ textAlign: "center", marginBottom: "var(--space-8)" }}>
+      <div style={{ textAlign: "center", marginBottom: "var(--space-5)" }}>
         <div style={{ fontSize: 56, fontWeight: 800, color: "var(--color-accent)" }}>
           {pct}%
         </div>

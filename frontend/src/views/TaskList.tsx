@@ -23,7 +23,7 @@ function TaskRow({ task, expanded, onToggle }: { task: Task; expanded: boolean; 
         <Item.Chevron expanded={expanded} onToggle={onToggle} />
       </Item>
       {expanded && (
-        <div style={{ padding: "var(--space-2) var(--space-4) var(--space-3) var(--space-8)", fontSize: "var(--text-sm)", color: "var(--color-text-muted)", lineHeight: 1.6 }}>
+        <div style={{ padding: "var(--space-2) var(--space-3) var(--space-3) var(--space-6)", fontSize: "var(--text-sm)", color: "var(--color-text-muted)", lineHeight: 1.6 }}>
           <p>{task.description}</p>
           {task.execution_notes && (
             <p style={{ marginTop: "var(--space-2)", color: "var(--color-text-muted)" }}>

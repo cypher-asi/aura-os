@@ -37,7 +37,7 @@ export function SpecViewer() {
         ]}
       />
       <PageHeader title={spec.title} subtitle={`Spec #${spec.order_index + 1}`} />
-      <Panel variant="solid" border="solid" borderRadius="md" style={{ padding: "var(--space-6)" }}>
+      <Panel variant="solid" border="solid" borderRadius="md" style={{ padding: "var(--space-4)" }}>
         <div className={styles.markdown}>
           <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
             {spec.markdown_contents}
