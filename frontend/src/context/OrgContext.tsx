@@ -18,6 +18,7 @@ interface OrgContextValue {
   refreshOrgs: () => Promise<void>;
   refreshMembers: () => Promise<void>;
   createOrg: (name: string) => Promise<Org>;
+  renameOrg: (orgId: string, name: string) => Promise<void>;
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null);
@@ -90,9 +91,20 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     [refreshOrgs],
   );
 
+  const renameOrg = useCallback(
+    async (orgId: string, name: string) => {
+      const updated = await api.orgs.update(orgId, name);
+      setOrgs((prev) => prev.map((o) => (o.org_id === orgId ? updated : o)));
+      if (activeOrg?.org_id === orgId) {
+        setActiveOrg(updated);
+      }
+    },
+    [activeOrg],
+  );
+
   return (
     <OrgContext.Provider
-      value={{ orgs, activeOrg, members, switchOrg, refreshOrgs, refreshMembers, createOrg }}
+      value={{ orgs, activeOrg, members, switchOrg, refreshOrgs, refreshMembers, createOrg, renameOrg }}
     >
       {children}
     </OrgContext.Provider>

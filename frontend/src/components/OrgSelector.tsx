@@ -46,7 +46,7 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
         onClick={() => setDropdownOpen((v) => !v)}
       >
         <Building2 size={14} className={styles.icon} />
-        <span className={styles.name}>{activeOrg?.name ?? "No Team"}</span>
+        <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
         <ChevronDown size={12} className={styles.chevron} />
       </button>
 

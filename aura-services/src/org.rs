@@ -297,12 +297,7 @@ impl OrgService {
     ) -> Result<(), OrgError> {
         let existing = self.store.list_user_orgs(user_id)?;
         if existing.is_empty() {
-            let org_name = if display_name.is_empty() {
-                "Personal".to_string()
-            } else {
-                format!("{display_name}'s Team")
-            };
-            self.create_org(user_id, &org_name, display_name)?;
+            self.create_org(user_id, "My Team", display_name)?;
         }
         Ok(())
     }

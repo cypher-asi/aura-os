@@ -1,11 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { api } from "../api/client";
+import { useOrg } from "../context/OrgContext";
 import type { ApiKeyInfo } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import { Page, Panel, Heading, Label, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import styles from "./aura.module.css";
 
 export function SettingsView() {
+  const { activeOrg, renameOrg } = useOrg();
+  const [teamName, setTeamName] = useState(activeOrg?.name ?? "");
+  const [teamSaving, setTeamSaving] = useState(false);
+  const [teamMessage, setTeamMessage] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    setTeamName(activeOrg?.name ?? "");
+  }, [activeOrg?.org_id]);
+
+  const handleTeamNameChange = (value: string) => {
+    setTeamName(value);
+    setTeamMessage("");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!activeOrg || !value.trim()) return;
+    debounceRef.current = setTimeout(async () => {
+      setTeamSaving(true);
+      try {
+        await renameOrg(activeOrg.org_id, value.trim());
+        setTeamMessage("Saved");
+      } catch (err) {
+        setTeamMessage(err instanceof Error ? err.message : "Failed to save");
+      } finally {
+        setTeamSaving(false);
+      }
+    }, 500);
+  };
+
   const [info, setInfo] = useState<ApiKeyInfo | null>(null);
   const [keyInput, setKeyInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -49,7 +78,23 @@ export function SettingsView() {
   if (loading) return <Spinner />;
 
   return (
-    <Page title="Settings" subtitle="Manage your Claude API key">
+    <Page title="Settings" subtitle="Manage your team and API key">
+      <Panel variant="solid" border="solid" borderRadius="md" style={{ maxWidth: 560, padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+        <Heading level={4}>Team Name</Heading>
+        <div>
+          <Input
+            value={teamName}
+            onChange={(e) => handleTeamNameChange(e.target.value)}
+            placeholder="My Team"
+          />
+        </div>
+        {(teamSaving || teamMessage) && (
+          <Text variant="secondary" size="sm">
+            {teamSaving ? "Saving..." : teamMessage}
+          </Text>
+        )}
+      </Panel>
+
       <Panel variant="solid" border="solid" borderRadius="md" style={{ maxWidth: 560, padding: "var(--space-4)", display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <Heading level={4}>Claude API Key</Heading>
 
