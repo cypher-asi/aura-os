@@ -388,7 +388,7 @@ export function ChatView() {
               autoResizeTextarea();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Message Aura..."
+            placeholder="Message AURA..."
             rows={1}
           />
           <div className={styles.inputToolbar}>
