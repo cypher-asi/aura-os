@@ -17,35 +17,25 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
-  const [title, setTitle] = useState(sprint.title);
   const [prompt, setPrompt] = useState(sprint.prompt);
   const [generatedAt, setGeneratedAt] = useState(sprint.generated_at);
   const [generating, setGenerating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    setTitle(sprint.title);
     setPrompt(sprint.prompt);
     setGeneratedAt(sprint.generated_at);
-  }, [sprint.sprint_id, sprint.title, sprint.prompt, sprint.generated_at]);
+  }, [sprint.sprint_id, sprint.prompt, sprint.generated_at]);
 
-  const save = useCallback(
-    (updates: { title?: string; prompt?: string }) => {
+  const savePrompt = useCallback(
+    (value: string) => {
       if (!projectId) return;
       clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        api.updateSprint(projectId, sprint.sprint_id, updates).catch(console.error);
+        api.updateSprint(projectId, sprint.sprint_id, { prompt: value }).catch(console.error);
       }, 500);
     },
     [projectId, sprint.sprint_id],
-  );
-
-  const propagate = useCallback(
-    (updates: { title?: string; prompt?: string }) => {
-      sidekick.updatePreviewSprint({ sprint_id: sprint.sprint_id, ...updates });
-      sidekick.notifySprintUpdate({ ...sprint, ...updates });
-    },
-    [sidekick, sprint],
   );
 
   const handleGenerate = useCallback(async () => {
@@ -53,7 +43,6 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
     setGenerating(true);
     try {
       const updated = await api.generateSprint(projectId, sprint.sprint_id);
-      setTitle(updated.title);
       setPrompt(updated.prompt);
       setGeneratedAt(updated.generated_at);
       sidekick.updatePreviewSprint({
@@ -76,16 +65,6 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
 
   return (
     <div className={styles.sprintEditor}>
-      <input
-        className={styles.sprintTitleInput}
-        value={title}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          save({ title: e.target.value });
-          propagate({ title: e.target.value });
-        }}
-        placeholder="Sprint title"
-      />
       {!generatedAt && !prompt ? (
         <div className={styles.sprintEmptyState}>
           <PageEmptyState
@@ -99,9 +78,11 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
           className={styles.sprintPromptArea}
           value={prompt}
           onChange={(e) => {
-            setPrompt(e.target.value);
-            save({ prompt: e.target.value });
-            propagate({ prompt: e.target.value });
+            const value = e.target.value;
+            setPrompt(value);
+            savePrompt(value);
+            sidekick.updatePreviewSprint({ sprint_id: sprint.sprint_id, prompt: value });
+            sidekick.notifySprintUpdate({ ...sprint, prompt: value });
           }}
           placeholder="Write your sprint document here..."
         />
@@ -156,6 +137,44 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   );
 }
 
+function SprintHeaderTitle({ sprint }: { sprint: Sprint }) {
+  const ctx = useProjectContext();
+  const projectId = ctx?.project.project_id;
+  const sidekick = useSidekick();
+  const [title, setTitle] = useState(sprint.title);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    setTitle(sprint.title);
+  }, [sprint.sprint_id, sprint.title]);
+
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTitle(value);
+    sidekick.updatePreviewSprint({ sprint_id: sprint.sprint_id, title: value });
+    sidekick.notifySprintUpdate({ ...sprint, title: value });
+    clearTimeout(debounceRef.current);
+    if (projectId) {
+      debounceRef.current = setTimeout(() => {
+        api.updateSprint(projectId, sprint.sprint_id, { title: value }).catch(console.error);
+      }, 500);
+    }
+  };
+
+  return (
+    <input
+      className={styles.headerTitleInput}
+      value={title}
+      onChange={handleChange}
+      placeholder="Sprint title"
+    />
+  );
+}
+
 function previewTitle(item: PreviewItem): string {
   switch (item.kind) {
     case "sprint": return item.sprint.title;
@@ -184,9 +203,13 @@ export function Preview() {
       header={
         displayItem ? (
           <div className={styles.previewHeader}>
-            <Text size="sm" className={styles.previewTitle} style={{ fontWeight: 600 }}>
-              {previewTitle(displayItem)}
-            </Text>
+            {displayItem.kind === "sprint" ? (
+              <SprintHeaderTitle sprint={displayItem.sprint} />
+            ) : (
+              <Text size="sm" className={styles.previewTitle} style={{ fontWeight: 600 }}>
+                {previewTitle(displayItem)}
+              </Text>
+            )}
             <Button variant="ghost" size="sm" iconOnly icon={<X size={14} />} onClick={closePreview} />
           </div>
         ) : undefined
