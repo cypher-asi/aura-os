@@ -15,6 +15,12 @@ import type {
   ProjectProgress,
   AuthSession,
   ApiError,
+  Org,
+  OrgMember,
+  OrgInvite,
+  OrgBilling,
+  OrgGithub,
+  OrgRole,
 } from "../types";
 import { streamSSE } from "./sse";
 
@@ -50,6 +56,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export interface CreateProjectRequest {
+  org_id: string;
   name: string;
   description: string;
   linked_folder_path: string;
@@ -119,8 +126,64 @@ export const api = {
   deleteApiKey: () =>
     apiFetch<void>("/api/settings/api-key", { method: "DELETE" }),
 
+  // Orgs
+  orgs: {
+    list: () => apiFetch<Org[]>("/api/orgs"),
+    create: (name: string) =>
+      apiFetch<Org>("/api/orgs", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      }),
+    get: (orgId: string) => apiFetch<Org>(`/api/orgs/${orgId}`),
+    update: (orgId: string, name: string) =>
+      apiFetch<Org>(`/api/orgs/${orgId}`, {
+        method: "PUT",
+        body: JSON.stringify({ name }),
+      }),
+    listMembers: (orgId: string) =>
+      apiFetch<OrgMember[]>(`/api/orgs/${orgId}/members`),
+    updateMemberRole: (orgId: string, userId: string, role: OrgRole) =>
+      apiFetch<OrgMember>(`/api/orgs/${orgId}/members/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ role }),
+      }),
+    removeMember: (orgId: string, userId: string) =>
+      apiFetch<void>(`/api/orgs/${orgId}/members/${userId}`, {
+        method: "DELETE",
+      }),
+    createInvite: (orgId: string) =>
+      apiFetch<OrgInvite>(`/api/orgs/${orgId}/invites`, { method: "POST" }),
+    listInvites: (orgId: string) =>
+      apiFetch<OrgInvite[]>(`/api/orgs/${orgId}/invites`),
+    revokeInvite: (orgId: string, inviteId: string) =>
+      apiFetch<OrgInvite>(`/api/orgs/${orgId}/invites/${inviteId}`, {
+        method: "DELETE",
+      }),
+    acceptInvite: (token: string) =>
+      apiFetch<OrgMember>(`/api/invites/${token}/accept`, { method: "POST" }),
+    getBilling: (orgId: string) =>
+      apiFetch<OrgBilling | null>(`/api/orgs/${orgId}/billing`),
+    setBilling: (orgId: string, billing_email: string | null, plan: string) =>
+      apiFetch<Org>(`/api/orgs/${orgId}/billing`, {
+        method: "PUT",
+        body: JSON.stringify({ billing_email, plan }),
+      }),
+    getGithub: (orgId: string) =>
+      apiFetch<OrgGithub | null>(`/api/orgs/${orgId}/integrations/github`),
+    setGithub: (orgId: string, github_org: string) =>
+      apiFetch<Org>(`/api/orgs/${orgId}/integrations/github`, {
+        method: "PUT",
+        body: JSON.stringify({ github_org }),
+      }),
+    removeGithub: (orgId: string) =>
+      apiFetch<void>(`/api/orgs/${orgId}/integrations/github`, {
+        method: "DELETE",
+      }),
+  },
+
   // Projects
-  listProjects: () => apiFetch<Project[]>("/api/projects"),
+  listProjects: (orgId?: string) =>
+    apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
   createProject: (data: CreateProjectRequest) =>
     apiFetch<Project>("/api/projects", {
       method: "POST",

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { api } from "../api/client";
+import { useOrg } from "../context/OrgContext";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { PathInput } from "./PathInput";
 
@@ -10,6 +11,7 @@ interface NewProjectModalProps {
 }
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
+  const { activeOrg } = useOrg();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folderPath, setFolderPath] = useState("");
@@ -42,7 +44,12 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setLoading(true);
     setError("");
     try {
+      if (!activeOrg) {
+        setError("No team selected");
+        return;
+      }
       const project = await api.createProject({
+        org_id: activeOrg.org_id,
         name: name.trim(),
         description: description.trim(),
         linked_folder_path: folderPath.trim(),

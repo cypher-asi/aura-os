@@ -1,0 +1,140 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 300px;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-1);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.activeTab {
+  color: var(--color-text-primary);
+  background: var(--color-bg-active);
+}
+
+.content {
+  flex: 1;
+}
+
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.memberRow:hover {
+  background: var(--color-bg-hover);
+}
+
+.memberName {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.roleBadge {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
+}
+
+.roleSelect {
+  font-size: var(--font-size-xs);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.invitesSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.invitesList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inviteRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
+}
+
+.inviteToken {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.billingSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.billingForm {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.integrationsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.githubConnected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.githubForm {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}

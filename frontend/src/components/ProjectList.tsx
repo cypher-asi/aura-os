@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
+import { useOrg } from "../context/OrgContext";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu, Modal, Input, Button, Text } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
@@ -49,6 +50,7 @@ export function ProjectList() {
   const { projectId, chatSessionId } = useParams();
   const navigate = useNavigate();
   const sidekick = useSidekick();
+  const { activeOrg } = useOrg();
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
@@ -63,8 +65,8 @@ export function ProjectList() {
   const ctxMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchProjects = useCallback(() => {
-    api.listProjects().then(setProjects).catch(console.error);
-  }, []);
+    api.listProjects(activeOrg?.org_id).then(setProjects).catch(console.error);
+  }, [activeOrg?.org_id]);
 
   const fetchSessions = useCallback((pid: string) => {
     api.listChatSessions(pid).then((sessions) => {

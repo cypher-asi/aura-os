@@ -9,6 +9,7 @@ import type {
 
 export interface Project {
   project_id: ProjectId;
+  org_id: string;
   name: string;
   description: string;
   linked_folder_path: string;
@@ -120,6 +121,50 @@ export interface AuthSession {
   wallets: string[];
   created_at: string;
   validated_at: string;
+}
+
+export type OrgRole = "owner" | "admin" | "member";
+export type InviteStatus = "pending" | "accepted" | "expired" | "revoked";
+
+export interface Org {
+  org_id: string;
+  name: string;
+  owner_user_id: string;
+  billing: OrgBilling | null;
+  github: OrgGithub | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrgMember {
+  org_id: string;
+  user_id: string;
+  display_name: string;
+  role: OrgRole;
+  joined_at: string;
+}
+
+export interface OrgInvite {
+  invite_id: string;
+  org_id: string;
+  token: string;
+  created_by: string;
+  status: InviteStatus;
+  accepted_by: string | null;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+}
+
+export interface OrgBilling {
+  billing_email: string | null;
+  plan: string;
+}
+
+export interface OrgGithub {
+  github_org: string;
+  connected_by: string;
+  connected_at: string;
 }
 
 export interface ApiError {

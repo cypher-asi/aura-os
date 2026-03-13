@@ -9,6 +9,7 @@ import { ChatView } from "./components/ChatView";
 import { SettingsView } from "./views/SettingsView";
 import { ExecutionView } from "./views/ExecutionView";
 import { LoginView } from "./views/LoginView";
+import { InviteAcceptView } from "./views/InviteAcceptView";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Routes>
             <Route path="login" element={<LoginView />} />
             <Route element={<RequireAuth />}>
+              <Route path="invite/:token" element={<InviteAcceptView />} />
               <Route element={<AppShell />}>
                 <Route index element={<HomeView />} />
                 <Route path="settings" element={<SettingsView />} />
