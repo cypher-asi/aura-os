@@ -1,8 +1,8 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Sidebar, Tabs, Button, Spinner, Text } from "@cypher-asi/zui";
-import { Play, Archive, FileText, ListChecks, Info, ArrowLeft } from "lucide-react";
+import { Sidebar, Tabs, Button, Text } from "@cypher-asi/zui";
+import { Play, Archive, FileText, Info, ArrowLeft } from "lucide-react";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { StatusBadge } from "./StatusBadge";
@@ -70,7 +70,7 @@ export function Sidekick() {
     );
   }
 
-  const { project, genLoading, extractLoading, handleGenerateSpecs, handleStopGeneration, handleExtractTasks, handleArchive, navigateToExecution } = ctx;
+  const { project, genLoading, handleGenerateSpecs, handleStopGeneration, handleArchive, navigateToExecution } = ctx;
 
   if (showInfo) {
     return (
@@ -151,7 +151,6 @@ export function Sidekick() {
             ) : (
               <Button variant="ghost" size="sm" iconOnly icon={<FileText size={16} />} onClick={handleGenerateSpecs} title="Generate Specs" />
             )}
-            <Button variant="ghost" size="sm" iconOnly icon={extractLoading ? <Spinner size="sm" /> : <ListChecks size={16} />} onClick={handleExtractTasks} disabled={extractLoading} title="Extract Tasks" />
             <Button variant="filled" size="sm" iconOnly icon={<Play size={16} />} onClick={navigateToExecution} title="Start Dev Loop" />
             {project.current_status !== "archived" && (
               <Button variant="danger" size="sm" iconOnly icon={<Archive size={16} />} onClick={handleArchive} title="Archive" />

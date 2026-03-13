@@ -21,6 +21,7 @@ pub enum SpecStreamEvent {
     Delta(String),
     Generating { tokens: usize },
     SpecSaved(Spec),
+    TaskSaved(Task),
     Complete(Vec<Spec>),
     Error(String),
 }
@@ -370,7 +371,23 @@ impl SpecGenerationService {
                             }
                             spec_index += 1;
                             saved_specs.push(spec.clone());
-                            let _ = tx.send(SpecStreamEvent::SpecSaved(spec));
+                            let _ = tx.send(SpecStreamEvent::SpecSaved(spec.clone()));
+
+                            let tasks = Self::parse_tasks_from_markdown(
+                                project_id,
+                                &spec.spec_id,
+                                &spec.markdown_contents,
+                            );
+                            if !tasks.is_empty() {
+                                if let Err(e) = self.save_tasks_for_spec(&tasks) {
+                                    error!(%project_id, error = %e, "Failed to save tasks for spec");
+                                } else {
+                                    info!(%project_id, spec = %spec.title, count = tasks.len(), "Tasks extracted and saved");
+                                    for task in tasks {
+                                        let _ = tx.send(SpecStreamEvent::TaskSaved(task));
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -419,6 +436,21 @@ impl SpecGenerationService {
                         }
                         for spec in &new_specs {
                             send(SpecStreamEvent::SpecSaved(spec.clone()));
+
+                            let tasks = Self::parse_tasks_from_markdown(
+                                project_id,
+                                &spec.spec_id,
+                                &spec.markdown_contents,
+                            );
+                            if !tasks.is_empty() {
+                                if let Err(e) = self.save_tasks_for_spec(&tasks) {
+                                    error!(%project_id, error = %e, "Failed to save tasks for spec (fallback)");
+                                } else {
+                                    for task in tasks {
+                                        send(SpecStreamEvent::TaskSaved(task));
+                                    }
+                                }
+                            }
                         }
                         saved_specs = new_specs;
                     }
@@ -453,6 +485,101 @@ impl SpecGenerationService {
         if !ops.is_empty() {
             self.store.write_batch(ops)?;
         }
+        Ok(())
+    }
+
+    fn parse_tasks_from_markdown(
+        project_id: &ProjectId,
+        spec_id: &SpecId,
+        markdown: &str,
+    ) -> Vec<Task> {
+        let now = Utc::now();
+        let mut tasks = Vec::new();
+        let mut in_task_section = false;
+        let mut header_seen = false;
+        let mut separator_seen = false;
+
+        for line in markdown.lines() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with('#') && trimmed.to_lowercase().contains("task") {
+                in_task_section = true;
+                header_seen = false;
+                separator_seen = false;
+                continue;
+            }
+
+            if in_task_section && trimmed.starts_with('#') && !trimmed.to_lowercase().contains("task") {
+                break;
+            }
+
+            if !in_task_section || trimmed.is_empty() || !trimmed.starts_with('|') {
+                continue;
+            }
+
+            if !header_seen {
+                header_seen = true;
+                continue;
+            }
+            if !separator_seen {
+                separator_seen = true;
+                continue;
+            }
+
+            let cells: Vec<&str> = trimmed
+                .split('|')
+                .map(|c| c.trim())
+                .filter(|c| !c.is_empty())
+                .collect();
+
+            if cells.len() >= 3 {
+                let id_str = cells[0];
+                let title = cells[1];
+                let description = cells[2..].join(" | ");
+
+                let order_index = id_str
+                    .split('.')
+                    .nth(1)
+                    .and_then(|n| n.trim().parse::<u32>().ok())
+                    .unwrap_or(tasks.len() as u32);
+
+                tasks.push(Task {
+                    task_id: TaskId::new(),
+                    project_id: *project_id,
+                    spec_id: *spec_id,
+                    title: title.to_string(),
+                    description: description.to_string(),
+                    status: TaskStatus::Pending,
+                    order_index,
+                    dependency_ids: vec![],
+                    assigned_agent_id: None,
+                    execution_notes: String::new(),
+                    created_at: now,
+                    updated_at: now,
+                });
+            }
+        }
+
+        tasks
+    }
+
+    fn save_tasks_for_spec(&self, tasks: &[Task]) -> Result<(), SpecGenError> {
+        if tasks.is_empty() {
+            return Ok(());
+        }
+        let ops: Vec<BatchOp> = tasks
+            .iter()
+            .filter_map(|task| {
+                serde_json::to_vec(task)
+                    .ok()
+                    .map(|value| BatchOp::Put {
+                        cf: ColumnFamilyName::Tasks,
+                        key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
+                        value,
+                    })
+            })
+            .collect();
+        self.store.write_batch(ops)?;
         Ok(())
     }
 

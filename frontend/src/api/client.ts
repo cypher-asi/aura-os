@@ -71,6 +71,7 @@ export interface SpecGenStreamCallbacks {
   onDelta: (text: string) => void;
   onGenerating: (tokens: number) => void;
   onSpecSaved: (spec: Spec) => void;
+  onTaskSaved: (task: Task) => void;
   onComplete: (specs: Spec[]) => void;
   onError: (message: string) => void;
 }
@@ -114,7 +115,7 @@ export const api = {
       method: "POST",
     }),
   generateSpecsStream: (projectId: ProjectId, cb: SpecGenStreamCallbacks, signal?: AbortSignal) =>
-    streamSSE<"progress" | "delta" | "generating" | "spec_saved" | "complete" | "error">(
+    streamSSE<"progress" | "delta" | "generating" | "spec_saved" | "task_saved" | "complete" | "error">(
       `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
       { method: "POST" },
       {
@@ -132,6 +133,9 @@ export const api = {
               break;
             case "spec_saved":
               cb.onSpecSaved(d.spec as Spec);
+              break;
+            case "task_saved":
+              cb.onTaskSaved(d.task as Task);
               break;
             case "complete":
               cb.onComplete(d.specs as Spec[]);
@@ -153,10 +157,6 @@ export const api = {
     apiFetch<Task[]>(`/api/projects/${projectId}/tasks`),
   listTasksBySpec: (projectId: ProjectId, specId: SpecId) =>
     apiFetch<Task[]>(`/api/projects/${projectId}/specs/${specId}/tasks`),
-  extractTasks: (projectId: ProjectId) =>
-    apiFetch<Task[]>(`/api/projects/${projectId}/tasks/extract`, {
-      method: "POST",
-    }),
   transitionTask: (
     projectId: ProjectId,
     taskId: TaskId,

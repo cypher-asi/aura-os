@@ -15,7 +15,6 @@ export function ProjectLayout() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
-  const [extractLoading, setExtractLoading] = useState(false);
   const [message, setMessage] = useState("");
   const { subscribe } = useEventContext();
   const sidekick = useSidekick();
@@ -75,6 +74,9 @@ export function ProjectLayout() {
         onSpecSaved(spec) {
           sidekick.appendSavedSpec(spec);
         },
+        onTaskSaved(_task) {
+          sidekick.incrementTaskCount();
+        },
         onComplete(specs) {
           genAbortRef.current = null;
           setMessage(`Generated ${specs.length} spec files`);
@@ -98,20 +100,6 @@ export function ProjectLayout() {
       sidekick.finishStreaming();
     };
 
-    const handleExtractTasks = async () => {
-      setExtractLoading(true);
-      setMessage("");
-      try {
-        const tasks = await api.extractTasks(project.project_id);
-        setMessage(`Extracted ${tasks.length} tasks`);
-        sidekick.setActiveTab("tasks");
-      } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Failed to extract tasks");
-      } finally {
-        setExtractLoading(false);
-      }
-    };
-
     const handleArchive = async () => {
       try {
         const updated = await api.archiveProject(project.project_id);
@@ -129,15 +117,13 @@ export function ProjectLayout() {
       project,
       setProject,
       genLoading,
-      extractLoading,
       message,
       handleGenerateSpecs,
       handleStopGeneration,
-      handleExtractTasks,
       handleArchive,
       navigateToExecution,
     });
-  }, [project, genLoading, extractLoading, message, navigate, register, sidekick]);
+  }, [project, genLoading, message, navigate, register, sidekick]);
 
   if (loading) return <Spinner />;
   if (!project) {

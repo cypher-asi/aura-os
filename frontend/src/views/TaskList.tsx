@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { Spec, Task } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import { useProjectContext } from "../context/ProjectContext";
+import { useSidekick } from "../context/SidekickContext";
 import { Page, PageEmptyState, Group, Item, Text } from "@cypher-asi/zui";
 import { ListTodo } from "lucide-react";
 
@@ -38,10 +39,12 @@ function TaskRow({ task, expanded, onToggle }: { task: Task; expanded: boolean; 
 export function TaskList() {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
+  const { isStreaming, savedTaskCount } = useSidekick();
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const wasStreamingRef = useRef(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -54,6 +57,21 @@ export function TaskList() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
+  useEffect(() => {
+    if (isStreaming) {
+      wasStreamingRef.current = true;
+      return;
+    }
+    if (!wasStreamingRef.current || !projectId) return;
+    wasStreamingRef.current = false;
+    Promise.all([api.listSpecs(projectId), api.listTasks(projectId)])
+      .then(([s, t]) => {
+        setSpecs(s.sort((a, b) => a.order_index - b.order_index));
+        setTasks(t.sort((a, b) => a.order_index - b.order_index));
+      })
+      .catch(console.error);
+  }, [isStreaming, projectId]);
+
   const specMap = new Map(specs.map((s) => [s.spec_id, s]));
   const groupedTasks = specs.map((spec) => ({
     spec,
@@ -64,14 +82,14 @@ export function TaskList() {
   return (
     <Page
       title="Tasks"
-      subtitle={`${tasks.length} tasks across ${specs.length} specs`}
+      subtitle={isStreaming ? `Extracting tasks… ${savedTaskCount} so far` : `${tasks.length} tasks across ${specs.length} specs`}
       isLoading={loading}
     >
-      {tasks.length === 0 ? (
+      {tasks.length === 0 && !isStreaming ? (
         <PageEmptyState
           icon={<ListTodo size={32} />}
           title="No tasks yet"
-          description='Click the "Extract Tasks" button above to create them.'
+          description="Tasks are created automatically when specs are generated."
         />
       ) : (
         <>

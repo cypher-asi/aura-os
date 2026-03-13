@@ -149,6 +149,12 @@ pub async fn generate_specs_stream(
                     .json_data(serde_json::json!({ "spec": spec }))
                     .unwrap()
             }
+            SpecStreamEvent::TaskSaved(ref task) => {
+                Event::default()
+                    .event("task_saved")
+                    .json_data(serde_json::json!({ "task": task }))
+                    .unwrap()
+            }
             SpecStreamEvent::Complete(specs) => {
                 let _ = event_tx_map.send(EngineEvent::SpecGenCompleted {
                     project_id,

@@ -10,6 +10,7 @@ interface ChatState {
   streamStage: string;
   tokenCount: number;
   savedSpecs: Spec[];
+  savedTaskCount: number;
 }
 
 interface PanelState {
@@ -25,6 +26,7 @@ interface ChatActions {
   setStreamStage: (stage: string) => void;
   setTokenCount: (count: number) => void;
   appendSavedSpec: (spec: Spec) => void;
+  incrementTaskCount: () => void;
   finishStreaming: () => void;
 }
 
@@ -44,6 +46,7 @@ const INITIAL_CHAT: ChatState = {
   streamStage: "",
   tokenCount: 0,
   savedSpecs: [],
+  savedTaskCount: 0,
 };
 
 const INITIAL_PANEL: PanelState = {
@@ -80,6 +83,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       streamStage: "",
       tokenCount: 0,
       savedSpecs: [],
+      savedTaskCount: 0,
     });
   }, []);
 
@@ -112,6 +116,14 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     setChat((prev) =>
       prev.isStreaming
         ? { ...prev, savedSpecs: [...prev.savedSpecs, spec] }
+        : prev,
+    );
+  }, []);
+
+  const incrementTaskCount = useCallback(() => {
+    setChat((prev) =>
+      prev.isStreaming
+        ? { ...prev, savedTaskCount: prev.savedTaskCount + 1 }
         : prev,
     );
   }, []);
@@ -153,6 +165,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         setStreamStage,
         setTokenCount,
         appendSavedSpec,
+        incrementTaskCount,
         finishStreaming,
         setActiveTab,
         viewSpec,

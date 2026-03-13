@@ -5,11 +5,9 @@ export interface ProjectActions {
   project: Project;
   setProject: (p: Project) => void;
   genLoading: boolean;
-  extractLoading: boolean;
   message: string;
   handleGenerateSpecs: () => void;
   handleStopGeneration: () => void;
-  handleExtractTasks: () => void;
   handleArchive: () => void;
   navigateToExecution: () => void;
 }
