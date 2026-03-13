@@ -73,6 +73,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-engine"
+version = "0.1.0"
+dependencies = [
+ "aura-core",
+ "aura-services",
+ "aura-settings",
+ "aura-store",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "aura-services"
 version = "0.1.0"
 dependencies = [
