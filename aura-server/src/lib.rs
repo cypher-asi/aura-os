@@ -20,6 +20,17 @@ use aura_services::{
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
+fn spawn_event_rebroadcast(
+    mut rx: mpsc::UnboundedReceiver<EngineEvent>,
+    broadcast_tx: broadcast::Sender<EngineEvent>,
+) {
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            let _ = broadcast_tx.send(event);
+        }
+    });
+}
+
 pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let settings_service =
@@ -40,8 +51,10 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let agent_service = Arc::new(AgentService::new(store.clone()));
     let session_service = Arc::new(SessionService::new(store.clone()));
 
-    let (event_tx, _event_rx) = mpsc::unbounded_channel::<EngineEvent>();
+    let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
+
+    spawn_event_rebroadcast(event_rx, event_broadcast.clone());
 
     AppState {
         store,
