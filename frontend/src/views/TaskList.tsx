@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { api } from "../api/client";
 import type { Spec, Task } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
@@ -39,9 +39,9 @@ function TaskRow({ task, expanded, onToggle }: { task: Task; expanded: boolean; 
 export function TaskList() {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
-  const { refreshKey } = useSidekick();
-  const [specs, setSpecs] = useState<Spec[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const sidekick = useSidekick();
+  const [localSpecs, setLocalSpecs] = useState<Spec[]>([]);
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -49,12 +49,26 @@ export function TaskList() {
     if (!projectId) return;
     Promise.all([api.listSpecs(projectId), api.listTasks(projectId)])
       .then(([s, t]) => {
-        setSpecs(s.sort((a, b) => a.order_index - b.order_index));
-        setTasks(t.sort((a, b) => a.order_index - b.order_index));
+        setLocalSpecs(s.sort((a, b) => a.order_index - b.order_index));
+        setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [projectId, refreshKey]);
+  }, [projectId]);
+
+  const specs = useMemo(() => {
+    const map = new Map<string, Spec>();
+    for (const s of localSpecs) map.set(s.spec_id, s);
+    for (const s of sidekick.specs) map.set(s.spec_id, s);
+    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
+  }, [localSpecs, sidekick.specs]);
+
+  const tasks = useMemo(() => {
+    const map = new Map<string, Task>();
+    for (const t of localTasks) map.set(t.task_id, t);
+    for (const t of sidekick.tasks) map.set(t.task_id, t);
+    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
+  }, [localTasks, sidekick.tasks]);
 
   const specMap = new Map(specs.map((s) => [s.spec_id, s]));
   const groupedTasks = specs.map((spec) => ({
