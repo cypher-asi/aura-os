@@ -209,7 +209,7 @@ impl ChatService {
         let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
         let client = self.claude_client.clone();
-        let api_key_owned = api_key;
+        let api_key_owned = api_key.clone();
         let system_owned = system;
         let stream_handle = tokio::spawn(async move {
             client
