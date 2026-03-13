@@ -116,7 +116,7 @@ export function SpecList() {
     <Explorer
       data={explorerData}
       searchable
-      searchPlaceholder="Search..."
+      searchPlaceholder="Search"
       enableDragDrop={false}
       enableMultiSelect={false}
       defaultSelectedIds={selectedId ? [selectedId] : undefined}
