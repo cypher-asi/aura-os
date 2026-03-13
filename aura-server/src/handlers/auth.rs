@@ -2,19 +2,20 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_auth::AuthError;
+use aura_services::AuthError;
 
 use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
-    match e {
-        AuthError::InvalidCredentials => ApiError::unauthorized("invalid email or password"),
-        AuthError::NoSession | AuthError::SessionExpired => {
-            ApiError::unauthorized("no active session")
+    match &e {
+        AuthError::ZosApi { status, .. } if *status == 401 => {
+            ApiError::unauthorized("invalid email or password")
         }
-        AuthError::RegistrationFailed(msg) => ApiError::bad_request(msg),
+        AuthError::ZosApi { status, message } if *status >= 400 && *status < 500 => {
+            ApiError::bad_request(message.clone())
+        }
         _ => ApiError::internal(e.to_string()),
     }
 }
@@ -50,7 +51,8 @@ pub async fn get_session(
         .auth_service
         .get_session()
         .await
-        .map_err(map_auth_error)?;
+        .map_err(map_auth_error)?
+        .ok_or_else(|| ApiError::unauthorized("no active session"))?;
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
@@ -61,7 +63,8 @@ pub async fn validate(
         .auth_service
         .validate()
         .await
-        .map_err(map_auth_error)?;
+        .map_err(map_auth_error)?
+        .ok_or_else(|| ApiError::unauthorized("session expired or invalid"))?;
     Ok(Json(AuthSessionResponse::from(session)))
 }
 

@@ -87,7 +87,7 @@ export function LoginView() {
           <Heading level={2}>
             <span className={styles.brand}>AURA</span>
           </Heading>
-          <Text variant="muted" size="sm" className={styles.subtitle}>
+          <Text variant="muted" size="sm" align="center" className={styles.subtitle}>
             Zero Identity Authentication
           </Text>
         </div>

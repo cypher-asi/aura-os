@@ -21,7 +21,11 @@
 
 .header {
   text-align: center;
+  padding-top: var(--space-4);
   margin-bottom: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .brand {
@@ -35,6 +39,7 @@
 .subtitle {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  text-align: center;
 }
 
 .tabs {

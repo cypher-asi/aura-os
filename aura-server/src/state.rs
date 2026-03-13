@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use aura_auth::AuthService;
 use aura_engine::{EngineEvent, LoopHandle};
 use aura_services::{
-    AgentService, ChatService, ClaudeClient, ProjectService, SessionService,
+    AgentService, AuthService, ChatService, ClaudeClient, ProjectService, SessionService,
     SpecGenerationService, TaskExtractionService, TaskService,
 };
 use aura_settings::SettingsService;
