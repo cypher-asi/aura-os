@@ -112,6 +112,7 @@ export function ChatView() {
       }
 
       if (action === "generate_specs") {
+        sidekick.clearGeneratedArtifacts();
         sidekick.setActiveTab("specs");
       }
 
@@ -133,11 +134,11 @@ export function ChatView() {
               });
             }
           },
-          onSpecSaved() {
-            sidekick.triggerRefresh();
+          onSpecSaved(spec) {
+            sidekick.pushSpec(spec);
           },
-          onTaskSaved() {
-            sidekick.triggerRefresh();
+          onTaskSaved(task) {
+            sidekick.pushTask(task);
           },
           onMessageSaved(msg) {
             setMessages((prev) => [

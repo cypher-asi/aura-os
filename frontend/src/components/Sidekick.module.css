@@ -3,19 +3,14 @@
 }
 
 .panelHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.tabsNoBorder {
-  border-bottom: none;
+  position: relative;
 }
 
 .actions {
-  margin-left: auto;
+  position: absolute;
+  right: var(--space-2);
+  top: 0;
+  height: 100%;
   display: flex;
   gap: var(--space-1);
   align-items: center;
