@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Text, Button } from "@cypher-asi/zui";
-import { Send, MessageSquare, FileText } from "lucide-react";
+import { ArrowUp, Plus, MessageSquare, FileText } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import type { ChatMessage } from "../types";
@@ -292,19 +292,8 @@ export function ChatView() {
         )}
       </div>
 
-      <div className={styles.inputArea}>
-        <div className={styles.quickActions}>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<FileText size={14} />}
-            onClick={() => sendMessage("Generate specs for this project", "generate_specs")}
-            disabled={isStreaming}
-          >
-            Generate Specs
-          </Button>
-        </div>
-        <div className={styles.inputRow}>
+      <div className={styles.inputWrapper}>
+        <div className={styles.inputContainer}>
           <textarea
             ref={textareaRef}
             className={styles.textarea}
@@ -314,20 +303,41 @@ export function ChatView() {
               autoResizeTextarea();
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder="Message Aura..."
             disabled={isStreaming}
             rows={1}
           />
-          <Button
-            className={styles.sendButton}
-            variant="primary"
-            size="sm"
-            icon={<Send size={14} />}
-            iconOnly
-            onClick={() => sendMessage(input)}
-            disabled={isStreaming || !input.trim()}
-            aria-label="Send"
-          />
+          <div className={styles.inputToolbar}>
+            <div className={styles.toolbarLeft}>
+              <button
+                type="button"
+                className={styles.attachButton}
+                aria-label="Attach"
+              >
+                <Plus size={18} />
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<FileText size={14} />}
+                onClick={() => sendMessage("Generate specs for this project", "generate_specs")}
+                disabled={isStreaming}
+              >
+                Generate Specs
+              </Button>
+            </div>
+            <div className={styles.toolbarRight}>
+              <button
+                type="button"
+                className={styles.sendButton}
+                onClick={() => sendMessage(input)}
+                disabled={isStreaming || !input.trim()}
+                aria-label="Send"
+              >
+                <ArrowUp size={18} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
