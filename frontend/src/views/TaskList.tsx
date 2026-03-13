@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "../api/client";
-import type { Spec, Task } from "../types";
+import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { useProjectContext } from "../context/ProjectContext";
+import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
@@ -14,6 +15,7 @@ export function TaskList() {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
+  const { subscribe } = useEventContext();
   const [localSpecs, setLocalSpecs] = useState<Spec[]>([]);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,33 @@ export function TaskList() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [projectId]);
+
+  const updateTaskStatus = useCallback(
+    (taskId: string, newStatus: TaskStatus) => {
+      setLocalTasks((prev) =>
+        prev.map((t) => (t.task_id === taskId ? { ...t, status: newStatus } : t)),
+      );
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const unsubs = [
+      subscribe("task_started", (e) => {
+        if (e.task_id) updateTaskStatus(e.task_id, "in_progress");
+      }),
+      subscribe("task_completed", (e) => {
+        if (e.task_id) updateTaskStatus(e.task_id, "done");
+      }),
+      subscribe("task_failed", (e) => {
+        if (e.task_id) updateTaskStatus(e.task_id, "failed");
+      }),
+      subscribe("task_became_ready", (e) => {
+        if (e.task_id) updateTaskStatus(e.task_id, "ready");
+      }),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [subscribe, updateTaskStatus]);
 
   const specs = useMemo(
     () => mergeById(localSpecs, sidekick.specs, "spec_id"),
