@@ -28,20 +28,6 @@
   padding: var(--space-4);
 }
 
-.streamPre {
-  margin: 0;
-  padding: var(--space-4);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--color-text-secondary);
-  overflow-x: hidden;
-}
 
 .viewerArea {
   flex: 1;

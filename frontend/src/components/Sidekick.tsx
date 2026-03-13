@@ -56,9 +56,14 @@ export function Sidekick() {
             )}
             <div className={styles.streamArea} ref={streamAreaRef}>
               {streamedText ? (
-                <pre className={styles.streamPre}>
-                  <code>{streamedText}</code>
-                </pre>
+                <div className={styles.markdown}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                  >
+                    {streamedText}
+                  </ReactMarkdown>
+                </div>
               ) : (
                 <Text variant="muted" size="sm">
                   Waiting for response...
