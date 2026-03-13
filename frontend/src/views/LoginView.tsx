@@ -97,42 +97,33 @@ export function LoginView() {
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel}>Email</label>
-            <Input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              disabled={loading}
-            />
-          </div>
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            disabled={loading}
+          />
 
-          <div className={styles.field}>
-            <label className={styles.fieldLabel}>Password</label>
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
-              disabled={loading}
-            />
-          </div>
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
+            disabled={loading}
+          />
 
           {activeTab === "register" && (
-            <div className={styles.field}>
-              <label className={styles.fieldLabel}>Confirm Password</label>
-              <Input
-                type="password"
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-                disabled={loading}
-              />
-            </div>
+            <Input
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+              disabled={loading}
+            />
           )}
 
           {error && <div className={styles.error}>{error}</div>}
