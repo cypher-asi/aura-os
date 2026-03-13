@@ -14,6 +14,7 @@ const STATUS_TO_VARIANT: Record<string, BadgeVariant> = {
   completed: "stopped",
   archived: "stopped",
   idle: "pending",
+  starting: "provisioning",
   working: "running",
   stopped: "stopped",
   error: "error",
@@ -26,7 +27,7 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
   const variant = STATUS_TO_VARIANT[status] || "pending";
   const label = status.replace(/_/g, " ");
-  const pulse = status === "in_progress" || status === "working" || status === "active";
+  const pulse = status === "in_progress" || status === "working" || status === "active" || status === "starting";
 
   return (
     <Badge variant={variant} pulse={pulse}>
