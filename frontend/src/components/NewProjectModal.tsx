@@ -11,7 +11,7 @@ interface NewProjectModalProps {
 }
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
-  const { activeOrg } = useOrg();
+  const { activeOrg, isLoading: orgLoading } = useOrg();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folderPath, setFolderPath] = useState("");
@@ -44,10 +44,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setLoading(true);
     setError("");
     try {
-      if (!activeOrg) {
-        setError("No team selected");
-        return;
-      }
+      if (!activeOrg) return;
       const project = await api.createProject({
         org_id: activeOrg.org_id,
         name: name.trim(),
@@ -75,7 +72,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           <Button variant="ghost" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+          <Button variant="primary" onClick={handleSubmit} disabled={loading || orgLoading || !activeOrg}>
             {loading ? <><Spinner size="sm" /> Creating...</> : "Create Project"}
           </Button>
         </>
@@ -106,6 +103,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           placeholder="Requirements doc path"
           mode="file"
         />
+        {!orgLoading && !activeOrg && (
+          <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
+            No team found. Log out and back in to create a default team.
+          </Text>
+        )}
         {error && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
             {error}

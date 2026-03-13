@@ -14,6 +14,7 @@ interface OrgContextValue {
   orgs: Org[];
   activeOrg: Org | null;
   members: OrgMember[];
+  isLoading: boolean;
   switchOrg: (orgId: string) => void;
   refreshOrgs: () => Promise<void>;
   refreshMembers: () => Promise<void>;
@@ -30,9 +31,13 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [activeOrg, setActiveOrg] = useState<Org | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const refreshOrgs = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     try {
       const list = await api.orgs.list();
       setOrgs(list);
@@ -47,6 +52,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Failed to load orgs", err);
+    } finally {
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -104,7 +111,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   return (
     <OrgContext.Provider
-      value={{ orgs, activeOrg, members, switchOrg, refreshOrgs, refreshMembers, createOrg, renameOrg }}
+      value={{ orgs, activeOrg, members, isLoading, switchOrg, refreshOrgs, refreshMembers, createOrg, renameOrg }}
     >
       {children}
     </OrgContext.Provider>
