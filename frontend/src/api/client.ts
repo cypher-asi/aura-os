@@ -292,6 +292,12 @@ export const api = {
       signal,
     ),
 
+  // Desktop file/folder picker
+  pickFolder: () =>
+    apiFetch<string | null>("/api/pick-folder", { method: "POST" }),
+  pickFile: () =>
+    apiFetch<string | null>("/api/pick-file", { method: "POST" }),
+
   // Loop
   startLoop: (projectId: ProjectId) =>
     apiFetch<LoopStatusResponse>(

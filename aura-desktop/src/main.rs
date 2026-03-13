@@ -1,6 +1,8 @@
 use std::net::TcpListener as StdTcpListener;
 use std::path::PathBuf;
 
+use axum::routing::post as axum_post;
+use axum::Json;
 use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
 use tao::window::{Icon, WindowBuilder};
@@ -63,6 +65,24 @@ fn find_frontend_dir() -> Option<PathBuf> {
         .find(|p| p.join("index.html").exists())
 }
 
+async fn pick_folder() -> Json<serde_json::Value> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title("Select folder")
+        .pick_folder()
+        .await;
+    let path = handle.map(|h| h.path().to_string_lossy().into_owned());
+    Json(serde_json::json!(path))
+}
+
+async fn pick_file() -> Json<serde_json::Value> {
+    let handle = rfd::AsyncFileDialog::new()
+        .set_title("Select file")
+        .pick_file()
+        .await;
+    let path = handle.map(|h| h.path().to_string_lossy().into_owned());
+    Json(serde_json::json!(path))
+}
+
 fn main() {
     let data_dir = default_data_dir();
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
@@ -89,7 +109,9 @@ fn main() {
         let rt = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
         rt.block_on(async move {
             let state = aura_server::build_app_state(&db_path, &data_dir);
-            let app = aura_server::create_router_with_frontend(state, frontend_dir);
+            let app = aura_server::create_router_with_frontend(state, frontend_dir)
+                .route("/api/pick-folder", axum_post(pick_folder))
+                .route("/api/pick-file", axum_post(pick_file));
             let listener = TcpListener::from_std(std_listener).expect("failed to create listener");
 
             let _ = ready_tx.send(());

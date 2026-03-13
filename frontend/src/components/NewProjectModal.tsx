@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { api } from "../api/client";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
+import { PathInput } from "./PathInput";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -86,17 +87,17 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
         />
-        <Input
+        <PathInput
           value={folderPath}
-          onChange={(e) => setFolderPath(e.target.value)}
+          onChange={setFolderPath}
           placeholder="Linked folder path"
-          mono
+          mode="folder"
         />
-        <Input
+        <PathInput
           value={reqPath}
-          onChange={(e) => setReqPath(e.target.value)}
+          onChange={setReqPath}
           placeholder="Requirements doc path"
-          mono
+          mode="file"
         />
         {error && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
