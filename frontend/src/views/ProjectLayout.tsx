@@ -7,7 +7,7 @@ import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { StatusBadge } from "../components/StatusBadge";
 import { PageEmptyState, Button, Spinner, Tabs, Text } from "@cypher-asi/zui";
-import { Play, Archive, FileText, ListChecks, Info, Square } from "lucide-react";
+import { Play, Archive, FileText, ListChecks, Info } from "lucide-react";
 import styles from "./aura.module.css";
 
 export function ProjectLayout() {
@@ -100,7 +100,7 @@ export function ProjectLayout() {
     genAbortRef.current?.abort();
     genAbortRef.current = null;
     setGenLoading(false);
-    setMessage("Spec generation cancelled");
+    setMessage("");
     sidekick.finishStreaming();
   };
 
@@ -142,10 +142,22 @@ export function ProjectLayout() {
         />
         <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
           {genLoading ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-              <Spinner size="sm" />
-              <Button variant="danger" size="sm" iconOnly icon={<Square size={14} fill="currentColor" />} onClick={handleStopGeneration} title="Stop Generation" />
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={
+                <span className={styles.stopIcon}>
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <circle className={styles.stopRing} cx="14" cy="14" r="12" stroke="var(--color-danger, #ef4444)" strokeWidth="2" strokeDasharray="22 54" strokeLinecap="round" />
+                    <circle cx="14" cy="14" r="8.5" stroke="var(--color-danger, #ef4444)" strokeWidth="1" opacity="0.25" fill="none" />
+                    <rect x="9.5" y="9.5" width="9" height="9" rx="0.75" fill="var(--color-danger, #ef4444)" />
+                  </svg>
+                </span>
+              }
+              onClick={handleStopGeneration}
+              title="Stop Generation"
+            />
           ) : (
             <Button variant="ghost" size="sm" iconOnly icon={<FileText size={16} />} onClick={handleGenerateSpecs} title="Generate Specs" />
           )}

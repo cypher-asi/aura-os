@@ -58,6 +58,25 @@
   50% { opacity: 0.5; }
 }
 
+.stopIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stopIcon svg {
+  display: block;
+}
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+
+.stopRing {
+  animation: spinRing 1s linear infinite;
+  transform-origin: center;
+}
+
 .markdown {
   font-size: 14px;
   line-height: 1.7;
