@@ -59,6 +59,7 @@ export function ProjectLayout() {
     setGenLoading(true);
     setMessage("");
     sidekick.startStreaming("Generating Specs");
+    let navigated = false;
     await api.generateSpecsStream(project.project_id, {
       onProgress(stage) {
         sidekick.setStreamStage(stage);
@@ -69,11 +70,19 @@ export function ProjectLayout() {
       onGenerating(tokens) {
         sidekick.setTokenCount(tokens);
       },
+      onSpecSaved() {
+        if (!navigated) {
+          navigated = true;
+          navigate(`/projects/${project.project_id}/specs`);
+        }
+      },
       onComplete(specs) {
         setMessage(`Generated ${specs.length} spec files`);
         setGenLoading(false);
         sidekick.finishStreaming();
-        navigate(`/projects/${project.project_id}/specs`);
+        if (!navigated) {
+          navigate(`/projects/${project.project_id}/specs`);
+        }
       },
       onError(msg) {
         setMessage(msg);
