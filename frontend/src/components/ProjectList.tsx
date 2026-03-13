@@ -2,12 +2,28 @@ import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { useSidekick } from "../context/SidekickContext";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu, Modal, ModalConfirm, Input, Button, Text } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { FolderOpen, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
 import styles from "./ProjectList.module.css";
+
+function formatRelativeTime(iso: string): string {
+  const date = new Date(iso);
+  const now = Date.now();
+  const diffMs = now - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 const projectMenuItems: MenuItem[] = [
   { id: "new-chat", label: "New Chat", icon: <MessageSquare size={14} /> },
@@ -32,6 +48,7 @@ export function ProjectList() {
   const [sessionsByProject, setSessionsByProject] = useState<Record<string, ChatSession[]>>({});
   const { projectId, chatSessionId } = useParams();
   const navigate = useNavigate();
+  const sidekick = useSidekick();
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
@@ -85,6 +102,22 @@ export function ProjectList() {
     };
   }, [ctxMenu]);
 
+  useEffect(() => {
+    return sidekick.onSessionTitleUpdate((session) => {
+      setSessionsByProject((prev) => {
+        const pid = session.project_id;
+        const list = prev[pid];
+        if (!list) return prev;
+        return {
+          ...prev,
+          [pid]: list.map((s) =>
+            s.chat_session_id === session.chat_session_id ? { ...s, title: session.title, updated_at: session.updated_at } : s,
+          ),
+        };
+      });
+    });
+  }, [sidekick]);
+
   // Lookup maps for navigation from Explorer selection
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.project_id, p])),
@@ -114,6 +147,11 @@ export function ProjectList() {
             ? sessionsByProject[p.project_id].map((s) => ({
                 id: s.chat_session_id,
                 label: s.title,
+                suffix: (
+                  <span className={styles.sessionTime}>
+                    {formatRelativeTime(s.updated_at)}
+                  </span>
+                ),
                 metadata: { type: "session", projectId: p.project_id },
               }))
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],

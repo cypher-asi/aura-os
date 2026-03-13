@@ -30,3 +30,11 @@
   position: fixed;
   z-index: 9999;
 }
+
+.sessionTime {
+  font-size: 11px;
+  opacity: 0.5;
+  white-space: nowrap;
+  margin-left: auto;
+  padding-left: var(--space-2);
+}
