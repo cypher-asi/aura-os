@@ -31,6 +31,10 @@
   padding-left: 12px !important;
 }
 
+.explorerWrap [class*="itemContent"][aria-expanded] [class*="label"] {
+  color: #ffffff;
+}
+
 /* Hide the icon spacer on parent items (no icon slot used) */
 .explorerWrap > [class*="explorer"] [class*="iconSpacer"] {
   display: none;
