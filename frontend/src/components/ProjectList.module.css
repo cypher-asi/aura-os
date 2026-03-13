@@ -63,16 +63,10 @@
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  opacity: 1;
+  transition: background 0.15s ease, color 0.15s ease;
   margin-left: auto;
   flex-shrink: 0;
-}
-
-/* Show on hover of the explorer row */
-*:hover > .newChatButton,
-.newChatButton:focus-visible {
-  opacity: 1;
 }
 
 .newChatButton:hover {
