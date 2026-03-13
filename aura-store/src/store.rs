@@ -5,7 +5,7 @@ use rocksdb::{ColumnFamilyDescriptor, DBWithThreadMode, MultiThreaded, Options, 
 use serde::de::DeserializeOwned;
 
 use crate::batch::BatchOp;
-use crate::error::{StoreError, StoreResult};
+use crate::error::StoreResult;
 
 pub(crate) const CF_NAMES: &[&str] = &[
     "projects",

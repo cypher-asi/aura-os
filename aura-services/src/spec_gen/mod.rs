@@ -14,7 +14,7 @@ use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
 use crate::claude::ClaudeClient;
 use crate::error::SpecGenError;
 
-use parser::{RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
+use parser::{RawSpecOutput, parse_claude_response, raw_to_specs};
 
 pub type ProgressTx = mpsc::UnboundedSender<String>;
 

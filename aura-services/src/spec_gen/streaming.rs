@@ -19,7 +19,7 @@ impl SpecGenerationService {
             let _ = tx.send(evt);
         };
 
-        let (project, requirements_content, api_key) =
+        let (requirements_content, api_key) =
             match self.load_project_and_key(project_id, &send) {
                 Some(v) => v,
                 None => return,
@@ -131,7 +131,7 @@ impl SpecGenerationService {
         &self,
         project_id: &ProjectId,
         send: &dyn Fn(SpecStreamEvent),
-    ) -> Option<(aura_core::Project, String, String)> {
+    ) -> Option<(String, String)> {
         send(SpecStreamEvent::Progress("Loading project".into()));
         info!(%project_id, "Loading project for streaming spec generation");
 
@@ -172,7 +172,7 @@ impl SpecGenerationService {
             }
         };
 
-        Some((project, requirements_content, api_key))
+        Some((requirements_content, api_key))
     }
 
     fn save_and_emit_spec(
