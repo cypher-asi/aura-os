@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import { Modal, Input, Textarea, Label, Button, Spinner, Text } from "@cypher-asi/zui";
+import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -56,15 +56,12 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     }
   };
 
-  const labelStyle = { display: "block" as const, marginBottom: "var(--space-1)" };
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="New Project"
-      subtitle="Create a new project to start building"
-      size="sm"
+      size="md"
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={loading}>
@@ -77,42 +74,30 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-        <div>
-          <Label size="sm" uppercase={false} style={labelStyle}>Project Name *</Label>
-          <Input
-            value={name}
-            onChange={(e) => { setName(e.target.value); setNameError(""); }}
-            placeholder="My Awesome App"
-            validationMessage={nameError}
-            autoFocus
-          />
-        </div>
-        <div>
-          <Label size="sm" uppercase={false} style={labelStyle}>Description</Label>
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description of the project..."
-          />
-        </div>
-        <div>
-          <Label size="sm" uppercase={false} style={labelStyle}>Linked Folder Path</Label>
-          <Input
-            value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            placeholder="/path/to/your/codebase"
-            mono
-          />
-        </div>
-        <div>
-          <Label size="sm" uppercase={false} style={labelStyle}>Requirements Doc Path</Label>
-          <Input
-            value={reqPath}
-            onChange={(e) => setReqPath(e.target.value)}
-            placeholder="/path/to/requirements.md"
-            mono
-          />
-        </div>
+        <Input
+          value={name}
+          onChange={(e) => { setName(e.target.value); setNameError(""); }}
+          placeholder="Project name"
+          validationMessage={nameError}
+          autoFocus
+        />
+        <Input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Description (optional)"
+        />
+        <Input
+          value={folderPath}
+          onChange={(e) => setFolderPath(e.target.value)}
+          placeholder="Linked folder path"
+          mono
+        />
+        <Input
+          value={reqPath}
+          onChange={(e) => setReqPath(e.target.value)}
+          placeholder="Requirements doc path"
+          mono
+        />
         {error && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
             {error}
