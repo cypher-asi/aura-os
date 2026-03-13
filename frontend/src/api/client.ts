@@ -14,7 +14,7 @@ import type {
   ApiError,
 } from "../types";
 
-const BASE_URL = "http://localhost:3100";
+const BASE_URL = "";
 
 export class ApiClientError extends Error {
   constructor(

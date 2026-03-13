@@ -1,0 +1,271 @@
+.executionView {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 16px;
+}
+
+/* Agent Status Bar */
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.statusLabel {
+  color: var(--color-text-dim);
+}
+
+.statusValue {
+  font-weight: 600;
+}
+
+.connDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.connDotOn { background: var(--color-success); }
+.connDotOff { background: var(--color-danger); }
+
+.currentTask {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* Panels */
+.panels {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Task Feed */
+.taskFeed {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.feedHeader {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-dim);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.feedList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.feedItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  font-size: 13px;
+  transition: background 0.12s;
+}
+.feedItem:hover { background: var(--color-surface-raised); }
+
+.feedItemActive {
+  composes: feedItem;
+  background: rgba(108, 92, 231, 0.08);
+}
+
+.feedTitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feedTime {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  flex-shrink: 0;
+}
+
+/* Log Panel */
+.logPanel {
+  flex: 1;
+  background: #0a0c12;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.logHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-dim);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.logClearBtn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  transition: background 0.12s;
+}
+.logClearBtn:hover { background: var(--color-border); }
+
+.logContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--color-text-muted);
+}
+
+.logLine {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.logTimestamp {
+  color: var(--color-text-dim);
+  margin-right: 8px;
+}
+
+.logEvent {
+  color: var(--color-accent);
+}
+
+/* Loop Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.controlBtn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, opacity 0.15s;
+}
+.controlBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.startBtn {
+  composes: controlBtn;
+  background: var(--color-success);
+  color: #000;
+}
+.startBtn:hover:not(:disabled) { background: #3de07d; }
+
+.pauseBtn {
+  composes: controlBtn;
+  background: var(--status-in-progress);
+  color: #000;
+}
+.pauseBtn:hover:not(:disabled) { background: #ffb832; }
+
+.stopBtn {
+  composes: controlBtn;
+  background: var(--color-danger);
+  color: #fff;
+}
+.stopBtn:hover:not(:disabled) { background: #ff8585; }
+
+.progressSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.progressBarSmall {
+  width: 200px;
+  height: 6px;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.progressBarSmallFill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.progressPct {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+  min-width: 48px;
+  text-align: right;
+}
+
+/* Fallback Banner */
+.fallbackBanner {
+  padding: 8px 16px;
+  background: rgba(255, 165, 2, 0.12);
+  border: 1px solid var(--status-in-progress);
+  border-radius: var(--radius-sm);
+  color: var(--status-in-progress);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .panels {
+    flex-direction: column;
+  }
+  .statusBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
