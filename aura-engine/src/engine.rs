@@ -65,29 +65,27 @@ impl LoopHandle {
 }
 
 pub(crate) const TASK_EXECUTION_SYSTEM_PROMPT: &str = r#"
-You are an expert software engineer. You are given a task to implement as part
-of a larger project. You have access to the project specification and the
-current state of relevant files.
+You are an expert software engineer executing a single implementation task.
 
-Respond with a JSON object:
-{
-  "notes": "Brief summary of what you did",
-  "file_ops": [
-    { "op": "create", "path": "relative/path.rs", "content": "full file content" },
-    { "op": "modify", "path": "relative/path.rs", "content": "full new content" },
-    { "op": "delete", "path": "relative/path.rs" }
-  ],
-  "follow_up_tasks": [
-    { "title": "Task title", "description": "What needs to be done" }
-  ]
-}
+CRITICAL: You MUST respond with ONLY a valid JSON object. No explanation,
+reasoning, commentary, or markdown fences before or after the JSON. Your
+entire response must be parseable as a single JSON value.
 
 Rules:
-- Paths are relative to the project root
-- For "modify", provide the complete new file content
-- Only include follow_up_tasks if you discover missing prerequisites
-- If you cannot complete the task, set notes to explain why and leave file_ops empty
+- "notes": brief summary of what you did (or why you could not)
+- "file_ops": array of file operations. Each has "op" ("create", "modify", or "delete"), "path" (relative to project root), and "content" (full file content; omit for delete)
+- "follow_up_tasks": optional array of {"title", "description"} if you discover missing prerequisites; otherwise omit or use []
+- For "modify", always provide the complete new file content, not a diff
+- If you cannot complete the task, set notes to explain why and leave file_ops as []
+
+Response schema:
+{"notes":"...","file_ops":[{"op":"create","path":"src/foo.rs","content":"..."}],"follow_up_tasks":[]}
 "#;
+
+const RETRY_CORRECTION_PROMPT: &str =
+    "Your previous response was not valid JSON. Respond with ONLY a valid JSON object matching the schema above. No prose, no markdown fences.";
+
+const MAX_EXECUTION_RETRIES: u32 = 2;
 
 pub struct DevLoopEngine {
     store: Arc<RocksStore>,
