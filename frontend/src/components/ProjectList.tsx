@@ -6,6 +6,7 @@ import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Text, Menu, Modal, ModalConfirm, Input, Button } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { FolderOpen, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { NewProjectModal } from "./NewProjectModal";
 import styles from "./ProjectList.module.css";
 
 const projectMenuItems: MenuItem[] = [
@@ -40,6 +41,7 @@ export function ProjectList() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<ChatSession | null>(null);
   const [deleteSessionLoading, setDeleteSessionLoading] = useState(false);
+  const [showNewProject, setShowNewProject] = useState(false);
 
   const ctxMenuRef = useRef<HTMLDivElement>(null);
 
@@ -260,7 +262,7 @@ export function ProjectList() {
     <div>
       <div className={styles.header}>
         <Text variant="muted" size="xs" weight="semibold">PROJECTS</Text>
-        <ButtonPlus onClick={() => navigate("/new-project")} size="sm" title="New Project" />
+        <ButtonPlus onClick={() => setShowNewProject(true)} size="sm" title="New Project" />
       </div>
 
       {projects.length === 0 ? (
@@ -350,6 +352,16 @@ export function ProjectList() {
         cancelLabel="Cancel"
         danger
         isLoading={deleteSessionLoading}
+      />
+
+      <NewProjectModal
+        isOpen={showNewProject}
+        onClose={() => setShowNewProject(false)}
+        onCreated={(pid) => {
+          setShowNewProject(false);
+          fetchProjects();
+          navigate(`/projects/${pid}`);
+        }}
       />
     </div>
   );
