@@ -20,11 +20,12 @@ export function Sidekick() {
     close,
   } = useSidekick();
 
-  const streamEndRef = useRef<HTMLDivElement>(null);
+  const streamAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mode === "streaming" && streamEndRef.current) {
-      streamEndRef.current.scrollIntoView({ behavior: "auto" });
+    const el = streamAreaRef.current;
+    if (mode === "streaming" && el) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [streamedText, savedSpecs, mode]);
 
@@ -53,9 +54,11 @@ export function Sidekick() {
                 )}
               </div>
             )}
-            <div className={styles.streamArea}>
+            <div className={styles.streamArea} ref={streamAreaRef}>
               {streamedText ? (
-                <div className={styles.streamText}>{streamedText}</div>
+                <pre className={styles.streamPre}>
+                  <code>{streamedText}</code>
+                </pre>
               ) : (
                 <Text variant="muted" size="sm">
                   Waiting for response...
@@ -75,7 +78,6 @@ export function Sidekick() {
                     </div>
                   </div>
                 ))}
-              <div ref={streamEndRef} />
             </div>
           </>
         )}
