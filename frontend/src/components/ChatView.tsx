@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Text, Button } from "@cypher-asi/zui";
+import { Text, Button, Menu } from "@cypher-asi/zui";
+import type { MenuItem } from "@cypher-asi/zui";
 import { ArrowUp, Plus, MessageSquare, FileText } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
@@ -29,12 +30,15 @@ export function ChatView() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
 
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     if (autoScrollRef.current && messageAreaRef.current) {
@@ -73,6 +77,21 @@ export function ChatView() {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!plusMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
+        setPlusMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [plusMenuOpen]);
+
+  const plusMenuItems: MenuItem[] = [
+    { id: "generate_specs", label: "Generate Specs", icon: <FileText size={14} /> },
+  ];
 
   const handleScroll = () => {
     const el = messageAreaRef.current;
@@ -309,22 +328,34 @@ export function ChatView() {
           />
           <div className={styles.inputToolbar}>
             <div className={styles.toolbarLeft}>
-              <button
-                type="button"
-                className={styles.attachButton}
-                aria-label="Attach"
-              >
-                <Plus size={18} />
-              </button>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<FileText size={14} />}
-                onClick={() => sendMessage("Generate specs for this project", "generate_specs")}
-                disabled={isStreaming}
-              >
-                Generate Specs
-              </Button>
+              <div ref={plusMenuRef} className={styles.plusMenuWrap}>
+                <button
+                  type="button"
+                  className={styles.attachButton}
+                  onClick={() => setPlusMenuOpen((v) => !v)}
+                  aria-label="Actions"
+                >
+                  <Plus size={18} />
+                </button>
+                {plusMenuOpen && (
+                  <div className={styles.plusMenu}>
+                    <Menu
+                      items={plusMenuItems}
+                      onChange={(id) => {
+                        setPlusMenuOpen(false);
+                        if (id === "generate_specs") {
+                          sendMessage("Generate specs for this project", "generate_specs");
+                        }
+                      }}
+                      background="solid"
+                      border="solid"
+                      rounded="md"
+                      width={200}
+                      isOpen
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div className={styles.toolbarRight}>
               <button

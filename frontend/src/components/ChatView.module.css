@@ -226,6 +226,18 @@
   color: var(--color-text);
 }
 
+.plusMenuWrap {
+  position: relative;
+}
+
+.plusMenu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 100;
+  margin-bottom: var(--space-1);
+}
+
 .sendButton {
   display: flex;
   align-items: center;
