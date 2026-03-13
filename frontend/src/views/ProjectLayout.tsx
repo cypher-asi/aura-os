@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useMatch, Outlet } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project } from "../types";
@@ -7,7 +7,7 @@ import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { StatusBadge } from "../components/StatusBadge";
 import { PageEmptyState, Button, Spinner, Tabs, Text } from "@cypher-asi/zui";
-import { Play, Archive, FileText, ListChecks, Info } from "lucide-react";
+import { Play, Archive, FileText, ListChecks, Info, Square } from "lucide-react";
 import styles from "./aura.module.css";
 
 export function ProjectLayout() {
@@ -23,6 +23,7 @@ export function ProjectLayout() {
   const [message, setMessage] = useState("");
   const { subscribe } = useEventContext();
   const sidekick = useSidekick();
+  const genAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const unsubs = [
@@ -56,6 +57,8 @@ export function ProjectLayout() {
   }
 
   const handleGenerateSpecs = async () => {
+    const controller = new AbortController();
+    genAbortRef.current = controller;
     setGenLoading(true);
     setMessage("");
     sidekick.startStreaming("Generating Specs");
@@ -64,19 +67,19 @@ export function ProjectLayout() {
       onProgress(stage) {
         sidekick.setStreamStage(stage);
       },
-      onDelta(text) {
-        sidekick.appendDelta(text);
-      },
+      onDelta() {},
       onGenerating(tokens) {
         sidekick.setTokenCount(tokens);
       },
-      onSpecSaved() {
+      onSpecSaved(spec) {
+        sidekick.appendSavedSpec(spec);
         if (!navigated) {
           navigated = true;
           navigate(`/projects/${project.project_id}/specs`);
         }
       },
       onComplete(specs) {
+        genAbortRef.current = null;
         setMessage(`Generated ${specs.length} spec files`);
         setGenLoading(false);
         sidekick.finishStreaming();
@@ -85,11 +88,20 @@ export function ProjectLayout() {
         }
       },
       onError(msg) {
+        genAbortRef.current = null;
         setMessage(msg);
         setGenLoading(false);
         sidekick.finishStreaming();
       },
-    });
+    }, controller.signal);
+  };
+
+  const handleStopGeneration = () => {
+    genAbortRef.current?.abort();
+    genAbortRef.current = null;
+    setGenLoading(false);
+    setMessage("Spec generation cancelled");
+    sidekick.finishStreaming();
   };
 
   const handleExtractTasks = async () => {
@@ -129,7 +141,14 @@ export function ProjectLayout() {
           onChange={(id) => navigate(`/projects/${project.project_id}/${id}`)}
         />
         <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
-          <Button variant="ghost" size="sm" iconOnly icon={genLoading ? <Spinner size="sm" /> : <FileText size={16} />} onClick={handleGenerateSpecs} disabled={genLoading} title="Generate Specs" />
+          {genLoading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+              <Spinner size="sm" />
+              <Button variant="danger" size="sm" iconOnly icon={<Square size={14} fill="currentColor" />} onClick={handleStopGeneration} title="Stop Generation" />
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" iconOnly icon={<FileText size={16} />} onClick={handleGenerateSpecs} title="Generate Specs" />
+          )}
           <Button variant="ghost" size="sm" iconOnly icon={extractLoading ? <Spinner size="sm" /> : <ListChecks size={16} />} onClick={handleExtractTasks} disabled={extractLoading} title="Extract Tasks" />
           <Button variant="filled" size="sm" iconOnly icon={<Play size={16} />} onClick={() => navigate(`/projects/${project.project_id}/execution`)} title="Start Dev Loop" />
           {project.current_status !== "archived" && (

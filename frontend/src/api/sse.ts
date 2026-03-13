@@ -8,8 +8,9 @@ export async function streamSSE<T extends string>(
   url: string,
   init: RequestInit,
   callbacks: SSECallbacks<T>,
+  signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(url, init);
+  const response = await fetch(url, { ...init, signal });
 
   if (!response.ok) {
     const text = await response.text().catch(() => response.statusText);
@@ -62,6 +63,7 @@ export async function streamSSE<T extends string>(
       }
     }
   } catch (err) {
+    if (signal?.aborted) return;
     callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));
     return;
   }

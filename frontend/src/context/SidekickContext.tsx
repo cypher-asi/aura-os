@@ -10,6 +10,7 @@ interface SidekickState {
   streamedText: string;
   streamStage: string;
   tokenCount: number;
+  savedSpecs: Spec[];
   selectedSpec: Spec | null;
   infoContent: ReactNode;
 }
@@ -19,6 +20,7 @@ interface SidekickActions {
   appendDelta: (text: string) => void;
   setStreamStage: (stage: string) => void;
   setTokenCount: (count: number) => void;
+  appendSavedSpec: (spec: Spec) => void;
   finishStreaming: () => void;
   viewSpec: (spec: Spec) => void;
   showInfo: (title: string, content: ReactNode) => void;
@@ -35,6 +37,7 @@ const INITIAL_STATE: SidekickState = {
   streamedText: "",
   streamStage: "",
   tokenCount: 0,
+  savedSpecs: [],
   selectedSpec: null,
   infoContent: null,
 };
@@ -54,6 +57,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       streamedText: "",
       streamStage: "",
       tokenCount: 0,
+      savedSpecs: [],
       selectedSpec: null,
       infoContent: null,
     });
@@ -79,6 +83,14 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const appendSavedSpec = useCallback((spec: Spec) => {
+    setState((prev) =>
+      prev.mode === "streaming"
+        ? { ...prev, savedSpecs: [...prev.savedSpecs, spec] }
+        : prev,
+    );
+  }, []);
+
   const finishStreaming = useCallback(() => {
     setState((prev) =>
       prev.mode === "streaming" ? { ...prev, mode: "idle" } : prev,
@@ -93,6 +105,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       streamedText: "",
       streamStage: "",
       tokenCount: 0,
+      savedSpecs: [],
       selectedSpec: spec,
       infoContent: null,
     });
@@ -106,6 +119,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       streamedText: "",
       streamStage: "",
       tokenCount: 0,
+      savedSpecs: [],
       selectedSpec: null,
       infoContent: content,
     });
@@ -123,6 +137,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         streamedText: "",
         streamStage: "",
         tokenCount: 0,
+        savedSpecs: [],
         selectedSpec: null,
         infoContent: content,
       };
@@ -141,6 +156,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         appendDelta,
         setStreamStage,
         setTokenCount,
+        appendSavedSpec,
         finishStreaming,
         viewSpec,
         showInfo,

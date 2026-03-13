@@ -111,7 +111,7 @@ export const api = {
     apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate`, {
       method: "POST",
     }),
-  generateSpecsStream: (projectId: ProjectId, cb: SpecGenStreamCallbacks) =>
+  generateSpecsStream: (projectId: ProjectId, cb: SpecGenStreamCallbacks, signal?: AbortSignal) =>
     streamSSE<"progress" | "delta" | "generating" | "spec_saved" | "complete" | "error">(
       `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
       { method: "POST" },
@@ -143,6 +143,7 @@ export const api = {
           cb.onError(err.message);
         },
       },
+      signal,
     ),
 
   // Tasks

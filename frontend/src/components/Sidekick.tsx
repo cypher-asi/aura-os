@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Drawer, Text } from "@cypher-asi/zui";
+import { Drawer, Text, Spinner } from "@cypher-asi/zui";
 import { useSidekick } from "../context/SidekickContext";
 import styles from "./Sidekick.module.css";
 
@@ -11,9 +11,9 @@ export function Sidekick() {
     isOpen,
     mode,
     title,
-    streamedText,
     streamStage,
     tokenCount,
+    savedSpecs,
     selectedSpec,
     infoContent,
     close,
@@ -25,7 +25,7 @@ export function Sidekick() {
     if (mode === "streaming" && streamEndRef.current) {
       streamEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [streamedText, mode]);
+  }, [savedSpecs, streamStage, mode]);
 
   return (
     <Drawer
@@ -43,6 +43,7 @@ export function Sidekick() {
           <>
             {streamStage && (
               <div className={styles.stageLabel}>
+                <Spinner size="sm" />
                 <span>{streamStage}</span>
                 {tokenCount > 0 && (
                   <span className={styles.tokenCount}>
@@ -52,7 +53,21 @@ export function Sidekick() {
               </div>
             )}
             <div className={styles.streamArea}>
-              {streamedText || (
+              {savedSpecs.length > 0 ? (
+                savedSpecs.map((spec) => (
+                  <div key={spec.spec_id} className={styles.savedSpecBlock}>
+                    <div className={styles.savedSpecTitle}>{spec.title}</div>
+                    <div className={styles.markdown}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                      >
+                        {spec.markdown_contents}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                ))
+              ) : (
                 <Text variant="muted" size="sm">
                   Waiting for response...
                 </Text>
