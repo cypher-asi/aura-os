@@ -405,6 +405,41 @@ declare module "@cypher-asi/zui" {
   }
   export function Navigator(props: NavigatorProps): JSX.Element;
 
+  // Menu
+  export type MenuBackground = "none" | "solid" | "transparent" | "glass";
+  export type MenuRounded = "none" | "sm" | "md" | "lg";
+  export type MenuBorder = "none" | "solid" | "future";
+
+  export interface MenuItemProps {
+    id: string;
+    label: string;
+    icon?: ReactNode;
+    status?: ReactNode;
+    disabled?: boolean;
+    children?: MenuItemProps[];
+  }
+
+  export interface MenuSeparator {
+    type: "separator";
+  }
+
+  export type MenuItem = MenuItemProps | MenuSeparator;
+
+  export interface MenuProps {
+    title?: string;
+    items: MenuItem[];
+    value?: string | string[];
+    onChange?: (id: string) => void;
+    background?: MenuBackground;
+    rounded?: MenuRounded;
+    border?: MenuBorder;
+    className?: string;
+    width?: number | string;
+    isOpen?: boolean;
+  }
+
+  export function Menu(props: MenuProps): JSX.Element;
+
   // Explorer
   export interface ExplorerNode {
     id: string;
