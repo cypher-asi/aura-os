@@ -64,13 +64,6 @@
 }
 
 
-.sprintEmptyState {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .sprintPromptArea {
   flex: 1;
   resize: none;
@@ -102,6 +95,12 @@
 .lastGenerated {
   margin-right: auto;
   white-space: nowrap;
+}
+
+.tokenCount {
+  margin-right: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .generateBtn {

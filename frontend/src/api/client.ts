@@ -94,6 +94,13 @@ export interface SpecGenStreamCallbacks {
   onError: (message: string) => void;
 }
 
+export interface SprintStreamCallbacks {
+  onDelta: (text: string) => void;
+  onGenerating: (inputTokens: number, outputTokens: number) => void;
+  onDone: (sprint: Sprint) => void;
+  onError: (message: string) => void;
+}
+
 export interface ChatStreamCallbacks {
   onDelta: (text: string) => void;
   onSpecSaved?: (spec: Spec) => void;
@@ -252,6 +259,34 @@ export const api = {
     apiFetch<Sprint>(`/api/projects/${projectId}/sprints/${sprintId}/generate`, {
       method: "POST",
     }),
+  generateSprintStream: (projectId: ProjectId, sprintId: SprintId, cb: SprintStreamCallbacks, signal?: AbortSignal) =>
+    streamSSE<"delta" | "generating" | "done" | "error">(
+      `${BASE_URL}/api/projects/${projectId}/sprints/${sprintId}/generate/stream`,
+      { method: "POST" },
+      {
+        onEvent(eventType, data) {
+          const d = data as Record<string, unknown>;
+          switch (eventType) {
+            case "delta":
+              cb.onDelta(d.text as string);
+              break;
+            case "generating":
+              cb.onGenerating(d.input_tokens as number, d.output_tokens as number);
+              break;
+            case "done":
+              cb.onDone(d.sprint as Sprint);
+              break;
+            case "error":
+              cb.onError(d.message as string);
+              break;
+          }
+        },
+        onError(err) {
+          cb.onError(err.message);
+        },
+      },
+      signal,
+    ),
 
   // Specs
   listSpecs: (projectId: ProjectId) =>

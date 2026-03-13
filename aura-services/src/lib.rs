@@ -14,7 +14,7 @@ pub mod task_extraction;
 pub use agent::AgentService;
 pub use auth::AuthService;
 pub use chat::{ChatService, ChatStreamEvent};
-pub use claude::ClaudeClient;
+pub use claude::{ClaudeClient, ClaudeStreamEvent};
 pub use error::{
     AgentError, AuthError, ChatError, ClaudeClientError, GitHubError, OrgError, ProjectError,
     SessionError, SpecGenError, TaskError,
