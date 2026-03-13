@@ -171,6 +171,7 @@ impl DevLoopEngine {
     ) -> Result<LoopOutcome, EngineError> {
         let api_key = self.settings.get_decrypted_api_key()?;
         let mut completed_count: usize = 0;
+        let mut work_log: Vec<String> = Vec::new();
 
         let promoted = self.task_service.resolve_initial_readiness(&project_id)?;
         for t in &promoted {
@@ -240,6 +241,7 @@ impl DevLoopEngine {
                             task_id: task.task_id,
                             reason: e.to_string(),
                         });
+                        work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                         Some(reason)
                     } else {
                         self.task_service.complete_task(
@@ -279,6 +281,23 @@ impl DevLoopEngine {
                             execution.input_tokens,
                             execution.output_tokens,
                         )?;
+
+                        let changed_files: Vec<&str> = execution
+                            .file_ops
+                            .iter()
+                            .map(|op| match op {
+                                FileOp::Create { path, .. }
+                                | FileOp::Modify { path, .. }
+                                | FileOp::Delete { path } => path.as_str(),
+                            })
+                            .collect();
+                        work_log.push(format!(
+                            "Task (completed): {}\nNotes: {}\nFiles changed: {}",
+                            task.title,
+                            execution.notes,
+                            changed_files.join(", "),
+                        ));
+
                         None
                     }
                 }
@@ -294,6 +313,7 @@ impl DevLoopEngine {
                         task_id: task.task_id,
                         reason: e.to_string(),
                     });
+                    work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                     Some(reason)
                 }
             };
@@ -315,15 +335,20 @@ impl DevLoopEngine {
                 self.session_service
                     .get_session(&project_id, &agent_id, &session.session_id)?;
             if self.session_service.should_rollover(&current_session) {
+                let project = self.project_service.get_project(&project_id)?;
+                let history = format!(
+                    "Project: {}\nDescription: {}\n\nSession work log ({} tasks completed):\n\n{}",
+                    project.name,
+                    project.description,
+                    completed_count,
+                    work_log.join("\n\n---\n\n"),
+                );
                 let summary = self
                     .session_service
                     .generate_rollover_summary(
                         &self.claude_client,
                         &api_key,
-                        &format!(
-                            "Completed {} tasks so far. Session context is full.",
-                            completed_count
-                        ),
+                        &history,
                     )
                     .await?;
                 let new_session = self.session_service.rollover_session(
@@ -338,6 +363,7 @@ impl DevLoopEngine {
                     new_session_id: new_session.session_id,
                 });
                 session = new_session;
+                work_log.clear();
             }
         }
     }
