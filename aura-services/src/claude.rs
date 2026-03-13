@@ -1,9 +1,6 @@
-use bytes::Bytes;
-use futures_core::Stream;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tokio_stream::wrappers::UnboundedReceiverStream;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::error::ClaudeClientError;
 
@@ -53,41 +50,6 @@ struct ContentBlock {
     text: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct StreamEventData {
-    #[serde(rename = "type")]
-    event_type: Option<String>,
-    delta: Option<StreamDelta>,
-    usage: Option<StreamUsage>,
-    message: Option<StreamMessage>,
-    content_block: Option<serde_json::Value>,
-    index: Option<u64>,
-    error: Option<StreamErrorData>,
-}
-
-#[derive(Deserialize)]
-struct StreamDelta {
-    #[serde(rename = "type")]
-    delta_type: Option<String>,
-    text: Option<String>,
-    stop_reason: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct StreamUsage {
-    input_tokens: Option<u64>,
-    output_tokens: Option<u64>,
-}
-
-#[derive(Deserialize)]
-struct StreamMessage {
-    usage: Option<StreamUsage>,
-}
-
-#[derive(Deserialize)]
-struct StreamErrorData {
-    message: Option<String>,
-}
 
 impl ClaudeClient {
     pub fn new() -> Self {
@@ -204,6 +166,8 @@ impl ClaudeClient {
         max_tokens: u32,
         event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
     ) -> Result<String, ClaudeClientError> {
+        use tokio_stream::StreamExt;
+
         let request = MessagesRequest {
             model: DEFAULT_MODEL.to_string(),
             max_tokens,
@@ -252,47 +216,112 @@ impl ClaudeClient {
             });
         }
 
-        use futures_core::StreamExt as _;
-        // Not available—use reqwest's bytes_stream with tokio_stream
         let mut byte_stream = response.bytes_stream();
-
         let mut line_buf = String::new();
-        let mut current_event_type = String::new();
         let mut accumulated_text = String::new();
         let mut input_tokens: u64 = 0;
         let mut output_tokens: u64 = 0;
         let mut stop_reason = String::from("end_turn");
 
-        use futures_core::stream::Stream as _;
-        use std::pin::Pin;
-        use std::task::{Context, Poll};
+        while let Some(chunk_result) = byte_stream.next().await {
+            let chunk = chunk_result.map_err(|e| {
+                error!(error = %e, "Error reading streaming chunk");
+                ClaudeClientError::Http(e)
+            })?;
 
-        let mut pinned = std::pin::pin!(byte_stream);
+            line_buf.push_str(&String::from_utf8_lossy(&chunk));
 
-        loop {
-            let chunk = {
-                use futures_core::Stream;
-                let mut cx = std::task::Context::from_waker(futures_core::task::noop_waker_ref());
-                // We need to poll in an async context; use a helper approach instead
-                break; // placeholder, we'll restructure
-            };
+            while let Some(double_newline_pos) = line_buf.find("\n\n") {
+                let frame = line_buf[..double_newline_pos].to_string();
+                line_buf = line_buf[double_newline_pos + 2..].to_string();
+
+                let mut event_type = String::new();
+                let mut data_str = String::new();
+
+                for line in frame.lines() {
+                    if let Some(val) = line.strip_prefix("event: ") {
+                        event_type = val.trim().to_string();
+                    } else if let Some(val) = line.strip_prefix("data: ") {
+                        data_str = val.trim().to_string();
+                    }
+                }
+
+                if event_type.is_empty() || data_str.is_empty() {
+                    continue;
+                }
+
+                match event_type.as_str() {
+                    "message_start" => {
+                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                            if let Some(usage) = data.get("message").and_then(|m| m.get("usage")) {
+                                if let Some(it) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                                    input_tokens = it;
+                                }
+                            }
+                        }
+                    }
+                    "content_block_delta" => {
+                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                            if let Some(text) = data.get("delta").and_then(|d| d.get("text")).and_then(|t| t.as_str()) {
+                                accumulated_text.push_str(text);
+                                let _ = event_tx.send(ClaudeStreamEvent::Delta(text.to_string()));
+                            }
+                        }
+                    }
+                    "message_delta" => {
+                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                            if let Some(sr) = data.get("delta").and_then(|d| d.get("stop_reason")).and_then(|v| v.as_str()) {
+                                stop_reason = sr.to_string();
+                            }
+                            if let Some(usage) = data.get("usage") {
+                                if let Some(ot) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                                    output_tokens = ot;
+                                }
+                            }
+                        }
+                    }
+                    "message_stop" => {
+                        debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
+                    }
+                    "error" => {
+                        let msg = serde_json::from_str::<serde_json::Value>(&data_str)
+                            .ok()
+                            .and_then(|v| v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(String::from))
+                            .unwrap_or_else(|| data_str.clone());
+                        let _ = event_tx.send(ClaudeStreamEvent::Error(msg.clone()));
+                        return Err(ClaudeClientError::Parse(msg));
+                    }
+                    _ => {}
+                }
+            }
         }
 
-        // Actually, let's use tokio_stream's StreamExt which provides next()
-        // reqwest bytes_stream returns impl Stream<Item = Result<Bytes, reqwest::Error>>
-        // We need to iterate over it asynchronously. We can use `while let` with StreamExt.
+        let _ = event_tx.send(ClaudeStreamEvent::Done {
+            stop_reason: stop_reason.clone(),
+            input_tokens,
+            output_tokens,
+        });
 
-        // Since futures_core::Stream doesn't have .next(), use tokio_stream's StreamExt
-        use tokio_stream::StreamExt;
-        let mut byte_stream = tokio_stream::StreamExt::map(
-            response.bytes_stream(),
-            |r| r,
+        info!(
+            stop_reason = %stop_reason,
+            input_tokens,
+            output_tokens,
+            response_len = accumulated_text.len(),
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            "Claude streaming complete"
         );
 
-        // Hmm, we already consumed response above. Let me restructure.
-        // Actually the response was consumed above. Let me fix this.
+        if stop_reason == "max_tokens" {
+            error!(max_tokens, "Claude streaming response truncated — hit max_tokens limit");
+            return Err(ClaudeClientError::Truncated { max_tokens });
+        }
 
-        todo!("restructure")
+        if accumulated_text.is_empty() {
+            error!("Claude streaming returned empty text content");
+            return Err(ClaudeClientError::Parse("no text content in streaming response".into()));
+        }
+
+        Ok(accumulated_text)
     }
 }
 

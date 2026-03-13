@@ -13,6 +13,7 @@ import type {
   ProjectProgress,
   ApiError,
 } from "../types";
+import { streamSSE } from "./sse";
 
 const BASE_URL = "";
 
@@ -65,6 +66,13 @@ export interface LoopStatusResponse {
   project_id: ProjectId | null;
 }
 
+export interface SpecGenStreamCallbacks {
+  onProgress: (stage: string) => void;
+  onGenerating: (tokens: number) => void;
+  onComplete: (specs: Spec[]) => void;
+  onError: (message: string) => void;
+}
+
 export const api = {
   // Settings
   getApiKeyInfo: () => apiFetch<ApiKeyInfo>("/api/settings/api-key"),
@@ -101,6 +109,33 @@ export const api = {
     apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate`, {
       method: "POST",
     }),
+  generateSpecsStream: (projectId: ProjectId, cb: SpecGenStreamCallbacks) =>
+    streamSSE<"progress" | "generating" | "complete" | "error">(
+      `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
+      { method: "POST" },
+      {
+        onEvent(eventType, data) {
+          const d = data as Record<string, unknown>;
+          switch (eventType) {
+            case "progress":
+              cb.onProgress(d.stage as string);
+              break;
+            case "generating":
+              cb.onGenerating(d.tokens as number);
+              break;
+            case "complete":
+              cb.onComplete(d.specs as Spec[]);
+              break;
+            case "error":
+              cb.onError(d.message as string);
+              break;
+          }
+        },
+        onError(err) {
+          cb.onError(err.message);
+        },
+      },
+    ),
 
   // Tasks
   listTasks: (projectId: ProjectId) =>

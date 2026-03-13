@@ -1,10 +1,16 @@
+use std::convert::Infallible;
+
 use axum::extract::{Path, State};
+use axum::response::sse::{Event, Sse};
 use axum::Json;
 use tokio::sync::mpsc;
+use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio_stream::StreamExt;
 use tracing::{error, info};
 
 use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
+use aura_services::SpecStreamEvent;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -94,4 +100,62 @@ pub async fn generate_specs(
             })
         }
     }
+}
+
+pub async fn generate_specs_stream(
+    State(state): State<AppState>,
+    Path(project_id): Path<ProjectId>,
+) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+    info!(%project_id, "Streaming spec generation requested");
+
+    let _ = state.event_tx.send(EngineEvent::SpecGenStarted { project_id });
+
+    let (tx, rx) = mpsc::unbounded_channel::<SpecStreamEvent>();
+
+    let spec_gen = state.spec_gen_service.clone();
+    let pid = project_id;
+    tokio::spawn(async move {
+        spec_gen.generate_specs_streaming(&pid, tx).await;
+    });
+
+    let event_tx_map = state.event_tx.clone();
+    let stream = UnboundedReceiverStream::new(rx).map(move |evt| {
+        let sse_event = match &evt {
+            SpecStreamEvent::Progress(stage) => {
+                Event::default()
+                    .event("progress")
+                    .json_data(serde_json::json!({ "stage": stage }))
+                    .unwrap()
+            }
+            SpecStreamEvent::Generating { tokens } => {
+                Event::default()
+                    .event("generating")
+                    .json_data(serde_json::json!({ "tokens": tokens }))
+                    .unwrap()
+            }
+            SpecStreamEvent::Complete(specs) => {
+                let _ = event_tx_map.send(EngineEvent::SpecGenCompleted {
+                    project_id,
+                    spec_count: specs.len(),
+                });
+                Event::default()
+                    .event("complete")
+                    .json_data(serde_json::json!({ "specs": specs }))
+                    .unwrap()
+            }
+            SpecStreamEvent::Error(msg) => {
+                let _ = event_tx_map.send(EngineEvent::SpecGenFailed {
+                    project_id,
+                    reason: msg.clone(),
+                });
+                Event::default()
+                    .event("error")
+                    .json_data(serde_json::json!({ "message": msg }))
+                    .unwrap()
+            }
+        };
+        Ok(sse_event)
+    });
+
+    Sse::new(stream)
 }

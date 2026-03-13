@@ -16,6 +16,7 @@ export function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
   const [genStage, setGenStage] = useState("");
+  const [genTokens, setGenTokens] = useState(0);
   const [extractLoading, setExtractLoading] = useState(false);
   const [message, setMessage] = useState("");
   const { subscribe } = useEventContext();
@@ -63,15 +64,29 @@ export function ProjectDetail() {
 
   const handleGenerateSpecs = async () => {
     setGenLoading(true);
+    setGenStage("");
+    setGenTokens(0);
     setMessage("");
-    try {
-      const specs = await api.generateSpecs(project.project_id);
-      setMessage(`Generated ${specs.length} spec files`);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to generate specs");
-    } finally {
-      setGenLoading(false);
-    }
+    await api.generateSpecsStream(project.project_id, {
+      onProgress(stage) {
+        setGenStage(stage);
+      },
+      onGenerating(tokens) {
+        setGenTokens(tokens);
+      },
+      onComplete(specs) {
+        setMessage(`Generated ${specs.length} spec files`);
+        setGenLoading(false);
+        setGenStage("");
+        setGenTokens(0);
+      },
+      onError(msg) {
+        setMessage(msg);
+        setGenLoading(false);
+        setGenStage("");
+        setGenTokens(0);
+      },
+    });
   };
 
   const handleExtractTasks = async () => {
@@ -118,7 +133,9 @@ export function ProjectDetail() {
           {genLoading ? <><Spinner size="sm" /> Generating...</> : "Generate Specs"}
         </Button>
         {genLoading && genStage && (
-          <span className={styles.progressStage}>{genStage}</span>
+          <span className={styles.progressStage}>
+            {genStage}{genTokens > 0 ? ` — ${genTokens.toLocaleString()} tokens generated` : ""}
+          </span>
         )}
         <Button variant="primary" size="sm" onClick={handleExtractTasks} disabled={extractLoading}>
           {extractLoading ? <><Spinner size="sm" /> Extracting...</> : "Extract Tasks"}

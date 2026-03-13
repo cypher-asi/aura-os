@@ -9,10 +9,19 @@ use aura_core::*;
 use aura_settings::SettingsService;
 use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
 
-use crate::claude::ClaudeClient;
+use crate::claude::{ClaudeClient, ClaudeStreamEvent};
 use crate::error::SpecGenError;
 
 pub type ProgressTx = mpsc::UnboundedSender<String>;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", content = "data")]
+pub enum SpecStreamEvent {
+    Progress(String),
+    Generating { tokens: usize },
+    Complete(Vec<Spec>),
+    Error(String),
+}
 
 const MAX_TOKENS: u32 = 16384;
 
@@ -148,17 +157,132 @@ impl SpecGenerationService {
             &format!("Saving {} specs to database", new_specs.len()),
         );
 
+        self.save_specs(project_id, &new_specs)?;
+        info!(%project_id, count = new_specs.len(), "Specs saved to database");
+
+        Ok(new_specs)
+    }
+
+    pub async fn generate_specs_streaming(
+        &self,
+        project_id: &ProjectId,
+        tx: mpsc::UnboundedSender<SpecStreamEvent>,
+    ) {
+        let send = |evt: SpecStreamEvent| {
+            let _ = tx.send(evt);
+        };
+
+        send(SpecStreamEvent::Progress("Loading project".into()));
+        info!(%project_id, "Loading project for streaming spec generation");
+
+        let project = match self.store.get_project(project_id) {
+            Ok(p) => p,
+            Err(aura_store::StoreError::NotFound(_)) => {
+                send(SpecStreamEvent::Error(format!("Project not found: {project_id}")));
+                return;
+            }
+            Err(e) => {
+                send(SpecStreamEvent::Error(format!("Store error: {e}")));
+                return;
+            }
+        };
+
+        send(SpecStreamEvent::Progress("Reading requirements document".into()));
+
+        let req_path = &project.requirements_doc_path;
+        if !std::path::Path::new(req_path).is_file() {
+            send(SpecStreamEvent::Error(format!("Requirements file not found: {req_path}")));
+            return;
+        }
+        let requirements_content = match std::fs::read_to_string(req_path) {
+            Ok(c) => c,
+            Err(e) => {
+                send(SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
+                return;
+            }
+        };
+
+        send(SpecStreamEvent::Progress("Decrypting API key".into()));
+
+        let api_key = match self.settings.get_decrypted_api_key() {
+            Ok(k) => k,
+            Err(e) => {
+                send(SpecStreamEvent::Error(format!("API key error: {e}")));
+                return;
+            }
+        };
+
+        send(SpecStreamEvent::Progress("Calling Claude to generate specs".into()));
+
+        let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+
+        let tx_fwd = tx.clone();
+        let forwarder = tokio::spawn(async move {
+            let mut token_count: usize = 0;
+            let mut delta_count: usize = 0;
+            while let Some(evt) = claude_rx.recv().await {
+                match evt {
+                    ClaudeStreamEvent::Delta(text) => {
+                        token_count += text.split_whitespace().count().max(1);
+                        delta_count += 1;
+                        if delta_count % 20 == 0 {
+                            let _ = tx_fwd.send(SpecStreamEvent::Generating { tokens: token_count });
+                        }
+                    }
+                    ClaudeStreamEvent::Done { .. } => {
+                        let _ = tx_fwd.send(SpecStreamEvent::Generating { tokens: token_count });
+                    }
+                    ClaudeStreamEvent::Error(msg) => {
+                        let _ = tx_fwd.send(SpecStreamEvent::Error(msg));
+                    }
+                }
+            }
+        });
+
+        let response = self.claude_client.complete_stream(
+            &api_key,
+            SPEC_GENERATION_SYSTEM_PROMPT,
+            &requirements_content,
+            MAX_TOKENS,
+            claude_tx,
+        ).await;
+
+        let _ = forwarder.await;
+
+        let response_text = match response {
+            Ok(text) => text,
+            Err(e) => {
+                send(SpecStreamEvent::Error(format!("Claude API error: {e}")));
+                return;
+            }
+        };
+
+        send(SpecStreamEvent::Progress("Parsing AI response".into()));
+
+        let raw_specs = match Self::parse_claude_response(&response_text) {
+            Ok(specs) => specs,
+            Err(e) => {
+                send(SpecStreamEvent::Error(format!("Parse error: {e}")));
+                return;
+            }
+        };
+
+        let new_specs = Self::raw_to_specs(project_id, raw_specs);
+
+        send(SpecStreamEvent::Progress(format!("Saving {} specs to database", new_specs.len())));
+
+        if let Err(e) = self.save_specs(project_id, &new_specs) {
+            send(SpecStreamEvent::Error(format!("Failed to save specs: {e}")));
+            return;
+        }
+
+        info!(%project_id, count = new_specs.len(), "Streaming spec generation complete");
+        send(SpecStreamEvent::Complete(new_specs));
+    }
+
+    fn save_specs(&self, project_id: &ProjectId, new_specs: &[Spec]) -> Result<(), SpecGenError> {
         let existing_specs = self.store.list_specs_by_project(project_id)?;
         let existing_tasks = self.store.list_tasks_by_project(project_id)?;
-
-        if !existing_specs.is_empty() || !existing_tasks.is_empty() {
-            info!(
-                %project_id,
-                old_specs = existing_specs.len(),
-                old_tasks = existing_tasks.len(),
-                "Replacing existing specs and tasks"
-            );
-        }
 
         let mut ops: Vec<BatchOp> = Vec::new();
 
@@ -175,7 +299,7 @@ impl SpecGenerationService {
             });
         }
 
-        for spec in &new_specs {
+        for spec in new_specs {
             ops.push(BatchOp::Put {
                 cf: ColumnFamilyName::Specs,
                 key: format!("{}:{}", spec.project_id, spec.spec_id),
@@ -185,9 +309,7 @@ impl SpecGenerationService {
         }
 
         self.store.write_batch(ops)?;
-        info!(%project_id, count = new_specs.len(), "Specs saved to database");
-
-        Ok(new_specs)
+        Ok(())
     }
 
     pub fn list_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, SpecGenError> {
