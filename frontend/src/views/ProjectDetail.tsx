@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { Project } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useEventContext } from "../context/EventContext";
+import { useSidekick } from "../context/SidekickContext";
 import { StatusBadge } from "../components/StatusBadge";
 import { PageHeader, PageEmptyState, Panel, Button, Spinner, Tabs, Text } from "@cypher-asi/zui";
 import { Play, Archive, FileText, ListChecks } from "lucide-react";
@@ -15,32 +16,21 @@ export function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [genLoading, setGenLoading] = useState(false);
-  const [genStage, setGenStage] = useState("");
-  const [genTokens, setGenTokens] = useState(0);
   const [extractLoading, setExtractLoading] = useState(false);
   const [message, setMessage] = useState("");
   const { subscribe } = useEventContext();
+  const sidekick = useSidekick();
 
   useEffect(() => {
     const unsubs = [
-      subscribe("spec_gen_started", (e: EngineEvent) => {
-        if (e.project_id === projectId) {
-          setGenStage("Starting spec generation...");
-        }
-      }),
-      subscribe("spec_gen_progress", (e: EngineEvent) => {
-        if (e.project_id === projectId && e.stage) {
-          setGenStage(e.stage);
-        }
-      }),
       subscribe("spec_gen_completed", (e: EngineEvent) => {
         if (e.project_id === projectId) {
-          setGenStage("");
+          setGenLoading(false);
         }
       }),
       subscribe("spec_gen_failed", (e: EngineEvent) => {
         if (e.project_id === projectId) {
-          setGenStage("");
+          setGenLoading(false);
         }
       }),
     ];
@@ -64,27 +54,28 @@ export function ProjectDetail() {
 
   const handleGenerateSpecs = async () => {
     setGenLoading(true);
-    setGenStage("");
-    setGenTokens(0);
     setMessage("");
+    sidekick.startStreaming("Generating Specs");
     await api.generateSpecsStream(project.project_id, {
       onProgress(stage) {
-        setGenStage(stage);
+        sidekick.setStreamStage(stage);
+      },
+      onDelta(text) {
+        sidekick.appendDelta(text);
       },
       onGenerating(tokens) {
-        setGenTokens(tokens);
+        sidekick.setTokenCount(tokens);
       },
       onComplete(specs) {
         setMessage(`Generated ${specs.length} spec files`);
         setGenLoading(false);
-        setGenStage("");
-        setGenTokens(0);
+        sidekick.finishStreaming();
+        navigate(`/projects/${project.project_id}/specs`);
       },
       onError(msg) {
         setMessage(msg);
         setGenLoading(false);
-        setGenStage("");
-        setGenTokens(0);
+        sidekick.finishStreaming();
       },
     });
   };
@@ -140,12 +131,6 @@ export function ProjectDetail() {
           <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
         </div>
       </Panel>
-
-      {(genLoading && genStage) && (
-        <Text variant="secondary" size="sm" style={{ marginBottom: "var(--space-4)" }}>
-          {genStage}{genTokens > 0 ? ` — ${genTokens.toLocaleString()} tokens generated` : ""}
-        </Text>
-      )}
 
       {message && <Text variant="secondary" size="sm" style={{ marginBottom: "var(--space-4)" }}>{message}</Text>}
 
