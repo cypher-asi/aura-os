@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import type { Project, ChatSession } from "../types";
-import { ButtonPlus, Explorer, Menu, Modal, ModalConfirm, Input, Button, Text } from "@cypher-asi/zui";
+import { ButtonPlus, Explorer, Menu, Modal, Input, Button, Text } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { FolderOpen, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
@@ -380,29 +380,43 @@ export function ProjectList() {
         />
       </Modal>
 
-      <ModalConfirm
+      <Modal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
         title="Delete Project"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmLabel={deleteLoading ? "Deleting..." : "Delete"}
-        cancelLabel="Cancel"
-        danger
-        isLoading={deleteLoading}
-      />
+        size="sm"
+        footer={
+          <div className={styles.confirmFooter}>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleDelete} disabled={deleteLoading} className={styles.dangerButton}>
+              {deleteLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <div className={styles.confirmMessage}>
+          Are you sure you want to delete &ldquo;{deleteTarget?.name}&rdquo;? This action cannot be undone.
+        </div>
+      </Modal>
 
-      <ModalConfirm
+      <Modal
         isOpen={!!deleteSessionTarget}
         onClose={() => setDeleteSessionTarget(null)}
-        onConfirm={handleDeleteSession}
         title="Delete Chat"
-        message={`Are you sure you want to delete this chat session? This action cannot be undone.`}
-        confirmLabel={deleteSessionLoading ? "Deleting..." : "Delete"}
-        cancelLabel="Cancel"
-        danger
-        isLoading={deleteSessionLoading}
-      />
+        size="sm"
+        footer={
+          <div className={styles.confirmFooter}>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteSessionTarget(null)} disabled={deleteSessionLoading}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleDeleteSession} disabled={deleteSessionLoading} className={styles.dangerButton}>
+              {deleteSessionLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <div className={styles.confirmMessage}>
+          Are you sure you want to delete this chat session? This action cannot be undone.
+        </div>
+      </Modal>
 
       <NewProjectModal
         isOpen={showNewProject}
