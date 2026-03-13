@@ -83,6 +83,7 @@ export interface ChatStreamCallbacks {
   onSpecSaved?: (spec: Spec) => void;
   onTaskSaved?: (task: Task) => void;
   onMessageSaved?: (message: ChatMessage) => void;
+  onTitleUpdated?: (session: ChatSession) => void;
   onError: (message: string) => void;
   onDone?: () => void;
 }
@@ -205,6 +206,11 @@ export const api = {
     }),
   listChatSessions: (projectId: ProjectId) =>
     apiFetch<ChatSession[]>(`/api/projects/${projectId}/chat-sessions`),
+  updateChatSession: (projectId: ProjectId, chatSessionId: string, title: string) =>
+    apiFetch<ChatSession>(`/api/projects/${projectId}/chat-sessions/${chatSessionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ title }),
+    }),
   deleteChatSession: (projectId: ProjectId, chatSessionId: string) =>
     apiFetch<void>(`/api/projects/${projectId}/chat-sessions/${chatSessionId}`, {
       method: "DELETE",
@@ -221,7 +227,7 @@ export const api = {
     cb: ChatStreamCallbacks,
     signal?: AbortSignal,
   ) =>
-    streamSSE<"delta" | "spec_saved" | "task_saved" | "message_saved" | "error" | "done">(
+    streamSSE<"delta" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
       `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
       {
         method: "POST",
@@ -243,6 +249,9 @@ export const api = {
               break;
             case "message_saved":
               cb.onMessageSaved?.(d.message as ChatMessage);
+              break;
+            case "title_updated":
+              cb.onTitleUpdated?.(d.session as ChatSession);
               break;
             case "error":
               cb.onError(d.message as string);
