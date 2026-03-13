@@ -5,6 +5,7 @@ import { StatusBadge } from "../components/StatusBadge";
 import { useProjectContext } from "../context/ProjectContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
+import { mergeById } from "../utils/collections";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { ListTodo } from "lucide-react";
@@ -28,19 +29,15 @@ export function TaskList() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  const specs = useMemo(() => {
-    const map = new Map<string, Spec>();
-    for (const s of localSpecs) map.set(s.spec_id, s);
-    for (const s of sidekick.specs) map.set(s.spec_id, s);
-    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
-  }, [localSpecs, sidekick.specs]);
+  const specs = useMemo(
+    () => mergeById(localSpecs, sidekick.specs, "spec_id"),
+    [localSpecs, sidekick.specs],
+  );
 
-  const tasks = useMemo(() => {
-    const map = new Map<string, Task>();
-    for (const t of localTasks) map.set(t.task_id, t);
-    for (const t of sidekick.tasks) map.set(t.task_id, t);
-    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
-  }, [localTasks, sidekick.tasks]);
+  const tasks = useMemo(
+    () => mergeById(localTasks, sidekick.tasks, "task_id"),
+    [localTasks, sidekick.tasks],
+  );
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);

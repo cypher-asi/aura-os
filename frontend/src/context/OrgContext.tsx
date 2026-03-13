@@ -9,6 +9,7 @@ import {
 import type { Org, OrgMember } from "../types";
 import { api } from "../api/client";
 import { useAuth } from "./AuthContext";
+import { ACTIVE_ORG_KEY } from "../constants";
 
 interface OrgContextValue {
   orgs: Org[];
@@ -23,8 +24,6 @@ interface OrgContextValue {
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null);
-
-const ACTIVE_ORG_KEY = "aura-active-org";
 
 export function OrgProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();

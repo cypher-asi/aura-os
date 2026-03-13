@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Sidebar, Tabs, Button, Text, Menu } from "@cypher-asi/zui";
 import { Archive, Info, ArrowLeft, Ellipsis } from "lucide-react";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
+import { useClickOutside } from "../hooks/use-click-outside";
 import { StatusBadge } from "./StatusBadge";
 import { SprintList } from "../views/SprintList";
 import { SpecList } from "../views/SpecList";
@@ -39,16 +40,7 @@ export function Sidekick() {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreBtnRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!moreOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (moreBtnRef.current && !moreBtnRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [moreOpen]);
+  useClickOutside(moreBtnRef, () => setMoreOpen(false), moreOpen);
 
   if (!ctx) {
     return (

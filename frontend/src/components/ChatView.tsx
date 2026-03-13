@@ -8,6 +8,8 @@ import type { MenuItem } from "@cypher-asi/zui";
 import { ArrowUp, Square, Plus, MessageSquare, FileText, ChevronDown } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
+import { useClickOutside } from "../hooks/use-click-outside";
+import { setLastChat } from "../utils/storage";
 import type { ChatMessage } from "../types";
 import styles from "./ChatView.module.css";
 
@@ -49,13 +51,9 @@ export function ChatView() {
     }
   }, []);
 
-  // Persist last visited chat for restoring on app open
   useEffect(() => {
     if (projectId && chatSessionId) {
-      localStorage.setItem(
-        "aura-last-chat",
-        JSON.stringify({ projectId, chatSessionId }),
-      );
+      setLastChat(projectId, chatSessionId);
     }
   }, [projectId, chatSessionId]);
 
@@ -98,27 +96,8 @@ export function ChatView() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!plusMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (plusMenuRef.current && !plusMenuRef.current.contains(e.target as Node)) {
-        setPlusMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [plusMenuOpen]);
-
-  useEffect(() => {
-    if (!modelMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
-        setModelMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [modelMenuOpen]);
+  useClickOutside(plusMenuRef, () => setPlusMenuOpen(false), plusMenuOpen);
+  useClickOutside(modelMenuRef, () => setModelMenuOpen(false), modelMenuOpen);
 
   const MODEL_OPTIONS: Record<string, string> = {
     "opus-4.6": "Opus 4.6",

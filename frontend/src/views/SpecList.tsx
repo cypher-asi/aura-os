@@ -6,6 +6,7 @@ import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
+import { mergeById } from "../utils/collections";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { FileText } from "lucide-react";
@@ -19,12 +20,10 @@ export function SpecList() {
   const { subscribe } = useEventContext();
   const sidekick = useSidekick();
 
-  const mergedSpecs = useMemo(() => {
-    const map = new Map<string, Spec>();
-    for (const s of localSpecs) map.set(s.spec_id, s);
-    for (const s of sidekick.specs) map.set(s.spec_id, s);
-    return Array.from(map.values()).sort((a, b) => a.order_index - b.order_index);
-  }, [localSpecs, sidekick.specs]);
+  const mergedSpecs = useMemo(
+    () => mergeById(localSpecs, sidekick.specs, "spec_id"),
+    [localSpecs, sidekick.specs],
+  );
 
   const fetchSpecs = useCallback(
     (autoSelect?: boolean) => {

@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useOrg } from "../context/OrgContext";
+import { clearLastChatIf } from "../utils/storage";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu, Modal, Input, Button } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
@@ -281,12 +282,7 @@ export function ProjectList() {
     setDeleteLoading(true);
     try {
       await api.deleteProject(deleteTarget.project_id);
-      try {
-        const last = JSON.parse(localStorage.getItem("aura-last-chat") || "{}");
-        if (last.projectId === deleteTarget.project_id) {
-          localStorage.removeItem("aura-last-chat");
-        }
-      } catch { /* ignore */ }
+      clearLastChatIf({ projectId: deleteTarget.project_id });
       if (projectId === deleteTarget.project_id) {
         navigate("/");
       }
@@ -304,12 +300,7 @@ export function ProjectList() {
     setDeleteSessionLoading(true);
     try {
       await api.deleteChatSession(deleteSessionTarget.project_id, deleteSessionTarget.chat_session_id);
-      try {
-        const last = JSON.parse(localStorage.getItem("aura-last-chat") || "{}");
-        if (last.chatSessionId === deleteSessionTarget.chat_session_id) {
-          localStorage.removeItem("aura-last-chat");
-        }
-      } catch { /* ignore */ }
+      clearLastChatIf({ chatSessionId: deleteSessionTarget.chat_session_id });
       if (chatSessionId === deleteSessionTarget.chat_session_id) {
         navigate(`/projects/${deleteSessionTarget.project_id}/chat`);
       }

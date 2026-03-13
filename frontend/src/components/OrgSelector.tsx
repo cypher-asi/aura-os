@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useOrg } from "../context/OrgContext";
 import { Building2, ChevronDown, Plus } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
+import { useClickOutside } from "../hooks/use-click-outside";
 import styles from "./OrgSelector.module.css";
 
 export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -12,16 +13,7 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [creating, setCreating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [dropdownOpen]);
+  useClickOutside(dropdownRef, () => setDropdownOpen(false), dropdownOpen);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;

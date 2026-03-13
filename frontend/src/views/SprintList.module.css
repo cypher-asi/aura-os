@@ -8,7 +8,7 @@
 
 .addButton {
   position: absolute;
-  top: 6px;
+  top: 0;
   right: 4px;
   z-index: 1;
   display: flex;
@@ -16,8 +16,13 @@
   height: var(--control-height-sm);
 }
 
-.sprintListWrap [class*="searchContainer"] input {
+.sprintListWrap [class*="searchContainer"] {
+  padding: 0 !important;
+}
+
+.sprintListWrap [class*="searchContainer"] input[class] {
   padding-right: calc(var(--space-2) + 24px);
+  border-top: none !important;
 }
 
 .emptyWrap {
