@@ -4,8 +4,8 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 
 use aura_engine::{EngineEvent, LoopHandle};
 use aura_services::{
-    AgentService, ClaudeClient, ProjectService, SessionService, SpecGenerationService,
-    TaskExtractionService, TaskService,
+    AgentService, ChatService, ClaudeClient, ProjectService, SessionService,
+    SpecGenerationService, TaskExtractionService, TaskService,
 };
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
@@ -20,6 +20,7 @@ pub struct AppState {
     pub task_service: Arc<TaskService>,
     pub agent_service: Arc<AgentService>,
     pub session_service: Arc<SessionService>,
+    pub chat_service: Arc<ChatService>,
     pub claude_client: Arc<ClaudeClient>,
     pub event_tx: mpsc::UnboundedSender<EngineEvent>,
     pub event_broadcast: broadcast::Sender<EngineEvent>,

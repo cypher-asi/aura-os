@@ -15,8 +15,8 @@ use tracing::{debug, warn};
 
 use aura_engine::EngineEvent;
 use aura_services::{
-    AgentService, ClaudeClient, ProjectService, SessionService, SpecGenerationService,
-    TaskExtractionService, TaskService,
+    AgentService, ChatService, ClaudeClient, ProjectService, SessionService,
+    SpecGenerationService, TaskExtractionService, TaskService,
 };
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
@@ -54,6 +54,12 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let task_service = Arc::new(TaskService::new(store.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone()));
     let session_service = Arc::new(SessionService::new(store.clone()));
+    let chat_service = Arc::new(ChatService::new(
+        store.clone(),
+        settings_service.clone(),
+        claude_client.clone(),
+        spec_gen_service.clone(),
+    ));
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
@@ -69,6 +75,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         task_service,
         agent_service,
         session_service,
+        chat_service,
         claude_client,
         event_tx,
         event_broadcast,

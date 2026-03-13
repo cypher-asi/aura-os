@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod chat;
 pub mod dev_loop;
 pub mod projects;
 pub mod settings;
