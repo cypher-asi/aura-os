@@ -10,11 +10,19 @@ use crate::state::AppState;
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
     match &e {
-        AuthError::ZosApi { status, .. } if *status == 401 => {
-            ApiError::unauthorized("invalid email or password")
+        AuthError::ZosApi { status, code, message } if *status == 401 || code == "INVALID_EMAIL_PASSWORD" => {
+            ApiError::unauthorized(if message.is_empty() {
+                "Invalid email or password".to_string()
+            } else {
+                message.clone()
+            })
         }
-        AuthError::ZosApi { status, message } if *status >= 400 && *status < 500 => {
-            ApiError::bad_request(message.clone())
+        AuthError::ZosApi { message, .. } => {
+            ApiError::bad_request(if message.is_empty() {
+                "Authentication request failed".to_string()
+            } else {
+                message.clone()
+            })
         }
         _ => ApiError::internal(e.to_string()),
     }

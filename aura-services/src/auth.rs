@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
@@ -12,6 +12,28 @@ use crate::error::AuthError;
 
 const ZOS_API_URL: &str = "https://zosapi.zero.tech";
 const AUTH_SESSION_KEY: &str = "zero_auth_session";
+
+#[derive(Debug, Deserialize)]
+struct ZosErrorBody {
+    code: Option<String>,
+    message: Option<String>,
+}
+
+fn parse_zos_error(status: u16, body: &str) -> AuthError {
+    let (code, message) = match serde_json::from_str::<ZosErrorBody>(body) {
+        Ok(parsed) => (
+            parsed.code.unwrap_or_default(),
+            parsed.message.unwrap_or_else(|| body.to_string()),
+        ),
+        Err(_) => (String::new(), body.to_string()),
+    };
+    error!(status, %code, %message, "zOS API error");
+    AuthError::ZosApi {
+        status,
+        code,
+        message,
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct ZosLoginResponse {
@@ -77,10 +99,7 @@ impl AuthService {
         if !res.status().is_success() {
             let status = res.status().as_u16();
             let body = res.text().await.unwrap_or_default();
-            return Err(AuthError::ZosApi {
-                status,
-                message: body,
-            });
+            return Err(parse_zos_error(status, &body));
         }
 
         let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
@@ -105,10 +124,7 @@ impl AuthService {
         if !res.status().is_success() {
             let status = res.status().as_u16();
             let body = res.text().await.unwrap_or_default();
-            return Err(AuthError::ZosApi {
-                status,
-                message: body,
-            });
+            return Err(parse_zos_error(status, &body));
         }
 
         let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
@@ -195,10 +211,7 @@ impl AuthService {
         if !res.status().is_success() {
             let status = res.status().as_u16();
             let body = res.text().await.unwrap_or_default();
-            return Err(AuthError::ZosApi {
-                status,
-                message: body,
-            });
+            return Err(parse_zos_error(status, &body));
         }
 
         res.json().await.map_err(AuthError::Http)
