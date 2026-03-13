@@ -119,7 +119,12 @@ impl RocksStore {
     ) -> StoreResult<Vec<T>> {
         let iter = match prefix {
             Some(p) => self.db.prefix_iterator_cf(cf, p.as_bytes()),
-            None => self.db.full_iterator_cf(cf, rocksdb::IteratorMode::Start),
+            None => {
+                let mut opts = rocksdb::ReadOptions::default();
+                opts.set_total_order_seek(true);
+                self.db
+                    .iterator_cf_opt(cf, opts, rocksdb::IteratorMode::Start)
+            }
         };
 
         let mut results = Vec::new();

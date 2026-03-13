@@ -19,6 +19,7 @@ interface PanelState {
 }
 
 type SessionUpdateListener = (session: ChatSession) => void;
+type SprintUpdateListener = (sprint: Sprint) => void;
 
 interface PanelActions {
   setActiveTab: (tab: SidekickTab) => void;
@@ -33,6 +34,9 @@ interface PanelActions {
   setStreamingSessionId: (id: string | null) => void;
   notifySessionTitleUpdate: (session: ChatSession) => void;
   onSessionTitleUpdate: (listener: SessionUpdateListener) => () => void;
+  updatePreviewSprint: (patch: Partial<Sprint> & { sprint_id: string }) => void;
+  notifySprintUpdate: (sprint: Sprint) => void;
+  onSprintUpdate: (listener: SprintUpdateListener) => () => void;
 }
 
 type SidekickContextValue = PanelState & PanelActions;
@@ -52,6 +56,7 @@ const SidekickContext = createContext<SidekickContextValue | null>(null);
 export function SidekickProvider({ children }: { children: React.ReactNode }) {
   const [panel, setPanel] = useState<PanelState>(INITIAL_PANEL);
   const titleListeners = useRef<Set<SessionUpdateListener>>(new Set());
+  const sprintListeners = useRef<Set<SprintUpdateListener>>(new Set());
 
   const setActiveTab = useCallback((tab: SidekickTab) => {
     setPanel((prev) => ({ ...prev, activeTab: tab, showInfo: false }));
@@ -119,6 +124,29 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     return () => { titleListeners.current.delete(listener); };
   }, []);
 
+  const updatePreviewSprint = useCallback((patch: Partial<Sprint> & { sprint_id: string }) => {
+    setPanel((prev) => {
+      if (prev.previewItem?.kind !== "sprint") return prev;
+      if (prev.previewItem.sprint.sprint_id !== patch.sprint_id) return prev;
+      return {
+        ...prev,
+        previewItem: {
+          kind: "sprint",
+          sprint: { ...prev.previewItem.sprint, ...patch },
+        },
+      };
+    });
+  }, []);
+
+  const notifySprintUpdate = useCallback((sprint: Sprint) => {
+    sprintListeners.current.forEach((fn) => fn(sprint));
+  }, []);
+
+  const onSprintUpdate = useCallback((listener: SprintUpdateListener) => {
+    sprintListeners.current.add(listener);
+    return () => { sprintListeners.current.delete(listener); };
+  }, []);
+
   return (
     <SidekickContext.Provider
       value={{
@@ -135,6 +163,9 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         setStreamingSessionId,
         notifySessionTitleUpdate,
         onSessionTitleUpdate,
+        updatePreviewSprint,
+        notifySprintUpdate,
+        onSprintUpdate,
       }}
     >
       {children}

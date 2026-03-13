@@ -5,8 +5,8 @@ use crate::enums::{
     AgentStatus, ChatRole, InviteStatus, OrgRole, ProjectStatus, SessionStatus, TaskStatus,
 };
 use crate::ids::{
-    AgentId, ChatMessageId, ChatSessionId, InviteId, OrgId, ProjectId, SessionId, SpecId, SprintId,
-    TaskId,
+    AgentId, ChatMessageId, ChatSessionId, GitHubIntegrationId, InviteId, OrgId, ProjectId,
+    SessionId, SpecId, SprintId, TaskId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -18,6 +18,10 @@ pub struct Project {
     pub linked_folder_path: String,
     pub requirements_doc_path: String,
     pub current_status: ProjectStatus,
+    #[serde(default)]
+    pub github_integration_id: Option<GitHubIntegrationId>,
+    #[serde(default)]
+    pub github_repo_full_name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -150,6 +154,29 @@ pub struct OrgGithub {
     pub github_org: String,
     pub connected_by: String,
     pub connected_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GitHubIntegration {
+    pub integration_id: GitHubIntegrationId,
+    pub org_id: OrgId,
+    pub installation_id: i64,
+    pub github_account_login: String,
+    pub github_account_type: String,
+    pub connected_by: String,
+    pub connected_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GitHubRepo {
+    pub github_repo_id: i64,
+    pub integration_id: GitHubIntegrationId,
+    pub full_name: String,
+    pub name: String,
+    pub private: bool,
+    pub default_branch: String,
+    pub html_url: String,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

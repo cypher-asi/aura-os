@@ -32,6 +32,16 @@ export function SprintList() {
     fetchSprints();
   }, [fetchSprints]);
 
+  useEffect(() => {
+    return sidekick.onSprintUpdate((updated) => {
+      setSprints((prev) =>
+        prev.map((s) =>
+          s.sprint_id === updated.sprint_id ? { ...s, ...updated } : s,
+        ),
+      );
+    });
+  }, [sidekick]);
+
   const sprintById = useMemo(
     () => new Map(sprints.map((s) => [s.sprint_id, s])),
     [sprints],

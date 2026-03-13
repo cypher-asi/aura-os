@@ -59,3 +59,4 @@ define_id!(ChatMessageId);
 define_id!(SprintId);
 define_id!(OrgId);
 define_id!(InviteId);
+define_id!(GitHubIntegrationId);

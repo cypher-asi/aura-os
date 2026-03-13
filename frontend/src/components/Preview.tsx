@@ -15,6 +15,7 @@ import styles from "./Preview.module.css";
 function SprintPreview({ sprint }: { sprint: Sprint }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
+  const sidekick = useSidekick();
   const [title, setTitle] = useState(sprint.title);
   const [prompt, setPrompt] = useState(sprint.prompt);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -35,6 +36,14 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
     [projectId, sprint.sprint_id],
   );
 
+  const propagate = useCallback(
+    (updates: { title?: string; prompt?: string }) => {
+      sidekick.updatePreviewSprint({ sprint_id: sprint.sprint_id, ...updates });
+      sidekick.notifySprintUpdate({ ...sprint, ...updates });
+    },
+    [sidekick, sprint],
+  );
+
   useEffect(() => {
     return () => clearTimeout(debounceRef.current);
   }, []);
@@ -47,6 +56,7 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
         onChange={(e) => {
           setTitle(e.target.value);
           save({ title: e.target.value });
+          propagate({ title: e.target.value });
         }}
         placeholder="Sprint title"
       />
@@ -56,6 +66,7 @@ function SprintPreview({ sprint }: { sprint: Sprint }) {
         onChange={(e) => {
           setPrompt(e.target.value);
           save({ prompt: e.target.value });
+          propagate({ prompt: e.target.value });
         }}
         placeholder="Write your sprint document here..."
       />
