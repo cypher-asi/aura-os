@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useOrg } from "../context/OrgContext";
 import type { Project, ChatSession } from "../types";
-import { ButtonPlus, Explorer, Menu, Modal, Input, Button, Text } from "@cypher-asi/zui";
+import { ButtonPlus, Explorer, Menu, Modal, Input, Button } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Plus, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
@@ -347,12 +347,6 @@ export function ProjectList() {
         />
       </div>
 
-      {projects.length === 0 && (
-        <Text variant="muted" size="sm" style={{ padding: "var(--space-3) var(--space-4)" }}>
-          No projects yet
-        </Text>
-      )}
-
       {ctxMenu &&
         createPortal(
           <div
@@ -437,10 +431,11 @@ export function ProjectList() {
       <NewProjectModal
         isOpen={showNewProject}
         onClose={() => setShowNewProject(false)}
-        onCreated={(pid) => {
+        onCreated={(project) => {
           setShowNewProject(false);
+          setProjects((prev) => [...prev, project]);
           fetchProjects();
-          navigate(`/projects/${pid}`);
+          navigate(`/projects/${project.project_id}`);
         }}
       />
     </div>

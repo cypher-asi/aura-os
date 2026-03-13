@@ -11,7 +11,7 @@ export function SettingsView() {
   const [teamName, setTeamName] = useState(activeOrg?.name ?? "");
   const [teamSaving, setTeamSaving] = useState(false);
   const [teamMessage, setTeamMessage] = useState("");
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     setTeamName(activeOrg?.name ?? "");

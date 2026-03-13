@@ -7,7 +7,7 @@ import { PathInput } from "./PathInput";
 interface NewProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (projectId: string) => void;
+  onCreated: (project: import("../types").Project) => void;
 }
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
@@ -53,7 +53,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
         requirements_doc_path: reqPath.trim(),
       });
       reset();
-      onCreated(project.project_id);
+      onCreated(project);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
     } finally {
