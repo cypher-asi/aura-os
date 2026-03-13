@@ -22,12 +22,12 @@
 }
 
 /* Align search icon with topbar title and tree chevrons */
-.explorerWrap [class*="searchContainer"] {
-  padding-left: var(--space-2, 8px);
+.explorerWrap [class*="iconWrapper"] {
+  left: var(--space-4, 16px);
 }
 
-/* Make room for the + button inside the search input */
 .explorerWrap [class*="searchContainer"] input {
+  padding-left: calc(var(--space-4, 16px) + var(--icon-xs, 14px) + var(--space-2, 8px));
   padding-right: calc(var(--space-2) + 24px);
 }
 
