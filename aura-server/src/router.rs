@@ -4,6 +4,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
+use tower_http::trace::TraceLayer;
 
 use crate::handlers::{agents, dev_loop, projects, settings, specs, tasks, ws};
 use crate::state::AppState;
@@ -101,6 +102,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         // WebSocket
         .route("/ws/events", get(ws::ws_events))
         .layer(cors)
+        .layer(TraceLayer::new_for_http())
         .with_state(state);
 
     match frontend_dir {

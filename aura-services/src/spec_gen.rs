@@ -3,6 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
+use tracing::{debug, error, info};
 
 use aura_core::*;
 use aura_settings::SettingsService;
@@ -13,7 +14,7 @@ use crate::error::SpecGenError;
 
 pub type ProgressTx = mpsc::UnboundedSender<String>;
 
-const MAX_TOKENS: u32 = 8192;
+const MAX_TOKENS: u32 = 16384;
 
 pub(crate) const SPEC_GENERATION_SYSTEM_PROMPT: &str = r#"
 You are an expert software architect. Given a requirements document, produce
@@ -77,25 +78,43 @@ impl SpecGenerationService {
         progress: Option<ProgressTx>,
     ) -> Result<Vec<Spec>, SpecGenError> {
         Self::emit(&progress, "Loading project");
+        info!(%project_id, "Loading project for spec generation");
 
         let project = self.store.get_project(project_id).map_err(|e| match e {
-            aura_store::StoreError::NotFound(_) => SpecGenError::ProjectNotFound(*project_id),
-            other => SpecGenError::Store(other),
+            aura_store::StoreError::NotFound(_) => {
+                error!(%project_id, "Project not found");
+                SpecGenError::ProjectNotFound(*project_id)
+            }
+            other => {
+                error!(%project_id, error = %other, "Store error loading project");
+                SpecGenError::Store(other)
+            }
         })?;
 
         Self::emit(&progress, "Reading requirements document");
 
         let req_path = &project.requirements_doc_path;
+        info!(%project_id, path = %req_path, "Reading requirements file");
         if !std::path::Path::new(req_path).is_file() {
+            error!(%project_id, path = %req_path, "Requirements file not found");
             return Err(SpecGenError::RequirementsFileNotFound(req_path.clone()));
         }
-        let requirements_content = std::fs::read_to_string(req_path)?;
+        let requirements_content = std::fs::read_to_string(req_path).map_err(|e| {
+            error!(%project_id, path = %req_path, error = %e, "Failed to read requirements file");
+            e
+        })?;
+        info!(%project_id, bytes = requirements_content.len(), "Requirements file loaded");
 
         Self::emit(&progress, "Decrypting API key");
 
-        let api_key = self.settings.get_decrypted_api_key()?;
+        let api_key = self.settings.get_decrypted_api_key().map_err(|e| {
+            error!(%project_id, error = %e, "Failed to get API key");
+            SpecGenError::Settings(e)
+        })?;
+        debug!(%project_id, "API key decrypted successfully");
 
         Self::emit(&progress, "Calling Claude to generate specs — this may take a minute");
+        info!(%project_id, max_tokens = MAX_TOKENS, "Sending request to Claude API");
 
         let response = self
             .claude_client
@@ -105,11 +124,23 @@ impl SpecGenerationService {
                 &requirements_content,
                 MAX_TOKENS,
             )
-            .await?;
+            .await
+            .map_err(|e| {
+                error!(%project_id, error = %e, "Claude API call failed");
+                e
+            })?;
+
+        info!(%project_id, response_len = response.len(), "Claude API response received");
 
         Self::emit(&progress, "Parsing AI response");
 
-        let raw_specs = Self::parse_claude_response(&response)?;
+        let raw_specs = Self::parse_claude_response(&response).map_err(|e| {
+            error!(%project_id, error = %e, "Failed to parse Claude response");
+            debug!(%project_id, response_preview = &response[..response.len().min(1000)], "Raw Claude response");
+            e
+        })?;
+        info!(%project_id, count = raw_specs.len(), "Parsed specs from Claude response");
+
         let new_specs = Self::raw_to_specs(project_id, raw_specs);
 
         Self::emit(
@@ -119,6 +150,15 @@ impl SpecGenerationService {
 
         let existing_specs = self.store.list_specs_by_project(project_id)?;
         let existing_tasks = self.store.list_tasks_by_project(project_id)?;
+
+        if !existing_specs.is_empty() || !existing_tasks.is_empty() {
+            info!(
+                %project_id,
+                old_specs = existing_specs.len(),
+                old_tasks = existing_tasks.len(),
+                "Replacing existing specs and tasks"
+            );
+        }
 
         let mut ops: Vec<BatchOp> = Vec::new();
 
@@ -145,6 +185,7 @@ impl SpecGenerationService {
         }
 
         self.store.write_batch(ops)?;
+        info!(%project_id, count = new_specs.len(), "Specs saved to database");
 
         Ok(new_specs)
     }

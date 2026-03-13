@@ -1,6 +1,7 @@
 use axum::extract::{Path, State};
 use axum::Json;
 use tokio::sync::mpsc;
+use tracing::{error, info};
 
 use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
@@ -39,6 +40,8 @@ pub async fn generate_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
+    info!(%project_id, "Spec generation requested");
+
     let _ = state.event_tx.send(EngineEvent::SpecGenStarted {
         project_id,
     });
@@ -49,6 +52,7 @@ pub async fn generate_specs(
     let pid = project_id;
     tokio::spawn(async move {
         while let Some(stage) = progress_rx.recv().await {
+            info!(%pid, stage, "Spec generation progress");
             let _ = event_tx.send(EngineEvent::SpecGenProgress {
                 project_id: pid,
                 stage,
@@ -63,6 +67,7 @@ pub async fn generate_specs(
 
     match result {
         Ok(specs) => {
+            info!(%project_id, count = specs.len(), "Spec generation completed");
             let _ = state.event_tx.send(EngineEvent::SpecGenCompleted {
                 project_id,
                 spec_count: specs.len(),
@@ -70,6 +75,7 @@ pub async fn generate_specs(
             Ok(Json(specs))
         }
         Err(e) => {
+            error!(%project_id, error = %e, "Spec generation failed");
             let _ = state.event_tx.send(EngineEvent::SpecGenFailed {
                 project_id,
                 reason: e.to_string(),

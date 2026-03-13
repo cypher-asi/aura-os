@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
+use tracing::{debug, warn};
 
 use aura_engine::EngineEvent;
 use aura_services::{
@@ -26,7 +27,10 @@ fn spawn_event_rebroadcast(
 ) {
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            let _ = broadcast_tx.send(event);
+            debug!(?event, "Broadcasting engine event");
+            if broadcast_tx.send(event).is_err() {
+                warn!("No WebSocket subscribers for engine event");
+            }
         }
     });
 }

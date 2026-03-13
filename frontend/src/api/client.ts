@@ -17,12 +17,14 @@ import type {
 const BASE_URL = "";
 
 export class ApiClientError extends Error {
-  constructor(
-    public status: number,
-    public body: ApiError,
-  ) {
+  status: number;
+  body: ApiError;
+
+  constructor(status: number, body: ApiError) {
     super(body.error);
     this.name = "ApiClientError";
+    this.status = status;
+    this.body = body;
   }
 }
 

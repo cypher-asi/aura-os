@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, info};
 
 use crate::error::ClaudeClientError;
 
@@ -27,6 +28,7 @@ struct Message {
 #[derive(Deserialize)]
 struct MessagesResponse {
     content: Vec<ContentBlock>,
+    stop_reason: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -67,19 +69,37 @@ impl ClaudeClient {
             }],
         };
 
+        let url = format!("{}/v1/messages", self.base_url);
+        info!(
+            model = DEFAULT_MODEL,
+            max_tokens,
+            user_msg_len = user_message.len(),
+            url = %url,
+            "Sending Claude API request"
+        );
+        let start = std::time::Instant::now();
+
         let response = self
             .http
-            .post(format!("{}/v1/messages", self.base_url))
+            .post(&url)
             .header("x-api-key", api_key)
             .header("anthropic-version", ANTHROPIC_API_VERSION)
             .header("content-type", "application/json")
             .json(&request)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                error!(elapsed_ms = start.elapsed().as_millis() as u64, error = %e, "Claude HTTP request failed");
+                e
+            })?;
 
         let status = response.status();
+        let elapsed_ms = start.elapsed().as_millis() as u64;
+        info!(status = status.as_u16(), elapsed_ms, "Claude API responded");
+
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
+            error!(status = status.as_u16(), body = %body, "Claude API error response");
             return Err(ClaudeClientError::Api {
                 status: status.as_u16(),
                 message: body,
@@ -89,7 +109,18 @@ impl ClaudeClient {
         let body: MessagesResponse = response
             .json()
             .await
-            .map_err(|e| ClaudeClientError::Parse(e.to_string()))?;
+            .map_err(|e| {
+                error!(error = %e, "Failed to deserialize Claude response body");
+                ClaudeClientError::Parse(e.to_string())
+            })?;
+
+        let stop_reason = body.stop_reason.as_deref().unwrap_or("unknown");
+        info!(stop_reason, "Claude stop_reason");
+
+        if stop_reason == "max_tokens" {
+            error!(max_tokens, "Claude response truncated — hit max_tokens limit");
+            return Err(ClaudeClientError::Truncated { max_tokens });
+        }
 
         let text = body
             .content
@@ -99,11 +130,13 @@ impl ClaudeClient {
             .join("");
 
         if text.is_empty() {
+            error!("Claude returned empty text content");
             return Err(ClaudeClientError::Parse(
                 "no text content in response".into(),
             ));
         }
 
+        debug!(response_len = text.len(), "Claude response text extracted");
         Ok(text)
     }
 }

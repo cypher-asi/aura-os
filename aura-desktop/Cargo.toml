@@ -1,0 +1,12 @@
+[package]
+name = "aura-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aura-server = { path = "../aura-server" }
+axum = "0.7"
+wry = "0.54"
+tao = "0.34"
+tokio = { version = "1", features = ["full"] }
+dirs = "5"
