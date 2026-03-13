@@ -1,0 +1,115 @@
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.header {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  animation: pulseFade 1.5s ease-in-out infinite;
+}
+
+.tokenCount {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+}
+
+.chatArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.emptyIcon {
+  opacity: 0.3;
+}
+
+.markdown {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.markdown h1 { font-size: 24px; margin: 24px 0 12px; }
+.markdown h2 { font-size: 20px; margin: 20px 0 10px; }
+.markdown h3 { font-size: 16px; margin: 16px 0 8px; }
+.markdown p { margin-bottom: 12px; }
+.markdown code {
+  font-family: var(--font-mono);
+  background: var(--color-bg-secondary);
+  padding: 2px 6px;
+  font-size: 13px;
+}
+.markdown pre {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  padding: 16px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.markdown pre code { background: none; padding: 0; }
+.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.markdown th, .markdown td {
+  border: 1px solid var(--color-border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.markdown th {
+  background: var(--color-bg-secondary);
+  font-weight: 600;
+}
+.markdown ul, .markdown ol {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+.markdown li { margin-bottom: 4px; }
+.markdown blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 16px;
+  color: var(--color-text-muted);
+  margin-bottom: 12px;
+}
+
+.savedSpecBlock {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+.savedSpecBlock:last-of-type {
+  border-bottom: none;
+}
+.savedSpecTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+@keyframes pulseFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
