@@ -1,3 +1,18 @@
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
 .sidekickBody {
   display: flex;
   flex-direction: column;
@@ -5,34 +20,30 @@
   overflow: hidden;
 }
 
-.stageLabel {
-  font-size: var(--text-xs);
-  color: var(--color-accent);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+.emptyState {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  animation: pulseFade 1.5s ease-in-out infinite;
+  justify-content: center;
+  height: 100%;
 }
-
-.tokenCount {
-  margin-left: auto;
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-}
-
-.streamArea {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
-}
-
 
 .viewerArea {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4);
+}
+
+.infoArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-2) var(--space-3);
+  align-items: baseline;
 }
 
 .markdown {
@@ -84,30 +95,14 @@
   margin-bottom: 12px;
 }
 
-.savedSpecBlock {
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
-.savedSpecBlock:last-of-type {
-  border-bottom: none;
-}
-.savedSpecTitle {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-accent);
-  margin-bottom: var(--space-3);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.stopIcon {
+  display: inline-flex;
 }
 
-.infoArea {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--space-4);
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
 }
-
-@keyframes pulseFade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+.stopRing {
+  transform-origin: center;
+  animation: spinRing 1.2s linear infinite;
 }
