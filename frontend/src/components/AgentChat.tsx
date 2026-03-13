@@ -18,13 +18,24 @@ export function AgentChat() {
   } = useSidekick();
 
   const chatAreaRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
 
   useEffect(() => {
-    const el = chatAreaRef.current;
-    if (isStreaming && el) {
-      el.scrollTop = el.scrollHeight;
+    autoScrollRef.current = true;
+  }, [isStreaming]);
+
+  useEffect(() => {
+    if (isStreaming && autoScrollRef.current && chatAreaRef.current) {
+      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
     }
   }, [streamedText, savedSpecs, isStreaming]);
+
+  const handleScroll = () => {
+    const el = chatAreaRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    autoScrollRef.current = atBottom;
+  };
 
   const hasContent = isStreaming || streamedText || savedSpecs.length > 0;
 
@@ -42,7 +53,7 @@ export function AgentChat() {
         </div>
       )}
 
-      <div className={styles.chatArea} ref={chatAreaRef}>
+      <div className={styles.chatArea} ref={chatAreaRef} onScroll={handleScroll}>
         {hasContent ? (
           <>
             {streamTitle && (

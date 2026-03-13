@@ -55,6 +55,7 @@ export function Sidekick() {
   if (!ctx) {
     return (
       <Sidebar
+        className={styles.sidekickPanel}
         resizable
         resizePosition="left"
         defaultWidth={420}
@@ -74,6 +75,7 @@ export function Sidekick() {
   if (showInfo) {
     return (
       <Sidebar
+        className={styles.sidekickPanel}
         resizable
         resizePosition="left"
         defaultWidth={420}
@@ -89,6 +91,7 @@ export function Sidekick() {
   if (selectedSpec) {
     return (
       <Sidebar
+        className={styles.sidekickPanel}
         resizable
         resizePosition="left"
         defaultWidth={420}
@@ -109,6 +112,7 @@ export function Sidekick() {
 
   return (
     <Sidebar
+      className={styles.sidekickPanel}
       resizable
       resizePosition="left"
       defaultWidth={420}
