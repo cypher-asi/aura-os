@@ -23,6 +23,8 @@ const CF_NAMES: &[&str] = &[
     "org_members",
     "user_orgs",
     "org_invites",
+    "github_integrations",
+    "github_repos",
 ];
 
 type RocksDB = DBWithThreadMode<MultiThreaded>;
@@ -108,6 +110,14 @@ impl RocksStore {
 
     fn cf_org_invites(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
         self.cf_handle("org_invites")
+    }
+
+    fn cf_github_integrations(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
+        self.cf_handle("github_integrations")
+    }
+
+    fn cf_github_repos(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
+        self.cf_handle("github_repos")
     }
 
     // -- Generic prefix scan --

@@ -66,6 +66,8 @@ impl ProjectService {
             linked_folder_path: input.linked_folder_path,
             requirements_doc_path: input.requirements_doc_path,
             current_status: ProjectStatus::Planning,
+            github_integration_id: None,
+            github_repo_full_name: None,
             created_at: now,
             updated_at: now,
         };

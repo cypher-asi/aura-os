@@ -4,7 +4,7 @@ import type { Sprint } from "../types";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
-import { Explorer, PageEmptyState, Button } from "@cypher-asi/zui";
+import { Explorer, PageEmptyState, Button, ButtonPlus } from "@cypher-asi/zui";
 import type { ExplorerNode, DropPosition } from "@cypher-asi/zui";
 import { Zap, Plus } from "lucide-react";
 import { formatRelativeTime } from "../utils/format";
@@ -134,8 +134,8 @@ export function SprintList() {
 
   return (
     <div className={styles.sprintListWrap}>
-      <div className={styles.toolbar}>
-        <Button variant="ghost" size="sm" iconOnly icon={<Plus size={14} />} onClick={handleAdd} title="Add Sprint" />
+      <div className={styles.addButton}>
+        <ButtonPlus onClick={handleAdd} size="sm" title="Add Sprint" />
       </div>
       <Explorer
         data={explorerData}
