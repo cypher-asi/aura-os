@@ -6,7 +6,8 @@ import { AgentStatusBar } from "./AgentStatusBar";
 import { TaskFeed } from "./TaskFeed";
 import { LogPanel } from "./LogPanel";
 import { LoopControls } from "./LoopControls";
-import styles from "./execution.module.css";
+import { Badge, Text } from "@cypher-asi/zui";
+import styles from "./aura.module.css";
 
 export function ExecutionView() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -68,9 +69,7 @@ export function ExecutionView() {
   return (
     <div className={styles.executionView}>
       {!connected && (
-        <div className={styles.fallbackBanner}>
-          Live updates unavailable — polling for status
-        </div>
+        <Badge variant="error">Live updates unavailable — polling for status</Badge>
       )}
 
       <AgentStatusBar projectId={projectId} />
@@ -90,15 +89,9 @@ export function ExecutionView() {
       />
 
       {error && (
-        <div
-          style={{
-            color: "var(--color-danger)",
-            fontSize: 13,
-            textAlign: "center",
-          }}
-        >
+        <Text variant="muted" size="sm" align="center" style={{ color: "var(--color-danger)" }}>
           {error}
-        </div>
+        </Text>
       )}
     </div>
   );

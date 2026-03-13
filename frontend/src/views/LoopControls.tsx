@@ -1,6 +1,9 @@
+import { useState } from "react";
 import type { ProjectId } from "../types";
 import { useLiveProgress } from "../hooks/use-live-progress";
-import styles from "./execution.module.css";
+import { Button, ModalConfirm } from "@cypher-asi/zui";
+import { Play, Pause, Square } from "lucide-react";
+import styles from "./aura.module.css";
 
 interface LoopControlsProps {
   projectId: ProjectId;
@@ -23,45 +26,55 @@ export function LoopControls({
   const pct = progress
     ? Math.round(progress.completion_percentage * 100) / 100
     : 0;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const handleStop = () => {
-    if (confirm("Stop autonomous execution? Current task will complete first.")) {
-      onStop();
-    }
+  const handleStopConfirm = () => {
+    setConfirmOpen(false);
+    onStop();
   };
 
   return (
-    <div className={styles.controls}>
-      {!running && !paused && (
-        <button className={styles.startBtn} onClick={onStart}>
-          Start
-        </button>
-      )}
-      {paused && (
-        <button className={styles.startBtn} onClick={onStart}>
-          Resume
-        </button>
-      )}
-      {running && !paused && (
-        <button className={styles.pauseBtn} onClick={onPause}>
-          Pause
-        </button>
-      )}
-      {(running || paused) && (
-        <button className={styles.stopBtn} onClick={handleStop}>
-          Stop
-        </button>
-      )}
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        {!running && !paused && (
+          <Button variant="filled" size="sm" icon={<Play size={14} />} onClick={onStart}>
+            Start
+          </Button>
+        )}
+        {paused && (
+          <Button variant="filled" size="sm" icon={<Play size={14} />} onClick={onStart}>
+            Resume
+          </Button>
+        )}
+        {running && !paused && (
+          <Button variant="secondary" size="sm" icon={<Pause size={14} />} onClick={onPause}>
+            Pause
+          </Button>
+        )}
+        {(running || paused) && (
+          <Button variant="danger" size="sm" icon={<Square size={14} />} onClick={() => setConfirmOpen(true)}>
+            Stop
+          </Button>
+        )}
 
-      <div className={styles.progressSection}>
-        <div className={styles.progressBarSmall}>
-          <div
-            className={styles.progressBarSmallFill}
-            style={{ width: `${pct}%` }}
-          />
+        <div className={styles.progressSection}>
+          <div className={styles.progressBarSmall}>
+            <div className={styles.progressBarSmallFill} style={{ width: `${pct}%` }} />
+          </div>
+          <span className={styles.progressPct}>{pct}%</span>
         </div>
-        <span className={styles.progressPct}>{pct}%</span>
       </div>
-    </div>
+
+      <ModalConfirm
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleStopConfirm}
+        title="Stop Execution"
+        message="Stop autonomous execution? The current task will complete first."
+        confirmLabel="Stop"
+        cancelLabel="Cancel"
+        danger
+      />
+    </>
   );
 }

@@ -3,7 +3,8 @@ import type { ProjectId, Task } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { StatusBadge } from "../components/StatusBadge";
-import styles from "./execution.module.css";
+import { Panel, Heading, Item, Text } from "@cypher-asi/zui";
+import styles from "./aura.module.css";
 
 interface TaskFeedProps {
   projectId: ProjectId;
@@ -79,35 +80,26 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
   const displayed = sorted.slice(0, 50);
 
   return (
-    <div className={styles.taskFeed}>
-      <div className={styles.feedHeader}>Task Feed ({tasks.length})</div>
+    <Panel variant="solid" border="solid" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--color-border)" }}>
+        <Heading level={5}>Task Feed ({tasks.length})</Heading>
+      </div>
       <div className={styles.feedList}>
         {displayed.map((task) => (
-          <div
+          <Item
             key={task.task_id}
-            className={
-              task.task_id === activeTaskId
-                ? styles.feedItemActive
-                : styles.feedItem
-            }
+            selected={task.task_id === activeTaskId}
           >
-            <StatusBadge status={task.status} />
-            <span className={styles.feedTitle}>{task.title}</span>
-          </div>
+            <Item.Icon><StatusBadge status={task.status} /></Item.Icon>
+            <Item.Label>{task.title}</Item.Label>
+          </Item>
         ))}
         {tasks.length === 0 && (
-          <div
-            style={{
-              padding: "20px 14px",
-              color: "var(--color-text-dim)",
-              textAlign: "center",
-              fontSize: 13,
-            }}
-          >
+          <Text variant="muted" size="sm" align="center" style={{ padding: "var(--space-5)" }}>
             No tasks
-          </div>
+          </Text>
         )}
       </div>
-    </div>
+    </Panel>
   );
 }

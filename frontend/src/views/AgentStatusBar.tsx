@@ -3,7 +3,7 @@ import type { ProjectId, Agent, Session } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { StatusBadge } from "../components/StatusBadge";
-import styles from "./execution.module.css";
+import { Panel, Badge, Text } from "@cypher-asi/zui";
 
 interface AgentStatusBarProps {
   projectId: ProjectId;
@@ -54,41 +54,34 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
   }, [subscribe]);
 
   return (
-    <div className={styles.statusBar}>
-      <div className={styles.statusItem}>
-        <span
-          className={`${styles.connDot} ${connected ? styles.connDotOn : styles.connDotOff}`}
-        />
-        <span className={styles.statusLabel}>
+    <Panel variant="solid" border="solid" style={{ display: "flex", alignItems: "center", gap: "var(--space-4)", padding: "var(--space-3) var(--space-4)", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <Badge variant={connected ? "running" : "error"} pulse={connected}>
           {connected ? "Connected" : "Disconnected"}
-        </span>
+        </Badge>
       </div>
 
-      <div className={styles.statusItem}>
-        <span className={styles.statusLabel}>Agent:</span>
-        <span className={styles.statusValue}>{agent?.name || "—"}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <Text variant="muted" size="sm" as="span">Agent:</Text>
+        <Text size="sm" as="span" weight="medium">{agent?.name || "—"}</Text>
         {agent && <StatusBadge status={agent.status} />}
       </div>
 
-      <div className={styles.statusItem}>
-        <span className={styles.statusLabel}>Session:</span>
-        <span className={styles.statusValue}>#{sessionCount || 0}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+        <Text variant="muted" size="sm" as="span">Session:</Text>
+        <Text size="sm" as="span" weight="medium">#{sessionCount || 0}</Text>
       </div>
 
-      <div className={styles.currentTask}>
+      <div style={{ marginLeft: "auto" }}>
         {currentTaskTitle ? (
-          <>
-            <span style={{ color: "var(--color-text-dim)", fontWeight: 400 }}>
-              Working on:{" "}
-            </span>
+          <Text size="sm" as="span">
+            <Text variant="muted" size="sm" as="span">Working on: </Text>
             {currentTaskTitle}
-          </>
+          </Text>
         ) : (
-          <span style={{ color: "var(--color-text-dim)", fontWeight: 400 }}>
-            Idle
-          </span>
+          <Text variant="muted" size="sm" as="span">Idle</Text>
         )}
       </div>
-    </div>
+    </Panel>
   );
 }
