@@ -21,6 +21,11 @@
   height: var(--control-height-sm);
 }
 
+/* Align search icon with topbar title and tree chevrons */
+.explorerWrap [class*="searchContainer"] {
+  padding-left: var(--space-2, 8px);
+}
+
 /* Make room for the + button inside the search input */
 .explorerWrap [class*="searchContainer"] input {
   padding-right: calc(var(--space-2) + 24px);
