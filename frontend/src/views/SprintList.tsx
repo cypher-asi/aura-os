@@ -7,6 +7,7 @@ import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { Explorer, PageEmptyState, Button } from "@cypher-asi/zui";
 import type { ExplorerNode, DropPosition } from "@cypher-asi/zui";
 import { Zap, Plus } from "lucide-react";
+import { formatRelativeTime } from "../utils/format";
 import styles from "./SprintList.module.css";
 
 export function SprintList() {
@@ -52,6 +53,11 @@ export function SprintList() {
       sprints.map((sprint) => ({
         id: sprint.sprint_id,
         label: sprint.title,
+        suffix: (
+          <span className={styles.sprintTime}>
+            {formatRelativeTime(sprint.created_at)}
+          </span>
+        ),
         metadata: { type: "sprint" },
       })),
     [sprints],
