@@ -68,6 +68,7 @@ export interface LoopStatusResponse {
 
 export interface SpecGenStreamCallbacks {
   onProgress: (stage: string) => void;
+  onDelta: (text: string) => void;
   onGenerating: (tokens: number) => void;
   onComplete: (specs: Spec[]) => void;
   onError: (message: string) => void;
@@ -110,7 +111,7 @@ export const api = {
       method: "POST",
     }),
   generateSpecsStream: (projectId: ProjectId, cb: SpecGenStreamCallbacks) =>
-    streamSSE<"progress" | "generating" | "complete" | "error">(
+    streamSSE<"progress" | "delta" | "generating" | "complete" | "error">(
       `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
       { method: "POST" },
       {
@@ -119,6 +120,9 @@ export const api = {
           switch (eventType) {
             case "progress":
               cb.onProgress(d.stage as string);
+              break;
+            case "delta":
+              cb.onDelta(d.text as string);
               break;
             case "generating":
               cb.onGenerating(d.tokens as number);
