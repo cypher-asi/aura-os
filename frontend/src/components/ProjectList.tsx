@@ -6,7 +6,7 @@ import { useSidekick } from "../context/SidekickContext";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu, Modal, Input, Button, Text } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { FolderOpen, Plus, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
 import styles from "./ProjectList.module.css";
 
@@ -143,7 +143,6 @@ export function ProjectList() {
         label: p.name,
         suffix: (
           <span className={styles.projectSuffix}>
-            <FolderOpen size={12} className={styles.projectFolderIcon} />
             <button
               type="button"
               className={styles.newChatButton}
