@@ -224,6 +224,7 @@ export const api = {
     chatSessionId: string,
     content: string,
     action: string | null,
+    model: string,
     cb: ChatStreamCallbacks,
     signal?: AbortSignal,
   ) =>
@@ -232,7 +233,7 @@ export const api = {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, action }),
+        body: JSON.stringify({ content, action, model }),
       },
       {
         onEvent(eventType, data) {

@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Text, Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { ArrowUp, Square, Plus, MessageSquare, FileText } from "lucide-react";
+import { ArrowUp, Square, Plus, MessageSquare, FileText, ChevronDown } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import type { ChatMessage } from "../types";
@@ -31,6 +31,8 @@ export function ChatView() {
   const [streamingText, setStreamingText] = useState("");
 
   const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("opus-4.6");
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
@@ -39,6 +41,7 @@ export function ChatView() {
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
   const plusMenuRef = useRef<HTMLDivElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
     if (autoScrollRef.current && messageAreaRef.current) {
@@ -106,6 +109,27 @@ export function ChatView() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [plusMenuOpen]);
 
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [modelMenuOpen]);
+
+  const MODEL_OPTIONS: Record<string, string> = {
+    "opus-4.6": "Opus 4.6",
+    "gpt-5.3-codex": "GPT 5.3 Codex",
+  };
+
+  const modelMenuItems: MenuItem[] = [
+    { id: "opus-4.6", label: "Opus 4.6" },
+    { id: "gpt-5.3-codex", label: "GPT 5.3 Codex" },
+  ];
+
   const plusMenuItems: MenuItem[] = [
     { id: "generate_specs", label: "Generate Specs", icon: <FileText size={14} /> },
   ];
@@ -161,6 +185,7 @@ export function ChatView() {
         chatSessionId,
         userMsg.content,
         action,
+        selectedModel,
         {
           onDelta(text) {
             streamBufferRef.current += text;
@@ -391,6 +416,32 @@ export function ChatView() {
                       border="solid"
                       rounded="md"
                       width={200}
+                      isOpen
+                    />
+                  </div>
+                )}
+              </div>
+              <div ref={modelMenuRef} className={styles.modelMenuWrap}>
+                <button
+                  type="button"
+                  className={styles.modelButton}
+                  onClick={() => setModelMenuOpen((v) => !v)}
+                >
+                  {MODEL_OPTIONS[selectedModel]} <ChevronDown size={12} />
+                </button>
+                {modelMenuOpen && (
+                  <div className={styles.modelMenu}>
+                    <Menu
+                      items={modelMenuItems}
+                      value={selectedModel}
+                      onChange={(id) => {
+                        setSelectedModel(id);
+                        setModelMenuOpen(false);
+                      }}
+                      background="solid"
+                      border="solid"
+                      rounded="md"
+                      width={180}
                       isOpen
                     />
                   </div>

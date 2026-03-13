@@ -238,6 +238,39 @@
   margin-bottom: var(--space-1);
 }
 
+.modelMenuWrap {
+  position: relative;
+}
+
+.modelButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.modelButton:hover {
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
+  color: var(--color-text);
+}
+
+.modelMenu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 100;
+  margin-bottom: var(--space-1);
+}
+
 .sendButton {
   display: flex;
   align-items: center;
