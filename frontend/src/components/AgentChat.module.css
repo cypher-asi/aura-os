@@ -58,8 +58,8 @@
   font-size: 13px;
 }
 .markdown pre {
-  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
+  border-radius: 6px;
   padding: 16px;
   overflow-x: auto;
   margin-bottom: 16px;
