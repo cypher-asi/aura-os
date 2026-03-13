@@ -54,8 +54,19 @@
   text-align: left;
 }
 
+.sidekickBody [class*="leafSpacer"],
+.sidekickBody [class*="iconSpacer"] {
+  display: none;
+}
+
 .sidekickBody [class*="itemContent"] {
+  padding-left: calc(var(--space-2, 8px) + var(--icon-xs, 14px) + var(--space-2, 8px)) !important;
   padding-right: var(--space-6, 24px);
+}
+
+/* Parent items with chevron: pull left so chevron aligns under search icon */
+.sidekickBody [class*="itemContent"][aria-expanded] {
+  padding-left: 4px !important;
 }
 
 .emptyState {

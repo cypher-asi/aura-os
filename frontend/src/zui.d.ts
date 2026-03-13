@@ -190,6 +190,7 @@ declare module "@cypher-asi/zui" {
     storageKey?: string;
     resizePosition?: "left" | "right";
     onWidthChange?: (width: number) => void;
+    collapsed?: boolean;
   }
   export function Sidebar(props: SidebarProps): JSX.Element;
 

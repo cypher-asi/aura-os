@@ -143,7 +143,7 @@ export function ProjectList() {
         label: p.name,
         suffix: (
           <span className={styles.projectSuffix}>
-            <FolderOpen size={14} className={styles.projectFolderIcon} />
+            <FolderOpen size={12} className={styles.projectFolderIcon} />
             <button
               type="button"
               className={styles.newChatButton}
