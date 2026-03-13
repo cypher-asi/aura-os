@@ -47,16 +47,16 @@
 }
 
 .bubble {
-  padding: var(--space-3) var(--space-4);
-  border-radius: 12px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 10px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.5;
   word-wrap: break-word;
 }
 
 .bubbleUser {
-  background: var(--color-accent);
-  color: var(--color-bg);
+  background: #2f2f2f;
+  color: #ffffff;
   border-bottom-right-radius: 4px;
 }
 
