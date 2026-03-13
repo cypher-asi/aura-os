@@ -9,6 +9,7 @@ use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
 
 use crate::error::AuthError;
+use crate::org::OrgService;
 
 const ZOS_API_URL: &str = "https://zosapi.zero.tech";
 const AUTH_SESSION_KEY: &str = "zero_auth_session";
@@ -75,6 +76,7 @@ struct ZosUserResponse {
 pub struct AuthService {
     store: Arc<RocksStore>,
     http: Client,
+    org_service: Option<Arc<OrgService>>,
 }
 
 impl AuthService {
@@ -82,7 +84,12 @@ impl AuthService {
         Self {
             store,
             http: Client::new(),
+            org_service: None,
         }
+    }
+
+    pub fn set_org_service(&mut self, org_service: Arc<OrgService>) {
+        self.org_service = Some(org_service);
     }
 
     pub async fn login(&self, email: &str, password: &str) -> Result<ZeroAuthSession, AuthError> {
@@ -247,6 +254,12 @@ impl AuthService {
 
         let bytes = serde_json::to_vec(&session)?;
         self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
+
+        if let Some(ref org_svc) = self.org_service {
+            if let Err(e) = org_svc.ensure_default_org(&session.user_id, &session.display_name) {
+                warn!("Failed to ensure default org: {e}");
+            }
+        }
 
         Ok(session)
     }

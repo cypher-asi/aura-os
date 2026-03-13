@@ -10,6 +10,7 @@ use crate::error::ProjectError;
 
 #[derive(Debug, Clone)]
 pub struct CreateProjectInput {
+    pub org_id: OrgId,
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
@@ -59,6 +60,7 @@ impl ProjectService {
         let now = Utc::now();
         let project = Project {
             project_id: ProjectId::new(),
+            org_id: input.org_id,
             name: input.name,
             description: input.description,
             linked_folder_path: input.linked_folder_path,
@@ -81,6 +83,25 @@ impl ProjectService {
 
     pub fn list_projects(&self) -> Result<Vec<Project>, ProjectError> {
         Ok(self.store.list_projects()?)
+    }
+
+    pub fn list_projects_by_org(&self, org_id: &OrgId) -> Result<Vec<Project>, ProjectError> {
+        let all = self.store.list_projects()?;
+        Ok(all.into_iter().filter(|p| p.org_id == *org_id).collect())
+    }
+
+    pub fn verify_org_access(
+        &self,
+        project: &Project,
+        user_id: &str,
+        store: &RocksStore,
+    ) -> Result<(), ProjectError> {
+        store
+            .get_org_member(&project.org_id, user_id)
+            .map_err(|_| {
+                ProjectError::InvalidInput("user is not a member of the project's org".into())
+            })?;
+        Ok(())
     }
 
     pub fn update_project(
