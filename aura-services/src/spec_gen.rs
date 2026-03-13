@@ -33,7 +33,7 @@ Respond ONLY with the JSON array, no other text.
 "#;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct RawSpecOutput {
+pub struct RawSpecOutput {
     pub title: String,
     pub purpose: String,
     pub markdown: String,
@@ -194,6 +194,13 @@ impl SpecGenerationService {
             }
         }
         Ok(specs)
+    }
+
+    /// Test-only wrapper for parse_claude_response.
+    pub fn parse_claude_response_for_test(
+        response: &str,
+    ) -> Result<Vec<RawSpecOutput>, SpecGenError> {
+        Self::parse_claude_response(response)
     }
 
     fn raw_to_specs(project_id: &ProjectId, raw: Vec<RawSpecOutput>) -> Vec<Spec> {
