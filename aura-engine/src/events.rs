@@ -19,6 +19,11 @@ pub enum EngineEvent {
         task_id: TaskId,
         reason: String,
     },
+    TaskRetrying {
+        task_id: TaskId,
+        attempt: u32,
+        reason: String,
+    },
     TaskBecameReady {
         task_id: TaskId,
     },

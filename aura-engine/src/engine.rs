@@ -2,6 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tokio::sync::{mpsc, watch};
+use tracing::warn;
 
 use aura_core::*;
 use aura_services::{AgentService, ClaudeClient, ClaudeStreamEvent, ProjectService, SessionService, TaskService};
@@ -334,28 +335,93 @@ impl DevLoopEngine {
         let user_message =
             build_execution_prompt(&project, &spec, task, session, &codebase_snapshot);
 
-        let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-        let event_tx = self.event_tx.clone();
         let task_id = task.task_id;
 
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = stream_rx.recv().await {
-                if let ClaudeStreamEvent::Delta(text) = evt {
-                    let _ = event_tx.send(EngineEvent::TaskOutputDelta {
-                        task_id,
-                        delta: text,
-                    });
+        // First attempt: stream with prefill to force JSON output
+        let response = {
+            let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+            let event_tx = self.event_tx.clone();
+            let tid = task_id;
+            let forwarder = tokio::spawn(async move {
+                while let Some(evt) = stream_rx.recv().await {
+                    if let ClaudeStreamEvent::Delta(text) = evt {
+                        let _ = event_tx.send(EngineEvent::TaskOutputDelta { task_id: tid, delta: text });
+                    }
                 }
+            });
+
+            let resp = self
+                .claude_client
+                .complete_stream_with_prefill(
+                    api_key,
+                    TASK_EXECUTION_SYSTEM_PROMPT,
+                    &user_message,
+                    16384,
+                    "{",
+                    stream_tx,
+                )
+                .await?;
+            let _ = forwarder.await;
+            resp
+        };
+
+        match parse_execution_response(&response) {
+            Ok(execution) => return Ok(execution),
+            Err(first_err) => {
+                warn!(task_id = %task_id, error = %first_err, "first execution parse failed, retrying");
+
+                // Retry loop: send the failed response back and ask for valid JSON
+                let mut last_response = response;
+                for attempt in 1..=MAX_EXECUTION_RETRIES {
+                    self.emit(EngineEvent::TaskRetrying {
+                        task_id,
+                        attempt,
+                        reason: format!("response was not valid JSON (attempt {attempt})"),
+                    });
+
+                    let messages = vec![
+                        ("user".to_string(), user_message.clone()),
+                        ("assistant".to_string(), last_response.clone()),
+                        ("user".to_string(), RETRY_CORRECTION_PROMPT.to_string()),
+                        ("assistant".to_string(), "{".to_string()),
+                    ];
+
+                    let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+                    let event_tx = self.event_tx.clone();
+                    let tid = task_id;
+                    let forwarder = tokio::spawn(async move {
+                        while let Some(evt) = stream_rx.recv().await {
+                            if let ClaudeStreamEvent::Delta(text) = evt {
+                                let _ = event_tx.send(EngineEvent::TaskOutputDelta { task_id: tid, delta: text });
+                            }
+                        }
+                    });
+
+                    let retry_resp = self
+                        .claude_client
+                        .complete_stream_multi(
+                            api_key,
+                            TASK_EXECUTION_SYSTEM_PROMPT,
+                            messages,
+                            16384,
+                            stream_tx,
+                        )
+                        .await?;
+                    let _ = forwarder.await;
+
+                    let full_response = format!("{{{retry_resp}");
+                    match parse_execution_response(&full_response) {
+                        Ok(execution) => return Ok(execution),
+                        Err(e) => {
+                            warn!(task_id = %task_id, attempt, error = %e, "retry parse failed");
+                            last_response = full_response;
+                        }
+                    }
+                }
+
+                Err(first_err)
             }
-        });
-
-        let response = self
-            .claude_client
-            .complete_stream(api_key, TASK_EXECUTION_SYSTEM_PROMPT, &user_message, 8192, stream_tx)
-            .await?;
-
-        let _ = forwarder.await;
-        parse_execution_response(&response)
+        }
     }
 
     fn emit(&self, event: EngineEvent) {
