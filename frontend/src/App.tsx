@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { EventProvider } from "./context/EventContext";
 import { AppShell } from "./components/AppShell";
 import { HomeView } from "./views/HomeView";
 import { NewProjectView } from "./views/NewProjectView";
-import { ProjectDetail } from "./views/ProjectDetail";
+import { ProjectLayout } from "./views/ProjectLayout";
 import { SpecList } from "./views/SpecList";
 import { SpecViewer } from "./views/SpecViewer";
 import { TaskList } from "./views/TaskList";
@@ -20,12 +20,14 @@ export default function App() {
             <Route index element={<HomeView />} />
             <Route path="new-project" element={<NewProjectView />} />
             <Route path="settings" element={<SettingsView />} />
-            <Route path="projects/:projectId" element={<ProjectDetail />} />
-            <Route path="projects/:projectId/specs" element={<SpecList />} />
-            <Route path="projects/:projectId/specs/:specId" element={<SpecViewer />} />
-            <Route path="projects/:projectId/tasks" element={<TaskList />} />
-            <Route path="projects/:projectId/progress" element={<ProgressDashboard />} />
-            <Route path="projects/:projectId/execution" element={<ExecutionView />} />
+            <Route path="projects/:projectId" element={<ProjectLayout />}>
+              <Route index element={<Navigate to="specs" replace />} />
+              <Route path="specs" element={<SpecList />} />
+              <Route path="specs/:specId" element={<SpecViewer />} />
+              <Route path="tasks" element={<TaskList />} />
+              <Route path="progress" element={<ProgressDashboard />} />
+              <Route path="execution" element={<ExecutionView />} />
+            </Route>
           </Route>
         </Routes>
       </EventProvider>
