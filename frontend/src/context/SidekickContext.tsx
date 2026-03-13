@@ -134,7 +134,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     setPanel((prev) => ({ ...prev, selectedSpec: null }));
   }, []);
 
-  const toggleInfo = useCallback((title: string, content: ReactNode) => {
+  const toggleInfo = useCallback((_title: string, content: ReactNode) => {
     setPanel((prev) => {
       if (prev.showInfo) {
         return { ...prev, showInfo: false, infoContent: null };
