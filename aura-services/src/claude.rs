@@ -5,7 +5,7 @@ use tracing::{debug, error, info};
 use crate::error::ClaudeClientError;
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
-const DEFAULT_MODEL: &str = "claude-sonnet-4-20250514";
+const DEFAULT_MODEL: &str = "claude-opus-4-6";
 
 #[derive(Debug, Clone)]
 pub enum ClaudeStreamEvent {

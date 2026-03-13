@@ -25,23 +25,42 @@ pub enum SpecStreamEvent {
     Error(String),
 }
 
-const MAX_TOKENS: u32 = 16384;
+const MAX_TOKENS: u32 = 32768;
 
 pub(crate) const SPEC_GENERATION_SYSTEM_PROMPT: &str = r#"
 You are an expert software architect. Given a requirements document, produce
-a structured implementation specification broken into logical phases ordered
-from most foundational to least foundational.
+a comprehensive, detailed implementation specification broken into logical
+phases ordered from most foundational to least foundational.
+
+Each spec must be numbered sequentially starting at 1 (e.g., "Spec 01", "Spec 02", etc.).
+Include the spec number in the title like: "01 — Core Domain Types".
+
+Each spec must include a Tasks section with numbered tasks using the format
+<spec_number>.<task_number>, starting at 0. For example, Spec 01 has tasks
+1.0, 1.1, 1.2, etc. Spec 02 has tasks 2.0, 2.1, 2.2, etc.
+Task 0 for each spec should be the setup/scaffolding task.
 
 Respond with a JSON array. Each element has:
-- "title": short title for the spec section
-- "purpose": one paragraph explaining what this section covers
-- "markdown": full markdown body including:
-  - Major concepts
-  - Interfaces (code-level)
-  - Use cases
-  - Test cases
-  - Dependencies on other sections
+- "title": short title for the spec section, prefixed with the zero-padded spec number
+  (e.g. "01 — Core Domain Types")
+- "purpose": one detailed paragraph explaining what this section covers and why it matters
+- "markdown": full, thorough markdown body including ALL of the following:
+  - Major concepts (with detailed explanations, not just bullet lists)
+  - Interfaces (full code-level type definitions, structs, traits, function signatures)
+  - Use cases (concrete scenarios)
+  - Key behaviors and invariants
+  - A Tasks section as a markdown table with columns: ID, Task, Description.
+    Task IDs use the format <spec_number>.<task_number> (e.g. 1.0, 1.1, 1.2).
+    Each task should be specific and actionable.
+  - Test criteria (concrete checklist of what must pass before moving on)
+  - Dependencies on other spec sections
   - State-machine diagrams (mermaid) where applicable
+  - Entity relationship diagrams (mermaid) where applicable
+
+Be thorough and detailed. Each spec should be comprehensive enough that a
+developer (or coding agent) can implement it without needing to ask clarifying
+questions. Include actual code signatures, type definitions, and concrete
+examples — not just high-level descriptions.
 
 Order the array so that the most fundamental sections come first.
 Respond ONLY with the JSON array, no other text.
