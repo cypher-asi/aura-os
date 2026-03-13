@@ -67,7 +67,7 @@
   padding: var(--space-2) 0;
   font-size: 13px;
   line-height: 1.65;
-  color: var(--color-text-muted);
+  color: #ffffff;
 }
 
 /* Markdown inside assistant messages */
