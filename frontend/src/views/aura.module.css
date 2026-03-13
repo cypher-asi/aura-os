@@ -15,23 +15,9 @@
   margin-bottom: 16px;
 }
 
-.statCard {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  padding: 12px;
-  text-align: center;
-}
-
 .statValue {
   font-size: 28px;
   font-weight: 700;
-}
-
-.statLabel {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  margin-top: 2px;
 }
 
 .progressBarContainer {
@@ -45,17 +31,6 @@
   height: 100%;
   background: var(--color-accent);
   transition: width 0.4s ease;
-}
-
-.progressStage {
-  font-size: 13px;
-  color: var(--color-accent);
-  animation: pulseFade 1.5s ease-in-out infinite;
-}
-
-@keyframes pulseFade {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 .stopIcon {
