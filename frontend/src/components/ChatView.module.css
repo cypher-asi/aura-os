@@ -265,3 +265,8 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+.stopButton {
+  background: var(--color-text) !important;
+  opacity: 1 !important;
+}

@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Text, Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { ArrowUp, Plus, MessageSquare, FileText } from "lucide-react";
+import { ArrowUp, Square, Plus, MessageSquare, FileText } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import type { ChatMessage } from "../types";
@@ -224,6 +224,25 @@ export function ChatView() {
     [projectId, chatSessionId, isStreaming, sidekick],
   );
 
+  const stopStreaming = useCallback(() => {
+    abortRef.current?.abort();
+    if (streamBufferRef.current) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `stopped-${Date.now()}`,
+          role: "assistant",
+          content: streamBufferRef.current,
+        },
+      ]);
+    }
+    setStreamingText("");
+    streamBufferRef.current = "";
+    setIsStreaming(false);
+    sidekick.setStreamingSessionId(null);
+    abortRef.current = null;
+  }, [sidekick]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -338,7 +357,6 @@ export function ChatView() {
             }}
             onKeyDown={handleKeyDown}
             placeholder="Message Aura..."
-            disabled={isStreaming}
             rows={1}
           />
           <div className={styles.inputToolbar}>
@@ -373,15 +391,26 @@ export function ChatView() {
               </div>
             </div>
             <div className={styles.toolbarRight}>
-              <button
-                type="button"
-                className={styles.sendButton}
-                onClick={() => sendMessage(input)}
-                disabled={isStreaming || !input.trim()}
-                aria-label="Send"
-              >
-                <ArrowUp size={18} />
-              </button>
+              {isStreaming ? (
+                <button
+                  type="button"
+                  className={`${styles.sendButton} ${styles.stopButton}`}
+                  onClick={stopStreaming}
+                  aria-label="Stop"
+                >
+                  <Square size={14} fill="currentColor" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.sendButton}
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim()}
+                  aria-label="Send"
+                >
+                  <ArrowUp size={18} />
+                </button>
+              )}
             </div>
           </div>
         </div>
