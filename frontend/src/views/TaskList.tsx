@@ -3,8 +3,37 @@ import { useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Spec, Task } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
-import { Spinner } from "@cypher-asi/zui";
-import styles from "./views.module.css";
+import { Page, PageEmptyState, Group, Item, Text } from "@cypher-asi/zui";
+import { ListTodo } from "lucide-react";
+
+function TaskRow({ task, expanded, onToggle }: { task: Task; expanded: boolean; onToggle: () => void }) {
+  return (
+    <>
+      <Item onClick={onToggle} hasChildren expanded={expanded}>
+        <Item.Icon>
+          <Text variant="muted" size="xs" as="span">#{task.order_index}</Text>
+        </Item.Icon>
+        <Item.Label>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <StatusBadge status={task.status} />
+            <span>{task.title}</span>
+          </span>
+        </Item.Label>
+        <Item.Chevron expanded={expanded} onToggle={onToggle} />
+      </Item>
+      {expanded && (
+        <div style={{ padding: "var(--space-2) var(--space-4) var(--space-3) var(--space-8)", fontSize: "var(--text-sm)", color: "var(--color-text-muted)", lineHeight: 1.6 }}>
+          <p>{task.description}</p>
+          {task.execution_notes && (
+            <p style={{ marginTop: "var(--space-2)", color: "var(--color-text-muted)" }}>
+              <strong>Notes:</strong> {task.execution_notes}
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 export function TaskList() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -24,89 +53,53 @@ export function TaskList() {
       .finally(() => setLoading(false));
   }, [projectId]);
 
-  if (loading) return <Spinner />;
-
   const specMap = new Map(specs.map((s) => [s.spec_id, s]));
   const groupedTasks = specs.map((spec) => ({
     spec,
     tasks: tasks.filter((t) => t.spec_id === spec.spec_id),
   }));
-
   const ungrouped = tasks.filter((t) => !specMap.has(t.spec_id));
 
   return (
-    <div>
-      <div className={styles.viewHeader}>
-        <h1 className={styles.viewTitle}>Tasks</h1>
-        <p className={styles.viewSubtitle}>
-          {tasks.length} tasks across {specs.length} specs
-        </p>
-      </div>
-
+    <Page
+      title="Tasks"
+      subtitle={`${tasks.length} tasks across ${specs.length} specs`}
+      isLoading={loading}
+    >
       {tasks.length === 0 ? (
-        <div className={styles.emptyState}>
-          <h3>No tasks yet</h3>
-          <p>Go to the project page and click "Extract Tasks" to create them.</p>
-        </div>
+        <PageEmptyState
+          icon={<ListTodo size={32} />}
+          title="No tasks yet"
+          description='Go to the project page and click "Extract Tasks" to create them.'
+        />
       ) : (
         <>
           {groupedTasks.map(({ spec, tasks: specTasks }) => (
-            <div key={spec.spec_id}>
-              <div className={styles.taskGroupHeader}>
-                {spec.title} ({specTasks.length})
-              </div>
+            <Group key={spec.spec_id} label={spec.title} count={specTasks.length}>
               {specTasks.map((task) => (
-                <div key={task.task_id}>
-                  <div
-                    className={styles.taskRow}
-                    onClick={() =>
-                      setExpanded(expanded === task.task_id ? null : task.task_id)
-                    }
-                  >
-                    <span className={styles.taskOrder}>#{task.order_index}</span>
-                    <StatusBadge status={task.status} />
-                    <span className={styles.taskTitle}>{task.title}</span>
-                  </div>
-                  {expanded === task.task_id && (
-                    <div className={styles.taskExpanded}>
-                      <p>{task.description}</p>
-                      {task.execution_notes && (
-                        <p style={{ marginTop: 8, color: "var(--color-text-dim)" }}>
-                          <strong>Notes:</strong> {task.execution_notes}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <TaskRow
+                  key={task.task_id}
+                  task={task}
+                  expanded={expanded === task.task_id}
+                  onToggle={() => setExpanded(expanded === task.task_id ? null : task.task_id)}
+                />
               ))}
-            </div>
+            </Group>
           ))}
           {ungrouped.length > 0 && (
-            <div>
-              <div className={styles.taskGroupHeader}>Other ({ungrouped.length})</div>
+            <Group label="Other" count={ungrouped.length}>
               {ungrouped.map((task) => (
-                <div key={task.task_id}>
-                  <div
-                    className={styles.taskRow}
-                    onClick={() =>
-                      setExpanded(expanded === task.task_id ? null : task.task_id)
-                    }
-                  >
-                    <span className={styles.taskOrder}>#{task.order_index}</span>
-                    <StatusBadge status={task.status} />
-                    <span className={styles.taskTitle}>{task.title}</span>
-                  </div>
-                  {expanded === task.task_id && (
-                    <div className={styles.taskExpanded}>
-                      <p>{task.description}</p>
-                    </div>
-                  )}
-                </div>
+                <TaskRow
+                  key={task.task_id}
+                  task={task}
+                  expanded={expanded === task.task_id}
+                  onToggle={() => setExpanded(expanded === task.task_id ? null : task.task_id)}
+                />
               ))}
-            </div>
+            </Group>
           )}
         </>
       )}
-    </div>
+    </Page>
   );
 }

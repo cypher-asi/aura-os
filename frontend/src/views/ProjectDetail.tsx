@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useEventContext } from "../context/EventContext";
 import { StatusBadge } from "../components/StatusBadge";
-import { Spinner } from "@cypher-asi/zui";
-import styles from "./views.module.css";
+import { PageHeader, PageEmptyState, Panel, Button, Spinner, Tabs, Text } from "@cypher-asi/zui";
+import { Play, Archive } from "lucide-react";
+import styles from "./aura.module.css";
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -57,11 +58,7 @@ export function ProjectDetail() {
 
   if (loading) return <Spinner />;
   if (!project) {
-    return (
-      <div className={styles.emptyState}>
-        <h3>Project not found</h3>
-      </div>
-    );
+    return <PageEmptyState title="Project not found" />;
   }
 
   const handleGenerateSpecs = async () => {
@@ -101,68 +98,51 @@ export function ProjectDetail() {
 
   return (
     <div>
-      <div className={styles.viewHeader}>
-        <h1 className={styles.viewTitle}>{project.name}</h1>
-        <p className={styles.viewSubtitle}>{project.description}</p>
-      </div>
+      <PageHeader title={project.name} subtitle={project.description} />
 
-      <div className={styles.card} style={{ marginBottom: 20 }}>
+      <Panel variant="solid" border="solid" borderRadius="md" style={{ padding: "var(--space-5)", marginBottom: "var(--space-5)" }}>
         <div className={styles.infoGrid}>
-          <span className={styles.infoLabel}>Status</span>
+          <Text variant="muted" size="sm" as="span">Status</Text>
           <span><StatusBadge status={project.current_status} /></span>
-          <span className={styles.infoLabel}>Folder</span>
-          <span className={styles.infoValue}>{project.linked_folder_path || "—"}</span>
-          <span className={styles.infoLabel}>Requirements</span>
-          <span className={styles.infoValue}>{project.requirements_doc_path || "—"}</span>
-          <span className={styles.infoLabel}>Created</span>
-          <span className={styles.infoValue}>{new Date(project.created_at).toLocaleString()}</span>
+          <Text variant="muted" size="sm" as="span">Folder</Text>
+          <Text size="sm" as="span">{project.linked_folder_path || "—"}</Text>
+          <Text variant="muted" size="sm" as="span">Requirements</Text>
+          <Text size="sm" as="span">{project.requirements_doc_path || "—"}</Text>
+          <Text variant="muted" size="sm" as="span">Created</Text>
+          <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
         </div>
-      </div>
+      </Panel>
 
-      <div className={styles.actions} style={{ marginBottom: 20 }}>
-        <button
-          className={styles.btnPrimary}
-          onClick={handleGenerateSpecs}
-          disabled={genLoading}
-        >
+      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-5)" }}>
+        <Button variant="primary" size="sm" onClick={handleGenerateSpecs} disabled={genLoading}>
           {genLoading ? <><Spinner size="sm" /> Generating...</> : "Generate Specs"}
-        </button>
+        </Button>
         {genLoading && genStage && (
           <span className={styles.progressStage}>{genStage}</span>
         )}
-        <button
-          className={styles.btnPrimary}
-          onClick={handleExtractTasks}
-          disabled={extractLoading}
-        >
+        <Button variant="primary" size="sm" onClick={handleExtractTasks} disabled={extractLoading}>
           {extractLoading ? <><Spinner size="sm" /> Extracting...</> : "Extract Tasks"}
-        </button>
-        <button
-          className={styles.btnSuccess}
-          onClick={() => navigate(`/projects/${project.project_id}/execution`)}
-        >
+        </Button>
+        <Button variant="filled" size="sm" icon={<Play size={14} />} onClick={() => navigate(`/projects/${project.project_id}/execution`)}>
           Start Dev Loop
-        </button>
+        </Button>
         {project.current_status !== "archived" && (
-          <button className={styles.btnDanger} onClick={handleArchive}>
+          <Button variant="danger" size="sm" icon={<Archive size={14} />} onClick={handleArchive}>
             Archive
-          </button>
+          </Button>
         )}
       </div>
 
-      {message && <p className={styles.successText}>{message}</p>}
+      {message && <Text variant="secondary" size="sm" style={{ marginBottom: "var(--space-4)" }}>{message}</Text>}
 
-      <div className={styles.tabs}>
-        <Link to={`/projects/${project.project_id}/specs`} className={styles.tab}>
-          Specs
-        </Link>
-        <Link to={`/projects/${project.project_id}/tasks`} className={styles.tab}>
-          Tasks
-        </Link>
-        <Link to={`/projects/${project.project_id}/progress`} className={styles.tab}>
-          Progress
-        </Link>
-      </div>
+      <Tabs
+        tabs={[
+          { id: "specs", label: "Specs" },
+          { id: "tasks", label: "Tasks" },
+          { id: "progress", label: "Progress" },
+        ]}
+        onChange={(id) => navigate(`/projects/${project.project_id}/${id}`)}
+      />
     </div>
   );
 }
