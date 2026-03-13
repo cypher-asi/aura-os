@@ -86,3 +86,16 @@ pub struct ChatMessage {
     pub content: String,
     pub created_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ZeroAuthSession {
+    pub user_id: String,
+    pub display_name: String,
+    pub profile_image: String,
+    pub primary_zid: String,
+    pub zero_wallet: String,
+    pub wallets: Vec<String>,
+    pub access_token: String,
+    pub created_at: DateTime<Utc>,
+    pub validated_at: DateTime<Utc>,
+}

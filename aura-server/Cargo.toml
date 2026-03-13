@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aura-auth = { path = "../aura-auth" }
 aura-core = { path = "../aura-core" }
 aura-store = { path = "../aura-store" }
 aura-services = { path = "../aura-services" }

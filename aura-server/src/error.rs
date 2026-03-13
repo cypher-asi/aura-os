@@ -45,6 +45,17 @@ impl ApiError {
         )
     }
 
+    pub fn unauthorized(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(Self {
+                error: msg.into(),
+                code: "unauthorized".to_string(),
+                details: None,
+            }),
+        )
+    }
+
     pub fn conflict(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::CONFLICT,

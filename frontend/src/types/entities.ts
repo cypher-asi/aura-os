@@ -102,6 +102,26 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export interface ZeroUser {
+  user_id: string;
+  display_name: string;
+  profile_image: string;
+  primary_zid: string;
+  zero_wallet: string;
+  wallets: string[];
+}
+
+export interface AuthSession {
+  user_id: string;
+  display_name: string;
+  profile_image: string;
+  primary_zid: string;
+  zero_wallet: string;
+  wallets: string[];
+  created_at: string;
+  validated_at: string;
+}
+
 export interface ApiError {
   error: string;
   code: string;

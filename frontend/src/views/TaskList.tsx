@@ -4,6 +4,7 @@ import type { Spec, Task } from "../types";
 import { StatusBadge } from "../components/StatusBadge";
 import { useProjectContext } from "../context/ProjectContext";
 import { useSidekick } from "../context/SidekickContext";
+import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { ListTodo } from "lucide-react";
@@ -90,7 +91,9 @@ export function TaskList() {
     [explorerData],
   );
 
-  if (tasks.length === 0 && !loading) {
+  const showEmpty = useDelayedEmpty(tasks.length === 0, loading);
+
+  if (showEmpty) {
     return (
       <PageEmptyState
         icon={<ListTodo size={32} />}

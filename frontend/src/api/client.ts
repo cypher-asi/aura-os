@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   ApiKeyInfo,
   ProjectProgress,
+  AuthSession,
   ApiError,
 } from "../types";
 import { streamSSE } from "./sse";
@@ -89,6 +90,25 @@ export interface ChatStreamCallbacks {
 }
 
 export const api = {
+  // Auth
+  auth: {
+    login: (email: string, password: string) =>
+      apiFetch<AuthSession>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      }),
+    register: (email: string, password: string) =>
+      apiFetch<AuthSession>("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      }),
+    getSession: () => apiFetch<AuthSession>("/api/auth/session"),
+    validate: () =>
+      apiFetch<AuthSession>("/api/auth/validate", { method: "POST" }),
+    logout: () =>
+      apiFetch<void>("/api/auth/logout", { method: "POST" }),
+  },
+
   // Settings
   getApiKeyInfo: () => apiFetch<ApiKeyInfo>("/api/settings/api-key"),
   setApiKey: (apiKey: string) =>

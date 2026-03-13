@@ -13,6 +13,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tracing::{debug, warn};
 
+use aura_auth::AuthService;
 use aura_engine::EngineEvent;
 use aura_services::{
     AgentService, ChatService, ClaudeClient, ProjectService, SessionService,
@@ -37,6 +38,7 @@ fn spawn_event_rebroadcast(
 
 pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
+    let auth_service = Arc::new(AuthService::new(store.clone()));
     let settings_service =
         Arc::new(SettingsService::new(store.clone(), data_dir).expect("failed to init settings"));
     let claude_client = Arc::new(ClaudeClient::new());
@@ -68,6 +70,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
 
     AppState {
         store,
+        auth_service,
         settings_service,
         project_service,
         spec_gen_service,

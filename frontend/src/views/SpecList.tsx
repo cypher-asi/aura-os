@@ -5,6 +5,7 @@ import type { EngineEvent } from "../types/events";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
+import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { FileText } from "lucide-react";
@@ -98,7 +99,9 @@ export function SpecList() {
     }
   };
 
-  if (mergedSpecs.length === 0 && !loading) {
+  const showEmpty = useDelayedEmpty(mergedSpecs.length === 0, loading);
+
+  if (showEmpty) {
     return (
       <PageEmptyState
         icon={<FileText size={32} />}

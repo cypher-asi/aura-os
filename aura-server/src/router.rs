@@ -6,7 +6,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, chat, dev_loop, projects, settings, specs, tasks, ws};
+use crate::handlers::{agents, auth, chat, dev_loop, projects, settings, specs, tasks, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -20,6 +20,12 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .allow_headers(Any);
 
     let api_router = Router::new()
+        // Auth
+        .route("/api/auth/login", post(auth::login))
+        .route("/api/auth/register", post(auth::register))
+        .route("/api/auth/session", get(auth::get_session))
+        .route("/api/auth/validate", post(auth::validate))
+        .route("/api/auth/logout", post(auth::logout))
         // Settings
         .route(
             "/api/settings/api-key",

@@ -1,0 +1,260 @@
+use std::sync::Arc;
+
+use chrono::Utc;
+use reqwest::Client;
+use serde::Deserialize;
+use tracing::{debug, warn};
+
+use aura_core::ZeroAuthSession;
+use aura_store::RocksStore;
+
+use crate::error::AuthError;
+
+const ZOS_API_URL: &str = "https://zosapi.zero.tech";
+const AUTH_SESSION_KEY: &str = "zero_auth_session";
+
+#[derive(Debug, Deserialize)]
+struct ZosLoginResponse {
+    #[serde(rename = "accessToken")]
+    access_token: String,
+    #[allow(dead_code)]
+    #[serde(rename = "identityToken")]
+    identity_token: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ZosProfileSummary {
+    #[serde(rename = "firstName")]
+    first_name: Option<String>,
+    #[serde(rename = "lastName")]
+    last_name: Option<String>,
+    #[serde(rename = "profileImage")]
+    profile_image: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ZosWallet {
+    #[serde(rename = "publicAddress")]
+    public_address: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ZosUserResponse {
+    id: String,
+    #[serde(rename = "profileSummary")]
+    profile_summary: Option<ZosProfileSummary>,
+    #[serde(rename = "primaryZID")]
+    primary_zid: Option<String>,
+    #[serde(rename = "primaryWalletAddress")]
+    primary_wallet_address: Option<String>,
+    wallets: Option<Vec<ZosWallet>>,
+}
+
+pub struct AuthService {
+    store: Arc<RocksStore>,
+    http: Client,
+}
+
+impl AuthService {
+    pub fn new(store: Arc<RocksStore>) -> Self {
+        Self {
+            store,
+            http: Client::new(),
+        }
+    }
+
+    pub async fn login(&self, email: &str, password: &str) -> Result<ZeroAuthSession, AuthError> {
+        debug!(email, "Logging in via zOS-api");
+
+        let res = self
+            .http
+            .post(format!("{ZOS_API_URL}/api/v2/accounts/login"))
+            .json(&serde_json::json!({ "email": email, "password": password }))
+            .send()
+            .await
+            .map_err(AuthError::Http)?;
+
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let body = res.text().await.unwrap_or_default();
+            return Err(AuthError::ZosApi {
+                status,
+                message: body,
+            });
+        }
+
+        let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
+        self.fetch_and_store_session(&login_data.access_token).await
+    }
+
+    pub async fn register(
+        &self,
+        email: &str,
+        password: &str,
+    ) -> Result<ZeroAuthSession, AuthError> {
+        debug!(email, "Registering via zOS-api");
+
+        let res = self
+            .http
+            .post(format!("{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"))
+            .json(&serde_json::json!({ "email": email, "password": password }))
+            .send()
+            .await
+            .map_err(AuthError::Http)?;
+
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let body = res.text().await.unwrap_or_default();
+            return Err(AuthError::ZosApi {
+                status,
+                message: body,
+            });
+        }
+
+        let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
+        self.fetch_and_store_session(&login_data.access_token).await
+    }
+
+    pub async fn get_session(&self) -> Result<Option<ZeroAuthSession>, AuthError> {
+        match self.store.get_setting(AUTH_SESSION_KEY) {
+            Ok(bytes) => {
+                let session: ZeroAuthSession = serde_json::from_slice(&bytes)?;
+                Ok(Some(session))
+            }
+            Err(aura_store::StoreError::NotFound(_)) => Ok(None),
+            Err(e) => Err(AuthError::Store(e)),
+        }
+    }
+
+    pub async fn validate(&self) -> Result<Option<ZeroAuthSession>, AuthError> {
+        let session = match self.get_session().await? {
+            Some(s) => s,
+            None => return Ok(None),
+        };
+
+        debug!("Validating stored auth token against zOS-api");
+
+        match self.fetch_user_info(&session.access_token).await {
+            Ok(user) => {
+                let updated = ZeroAuthSession {
+                    user_id: user.id,
+                    display_name: build_display_name(&user.profile_summary, &user.primary_zid),
+                    profile_image: user
+                        .profile_summary
+                        .as_ref()
+                        .and_then(|p| p.profile_image.clone())
+                        .unwrap_or_default(),
+                    primary_zid: user.primary_zid.unwrap_or_default(),
+                    zero_wallet: user.primary_wallet_address.unwrap_or_default(),
+                    wallets: user
+                        .wallets
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(|w| w.public_address)
+                        .collect(),
+                    access_token: session.access_token,
+                    created_at: session.created_at,
+                    validated_at: Utc::now(),
+                };
+                let bytes = serde_json::to_vec(&updated)?;
+                self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
+                Ok(Some(updated))
+            }
+            Err(AuthError::ZosApi { status: 401, .. }) => {
+                warn!("Stored auth token is invalid/expired, clearing session");
+                let _ = self.store.delete_setting(AUTH_SESSION_KEY);
+                Ok(None)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn logout(&self) -> Result<(), AuthError> {
+        if let Some(session) = self.get_session().await? {
+            debug!("Logging out via zOS-api");
+            let _ = self
+                .http
+                .delete(format!("{ZOS_API_URL}/authentication/session"))
+                .bearer_auth(&session.access_token)
+                .send()
+                .await;
+        }
+        let _ = self.store.delete_setting(AUTH_SESSION_KEY);
+        Ok(())
+    }
+
+    async fn fetch_user_info(&self, token: &str) -> Result<ZosUserResponse, AuthError> {
+        let res = self
+            .http
+            .get(format!("{ZOS_API_URL}/api/users/current"))
+            .bearer_auth(token)
+            .send()
+            .await
+            .map_err(AuthError::Http)?;
+
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let body = res.text().await.unwrap_or_default();
+            return Err(AuthError::ZosApi {
+                status,
+                message: body,
+            });
+        }
+
+        res.json().await.map_err(AuthError::Http)
+    }
+
+    async fn fetch_and_store_session(
+        &self,
+        access_token: &str,
+    ) -> Result<ZeroAuthSession, AuthError> {
+        let user = self.fetch_user_info(access_token).await?;
+        let now = Utc::now();
+
+        let session = ZeroAuthSession {
+            user_id: user.id,
+            display_name: build_display_name(&user.profile_summary, &user.primary_zid),
+            profile_image: user
+                .profile_summary
+                .as_ref()
+                .and_then(|p| p.profile_image.clone())
+                .unwrap_or_default(),
+            primary_zid: user.primary_zid.unwrap_or_default(),
+            zero_wallet: user.primary_wallet_address.unwrap_or_default(),
+            wallets: user
+                .wallets
+                .unwrap_or_default()
+                .into_iter()
+                .map(|w| w.public_address)
+                .collect(),
+            access_token: access_token.to_string(),
+            created_at: now,
+            validated_at: now,
+        };
+
+        let bytes = serde_json::to_vec(&session)?;
+        self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
+
+        Ok(session)
+    }
+}
+
+fn build_display_name(
+    profile: &Option<ZosProfileSummary>,
+    primary_zid: &Option<String>,
+) -> String {
+    if let Some(p) = profile {
+        let first = p.first_name.as_deref().unwrap_or("");
+        let last = p.last_name.as_deref().unwrap_or("");
+        let full = format!("{first} {last}").trim().to_string();
+        if !full.is_empty() {
+            return full;
+        }
+    }
+    if let Some(zid) = primary_zid {
+        if !zid.is_empty() {
+            return zid.clone();
+        }
+    }
+    "User".to_string()
+}

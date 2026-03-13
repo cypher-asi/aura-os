@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { ProjectProgress } from "../types";
 import { useProjectContext } from "../context/ProjectContext";
+import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { PageEmptyState, Panel, Text } from "@cypher-asi/zui";
 import styles from "./aura.module.css";
 
@@ -25,7 +26,10 @@ export function ProgressDashboard() {
     return () => clearInterval(interval);
   }, [projectId]);
 
-  if (!progress && !loading) {
+  const showEmpty = useDelayedEmpty(!progress, loading);
+
+  if (!progress) {
+    if (!showEmpty) return null;
     return <PageEmptyState title="No progress data" />;
   }
 

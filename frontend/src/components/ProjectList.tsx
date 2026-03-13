@@ -173,7 +173,7 @@ export function ProjectList() {
               }))
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],
       })),
-    [projects, sessionsByProject, streamingSessionId, handleNewSession],
+    [projects, sessionsByProject, streamingSessionId],
   );
 
   const defaultExpandedIds = useMemo(
