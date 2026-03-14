@@ -71,6 +71,7 @@ impl TaskService {
                 | (TaskStatus::InProgress, TaskStatus::Ready)
                 | (TaskStatus::Failed, TaskStatus::Ready)
                 | (TaskStatus::Blocked, TaskStatus::Ready)
+                | (TaskStatus::Done, TaskStatus::Ready)
         );
         if legal {
             Ok(())
@@ -198,7 +199,27 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready)
+        let mut task = self
+            .store
+            .get_task(project_id, spec_id, task_id)
+            .map_err(|e| match e {
+                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
+                other => TaskError::Store(other),
+            })?;
+
+        if task.status == TaskStatus::Ready {
+            return Ok(task);
+        }
+
+        Self::validate_transition(task.status, TaskStatus::Ready)?;
+        task.status = TaskStatus::Ready;
+        task.assigned_agent_id = None;
+        task.session_id = None;
+        task.build_steps.clear();
+        task.live_output.clear();
+        task.updated_at = Utc::now();
+        self.store.put_task(&task)?;
+        Ok(task)
     }
 
     // -- Dependency resolution --
