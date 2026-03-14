@@ -34,6 +34,7 @@ const EVENT_LABELS: Record<EngineEventType, string> = {
   spec_gen_completed: "Spec",
   spec_gen_failed: "Spec",
   spec_saved: "Spec",
+  build_verification_skipped: "Build",
   build_verification_started: "Build",
   build_verification_passed: "Build",
   build_verification_failed: "Build",
@@ -150,6 +151,8 @@ function summarise(e: EngineEvent): string {
       return `Spec generation failed: ${e.reason ?? "unknown"}`;
     case "spec_saved":
       return `Spec saved: ${e.spec?.title ?? e.project_id}`;
+    case "build_verification_skipped":
+      return `Build verification skipped${e.reason ? `: ${e.reason}` : ""}`;
     case "build_verification_started":
       return `Build verification started${e.task_id ? `: ${e.task_id}` : ""}`;
     case "build_verification_passed": {
@@ -252,6 +255,7 @@ export function useLogStream() {
       "spec_gen_completed",
       "spec_gen_failed",
       "spec_saved",
+      "build_verification_skipped",
       "build_verification_started",
       "build_verification_passed",
       "build_verification_failed",
