@@ -66,7 +66,7 @@ export function AppShell() {
           </div>
 
           {/* Right column: sidekick/preview + taskbar right */}
-          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid var(--color-border)" }}>
             <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
               <Sidekick />
               <Preview />
