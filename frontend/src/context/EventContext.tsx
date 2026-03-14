@@ -55,15 +55,13 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       (event.type === "task_completed" || event.type === "task_failed") &&
       event.task_id
     ) {
-      const taskId = event.task_id;
-      setTimeout(() => {
-        taskOutputRef.current.delete(taskId);
-        notifyTaskOutputListeners(taskId);
-      }, 60_000);
+      notifyTaskOutputListeners(event.task_id);
     }
 
     if (event.type === "loop_stopped" || event.type === "loop_finished") {
-      taskOutputRef.current.clear();
+      for (const taskId of taskOutputRef.current.keys()) {
+        notifyTaskOutputListeners(taskId);
+      }
     }
 
     const subs = subscribersRef.current.get(event.type);
