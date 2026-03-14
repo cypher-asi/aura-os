@@ -8,7 +8,7 @@ import { clearLastChatIf } from "../utils/storage";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { Plus, MessageSquare, Pencil, Trash2, Loader2 } from "lucide-react";
+import { MessageSquare, Pencil, Trash2, Loader2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
 import { DeleteProjectModal, DeleteSessionModal } from "./ProjectModals";
 import { useEventContext } from "../context/EventContext";
@@ -223,17 +223,13 @@ export function ProjectList() {
             {automatingProjectId === p.project_id && (
               <Loader2 size={12} className={styles.automationSpinner} />
             )}
-            <button
-              type="button"
-              className={styles.newChatButton}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNewSession(p.project_id);
-              }}
-              aria-label="New Chat"
-            >
-              <Plus size={14} />
-            </button>
+            <span onClick={(e) => e.stopPropagation()} className={styles.newChatWrap}>
+              <ButtonPlus
+                onClick={() => handleNewSession(p.project_id)}
+                size="sm"
+                title="New Chat"
+              />
+            </span>
           </span>
         ),
         metadata: { type: "project" },
