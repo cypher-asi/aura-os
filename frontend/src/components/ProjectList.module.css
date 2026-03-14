@@ -70,6 +70,12 @@
   margin-bottom: -4px;
 }
 
+/* Override Item's .item svg (18px) so the + icon matches the search-area + (16px) */
+.newChatWrap button svg {
+  width: var(--icon-sm, 16px);
+  height: var(--icon-sm, 16px);
+}
+
 .inlineRenameInput {
   position: fixed;
   z-index: 10;
