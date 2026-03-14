@@ -1,24 +1,26 @@
 import { useState, useCallback } from "react";
 import { Link, Outlet } from "react-router-dom";
-import { Topbar, Sidebar, ButtonWindow } from "@cypher-asi/zui";
+import { Topbar, ButtonWindow } from "@cypher-asi/zui";
+import { Lane } from "./Lane";
 import { ProjectList } from "./ProjectList";
-import { Sidekick } from "./Sidekick";
-import { Preview } from "./Preview";
+import { SidekickHeader, SidekickContent } from "./Sidekick";
+import { PreviewHeader, PreviewContent } from "./Preview";
 import { TaskbarLeft } from "./TaskbarLeft";
 import { TaskbarMiddle } from "./TaskbarMiddle";
 import { TaskbarRight } from "./TaskbarRight";
 import { TerminalPanel } from "./TerminalPanel";
 import { SettingsModal } from "./SettingsModal";
 import { OrgSettingsPanel } from "./OrgSettingsPanel";
-import { SidekickProvider } from "../context/SidekickContext";
+import { SidekickProvider, useSidekick } from "../context/SidekickContext";
 import { ProjectContextProvider } from "../context/ProjectContext";
 import { OrgProvider } from "../context/OrgContext";
 import { windowCommand } from "../lib/windowCommand";
 
-export function AppShell() {
+function AppLayout() {
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgInitialSection, setOrgInitialSection] = useState<"billing" | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { previewItem } = useSidekick();
 
   const openOrgBilling = useCallback(() => {
     setOrgInitialSection("billing");
@@ -26,9 +28,7 @@ export function AppShell() {
   }, []);
 
   return (
-    <SidekickProvider>
-    <OrgProvider>
-    <ProjectContextProvider>
+    <>
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Topbar
           className="titlebar-drag"
@@ -44,43 +44,66 @@ export function AppShell() {
           }
         />
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          {/* Left column: sidebar + taskbar left */}
-          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
-            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-              <Sidebar
-                className="nav-sidebar"
-                resizable
-                defaultWidth={200}
-                minWidth={140}
-                maxWidth={300}
-                storageKey="aura-sidebar"
-              >
-                <ProjectList />
-              </Sidebar>
-            </div>
-            <TaskbarLeft
-              onOpenSettings={() => setSettingsOpen(true)}
-              onOpenOrgSettings={() => setOrgSettingsOpen(true)}
-            />
-          </div>
 
-          {/* Middle column: main content + terminal + taskbar middle */}
-          <div style={{ flex: 1, minWidth: 120, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Lane 1: AgentsList */}
+          <Lane
+            resizable
+            resizePosition="right"
+            defaultWidth={200}
+            minWidth={140}
+            maxWidth={300}
+            storageKey="aura-sidebar"
+            taskbar={
+              <TaskbarLeft
+                onOpenSettings={() => setSettingsOpen(true)}
+                onOpenOrgSettings={() => setOrgSettingsOpen(true)}
+              />
+            }
+          >
+            <ProjectList />
+          </Lane>
+
+          {/* Lane 2: AgentChat */}
+          <Lane
+            flex
+            style={{ borderLeft: "1px solid var(--color-border)", borderRight: "1px solid var(--color-border)" }}
+            taskbar={<TaskbarMiddle />}
+          >
             <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
               <Outlet />
             </main>
             <TerminalPanel />
-            <TaskbarMiddle />
-          </div>
+          </Lane>
 
-          {/* Right column: sidekick/preview + taskbar right */}
-          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0, borderLeft: "1px solid var(--color-border)" }}>
-            <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-              <Sidekick />
-              <Preview />
-            </div>
-            <TaskbarRight onBuyCredits={openOrgBilling} />
-          </div>
+          {/* Lane 3: Sidekick */}
+          <Lane
+            resizable
+            resizePosition="left"
+            defaultWidth={320}
+            minWidth={200}
+            maxWidth={1200}
+            storageKey="aura-sidekick"
+            header={<SidekickHeader />}
+            taskbar={<TaskbarRight onBuyCredits={openOrgBilling} />}
+          >
+            <SidekickContent />
+          </Lane>
+
+          {/* Lane 4: Preview */}
+          <Lane
+            resizable
+            resizePosition="left"
+            defaultWidth={320}
+            minWidth={200}
+            maxWidth={600}
+            storageKey="aura-preview"
+            collapsed={!previewItem}
+            header={<PreviewHeader />}
+            style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
+          >
+            <PreviewContent />
+          </Lane>
+
         </div>
       </div>
       <OrgSettingsPanel
@@ -89,6 +112,16 @@ export function AppShell() {
         initialSection={orgInitialSection}
       />
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
+  );
+}
+
+export function AppShell() {
+  return (
+    <SidekickProvider>
+    <OrgProvider>
+    <ProjectContextProvider>
+      <AppLayout />
     </ProjectContextProvider>
     </OrgProvider>
     </SidekickProvider>
