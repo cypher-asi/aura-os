@@ -69,6 +69,8 @@ pub struct Task {
     pub order_index: u32,
     pub dependency_ids: Vec<TaskId>,
     pub assigned_agent_id: Option<AgentId>,
+    #[serde(default)]
+    pub session_id: Option<SessionId>,
     pub execution_notes: String,
     #[serde(default)]
     pub files_changed: Vec<FileChangeSummary>,
@@ -94,6 +96,8 @@ pub struct Session {
     pub agent_id: AgentId,
     pub project_id: ProjectId,
     pub active_task_id: Option<TaskId>,
+    #[serde(default)]
+    pub tasks_worked: Vec<TaskId>,
     pub context_usage_estimate: f64,
     pub summary_of_previous_context: String,
     pub status: SessionStatus,

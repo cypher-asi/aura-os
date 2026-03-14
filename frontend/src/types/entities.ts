@@ -53,6 +53,7 @@ export interface Task {
   order_index: number;
   dependency_ids: TaskId[];
   assigned_agent_id: AgentId | null;
+  session_id: SessionId | null;
   execution_notes: string;
   files_changed: { op: string; path: string }[];
   created_at: string;
@@ -75,6 +76,7 @@ export interface Session {
   agent_id: AgentId;
   project_id: ProjectId;
   active_task_id: TaskId | null;
+  tasks_worked: TaskId[];
   context_usage_estimate: number;
   summary_of_previous_context: string;
   status: SessionStatus;

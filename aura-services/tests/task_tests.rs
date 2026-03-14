@@ -30,6 +30,7 @@ fn make_task_with(
         order_index: order,
         dependency_ids: deps,
         assigned_agent_id: None,
+        session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
         created_at: now,

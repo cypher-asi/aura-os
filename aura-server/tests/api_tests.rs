@@ -292,6 +292,7 @@ async fn task_list_and_progress() {
         order_index: 0,
         dependency_ids: vec![],
         assigned_agent_id: None,
+        session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
         created_at: now,

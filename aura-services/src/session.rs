@@ -59,6 +59,7 @@ impl SessionService {
             agent_id: *agent_id,
             project_id: *project_id,
             active_task_id,
+            tasks_worked: Vec::new(),
             context_usage_estimate: 0.0,
             summary_of_previous_context: summary,
             status: SessionStatus::Active,
