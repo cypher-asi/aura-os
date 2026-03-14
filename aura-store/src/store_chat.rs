@@ -75,6 +75,21 @@ impl RocksStore {
         self.scan_cf::<ChatMessage>(&self.cf_chat_messages(), Some(&prefix))
     }
 
+    pub fn count_messages_by_project(&self, project_id: &ProjectId) -> StoreResult<usize> {
+        let prefix = format!("{project_id}:");
+        let cf = self.cf_chat_messages();
+        let iter = self.db.prefix_iterator_cf(&cf, prefix.as_bytes());
+        let mut count = 0;
+        for item in iter {
+            let (key, _) = item?;
+            if !key.starts_with(prefix.as_bytes()) {
+                break;
+            }
+            count += 1;
+        }
+        Ok(count)
+    }
+
     pub fn delete_chat_messages_by_session(
         &self,
         project_id: &ProjectId,

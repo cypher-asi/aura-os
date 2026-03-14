@@ -94,6 +94,14 @@ impl RocksStore {
         self.scan_cf::<Session>(&self.cf_sessions(), Some(&prefix))
     }
 
+    pub fn list_sessions_by_project(
+        &self,
+        project_id: &ProjectId,
+    ) -> StoreResult<Vec<Session>> {
+        let prefix = format!("{project_id}:");
+        self.scan_cf::<Session>(&self.cf_sessions(), Some(&prefix))
+    }
+
     // -- Settings CRUD --
 
     pub fn put_setting(&self, key: &str, value: &[u8]) -> StoreResult<()> {
