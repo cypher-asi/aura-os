@@ -130,6 +130,27 @@ pub async fn get_progress(
             .sum();
     }
 
+    // Chat sessions: include chat token usage in project totals
+    if let Ok(chat_sessions) = state.store.list_chat_sessions(&project_id) {
+        let fee_schedule = state.pricing_service.get_fee_schedule();
+        let chat_tokens: u64 = chat_sessions
+            .iter()
+            .map(|cs| cs.total_input_tokens + cs.total_output_tokens)
+            .sum();
+        let chat_cost: f64 = chat_sessions
+            .iter()
+            .map(|cs| {
+                let model = cs.model.as_deref().unwrap_or("claude-opus-4-6");
+                let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
+                aura_billing::compute_cost_with_rates(
+                    cs.total_input_tokens, cs.total_output_tokens, inp, out,
+                )
+            })
+            .sum();
+        progress.total_tokens += chat_tokens;
+        progress.total_cost += chat_cost;
+    }
+
     // Messages: count from chat store
     if let Ok(count) = state.store.count_messages_by_project(&project_id) {
         progress.total_messages = count as u64;
