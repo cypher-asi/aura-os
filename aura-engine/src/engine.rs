@@ -98,7 +98,9 @@ const RETRY_CORRECTION_PROMPT: &str =
     "Your previous response was not valid JSON. Respond with ONLY a valid JSON object matching the schema above. No prose, no markdown fences.";
 
 const MAX_EXECUTION_RETRIES: u32 = 2;
-const MAX_BUILD_FIX_RETRIES: u32 = 3;
+const MAX_BUILD_FIX_RETRIES: u32 = 10;
+const MAX_SHELL_TASK_RETRIES: u32 = 10;
+const MAX_LOOP_TASK_RETRIES: u32 = 5;
 const MAX_FOLLOW_UPS_PER_LOOP: usize = 20;
 const TASK_EXECUTION_MAX_TOKENS: u32 = 32_768;
 
@@ -716,7 +718,7 @@ impl DevLoopEngine {
         command: &str,
     ) -> Result<TaskExecution, EngineError> {
         let base_path = Path::new(&project.linked_folder_path);
-        let max_attempts: u32 = MAX_BUILD_FIX_RETRIES;
+        let max_attempts: u32 = MAX_SHELL_TASK_RETRIES;
 
         for attempt in 1..=max_attempts {
             self.emit(EngineEvent::BuildVerificationStarted {
