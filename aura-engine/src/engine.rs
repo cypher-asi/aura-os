@@ -1693,7 +1693,28 @@ impl DevLoopEngine {
             }
             api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
+            // Separate engine-handled tools from executor tools for parallel execution
+            let mut executor_indices: Vec<usize> = Vec::new();
+            for (i, tc) in stream_result.tool_calls.iter().enumerate() {
+                match tc.name.as_str() {
+                    "task_done" | "get_task_context" => {}
+                    _ => {
+                        track_file_op(&tc.name, &tc.input, &mut tracked_file_ops);
+                        executor_indices.push(i);
+                    }
+                }
+            }
+
+            // Execute regular tools in parallel
+            let executor_futures: Vec<_> = executor_indices.iter().map(|&i| {
+                let tc = &stream_result.tool_calls[i];
+                executor.execute(project_id, &tc.name, tc.input.clone())
+            }).collect();
+            let executor_results = futures::future::join_all(executor_futures).await;
+
+            // Build result blocks in order, merging parallel results
             let mut result_blocks: Vec<ContentBlock> = Vec::new();
+            let mut exec_result_iter = executor_results.into_iter();
             for tc in &stream_result.tool_calls {
                 match tc.name.as_str() {
                     "task_done" => {
@@ -1724,18 +1745,18 @@ impl DevLoopEngine {
                         });
                     }
                     _ => {
-                        track_file_op(&tc.name, &tc.input, &mut tracked_file_ops);
-                        let result = executor.execute(project_id, &tc.name, tc.input.clone()).await;
-                        let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
-                            task_id,
-                            delta: format!("\n[tool: {} -> {}]\n", tc.name,
-                                if result.is_error { "error" } else { "ok" }),
-                        });
-                        result_blocks.push(ContentBlock::ToolResult {
-                            tool_use_id: tc.id.clone(),
-                            content: result.content,
-                            is_error: if result.is_error { Some(true) } else { None },
-                        });
+                        if let Some(result) = exec_result_iter.next() {
+                            let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
+                                task_id,
+                                delta: format!("\n[tool: {} -> {}]\n", tc.name,
+                                    if result.is_error { "error" } else { "ok" }),
+                            });
+                            result_blocks.push(ContentBlock::ToolResult {
+                                tool_use_id: tc.id.clone(),
+                                content: result.content,
+                                is_error: if result.is_error { Some(true) } else { None },
+                            });
+                        }
                     }
                 }
             }

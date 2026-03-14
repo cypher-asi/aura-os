@@ -423,11 +423,15 @@ impl ChatService {
                 error!(%project_id, error = %e, "Failed to persist assistant tool-use message");
             }
 
-            // Execute each tool call and build tool_result blocks
+            // Execute tool calls in parallel
+            let tool_futures: Vec<_> = iter_tool_calls.iter().map(|tc| {
+                executor.execute(project_id, &tc.name, tc.input.clone())
+            }).collect();
+            let tool_results = futures::future::join_all(tool_futures).await;
+
             let mut result_blocks: Vec<ContentBlock> = Vec::new();
             let mut result_persist_blocks: Vec<ChatContentBlock> = Vec::new();
-            for tc in &iter_tool_calls {
-                let result = executor.execute(project_id, &tc.name, tc.input.clone()).await;
+            for (tc, result) in iter_tool_calls.iter().zip(tool_results) {
                 let _ = tx.send(ChatStreamEvent::ToolResult {
                     id: tc.id.clone(),
                     name: tc.name.clone(),
