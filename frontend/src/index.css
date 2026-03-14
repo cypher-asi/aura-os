@@ -17,6 +17,7 @@ html, body, #root {
   height: var(--control-height-md);
   position: relative;
   padding-left: 13px;
+  padding-right: var(--space-2);
 }
 
 .titlebar-no-drag {

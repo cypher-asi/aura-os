@@ -1,3 +1,5 @@
+use std::path::Path as FsPath;
+
 use axum::extract::{Path, State};
 use axum::Json;
 
@@ -101,9 +103,137 @@ pub async fn get_progress(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<ProjectProgress>> {
-    let progress = state
+    let mut progress = state
         .task_service
         .get_project_progress(&project_id)
         .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    // Tokens: sum across all sessions for this project
+    if let Ok(sessions) = state.store.list_sessions_by_project(&project_id) {
+        progress.total_tokens = sessions
+            .iter()
+            .map(|s| s.total_input_tokens + s.total_output_tokens)
+            .sum();
+    }
+
+    // Messages: count from chat store
+    if let Ok(count) = state.store.count_messages_by_project(&project_id) {
+        progress.total_messages = count as u64;
+    }
+
+    // LOC + commits need the project's linked folder
+    if let Ok(project) = state.project_service.get_project(&project_id) {
+        let folder = &project.linked_folder_path;
+        if FsPath::new(folder).is_dir() {
+            progress.lines_of_code = count_lines_of_code(folder).await;
+            progress.total_commits = count_git_commits(folder).await;
+        }
+
+        // PRs: query GitHub if integration is configured
+        if let Some(ref repo_full_name) = project.github_repo_full_name {
+            progress.total_pull_requests = count_github_prs(&state, repo_full_name).await;
+        }
+    }
+
     Ok(Json(progress))
+}
+
+async fn count_lines_of_code(folder: &str) -> u64 {
+    tokio::task::spawn_blocking({
+        let folder = folder.to_string();
+        move || count_loc_sync(&folder)
+    })
+    .await
+    .unwrap_or(0)
+}
+
+fn count_loc_sync(folder: &str) -> u64 {
+    use std::fs;
+
+    const SKIP: &[&str] = &[
+        ".git",
+        "target",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "dist",
+        "build",
+    ];
+    const EXTS: &[&str] = &[
+        "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "css", "html", "sql", "sh", "yaml",
+        "yml", "toml", "json", "md",
+    ];
+
+    fn walk(dir: &FsPath, total: &mut u64) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if !SKIP.contains(&name.as_str()) {
+                    walk(&path, total);
+                }
+            } else if path.is_file() {
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or_default();
+                if EXTS.contains(&ext) {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        *total += content.lines().count() as u64;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut total = 0u64;
+    walk(FsPath::new(folder), &mut total);
+    total
+}
+
+async fn count_git_commits(folder: &str) -> u64 {
+    let output = tokio::process::Command::new("git")
+        .args(["rev-list", "--count", "HEAD"])
+        .current_dir(folder)
+        .output()
+        .await;
+
+    match output {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+            .trim()
+            .parse::<u64>()
+            .unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// Count PRs via `gh pr list` CLI if available, otherwise 0.
+async fn count_github_prs(_state: &AppState, repo_full_name: &str) -> u64 {
+    let output = tokio::process::Command::new("gh")
+        .args([
+            "pr",
+            "list",
+            "--repo",
+            repo_full_name,
+            "--state",
+            "all",
+            "--json",
+            "number",
+            "--limit",
+            "1000",
+        ])
+        .output()
+        .await;
+
+    match output {
+        Ok(o) if o.status.success() => {
+            let json: Result<Vec<serde_json::Value>, _> =
+                serde_json::from_slice(&o.stdout);
+            json.map(|v| v.len() as u64).unwrap_or(0)
+        }
+        _ => 0,
+    }
 }
