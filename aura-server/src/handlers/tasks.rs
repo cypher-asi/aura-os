@@ -134,6 +134,7 @@ pub async fn get_progress(
         if FsPath::new(folder).is_dir() {
             progress.lines_of_code = count_lines_of_code(folder).await;
             progress.total_commits = count_git_commits(folder).await;
+            progress.total_tests = count_tests(folder).await;
         }
 
         // PRs: query GitHub if integration is configured
@@ -222,6 +223,86 @@ fn count_loc_sync(folder: &str) -> u64 {
                 if EXTS.contains(&ext) {
                     if let Ok(content) = fs::read_to_string(&path) {
                         *total += content.lines().count() as u64;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut total = 0u64;
+    walk(FsPath::new(folder), &mut total);
+    total
+}
+
+async fn count_tests(folder: &str) -> u64 {
+    tokio::task::spawn_blocking({
+        let folder = folder.to_string();
+        move || count_tests_sync(&folder)
+    })
+    .await
+    .unwrap_or(0)
+}
+
+fn count_tests_sync(folder: &str) -> u64 {
+    use std::fs;
+
+    const SKIP: &[&str] = &[
+        ".git",
+        "target",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "dist",
+        "build",
+    ];
+
+    fn walk(dir: &FsPath, total: &mut u64) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if !SKIP.contains(&name.as_str()) {
+                    walk(&path, total);
+                }
+            } else if path.is_file() {
+                let ext = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or_default();
+                if let Ok(content) = fs::read_to_string(&path) {
+                    match ext {
+                        "rs" => {
+                            *total += content.matches("#[test]").count() as u64;
+                            *total += content.matches("#[tokio::test]").count() as u64;
+                        }
+                        "ts" | "tsx" | "js" | "jsx" => {
+                            if name.contains(".test.") || name.contains(".spec.") {
+                                for line in content.lines() {
+                                    let trimmed = line.trim_start();
+                                    if trimmed.starts_with("it(")
+                                        || trimmed.starts_with("it.only(")
+                                        || trimmed.starts_with("test(")
+                                        || trimmed.starts_with("test.only(")
+                                    {
+                                        *total += 1;
+                                    }
+                                }
+                            }
+                        }
+                        "py" => {
+                            for line in content.lines() {
+                                let trimmed = line.trim_start();
+                                if trimmed.starts_with("def test_")
+                                    || trimmed.starts_with("async def test_")
+                                {
+                                    *total += 1;
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }

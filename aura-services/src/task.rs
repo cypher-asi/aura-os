@@ -28,6 +28,7 @@ pub struct ProjectProgress {
     pub total_pull_requests: u64,
     pub total_messages: u64,
     pub total_sessions: u64,
+    pub total_tests: u64,
 }
 
 pub struct TaskService {
@@ -468,6 +469,7 @@ impl TaskService {
             total_pull_requests: 0,
             total_messages: 0,
             total_sessions: 0,
+            total_tests: 0,
         })
     }
 }

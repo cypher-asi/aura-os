@@ -147,6 +147,7 @@ export interface ProjectProgress {
   total_pull_requests: number;
   total_messages: number;
   total_sessions: number;
+  total_tests: number;
 }
 
 export interface ChatSession {
