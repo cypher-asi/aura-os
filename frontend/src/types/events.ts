@@ -17,7 +17,11 @@ export type EngineEventType =
   | "spec_gen_progress"
   | "spec_gen_completed"
   | "spec_gen_failed"
-  | "spec_saved";
+  | "spec_saved"
+  | "build_verification_started"
+  | "build_verification_passed"
+  | "build_verification_failed"
+  | "build_fix_attempt";
 
 export interface EngineEvent {
   type: EngineEventType;
@@ -41,4 +45,7 @@ export interface EngineEvent {
   stage?: string;
   spec_count?: number;
   spec?: import("./entities").Spec;
+  command?: string;
+  stderr?: string;
+  stdout?: string;
 }
