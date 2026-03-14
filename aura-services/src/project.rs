@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -14,7 +13,6 @@ pub struct CreateProjectInput {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
-    pub requirements_doc_path: String,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
 }
@@ -24,7 +22,6 @@ pub struct UpdateProjectInput {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
-    pub requirements_doc_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
 }
@@ -53,14 +50,6 @@ impl ProjectService {
             )));
         }
 
-        let req_path = Path::new(&input.requirements_doc_path);
-        if !req_path.is_file() {
-            return Err(ProjectError::InvalidInput(format!(
-                "requirements doc path does not exist or is not a file: {}",
-                input.requirements_doc_path
-            )));
-        }
-
         let now = Utc::now();
         let project = Project {
             project_id: ProjectId::new(),
@@ -68,7 +57,7 @@ impl ProjectService {
             name: input.name,
             description: input.description,
             linked_folder_path: input.linked_folder_path,
-            requirements_doc_path: input.requirements_doc_path,
+            requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
             github_integration_id: input.github_integration_id,
             github_repo_full_name: input.github_repo_full_name,
@@ -130,9 +119,6 @@ impl ProjectService {
         }
         if let Some(path) = input.linked_folder_path {
             project.linked_folder_path = path;
-        }
-        if let Some(path) = input.requirements_doc_path {
-            project.requirements_doc_path = path;
         }
         if input.github_integration_id.is_some() || input.github_repo_full_name.is_some() {
             project.github_integration_id = input.github_integration_id;

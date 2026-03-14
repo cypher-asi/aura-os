@@ -420,6 +420,13 @@ function SessionPreview({ session }: { session: Session }) {
           <Text size="sm">{contextPct}%</Text>
         </div>
         <div className={styles.taskField}>
+          <Text variant="muted" size="sm">Tokens Used</Text>
+          <Text size="sm">
+            {(session.total_input_tokens + session.total_output_tokens).toLocaleString()} total
+            <Text variant="muted" size="sm" as="span"> ({session.total_input_tokens.toLocaleString()} in / {session.total_output_tokens.toLocaleString()} out)</Text>
+          </Text>
+        </div>
+        <div className={styles.taskField}>
           <Text variant="muted" size="sm">Started</Text>
           <Text size="sm">{formatRelativeTime(session.started_at)}</Text>
         </div>

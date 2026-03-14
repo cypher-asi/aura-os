@@ -24,7 +24,6 @@ pub async fn create_project(
         name: req.name,
         description: req.description,
         linked_folder_path: req.linked_folder_path,
-        requirements_doc_path: req.requirements_doc_path,
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
     };
@@ -78,7 +77,6 @@ pub async fn update_project(
         name: req.name,
         description: req.description,
         linked_folder_path: req.linked_folder_path,
-        requirements_doc_path: req.requirements_doc_path,
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
     };

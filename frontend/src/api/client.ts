@@ -74,7 +74,6 @@ export interface CreateProjectRequest {
   name: string;
   description: string;
   linked_folder_path: string;
-  requirements_doc_path: string;
   github_integration_id?: string;
   github_repo_full_name?: string;
 }
@@ -83,7 +82,6 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   linked_folder_path?: string;
-  requirements_doc_path?: string;
   github_integration_id?: string;
   github_repo_full_name?: string;
 }

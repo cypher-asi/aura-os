@@ -24,7 +24,6 @@ pub struct CreateProjectRequest {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
-    pub requirements_doc_path: String,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
 }
@@ -34,7 +33,6 @@ pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
-    pub requirements_doc_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
 }

@@ -136,7 +136,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
                       <Text size="sm" weight="medium" as="span">#{num}</Text>
                       <StatusBadge status={session.status} />
                       <Text variant="muted" size="sm" as="span" style={{ marginLeft: "auto", whiteSpace: "nowrap" }}>
-                        {taskCount} task{taskCount !== 1 ? "s" : ""} · {formatRelativeTime(session.started_at)}
+                        {taskCount} task{taskCount !== 1 ? "s" : ""} · {((session.total_input_tokens + session.total_output_tokens) / 1000).toFixed(1)}k tokens · {formatRelativeTime(session.started_at)}
                       </Text>
                     </span>
                   </Item.Label>

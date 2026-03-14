@@ -16,7 +16,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folderPath, setFolderPath] = useState("");
-  const [reqPath, setReqPath] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -32,7 +31,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setName("");
     setDescription("");
     setFolderPath("");
-    setReqPath("");
     setSelectedRepo("");
     setLoading(false);
     setError("");
@@ -60,7 +58,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
         name: name.trim(),
         description: description.trim(),
         linked_folder_path: folderPath.trim(),
-        requirements_doc_path: reqPath.trim(),
         github_integration_id: repoObj?.integration_id,
         github_repo_full_name: repoObj?.full_name,
       });
@@ -108,12 +105,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           onChange={setFolderPath}
           placeholder="Linked folder path"
           mode="folder"
-        />
-        <PathInput
-          value={reqPath}
-          onChange={setReqPath}
-          placeholder="Requirements doc path"
-          mode="file"
         />
         {repos.length > 0 && (
           <select

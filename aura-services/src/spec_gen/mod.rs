@@ -121,11 +121,15 @@ impl SpecGenerationService {
 
         Self::emit(&progress, "Reading requirements document");
 
-        let req_path = &project.requirements_doc_path;
-        info!(%project_id, path = %req_path, "Reading requirements file");
-        if !std::path::Path::new(req_path).is_file() {
-            error!(%project_id, path = %req_path, "Requirements file not found");
-            return Err(SpecGenError::RequirementsFileNotFound(req_path.clone()));
+        let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
+        if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
+            let msg = if req_path.is_empty() {
+                "No requirements document configured — use Sprints instead".to_string()
+            } else {
+                format!("Requirements file not found: {req_path}")
+            };
+            error!(%project_id, "Requirements unavailable: {}", msg);
+            return Err(SpecGenError::RequirementsFileNotFound(msg));
         }
         let requirements_content = std::fs::read_to_string(req_path).map_err(|e| {
             error!(%project_id, path = %req_path, error = %e, "Failed to read requirements file");

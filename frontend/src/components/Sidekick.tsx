@@ -25,8 +25,6 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
         <span><StatusBadge status={project.current_status} /></span>
         <Text variant="muted" size="sm" as="span">Folder</Text>
         <Text size="sm" as="span">{project.linked_folder_path || "—"}</Text>
-        <Text variant="muted" size="sm" as="span">Requirements</Text>
-        <Text size="sm" as="span">{project.requirements_doc_path || "—"}</Text>
         <Text variant="muted" size="sm" as="span">Created</Text>
         <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
       </div>

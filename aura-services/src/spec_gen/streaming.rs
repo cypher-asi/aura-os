@@ -149,9 +149,14 @@ impl SpecGenerationService {
 
         send(SpecStreamEvent::Progress("Reading requirements document".into()));
 
-        let req_path = &project.requirements_doc_path;
-        if !std::path::Path::new(req_path).is_file() {
-            send(SpecStreamEvent::Error(format!("Requirements file not found: {req_path}")));
+        let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
+        if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
+            let msg = if req_path.is_empty() {
+                "No requirements document configured — use Sprints instead".to_string()
+            } else {
+                format!("Requirements file not found: {req_path}")
+            };
+            send(SpecStreamEvent::Error(msg));
             return None;
         }
         let requirements_content = match std::fs::read_to_string(req_path) {

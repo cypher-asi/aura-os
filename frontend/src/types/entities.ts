@@ -13,7 +13,7 @@ export interface Project {
   name: string;
   description: string;
   linked_folder_path: string;
-  requirements_doc_path: string;
+  requirements_doc_path?: string;
   current_status: ProjectStatus;
   github_integration_id?: string;
   github_repo_full_name?: string;

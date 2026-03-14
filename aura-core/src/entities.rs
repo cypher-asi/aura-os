@@ -16,7 +16,8 @@ pub struct Project {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
-    pub requirements_doc_path: String,
+    #[serde(default)]
+    pub requirements_doc_path: Option<String>,
     pub current_status: ProjectStatus,
     #[serde(default)]
     pub github_integration_id: Option<GitHubIntegrationId>,

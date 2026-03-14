@@ -55,14 +55,30 @@ export function ProgressDashboard() {
         <StatCard value={progress.blocked_tasks} label="Tasks Blocked" color="var(--status-blocked)" />
         <StatCard value={progress.failed_tasks} label="Tasks Failed" color="var(--status-failed)" />
       </div>
+
+      <div style={{ margin: "var(--space-4) 0 var(--space-2)" }}>
+        <Text variant="muted" size="xs" style={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          Activity
+        </Text>
+      </div>
+
+      <div className={styles.statsGrid}>
+        <StatCard value={progress.total_tokens} label="Total Tokens" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.lines_changed} label="Lines Changed" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.lines_of_code} label="Lines of Code" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.total_commits} label="Total Commits" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.total_pull_requests} label="Pull Requests" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.total_messages} label="Total Messages" color="var(--color-text-muted)" fmt />
+      </div>
     </div>
   );
 }
 
-function StatCard({ value, label, color }: { value: number; label: string; color: string }) {
+function StatCard({ value, label, color, fmt }: { value: number; label: string; color: string; fmt?: boolean }) {
+  const display = fmt ? value.toLocaleString() : value;
   return (
     <Panel variant="solid" border="solid" style={{ padding: "var(--space-3)", textAlign: "center" }}>
-      <div className={styles.statValue} style={{ color }}>{value}</div>
+      <div className={styles.statValue} style={{ color }}>{display}</div>
       <Text variant="muted" size="xs">{label}</Text>
     </Panel>
   );

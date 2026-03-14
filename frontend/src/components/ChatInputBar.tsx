@@ -1,7 +1,7 @@
 import { useRef, useState, useImperativeHandle, forwardRef } from "react";
 import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import { ArrowUp, Square, Plus, FileText, ChevronDown } from "lucide-react";
+import { ArrowUp, Square, ChevronDown } from "lucide-react";
 import { useClickOutside } from "../hooks/use-click-outside";
 import styles from "./ChatView.module.css";
 
@@ -13,10 +13,6 @@ const MODEL_OPTIONS: Record<string, string> = {
 const modelMenuItems: MenuItem[] = [
   { id: "opus-4.6", label: "Opus 4.6" },
   { id: "gpt-5.3-codex", label: "GPT 5.3 Codex" },
-];
-
-const plusMenuItems: MenuItem[] = [
-  { id: "generate_specs", label: "Generate Specs", icon: <FileText size={14} /> },
 ];
 
 export interface ChatInputBarHandle {
@@ -42,9 +38,7 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   selectedModel,
   onModelChange,
 }, ref) {
-  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
-  const plusMenuRef = useRef<HTMLDivElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,7 +46,6 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
     focus: () => textareaRef.current?.focus(),
   }));
 
-  useClickOutside(plusMenuRef, () => setPlusMenuOpen(false), plusMenuOpen);
   useClickOutside(modelMenuRef, () => setModelMenuOpen(false), modelMenuOpen);
 
   const autoResizeTextarea = () => {
@@ -86,34 +79,6 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
         />
         <div className={styles.inputToolbar}>
           <div className={styles.toolbarLeft}>
-            <div ref={plusMenuRef} className={styles.plusMenuWrap}>
-              <button
-                type="button"
-                className={styles.attachButton}
-                onClick={() => setPlusMenuOpen((v) => !v)}
-                aria-label="Actions"
-              >
-                <Plus size={18} />
-              </button>
-              {plusMenuOpen && (
-                <div className={styles.plusMenu}>
-                  <Menu
-                    items={plusMenuItems}
-                    onChange={(id) => {
-                      setPlusMenuOpen(false);
-                      if (id === "generate_specs") {
-                        onSend("Generate specs for this project", "generate_specs");
-                      }
-                    }}
-                    background="solid"
-                    border="solid"
-                    rounded="md"
-                    width={200}
-                    isOpen
-                  />
-                </div>
-              )}
-            </div>
             <div ref={modelMenuRef} className={styles.modelMenuWrap}>
               <button
                 type="button"
