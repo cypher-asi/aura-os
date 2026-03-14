@@ -300,6 +300,11 @@ impl DevLoopEngine {
     pub async fn start(self: Arc<Self>, project_id: ProjectId) -> Result<LoopHandle, EngineError> {
         let _project = self.project_service.get_project(&project_id)?;
 
+        let stale = self.session_service.close_stale_sessions(&project_id)?;
+        if !stale.is_empty() {
+            info!("closed {} stale active session(s) from previous run", stale.len());
+        }
+
         let agent = self
             .agent_service
             .create_agent(&project_id, "dev-agent".into())?;

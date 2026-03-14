@@ -27,7 +27,8 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const variant = STATUS_TO_VARIANT[status] || "pending";
-  const label = status.replace(/_/g, " ");
+  const LABEL_OVERRIDES: Record<string, string> = { rolled_over: "cont." };
+  const label = LABEL_OVERRIDES[status] ?? status.replace(/_/g, " ");
   const pulse = status === "in_progress" || status === "working" || status === "active" || status === "starting";
 
   return (

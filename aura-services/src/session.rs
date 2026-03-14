@@ -166,6 +166,23 @@ impl SessionService {
         Ok(session)
     }
 
+    /// Mark any leftover `Active` sessions for this project as `Completed`.
+    /// Called on engine startup to clean up sessions orphaned by crashes or
+    /// restarts.
+    pub fn close_stale_sessions(&self, project_id: &ProjectId) -> Result<Vec<Session>, SessionError> {
+        let all = self.store.list_sessions_by_project(project_id)?;
+        let mut closed = Vec::new();
+        for mut session in all {
+            if session.status == SessionStatus::Active {
+                session.status = SessionStatus::Completed;
+                session.ended_at = Some(Utc::now());
+                self.store.put_session(&session)?;
+                closed.push(session);
+            }
+        }
+        Ok(closed)
+    }
+
     pub fn session_count(
         &self,
         project_id: &ProjectId,
