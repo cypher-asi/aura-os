@@ -9,6 +9,19 @@
   flex-shrink: 0;
 }
 
+.collapsed {
+  height: var(--control-height-md);
+  max-height: var(--control-height-md);
+}
+
+.collapsed .terminalBody {
+  display: none;
+}
+
+.collapsed .terminalHeader {
+  border-bottom: none;
+}
+
 .noTransition {
   transition: none;
 }

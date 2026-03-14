@@ -183,7 +183,7 @@ export function TerminalPanel() {
 
   return (
     <div
-      className={`${styles.terminalPanel} ${dragging.current ? styles.noTransition : ""}`}
+      className={`${styles.terminalPanel} ${collapsed ? styles.collapsed : ""} ${dragging.current ? styles.noTransition : ""}`}
       style={collapsed ? undefined : { height: panelHeight }}
     >
       <div

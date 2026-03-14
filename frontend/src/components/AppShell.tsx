@@ -38,17 +38,19 @@ export function AppShell() {
         />
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* Left column: sidebar + taskbar left */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <Sidebar
-              className="nav-sidebar"
-              resizable
-              defaultWidth={200}
-              minWidth={140}
-              maxWidth={300}
-              storageKey="aura-sidebar"
-            >
-              <ProjectList />
-            </Sidebar>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+              <Sidebar
+                className="nav-sidebar"
+                resizable
+                defaultWidth={200}
+                minWidth={140}
+                maxWidth={300}
+                storageKey="aura-sidebar"
+              >
+                <ProjectList />
+              </Sidebar>
+            </div>
             <TaskbarLeft
               onOpenSettings={() => setSettingsOpen(true)}
               onOpenOrgSettings={() => setOrgSettingsOpen(true)}
@@ -64,8 +66,8 @@ export function AppShell() {
           </div>
 
           {/* Right column: sidekick/preview + taskbar right */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
               <Sidekick />
               <Preview />
             </div>
