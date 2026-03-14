@@ -3,11 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Sidebar, Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import { X, ArrowLeft, Sparkles, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check } from "lucide-react";
+import { X, ArrowLeft, Sparkles, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
-import { useEventContext, useTaskOutput } from "../context/EventContext";
+import { useEventContext, useTaskOutput, type BuildStep } from "../context/EventContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime, toBullets, formatCost, formatTokens, formatModelName } from "../utils/format";
 import { parseTaskStream } from "../utils/parse-task-stream";
@@ -230,6 +230,70 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
       title={running ? "Running..." : "Run task"}
       style={visible ? undefined : { visibility: "hidden" }}
     />
+  );
+}
+
+function BuildStepIcon({ kind }: { kind: BuildStep["kind"] }) {
+  switch (kind) {
+    case "started":
+      return <Loader2 size={12} className={styles.spinner} />;
+    case "passed":
+      return <Check size={12} />;
+    case "failed":
+      return <XCircle size={12} />;
+    case "fix_attempt":
+      return <Wrench size={12} />;
+  }
+}
+
+function BuildStepItem({ step }: { step: BuildStep }) {
+  const [expanded, setExpanded] = useState(step.kind === "failed");
+
+  const statusClass =
+    step.kind === "passed" ? styles.buildPassed :
+    step.kind === "failed" ? styles.buildFailed : "";
+
+  const hasOutput = !!(step.stderr || step.stdout);
+
+  let label: string;
+  switch (step.kind) {
+    case "started":
+      label = `Running \`${step.command}\`...`;
+      break;
+    case "passed":
+      label = "Build passed";
+      break;
+    case "failed":
+      label = `Build failed${step.attempt ? ` (attempt ${step.attempt})` : ""}`;
+      break;
+    case "fix_attempt":
+      label = `Attempting auto-fix${step.attempt ? ` (attempt ${step.attempt})` : ""}...`;
+      break;
+  }
+
+  return (
+    <div className={`${styles.activityItem} ${statusClass}`}>
+      <span className={styles.activityIcon}>
+        <BuildStepIcon kind={step.kind} />
+      </span>
+      <span className={styles.activityBody}>
+        <span className={styles.activityMessage}>{label}</span>
+        {hasOutput && (
+          <button
+            className={styles.buildToggle}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Hide output" : "Show output"}
+          </button>
+        )}
+        {expanded && step.stderr && (
+          <pre className={styles.buildOutput}>{step.stderr}</pre>
+        )}
+        {expanded && step.stdout && (
+          <pre className={styles.buildOutput}>{step.stdout}</pre>
+        )}
+      </span>
+    </div>
   );
 }
 
@@ -486,6 +550,18 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
       {editorPath && (
         <CodeEditor filePath={editorPath} onClose={() => setEditorPath(null)} />
+      )}
+
+      {taskOutput.buildSteps.length > 0 && (
+        <GroupCollapsible label="Build Verification" count={taskOutput.buildSteps.length} defaultOpen className={styles.section}>
+          <div className={styles.liveOutputSection}>
+            <div className={styles.activityList}>
+              {taskOutput.buildSteps.map((step, i) => (
+                <BuildStepItem key={i} step={step} />
+              ))}
+            </div>
+          </div>
+        </GroupCollapsible>
       )}
 
       {showNotes && (
