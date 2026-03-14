@@ -4,15 +4,23 @@ export interface ParsedTaskStream {
   isPartial: boolean;
 }
 
+const TOOL_MARKER_RE = /\[tool:\s*\S+\s*->\s*(?:ok|error)\]/;
+
 /**
- * Extracts structured data from a partial/complete JSON buffer emitted by
- * the task execution LLM. Uses string scanning rather than a full JSON
- * parser so it can work on incomplete streams.
+ * Extracts structured data from a partial/complete task output buffer.
  *
- * Expected schema: {"notes":"...","file_ops":[{"op":"...","path":"...","content":"..."}],...}
+ * Supports two formats:
+ * 1. Legacy single-shot JSON: {"notes":"...","file_ops":[...],...}
+ * 2. Agentic tool-use: plain text with [tool: <name> -> ok|error] markers.
+ *    In this mode, notes and file ops are delivered via separate engine events,
+ *    so we return an empty result.
  */
 export function parseTaskStream(buffer: string): ParsedTaskStream {
   const result: ParsedTaskStream = { notes: null, fileOps: [], isPartial: true };
+
+  if (TOOL_MARKER_RE.test(buffer) || !buffer.trimStart().startsWith("{")) {
+    return result;
+  }
 
   if (!buffer.includes("{")) return result;
 

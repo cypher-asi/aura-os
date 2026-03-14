@@ -6,16 +6,108 @@ export interface ActivityItem {
 }
 
 /**
- * Scans a partial JSON stream buffer (from the task execution LLM) and
- * derives a human-readable list of activity items describing what the
- * model is currently doing and has already done.
+ * Scans a task output buffer and derives a human-readable activity list.
  *
- * The expected JSON shape is:
- *   {"notes":"...","file_ops":[{"op":"...","path":"...","content":"..."}],"follow_up_tasks":[...]}
+ * Supports two formats:
+ * 1. Legacy single-shot JSON: {"notes":"...","file_ops":[...],"follow_up_tasks":[...]}
+ * 2. Agentic tool-use: plain LLM text interspersed with [tool: <name> -> ok|error] markers
  */
 export function deriveActivity(buffer: string): ActivityItem[] {
+  if (!buffer) {
+    return [{ id: "thinking", message: "Generating response", status: "active" }];
+  }
+
+  if (isAgenticFormat(buffer)) {
+    return deriveAgenticActivity(buffer);
+  }
+
+  return deriveLegacyJsonActivity(buffer);
+}
+
+const TOOL_MARKER_RE = /\[tool:\s*(\S+)\s*->\s*(ok|error)\]/g;
+const TOOL_MARKER_TEST = /\[tool:\s*\S+\s*->\s*(?:ok|error)\]/;
+
+function isAgenticFormat(buffer: string): boolean {
+  return TOOL_MARKER_TEST.test(buffer) || !buffer.trimStart().startsWith("{");
+}
+
+function deriveAgenticActivity(buffer: string): ActivityItem[] {
   const items: ActivityItem[] = [];
-  if (!buffer || !buffer.includes("{")) {
+  TOOL_MARKER_RE.lastIndex = 0;
+
+  let match: RegExpExecArray | null;
+  let idx = 0;
+  while ((match = TOOL_MARKER_RE.exec(buffer)) !== null) {
+    const toolName = match[1];
+    const result = match[2];
+    const msg = agenticToolLabel(toolName);
+    const detail = result === "error" ? "(failed)" : undefined;
+    items.push({ id: `tool-${idx}`, message: msg, detail, status: "done" });
+    idx++;
+  }
+
+  const lastMarkerEnd = findLastToolMarkerEnd(buffer);
+  const trailing = lastMarkerEnd === -1 ? buffer : buffer.slice(lastMarkerEnd);
+  const trailingText = trailing.trim();
+
+  if (trailingText.length > 0) {
+    const label = summarizeTrailingText(trailingText);
+    items.push({ id: "current", message: label, status: "active" });
+  } else if (items.length === 0) {
+    items.push({ id: "thinking", message: "Generating response", status: "active" });
+  }
+
+  return items;
+}
+
+function findLastToolMarkerEnd(buffer: string): number {
+  TOOL_MARKER_RE.lastIndex = 0;
+  let lastEnd = -1;
+  let match: RegExpExecArray | null;
+  while ((match = TOOL_MARKER_RE.exec(buffer)) !== null) {
+    lastEnd = match.index + match[0].length;
+  }
+  return lastEnd;
+}
+
+function agenticToolLabel(toolName: string): string {
+  switch (toolName) {
+    case "read_file": return "Read file";
+    case "write_file": return "Write file";
+    case "edit_file": return "Edit file";
+    case "delete_file": return "Delete file";
+    case "list_files": return "List files";
+    case "search_code": return "Search code";
+    case "run_command": return "Run command";
+    case "task_done": return "Task complete";
+    case "get_task_context": return "Load task context";
+    default: return `Tool: ${toolName}`;
+  }
+}
+
+function summarizeTrailingText(text: string): string {
+  const lower = text.toLowerCase();
+  if (lower.includes("implement") || lower.includes("writing") || lower.includes("creating")) {
+    return "Implementing changes";
+  }
+  if (lower.includes("read") || lower.includes("look") || lower.includes("check") || lower.includes("explore") || lower.includes("examin")) {
+    return "Analyzing codebase";
+  }
+  if (lower.includes("build") || lower.includes("compil")) {
+    return "Building project";
+  }
+  if (lower.includes("test")) {
+    return "Running tests";
+  }
+  if (lower.includes("fix") || lower.includes("correct") || lower.includes("resolv")) {
+    return "Fixing issues";
+  }
+  return "Generating response";
+}
+
+function deriveLegacyJsonActivity(buffer: string): ActivityItem[] {
+  const items: ActivityItem[] = [];
+  if (!buffer.includes("{")) {
     items.push({ id: "thinking", message: "Generating response", status: "active" });
     return items;
   }
