@@ -9,7 +9,7 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput } from "../context/EventContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
-import { formatRelativeTime } from "../utils/format";
+import { formatRelativeTime, toBullets } from "../utils/format";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
@@ -362,7 +362,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
           {task.description ? (
             <div className={styles.markdown}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {task.description}
+                {toBullets(task.description)}
               </ReactMarkdown>
             </div>
           ) : (
