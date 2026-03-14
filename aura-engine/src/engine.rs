@@ -63,6 +63,10 @@ impl LoopHandle {
         let _ = self.stop_tx.send(LoopCommand::Stop);
     }
 
+    pub fn is_finished(&self) -> bool {
+        self.join_handle.is_finished()
+    }
+
     pub async fn wait(self) -> Result<LoopOutcome, EngineError> {
         self.join_handle
             .await

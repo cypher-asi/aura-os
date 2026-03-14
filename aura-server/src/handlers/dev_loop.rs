@@ -16,8 +16,13 @@ pub async fn start_loop(
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
     let mut handle_lock = state.loop_handle.lock().await;
-    if handle_lock.is_some() {
-        return Err(ApiError::conflict("a dev loop is already running"));
+    if let Some(h) = handle_lock.as_ref() {
+        if h.is_finished() {
+            handle_lock.take();
+            *state.loop_project_id.lock().await = None;
+        } else {
+            return Err(ApiError::conflict("a dev loop is already running"));
+        }
     }
 
     let engine = Arc::new(DevLoopEngine::new(
@@ -91,9 +96,14 @@ pub async fn run_single_task(
     State(state): State<AppState>,
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<StatusCode> {
-    let handle_lock = state.loop_handle.lock().await;
-    if handle_lock.is_some() {
-        return Err(ApiError::conflict("cannot run a single task while the dev loop is active"));
+    let mut handle_lock = state.loop_handle.lock().await;
+    if let Some(h) = handle_lock.as_ref() {
+        if h.is_finished() {
+            handle_lock.take();
+            *state.loop_project_id.lock().await = None;
+        } else {
+            return Err(ApiError::conflict("cannot run a single task while the dev loop is active"));
+        }
     }
     drop(handle_lock);
 
