@@ -253,7 +253,6 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       subscribe("task_started", (e) => {
         if (e.task_id !== task.task_id) return;
         setLiveStatus("in_progress");
-        setRunningTask(false);
         if (e.session_id) setLiveSessionId(e.session_id);
       }),
       subscribe("task_completed", (e) => {
