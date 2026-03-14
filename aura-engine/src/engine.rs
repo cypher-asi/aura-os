@@ -599,14 +599,30 @@ impl DevLoopEngine {
                     completed_count,
                     work_log.join("\n\n---\n\n"),
                 );
-                let summary = self
-                    .session_service
-                    .generate_rollover_summary(
+                let summary = tokio::select! {
+                    res = self.session_service.generate_rollover_summary(
                         &self.claude_client,
                         &api_key,
                         &history,
-                    )
-                    .await?;
+                    ) => { res? }
+                    _ = stop_rx.changed() => {
+                        let _ = self.agent_service.finish_working(&project_id, &agent_id);
+                        let cmd = *stop_rx.borrow();
+                        if cmd == LoopCommand::Stop {
+                            let _ = self.session_service.end_session(
+                                &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                            );
+                            self.emit(EngineEvent::LoopStopped { completed_count });
+                            return Ok(LoopOutcome::Stopped { completed_count });
+                        } else {
+                            let _ = self.session_service.end_session(
+                                &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                            );
+                            self.emit(EngineEvent::LoopPaused { completed_count });
+                            return Ok(LoopOutcome::Paused { completed_count });
+                        }
+                    }
+                };
                 let new_session = self.session_service.rollover_session(
                     &project_id,
                     &agent_id,
