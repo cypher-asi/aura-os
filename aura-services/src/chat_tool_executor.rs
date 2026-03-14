@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use serde_json::{json, Value};
-use tracing::{error, info};
+use tracing::info;
 
 use aura_core::*;
 use aura_store::RocksStore;
