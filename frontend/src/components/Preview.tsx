@@ -1,15 +1,16 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Sidebar, Button, Text } from "@cypher-asi/zui";
-import { X, Sparkles, Loader2 } from "lucide-react";
+import { Sidebar, Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
+import { X, Sparkles, Loader2, FilePlus, FilePen, FileX, RotateCcw } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime } from "../utils/format";
+import { parseTaskStream } from "../utils/parse-task-stream";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Sprint } from "../types";
 import styles from "./Preview.module.css";
@@ -156,24 +157,44 @@ function SpecPreview({ spec }: { spec: import("../types").Spec }) {
   );
 }
 
+function FileOpIcon({ op }: { op: string }) {
+  if (op === "create") return <FilePlus size={14} className={styles.opCreate} />;
+  if (op === "modify") return <FilePen size={14} className={styles.opModify} />;
+  if (op === "delete") return <FileX size={14} className={styles.opDelete} />;
+  return <FilePen size={14} />;
+}
+
 function TaskPreview({ task }: { task: import("../types").Task }) {
   const { subscribe } = useEventContext();
+  const ctx = useProjectContext();
+  const projectId = ctx?.project.project_id;
   const [streamBuf, setStreamBuf] = useState("");
+  const [liveFileOps, setLiveFileOps] = useState<{ op: string; path: string }[]>([]);
+  const [retrying, setRetrying] = useState(false);
   const streamRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const isActive = task.status === "in_progress";
 
   useEffect(() => {
     setStreamBuf("");
+    setLiveFileOps([]);
   }, [task.task_id]);
 
   useEffect(() => {
     if (!isActive) return;
     setStreamBuf("");
-    return subscribe("task_output_delta", (e) => {
-      if (e.task_id !== task.task_id) return;
-      setStreamBuf((prev) => prev + (e.delta ?? ""));
-    });
+    setLiveFileOps([]);
+    const unsubs = [
+      subscribe("task_output_delta", (e) => {
+        if (e.task_id !== task.task_id) return;
+        setStreamBuf((prev) => prev + (e.delta ?? ""));
+      }),
+      subscribe("file_ops_applied", (e) => {
+        if (e.task_id !== task.task_id || !e.files) return;
+        setLiveFileOps(e.files);
+      }),
+    ];
+    return () => unsubs.forEach((u) => u());
   }, [task.task_id, isActive, subscribe]);
 
   useEffect(() => {
@@ -188,40 +209,94 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   }, []);
 
-  const displayOutput = isActive && streamBuf ? streamBuf : task.execution_notes;
+  const parsed = useMemo(() => (isActive && streamBuf ? parseTaskStream(streamBuf) : null), [isActive, streamBuf]);
+
+  const fileOps = isActive
+    ? (liveFileOps.length > 0 ? liveFileOps : parsed?.fileOps ?? [])
+    : (task.files_changed ?? []);
+
+  const notes = isActive
+    ? (parsed?.notes ?? (streamBuf ? null : null))
+    : task.execution_notes;
+
+  const showNotes = isActive ? (parsed?.notes != null) : !!task.execution_notes;
+  const showRawFallback = isActive && streamBuf && !parsed?.notes;
+
+  const handleRetry = useCallback(async () => {
+    if (!projectId || retrying) return;
+    setRetrying(true);
+    try {
+      await api.retryTask(projectId, task.task_id);
+    } catch (err) {
+      console.error("Retry failed:", err);
+    } finally {
+      setRetrying(false);
+    }
+  }, [projectId, task.task_id, retrying]);
 
   return (
     <>
       <div className={styles.taskMeta}>
         <div className={styles.taskField}>
           <Text variant="muted" size="sm">Status</Text>
-          <span><TaskStatusIcon status={task.status} /></span>
+          <span className={styles.statusRow}>
+            <TaskStatusIcon status={task.status} />
+            {task.status === "failed" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RotateCcw size={14} />}
+                onClick={handleRetry}
+                disabled={retrying}
+              >
+                {retrying ? "Retrying..." : "Retry"}
+              </Button>
+            )}
+          </span>
         </div>
         <div className={styles.taskField}>
           <Text variant="muted" size="sm">Description</Text>
           <Text size="sm">{task.description || "—"}</Text>
         </div>
       </div>
-      {(displayOutput || isActive) && (
+
+      {showRawFallback && (
         <div className={styles.taskStreamWrapper}>
           <Text variant="muted" size="sm">
-            {isActive ? (
-              <span className={styles.streamingIndicator}>
-                <Loader2 size={12} className={styles.spinner} />
-                Output
-              </span>
-            ) : (
-              "Exec Notes"
-            )}
+            <span className={styles.streamingIndicator}>
+              <Loader2 size={12} className={styles.spinner} />
+              Output
+            </span>
           </Text>
-          <div
-            ref={streamRef}
-            className={styles.taskStream}
-            onScroll={handleStreamScroll}
-          >
-            {displayOutput || "Waiting for output..."}
+          <div ref={streamRef} className={styles.taskStream} onScroll={handleStreamScroll}>
+            {streamBuf || "Waiting for output..."}
           </div>
         </div>
+      )}
+
+      {showNotes && (
+        <GroupCollapsible label="Notes" defaultOpen>
+          <div className={styles.notesContent}>
+            <div className={styles.markdown}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                {notes || ""}
+              </ReactMarkdown>
+            </div>
+          </div>
+        </GroupCollapsible>
+      )}
+
+      {fileOps.length > 0 && (
+        <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen={isActive}>
+          <div className={styles.fileOpsList}>
+            {fileOps.map((f) => (
+              <Item key={f.path}>
+                <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
+                <Item.Label>{f.path}</Item.Label>
+              </Item>
+            ))}
+          </div>
+        </GroupCollapsible>
       )}
     </>
   );
