@@ -98,13 +98,13 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
           cy={CENTER}
           r={R}
           fill="none"
-          stroke="var(--status-done, #2ed573)"
+          stroke="var(--status-done, #01f4cb)"
           strokeWidth={STROKE}
         />
         <polyline
           points="4.5 7.5 6.5 9.5 10 5"
           fill="none"
-          stroke="var(--status-done, #2ed573)"
+          stroke="var(--status-done, #01f4cb)"
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeLinejoin="round"

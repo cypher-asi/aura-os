@@ -2,7 +2,7 @@
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
   --status-in-progress: #ffa502;
-  --status-done: #2ed573;
+  --status-done: var(--color-success, #01f4cb);
   --status-failed: #ff6b6b;
   --status-blocked: #ff8a50;
 }
