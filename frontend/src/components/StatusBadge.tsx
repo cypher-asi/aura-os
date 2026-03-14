@@ -18,6 +18,7 @@ const STATUS_TO_VARIANT: Record<string, BadgeVariant> = {
   working: "running",
   stopped: "stopped",
   error: "error",
+  rolled_over: "stopped",
 };
 
 interface StatusBadgeProps {

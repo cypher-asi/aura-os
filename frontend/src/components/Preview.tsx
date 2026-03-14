@@ -13,7 +13,8 @@ import { formatRelativeTime } from "../utils/format";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
-import type { Sprint } from "../types";
+import type { Sprint, Task, Session } from "../types";
+import { StatusBadge } from "./StatusBadge";
 import styles from "./Preview.module.css";
 
 function SprintPreview({ sprint }: { sprint: Sprint }) {
@@ -332,6 +333,111 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   );
 }
 
+function formatDuration(startedAt: string, endedAt: string | null): string {
+  const start = new Date(startedAt).getTime();
+  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+  const diffSec = Math.floor((end - start) / 1000);
+  if (diffSec < 60) return `${diffSec}s`;
+  const min = Math.floor(diffSec / 60);
+  const sec = diffSec % 60;
+  if (min < 60) return `${min}m ${sec}s`;
+  const hr = Math.floor(min / 60);
+  return `${hr}h ${min % 60}m`;
+}
+
+function SessionPreview({ session }: { session: Session }) {
+  const ctx = useProjectContext();
+  const projectId = ctx?.project.project_id;
+  const sidekick = useSidekick();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setLoading(true);
+    api
+      .listAgents(projectId)
+      .then((agents) => {
+        const agent = agents.find((a) => a.agent_id === session.agent_id);
+        if (!agent) return;
+        return api.listSessionTasks(projectId, agent.agent_id, session.session_id);
+      })
+      .then((t) => { if (t) setTasks(t); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [projectId, session.session_id, session.agent_id]);
+
+  const contextPct = Math.round(session.context_usage_estimate * 100);
+
+  return (
+    <>
+      <div className={styles.taskMeta}>
+        <div className={styles.taskField}>
+          <Text variant="muted" size="sm">Status</Text>
+          <StatusBadge status={session.status} />
+        </div>
+        <div className={styles.taskField}>
+          <Text variant="muted" size="sm">Duration</Text>
+          <Text size="sm">
+            {formatDuration(session.started_at, session.ended_at)}
+            {!session.ended_at && " (ongoing)"}
+          </Text>
+        </div>
+        <div className={styles.taskField}>
+          <Text variant="muted" size="sm">Context Usage</Text>
+          <Text size="sm">{contextPct}%</Text>
+        </div>
+        <div className={styles.taskField}>
+          <Text variant="muted" size="sm">Started</Text>
+          <Text size="sm">{formatRelativeTime(session.started_at)}</Text>
+        </div>
+        {session.ended_at && (
+          <div className={styles.taskField}>
+            <Text variant="muted" size="sm">Ended</Text>
+            <Text size="sm">{formatRelativeTime(session.ended_at)}</Text>
+          </div>
+        )}
+      </div>
+
+      {session.summary_of_previous_context && (
+        <GroupCollapsible label="Context Summary" defaultOpen className={styles.section}>
+          <div className={styles.notesContent}>
+            <div className={styles.markdown}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                {session.summary_of_previous_context}
+              </ReactMarkdown>
+            </div>
+          </div>
+        </GroupCollapsible>
+      )}
+
+      <GroupCollapsible
+        label="Tasks"
+        count={tasks.length}
+        defaultOpen
+        className={styles.section}
+      >
+        <div className={styles.fileOpsList}>
+          {loading && <Text variant="muted" size="sm" style={{ padding: "0 var(--space-3)" }}>Loading...</Text>}
+          {!loading && tasks.length === 0 && (
+            <Text variant="muted" size="sm" style={{ padding: "0 var(--space-3)" }}>No tasks in this session</Text>
+          )}
+          {tasks.map((task) => (
+            <Item
+              key={task.task_id}
+              onClick={() => sidekick.viewTask(task)}
+              className={styles.fileOpItem}
+            >
+              <Item.Icon><TaskStatusIcon status={task.status} /></Item.Icon>
+              <Item.Label>{task.title}</Item.Label>
+            </Item>
+          ))}
+        </div>
+      </GroupCollapsible>
+    </>
+  );
+}
+
 function SprintHeaderTitle({ sprint }: { sprint: Sprint }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
@@ -415,6 +521,7 @@ export function Preview() {
         {displayItem?.kind === "sprint" && <SprintPreview sprint={displayItem.sprint} />}
         {displayItem?.kind === "spec" && <SpecPreview spec={displayItem.spec} />}
         {displayItem?.kind === "task" && <TaskPreview task={displayItem.task} />}
+        {displayItem?.kind === "session" && <SessionPreview session={displayItem.session} />}
       </div>
     </Sidebar>
   );
