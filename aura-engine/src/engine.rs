@@ -15,6 +15,7 @@ use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::{EngineEvent, PhaseTimingEntry};
 use crate::file_ops::{self, FileOp};
+use crate::metrics::{self, LoopRunMetrics, TaskMetrics};
 
 #[derive(Debug, Clone)]
 pub struct TaskExecution {
@@ -410,6 +411,26 @@ impl DevLoopEngine {
         let mut total_build_fix_attempts: u32 = 0;
         let mut duplicate_error_bailouts: u32 = 0;
 
+        let project_root = self.project_service.get_project(&project_id)
+            .map(|p| p.linked_folder_path.clone())
+            .unwrap_or_default();
+        let mut run_metrics = LoopRunMetrics::new(project_id.to_string());
+
+        macro_rules! flush_metrics {
+            ($outcome:expr) => {{
+                run_metrics.finalize(
+                    $outcome,
+                    loop_start.elapsed().as_millis() as u64,
+                    completed_count, failed_count, tasks_retried,
+                    total_input_tokens, total_output_tokens, sessions_used,
+                    total_parse_retries, total_build_fix_attempts, duplicate_error_bailouts,
+                );
+                if !project_root.is_empty() {
+                    metrics::write_run_metrics(Path::new(&project_root), &run_metrics);
+                }
+            }};
+        }
+
         let orphaned = self.task_service.reset_in_progress_tasks(&project_id)?;
         for t in &orphaned {
             self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
@@ -427,6 +448,7 @@ impl DevLoopEngine {
                 );
                 let _ = self.agent_service.finish_working(&project_id, &agent_id);
                 self.emit(EngineEvent::LoopPaused { completed_count });
+                flush_metrics!("paused");
                 return Ok(LoopOutcome::Paused { completed_count });
             }
             if *stop_rx.borrow() == LoopCommand::Stop {
@@ -435,6 +457,7 @@ impl DevLoopEngine {
                 );
                 let _ = self.agent_service.finish_working(&project_id, &agent_id);
                 self.emit(EngineEvent::LoopStopped { completed_count });
+                flush_metrics!("stopped");
                 return Ok(LoopOutcome::Stopped { completed_count });
             }
 
@@ -480,12 +503,14 @@ impl DevLoopEngine {
                             &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                         );
                         self.emit(loop_metrics("all_tasks_blocked"));
+                        flush_metrics!("all_tasks_blocked");
                         return Ok(LoopOutcome::AllTasksBlocked);
                     }
                     let _ = self.session_service.end_session(
                         &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                     );
                     self.emit(loop_metrics("all_tasks_complete"));
+                    flush_metrics!("all_tasks_complete");
                     return Ok(LoopOutcome::AllTasksComplete);
                 }
             };
@@ -537,12 +562,14 @@ impl DevLoopEngine {
                         &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                     );
                     self.emit(EngineEvent::LoopStopped { completed_count });
+                    flush_metrics!("stopped");
                     return Ok(LoopOutcome::Stopped { completed_count });
                 } else {
                     let _ = self.session_service.end_session(
                         &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                     );
                     self.emit(EngineEvent::LoopPaused { completed_count });
+                    flush_metrics!("paused");
                     return Ok(LoopOutcome::Paused { completed_count });
                 }
             }
@@ -568,6 +595,7 @@ impl DevLoopEngine {
                     let file_ops_start = Instant::now();
                     if let Err(e) = file_ops::apply_file_ops(base_path, &execution.file_ops).await {
                         let reason = format!("file operation failed: {e}");
+                        let task_dur = task_start.elapsed().as_millis() as u64;
                         self.task_service.fail_task(
                             &project_id,
                             &task.spec_id,
@@ -578,11 +606,29 @@ impl DevLoopEngine {
                         self.emit(EngineEvent::TaskFailed {
                             task_id: task.task_id,
                             reason: e.to_string(),
-                            duration_ms: Some(task_start.elapsed().as_millis() as u64),
+                            duration_ms: Some(task_dur),
                             phase: Some("file_ops".into()),
                             parse_retries: Some(execution.parse_retries),
                             build_fix_attempts: None,
                             model: session.model.clone(),
+                        });
+                        run_metrics.tasks.push(TaskMetrics {
+                            task_id: task.task_id.to_string(),
+                            title: task.title.clone(),
+                            outcome: "failed".into(),
+                            duration_ms: task_dur,
+                            llm_duration_ms: Some(llm_duration_ms),
+                            build_verify_duration_ms: None,
+                            file_ops_duration_ms: None,
+                            input_tokens: execution.input_tokens,
+                            output_tokens: execution.output_tokens,
+                            files_changed: execution.file_ops.len() as u32,
+                            parse_retries: execution.parse_retries,
+                            build_fix_attempts: 0,
+                            model: session.model.clone(),
+                            failure_phase: Some("file_ops".into()),
+                            failure_reason: Some(reason.clone()),
+                            phase_timings: vec![],
                         });
                         work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                         Some(reason)
@@ -620,6 +666,28 @@ impl DevLoopEngine {
                                 build_fix_attempts: Some(build_attempts),
                                 model: session.model.clone(),
                             });
+                            run_metrics.tasks.push(TaskMetrics {
+                                task_id: task.task_id.to_string(),
+                                title: task.title.clone(),
+                                outcome: "failed".into(),
+                                duration_ms: task_duration_ms,
+                                llm_duration_ms: Some(llm_duration_ms),
+                                build_verify_duration_ms: Some(build_verify_duration_ms),
+                                file_ops_duration_ms: Some(file_ops_duration_ms),
+                                input_tokens: execution.input_tokens,
+                                output_tokens: execution.output_tokens,
+                                files_changed: execution.file_ops.len() as u32,
+                                parse_retries: execution.parse_retries,
+                                build_fix_attempts: build_attempts,
+                                model: session.model.clone(),
+                                failure_phase: Some("build_verify".into()),
+                                failure_reason: Some(reason.clone()),
+                                phase_timings: vec![
+                                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: llm_duration_ms },
+                                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: file_ops_duration_ms },
+                                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: build_verify_duration_ms },
+                                ],
+                            });
                             work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                             Some(reason)
                         } else {
@@ -645,13 +713,33 @@ impl DevLoopEngine {
                                 model: session.model.clone(),
                             });
 
+                            let task_phase_timings = vec![
+                                PhaseTimingEntry { phase: "llm_call".into(), duration_ms: llm_duration_ms },
+                                PhaseTimingEntry { phase: "file_ops".into(), duration_ms: file_ops_duration_ms },
+                                PhaseTimingEntry { phase: "build_verify".into(), duration_ms: build_verify_duration_ms },
+                            ];
                             self.emit(EngineEvent::LoopIterationSummary {
                                 task_id: task.task_id,
-                                phase_timings: vec![
-                                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: llm_duration_ms },
-                                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: file_ops_duration_ms },
-                                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: build_verify_duration_ms },
-                                ],
+                                phase_timings: task_phase_timings.clone(),
+                            });
+
+                            run_metrics.tasks.push(TaskMetrics {
+                                task_id: task.task_id.to_string(),
+                                title: task.title.clone(),
+                                outcome: "completed".into(),
+                                duration_ms: task_duration_ms,
+                                llm_duration_ms: Some(llm_duration_ms),
+                                build_verify_duration_ms: Some(build_verify_duration_ms),
+                                file_ops_duration_ms: Some(file_ops_duration_ms),
+                                input_tokens: execution.input_tokens,
+                                output_tokens: execution.output_tokens,
+                                files_changed: execution.file_ops.len() as u32,
+                                parse_retries: execution.parse_retries,
+                                build_fix_attempts: build_attempts,
+                                model: session.model.clone(),
+                                failure_phase: None,
+                                failure_reason: None,
+                                phase_timings: task_phase_timings,
                             });
 
                             let newly_ready = self
@@ -715,6 +803,7 @@ impl DevLoopEngine {
                 }
                 Err(e) => {
                     let reason = format!("execution error: {e}");
+                    let task_dur = task_start.elapsed().as_millis() as u64;
                     self.task_service.fail_task(
                         &project_id,
                         &task.spec_id,
@@ -725,11 +814,29 @@ impl DevLoopEngine {
                     self.emit(EngineEvent::TaskFailed {
                         task_id: task.task_id,
                         reason: e.to_string(),
-                        duration_ms: Some(task_start.elapsed().as_millis() as u64),
+                        duration_ms: Some(task_dur),
                         phase: Some("execution".into()),
                         parse_retries: None,
                         build_fix_attempts: None,
                         model: session.model.clone(),
+                    });
+                    run_metrics.tasks.push(TaskMetrics {
+                        task_id: task.task_id.to_string(),
+                        title: task.title.clone(),
+                        outcome: "failed".into(),
+                        duration_ms: task_dur,
+                        llm_duration_ms: None,
+                        build_verify_duration_ms: None,
+                        file_ops_duration_ms: None,
+                        input_tokens: 0,
+                        output_tokens: 0,
+                        files_changed: 0,
+                        parse_retries: 0,
+                        build_fix_attempts: 0,
+                        model: session.model.clone(),
+                        failure_phase: Some("execution".into()),
+                        failure_reason: Some(reason.clone()),
+                        phase_timings: vec![],
                     });
                     work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                     Some(reason)
@@ -769,12 +876,14 @@ impl DevLoopEngine {
                                 &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                             );
                             self.emit(EngineEvent::LoopStopped { completed_count });
+                            flush_metrics!("stopped");
                             return Ok(LoopOutcome::Stopped { completed_count });
                         } else {
                             let _ = self.session_service.end_session(
                                 &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
                             );
                             self.emit(EngineEvent::LoopPaused { completed_count });
+                            flush_metrics!("paused");
                             return Ok(LoopOutcome::Paused { completed_count });
                         }
                     }
