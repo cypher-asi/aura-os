@@ -79,6 +79,8 @@ pub struct Task {
     pub execution_notes: String,
     #[serde(default)]
     pub files_changed: Vec<FileChangeSummary>,
+    #[serde(default)]
+    pub live_output: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

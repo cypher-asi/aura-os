@@ -56,6 +56,7 @@ export interface Task {
   session_id: SessionId | null;
   execution_notes: string;
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
+  live_output: string;
   created_at: string;
   updated_at: string;
 }

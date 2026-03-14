@@ -268,15 +268,21 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     return () => unsubs.forEach((u) => u());
   }, [task.task_id, subscribe]);
 
-  // Hydrate from server if the global buffer is empty (e.g. after page refresh)
+  // Hydrate from persisted live_output or server buffer when global buffer is empty
   useEffect(() => {
     if (!isActive || !projectId) return;
     if (streamBuf || hydratedRef.current === task.task_id) return;
     hydratedRef.current = task.task_id;
+
+    if (task.live_output) {
+      seedTaskOutput(task.task_id, task.live_output);
+      return;
+    }
+
     api.getTaskOutput(projectId, task.task_id).then((res) => {
       if (res.output) seedTaskOutput(task.task_id, res.output);
     }).catch(() => {});
-  }, [isActive, projectId, task.task_id, streamBuf, seedTaskOutput]);
+  }, [isActive, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
 
   useEffect(() => {
     if (autoScrollRef.current && streamRef.current) {

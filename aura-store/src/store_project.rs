@@ -165,4 +165,10 @@ impl RocksStore {
         let prefix = format!("{project_id}:");
         self.scan_cf::<Task>(&self.cf_tasks(), Some(&prefix))
     }
+
+    /// Scan all tasks to find one by its task_id alone (no project/spec prefix needed).
+    pub fn find_task_by_id(&self, task_id: &TaskId) -> StoreResult<Option<Task>> {
+        let all: Vec<Task> = self.scan_cf::<Task>(&self.cf_tasks(), None)?;
+        Ok(all.into_iter().find(|t| t.task_id == *task_id))
+    }
 }

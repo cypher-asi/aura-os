@@ -153,6 +153,7 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
+        live_output: String::new(),
         created_at: now,
         updated_at: now,
     }
