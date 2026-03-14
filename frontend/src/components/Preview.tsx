@@ -271,8 +271,18 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
   // Hydrate from persisted live_output or server buffer when global buffer is empty
   useEffect(() => {
-    if ((!isActive && !isTerminal) || !projectId) return;
+    if (!projectId) return;
     if (streamBuf || hydratedRef.current === task.task_id) return;
+
+    if (isTerminal) {
+      if (task.live_output) {
+        hydratedRef.current = task.task_id;
+        seedTaskOutput(task.task_id, task.live_output);
+      }
+      return;
+    }
+
+    if (!isActive) return;
     hydratedRef.current = task.task_id;
 
     if (task.live_output) {
