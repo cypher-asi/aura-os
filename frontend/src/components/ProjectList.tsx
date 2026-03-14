@@ -245,7 +245,11 @@ export function ProjectList() {
                 suffix:
                   streamingSessionId === s.chat_session_id ? (
                     <span className={styles.streamingDot} />
-                  ) : undefined,
+                  ) : (
+                    <span className={styles.sessionTime}>
+                      {formatRelativeTime(s.updated_at)}
+                    </span>
+                  ),
                 metadata: { type: "session", projectId: p.project_id },
               }))
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],

@@ -1,42 +1,6 @@
-import { Modal, Input, Button } from "@cypher-asi/zui";
+import { Modal, Button } from "@cypher-asi/zui";
 import type { Project, ChatSession } from "../types";
 import styles from "./ProjectList.module.css";
-
-interface RenameModalProps {
-  target: Project | null;
-  name: string;
-  onNameChange: (name: string) => void;
-  loading: boolean;
-  onClose: () => void;
-  onRename: () => void;
-}
-
-export function RenameProjectModal({ target, name, onNameChange, loading, onClose, onRename }: RenameModalProps) {
-  return (
-    <Modal
-      isOpen={!!target}
-      onClose={onClose}
-      title="Rename Project"
-      size="sm"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={onRename} disabled={loading || !name.trim()}>
-            {loading ? "Saving..." : "Save"}
-          </Button>
-        </>
-      }
-    >
-      <Input
-        value={name}
-        onChange={(e) => onNameChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") onRename(); }}
-        placeholder="Project name"
-        autoFocus
-      />
-    </Modal>
-  );
-}
 
 interface DeleteProjectModalProps {
   target: Project | null;
