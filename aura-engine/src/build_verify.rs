@@ -27,22 +27,26 @@ fn truncate_output(s: &str, max: usize) -> String {
     format!("{start}\n\n... (truncated {0} bytes) ...\n\n{end}", s.len() - max)
 }
 
+/// Returns true if the command string contains shell operators that require
+/// interpretation by a shell (&&, ||, pipes, redirects, semicolons, etc.).
+fn needs_shell(cmd: &str) -> bool {
+    cmd.contains("&&") || cmd.contains("||") || cmd.contains('|')
+        || cmd.contains('>') || cmd.contains('<') || cmd.contains(';')
+        || cmd.contains('$') || cmd.contains('`')
+}
+
 /// Run a build command in the project directory and capture the result.
 ///
-/// The `build_command` string is split on whitespace for the executable and
-/// arguments (e.g. `"cargo build --workspace"` becomes
-/// `Command::new("cargo").args(["build", "--workspace"])`).
+/// Simple commands are split on whitespace and executed directly. Commands
+/// containing shell operators (`&&`, `|`, etc.) are run through the system
+/// shell (`cmd /C` on Windows, `sh -c` on Unix).
 pub async fn run_build_command(
     project_dir: &Path,
     build_command: &str,
 ) -> Result<BuildResult, EngineError> {
-    let parts: Vec<&str> = build_command.split_whitespace().collect();
-    if parts.is_empty() {
+    if build_command.split_whitespace().next().is_none() {
         return Err(EngineError::Parse("build_command is empty".into()));
     }
-
-    let program = parts[0];
-    let args = &parts[1..];
 
     info!(
         dir = %project_dir.display(),
@@ -50,14 +54,38 @@ pub async fn run_build_command(
         "running build verification"
     );
 
-    let output = Command::new(program)
-        .args(args)
-        .current_dir(project_dir)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
-        .map_err(|e| EngineError::Io(format!("failed to execute build command `{build_command}`: {e}")))?;
+    let output = if needs_shell(build_command) {
+        #[cfg(target_os = "windows")]
+        {
+            Command::new("cmd")
+                .args(["/C", build_command])
+                .current_dir(project_dir)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Command::new("sh")
+                .args(["-c", build_command])
+                .current_dir(project_dir)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+        }
+    } else {
+        let parts: Vec<&str> = build_command.split_whitespace().collect();
+        Command::new(parts[0])
+            .args(&parts[1..])
+            .current_dir(project_dir)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+    }
+    .map_err(|e| EngineError::Io(format!("failed to execute build command `{build_command}`: {e}")))?;
 
     let stdout_raw = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr_raw = String::from_utf8_lossy(&output.stderr).to_string();
