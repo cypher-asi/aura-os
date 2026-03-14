@@ -352,7 +352,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
                 textUnderlineOffset: 2,
               }}
             >
-              View session details
+              {task.session_id!.slice(0, 8)}
             </button>
           </div>
         )}
@@ -576,7 +576,7 @@ function previewTitle(item: PreviewItem): string {
     case "sprint": return item.sprint.title;
     case "spec": return item.spec.title;
     case "task": return item.task.title;
-    case "session": return `Session`;
+    case "session": return `Session ${item.session.session_id.slice(0, 8)}`;
   }
 }
 
