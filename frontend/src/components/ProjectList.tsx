@@ -441,7 +441,7 @@ export function ProjectList() {
         <Explorer
           data={explorerData}
           searchable
-          searchPlaceholder="Search"
+          searchPlaceholder="Search Agents..."
           expandOnSelect
           enableDragDrop={false}
           enableMultiSelect={false}

@@ -1,0 +1,8 @@
+.container {
+  padding: 0 var(--space-3);
+  gap: var(--space-3);
+  justify-content: flex-start;
+  overflow: hidden;
+  border-left: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+}

@@ -5,6 +5,7 @@ import { ProjectList } from "./ProjectList";
 import { Sidekick } from "./Sidekick";
 import { Preview } from "./Preview";
 import { TaskbarLeft } from "./TaskbarLeft";
+import { TaskbarMiddle } from "./TaskbarMiddle";
 import { TaskbarRight } from "./TaskbarRight";
 import { TerminalPanel } from "./TerminalPanel";
 import { SettingsModal } from "./SettingsModal";
@@ -44,7 +45,7 @@ export function AppShell() {
         />
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* Left column: sidebar + taskbar left */}
-          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0 }}>
             <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
               <Sidebar
                 className="nav-sidebar"
@@ -63,16 +64,17 @@ export function AppShell() {
             />
           </div>
 
-          {/* Middle column: main content + terminal (taskbar middle) */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Middle column: main content + terminal + taskbar middle */}
+          <div style={{ flex: 1, minWidth: 120, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
               <Outlet />
             </main>
             <TerminalPanel />
+            <TaskbarMiddle />
           </div>
 
           {/* Right column: sidekick/preview + taskbar right */}
-          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid var(--color-border)" }}>
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flexShrink: 0, borderLeft: "1px solid var(--color-border)" }}>
             <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
               <Sidekick />
               <Preview />

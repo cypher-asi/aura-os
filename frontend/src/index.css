@@ -59,6 +59,7 @@ html, body, #root {
   align-items: stretch;
   flex-shrink: 0;
   box-sizing: border-box;
+  min-height: var(--control-height-sm, 28px);
 }
 
 ::-webkit-scrollbar {
