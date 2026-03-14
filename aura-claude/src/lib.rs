@@ -9,8 +9,8 @@ use tracing::{debug, error, info};
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 
-/// Deprecated: use `aura_pricing::PricingService::compute_cost` or the pure
-/// functions in `aura_pricing` instead. Kept temporarily for backward compat.
+/// Deprecated: use `aura_billing::PricingService::compute_cost` or the pure
+/// functions in `aura_billing` instead. Kept temporarily for backward compat.
 pub fn compute_cost(input_tokens: u64, output_tokens: u64) -> f64 {
     input_tokens as f64 * 5.0 / 1_000_000.0 + output_tokens as f64 * 25.0 / 1_000_000.0
 }

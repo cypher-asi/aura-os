@@ -97,7 +97,7 @@ impl DevLoopEngine {
         let project_root = self.project_service.get_project(&project_id)
             .map(|p| p.linked_folder_path.clone())
             .unwrap_or_default();
-        let fee_schedule = aura_pricing::PricingService::new(self.store.clone())
+        let fee_schedule = aura_billing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 
         let baseline_test_failures = {

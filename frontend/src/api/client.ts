@@ -25,6 +25,9 @@ import type {
   OrgRole,
   GitHubIntegration,
   GitHubRepo,
+  CreditTier,
+  CreditBalance,
+  CheckoutSessionResponse,
 } from "../types";
 import {
   generateSprintStream,
@@ -196,6 +199,15 @@ export const api = {
     refreshGithubIntegration: (orgId: string, integrationId: string) =>
       apiFetch<GitHubRepo[]>(`/api/orgs/${orgId}/integrations/github/${integrationId}/refresh`, {
         method: "POST",
+      }),
+    getCreditTiers: (orgId: string) =>
+      apiFetch<CreditTier[]>(`/api/orgs/${orgId}/credits/tiers`),
+    getCreditBalance: (orgId: string) =>
+      apiFetch<CreditBalance>(`/api/orgs/${orgId}/credits/balance`),
+    createCreditCheckout: (orgId: string, tierId?: string, customCredits?: number) =>
+      apiFetch<CheckoutSessionResponse>(`/api/orgs/${orgId}/credits/checkout`, {
+        method: "POST",
+        body: JSON.stringify({ tier_id: tierId, custom_credits: customCredits }),
       }),
   },
 

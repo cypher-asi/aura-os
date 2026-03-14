@@ -8,7 +8,7 @@ aura-core = { path = "../aura-core" }
 aura-store = { path = "../aura-store" }
 aura-settings = { path = "../aura-settings" }
 aura-claude = { path = "../aura-claude" }
-aura-pricing = { path = "../aura-pricing" }
+aura-billing = { path = "../aura-billing" }
 aura-tools = { path = "../aura-tools" }
 aura-orgs = { path = "../aura-orgs" }
 aura-projects = { path = "../aura-projects" }

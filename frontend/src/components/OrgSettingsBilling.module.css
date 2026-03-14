@@ -1,0 +1,94 @@
+.balanceValue {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tier grid */
+
+.tierGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.tierCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.tierCredits {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tierLabel {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.tierPrice {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent);
+  margin-top: var(--space-2);
+}
+
+/* Custom price inline */
+
+.customPrice {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Polling status */
+
+.pollingStatus {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+/* Status badge */
+
+.statusBadge {
+  font-size: var(--text-2xs);
+  text-transform: capitalize;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.statusBadge[data-status="fulfilled"],
+.statusBadge[data-status="paid"] {
+  color: var(--color-success, #22c55e);
+  border-color: var(--color-success, #22c55e);
+}
+
+.statusBadge[data-status="pending"] {
+  color: var(--color-warning, #eab308);
+  border-color: var(--color-warning, #eab308);
+}
+
+.statusBadge[data-status="failed"] {
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error, #ef4444);
+}

@@ -198,7 +198,7 @@ impl DevLoopEngine {
             .map(|p| p.linked_folder_path.clone())
             .unwrap_or_default();
         let mut run_metrics = LoopRunMetrics::new(project_id.to_string());
-        let fee_schedule = aura_pricing::PricingService::new(self.store.clone())
+        let fee_schedule = aura_billing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 
         macro_rules! flush_metrics {

@@ -6,7 +6,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, chat, dev_loop, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
+use crate::handlers::{agents, auth, billing, chat, dev_loop, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -55,6 +55,23 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             put(orgs::set_github)
                 .delete(orgs::remove_github)
                 .get(orgs::get_github),
+        )
+        // Credits / Billing
+        .route(
+            "/api/orgs/:org_id/credits/tiers",
+            get(billing::get_credit_tiers),
+        )
+        .route(
+            "/api/orgs/:org_id/credits/balance",
+            get(billing::get_credit_balance),
+        )
+        .route(
+            "/api/orgs/:org_id/credits/checkout",
+            post(billing::create_credit_checkout),
+        )
+        .route(
+            "/webhooks/billing/fulfill",
+            post(billing::handle_fulfillment),
         )
         // GitHub App integrations
         .route(

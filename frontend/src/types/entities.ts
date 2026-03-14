@@ -265,6 +265,32 @@ export interface GitHubRepo {
   updated_at: string;
 }
 
+export interface CreditTier {
+  id: string;
+  credits: number;
+  price_usd_cents: number;
+  label: string;
+}
+
+export interface CreditPurchase {
+  id: string;
+  tier_id: string | null;
+  credits: number;
+  amount_cents: number;
+  status: string;
+  created_at: string;
+}
+
+export interface CreditBalance {
+  total_credits: number;
+  purchases: CreditPurchase[];
+}
+
+export interface CheckoutSessionResponse {
+  checkout_url: string;
+  session_id: string;
+}
+
 export interface ApiError {
   error: string;
   code: string;

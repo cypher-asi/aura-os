@@ -485,7 +485,7 @@ impl TaskService {
         let task_input: u64 = tasks.iter().map(|t| t.total_input_tokens).sum();
         let task_output: u64 = tasks.iter().map(|t| t.total_output_tokens).sum();
 
-        let pricing = aura_pricing::PricingService::new(self.store.clone());
+        let pricing = aura_billing::PricingService::new(self.store.clone());
         let fee_schedule = pricing.get_fee_schedule();
 
         let total_parse_retries: u32 = tasks
@@ -549,8 +549,8 @@ impl TaskService {
             total_tokens: task_input + task_output,
             total_cost: tasks.iter().map(|t| {
                 let model = t.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp_rate, out_rate) = aura_pricing::lookup_rate_in(&fee_schedule, model);
-                aura_pricing::compute_cost_with_rates(
+                let (inp_rate, out_rate) = aura_billing::lookup_rate_in(&fee_schedule, model);
+                aura_billing::compute_cost_with_rates(
                     t.total_input_tokens, t.total_output_tokens, inp_rate, out_rate,
                 )
             }).sum(),

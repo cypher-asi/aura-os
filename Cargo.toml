@@ -2,7 +2,7 @@
 members = [
     "aura-core",
     "aura-claude",
-    "aura-pricing",
+    "aura-billing",
     "aura-tools",
     "aura-orgs",
     "aura-projects",

@@ -122,8 +122,8 @@ pub async fn get_progress(
             .iter()
             .map(|s| {
                 let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp, out) = aura_pricing::lookup_rate_in(&fee_schedule, model);
-                aura_pricing::compute_cost_with_rates(
+                let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
+                aura_billing::compute_cost_with_rates(
                     s.total_input_tokens, s.total_output_tokens, inp, out,
                 )
             })

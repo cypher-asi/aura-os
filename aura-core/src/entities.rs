@@ -289,6 +289,36 @@ pub struct FeeScheduleEntry {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreditTier {
+    pub id: String,
+    pub credits: u64,
+    pub price_usd_cents: u64,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreditPurchase {
+    pub id: String,
+    pub tier_id: Option<String>,
+    pub credits: u64,
+    pub amount_cents: u64,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreditBalance {
+    pub total_credits: u64,
+    pub purchases: Vec<CreditPurchase>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CheckoutSessionResponse {
+    pub checkout_url: String,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZeroAuthSession {
     pub user_id: String,
     pub display_name: String,

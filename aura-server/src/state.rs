@@ -12,7 +12,7 @@ use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
 use aura_github::GitHubService;
 use aura_orgs::OrgService;
-use aura_pricing::PricingService;
+use aura_billing::{BillingClient, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
 use aura_specs::SpecGenerationService;
@@ -33,6 +33,7 @@ pub struct AppState {
     pub auth_service: Arc<AuthService>,
     pub settings_service: Arc<SettingsService>,
     pub pricing_service: Arc<PricingService>,
+    pub billing_client: Arc<BillingClient>,
     pub project_service: Arc<ProjectService>,
     pub spec_gen_service: Arc<SpecGenerationService>,
     pub task_extraction_service: Arc<TaskExtractionService>,

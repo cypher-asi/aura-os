@@ -5,7 +5,7 @@ pub mod claude {
     pub use aura_claude::*;
 }
 pub mod pricing {
-    pub use aura_pricing::*;
+    pub use aura_billing::pricing::*;
 }
 pub mod tools {
     pub use aura_tools::*;
@@ -68,7 +68,7 @@ pub use aura_claude::{
 };
 pub use aura_github::GitHubService;
 pub use aura_orgs::OrgService;
-pub use aura_pricing::PricingService;
+pub use aura_billing::PricingService;
 pub use aura_projects::{CreateProjectInput, ProjectService, UpdateProjectInput};
 pub use aura_sessions::SessionService;
 pub use aura_specs::{ProgressTx, SpecGenerationService, SpecStreamEvent};

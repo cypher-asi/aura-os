@@ -25,7 +25,7 @@ use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
 use aura_github::GitHubService;
 use aura_orgs::OrgService;
-use aura_pricing::PricingService;
+use aura_billing::{BillingClient, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
 use aura_specs::SpecGenerationService;
@@ -183,6 +183,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let settings_service =
         Arc::new(SettingsService::new(store.clone(), data_dir).expect("failed to init settings"));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
+    let billing_client = Arc::new(BillingClient::new());
     let claude_client = Arc::new(ClaudeClient::new());
     let project_service = Arc::new(ProjectService::new(store.clone()));
     let spec_gen_service = Arc::new(SpecGenerationService::new(
@@ -249,6 +250,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         auth_service,
         settings_service,
         pricing_service,
+        billing_client,
         project_service,
         spec_gen_service,
         task_extraction_service,
