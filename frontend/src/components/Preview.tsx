@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Sidebar, Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import { X, Sparkles, Loader2, FilePlus, FilePen, FileX, RotateCcw, Check, Activity } from "lucide-react";
+import { X, Sparkles, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, Activity } from "lucide-react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -174,9 +174,37 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [streamBuf, setStreamBuf] = useState("");
   const [liveFileOps, setLiveFileOps] = useState<{ op: string; path: string }[]>([]);
   const [retrying, setRetrying] = useState(false);
+  const [runningTask, setRunningTask] = useState(false);
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
-  const isActive = task.status === "in_progress";
+
+  const effectiveStatus = liveStatus ?? task.status;
+  const isActive = effectiveStatus === "in_progress";
+
+  useEffect(() => {
+    setLiveStatus(null);
+    setRunningTask(false);
+  }, [task.task_id]);
+
+  useEffect(() => {
+    const unsubs = [
+      subscribe("task_started", (e) => {
+        if (e.task_id !== task.task_id) return;
+        setLiveStatus("in_progress");
+        setRunningTask(false);
+      }),
+      subscribe("task_completed", (e) => {
+        if (e.task_id !== task.task_id) return;
+        setLiveStatus("done");
+      }),
+      subscribe("task_failed", (e) => {
+        if (e.task_id !== task.task_id) return;
+        setLiveStatus("failed");
+      }),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [task.task_id, subscribe]);
 
   useEffect(() => {
     setStreamBuf("");
@@ -242,6 +270,17 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     }
   }, [projectId, task.task_id, retrying]);
 
+  const handleRunTask = useCallback(async () => {
+    if (!projectId || runningTask) return;
+    setRunningTask(true);
+    try {
+      await api.runTask(projectId, task.task_id);
+    } catch (err) {
+      console.error("Run task failed:", err);
+      setRunningTask(false);
+    }
+  }, [projectId, task.task_id, runningTask]);
+
   const handleViewSession = useCallback(async () => {
     if (!projectId || !task.session_id || !task.assigned_agent_id) return;
     try {
@@ -258,9 +297,20 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Status</span>
           <span className={styles.statusRow}>
-            <TaskStatusIcon status={task.status} />
-            <Text size="sm">{task.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Text>
-            {task.status === "failed" && (
+            <TaskStatusIcon status={effectiveStatus} />
+            <Text size="sm">{effectiveStatus.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Text>
+            {effectiveStatus === "ready" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={runningTask ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
+                onClick={handleRunTask}
+                disabled={runningTask}
+              >
+                {runningTask ? "Running..." : "Run"}
+              </Button>
+            )}
+            {effectiveStatus === "failed" && (
               <Button
                 variant="secondary"
                 size="sm"
