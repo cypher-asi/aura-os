@@ -243,6 +243,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
+  const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
 
   useEffect(() => {
     setLiveStatus(null);
@@ -270,7 +271,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
   // Hydrate from persisted live_output or server buffer when global buffer is empty
   useEffect(() => {
-    if (!isActive || !projectId) return;
+    if ((!isActive && !isTerminal) || !projectId) return;
     if (streamBuf || hydratedRef.current === task.task_id) return;
     hydratedRef.current = task.task_id;
 
@@ -282,7 +283,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     api.getTaskOutput(projectId, task.task_id).then((res) => {
       if (res.output) seedTaskOutput(task.task_id, res.output);
     }).catch(() => {});
-  }, [isActive, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
+  }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
 
   useEffect(() => {
     if (autoScrollRef.current && streamRef.current) {
@@ -296,23 +297,24 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   }, []);
 
-  const parsed = useMemo(() => (isActive && streamBuf ? parseTaskStream(streamBuf) : null), [isActive, streamBuf]);
+  const hasOutput = isActive || isTerminal;
+  const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
 
-  const fileOps = isActive
-    ? (liveFileOps.length > 0 ? liveFileOps : parsed?.fileOps ?? [])
+  const fileOps = hasOutput
+    ? (liveFileOps.length > 0 ? liveFileOps : parsed?.fileOps ?? (task.files_changed ?? []))
     : (task.files_changed ?? []);
 
-  const notes = isActive
-    ? (parsed?.notes ?? (streamBuf ? null : null))
+  const notes = hasOutput
+    ? (parsed?.notes ?? task.execution_notes)
     : task.execution_notes;
 
-  const showNotes = isActive ? (parsed?.notes != null) : !!task.execution_notes;
+  const showNotes = hasOutput ? (parsed?.notes != null || !!task.execution_notes) : !!task.execution_notes;
 
   const activity = useMemo(
-    () => (isActive ? deriveActivity(streamBuf) : []),
-    [isActive, streamBuf],
+    () => (hasOutput ? deriveActivity(streamBuf) : []),
+    [hasOutput, streamBuf],
   );
-  const showLiveOutput = isActive && activity.length > 0;
+  const showOutput = activity.length > 0;
 
   const handleRetry = useCallback(async () => {
     if (!projectId || retrying) return;
@@ -428,8 +430,8 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
         </GroupCollapsible>
       )}
 
-      {showLiveOutput && (
-        <GroupCollapsible label="Live Output" defaultOpen className={styles.section}>
+      {showOutput && (
+        <GroupCollapsible label={isActive ? "Live Output" : "Output"} defaultOpen className={styles.section}>
           <div className={styles.liveOutputSection}>
             <div ref={streamRef} className={styles.activityList} onScroll={handleStreamScroll}>
               {activity.map((item) => (
