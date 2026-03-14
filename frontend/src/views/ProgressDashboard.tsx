@@ -75,11 +75,19 @@ export function ProgressDashboard() {
   );
 }
 
+function formatCompact(n: number): string {
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(n >= 10_000_000_000 ? 0 : 1).replace(/\.0$/, "") + "B";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
+  if (n >= 10_000) return (n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\.0$/, "") + "K";
+  return n.toLocaleString();
+}
+
 function StatCard({ value, label, color, fmt }: { value: number; label: string; color: string; fmt?: boolean }) {
-  const display = fmt ? value.toLocaleString() : value;
+  const display = fmt ? formatCompact(value) : value;
+  const title = fmt ? value.toLocaleString() : undefined;
   return (
     <Panel variant="solid" border="solid" style={{ padding: "var(--space-3)", textAlign: "center" }}>
-      <div className={styles.statValue} style={{ color }}>{display}</div>
+      <div className={styles.statValue} style={{ color }} title={title}>{display}</div>
       <Text variant="muted" size="xs" align="center">{label}</Text>
     </Panel>
   );

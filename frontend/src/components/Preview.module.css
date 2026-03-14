@@ -172,6 +172,16 @@
   gap: var(--space-2);
 }
 
+.retryBtn {
+  margin-left: auto;
+}
+
+.failReason {
+  color: var(--status-failed, #ff6b6b);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
 
 .notesContent {
   padding: 0 var(--space-3);
@@ -207,15 +217,15 @@
 }
 
 .opCreate {
-  color: var(--color-success, #22c55e);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .opModify {
-  color: var(--color-accent, #3b82f6);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .opDelete {
-  color: var(--color-danger, #ef4444);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .taskDescription {
@@ -321,7 +331,7 @@
 }
 
 .activityIcon[data-status="done"] {
-  color: var(--color-success, #22c55e);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .activityIcon[data-status="active"] {

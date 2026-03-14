@@ -17,6 +17,14 @@ import type { Sprint, Task, Session } from "../types";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./Preview.module.css";
 
+function extractErrorMessage(raw: string): string {
+  const jsonMatch = raw.match(/"message"\s*:\s*"([^"]+)"/);
+  if (jsonMatch) return jsonMatch[1];
+  const prefixMatch = raw.match(/^[\w\s]+error:\s*(.+)/i);
+  if (prefixMatch) return prefixMatch[1];
+  return raw;
+}
+
 function SprintPreview({ sprint }: { sprint: Sprint }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
@@ -233,6 +241,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [retrying, setRetrying] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
+  const [failReason, setFailReason] = useState<string | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const hydratedRef = useRef<string | null>(null);
@@ -248,6 +257,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   useEffect(() => {
     setLiveStatus(null);
     setLiveSessionId(null);
+    setFailReason(null);
   }, [task.task_id]);
 
   useEffect(() => {
@@ -264,6 +274,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       subscribe("task_failed", (e) => {
         if (e.task_id !== task.task_id) return;
         setLiveStatus("failed");
+        if (e.reason) setFailReason(e.reason);
       }),
     ];
     return () => unsubs.forEach((u) => u());
@@ -373,16 +384,19 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             <Text size="sm">{effectiveStatus.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Text>
             {effectiveStatus === "failed" && (
               <Button
-                variant="secondary"
+                className={styles.retryBtn}
+                variant="ghost"
                 size="sm"
+                iconOnly
                 icon={<RotateCcw size={14} />}
                 onClick={handleRetry}
                 disabled={retrying}
-              >
-                {retrying ? "Retrying..." : "Retry"}
-              </Button>
+              />
             )}
           </span>
+          {effectiveStatus === "failed" && failReason && (
+            <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason)}</Text>
+          )}
         </div>
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Description</span>
