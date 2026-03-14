@@ -347,11 +347,17 @@ impl DevLoopEngine {
 
         loop {
             if *stop_rx.borrow() == LoopCommand::Pause {
+                let _ = self.session_service.end_session(
+                    &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                );
                 let _ = self.agent_service.finish_working(&project_id, &agent_id);
                 self.emit(EngineEvent::LoopPaused { completed_count });
                 return Ok(LoopOutcome::Paused { completed_count });
             }
             if *stop_rx.borrow() == LoopCommand::Stop {
+                let _ = self.session_service.end_session(
+                    &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                );
                 let _ = self.agent_service.finish_working(&project_id, &agent_id);
                 self.emit(EngineEvent::LoopStopped { completed_count });
                 return Ok(LoopOutcome::Stopped { completed_count });
@@ -362,11 +368,17 @@ impl DevLoopEngine {
                 None => {
                     let progress = self.task_service.get_project_progress(&project_id)?;
                     if progress.blocked_tasks > 0 || progress.failed_tasks > 0 {
+                        let _ = self.session_service.end_session(
+                            &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                        );
                         self.emit(EngineEvent::LoopFinished {
                             outcome: "all_tasks_blocked".into(),
                         });
                         return Ok(LoopOutcome::AllTasksBlocked);
                     }
+                    let _ = self.session_service.end_session(
+                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                    );
                     self.emit(EngineEvent::LoopFinished {
                         outcome: "all_tasks_complete".into(),
                     });
@@ -516,6 +528,9 @@ impl DevLoopEngine {
             self.agent_service.finish_working(&project_id, &agent_id)?;
 
             if let Some(reason) = failure_reason {
+                let _ = self.session_service.end_session(
+                    &project_id, &agent_id, &session.session_id, SessionStatus::Failed,
+                );
                 self.emit(EngineEvent::LoopFinished {
                     outcome: "task_failed".into(),
                 });
