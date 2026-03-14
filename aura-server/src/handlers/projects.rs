@@ -26,6 +26,7 @@ pub async fn create_project(
         linked_folder_path: req.linked_folder_path,
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
+        build_command: req.build_command,
     };
     let project = state
         .project_service
@@ -79,6 +80,7 @@ pub async fn update_project(
         linked_folder_path: req.linked_folder_path,
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
+        build_command: req.build_command,
     };
     let project = state
         .project_service

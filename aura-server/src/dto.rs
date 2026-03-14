@@ -26,6 +26,7 @@ pub struct CreateProjectRequest {
     pub linked_folder_path: String,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
+    pub build_command: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +36,7 @@ pub struct UpdateProjectRequest {
     pub linked_folder_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
+    pub build_command: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

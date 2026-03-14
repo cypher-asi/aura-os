@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tokio::sync::{mpsc, watch, Mutex};
-use tracing::warn;
+use tracing::{info, warn};
 
 use aura_core::*;
 use aura_services::{AgentService, ClaudeClient, ClaudeStreamEvent, ProjectService, SessionService, TaskService};
@@ -10,6 +10,7 @@ use aura_services::claude::DEFAULT_MODEL;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
+use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp};
@@ -97,6 +98,7 @@ const RETRY_CORRECTION_PROMPT: &str =
     "Your previous response was not valid JSON. Respond with ONLY a valid JSON object matching the schema above. No prose, no markdown fences.";
 
 const MAX_EXECUTION_RETRIES: u32 = 2;
+const MAX_BUILD_FIX_RETRIES: u32 = 3;
 const TASK_EXECUTION_MAX_TOKENS: u32 = 32_768;
 
 pub struct DevLoopEngine {
@@ -220,50 +222,57 @@ impl DevLoopEngine {
                     });
                     SessionStatus::Failed
                 } else {
-                    let files_written = execution.file_ops.iter().filter(|op| matches!(op, file_ops::FileOp::Create { .. } | file_ops::FileOp::Modify { .. })).count();
-                    let files_deleted = execution.file_ops.iter().filter(|op| matches!(op, file_ops::FileOp::Delete { .. })).count();
-                    let files: Vec<crate::events::FileOpSummary> = execution.file_ops.iter().map(|op| {
-                        let (op_name, path) = match op {
-                            file_ops::FileOp::Create { path, .. } => ("create", path.as_str()),
-                            file_ops::FileOp::Modify { path, .. } => ("modify", path.as_str()),
-                            file_ops::FileOp::Delete { path } => ("delete", path.as_str()),
-                        };
-                        crate::events::FileOpSummary { op: op_name.to_string(), path: path.to_string() }
-                    }).collect();
-                    self.emit(EngineEvent::FileOpsApplied {
-                        task_id: task.task_id,
-                        files_written,
-                        files_deleted,
-                        files,
-                    });
-                    let _ = self.task_service.complete_task(
-                        &project_id, &task.spec_id, &task.task_id,
-                        &execution.notes, file_changes,
-                    );
-                    self.emit(EngineEvent::TaskCompleted {
-                        task_id: task.task_id,
-                        execution_notes: execution.notes.clone(),
-                    });
+                    self.emit_file_ops_applied(&task, &execution.file_ops);
 
-                    let newly_ready = self
-                        .task_service
-                        .resolve_dependencies_after_completion(&project_id, &task.task_id)
-                        .unwrap_or_default();
-                    for t in &newly_ready {
-                        self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
-                    }
+                    let session_ref = self.session_service.get_session(
+                        &project_id, &agent.agent_id, &session.session_id,
+                    ).unwrap_or_else(|_| session.clone());
 
-                    for follow_up in &execution.follow_up_tasks {
-                        if let Ok(new_task) = self.task_service.create_follow_up_task(
-                            &task,
-                            follow_up.title.clone(),
-                            follow_up.description.clone(),
-                            vec![],
-                        ) {
-                            self.emit(EngineEvent::FollowUpTaskCreated {
-                                task_id: new_task.task_id,
-                            });
+                    let (_, build_passed) = self
+                        .verify_and_fix_build(
+                            &project, &task, &session_ref, &api_key, &execution,
+                        )
+                        .await?;
+
+                    if build_passed {
+                        let _ = self.task_service.complete_task(
+                            &project_id, &task.spec_id, &task.task_id,
+                            &execution.notes, file_changes,
+                        );
+                        self.emit(EngineEvent::TaskCompleted {
+                            task_id: task.task_id,
+                            execution_notes: execution.notes.clone(),
+                        });
+
+                        let newly_ready = self
+                            .task_service
+                            .resolve_dependencies_after_completion(&project_id, &task.task_id)
+                            .unwrap_or_default();
+                        for t in &newly_ready {
+                            self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
                         }
+
+                        for follow_up in &execution.follow_up_tasks {
+                            if let Ok(new_task) = self.task_service.create_follow_up_task(
+                                &task,
+                                follow_up.title.clone(),
+                                follow_up.description.clone(),
+                                vec![],
+                            ) {
+                                self.emit(EngineEvent::FollowUpTaskCreated {
+                                    task_id: new_task.task_id,
+                                });
+                            }
+                        }
+                    } else {
+                        let reason = "build verification failed after all fix attempts".to_string();
+                        let _ = self.task_service.fail_task(
+                            &project_id, &task.spec_id, &task.task_id, &reason,
+                        );
+                        self.emit(EngineEvent::TaskFailed {
+                            task_id: task.task_id,
+                            reason,
+                        });
                     }
                     SessionStatus::Completed
                 }
@@ -433,79 +442,87 @@ impl DevLoopEngine {
                         work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                         Some(reason)
                     } else {
-                        let files_written = execution.file_ops.iter().filter(|op| matches!(op, file_ops::FileOp::Create { .. } | file_ops::FileOp::Modify { .. })).count();
-                        let files_deleted = execution.file_ops.iter().filter(|op| matches!(op, file_ops::FileOp::Delete { .. })).count();
-                        let files: Vec<crate::events::FileOpSummary> = execution.file_ops.iter().map(|op| {
-                            let (op_name, path) = match op {
-                                file_ops::FileOp::Create { path, .. } => ("create", path.as_str()),
-                                file_ops::FileOp::Modify { path, .. } => ("modify", path.as_str()),
-                                file_ops::FileOp::Delete { path } => ("delete", path.as_str()),
-                            };
-                            crate::events::FileOpSummary { op: op_name.to_string(), path: path.to_string() }
-                        }).collect();
-                        self.emit(EngineEvent::FileOpsApplied {
-                            task_id: task.task_id,
-                            files_written,
-                            files_deleted,
-                            files,
-                        });
-                        self.task_service.complete_task(
-                            &project_id,
-                            &task.spec_id,
-                            &task.task_id,
-                            &execution.notes,
-                            file_changes,
-                        )?;
-                        completed_count += 1;
-                        self.emit(EngineEvent::TaskCompleted {
-                            task_id: task.task_id,
-                            execution_notes: execution.notes.clone(),
-                        });
+                        self.emit_file_ops_applied(&task, &execution.file_ops);
 
-                        let newly_ready = self
-                            .task_service
-                            .resolve_dependencies_after_completion(&project_id, &task.task_id)?;
-                        for t in &newly_ready {
-                            self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
-                        }
+                        let (_, build_passed) = self
+                            .verify_and_fix_build(
+                                &project, &task, &session, &api_key, &execution,
+                            )
+                            .await?;
 
-                        for follow_up in &execution.follow_up_tasks {
-                            let new_task = self.task_service.create_follow_up_task(
-                                &task,
-                                follow_up.title.clone(),
-                                follow_up.description.clone(),
-                                vec![],
+                        if !build_passed {
+                            let reason = "build verification failed after all fix attempts".to_string();
+                            self.task_service.fail_task(
+                                &project_id,
+                                &task.spec_id,
+                                &task.task_id,
+                                &reason,
                             )?;
-                            self.emit(EngineEvent::FollowUpTaskCreated {
-                                task_id: new_task.task_id,
+                            self.emit(EngineEvent::TaskFailed {
+                                task_id: task.task_id,
+                                reason: reason.clone(),
                             });
+                            work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
+                            Some(reason)
+                        } else {
+                            self.task_service.complete_task(
+                                &project_id,
+                                &task.spec_id,
+                                &task.task_id,
+                                &execution.notes,
+                                file_changes,
+                            )?;
+                            completed_count += 1;
+                            self.emit(EngineEvent::TaskCompleted {
+                                task_id: task.task_id,
+                                execution_notes: execution.notes.clone(),
+                            });
+
+                            let newly_ready = self
+                                .task_service
+                                .resolve_dependencies_after_completion(&project_id, &task.task_id)?;
+                            for t in &newly_ready {
+                                self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
+                            }
+
+                            for follow_up in &execution.follow_up_tasks {
+                                let new_task = self.task_service.create_follow_up_task(
+                                    &task,
+                                    follow_up.title.clone(),
+                                    follow_up.description.clone(),
+                                    vec![],
+                                )?;
+                                self.emit(EngineEvent::FollowUpTaskCreated {
+                                    task_id: new_task.task_id,
+                                });
+                            }
+
+                            self.session_service.update_context_usage(
+                                &project_id,
+                                &agent_id,
+                                &session.session_id,
+                                execution.input_tokens,
+                                execution.output_tokens,
+                            )?;
+
+                            let changed_files: Vec<&str> = execution
+                                .file_ops
+                                .iter()
+                                .map(|op| match op {
+                                    FileOp::Create { path, .. }
+                                    | FileOp::Modify { path, .. }
+                                    | FileOp::Delete { path } => path.as_str(),
+                                })
+                                .collect();
+                            work_log.push(format!(
+                                "Task (completed): {}\nNotes: {}\nFiles changed: {}",
+                                task.title,
+                                execution.notes,
+                                changed_files.join(", "),
+                            ));
+
+                            None
                         }
-
-                        self.session_service.update_context_usage(
-                            &project_id,
-                            &agent_id,
-                            &session.session_id,
-                            execution.input_tokens,
-                            execution.output_tokens,
-                        )?;
-
-                        let changed_files: Vec<&str> = execution
-                            .file_ops
-                            .iter()
-                            .map(|op| match op {
-                                FileOp::Create { path, .. }
-                                | FileOp::Modify { path, .. }
-                                | FileOp::Delete { path } => path.as_str(),
-                            })
-                            .collect();
-                        work_log.push(format!(
-                            "Task (completed): {}\nNotes: {}\nFiles changed: {}",
-                            task.title,
-                            execution.notes,
-                            changed_files.join(", "),
-                        ));
-
-                        None
                     }
                 }
                 Err(e) => {
@@ -703,6 +720,171 @@ impl DevLoopEngine {
         }
     }
 
+    /// Run the project's build command and, if it fails, ask Claude to fix the
+    /// errors up to `MAX_BUILD_FIX_RETRIES` times. Returns the final
+    /// `TaskExecution` (which may contain additional file ops from fix rounds)
+    /// and whether the build ultimately passed.
+    async fn verify_and_fix_build(
+        &self,
+        project: &Project,
+        task: &Task,
+        session: &Session,
+        api_key: &str,
+        initial_execution: &TaskExecution,
+    ) -> Result<(Vec<FileOp>, bool), EngineError> {
+        let build_command = match &project.build_command {
+            Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
+            _ => return Ok((vec![], true)), // no build command configured, treat as pass
+        };
+
+        let base_path = Path::new(&project.linked_folder_path);
+        let mut all_fix_ops: Vec<FileOp> = Vec::new();
+
+        for attempt in 1..=MAX_BUILD_FIX_RETRIES {
+            self.emit(EngineEvent::BuildVerificationStarted {
+                task_id: task.task_id,
+                command: build_command.clone(),
+            });
+
+            let build_result = build_verify::run_build_command(base_path, &build_command).await?;
+
+            if build_result.success {
+                self.emit(EngineEvent::BuildVerificationPassed {
+                    task_id: task.task_id,
+                });
+                return Ok((all_fix_ops, true));
+            }
+
+            self.emit(EngineEvent::BuildVerificationFailed {
+                task_id: task.task_id,
+                stderr: build_result.stderr.clone(),
+                attempt,
+            });
+
+            if attempt == MAX_BUILD_FIX_RETRIES {
+                info!(task_id = %task.task_id, "build still failing after max retries");
+                return Ok((all_fix_ops, false));
+            }
+
+            self.emit(EngineEvent::BuildFixAttempt {
+                task_id: task.task_id,
+                attempt,
+            });
+
+            let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
+            let codebase_snapshot =
+                file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+
+            let fix_prompt = build_fix_prompt(
+                project,
+                &spec,
+                task,
+                session,
+                &codebase_snapshot,
+                &build_command,
+                &build_result.stderr,
+                &build_result.stdout,
+                &initial_execution.notes,
+            );
+
+            let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+            let event_tx = self.event_tx.clone();
+            let tid = task.task_id;
+            let forwarder = tokio::spawn(async move {
+                while let Some(evt) = stream_rx.recv().await {
+                    if let ClaudeStreamEvent::Delta(text) = evt {
+                        let _ = event_tx.send(EngineEvent::TaskOutputDelta {
+                            task_id: tid,
+                            delta: text,
+                        });
+                    }
+                }
+            });
+
+            let response = self
+                .claude_client
+                .complete_stream(
+                    api_key,
+                    TASK_EXECUTION_SYSTEM_PROMPT,
+                    &fix_prompt,
+                    TASK_EXECUTION_MAX_TOKENS,
+                    stream_tx,
+                )
+                .await?;
+            let _ = forwarder.await;
+
+            match parse_execution_response(&response) {
+                Ok(fix_execution) => {
+                    file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await?;
+
+                    let files: Vec<crate::events::FileOpSummary> = fix_execution
+                        .file_ops
+                        .iter()
+                        .map(|op| {
+                            let (op_name, path) = match op {
+                                FileOp::Create { path, .. } => ("create", path.as_str()),
+                                FileOp::Modify { path, .. } => ("modify", path.as_str()),
+                                FileOp::Delete { path } => ("delete", path.as_str()),
+                            };
+                            crate::events::FileOpSummary {
+                                op: op_name.to_string(),
+                                path: path.to_string(),
+                            }
+                        })
+                        .collect();
+
+                    if !fix_execution.file_ops.is_empty() {
+                        self.emit(EngineEvent::FileOpsApplied {
+                            task_id: task.task_id,
+                            files_written: fix_execution
+                                .file_ops
+                                .iter()
+                                .filter(|op| matches!(op, FileOp::Create { .. } | FileOp::Modify { .. }))
+                                .count(),
+                            files_deleted: fix_execution
+                                .file_ops
+                                .iter()
+                                .filter(|op| matches!(op, FileOp::Delete { .. }))
+                                .count(),
+                            files,
+                        });
+                    }
+
+                    all_fix_ops.extend(fix_execution.file_ops);
+                }
+                Err(e) => {
+                    warn!(
+                        task_id = %task.task_id,
+                        attempt,
+                        error = %e,
+                        "failed to parse build-fix response"
+                    );
+                }
+            }
+        }
+
+        Ok((all_fix_ops, false))
+    }
+
+    fn emit_file_ops_applied(&self, task: &Task, ops: &[FileOp]) {
+        let files_written = ops.iter().filter(|op| matches!(op, FileOp::Create { .. } | FileOp::Modify { .. })).count();
+        let files_deleted = ops.iter().filter(|op| matches!(op, FileOp::Delete { .. })).count();
+        let files: Vec<crate::events::FileOpSummary> = ops.iter().map(|op| {
+            let (op_name, path) = match op {
+                FileOp::Create { path, .. } => ("create", path.as_str()),
+                FileOp::Modify { path, .. } => ("modify", path.as_str()),
+                FileOp::Delete { path } => ("delete", path.as_str()),
+            };
+            crate::events::FileOpSummary { op: op_name.to_string(), path: path.to_string() }
+        }).collect();
+        self.emit(EngineEvent::FileOpsApplied {
+            task_id: task.task_id,
+            files_written,
+            files_deleted,
+            files,
+        });
+    }
+
     fn update_task_tracking(
         &self,
         project_id: &ProjectId,
@@ -863,6 +1045,65 @@ fn extract_last_fenced_json(text: &str) -> Option<String> {
         }
     }
     None
+}
+
+fn build_fix_prompt(
+    project: &Project,
+    spec: &Spec,
+    task: &Task,
+    session: &Session,
+    codebase_snapshot: &str,
+    build_command: &str,
+    stderr: &str,
+    stdout: &str,
+    prior_notes: &str,
+) -> String {
+    let mut prompt = String::new();
+
+    prompt.push_str(&format!(
+        "# Project: {}\n{}\n\n",
+        project.name, project.description
+    ));
+    prompt.push_str(&format!(
+        "# Spec: {}\n{}\n\n",
+        spec.title, spec.markdown_contents
+    ));
+    prompt.push_str(&format!("# Task: {}\n{}\n\n", task.title, task.description));
+
+    if !session.summary_of_previous_context.is_empty() {
+        prompt.push_str(&format!(
+            "# Previous Context Summary\n{}\n\n",
+            session.summary_of_previous_context
+        ));
+    }
+
+    if !prior_notes.is_empty() {
+        prompt.push_str(&format!(
+            "# Notes from Initial Implementation\n{}\n\n",
+            prior_notes
+        ));
+    }
+
+    prompt.push_str(&format!(
+        "# Build Verification FAILED\n\
+         The build command `{}` failed after the previous file operations were applied.\n\
+         You MUST fix ALL compilation/build errors below.\n\n\
+         ## stderr\n```\n{}\n```\n\n",
+        build_command, stderr
+    ));
+
+    if !stdout.is_empty() {
+        prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", stdout));
+    }
+
+    if !codebase_snapshot.is_empty() {
+        prompt.push_str(&format!(
+            "# Current Codebase Files (after previous changes)\n{}\n",
+            codebase_snapshot
+        ));
+    }
+
+    prompt
 }
 
 /// Walk through the text looking for `{` and track brace depth to find a

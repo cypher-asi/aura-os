@@ -16,6 +16,7 @@ pub struct CreateProjectInput {
     pub linked_folder_path: String,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
+    pub build_command: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -25,6 +26,7 @@ pub struct UpdateProjectInput {
     pub linked_folder_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
+    pub build_command: Option<String>,
 }
 
 pub struct ProjectService {
@@ -62,6 +64,7 @@ impl ProjectService {
             current_status: ProjectStatus::Planning,
             github_integration_id: input.github_integration_id,
             github_repo_full_name: input.github_repo_full_name,
+            build_command: input.build_command,
             created_at: now,
             updated_at: now,
         };
@@ -124,6 +127,9 @@ impl ProjectService {
         if input.github_integration_id.is_some() || input.github_repo_full_name.is_some() {
             project.github_integration_id = input.github_integration_id;
             project.github_repo_full_name = input.github_repo_full_name;
+        }
+        if input.build_command.is_some() {
+            project.build_command = input.build_command;
         }
 
         project.updated_at = Utc::now();

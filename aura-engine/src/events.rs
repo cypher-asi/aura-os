@@ -84,4 +84,21 @@ pub enum EngineEvent {
         project_id: ProjectId,
         spec: Spec,
     },
+
+    BuildVerificationStarted {
+        task_id: TaskId,
+        command: String,
+    },
+    BuildVerificationPassed {
+        task_id: TaskId,
+    },
+    BuildVerificationFailed {
+        task_id: TaskId,
+        stderr: String,
+        attempt: u32,
+    },
+    BuildFixAttempt {
+        task_id: TaskId,
+        attempt: u32,
+    },
 }

@@ -23,6 +23,8 @@ pub struct Project {
     pub github_integration_id: Option<GitHubIntegrationId>,
     #[serde(default)]
     pub github_repo_full_name: Option<String>,
+    #[serde(default)]
+    pub build_command: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

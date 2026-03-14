@@ -21,6 +21,7 @@ fn valid_input(dir: &TempDir) -> CreateProjectInput {
         linked_folder_path: folder,
         github_integration_id: None,
         github_repo_full_name: None,
+        build_command: None,
     }
 }
 
@@ -109,6 +110,7 @@ fn update_project_applies_partial_updates() {
                 linked_folder_path: None,
                 github_integration_id: None,
                 github_repo_full_name: None,
+                build_command: None,
             },
         )
         .unwrap();

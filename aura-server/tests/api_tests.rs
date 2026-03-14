@@ -270,11 +270,15 @@ async fn task_list_and_progress() {
     let pid = ProjectId::new();
     let project = Project {
         project_id: pid,
+        org_id: OrgId::new(),
         name: "Test".into(),
         description: "d".into(),
         linked_folder_path: project_dir.path().to_string_lossy().to_string(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
+        github_integration_id: None,
+        github_repo_full_name: None,
+        build_command: None,
         created_at: now,
         updated_at: now,
     };
@@ -345,11 +349,15 @@ async fn agent_list_empty() {
     let now = chrono::Utc::now();
     let project = Project {
         project_id: pid,
+        org_id: OrgId::new(),
         name: "Test".into(),
         description: "d".into(),
         linked_folder_path: ".".into(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
+        github_integration_id: None,
+        github_repo_full_name: None,
+        build_command: None,
         created_at: now,
         updated_at: now,
     };
