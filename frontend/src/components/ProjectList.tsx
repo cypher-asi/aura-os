@@ -287,6 +287,20 @@ export function ProjectList() {
     [projectMap, sessionsByProject, fetchSessions],
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key !== "F2") return;
+      const focused = (e.target as HTMLElement).closest("button[id]");
+      if (!focused) return;
+      const proj = projectMap.get(focused.id);
+      if (proj) {
+        e.preventDefault();
+        setRenameTarget(proj);
+      }
+    },
+    [projectMap],
+  );
+
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       const target = (e.target as HTMLElement).closest("button[id]");
@@ -392,7 +406,7 @@ export function ProjectList() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.explorerWrap} onContextMenu={handleContextMenu}>
+      <div className={styles.explorerWrap} onContextMenu={handleContextMenu} onKeyDown={handleKeyDown}>
         <div className={styles.addButton}>
           <ButtonPlus onClick={() => setShowNewProject(true)} size="sm" title="New Project" />
         </div>
