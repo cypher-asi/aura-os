@@ -63,17 +63,6 @@ fn create_project_rejects_nonexistent_folder() {
 }
 
 #[test]
-fn create_project_rejects_nonexistent_requirements_file() {
-    let (store, dir) = setup();
-    let svc = ProjectService::new(store);
-    let mut input = valid_input(&dir);
-    input.requirements_doc_path = "/nonexistent/requirements.md".into();
-
-    let err = svc.create_project(input).unwrap_err();
-    assert!(matches!(err, ProjectError::InvalidInput(_)));
-}
-
-#[test]
 fn get_project_round_trip() {
     let (store, dir) = setup();
     let svc = ProjectService::new(store);
@@ -118,7 +107,6 @@ fn update_project_applies_partial_updates() {
                 name: Some("New Name".into()),
                 description: None,
                 linked_folder_path: None,
-                requirements_doc_path: None,
                 github_integration_id: None,
                 github_repo_full_name: None,
             },
