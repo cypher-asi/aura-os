@@ -1,0 +1,36 @@
+.sessionListWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.emptyWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-4);
+}
+
+.sessionMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  padding-left: var(--space-2);
+  white-space: nowrap;
+}
+
+.sessionDuration {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.sessionTokens {
+  font-size: 11px;
+  opacity: 0.4;
+}
