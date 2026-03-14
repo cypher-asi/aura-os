@@ -246,7 +246,7 @@
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;
-  color: #e2b55a;
+  color: var(--color-text-muted, #9ca3af);
 }
 .markdown pre {
   border: 1px solid var(--color-border);
