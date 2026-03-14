@@ -5,11 +5,9 @@ import { MessageSquare } from "lucide-react";
 import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
-import { useProjectContext } from "../context/ProjectContext";
 import { setLastChat } from "../utils/storage";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
 import { ChatInputBar } from "./ChatInputBar";
-import { TerminalPanel } from "./TerminalPanel";
 import type { ChatInputBarHandle } from "./ChatInputBar";
 import type { ChatMessage } from "../types";
 import styles from "./ChatView.module.css";
@@ -20,7 +18,6 @@ export function ChatView() {
     chatSessionId: string;
   }>();
   const navigate = useNavigate();
-  const ctx = useProjectContext();
 
   const {
     messages,
@@ -109,7 +106,6 @@ export function ChatView() {
             )}
           </div>
         </div>
-        <TerminalPanel cwd={ctx?.project.linked_folder_path} />
       </div>
     );
   }
@@ -156,8 +152,6 @@ export function ChatView() {
           onModelChange={setSelectedModel}
         />
       </div>
-
-      <TerminalPanel cwd={ctx?.project.linked_folder_path} />
     </div>
   );
 }
