@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -8,11 +8,77 @@ import { clearLastChatIf } from "../utils/storage";
 import type { Project, ChatSession } from "../types";
 import { ButtonPlus, Explorer, Menu } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { Plus, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Pencil, Trash2, Loader2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
-import { RenameProjectModal, DeleteProjectModal, DeleteSessionModal } from "./ProjectModals";
+import { DeleteProjectModal, DeleteSessionModal } from "./ProjectModals";
+import { useEventContext } from "../context/EventContext";
 import { formatRelativeTime } from "../utils/format";
 import styles from "./ProjectList.module.css";
+
+/**
+ * Self-contained inline rename input that overlays a tree node.
+ * All keystroke state is local so typing never re-renders the parent list.
+ */
+function InlineRenameInput({
+  target,
+  onSave,
+  onCancel,
+}: {
+  target: Project;
+  onSave: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(target.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const saved = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = document.getElementById(target.project_id);
+    if (el) setRect(el.getBoundingClientRect());
+  }, [target.project_id]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [rect]);
+
+  const commit = useCallback(() => {
+    if (saved.current) return;
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== target.name) {
+      saved.current = true;
+      onSave(trimmed);
+    } else {
+      onCancel();
+    }
+  }, [value, target.name, onSave, onCancel]);
+
+  if (!rect) return null;
+
+  return createPortal(
+    <input
+      ref={inputRef}
+      className={styles.inlineRenameInput}
+      style={{
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      }}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") onCancel();
+      }}
+      onBlur={commit}
+    />,
+    document.body,
+  );
+}
 
 const projectMenuItems: MenuItem[] = [
   { id: "new-chat", label: "New Chat", icon: <MessageSquare size={14} /> },
@@ -40,10 +106,11 @@ export function ProjectList() {
   const sidekick = useSidekick();
   const { activeOrg } = useOrg();
 
+  const { subscribe } = useEventContext();
+  const [automatingProjectId, setAutomatingProjectId] = useState<string | null>(null);
+
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
-  const [renameName, setRenameName] = useState("");
-  const [renameLoading, setRenameLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<ChatSession | null>(null);
@@ -117,6 +184,18 @@ export function ProjectList() {
     });
   }, [sidekick]);
 
+  useEffect(() => {
+    const unsubs = [
+      subscribe("loop_started", (e) => {
+        if (e.project_id) setAutomatingProjectId(e.project_id);
+      }),
+      subscribe("loop_paused", () => setAutomatingProjectId(null)),
+      subscribe("loop_stopped", () => setAutomatingProjectId(null)),
+      subscribe("loop_finished", () => setAutomatingProjectId(null)),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [subscribe]);
+
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.project_id, p])),
     [projects],
@@ -141,6 +220,9 @@ export function ProjectList() {
         label: p.name,
         suffix: (
           <span className={styles.projectSuffix}>
+            {automatingProjectId === p.project_id && (
+              <Loader2 size={12} className={styles.automationSpinner} />
+            )}
             <button
               type="button"
               className={styles.newChatButton}
@@ -168,7 +250,7 @@ export function ProjectList() {
               }))
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],
       })),
-    [projects, sessionsByProject, streamingSessionId],
+    [projects, sessionsByProject, streamingSessionId, automatingProjectId],
   );
 
   const defaultExpandedIds = useMemo(
@@ -249,7 +331,6 @@ export function ProjectList() {
     if (actionId === "new-chat" && target) {
       handleNewSession(target.project_id);
     } else if (actionId === "rename" && target) {
-      setRenameName(target.name);
       setRenameTarget(target);
     } else if (actionId === "delete" && target) {
       setDeleteTarget(target);
@@ -258,19 +339,20 @@ export function ProjectList() {
     }
   };
 
-  const handleRename = async () => {
-    if (!renameTarget || !renameName.trim()) return;
-    setRenameLoading(true);
-    try {
-      await api.updateProject(renameTarget.project_id, { name: renameName.trim() });
-      setRenameTarget(null);
-      fetchProjects();
-    } catch (err) {
-      console.error("Failed to rename project", err);
-    } finally {
-      setRenameLoading(false);
-    }
-  };
+  const handleRename = useCallback(
+    async (newName: string) => {
+      if (!renameTarget) return;
+      try {
+        await api.updateProject(renameTarget.project_id, { name: newName });
+        fetchProjects();
+      } catch (err) {
+        console.error("Failed to rename project", err);
+      } finally {
+        setRenameTarget(null);
+      }
+    },
+    [renameTarget, fetchProjects],
+  );
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -348,14 +430,13 @@ export function ProjectList() {
           document.body,
         )}
 
-      <RenameProjectModal
-        target={renameTarget}
-        name={renameName}
-        onNameChange={setRenameName}
-        loading={renameLoading}
-        onClose={() => setRenameTarget(null)}
-        onRename={handleRename}
-      />
+      {renameTarget && (
+        <InlineRenameInput
+          target={renameTarget}
+          onSave={handleRename}
+          onCancel={() => setRenameTarget(null)}
+        />
+      )}
 
       <DeleteProjectModal
         target={deleteTarget}
