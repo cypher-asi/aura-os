@@ -208,7 +208,7 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
     }
   }, [projectId, task.task_id, running]);
 
-  if (status !== "ready") return null;
+  const visible = status === "ready";
 
   return (
     <Button
@@ -216,9 +216,10 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
       size="sm"
       iconOnly
       icon={running ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
-      onClick={handleRun}
-      disabled={running}
+      onClick={visible ? handleRun : undefined}
+      disabled={!visible || running}
       title={running ? "Running..." : "Run task"}
+      style={visible ? undefined : { visibility: "hidden" }}
     />
   );
 }

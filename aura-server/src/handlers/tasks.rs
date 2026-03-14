@@ -110,8 +110,9 @@ pub async fn get_progress(
         .get_project_progress(&project_id)
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
-    // Tokens: sum across all sessions for this project
+    // Sessions + tokens: aggregate across all sessions for this project
     if let Ok(sessions) = state.store.list_sessions_by_project(&project_id) {
+        progress.total_sessions = sessions.len() as u64;
         progress.total_tokens = sessions
             .iter()
             .map(|s| s.total_input_tokens + s.total_output_tokens)
