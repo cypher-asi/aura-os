@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use tracing::{info, error};
 
 use crate::error::EngineError;
 
@@ -55,11 +56,16 @@ fn resolve_via_ancestors(target: &Path) -> Result<std::path::PathBuf, EngineErro
 }
 
 pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), EngineError> {
+    info!(base = %base_path.display(), count = ops.len(), "applying file operations");
+
     for op in ops {
         match op {
             FileOp::Create { path, content } | FileOp::Modify { path, content } => {
                 let full_path = base_path.join(path);
-                validate_path(base_path, &full_path)?;
+                if let Err(e) = validate_path(base_path, &full_path) {
+                    error!(path = %path, error = %e, "path validation failed");
+                    return Err(e);
+                }
                 if let Some(parent) = full_path.parent() {
                     tokio::fs::create_dir_all(parent)
                         .await
@@ -67,19 +73,32 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                 }
                 tokio::fs::write(&full_path, content)
                     .await
-                    .map_err(|e| EngineError::Io(e.to_string()))?;
+                    .map_err(|e| {
+                        error!(path = %path, error = %e, "failed to write file");
+                        EngineError::Io(e.to_string())
+                    })?;
+                info!(path = %path, bytes = content.len(), "wrote file");
             }
             FileOp::Delete { path } => {
                 let full_path = base_path.join(path);
-                validate_path(base_path, &full_path)?;
+                if let Err(e) = validate_path(base_path, &full_path) {
+                    error!(path = %path, error = %e, "path validation failed");
+                    return Err(e);
+                }
                 if full_path.exists() {
                     tokio::fs::remove_file(&full_path)
                         .await
-                        .map_err(|e| EngineError::Io(e.to_string()))?;
+                        .map_err(|e| {
+                            error!(path = %path, error = %e, "failed to delete file");
+                            EngineError::Io(e.to_string())
+                        })?;
+                    info!(path = %path, "deleted file");
                 }
             }
         }
     }
+
+    info!(count = ops.len(), "all file operations applied successfully");
     Ok(())
 }
 
