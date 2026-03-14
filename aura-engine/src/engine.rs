@@ -1493,7 +1493,9 @@ impl DevLoopEngine {
                             let _ = event_tx.send(EngineEvent::TaskOutputDelta { task_id: tid, delta: text });
                         }
                         ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                            *tc.lock().await = (input_tokens, output_tokens);
+                            let mut g = tc.lock().await;
+                            g.0 += input_tokens;
+                            g.1 += output_tokens;
                         }
                         _ => {}
                     }
@@ -1554,7 +1556,9 @@ impl DevLoopEngine {
                                     let _ = event_tx2.send(EngineEvent::TaskOutputDelta { task_id: tid2, delta: text });
                                 }
                                 ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                                    *tc2.lock().await = (input_tokens, output_tokens);
+                                    let mut g = tc2.lock().await;
+                                    g.0 += input_tokens;
+                                    g.1 += output_tokens;
                                 }
                                 _ => {}
                             }
@@ -1612,7 +1616,9 @@ impl DevLoopEngine {
                                     let _ = event_tx.send(EngineEvent::TaskOutputDelta { task_id: tid, delta: text });
                                 }
                                 ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                                    *tc.lock().await = (input_tokens, output_tokens);
+                                    let mut g = tc.lock().await;
+                                    g.0 += input_tokens;
+                                    g.1 += output_tokens;
                                 }
                                 _ => {}
                             }
@@ -1669,7 +1675,7 @@ impl DevLoopEngine {
         }
     }
 
-    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts).
+    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens).
     async fn verify_and_fix_build(
         &self,
         project: &Project,
@@ -1677,7 +1683,7 @@ impl DevLoopEngine {
         session: &Session,
         api_key: &str,
         initial_execution: &TaskExecution,
-    ) -> Result<(Vec<FileOp>, bool, u32, u32), EngineError> {
+    ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
         let build_command = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
@@ -1685,7 +1691,7 @@ impl DevLoopEngine {
                     task_id: task.task_id,
                     reason: "no build_command configured on project".into(),
                 });
-                return Ok((vec![], true, 0, 0));
+                return Ok((vec![], true, 0, 0, 0, 0));
             }
         };
 
@@ -1697,6 +1703,8 @@ impl DevLoopEngine {
         let mut all_fix_ops: Vec<FileOp> = Vec::new();
         let mut prior_attempts: Vec<BuildFixAttemptRecord> = Vec::new();
         let mut duplicate_bailouts: u32 = 0;
+        let mut fix_input_tokens: u64 = 0;
+        let mut fix_output_tokens: u64 = 0;
 
         for attempt in 1..=MAX_BUILD_FIX_RETRIES {
             let build_step_start = Instant::now();
@@ -1731,17 +1739,19 @@ impl DevLoopEngine {
                 });
 
                 let test_passed = if let Some(ref test_cmd) = test_command {
-                    let test_result = self.run_and_handle_tests(
+                    let (test_result, test_inp, test_out) = self.run_and_handle_tests(
                         project, task, session, api_key, initial_execution,
                         test_cmd, base_path, attempt, &mut all_fix_ops,
                     ).await?;
+                    fix_input_tokens += test_inp;
+                    fix_output_tokens += test_out;
                     test_result
                 } else {
                     true
                 };
 
                 if test_passed {
-                    return Ok((all_fix_ops, true, attempt, duplicate_bailouts));
+                    return Ok((all_fix_ops, true, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
                 }
                 continue;
             }
@@ -1773,7 +1783,7 @@ impl DevLoopEngine {
 
             if attempt == MAX_BUILD_FIX_RETRIES {
                 info!(task_id = %task.task_id, "build still failing after max retries");
-                return Ok((all_fix_ops, false, attempt, duplicate_bailouts));
+                return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
             }
 
             let current_signature = normalize_error_signature(&build_result.stderr);
@@ -1790,7 +1800,7 @@ impl DevLoopEngine {
                     consecutive_dupes + 1
                 );
                 duplicate_bailouts += 1;
-                return Ok((all_fix_ops, false, attempt, duplicate_bailouts));
+                return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
             }
 
             self.emit(EngineEvent::BuildFixAttempt {
@@ -1822,16 +1832,26 @@ impl DevLoopEngine {
                 &prior_attempts,
             );
 
+            let fix_tc: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
             let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
             let event_tx = self.event_tx.clone();
             let tid = task.task_id;
+            let fix_tc_clone = fix_tc.clone();
             let forwarder = tokio::spawn(async move {
                 while let Some(evt) = stream_rx.recv().await {
-                    if let ClaudeStreamEvent::Delta(text) = evt {
-                        let _ = event_tx.send(EngineEvent::TaskOutputDelta {
-                            task_id: tid,
-                            delta: text,
-                        });
+                    match evt {
+                        ClaudeStreamEvent::Delta(text) => {
+                            let _ = event_tx.send(EngineEvent::TaskOutputDelta {
+                                task_id: tid,
+                                delta: text,
+                            });
+                        }
+                        ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
+                            let mut g = fix_tc_clone.lock().await;
+                            g.0 += input_tokens;
+                            g.1 += output_tokens;
+                        }
+                        _ => {}
                     }
                 }
             });
@@ -1847,6 +1867,12 @@ impl DevLoopEngine {
                 )
                 .await?;
             let _ = forwarder.await;
+
+            {
+                let g = fix_tc.lock().await;
+                fix_input_tokens += g.0;
+                fix_output_tokens += g.1;
+            }
 
             // Summarize what files this attempt changed for the history
             let mut attempt_files_changed: Vec<String> = Vec::new();

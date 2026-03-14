@@ -299,6 +299,33 @@ pub fn agent_tool_definitions() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
+        // ── Search ─────────────────────────────────────────────────────
+        tool(
+            "search_code",
+            "Search for a regex pattern across files in the project. Returns matching lines with file paths and line numbers. Useful for finding usages, definitions, and references.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "pattern": { "type": "string", "description": "Regex pattern to search for" },
+                    "path": { "type": "string", "description": "Optional relative directory or file path to scope the search (default: project root)" },
+                    "include": { "type": "string", "description": "Optional glob to filter files, e.g. '*.rs' or '*.ts'" },
+                    "max_results": { "type": "integer", "description": "Maximum number of matching lines to return (default: 50)" }
+                },
+                "required": ["pattern"]
+            }),
+        ),
+        tool(
+            "find_files",
+            "Find files by name or glob pattern in the project directory. Returns matching file paths.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "pattern": { "type": "string", "description": "Glob pattern to match file names, e.g. '*.rs', 'Cargo.toml', 'src/**/*.ts'" },
+                    "path": { "type": "string", "description": "Optional relative directory to scope the search (default: project root)" }
+                },
+                "required": ["pattern"]
+            }),
+        ),
         // ── Progress ───────────────────────────────────────────────────
         tool(
             "get_progress",

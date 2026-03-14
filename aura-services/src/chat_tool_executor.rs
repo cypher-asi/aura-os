@@ -97,6 +97,9 @@ impl ChatToolExecutor {
             "write_file" => self.write_file(project_id, &input),
             "delete_file" => self.delete_file(project_id, &input),
             "list_files" => self.list_files(project_id, &input),
+            // ── Search ─────────────────────────────────────────────
+            "search_code" => self.search_code(project_id, &input),
+            "find_files" => self.find_files(project_id, &input),
             // ── Progress ───────────────────────────────────────────
             "get_progress" => self.get_progress(project_id),
             _ => ToolExecResult::err(format!("Unknown tool: {tool_name}")),
@@ -547,6 +550,84 @@ impl ChatToolExecutor {
     }
 
     // -----------------------------------------------------------------------
+    // Search operations
+    // -----------------------------------------------------------------------
+
+    fn search_code(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let pattern = str_field(input, "pattern").unwrap_or_default();
+        if pattern.is_empty() {
+            return ToolExecResult::err("Missing required field: pattern");
+        }
+        let rel = str_field(input, "path").unwrap_or_else(|| ".".to_string());
+        let abs = match self.resolve_project_path(project_id, &rel) {
+            Ok(p) => p,
+            Err(e) => return e,
+        };
+        let include_glob = str_field(input, "include");
+        let max_results = input
+            .get("max_results")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(50) as usize;
+
+        let regex = match regex::Regex::new(&pattern) {
+            Ok(r) => r,
+            Err(e) => return ToolExecResult::err(format!("Invalid regex: {e}")),
+        };
+
+        let mut matches: Vec<Value> = Vec::new();
+        search_directory(&abs, &abs, &regex, include_glob.as_deref(), max_results, &mut matches);
+
+        ToolExecResult::ok(json!({
+            "pattern": pattern,
+            "match_count": matches.len(),
+            "truncated": matches.len() >= max_results,
+            "matches": matches
+        }))
+    }
+
+    fn find_files(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let pattern = str_field(input, "pattern").unwrap_or_default();
+        if pattern.is_empty() {
+            return ToolExecResult::err("Missing required field: pattern");
+        }
+        let rel = str_field(input, "path").unwrap_or_else(|| ".".to_string());
+        let abs = match self.resolve_project_path(project_id, &rel) {
+            Ok(p) => p,
+            Err(e) => return e,
+        };
+
+        let glob_pattern = if pattern.contains('/') || pattern.contains('\\') {
+            pattern.clone()
+        } else if pattern.starts_with("*.") || pattern.starts_with("**") {
+            format!("**/{pattern}")
+        } else {
+            format!("**/{pattern}")
+        };
+
+        let full_glob = format!("{}/{}", abs.display(), glob_pattern);
+        let mut found: Vec<String> = Vec::new();
+        if let Ok(paths) = glob::glob(&full_glob.replace('\\', "/")) {
+            for entry in paths.flatten() {
+                if let Ok(rel_path) = entry.strip_prefix(&abs) {
+                    let p = rel_path.to_string_lossy().replace('\\', "/");
+                    if !should_skip_path(&p) {
+                        found.push(p);
+                    }
+                }
+                if found.len() >= 200 {
+                    break;
+                }
+            }
+        }
+
+        ToolExecResult::ok(json!({
+            "pattern": pattern,
+            "file_count": found.len(),
+            "files": found
+        }))
+    }
+
+    // -----------------------------------------------------------------------
     // Progress
     // -----------------------------------------------------------------------
 
@@ -587,4 +668,68 @@ fn lexical_normalize(path: &Path) -> std::path::PathBuf {
         }
     }
     out
+}
+
+const SKIP_DIRS: &[&str] = &[
+    "node_modules", "target", ".git", "__pycache__", ".next", "dist",
+    "build", ".cargo", "vendor", ".venv", "venv",
+];
+
+fn should_skip_path(path: &str) -> bool {
+    path.split('/').any(|segment| SKIP_DIRS.contains(&segment))
+}
+
+fn search_directory(
+    root: &Path,
+    dir: &Path,
+    regex: &regex::Regex,
+    include_glob: Option<&str>,
+    max_results: usize,
+    matches: &mut Vec<Value>,
+) {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(rd) => rd,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        if matches.len() >= max_results {
+            return;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if SKIP_DIRS.contains(&name.as_str()) || name.starts_with('.') {
+            continue;
+        }
+        let path = entry.path();
+        if path.is_dir() {
+            search_directory(root, &path, regex, include_glob, max_results, matches);
+        } else if path.is_file() {
+            if let Some(glob_pat) = include_glob {
+                if let Ok(matcher) = glob::Pattern::new(glob_pat) {
+                    if !matcher.matches(&name) {
+                        continue;
+                    }
+                }
+            }
+            let rel = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                for (line_num, line) in content.lines().enumerate() {
+                    if matches.len() >= max_results {
+                        return;
+                    }
+                    if regex.is_match(line) {
+                        matches.push(json!({
+                            "file": rel,
+                            "line": line_num + 1,
+                            "content": line.chars().take(200).collect::<String>()
+                        }));
+                    }
+                }
+            }
+        }
+    }
 }
