@@ -14,7 +14,7 @@
   width: 100%;
   justify-content: flex-start;
   border-radius: 0;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs, 11px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

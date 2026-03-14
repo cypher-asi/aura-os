@@ -9,7 +9,7 @@
   justify-content: flex-start;
   border-radius: 0;
   gap: var(--space-2);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs, 11px);
 }
 
 .icon {
