@@ -184,6 +184,7 @@ impl ChatService {
             project_id: *project_id,
             role: ChatRole::User,
             content: content.to_string(),
+            content_blocks: None,
             created_at: now,
         };
         if let Err(e) = self.store.put_chat_message(&user_msg) {
@@ -250,9 +251,6 @@ impl ChatService {
 
         let system = format!("{CHAT_SYSTEM_PROMPT}{project_context}");
 
-        // Build RichMessage history from stored chat messages.
-        // Stored messages only contain text (tool interactions aren't persisted
-        // in the DB), so we use simple text content for history replay.
         let mut api_messages: Vec<RichMessage> = stored_messages
             .iter()
             .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
@@ -262,9 +260,40 @@ impl ChatService {
                     ChatRole::Assistant => "assistant",
                     ChatRole::System => "user",
                 };
-                RichMessage {
-                    role: role.to_string(),
-                    content: crate::claude::MessageContent::Text(m.content.clone()),
+                if let Some(blocks) = &m.content_blocks {
+                    let content_blocks: Vec<ContentBlock> = blocks
+                        .iter()
+                        .map(|b| match b {
+                            ChatContentBlock::Text { text } => ContentBlock::Text {
+                                text: text.clone(),
+                            },
+                            ChatContentBlock::ToolUse { id, name, input } => {
+                                ContentBlock::ToolUse {
+                                    id: id.clone(),
+                                    name: name.clone(),
+                                    input: input.clone(),
+                                }
+                            }
+                            ChatContentBlock::ToolResult {
+                                tool_use_id,
+                                content,
+                                is_error,
+                            } => ContentBlock::ToolResult {
+                                tool_use_id: tool_use_id.clone(),
+                                content: content.clone(),
+                                is_error: *is_error,
+                            },
+                        })
+                        .collect();
+                    RichMessage {
+                        role: role.to_string(),
+                        content: crate::claude::MessageContent::Blocks(content_blocks),
+                    }
+                } else {
+                    RichMessage {
+                        role: role.to_string(),
+                        content: crate::claude::MessageContent::Text(m.content.clone()),
+                    }
                 }
             })
             .collect();
@@ -278,6 +307,7 @@ impl ChatService {
 
         let max_iters = ChatToolExecutor::max_iterations();
         let mut total_text = String::new();
+        let mut final_text = String::new();
 
         for iteration in 0..max_iters {
             // Each iteration: call Claude with tools, handle response
@@ -351,13 +381,18 @@ impl ChatService {
 
             // If Claude finished with end_turn (no tool calls), we're done
             if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
+                final_text = iter_text;
                 break;
             }
 
             // Build the assistant message with both text and tool_use blocks
             let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
+            let mut assistant_persist_blocks: Vec<ChatContentBlock> = Vec::new();
             if !iter_text.is_empty() {
                 assistant_blocks.push(ContentBlock::Text {
+                    text: iter_text.clone(),
+                });
+                assistant_persist_blocks.push(ChatContentBlock::Text {
                     text: iter_text.clone(),
                 });
             }
@@ -367,11 +402,30 @@ impl ChatService {
                     name: tc.name.clone(),
                     input: tc.input.clone(),
                 });
+                assistant_persist_blocks.push(ChatContentBlock::ToolUse {
+                    id: tc.id.clone(),
+                    name: tc.name.clone(),
+                    input: tc.input.clone(),
+                });
             }
             api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
+            let assistant_iter_msg = ChatMessage {
+                message_id: ChatMessageId::new(),
+                chat_session_id: *chat_session_id,
+                project_id: *project_id,
+                role: ChatRole::Assistant,
+                content: iter_text.clone(),
+                content_blocks: Some(assistant_persist_blocks),
+                created_at: Utc::now(),
+            };
+            if let Err(e) = self.store.put_chat_message(&assistant_iter_msg) {
+                error!(%project_id, error = %e, "Failed to persist assistant tool-use message");
+            }
+
             // Execute each tool call and build tool_result blocks
             let mut result_blocks: Vec<ContentBlock> = Vec::new();
+            let mut result_persist_blocks: Vec<ChatContentBlock> = Vec::new();
             for tc in &iter_tool_calls {
                 let result = executor.execute(project_id, &tc.name, tc.input.clone()).await;
                 let _ = tx.send(ChatStreamEvent::ToolResult {
@@ -382,11 +436,29 @@ impl ChatService {
                 });
                 result_blocks.push(ContentBlock::ToolResult {
                     tool_use_id: tc.id.clone(),
+                    content: result.content.clone(),
+                    is_error: if result.is_error { Some(true) } else { None },
+                });
+                result_persist_blocks.push(ChatContentBlock::ToolResult {
+                    tool_use_id: tc.id.clone(),
                     content: result.content,
                     is_error: if result.is_error { Some(true) } else { None },
                 });
             }
             api_messages.push(RichMessage::tool_results(result_blocks));
+
+            let tool_result_msg = ChatMessage {
+                message_id: ChatMessageId::new(),
+                chat_session_id: *chat_session_id,
+                project_id: *project_id,
+                role: ChatRole::User,
+                content: String::new(),
+                content_blocks: Some(result_persist_blocks),
+                created_at: Utc::now(),
+            };
+            if let Err(e) = self.store.put_chat_message(&tool_result_msg) {
+                error!(%project_id, error = %e, "Failed to persist tool result message");
+            }
 
             if iteration + 1 >= max_iters {
                 warn!(
@@ -397,15 +469,17 @@ impl ChatService {
             }
         }
 
-        // Save the final accumulated text as the assistant message
-        if !total_text.is_empty() {
-            let assistant_reply = total_text.clone();
+        // Save the final assistant text (only from the last non-tool-use iteration;
+        // intermediate tool-use rounds were already persisted above).
+        if !final_text.is_empty() {
+            let assistant_reply = final_text.clone();
             let assistant_msg = ChatMessage {
                 message_id: ChatMessageId::new(),
                 chat_session_id: *chat_session_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
-                content: total_text,
+                content: final_text,
+                content_blocks: None,
                 created_at: Utc::now(),
             };
             if let Err(e) = self.store.put_chat_message(&assistant_msg) {
@@ -533,6 +607,7 @@ impl ChatService {
                 project_id: *project_id,
                 role: ChatRole::Assistant,
                 content: accumulated,
+                content_blocks: None,
                 created_at: Utc::now(),
             };
             if let Err(e) = self.store.put_chat_message(&assistant_msg) {

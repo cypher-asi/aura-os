@@ -158,12 +158,24 @@ export interface ChatSession {
   updated_at: string;
 }
 
+export interface ChatContentBlock {
+  type: "text" | "tool_use" | "tool_result";
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  content?: string;
+  is_error?: boolean;
+}
+
 export interface ChatMessage {
   message_id: string;
   chat_session_id: string;
   project_id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  content_blocks?: ChatContentBlock[];
   created_at: string;
 }
 

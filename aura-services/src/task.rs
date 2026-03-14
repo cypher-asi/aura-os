@@ -29,6 +29,12 @@ pub struct ProjectProgress {
     pub total_messages: u64,
     pub total_sessions: u64,
     pub total_tests: u64,
+    // Quality signals
+    pub total_parse_retries: u32,
+    pub total_build_fix_attempts: u32,
+    pub build_verify_failures: usize,
+    pub execution_failures: usize,
+    pub file_ops_failures: usize,
 }
 
 pub struct TaskService {
@@ -436,6 +442,45 @@ impl TaskService {
             .map(|f| (f.lines_added as u64) + (f.lines_removed as u64))
             .sum();
 
+        let task_input: u64 = tasks.iter().map(|t| t.total_input_tokens).sum();
+        let task_output: u64 = tasks.iter().map(|t| t.total_output_tokens).sum();
+
+        let total_parse_retries: u32 = tasks
+            .iter()
+            .flat_map(|t| &t.build_steps)
+            .filter(|s| s.kind == "fix_attempt")
+            .count() as u32;
+
+        let total_build_fix_attempts: u32 = tasks
+            .iter()
+            .map(|t| {
+                t.build_steps
+                    .iter()
+                    .filter(|s| s.kind == "fix_attempt")
+                    .count() as u32
+            })
+            .sum();
+
+        let failed_tasks: Vec<&Task> = tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::Failed)
+            .collect();
+
+        let build_verify_failures = failed_tasks
+            .iter()
+            .filter(|t| {
+                t.execution_notes
+                    .contains("build verification failed")
+            })
+            .count();
+
+        let file_ops_failures = failed_tasks
+            .iter()
+            .filter(|t| t.execution_notes.contains("file operation failed"))
+            .count();
+
+        let execution_failures = failed_tasks.len() - build_verify_failures - file_ops_failures;
+
         Ok(ProjectProgress {
             project_id: *project_id,
             total_tasks: total,
@@ -456,13 +501,10 @@ impl TaskService {
                 .filter(|t| t.status == TaskStatus::Blocked)
                 .count(),
             done_tasks: done,
-            failed_tasks: tasks
-                .iter()
-                .filter(|t| t.status == TaskStatus::Failed)
-                .count(),
+            failed_tasks: failed_tasks.len(),
             completion_percentage: pct,
-            total_tokens: 0,
-            total_cost: 0.0,
+            total_tokens: task_input + task_output,
+            total_cost: crate::claude::compute_cost(task_input, task_output),
             lines_changed,
             lines_of_code: 0,
             total_commits: 0,
@@ -470,6 +512,11 @@ impl TaskService {
             total_messages: 0,
             total_sessions: 0,
             total_tests: 0,
+            total_parse_retries,
+            total_build_fix_attempts,
+            build_verify_failures,
+            execution_failures,
+            file_ops_failures,
         })
     }
 }

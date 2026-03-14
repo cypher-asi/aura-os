@@ -390,6 +390,7 @@ impl DevLoopEngine {
                     if !project_root.is_empty() {
                         metrics::write_single_task_metrics(
                             Path::new(&project_root),
+                            &project_id.to_string(),
                             metrics::TaskMetrics {
                                 task_id: task.task_id.to_string(),
                                 title: task.title.clone(),
@@ -457,6 +458,7 @@ impl DevLoopEngine {
                         if !project_root.is_empty() {
                             metrics::write_single_task_metrics(
                                 Path::new(&project_root),
+                                &project_id.to_string(),
                                 metrics::TaskMetrics {
                                     task_id: task.task_id.to_string(),
                                     title: task.title.clone(),
@@ -519,6 +521,7 @@ impl DevLoopEngine {
                         if !project_root.is_empty() {
                             metrics::write_single_task_metrics(
                                 Path::new(&project_root),
+                                &project_id.to_string(),
                                 metrics::TaskMetrics {
                                     task_id: task.task_id.to_string(),
                                     title: task.title.clone(),
@@ -565,6 +568,7 @@ impl DevLoopEngine {
                 if !project_root.is_empty() {
                     metrics::write_single_task_metrics(
                         Path::new(&project_root),
+                        &project_id.to_string(),
                         metrics::TaskMetrics {
                             task_id: task.task_id.to_string(),
                             title: task.title.clone(),
@@ -669,9 +673,7 @@ impl DevLoopEngine {
                 run_metrics.finalize(
                     $outcome,
                     loop_start.elapsed().as_millis() as u64,
-                    completed_count, failed_count, tasks_retried,
-                    total_input_tokens, total_output_tokens, sessions_used,
-                    total_parse_retries, total_build_fix_attempts, duplicate_error_bailouts,
+                    sessions_used, tasks_retried, duplicate_error_bailouts,
                 );
                 if !project_root.is_empty() {
                     metrics::write_run_metrics(Path::new(&project_root), &run_metrics);
@@ -940,8 +942,8 @@ impl DevLoopEngine {
                                 llm_duration_ms: Some(llm_duration_ms),
                                 build_verify_duration_ms: Some(build_verify_duration_ms),
                                 file_ops_duration_ms: Some(file_ops_duration_ms),
-                                input_tokens: execution.input_tokens,
-                                output_tokens: execution.output_tokens,
+                                input_tokens: execution.input_tokens + fix_inp,
+                                output_tokens: execution.output_tokens + fix_out,
                                 files_changed: execution.file_ops.len() as u32,
                                 parse_retries: execution.parse_retries,
                                 build_fix_attempts: build_attempts,
@@ -969,8 +971,8 @@ impl DevLoopEngine {
                                 task_id: task.task_id,
                                 execution_notes: execution.notes.clone(),
                                 duration_ms: Some(task_duration_ms),
-                                input_tokens: Some(execution.input_tokens),
-                                output_tokens: Some(execution.output_tokens),
+                                input_tokens: Some(execution.input_tokens + fix_inp),
+                                output_tokens: Some(execution.output_tokens + fix_out),
                                 llm_duration_ms: Some(llm_duration_ms),
                                 build_verify_duration_ms: Some(build_verify_duration_ms),
                                 files_changed_count: Some(execution.file_ops.len() as u32),
@@ -997,8 +999,8 @@ impl DevLoopEngine {
                                 llm_duration_ms: Some(llm_duration_ms),
                                 build_verify_duration_ms: Some(build_verify_duration_ms),
                                 file_ops_duration_ms: Some(file_ops_duration_ms),
-                                input_tokens: execution.input_tokens,
-                                output_tokens: execution.output_tokens,
+                                input_tokens: execution.input_tokens + fix_inp,
+                                output_tokens: execution.output_tokens + fix_out,
                                 files_changed: execution.file_ops.len() as u32,
                                 parse_retries: execution.parse_retries,
                                 build_fix_attempts: build_attempts,
@@ -1043,8 +1045,8 @@ impl DevLoopEngine {
                                 &project_id,
                                 &agent_id,
                                 &session.session_id,
-                                execution.input_tokens,
-                                execution.output_tokens,
+                                execution.input_tokens + fix_inp,
+                                execution.output_tokens + fix_out,
                             )?;
 
                             let changed_files: Vec<&str> = execution

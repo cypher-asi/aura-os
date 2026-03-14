@@ -102,33 +102,26 @@ impl LoopRunMetrics {
         self.estimated_cost_usd = compute_cost(self.total_input_tokens, self.total_output_tokens);
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn finalize(
         &mut self,
         outcome: &str,
         total_duration_ms: u64,
-        completed: usize,
-        failed: usize,
-        retried: usize,
-        input_tokens: u64,
-        output_tokens: u64,
         sessions: usize,
-        parse_retries: u32,
-        build_fix_attempts: u32,
-        dup_bailouts: u32,
+        tasks_retried: usize,
+        duplicate_error_bailouts: u32,
     ) {
         self.outcome = outcome.to_string();
         self.total_duration_ms = total_duration_ms;
-        self.tasks_completed = completed;
-        self.tasks_failed = failed;
-        self.tasks_retried = retried;
-        self.total_input_tokens = input_tokens;
-        self.total_output_tokens = output_tokens;
         self.sessions_used = sessions;
-        self.total_parse_retries = parse_retries;
-        self.total_build_fix_attempts = build_fix_attempts;
-        self.duplicate_error_bailouts = dup_bailouts;
-        self.estimated_cost_usd = compute_cost(input_tokens, output_tokens);
+        self.tasks_retried = tasks_retried;
+        self.duplicate_error_bailouts = duplicate_error_bailouts;
+        self.tasks_completed = self.tasks.iter().filter(|t| t.outcome == "completed").count();
+        self.tasks_failed = self.tasks.iter().filter(|t| t.outcome == "failed").count();
+        self.total_input_tokens = self.tasks.iter().map(|t| t.input_tokens).sum();
+        self.total_output_tokens = self.tasks.iter().map(|t| t.output_tokens).sum();
+        self.total_parse_retries = self.tasks.iter().map(|t| t.parse_retries).sum();
+        self.total_build_fix_attempts = self.tasks.iter().map(|t| t.build_fix_attempts).sum();
+        self.estimated_cost_usd = compute_cost(self.total_input_tokens, self.total_output_tokens);
     }
 }
 
@@ -192,27 +185,15 @@ pub fn write_live_snapshot(project_root: &Path, metrics: &LoopRunMetrics, task: 
 /// Wraps the `TaskMetrics` in a one-task `LoopRunMetrics`, overwrites
 /// `last_run_metrics.json`, and appends to both `task_history.jsonl`
 /// and `run_history.jsonl`.
-pub fn write_single_task_metrics(project_root: &Path, task: TaskMetrics) {
+pub fn write_single_task_metrics(project_root: &Path, project_id: &str, task: TaskMetrics) {
     let Some(dir) = ensure_metrics_dir(project_root) else {
         return;
     };
 
-    let mut run = LoopRunMetrics::new(String::new());
+    let mut run = LoopRunMetrics::new(project_id.to_string());
     let outcome = task.outcome.clone();
     run.tasks.push(task.clone());
-    run.finalize(
-        &outcome,
-        task.duration_ms,
-        if outcome == "completed" { 1 } else { 0 },
-        if outcome == "failed" { 1 } else { 0 },
-        0,
-        task.input_tokens,
-        task.output_tokens,
-        1,
-        task.parse_retries,
-        task.build_fix_attempts,
-        0,
-    );
+    run.finalize(&outcome, task.duration_ms, 1, 0, 0);
 
     write_snapshot_file(&dir, &run);
     if let Ok(line) = serde_json::to_string(&task) {
