@@ -216,6 +216,7 @@ impl TaskService {
         task.assigned_agent_id = None;
         task.session_id = None;
         task.build_steps.clear();
+        task.test_steps.clear();
         task.live_output.clear();
         task.updated_at = Utc::now();
         self.store.put_task(&task)?;
@@ -397,6 +398,7 @@ impl TaskService {
             files_changed: vec![],
             live_output: String::new(),
             build_steps: vec![],
+            test_steps: vec![],
             user_id: None,
             model: None,
             total_input_tokens: 0,

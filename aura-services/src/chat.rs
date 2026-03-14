@@ -235,6 +235,7 @@ impl ChatService {
                 ClaudeStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));
                 }
+                ClaudeStreamEvent::ToolUse { .. } => {}
             }
         }
 

@@ -17,6 +17,8 @@ export interface Project {
   current_status: ProjectStatus;
   github_integration_id?: string;
   github_repo_full_name?: string;
+  build_command?: string;
+  test_command?: string;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +53,22 @@ export interface BuildStepRecord {
   attempt?: number;
 }
 
+export interface IndividualTestResult {
+  name: string;
+  status: string;
+  message?: string;
+}
+
+export interface TestStepRecord {
+  kind: string;
+  command?: string;
+  stderr?: string;
+  stdout?: string;
+  attempt?: number;
+  tests: IndividualTestResult[];
+  summary?: string;
+}
+
 export interface Task {
   task_id: TaskId;
   project_id: ProjectId;
@@ -66,6 +84,7 @@ export interface Task {
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
   live_output: string;
   build_steps?: BuildStepRecord[];
+  test_steps?: TestStepRecord[];
   user_id?: string;
   model?: string;
   total_input_tokens: number;

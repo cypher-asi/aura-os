@@ -27,6 +27,7 @@ pub async fn create_project(
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
         build_command: req.build_command,
+        test_command: req.test_command,
     };
     let project = state
         .project_service
@@ -81,6 +82,7 @@ pub async fn update_project(
         github_integration_id: req.github_integration_id,
         github_repo_full_name: req.github_repo_full_name,
         build_command: req.build_command,
+        test_command: req.test_command,
     };
     let project = state
         .project_service

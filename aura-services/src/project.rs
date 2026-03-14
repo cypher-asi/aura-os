@@ -17,6 +17,7 @@ pub struct CreateProjectInput {
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
+    pub test_command: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -27,6 +28,7 @@ pub struct UpdateProjectInput {
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
+    pub test_command: Option<String>,
 }
 
 pub struct ProjectService {
@@ -65,6 +67,7 @@ impl ProjectService {
             github_integration_id: input.github_integration_id,
             github_repo_full_name: input.github_repo_full_name,
             build_command: input.build_command,
+            test_command: input.test_command,
             created_at: now,
             updated_at: now,
         };
@@ -130,6 +133,9 @@ impl ProjectService {
         }
         if input.build_command.is_some() {
             project.build_command = input.build_command;
+        }
+        if input.test_command.is_some() {
+            project.test_command = input.test_command;
         }
 
         project.updated_at = Utc::now();

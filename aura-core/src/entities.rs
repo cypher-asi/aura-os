@@ -25,6 +25,8 @@ pub struct Project {
     pub github_repo_full_name: Option<String>,
     #[serde(default)]
     pub build_command: Option<String>,
+    #[serde(default)]
+    pub test_command: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -75,6 +77,27 @@ pub struct BuildStepRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndividualTestResult {
+    pub name: String,
+    pub status: String,
+    #[serde(default)]
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TestStepRecord {
+    pub kind: String,
+    pub command: Option<String>,
+    pub stderr: Option<String>,
+    pub stdout: Option<String>,
+    pub attempt: Option<u32>,
+    #[serde(default)]
+    pub tests: Vec<IndividualTestResult>,
+    #[serde(default)]
+    pub summary: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Task {
     pub task_id: TaskId,
     pub project_id: ProjectId,
@@ -94,6 +117,8 @@ pub struct Task {
     pub live_output: String,
     #[serde(default)]
     pub build_steps: Vec<BuildStepRecord>,
+    #[serde(default)]
+    pub test_steps: Vec<TestStepRecord>,
     #[serde(default)]
     pub user_id: Option<String>,
     #[serde(default)]

@@ -93,6 +93,7 @@ impl SpecGenerationService {
                 ClaudeStreamEvent::Error(msg) => {
                     let _ = tx.send(SpecStreamEvent::Error(msg));
                 }
+                ClaudeStreamEvent::ToolUse { .. } => {}
             }
         }
 
