@@ -34,6 +34,7 @@ interface PanelActions {
   setStreamingSessionId: (id: string | null) => void;
   notifySessionTitleUpdate: (session: ChatSession) => void;
   onSessionTitleUpdate: (listener: SessionUpdateListener) => () => void;
+  updatePreviewTask: (patch: Partial<Task> & { task_id: string }) => void;
   updatePreviewSprint: (patch: Partial<Sprint> & { sprint_id: string }) => void;
   notifySprintUpdate: (sprint: Sprint) => void;
   onSprintUpdate: (listener: SprintUpdateListener) => () => void;
@@ -128,6 +129,20 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     return () => { titleListeners.current.delete(listener); };
   }, []);
 
+  const updatePreviewTask = useCallback((patch: Partial<Task> & { task_id: string }) => {
+    setPanel((prev) => {
+      if (prev.previewItem?.kind !== "task") return prev;
+      if (prev.previewItem.task.task_id !== patch.task_id) return prev;
+      return {
+        ...prev,
+        previewItem: {
+          kind: "task",
+          task: { ...prev.previewItem.task, ...patch },
+        },
+      };
+    });
+  }, []);
+
   const updatePreviewSprint = useCallback((patch: Partial<Sprint> & { sprint_id: string }) => {
     setPanel((prev) => {
       if (prev.previewItem?.kind !== "sprint") return prev;
@@ -163,6 +178,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         toggleInfo,
         pushSpec,
         pushTask,
+        updatePreviewTask,
         clearGeneratedArtifacts,
         setStreamingSessionId,
         notifySessionTitleUpdate,

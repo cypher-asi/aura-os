@@ -32,12 +32,13 @@ export function TaskList() {
   }, [projectId]);
 
   const updateTaskStatus = useCallback(
-    (taskId: string, newStatus: TaskStatus) => {
+    (taskId: string, newStatus: TaskStatus, extra?: Partial<Task>) => {
       setLocalTasks((prev) =>
-        prev.map((t) => (t.task_id === taskId ? { ...t, status: newStatus } : t)),
+        prev.map((t) => (t.task_id === taskId ? { ...t, ...extra, status: newStatus } : t)),
       );
+      sidekick.updatePreviewTask({ task_id: taskId, ...extra, status: newStatus });
     },
-    [],
+    [sidekick],
   );
 
   useEffect(() => {
@@ -47,13 +48,9 @@ export function TaskList() {
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id) {
-          setLocalTasks((prev) =>
-            prev.map((t) =>
-              t.task_id === e.task_id
-                ? { ...t, status: "done" as const, execution_notes: e.execution_notes ?? t.execution_notes }
-                : t
-            ),
-          );
+          updateTaskStatus(e.task_id, "done", {
+            execution_notes: e.execution_notes,
+          });
         }
       }),
       subscribe("task_failed", (e) => {
