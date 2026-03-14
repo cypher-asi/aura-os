@@ -105,6 +105,7 @@ export interface ProjectProgress {
   failed_tasks: number;
   completion_percentage: number;
   total_tokens: number;
+  total_cost: number;
   lines_changed: number;
   lines_of_code: number;
   total_commits: number;

@@ -36,7 +36,7 @@ export function ProgressDashboard() {
   const pct = Math.round(progress.completion_percentage * 100) / 100;
 
   return (
-    <div style={{ padding: "var(--space-4)" }}>
+    <div style={{ padding: "var(--space-4) var(--space-8)" }}>
       <div style={{ textAlign: "center", marginBottom: "var(--space-5)" }}>
         <div style={{ fontSize: 36, fontWeight: 700, color: "var(--color-text-secondary)" }}>
           {pct}%
@@ -63,6 +63,7 @@ export function ProgressDashboard() {
       </div>
 
       <div className={styles.statsGrid}>
+        <StatCard value={progress.total_cost} label="Total Cost" fmtFn={formatCurrency} />
         <StatCard value={progress.total_tokens} label="Total Tokens" fmt />
         <StatCard value={progress.lines_changed} label="Lines Changed" fmt />
         <StatCard value={progress.lines_of_code} label="Lines of Code" fmt />
@@ -82,9 +83,17 @@ function formatCompact(n: number): string {
   return n.toLocaleString();
 }
 
-function StatCard({ value, label, fmt }: { value: number; label: string; fmt?: boolean }) {
-  const display = fmt ? formatCompact(value) : value;
-  const title = fmt ? value.toLocaleString() : undefined;
+function formatCurrency(n: number): string {
+  if (n >= 1_000_000) return "$" + (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000) return "$" + (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  if (n >= 1) return "$" + n.toFixed(2);
+  if (n > 0) return "$" + n.toFixed(4);
+  return "$0.00";
+}
+
+function StatCard({ value, label, fmt, fmtFn }: { value: number; label: string; fmt?: boolean; fmtFn?: (n: number) => string }) {
+  const display = fmtFn ? fmtFn(value) : fmt ? formatCompact(value) : value;
+  const title = (fmtFn || fmt) ? value.toLocaleString() : undefined;
   return (
     <Panel variant="solid" border="solid" style={{ padding: "var(--space-3)", textAlign: "center" }}>
       <div className={styles.statValue} style={{ color: "var(--color-text-secondary)" }} title={title}>{display}</div>
