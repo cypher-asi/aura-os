@@ -48,10 +48,10 @@ fn spawn_event_rebroadcast(
                 }
                 EngineEvent::TaskCompleted { task_id, .. }
                 | EngineEvent::TaskFailed { task_id, .. } => {
-                    clear_live_output(&store, &task_output_buffers, task_id);
+                    finalize_live_output(&store, &task_output_buffers, task_id);
                 }
                 EngineEvent::LoopStopped { .. } | EngineEvent::LoopFinished { .. } => {
-                    clear_all_live_output(&store, &task_output_buffers);
+                    finalize_all_live_output(&store, &task_output_buffers);
                 }
                 _ => {}
             }
@@ -94,34 +94,33 @@ fn flush_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
     }
 }
 
-fn clear_live_output(
+fn finalize_live_output(
     store: &Arc<RocksStore>,
     buffers: &TaskOutputBuffers,
     task_id: &aura_core::TaskId,
 ) {
-    if let Ok(mut bufs) = buffers.lock() {
-        bufs.remove(task_id);
-    }
-    if let Ok(Some(mut task)) = store.find_task_by_id(task_id) {
-        if !task.live_output.is_empty() {
-            task.live_output.clear();
-            let _ = store.put_task(&task);
+    let final_text = buffers.lock().ok().and_then(|mut bufs| bufs.remove(task_id));
+    if let Some(text) = final_text {
+        if let Ok(Some(mut task)) = store.find_task_by_id(task_id) {
+            task.live_output = text;
+            if let Err(e) = store.put_task(&task) {
+                warn!(%task_id, "Failed to finalize live_output: {e}");
+            }
         }
     }
 }
 
-fn clear_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
-    let task_ids: Vec<aura_core::TaskId> = {
+fn finalize_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
+    let entries: Vec<(aura_core::TaskId, String)> = {
         let Ok(mut bufs) = buffers.lock() else { return };
-        let ids: Vec<_> = bufs.keys().copied().collect();
-        bufs.clear();
-        ids
+        let drained: Vec<_> = bufs.drain().collect();
+        drained
     };
-    for task_id in task_ids {
+    for (task_id, text) in entries {
         if let Ok(Some(mut task)) = store.find_task_by_id(&task_id) {
-            if !task.live_output.is_empty() {
-                task.live_output.clear();
-                let _ = store.put_task(&task);
+            task.live_output = text;
+            if let Err(e) = store.put_task(&task) {
+                warn!(%task_id, "Failed to finalize live_output: {e}");
             }
         }
     }
