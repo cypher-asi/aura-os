@@ -411,9 +411,38 @@ impl DevLoopEngine {
                 session_id: session.session_id,
             });
 
-            let result = self
-                .execute_task(&project_id, &task, &session, &api_key)
-                .await;
+            let result = tokio::select! {
+                res = self.execute_task(&project_id, &task, &session, &api_key) => {
+                    Some(res)
+                }
+                _ = stop_rx.changed() => {
+                    None
+                }
+            };
+
+            if result.is_none() {
+                let _ = self.task_service.reset_task_to_ready(
+                    &project_id, &task.spec_id, &task.task_id,
+                );
+                self.emit(EngineEvent::TaskBecameReady { task_id: task.task_id });
+                let _ = self.agent_service.finish_working(&project_id, &agent_id);
+
+                let cmd = *stop_rx.borrow();
+                if cmd == LoopCommand::Stop {
+                    let _ = self.session_service.end_session(
+                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                    );
+                    self.emit(EngineEvent::LoopStopped { completed_count });
+                    return Ok(LoopOutcome::Stopped { completed_count });
+                } else {
+                    let _ = self.session_service.end_session(
+                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                    );
+                    self.emit(EngineEvent::LoopPaused { completed_count });
+                    return Ok(LoopOutcome::Paused { completed_count });
+                }
+            }
+            let result = result.unwrap();
 
             let failure_reason = match result {
                 Ok(execution) => {
