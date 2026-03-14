@@ -578,18 +578,8 @@ impl DevLoopEngine {
 
             self.agent_service.finish_working(&project_id, &agent_id)?;
 
-            if let Some(reason) = failure_reason {
-                let _ = self.session_service.end_session(
-                    &project_id, &agent_id, &session.session_id, SessionStatus::Failed,
-                );
-                self.emit(EngineEvent::LoopFinished {
-                    outcome: "task_failed".into(),
-                });
-                return Ok(LoopOutcome::TaskFailed {
-                    completed_count,
-                    task_id: task.task_id,
-                    reason,
-                });
+            if failure_reason.is_some() {
+                continue;
             }
 
             let current_session =
