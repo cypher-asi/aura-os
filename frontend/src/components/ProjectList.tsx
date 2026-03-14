@@ -385,6 +385,17 @@ export function ProjectList() {
     [renameTarget, fetchProjects],
   );
 
+  const handleNewProjectClose = useCallback(() => setShowNewProject(false), []);
+
+  const handleNewProjectCreated = useCallback(
+    (project: Project) => {
+      setShowNewProject(false);
+      setProjects((prev) => [...prev, project]);
+      navigate(`/projects/${project.project_id}`);
+    },
+    [navigate],
+  );
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
@@ -485,12 +496,8 @@ export function ProjectList() {
 
       <NewProjectModal
         isOpen={showNewProject}
-        onClose={() => setShowNewProject(false)}
-        onCreated={(project) => {
-          setShowNewProject(false);
-          setProjects((prev) => [...prev, project]);
-          navigate(`/projects/${project.project_id}`);
-        }}
+        onClose={handleNewProjectClose}
+        onCreated={handleNewProjectCreated}
       />
     </div>
   );
