@@ -7,6 +7,24 @@ export function formatTime(date: Date): string {
   });
 }
 
+/**
+ * Convert plain multi-line text into a markdown bullet list.
+ * Lines that are already list items or headings are left untouched.
+ */
+export function toBullets(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => {
+      const trimmed = line.trimStart();
+      if (/^[-*+]\s/.test(trimmed) || /^\d+\.\s/.test(trimmed) || /^#/.test(trimmed)) {
+        return line;
+      }
+      return `- ${trimmed}`;
+    })
+    .join("\n");
+}
+
 export function formatRelativeTime(iso: string): string {
   const date = new Date(iso);
   const now = Date.now();
