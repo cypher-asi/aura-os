@@ -33,7 +33,6 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
   return (
     <div className={styles.container} ref={dropdownRef}>
       <div className={styles.trigger} onClick={() => setDropdownOpen((v) => !v)}>
-        <Building2 size={14} className={styles.icon} />
         <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
         <Button
           variant="ghost"
