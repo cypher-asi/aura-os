@@ -288,6 +288,14 @@ export const api = {
     apiFetch<Session[]>(
       `/api/projects/${projectId}/agents/${agentId}/sessions`,
     ),
+  getSession: (projectId: ProjectId, agentId: AgentId, sessionId: string) =>
+    apiFetch<Session>(
+      `/api/projects/${projectId}/agents/${agentId}/sessions/${sessionId}`,
+    ),
+  listSessionTasks: (projectId: ProjectId, agentId: AgentId, sessionId: string) =>
+    apiFetch<Task[]>(
+      `/api/projects/${projectId}/agents/${agentId}/sessions/${sessionId}/tasks`,
+    ),
 
   // Chat Sessions
   createChatSession: (projectId: ProjectId, title: string) =>
