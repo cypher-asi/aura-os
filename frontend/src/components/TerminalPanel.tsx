@@ -79,7 +79,7 @@ function savePanelState(height: number, collapsed: boolean) {
   } catch { /* ignore */ }
 }
 
-export function TerminalPanel() {
+export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
   const [terminals, setTerminals] = useState<TerminalInstance[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const hookRefs = useRef<Map<string, UseTerminalReturn>>(new Map());
@@ -224,6 +224,7 @@ export function TerminalPanel() {
             <TerminalWrapper
               key={t.id}
               visible={t.id === activeId}
+              cwd={cwd}
               onHook={(hook) => registerHook(t.id, hook)}
             />
           ))}
