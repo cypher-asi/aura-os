@@ -12,6 +12,7 @@ import { TaskList } from "../views/TaskList";
 import { ProgressDashboard } from "../views/ProgressDashboard";
 import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
+import { TerminalPanel } from "./TerminalPanel";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
@@ -151,14 +152,17 @@ export function Sidekick() {
       }
     >
       <div className={styles.sidekickBody}>
-        {activeTab !== "log" && (
-          <div className={styles.tabContent}>
-            {tabContent[activeTab]}
+        <div className={styles.sidekickContent}>
+          {activeTab !== "log" && (
+            <div className={styles.tabContent}>
+              {tabContent[activeTab]}
+            </div>
+          )}
+          <div className={styles.tabContent} style={activeTab === "log" ? undefined : { display: "none" }}>
+            <SidekickLog />
           </div>
-        )}
-        <div className={styles.tabContent} style={activeTab === "log" ? undefined : { display: "none" }}>
-          <SidekickLog />
         </div>
+        <TerminalPanel />
       </div>
     </Sidebar>
   );

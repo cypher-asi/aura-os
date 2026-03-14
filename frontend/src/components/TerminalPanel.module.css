@@ -1,0 +1,136 @@
+.terminalPanel {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--color-border);
+  background: #0d0d0d;
+  min-height: 32px;
+  overflow: hidden;
+}
+
+.resizeHandle {
+  height: 4px;
+  cursor: row-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.resizeHandle:hover,
+.resizeHandleActive {
+  background: var(--color-accent, #569cd6);
+}
+
+.terminalHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  padding: 0 var(--space-2, 8px);
+  height: 32px;
+  min-height: 32px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+}
+
+.headerLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted, #888);
+  margin-right: var(--space-2, 8px);
+}
+
+.tabList {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tabList::-webkit-scrollbar {
+  display: none;
+}
+
+.terminalTab {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-muted, #888);
+  background: transparent;
+  border: none;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.terminalTab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text, #d4d4d4);
+}
+
+.terminalTabActive {
+  composes: terminalTab;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text, #d4d4d4);
+}
+
+.tabClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+  cursor: pointer;
+}
+
+.terminalTab:hover .tabClose,
+.terminalTabActive .tabClose {
+  opacity: 0.6;
+}
+
+.tabClose:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.headerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.headerBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text, #d4d4d4);
+}
+
+.terminalBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
