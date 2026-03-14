@@ -261,11 +261,20 @@ impl DevLoopEngine {
                             files,
                         });
 
+                        let file_changes: Vec<aura_core::FileChangeSummary> = execution.file_ops.iter().map(|op| {
+                            let (op_name, path) = match op {
+                                file_ops::FileOp::Create { path, .. } => ("create", path.as_str()),
+                                file_ops::FileOp::Modify { path, .. } => ("modify", path.as_str()),
+                                file_ops::FileOp::Delete { path } => ("delete", path.as_str()),
+                            };
+                            aura_core::FileChangeSummary { op: op_name.to_string(), path: path.to_string() }
+                        }).collect();
                         self.task_service.complete_task(
                             &project_id,
                             &task.spec_id,
                             &task.task_id,
                             &execution.notes,
+                            file_changes,
                         )?;
                         completed_count += 1;
                         self.emit(EngineEvent::TaskCompleted {

@@ -98,6 +98,7 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
         notes: &str,
+        files_changed: Vec<FileChangeSummary>,
     ) -> Result<Task, TaskError> {
         let mut task = self
             .store
@@ -109,6 +110,7 @@ impl TaskService {
         Self::validate_transition(task.status, TaskStatus::Done)?;
         task.status = TaskStatus::Done;
         task.execution_notes = notes.to_string();
+        task.files_changed = files_changed;
         task.assigned_agent_id = None;
         task.updated_at = Utc::now();
         self.store.put_task(&task)?;
@@ -310,6 +312,7 @@ impl TaskService {
             dependency_ids,
             assigned_agent_id: None,
             execution_notes: String::new(),
+            files_changed: vec![],
             created_at: now,
             updated_at: now,
         };

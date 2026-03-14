@@ -53,6 +53,12 @@ pub struct Spec {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FileChangeSummary {
+    pub op: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Task {
     pub task_id: TaskId,
     pub project_id: ProjectId,
@@ -64,6 +70,8 @@ pub struct Task {
     pub dependency_ids: Vec<TaskId>,
     pub assigned_agent_id: Option<AgentId>,
     pub execution_notes: String,
+    #[serde(default)]
+    pub files_changed: Vec<FileChangeSummary>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
