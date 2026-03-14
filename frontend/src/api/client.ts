@@ -344,6 +344,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ path }),
     }),
+  readFile: (path: string) =>
+    apiFetch<{ ok: boolean; content?: string; path?: string; error?: string }>("/api/read-file", {
+      method: "POST",
+      body: JSON.stringify({ path }),
+    }),
 
   // Loop
   startLoop: (projectId: ProjectId) =>
