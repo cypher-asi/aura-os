@@ -177,6 +177,22 @@ pub fn compute_file_changes(
                     lines_removed: old_lines,
                 }
             }
+            FileOp::SearchReplace { path, replacements } => {
+                let old_content = std::fs::read_to_string(base_path.join(path))
+                    .unwrap_or_default();
+                let old_lines = old_content.lines().count() as u32;
+                let mut new_content = old_content;
+                for rep in replacements {
+                    new_content = new_content.replacen(&rep.search, &rep.replace, 1);
+                }
+                let new_lines = new_content.lines().count() as u32;
+                aura_core::FileChangeSummary {
+                    op: "search_replace".to_string(),
+                    path: path.clone(),
+                    lines_added: new_lines,
+                    lines_removed: old_lines,
+                }
+            }
         })
         .collect()
 }
@@ -292,6 +308,11 @@ pub fn validate_all_file_ops(ops: &[FileOp]) -> String {
         match op {
             FileOp::Create { path, content } | FileOp::Modify { path, content } => {
                 all_warnings.extend(validate_file_content(path, content));
+            }
+            FileOp::SearchReplace { path, replacements } => {
+                for rep in replacements {
+                    all_warnings.extend(validate_file_content(path, &rep.replace));
+                }
             }
             FileOp::Delete { .. } => {}
         }
