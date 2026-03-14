@@ -26,6 +26,7 @@ pub enum SpecStreamEvent {
     Generating { tokens: usize },
     SpecSaved(Spec),
     TaskSaved(Box<Task>),
+    TokenUsage { input_tokens: u64, output_tokens: u64 },
     Complete(Vec<Spec>),
     Error(String),
 }

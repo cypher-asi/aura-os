@@ -770,6 +770,8 @@ impl ChatService {
         });
 
         let mut accumulated = String::new();
+        let mut spec_input_tokens: u64 = 0;
+        let mut spec_output_tokens: u64 = 0;
 
         while let Some(evt) = spec_rx.recv().await {
             match evt {
@@ -783,11 +785,29 @@ impl ChatService {
                 SpecStreamEvent::TaskSaved(task) => {
                     let _ = tx.send(ChatStreamEvent::TaskSaved(task));
                 }
+                SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
+                    spec_input_tokens += input_tokens;
+                    spec_output_tokens += output_tokens;
+                }
                 SpecStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));
                 }
                 SpecStreamEvent::Complete(_) => {}
                 SpecStreamEvent::Progress(_) | SpecStreamEvent::Generating { .. } => {}
+            }
+        }
+
+        if spec_input_tokens > 0 || spec_output_tokens > 0 {
+            if let Ok(mut session) = self.store.get_chat_session(project_id, chat_session_id) {
+                session.total_input_tokens += spec_input_tokens;
+                session.total_output_tokens += spec_output_tokens;
+                if session.model.is_none() {
+                    session.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                }
+                session.updated_at = Utc::now();
+                if let Err(e) = self.store.put_chat_session(&session) {
+                    error!(%project_id, %chat_session_id, error = %e, "Failed to persist spec-gen tokens on chat session");
+                }
             }
         }
 

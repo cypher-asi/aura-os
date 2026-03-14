@@ -175,6 +175,15 @@ pub async fn generate_specs_stream(
                     .json_data(serde_json::json!({ "message": msg }))
                     .unwrap()
             }
+            SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
+                Event::default()
+                    .event("token_usage")
+                    .json_data(serde_json::json!({
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                    }))
+                    .unwrap()
+            }
         };
         Ok(sse_event)
     });

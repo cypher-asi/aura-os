@@ -87,8 +87,9 @@ impl SpecGenerationService {
                         }
                     }
                 }
-                ClaudeStreamEvent::Done { .. } => {
+                ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
                     let _ = tx.send(SpecStreamEvent::Generating { tokens: token_count });
+                    let _ = tx.send(SpecStreamEvent::TokenUsage { input_tokens, output_tokens });
                 }
                 ClaudeStreamEvent::Error(msg) => {
                     let _ = tx.send(SpecStreamEvent::Error(msg));
