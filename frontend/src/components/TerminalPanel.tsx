@@ -87,7 +87,7 @@ export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
 
   const initial = useRef(loadPanelState());
   const [panelHeight, setPanelHeight] = useState(initial.current.height);
-  const [collapsed, setCollapsed] = useState(initial.current.collapsed);
+  const [collapsed, setCollapsed] = useState(true);
   const dragging = useRef(false);
   const startY = useRef(0);
   const startHeight = useRef(0);
@@ -163,10 +163,13 @@ export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
     [panelHeight],
   );
 
-  // Auto-create first terminal on mount
+  // Auto-create first terminal on mount without expanding the panel
   useEffect(() => {
     if (terminals.length === 0) {
-      addTerminal();
+      const num = nextNum.current++;
+      const key = `term-${Date.now()}-${num}`;
+      setTerminals([{ id: key, title: `Terminal ${num}`, hook: null! }]);
+      setActiveId(key);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
