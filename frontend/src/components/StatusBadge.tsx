@@ -13,7 +13,7 @@ const STATUS_TO_VARIANT: Record<string, BadgeVariant> = {
   paused: "pending",
   completed: "stopped",
   archived: "stopped",
-  idle: "pending",
+  idle: "stopped",
   starting: "provisioning",
   working: "running",
   stopped: "stopped",
