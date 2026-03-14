@@ -51,6 +51,10 @@ pub struct LoopStatusResponse {
     pub running: bool,
     pub paused: bool,
     pub project_id: Option<ProjectId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<AgentId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_agents: Option<Vec<AgentId>>,
 }
 
 #[derive(Debug, Deserialize)]

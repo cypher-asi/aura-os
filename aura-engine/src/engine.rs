@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use tokio::sync::{mpsc, watch, Mutex};
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use aura_core::*;
 use aura_services::{
@@ -124,6 +124,8 @@ pub enum LoopOutcome {
 }
 
 pub struct LoopHandle {
+    pub project_id: ProjectId,
+    pub agent_id: AgentId,
     stop_tx: watch::Sender<LoopCommand>,
     join_handle: tokio::task::JoinHandle<Result<LoopOutcome, EngineError>>,
 }
@@ -798,7 +800,11 @@ impl DevLoopEngine {
         Ok(())
     }
 
-    pub async fn start(self: Arc<Self>, project_id: ProjectId) -> Result<LoopHandle, EngineError> {
+    pub async fn start(
+        self: Arc<Self>,
+        project_id: ProjectId,
+        agent_name: Option<String>,
+    ) -> Result<LoopHandle, EngineError> {
         let _project = self.project_service.get_project(&project_id)?;
 
         let stale = self.session_service.close_stale_sessions(&project_id)?;
@@ -806,9 +812,10 @@ impl DevLoopEngine {
             info!("closed {} stale active session(s) from previous run", stale.len());
         }
 
+        let name = agent_name.unwrap_or_else(|| "dev-agent".into());
         let agent = self
             .agent_service
-            .create_agent(&project_id, "dev-agent".into())?;
+            .create_agent(&project_id, name)?;
 
         let session = self.session_service.create_session(
             &agent.agent_id,
@@ -827,13 +834,36 @@ impl DevLoopEngine {
         });
 
         let engine = self.clone();
+        let aid = agent.agent_id;
         let join_handle = tokio::spawn(async move {
-            engine
-                .run_loop(project_id, agent.agent_id, session, stop_rx)
-                .await
+            let result = engine
+                .run_loop(project_id, aid, session, stop_rx)
+                .await;
+            if let Err(ref e) = result {
+                error!(error = %e, "run_loop exited with error, emitting LoopFinished");
+                engine.emit(EngineEvent::LoopFinished {
+                    project_id,
+                    agent_id: aid,
+                    outcome: format!("error: {e}"),
+                    total_duration_ms: None,
+                    tasks_completed: None,
+                    tasks_failed: None,
+                    tasks_retried: None,
+                    total_input_tokens: None,
+                    total_output_tokens: None,
+                    sessions_used: None,
+                    total_parse_retries: None,
+                    total_build_fix_attempts: None,
+                    duplicate_error_bailouts: None,
+                });
+                let _ = engine.agent_service.finish_working(&project_id, &aid);
+            }
+            result
         });
 
         Ok(LoopHandle {
+            project_id,
+            agent_id: agent.agent_id,
             stop_tx,
             join_handle,
         })

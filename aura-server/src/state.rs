@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use aura_core::TaskId;
-use aura_engine::{EngineEvent, LoopHandle};
+use aura_core::{AgentId, ProjectId, TaskId};
+use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_terminal::TerminalManager;
 use aura_services::{
     AgentService, AuthService, ChatService, ClaudeClient, GitHubService, OrgService,
@@ -15,6 +15,9 @@ use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
+
+/// Tracks all active agent loops across projects.
+pub type LoopRegistry = Arc<Mutex<HashMap<AgentId, LoopHandle>>>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,8 +37,25 @@ pub struct AppState {
     pub claude_client: Arc<ClaudeClient>,
     pub event_tx: mpsc::UnboundedSender<EngineEvent>,
     pub event_broadcast: broadcast::Sender<EngineEvent>,
-    pub loop_handle: Arc<Mutex<Option<LoopHandle>>>,
-    pub loop_project_id: Arc<Mutex<Option<aura_core::ProjectId>>>,
+    pub loop_registry: LoopRegistry,
+    pub write_coordinator: ProjectWriteCoordinator,
     pub task_output_buffers: TaskOutputBuffers,
     pub terminal_manager: Arc<TerminalManager>,
+}
+
+impl AppState {
+    /// Remove finished loops from the registry.
+    pub async fn gc_finished_loops(&self) {
+        let mut reg = self.loop_registry.lock().await;
+        reg.retain(|_, h| !h.is_finished());
+    }
+
+    /// Get all active loops for a given project.
+    pub async fn loops_for_project(&self, project_id: &ProjectId) -> Vec<AgentId> {
+        let reg = self.loop_registry.lock().await;
+        reg.iter()
+            .filter(|(_, h)| h.project_id == *project_id && !h.is_finished())
+            .map(|(aid, _)| *aid)
+            .collect()
+    }
 }

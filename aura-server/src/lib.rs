@@ -253,8 +253,8 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         claude_client,
         event_tx,
         event_broadcast,
-        loop_handle: Arc::new(Mutex::new(None)),
-        loop_project_id: Arc::new(Mutex::new(None)),
+        loop_registry: Arc::new(Mutex::new(HashMap::new())),
+        write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
         terminal_manager: Arc::new(TerminalManager::new()),
     }

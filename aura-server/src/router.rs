@@ -234,6 +234,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/loop/stop",
             post(dev_loop::stop_loop),
         )
+        .route(
+            "/api/projects/:project_id/loop/status",
+            get(dev_loop::get_loop_status),
+        )
         // Terminal
         .route("/api/terminal", post(terminal::spawn_terminal).get(terminal::list_terminals))
         .route("/api/terminal/:id", delete(terminal::kill_terminal))
