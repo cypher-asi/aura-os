@@ -169,6 +169,7 @@ function FileOpIcon({ op }: { op: string }) {
 function TaskPreview({ task }: { task: import("../types").Task }) {
   const { subscribe } = useEventContext();
   const ctx = useProjectContext();
+  const sidekick = useSidekick();
   const projectId = ctx?.project.project_id;
   const [streamBuf, setStreamBuf] = useState("");
   const [liveFileOps, setLiveFileOps] = useState<{ op: string; path: string }[]>([]);
@@ -241,6 +242,16 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     }
   }, [projectId, task.task_id, retrying]);
 
+  const handleViewSession = useCallback(async () => {
+    if (!projectId || !task.session_id || !task.assigned_agent_id) return;
+    try {
+      const session = await api.getSession(projectId, task.assigned_agent_id, task.session_id);
+      sidekick.viewSession(session);
+    } catch (err) {
+      console.error("Failed to load session:", err);
+    }
+  }, [projectId, task.session_id, task.assigned_agent_id, sidekick]);
+
   return (
     <>
       <div className={styles.taskMeta}>
@@ -266,6 +277,27 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
           <span className={styles.fieldLabel}>Description</span>
           <Text size="sm">{task.description || "—"}</Text>
         </div>
+        {task.session_id && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel}>Session</span>
+            <button
+              onClick={handleViewSession}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                color: "var(--color-accent, #3b82f6)",
+                fontSize: 13,
+                textAlign: "left",
+                textDecoration: "underline",
+                textUnderlineOffset: 2,
+              }}
+            >
+              View session details
+            </button>
+          </div>
+        )}
       </div>
 
       {fileOps.length > 0 && (
