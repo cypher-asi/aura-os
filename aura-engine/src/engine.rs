@@ -696,76 +696,154 @@ impl DevLoopEngine {
         command: &str,
     ) -> Result<TaskExecution, EngineError> {
         let base_path = Path::new(&project.linked_folder_path);
+        let max_attempts: u32 = MAX_BUILD_FIX_RETRIES;
 
-        self.emit(EngineEvent::BuildVerificationStarted {
-            task_id: task.task_id,
-            command: command.to_string(),
-        });
-        self.persist_build_step(task, BuildStepRecord {
-            kind: "started".into(),
-            command: Some(command.to_string()),
-            stderr: None,
-            stdout: None,
-            attempt: Some(1),
-        });
-
-        let delta = format!("Running: {command}\n");
-        let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
-            task_id: task.task_id,
-            delta,
-        });
-
-        let result = build_verify::run_build_command(base_path, command).await?;
-
-        if result.success {
-            self.emit(EngineEvent::BuildVerificationPassed {
+        for attempt in 1..=max_attempts {
+            self.emit(EngineEvent::BuildVerificationStarted {
                 task_id: task.task_id,
                 command: command.to_string(),
-                stdout: result.stdout.clone(),
             });
             self.persist_build_step(task, BuildStepRecord {
-                kind: "passed".into(),
+                kind: "started".into(),
                 command: Some(command.to_string()),
                 stderr: None,
-                stdout: Some(result.stdout.clone()),
-                attempt: Some(1),
+                stdout: None,
+                attempt: Some(attempt),
             });
 
-            let notes = format!("Command `{command}` succeeded.\n{}", result.stdout);
             let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
                 task_id: task.task_id,
-                delta: notes.clone(),
+                delta: format!("Running: {command} (attempt {attempt}/{max_attempts})\n"),
             });
 
-            Ok(TaskExecution {
-                notes,
-                file_ops: vec![],
-                follow_up_tasks: vec![],
-                input_tokens: 0,
-                output_tokens: 0,
-            })
-        } else {
+            let result = build_verify::run_build_command(base_path, command).await?;
+
+            if result.success {
+                self.emit(EngineEvent::BuildVerificationPassed {
+                    task_id: task.task_id,
+                    command: command.to_string(),
+                    stdout: result.stdout.clone(),
+                });
+                self.persist_build_step(task, BuildStepRecord {
+                    kind: "passed".into(),
+                    command: Some(command.to_string()),
+                    stderr: None,
+                    stdout: Some(result.stdout.clone()),
+                    attempt: Some(attempt),
+                });
+
+                let notes = format!("Command `{command}` succeeded on attempt {attempt}.\n{}", result.stdout);
+                let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
+                    task_id: task.task_id,
+                    delta: notes.clone(),
+                });
+
+                return Ok(TaskExecution {
+                    notes,
+                    file_ops: vec![],
+                    follow_up_tasks: vec![],
+                    input_tokens: 0,
+                    output_tokens: 0,
+                });
+            }
+
             self.emit(EngineEvent::BuildVerificationFailed {
                 task_id: task.task_id,
                 command: command.to_string(),
                 stdout: result.stdout.clone(),
                 stderr: result.stderr.clone(),
-                attempt: 1,
+                attempt,
             });
             self.persist_build_step(task, BuildStepRecord {
                 kind: "failed".into(),
                 command: Some(command.to_string()),
                 stderr: Some(result.stderr.clone()),
                 stdout: Some(result.stdout.clone()),
-                attempt: Some(1),
+                attempt: Some(attempt),
             });
 
             let detail = if !result.stderr.is_empty() { &result.stderr } else { &result.stdout };
-            Err(EngineError::Build(format!(
-                "command `{command}` failed (exit code {:?}):\n{detail}",
-                result.exit_code
-            )))
+            let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
+                task_id: task.task_id,
+                delta: format!("Command failed (attempt {attempt}):\n{detail}\n"),
+            });
+
+            if attempt < max_attempts {
+                self.emit(EngineEvent::BuildFixAttempt {
+                    task_id: task.task_id,
+                    attempt,
+                });
+                self.persist_build_step(task, BuildStepRecord {
+                    kind: "fix_attempt".into(),
+                    command: None,
+                    stderr: None,
+                    stdout: None,
+                    attempt: Some(attempt),
+                });
+
+                let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
+                let codebase_snapshot =
+                    file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+                let fix_prompt = build_fix_prompt(
+                    project, &spec, task,
+                    &Session {
+                        session_id: aura_core::SessionId::new(),
+                        agent_id: aura_core::AgentId::new(),
+                        project_id: project.project_id,
+                        active_task_id: None,
+                        tasks_worked: vec![],
+                        context_usage_estimate: 0.0,
+                        total_input_tokens: 0,
+                        total_output_tokens: 0,
+                        summary_of_previous_context: String::new(),
+                        status: aura_core::SessionStatus::Active,
+                        user_id: None,
+                        model: None,
+                        started_at: chrono::Utc::now(),
+                        ended_at: None,
+                    },
+                    &codebase_snapshot,
+                    command,
+                    &result.stderr,
+                    &result.stdout,
+                    &format!("Shell command task: {command}"),
+                );
+
+                let api_key = self.settings.get_decrypted_api_key()?;
+                let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+                let event_tx = self.event_tx.clone();
+                let tid = task.task_id;
+                let forwarder = tokio::spawn(async move {
+                    while let Some(evt) = stream_rx.recv().await {
+                        if let ClaudeStreamEvent::Delta(text) = evt {
+                            let _ = event_tx.send(EngineEvent::TaskOutputDelta {
+                                task_id: tid,
+                                delta: text,
+                            });
+                        }
+                    }
+                });
+
+                let response = self.claude_client.complete_stream(
+                    &api_key,
+                    TASK_EXECUTION_SYSTEM_PROMPT,
+                    &fix_prompt,
+                    TASK_EXECUTION_MAX_TOKENS,
+                    stream_tx,
+                ).await?;
+                let _ = forwarder.await;
+
+                if let Ok(fix_execution) = parse_execution_response(&response) {
+                    if !fix_execution.file_ops.is_empty() {
+                        let _ = file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await;
+                        self.emit_file_ops_applied(task, &fix_execution.file_ops);
+                    }
+                }
+            }
         }
+
+        let detail = format!("command `{command}` failed after {max_attempts} attempts");
+        Err(EngineError::Build(detail))
     }
 
     async fn execute_task(
