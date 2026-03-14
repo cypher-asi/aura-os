@@ -4,9 +4,19 @@ import { useEventStream } from "../hooks/use-event-stream";
 
 type EventCallback = (event: EngineEvent) => void;
 
+export interface BuildStep {
+  kind: "started" | "passed" | "failed" | "fix_attempt";
+  command?: string;
+  stderr?: string;
+  stdout?: string;
+  attempt?: number;
+  timestamp: number;
+}
+
 export interface TaskOutputEntry {
   text: string;
   fileOps: { op: string; path: string }[];
+  buildSteps: BuildStep[];
 }
 
 type TaskOutputListener = () => void;
@@ -21,7 +31,7 @@ interface EventContextValue {
   seedTaskOutput: (taskId: string, text: string) => void;
 }
 
-const EMPTY_OUTPUT: TaskOutputEntry = { text: "", fileOps: [] };
+const EMPTY_OUTPUT: TaskOutputEntry = { text: "", fileOps: [], buildSteps: [] };
 
 const EventContext = createContext<EventContextValue | null>(null);
 
@@ -39,15 +49,41 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   const dispatchEvent = useCallback((event: EngineEvent) => {
     if (event.type === "task_output_delta" && event.task_id && event.delta) {
       const map = taskOutputRef.current;
-      const existing = map.get(event.task_id) ?? { text: "", fileOps: [] };
+      const existing = map.get(event.task_id) ?? { text: "", fileOps: [], buildSteps: [] };
       map.set(event.task_id, { ...existing, text: existing.text + event.delta });
       notifyTaskOutputListeners(event.task_id);
     }
 
     if (event.type === "file_ops_applied" && event.task_id && event.files) {
       const map = taskOutputRef.current;
-      const existing = map.get(event.task_id) ?? { text: "", fileOps: [] };
+      const existing = map.get(event.task_id) ?? { text: "", fileOps: [], buildSteps: [] };
       map.set(event.task_id, { ...existing, fileOps: event.files });
+      notifyTaskOutputListeners(event.task_id);
+    }
+
+    if (event.task_id && (
+      event.type === "build_verification_started" ||
+      event.type === "build_verification_passed" ||
+      event.type === "build_verification_failed" ||
+      event.type === "build_fix_attempt"
+    )) {
+      const kindMap: Record<string, BuildStep["kind"]> = {
+        build_verification_started: "started",
+        build_verification_passed: "passed",
+        build_verification_failed: "failed",
+        build_fix_attempt: "fix_attempt",
+      };
+      const step: BuildStep = {
+        kind: kindMap[event.type],
+        command: event.command,
+        stderr: event.stderr,
+        stdout: event.stdout,
+        attempt: event.attempt,
+        timestamp: Date.now(),
+      };
+      const map = taskOutputRef.current;
+      const existing = map.get(event.task_id) ?? { text: "", fileOps: [], buildSteps: [] };
+      map.set(event.task_id, { ...existing, buildSteps: [...existing.buildSteps, step] });
       notifyTaskOutputListeners(event.task_id);
     }
 
@@ -108,7 +144,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       if (!text) return;
       const existing = taskOutputRef.current.get(taskId);
       if (existing && existing.text) return;
-      taskOutputRef.current.set(taskId, { text, fileOps: existing?.fileOps ?? [] });
+      taskOutputRef.current.set(taskId, { text, fileOps: existing?.fileOps ?? [], buildSteps: existing?.buildSteps ?? [] });
       notifyTaskOutputListeners(taskId);
     },
     [notifyTaskOutputListeners],
