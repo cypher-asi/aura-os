@@ -157,7 +157,20 @@ pub async fn get_task_output(
         .get(&task_id)
         .cloned()
         .unwrap_or_default();
-    Ok(Json(TaskOutputResponse { output }))
+
+    if !output.is_empty() {
+        return Ok(Json(TaskOutputResponse { output }));
+    }
+
+    let persisted = state
+        .store
+        .find_task_by_id(&task_id)
+        .ok()
+        .flatten()
+        .map(|t| t.live_output)
+        .unwrap_or_default();
+
+    Ok(Json(TaskOutputResponse { output: persisted }))
 }
 
 async fn count_lines_of_code(folder: &str) -> u64 {
