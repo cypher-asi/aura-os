@@ -57,6 +57,10 @@ export interface Task {
   execution_notes: string;
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
   live_output: string;
+  user_id?: string;
+  model?: string;
+  total_input_tokens: number;
+  total_output_tokens: number;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +87,8 @@ export interface Session {
   total_output_tokens: number;
   summary_of_previous_context: string;
   status: SessionStatus;
+  user_id?: string;
+  model?: string;
   started_at: string;
   ended_at: string | null;
 }

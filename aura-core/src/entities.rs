@@ -81,6 +81,14 @@ pub struct Task {
     pub files_changed: Vec<FileChangeSummary>,
     #[serde(default)]
     pub live_output: String,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub total_input_tokens: u64,
+    #[serde(default)]
+    pub total_output_tokens: u64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -112,6 +120,10 @@ pub struct Session {
     pub total_output_tokens: u64,
     pub summary_of_previous_context: String,
     pub status: SessionStatus,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
     pub started_at: DateTime<Utc>,
     pub ended_at: Option<DateTime<Utc>>,
 }
