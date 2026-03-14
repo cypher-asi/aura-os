@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useRef, useEffect } from "react";
+import { createContext, useContext, useCallback, useRef } from "react";
 import type { EngineEvent, EngineEventType } from "../types/events";
 import { useEventStream } from "../hooks/use-event-stream";
 
@@ -14,21 +14,14 @@ interface EventContextValue {
 const EventContext = createContext<EventContextValue | null>(null);
 
 export function EventProvider({ children }: { children: React.ReactNode }) {
-  const stream = useEventStream();
   const subscribersRef = useRef<Map<EngineEventType, Set<EventCallback>>>(new Map());
-  const lastDispatchedRef = useRef(0);
 
-  useEffect(() => {
-    const all = stream.events;
-    const start = lastDispatchedRef.current;
-    if (all.length <= start) return;
-    for (let i = start; i < all.length; i++) {
-      const event = all[i];
-      const subs = subscribersRef.current.get(event.type);
-      if (subs) subs.forEach((cb) => cb(event));
-    }
-    lastDispatchedRef.current = all.length;
-  }, [stream.events]);
+  const dispatchEvent = useCallback((event: EngineEvent) => {
+    const subs = subscribersRef.current.get(event.type);
+    if (subs) subs.forEach((cb) => cb(event));
+  }, []);
+
+  const stream = useEventStream(dispatchEvent);
 
   const subscribe = useCallback(
     (type: EngineEventType, callback: EventCallback) => {

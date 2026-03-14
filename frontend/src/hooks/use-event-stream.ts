@@ -11,11 +11,15 @@ export interface EventStreamState {
   latestEvent: EngineEvent | null;
 }
 
-export function useEventStream(): EventStreamState {
+export function useEventStream(
+  onEvent?: (event: EngineEvent) => void,
+): EventStreamState {
   const [connected, setConnected] = useState(false);
   const [events, setEvents] = useState<EngineEvent[]>([]);
   const [latestEvent, setLatestEvent] = useState<EngineEvent | null>(null);
   const wsRef = useRef<{ close: () => void } | null>(null);
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
 
   const handleMessage = useCallback((data: string) => {
     try {
@@ -25,6 +29,7 @@ export function useEventStream(): EventStreamState {
         const next = [...prev, event];
         return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
       });
+      onEventRef.current?.(event);
     } catch {
       // ignore malformed events
     }
