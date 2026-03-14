@@ -5,6 +5,11 @@
   background: var(--color-bg);
   min-height: 32px;
   overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.noTransition {
+  transition: none;
 }
 
 .resizeHandle {

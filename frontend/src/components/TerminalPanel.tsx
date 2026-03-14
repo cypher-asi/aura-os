@@ -180,15 +180,14 @@ export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
 
   return (
     <div
-      className={styles.terminalPanel}
+      className={`${styles.terminalPanel} ${dragging.current ? styles.noTransition : ""}`}
       style={{ height: collapsed ? HEADER_HEIGHT : panelHeight }}
     >
-      {!collapsed && (
-        <div
-          className={`${styles.resizeHandle} ${dragging.current ? styles.resizeHandleActive : ""}`}
-          onMouseDown={handleMouseDown}
-        />
-      )}
+      <div
+        className={`${styles.resizeHandle} ${dragging.current ? styles.resizeHandleActive : ""}`}
+        onMouseDown={handleMouseDown}
+        style={collapsed ? { visibility: "hidden" } : undefined}
+      />
 
       <div className={styles.terminalHeader}>
         <span className={styles.headerLabel}>Terminal</span>
@@ -221,18 +220,16 @@ export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
         </div>
       </div>
 
-      {!collapsed && (
-        <div className={styles.terminalBody}>
-          {terminals.map((t) => (
-            <TerminalWrapper
-              key={t.id}
-              visible={t.id === activeId}
-              cwd={cwd}
-              onHook={(hook) => registerHook(t.id, hook)}
-            />
-          ))}
-        </div>
-      )}
+      <div className={styles.terminalBody}>
+        {terminals.map((t) => (
+          <TerminalWrapper
+            key={t.id}
+            visible={t.id === activeId}
+            cwd={cwd}
+            onHook={(hook) => registerHook(t.id, hook)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
