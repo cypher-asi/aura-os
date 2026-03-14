@@ -12,7 +12,6 @@ import { TaskList } from "../views/TaskList";
 import { ProgressDashboard } from "../views/ProgressDashboard";
 import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
-import { TerminalPanel } from "./TerminalPanel";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
@@ -162,7 +161,6 @@ export function Sidekick() {
             <SidekickLog />
           </div>
         </div>
-        <TerminalPanel />
       </div>
     </Sidebar>
   );
