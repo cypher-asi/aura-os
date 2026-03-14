@@ -103,8 +103,8 @@ export function Sidekick() {
               { id: "sprint", label: "Sprint" },
               { id: "specs", label: "Specs" },
               { id: "tasks", label: "Tasks" },
-              { id: "progress", label: "KPIs" },
               { id: "log", label: "Log" },
+              { id: "progress", label: "KPIs" },
             ]}
             value={activeTab}
             onChange={(id) => setActiveTab(id as "sprint" | "specs" | "tasks" | "progress" | "log")}
