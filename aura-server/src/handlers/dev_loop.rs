@@ -124,6 +124,11 @@ pub async fn run_single_task(
             let _ = event_tx.send(aura_engine::EngineEvent::TaskFailed {
                 task_id,
                 reason: e.to_string(),
+                duration_ms: None,
+                phase: None,
+                parse_retries: None,
+                build_fix_attempts: None,
+                model: None,
             });
         }
     });
