@@ -241,6 +241,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
           <Text variant="muted" size="sm">Status</Text>
           <span className={styles.statusRow}>
             <TaskStatusIcon status={task.status} />
+            <Text size="sm">{task.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</Text>
             {task.status === "failed" && (
               <Button
                 variant="secondary"
