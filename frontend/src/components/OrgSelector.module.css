@@ -12,11 +12,6 @@
   font-size: var(--font-size-2xs, 11px);
 }
 
-.icon {
-  flex-shrink: 0;
-  color: var(--color-text-muted);
-}
-
 .name {
   flex: 1;
   min-width: 0;
