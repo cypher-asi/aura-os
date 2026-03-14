@@ -15,6 +15,7 @@ import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Sprint, Task, Session } from "../types";
 import { StatusBadge } from "./StatusBadge";
+import { CodeEditor } from "../ide";
 import styles from "./Preview.module.css";
 
 function extractErrorMessage(raw: string): string {
@@ -242,6 +243,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
+  const [editorPath, setEditorPath] = useState<string | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const hydratedRef = useRef<string | null>(null);
@@ -470,9 +472,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
               return (
                 <Item
                   key={f.path}
-                  onClick={() => {
-                    api.openPath(fullPath).catch(console.error);
-                  }}
+                  onClick={() => setEditorPath(fullPath)}
                   className={styles.fileOpItem}
                 >
                   <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
@@ -482,6 +482,10 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             })}
           </div>
         </GroupCollapsible>
+      )}
+
+      {editorPath && (
+        <CodeEditor filePath={editorPath} onClose={() => setEditorPath(null)} />
       )}
 
       {showNotes && (
