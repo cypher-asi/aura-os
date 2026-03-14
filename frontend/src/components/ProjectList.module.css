@@ -94,6 +94,7 @@
   animation: spin 1s linear infinite;
   color: var(--color-text-muted);
   flex-shrink: 0;
+  margin-left: -14px;
 }
 
 @keyframes spin {
