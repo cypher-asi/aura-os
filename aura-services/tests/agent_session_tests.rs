@@ -182,7 +182,7 @@ fn session_create_active() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
     assert_eq!(session.status, SessionStatus::Active);
     assert_eq!(session.context_usage_estimate, 0.0);
     assert!(session.ended_at.is_none());
@@ -196,7 +196,7 @@ fn session_update_context_usage() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
 
     // 50k input + 50k output = 100k / 200k = 0.5
     let updated = svc
@@ -212,7 +212,7 @@ fn session_context_usage_accumulates() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
 
     // Turn 1: 20k / 200k = 0.1
     svc.update_context_usage(&pid, &aid, &session.session_id, 10_000, 10_000)
@@ -231,7 +231,7 @@ fn session_context_usage_caps_at_one() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
 
     // 300k tokens > 200k window => should cap at 1.0
     let s = svc
@@ -247,7 +247,7 @@ fn session_should_rollover_threshold() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
 
     // Below threshold
     assert!(!svc.should_rollover(&session));
@@ -266,7 +266,7 @@ fn session_rollover_creates_new_session() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
     let old_id = session.session_id;
 
     let new_session = svc
@@ -295,7 +295,7 @@ fn session_end_completed() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
     let ended = svc
         .end_session(&pid, &aid, &session.session_id, SessionStatus::Completed)
         .unwrap();
@@ -311,7 +311,7 @@ fn session_end_failed() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    let session = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let session = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
     let ended = svc
         .end_session(&pid, &aid, &session.session_id, SessionStatus::Failed)
         .unwrap();
@@ -329,7 +329,7 @@ fn session_count() {
 
     assert_eq!(svc.session_count(&pid, &aid).unwrap(), 0);
 
-    let s1 = svc.create_session(&aid, &pid, None, String::new()).unwrap();
+    let s1 = svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
     assert_eq!(svc.session_count(&pid, &aid).unwrap(), 1);
 
     svc.rollover_session(&pid, &aid, &s1.session_id, "summary".into(), None)
@@ -344,8 +344,8 @@ fn session_list() {
     let pid = ProjectId::new();
     let aid = AgentId::new();
 
-    svc.create_session(&aid, &pid, None, String::new()).unwrap();
-    svc.create_session(&aid, &pid, None, "second".into())
+    svc.create_session(&aid, &pid, None, String::new(), None, None).unwrap();
+    svc.create_session(&aid, &pid, None, "second".into(), None, None)
         .unwrap();
 
     let sessions = svc.list_sessions(&pid, &aid).unwrap();
@@ -368,7 +368,7 @@ fn agent_session_integration() {
 
     // Create session
     let session = session_svc
-        .create_session(&agent.agent_id, &pid, Some(tid), String::new())
+        .create_session(&agent.agent_id, &pid, Some(tid), String::new(), None, None)
         .unwrap();
 
     // Start working

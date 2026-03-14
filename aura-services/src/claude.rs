@@ -5,7 +5,7 @@ use tracing::{debug, error, info};
 use crate::error::ClaudeClientError;
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
-const DEFAULT_MODEL: &str = "claude-opus-4-6";
+pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 
 const COST_PER_INPUT_TOKEN: f64 = 5.0 / 1_000_000.0;
 const COST_PER_OUTPUT_TOKEN: f64 = 25.0 / 1_000_000.0;

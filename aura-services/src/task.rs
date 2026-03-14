@@ -343,6 +343,10 @@ impl TaskService {
             execution_notes: String::new(),
             files_changed: vec![],
             live_output: String::new(),
+            user_id: None,
+            model: None,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
             created_at: now,
             updated_at: now,
         };

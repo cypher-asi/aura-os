@@ -52,6 +52,8 @@ impl SessionService {
         project_id: &ProjectId,
         active_task_id: Option<TaskId>,
         summary: String,
+        user_id: Option<String>,
+        model: Option<String>,
     ) -> Result<Session, SessionError> {
         let now = Utc::now();
         let session = Session {
@@ -65,6 +67,8 @@ impl SessionService {
             total_output_tokens: 0,
             summary_of_previous_context: summary,
             status: SessionStatus::Active,
+            user_id,
+            model,
             started_at: now,
             ended_at: None,
         };
@@ -102,11 +106,13 @@ impl SessionService {
         next_task_id: Option<TaskId>,
     ) -> Result<Session, SessionError> {
         let mut old_session = self.get_session(project_id, agent_id, session_id)?;
+        let user_id = old_session.user_id.clone();
+        let model = old_session.model.clone();
         old_session.status = SessionStatus::RolledOver;
         old_session.ended_at = Some(Utc::now());
         self.store.put_session(&old_session)?;
 
-        self.create_session(agent_id, project_id, next_task_id, summary)
+        self.create_session(agent_id, project_id, next_task_id, summary, user_id, model)
     }
 
     pub fn end_session(

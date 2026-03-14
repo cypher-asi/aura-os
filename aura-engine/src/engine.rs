@@ -6,6 +6,7 @@ use tracing::warn;
 
 use aura_core::*;
 use aura_services::{AgentService, ClaudeClient, ClaudeStreamEvent, ProjectService, SessionService, TaskService};
+use aura_services::claude::DEFAULT_MODEL;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
@@ -161,6 +162,9 @@ impl DevLoopEngine {
             )));
         }
 
+        let user_id = self.current_user_id();
+        let model = Some(DEFAULT_MODEL.to_string());
+
         let agent = self
             .agent_service
             .create_agent(&project_id, "dev-agent".into())?;
@@ -169,6 +173,8 @@ impl DevLoopEngine {
             &project_id,
             None,
             String::new(),
+            user_id.clone(),
+            model.clone(),
         )?;
 
         self.task_service
@@ -197,6 +203,11 @@ impl DevLoopEngine {
                 let base_path = Path::new(&project.linked_folder_path);
 
                 let file_changes = file_ops::compute_file_changes(base_path, &execution.file_ops);
+
+                self.update_task_tracking(
+                    &project_id, &task, &user_id, &model,
+                    execution.input_tokens, execution.output_tokens,
+                );
 
                 if let Err(e) = file_ops::apply_file_ops(base_path, &execution.file_ops).await {
                     let reason = format!("file operation failed: {e}");
@@ -283,6 +294,8 @@ impl DevLoopEngine {
             &project_id,
             None,
             String::new(),
+            self.current_user_id(),
+            Some(DEFAULT_MODEL.to_string()),
         )?;
 
         let (stop_tx, stop_rx) = watch::channel(LoopCommand::Continue);
@@ -381,6 +394,11 @@ impl DevLoopEngine {
                     let base_path = Path::new(&project.linked_folder_path);
 
                     let file_changes = file_ops::compute_file_changes(base_path, &execution.file_ops);
+
+                    self.update_task_tracking(
+                        &project_id, &task, &session.user_id, &session.model,
+                        execution.input_tokens, execution.output_tokens,
+                    );
 
                     if let Err(e) = file_ops::apply_file_ops(base_path, &execution.file_ops).await {
                         let reason = format!("file operation failed: {e}");
@@ -662,6 +680,32 @@ impl DevLoopEngine {
                 Err(first_err)
             }
         }
+    }
+
+    fn update_task_tracking(
+        &self,
+        project_id: &ProjectId,
+        task: &Task,
+        user_id: &Option<String>,
+        model: &Option<String>,
+        input_tokens: u64,
+        output_tokens: u64,
+    ) {
+        if let Ok(mut t) = self.store.get_task(project_id, &task.spec_id, &task.task_id) {
+            t.user_id = user_id.clone();
+            t.model = model.clone();
+            t.total_input_tokens += input_tokens;
+            t.total_output_tokens += output_tokens;
+            let _ = self.store.put_task(&t);
+        }
+    }
+
+    fn current_user_id(&self) -> Option<String> {
+        self.store
+            .get_setting("zero_auth_session")
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
+            .map(|s| s.user_id)
     }
 
     fn emit(&self, event: EngineEvent) {

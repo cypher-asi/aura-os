@@ -56,6 +56,10 @@ fn make_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         execution_notes: String::new(),
         files_changed: vec![],
         live_output: String::new(),
+        user_id: None,
+        model: None,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
         created_at: now,
         updated_at: now,
     }
@@ -88,6 +92,8 @@ fn make_session(agent_id: AgentId, project_id: ProjectId) -> Session {
         total_output_tokens: 0,
         summary_of_previous_context: String::new(),
         status: SessionStatus::Active,
+        user_id: None,
+        model: None,
         started_at: now,
         ended_at: None,
     }
