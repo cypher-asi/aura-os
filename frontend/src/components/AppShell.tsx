@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { Topbar, Sidebar, ButtonWindow } from "@cypher-asi/zui";
 import { ProjectList } from "./ProjectList";
@@ -16,7 +16,13 @@ import { windowCommand } from "../lib/windowCommand";
 
 export function AppShell() {
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
+  const [orgInitialSection, setOrgInitialSection] = useState<"billing" | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const openOrgBilling = useCallback(() => {
+    setOrgInitialSection("billing");
+    setOrgSettingsOpen(true);
+  }, []);
 
   return (
     <SidekickProvider>
@@ -71,11 +77,15 @@ export function AppShell() {
               <Sidekick />
               <Preview />
             </div>
-            <TaskbarRight />
+            <TaskbarRight onBuyCredits={openOrgBilling} />
           </div>
         </div>
       </div>
-      <OrgSettingsPanel isOpen={orgSettingsOpen} onClose={() => setOrgSettingsOpen(false)} />
+      <OrgSettingsPanel
+        isOpen={orgSettingsOpen}
+        onClose={() => { setOrgSettingsOpen(false); setOrgInitialSection(undefined); }}
+        initialSection={orgInitialSection}
+      />
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </ProjectContextProvider>
     </OrgProvider>

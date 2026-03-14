@@ -19,6 +19,7 @@ type Section = "general" | "members" | "invites" | "billing" | "integrations";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialSection?: Section;
 }
 
 const NAV_ITEMS: NavigatorItemProps[] = [
@@ -29,10 +30,14 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
-export function OrgSettingsPanel({ isOpen, onClose }: Props) {
+export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs } = useOrg();
   const { user } = useAuth();
-  const [section, setSection] = useState<Section>("general");
+  const [section, setSection] = useState<Section>(initialSection ?? "general");
+
+  useEffect(() => {
+    if (isOpen) setSection(initialSection ?? "general");
+  }, [isOpen, initialSection]);
 
   const [teamName, setTeamName] = useState(activeOrg?.name ?? "");
   const [teamSaving, setTeamSaving] = useState(false);

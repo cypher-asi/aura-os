@@ -2,11 +2,15 @@ import { Button } from "@cypher-asi/zui";
 import { CreditsBadge } from "./CreditsBadge";
 import styles from "./TaskbarRight.module.css";
 
-export function TaskbarRight() {
+interface Props {
+  onBuyCredits?: () => void;
+}
+
+export function TaskbarRight({ onBuyCredits }: Props) {
   return (
     <div className={`taskbar-section ${styles.container}`}>
-      <CreditsBadge />
-      <Button variant="secondary" size="sm" onClick={() => {/* TODO: open billing/purchase flow */}}>
+      <CreditsBadge onClick={onBuyCredits} />
+      <Button variant="secondary" size="sm" onClick={onBuyCredits}>
         Buy Credits
       </Button>
     </div>
