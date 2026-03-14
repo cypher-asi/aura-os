@@ -70,7 +70,7 @@ function loadPanelState(): { height: number; collapsed: boolean } {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw);
   } catch { /* ignore */ }
-  return { height: DEFAULT_HEIGHT, collapsed: false };
+  return { height: DEFAULT_HEIGHT, collapsed: true };
 }
 
 function savePanelState(height: number, collapsed: boolean) {
