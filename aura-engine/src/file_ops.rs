@@ -13,11 +13,14 @@ pub enum FileOp {
 }
 
 pub fn validate_path(base: &Path, target: &Path) -> Result<(), EngineError> {
+    let canonical_base = base
+        .canonicalize()
+        .map_err(|_| EngineError::PathEscape(base.display().to_string()))?;
     let canonical = target
         .canonicalize()
         .or_else(|_| resolve_via_ancestors(target))?;
 
-    if !canonical.starts_with(base) {
+    if !canonical.starts_with(&canonical_base) {
         return Err(EngineError::PathEscape(target.display().to_string()));
     }
     Ok(())
