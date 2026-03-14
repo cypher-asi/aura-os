@@ -6,7 +6,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, chat, dev_loop, github, orgs, projects, settings, specs, sprints, tasks, ws};
+use crate::handlers::{agents, auth, chat, dev_loop, github, log, orgs, projects, settings, specs, sprints, tasks, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -194,6 +194,8 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/chat-sessions/:chat_session_id/messages/stream",
             post(chat::send_message_stream),
         )
+        // Log entries
+        .route("/api/log-entries", get(log::list_log_entries))
         // Dev Loop
         .route(
             "/api/projects/:project_id/loop/start",

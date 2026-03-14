@@ -312,6 +312,12 @@ export const api = {
     ),
   sendMessageStream,
 
+  // Log entries
+  getLogEntries: (limit = 1000) =>
+    apiFetch<{ timestamp_ms: number; event: import("../types/events").EngineEvent }[]>(
+      `/api/log-entries?limit=${limit}`,
+    ),
+
   // Desktop file/folder picker
   pickFolder: () =>
     apiFetch<string | null>("/api/pick-folder", { method: "POST" }),

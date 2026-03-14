@@ -3,6 +3,7 @@ import { useEventContext } from "../context/EventContext";
 import type { EngineEvent, EngineEventType } from "../types/events";
 import { formatTime } from "../utils/format";
 import { LOG_MAX_LINES } from "../constants";
+import { api } from "../api/client";
 
 export interface LogEntry {
   timestamp: string;
@@ -85,6 +86,30 @@ export function useLogStream() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
+  const historyLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (historyLoadedRef.current) return;
+    historyLoadedRef.current = true;
+
+    api.getLogEntries(LOG_MAX_LINES).then((persisted) => {
+      if (persisted.length === 0) return;
+      const restored: LogEntry[] = persisted.map((p) => ({
+        timestamp: formatTime(new Date(p.timestamp_ms)),
+        type: p.event.type,
+        summary: summarise(p.event),
+        detail: p.event,
+      }));
+      setEntries((prev) => {
+        const combined = [...restored, ...prev];
+        return combined.length > LOG_MAX_LINES
+          ? combined.slice(-LOG_MAX_LINES)
+          : combined;
+      });
+    }).catch(() => {
+      // Silently ignore load failures; live events still work
+    });
+  }, []);
 
   const addEntry = useCallback((event: EngineEvent) => {
     setEntries((prev) => {

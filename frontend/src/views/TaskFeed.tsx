@@ -24,6 +24,9 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
   }, [projectId]);
 
   useEffect(() => {
+    const refetch = () => {
+      api.listTasks(projectId).then(setTasks).catch(console.error);
+    };
     const unsubs = [
       subscribe("task_started", (e) => {
         setActiveTaskId(e.task_id || null);
@@ -57,9 +60,19 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
         );
       }),
       subscribe("follow_up_task_created", (e) => {
-        if (e.task_id) {
-          api.listTasks(projectId).then(setTasks).catch(console.error);
-        }
+        if (e.task_id) refetch();
+      }),
+      subscribe("loop_stopped", () => {
+        setActiveTaskId(null);
+        refetch();
+      }),
+      subscribe("loop_paused", () => {
+        setActiveTaskId(null);
+        refetch();
+      }),
+      subscribe("loop_finished", () => {
+        setActiveTaskId(null);
+        refetch();
       }),
     ];
     return () => unsubs.forEach((u) => u());

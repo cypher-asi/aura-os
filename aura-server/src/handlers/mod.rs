@@ -3,6 +3,7 @@ pub mod auth;
 pub mod chat;
 pub mod dev_loop;
 pub mod github;
+pub mod log;
 pub mod orgs;
 pub mod projects;
 pub mod settings;

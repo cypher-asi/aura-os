@@ -60,6 +60,7 @@ impl TaskService {
                 | (TaskStatus::InProgress, TaskStatus::Done)
                 | (TaskStatus::InProgress, TaskStatus::Failed)
                 | (TaskStatus::InProgress, TaskStatus::Blocked)
+                | (TaskStatus::InProgress, TaskStatus::Ready)
                 | (TaskStatus::Failed, TaskStatus::Ready)
                 | (TaskStatus::Blocked, TaskStatus::Ready)
         );
@@ -68,6 +69,25 @@ impl TaskService {
         } else {
             Err(TaskError::IllegalTransition { current, target })
         }
+    }
+
+    /// Reset any orphaned `InProgress` tasks back to `Ready`.
+    /// Called on loop start to recover from crashes or unclean shutdowns.
+    pub fn reset_in_progress_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
+        let all_tasks = self.store.list_tasks_by_project(project_id)?;
+        let mut reset = Vec::new();
+        for task in &all_tasks {
+            if task.status == TaskStatus::InProgress {
+                let ready_task = self.transition_task(
+                    project_id,
+                    &task.spec_id,
+                    &task.task_id,
+                    TaskStatus::Ready,
+                )?;
+                reset.push(ready_task);
+            }
+        }
+        Ok(reset)
     }
 
     pub fn assign_task(

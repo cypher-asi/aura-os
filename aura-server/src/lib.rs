@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use aura_engine::EngineEvent;
 use aura_services::{
@@ -24,9 +24,26 @@ use aura_store::RocksStore;
 fn spawn_event_rebroadcast(
     mut rx: mpsc::UnboundedReceiver<EngineEvent>,
     broadcast_tx: broadcast::Sender<EngineEvent>,
+    store: Arc<RocksStore>,
 ) {
     tokio::spawn(async move {
+        let mut write_count: u64 = 0;
         while let Some(event) = rx.recv().await {
+            if !matches!(event, EngineEvent::TaskOutputDelta { .. }) {
+                if let Ok(json_bytes) = serde_json::to_vec(&event) {
+                    if let Err(e) = store.append_log_entry(&json_bytes) {
+                        warn!("Failed to persist log entry: {e}");
+                    } else {
+                        write_count += 1;
+                        if write_count % 500 == 0 {
+                            if let Err(e) = store.prune_log_entries_if_needed() {
+                                warn!("Failed to prune log entries: {e}");
+                            }
+                        }
+                    }
+                }
+            }
+
             debug!(?event, "Broadcasting engine event");
             if broadcast_tx.send(event).is_err() {
                 warn!("No WebSocket subscribers for engine event");
@@ -66,10 +83,33 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         spec_gen_service.clone(),
     ));
 
+    // Reset any tasks left InProgress from a previous unclean shutdown
+    if let Ok(projects) = project_service.list_projects() {
+        for project in &projects {
+            match task_service.reset_in_progress_tasks(&project.project_id) {
+                Ok(reset) if !reset.is_empty() => {
+                    info!(
+                        project_id = %project.project_id,
+                        count = reset.len(),
+                        "Reset orphaned InProgress tasks on startup"
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        project_id = %project.project_id,
+                        error = %e,
+                        "Failed to reset orphaned tasks on startup"
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
 
-    spawn_event_rebroadcast(event_rx, event_broadcast.clone());
+    spawn_event_rebroadcast(event_rx, event_broadcast.clone(), store.clone());
 
     AppState {
         store,

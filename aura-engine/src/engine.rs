@@ -173,6 +173,11 @@ impl DevLoopEngine {
         let mut completed_count: usize = 0;
         let mut work_log: Vec<String> = Vec::new();
 
+        let orphaned = self.task_service.reset_in_progress_tasks(&project_id)?;
+        for t in &orphaned {
+            self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });
+        }
+
         let promoted = self.task_service.resolve_initial_readiness(&project_id)?;
         for t in &promoted {
             self.emit(EngineEvent::TaskBecameReady { task_id: t.task_id });

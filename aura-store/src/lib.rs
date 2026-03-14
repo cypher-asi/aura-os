@@ -4,6 +4,7 @@ pub mod store;
 mod store_agent;
 mod store_chat;
 mod store_github;
+mod store_log;
 mod store_org;
 mod store_project;
 

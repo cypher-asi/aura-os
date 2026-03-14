@@ -41,6 +41,13 @@ export function TaskList() {
     [sidekick],
   );
 
+  const refetchTasks = useCallback(() => {
+    if (!projectId) return;
+    api.listTasks(projectId).then((t) => {
+      setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
+    }).catch(console.error);
+  }, [projectId]);
+
   useEffect(() => {
     const unsubs = [
       subscribe("task_started", (e) => {
@@ -65,9 +72,12 @@ export function TaskList() {
       subscribe("task_became_ready", (e) => {
         if (e.task_id) updateTaskStatus(e.task_id, "ready");
       }),
+      subscribe("loop_stopped", refetchTasks),
+      subscribe("loop_paused", refetchTasks),
+      subscribe("loop_finished", refetchTasks),
     ];
     return () => unsubs.forEach((u) => u());
-  }, [subscribe, updateTaskStatus]);
+  }, [subscribe, updateTaskStatus, refetchTasks]);
 
   const specs = useMemo(
     () => mergeById(localSpecs, sidekick.specs, "spec_id"),
