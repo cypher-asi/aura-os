@@ -283,6 +283,10 @@ export const api = {
   getTaskOutput: (projectId: ProjectId, taskId: TaskId) =>
     apiFetch<{ output: string }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
 
+  // Sessions (project-level)
+  listProjectSessions: (projectId: ProjectId) =>
+    apiFetch<Session[]>(`/api/projects/${projectId}/sessions`),
+
   // Agents
   listAgents: (projectId: ProjectId) =>
     apiFetch<Agent[]>(`/api/projects/${projectId}/agents`),
