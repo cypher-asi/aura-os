@@ -12,7 +12,6 @@ import { MessageSquare, Pencil, Trash2, Loader2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
 import { DeleteProjectModal, DeleteSessionModal } from "./ProjectModals";
 import { useEventContext } from "../context/EventContext";
-import { formatRelativeTime } from "../utils/format";
 import styles from "./ProjectList.module.css";
 
 /**
