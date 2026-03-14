@@ -75,6 +75,9 @@ export function TaskList() {
       subscribe("task_became_ready", (e) => {
         if (e.task_id) updateTaskStatus(e.task_id, "ready");
       }),
+      subscribe("follow_up_task_created", () => {
+        refetchTasks();
+      }),
       subscribe("loop_stopped", refetchTasks),
       subscribe("loop_paused", refetchTasks),
       subscribe("loop_finished", refetchTasks),
