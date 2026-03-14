@@ -507,6 +507,14 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     setRetrying(true);
     try {
       await api.retryTask(projectId, task.task_id);
+      setLiveStatus("ready");
+      setFailReason(null);
+      // Auto-run the task after resetting it
+      try {
+        await api.runTask(projectId, task.task_id);
+      } catch {
+        // Task is at least reset to Ready; user can run manually
+      }
     } catch (err) {
       console.error("Retry failed:", err);
     } finally {

@@ -301,6 +301,7 @@ async fn forward_claude_events(
                     .json_data(serde_json::json!({ "message": msg }))
                     .unwrap()
             }
+            ClaudeStreamEvent::ToolUse { .. } => continue,
         };
         if sse_tx.send(event).is_err() {
             break;

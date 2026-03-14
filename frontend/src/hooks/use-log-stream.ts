@@ -36,6 +36,10 @@ const EVENT_LABELS: Record<EngineEventType, string> = {
   build_verification_passed: "Build",
   build_verification_failed: "Build",
   build_fix_attempt: "Build",
+  test_verification_started: "Test",
+  test_verification_passed: "Test",
+  test_verification_failed: "Test",
+  test_fix_attempt: "Test",
 };
 
 function summarise(e: EngineEvent): string {
@@ -86,6 +90,14 @@ function summarise(e: EngineEvent): string {
       return `Build verification failed${e.reason ? `: ${e.reason}` : ""}`;
     case "build_fix_attempt":
       return `Build fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    case "test_verification_started":
+      return `Test verification started${e.task_id ? `: ${e.task_id}` : ""}`;
+    case "test_verification_passed":
+      return `Test verification passed${e.task_id ? `: ${e.task_id}` : ""}`;
+    case "test_verification_failed":
+      return `Test verification failed${e.reason ? `: ${e.reason}` : ""}`;
+    case "test_fix_attempt":
+      return `Test fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
     default:
       return e.type;
   }
@@ -161,6 +173,10 @@ export function useLogStream() {
       "build_verification_passed",
       "build_verification_failed",
       "build_fix_attempt",
+      "test_verification_started",
+      "test_verification_passed",
+      "test_verification_failed",
+      "test_fix_attempt",
     ];
     const unsubs = allTypes.map((type) =>
       subscribe(type, (e) => addEntry(e)),

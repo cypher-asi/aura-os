@@ -1076,6 +1076,7 @@ impl DevLoopEngine {
 
         let base_path = Path::new(&project.linked_folder_path);
         let mut all_fix_ops: Vec<FileOp> = Vec::new();
+        let mut prior_errors: Vec<String> = Vec::new();
 
         for attempt in 1..=MAX_BUILD_FIX_RETRIES {
             self.emit(EngineEvent::BuildVerificationStarted {
@@ -1155,6 +1156,8 @@ impl DevLoopEngine {
                 stdout: None,
                 attempt: Some(attempt),
             });
+
+            prior_errors.push(build_result.stderr.clone());
 
             let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
             let codebase_snapshot =
