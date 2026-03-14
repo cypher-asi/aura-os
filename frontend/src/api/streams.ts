@@ -28,8 +28,23 @@ export interface SprintStreamCallbacks {
   onError: (message: string) => void;
 }
 
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+export interface ToolResultInfo {
+  id: string;
+  name: string;
+  result: string;
+  is_error: boolean;
+}
+
 export interface ChatStreamCallbacks {
   onDelta: (text: string) => void;
+  onToolCall?: (info: ToolCallInfo) => void;
+  onToolResult?: (info: ToolResultInfo) => void;
   onSpecSaved?: (spec: Spec) => void;
   onTaskSaved?: (task: Task) => void;
   onMessageSaved?: (message: ChatMessage) => void;
@@ -109,7 +124,7 @@ export function sendMessageStream(
   cb: ChatStreamCallbacks,
   signal?: AbortSignal,
 ) {
-  return streamSSE<"delta" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
+  return streamSSE<"delta" | "tool_call" | "tool_result" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
     `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
     {
       method: "POST",
@@ -122,6 +137,21 @@ export function sendMessageStream(
         switch (eventType) {
           case "delta":
             cb.onDelta(d.text as string);
+            break;
+          case "tool_call":
+            cb.onToolCall?.({
+              id: d.id as string,
+              name: d.name as string,
+              input: d.input as Record<string, unknown>,
+            });
+            break;
+          case "tool_result":
+            cb.onToolResult?.({
+              id: d.id as string,
+              name: d.name as string,
+              result: d.result as string,
+              is_error: d.is_error as boolean,
+            });
             break;
           case "spec_saved":
             cb.onSpecSaved?.(d.spec as Spec);

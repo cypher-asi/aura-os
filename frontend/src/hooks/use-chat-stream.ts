@@ -1,11 +1,22 @@
 import { useRef, useState, useCallback } from "react";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
+import type { ToolCallInfo, ToolResultInfo } from "../api/streams";
 
-interface DisplayMessage {
+export interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  toolCalls?: ToolCallEntry[];
+}
+
+export interface ToolCallEntry {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  result?: string;
+  isError?: boolean;
+  pending: boolean;
 }
 
 interface UseChatStreamOptions {
@@ -19,10 +30,12 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
+  const toolCallsRef = useRef<ToolCallEntry[]>([]);
 
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
     setMessages(msgs);
@@ -45,6 +58,8 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       sidekick.setStreamingSessionId(chatSessionId);
       setStreamingText("");
       streamBufferRef.current = "";
+      toolCallsRef.current = [];
+      setActiveToolCalls([]);
 
       if (action === "generate_specs") {
         sidekick.clearGeneratedArtifacts();
@@ -70,6 +85,24 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
               });
             }
           },
+          onToolCall(info: ToolCallInfo) {
+            const entry: ToolCallEntry = {
+              id: info.id,
+              name: info.name,
+              input: info.input,
+              pending: true,
+            };
+            toolCallsRef.current = [...toolCallsRef.current, entry];
+            setActiveToolCalls([...toolCallsRef.current]);
+          },
+          onToolResult(info: ToolResultInfo) {
+            toolCallsRef.current = toolCallsRef.current.map((tc) =>
+              tc.id === info.id
+                ? { ...tc, result: info.result, isError: info.is_error, pending: false }
+                : tc,
+            );
+            setActiveToolCalls([...toolCallsRef.current]);
+          },
           onSpecSaved(spec) {
             sidekick.pushSpec(spec);
           },
@@ -77,12 +110,22 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             sidekick.pushTask(task);
           },
           onMessageSaved(msg) {
+            const finalToolCalls = toolCallsRef.current.length > 0
+              ? [...toolCallsRef.current]
+              : undefined;
             setMessages((prev) => [
               ...prev,
-              { id: msg.message_id, role: "assistant", content: msg.content },
+              {
+                id: msg.message_id,
+                role: "assistant",
+                content: msg.content,
+                toolCalls: finalToolCalls,
+              },
             ]);
             setStreamingText("");
             streamBufferRef.current = "";
+            toolCallsRef.current = [];
+            setActiveToolCalls([]);
           },
           onTitleUpdated(session) {
             sidekick.notifySessionTitleUpdate(session);
@@ -96,11 +139,14 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
                   id: `error-${Date.now()}`,
                   role: "assistant",
                   content: streamBufferRef.current + `\n\n*Error: ${message}*`,
+                  toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
                 },
               ]);
             }
             setStreamingText("");
             streamBufferRef.current = "";
+            toolCallsRef.current = [];
+            setActiveToolCalls([]);
           },
           onDone() {
             if (streamBufferRef.current && !isStreaming) {
@@ -110,10 +156,13 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
                   id: `stream-${Date.now()}`,
                   role: "assistant",
                   content: streamBufferRef.current,
+                  toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
                 },
               ]);
               setStreamingText("");
               streamBufferRef.current = "";
+              toolCallsRef.current = [];
+              setActiveToolCalls([]);
             }
             setIsStreaming(false);
             sidekick.setStreamingSessionId(null);
@@ -139,11 +188,14 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
           id: `stopped-${Date.now()}`,
           role: "assistant",
           content: streamBufferRef.current,
+          toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
         },
       ]);
     }
     setStreamingText("");
     streamBufferRef.current = "";
+    toolCallsRef.current = [];
+    setActiveToolCalls([]);
     setIsStreaming(false);
     sidekick.setStreamingSessionId(null);
     abortRef.current = null;
@@ -153,6 +205,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
     messages,
     isStreaming,
     streamingText,
+    activeToolCalls,
     sendMessage,
     stopStreaming,
     resetMessages,

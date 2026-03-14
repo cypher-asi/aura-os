@@ -25,6 +25,7 @@ export function ChatView() {
     messages,
     isStreaming,
     streamingText,
+    activeToolCalls,
     sendMessage,
     stopStreaming,
     resetMessages,
@@ -149,7 +150,9 @@ export function ChatView() {
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
-              {streamingText && <StreamingBubble text={streamingText} />}
+              {(streamingText || activeToolCalls.length > 0) && (
+                <StreamingBubble text={streamingText} toolCalls={activeToolCalls} />
+              )}
             </>
           )}
         </div>
