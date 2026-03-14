@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Modal, Spinner, Text, Button } from "@cypher-asi/zui";
 import { Save } from "lucide-react";
+import hljs from "highlight.js/lib/common";
 import { api } from "../api/client";
-import { filenameFromPath } from "./lang";
+import { filenameFromPath, langFromPath } from "./lang";
 import styles from "./CodeEditor.module.css";
+
+const MAX_HIGHLIGHT_SIZE = 100_000;
 
 export interface CodeEditorProps {
   filePath: string;
@@ -20,8 +23,11 @@ export function CodeEditor({ filePath, onClose }: CodeEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  const highlightRef = useRef<HTMLPreElement>(null);
 
   const dirty = content !== null && savedContent !== null && content !== savedContent;
+
+  const language = useMemo(() => langFromPath(filePath), [filePath]);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,8 +92,14 @@ export function CodeEditor({ filePath, onClose }: CodeEditorProps) {
   }, [handleSave]);
 
   const handleScroll = useCallback(() => {
-    if (textareaRef.current && gutterRef.current) {
-      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    if (gutterRef.current) {
+      gutterRef.current.scrollTop = ta.scrollTop;
+    }
+    if (highlightRef.current) {
+      highlightRef.current.scrollTop = ta.scrollTop;
+      highlightRef.current.scrollLeft = ta.scrollLeft;
     }
   }, []);
 
@@ -109,10 +121,34 @@ export function CodeEditor({ filePath, onClose }: CodeEditorProps) {
     [],
   );
 
+  const highlightedHtml = useMemo(() => {
+    if (content == null) return "";
+    if (content.length > MAX_HIGHLIGHT_SIZE) {
+      const escaped = content
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return escaped;
+    }
+    try {
+      if (language && hljs.getLanguage(language)) {
+        return hljs.highlight(content, { language }).value;
+      }
+      return hljs.highlightAuto(content).value;
+    } catch {
+      const escaped = content
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return escaped;
+    }
+  }, [content, language]);
+
   const lineCount = content ? content.split("\n").length : 0;
   const filename = filenameFromPath(filePath);
-
   const titleDisplay = dirty ? `● ${filename}` : filename;
+
+  const displayLang = language ?? "plain text";
 
   return (
     <Modal
@@ -125,6 +161,7 @@ export function CodeEditor({ filePath, onClose }: CodeEditorProps) {
       noPadding
       headerActions={
         <div className={styles.headerActions}>
+          <span className={styles.langBadge}>{displayLang}</span>
           {saveError && (
             <Text variant="primary" size="sm" className={styles.saveError}>
               {saveError}
@@ -168,18 +205,30 @@ export function CodeEditor({ filePath, onClose }: CodeEditorProps) {
               </span>
             ))}
           </div>
-          <textarea
-            ref={textareaRef}
-            className={styles.codeArea}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onScroll={handleScroll}
-            onKeyDown={handleTab}
-            spellCheck={false}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-          />
+          <div className={styles.editorContainer}>
+            <pre
+              ref={highlightRef}
+              className={styles.codeHighlight}
+              aria-hidden
+            >
+              <code
+                className={language ? `hljs language-${language}` : "hljs"}
+                dangerouslySetInnerHTML={{ __html: highlightedHtml + "\n" }}
+              />
+            </pre>
+            <textarea
+              ref={textareaRef}
+              className={styles.codeArea}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onScroll={handleScroll}
+              onKeyDown={handleTab}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+            />
+          </div>
         </div>
       )}
     </Modal>
