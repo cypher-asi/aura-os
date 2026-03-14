@@ -51,7 +51,9 @@ export function TaskList() {
   useEffect(() => {
     const unsubs = [
       subscribe("task_started", (e) => {
-        if (e.task_id) updateTaskStatus(e.task_id, "in_progress");
+        if (e.task_id) updateTaskStatus(e.task_id, "in_progress", {
+          ...(e.session_id ? { session_id: e.session_id } : {}),
+        });
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id) {

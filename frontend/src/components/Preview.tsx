@@ -176,14 +176,17 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [retrying, setRetrying] = useState(false);
   const [runningTask, setRunningTask] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
+  const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const streamRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
 
   const effectiveStatus = liveStatus ?? task.status;
+  const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
 
   useEffect(() => {
     setLiveStatus(null);
+    setLiveSessionId(null);
     setRunningTask(false);
   }, [task.task_id]);
 
@@ -193,6 +196,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
         if (e.task_id !== task.task_id) return;
         setLiveStatus("in_progress");
         setRunningTask(false);
+        if (e.session_id) setLiveSessionId(e.session_id);
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id !== task.task_id) return;
@@ -282,14 +286,14 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   }, [projectId, task.task_id, runningTask]);
 
   const handleViewSession = useCallback(async () => {
-    if (!projectId || !task.session_id || !task.assigned_agent_id) return;
+    if (!projectId || !effectiveSessionId || !task.assigned_agent_id) return;
     try {
-      const session = await api.getSession(projectId, task.assigned_agent_id, task.session_id);
+      const session = await api.getSession(projectId, task.assigned_agent_id, effectiveSessionId);
       sidekick.pushPreview({ kind: "session", session });
     } catch (err) {
       console.error("Failed to load session:", err);
     }
-  }, [projectId, task.session_id, task.assigned_agent_id, sidekick]);
+  }, [projectId, effectiveSessionId, task.assigned_agent_id, sidekick]);
 
   return (
     <>
@@ -335,7 +339,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             <Text size="sm">—</Text>
           )}
         </div>
-        {task.session_id && (
+        {effectiveSessionId && (
           <div className={styles.taskField}>
             <span className={styles.fieldLabel}>Session</span>
             <button
@@ -352,7 +356,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
                 textUnderlineOffset: 2,
               }}
             >
-              {task.session_id!.slice(0, 8)}
+              {effectiveSessionId.slice(0, 8)}
             </button>
           </div>
         )}
