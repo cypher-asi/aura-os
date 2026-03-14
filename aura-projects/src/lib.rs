@@ -1,3 +1,6 @@
+mod error;
+pub use error::ProjectError;
+
 use std::path::Path;
 use std::sync::Arc;
 
@@ -5,8 +8,6 @@ use chrono::Utc;
 
 use aura_core::*;
 use aura_store::RocksStore;
-
-use crate::error::ProjectError;
 
 /// Strip trailing natural language that LLMs sometimes append to shell commands.
 /// e.g. "cargo build --workspace to confirm compilation" → "cargo build --workspace"

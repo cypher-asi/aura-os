@@ -1,0 +1,15 @@
+[package]
+name = "aura-auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-store = { path = "../aura-store" }
+aura-orgs = { path = "../aura-orgs" }
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+thiserror = "1"

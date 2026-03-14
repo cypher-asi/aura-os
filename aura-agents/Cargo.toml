@@ -1,0 +1,10 @@
+[package]
+name = "aura-agents"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aura-core = { path = "../aura-core" }
+aura-store = { path = "../aura-store" }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"

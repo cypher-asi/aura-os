@@ -1,3 +1,6 @@
+mod error;
+pub use error::AuthError;
+
 use std::sync::Arc;
 
 use chrono::Utc;
@@ -7,9 +10,7 @@ use tracing::{debug, error, warn};
 
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
-
-use crate::error::AuthError;
-use crate::org::OrgService;
+use aura_orgs::OrgService;
 
 const ZOS_API_URL: &str = "https://zosapi.zero.tech";
 const AUTH_SESSION_KEY: &str = "zero_auth_session";
@@ -92,9 +93,12 @@ impl AuthService {
         self.org_service = Some(org_service);
     }
 
-    pub async fn login(&self, email: &str, password: &str) -> Result<ZeroAuthSession, AuthError> {
+    pub async fn login(
+        &self,
+        email: &str,
+        password: &str,
+    ) -> Result<ZeroAuthSession, AuthError> {
         debug!(email, "Logging in via zOS-api");
-
         let res = self
             .http
             .post(format!("{ZOS_API_URL}/api/v2/accounts/login"))
@@ -119,10 +123,11 @@ impl AuthService {
         password: &str,
     ) -> Result<ZeroAuthSession, AuthError> {
         debug!(email, "Registering via zOS-api");
-
         let res = self
             .http
-            .post(format!("{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"))
+            .post(format!(
+                "{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"
+            ))
             .json(&serde_json::json!({ "email": email, "password": password }))
             .send()
             .await
@@ -157,12 +162,14 @@ impl AuthService {
         };
 
         debug!("Validating stored auth token against zOS-api");
-
         match self.fetch_user_info(&session.access_token).await {
             Ok(user) => {
                 let updated = ZeroAuthSession {
                     user_id: user.id,
-                    display_name: build_display_name(&user.profile_summary, &user.primary_zid),
+                    display_name: build_display_name(
+                        &user.profile_summary,
+                        &user.primary_zid,
+                    ),
                     profile_image: user
                         .profile_summary
                         .as_ref()
@@ -210,7 +217,9 @@ impl AuthService {
 
     fn ensure_org(&self, session: &ZeroAuthSession) {
         if let Some(ref org_svc) = self.org_service {
-            if let Err(e) = org_svc.ensure_default_org(&session.user_id, &session.display_name) {
+            if let Err(e) =
+                org_svc.ensure_default_org(&session.user_id, &session.display_name)
+            {
                 warn!("Failed to ensure default org: {e}");
             }
         }
@@ -240,7 +249,6 @@ impl AuthService {
     ) -> Result<ZeroAuthSession, AuthError> {
         let user = self.fetch_user_info(access_token).await?;
         let now = Utc::now();
-
         let session = ZeroAuthSession {
             user_id: user.id,
             display_name: build_display_name(&user.profile_summary, &user.primary_zid),
@@ -261,12 +269,9 @@ impl AuthService {
             created_at: now,
             validated_at: now,
         };
-
         let bytes = serde_json::to_vec(&session)?;
         self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
-
         self.ensure_org(&session);
-
         Ok(session)
     }
 }

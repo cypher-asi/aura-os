@@ -1,3 +1,6 @@
+mod error;
+pub use error::GitHubError;
+
 use std::sync::Arc;
 
 use chrono::{Duration, Utc};
@@ -7,9 +10,7 @@ use tracing::info;
 
 use aura_core::*;
 use aura_store::RocksStore;
-
-use crate::error::GitHubError;
-use crate::OrgService;
+use aura_orgs::OrgService;
 
 #[derive(Debug, Serialize)]
 struct JwtClaims {
@@ -68,20 +69,27 @@ impl GitHubService {
     }
 
     fn load_app_config(&self) -> Result<(String, String, String), GitHubError> {
-        let app_id = self.get_setting_string("github_app_id")
-            .or_else(|_| std::env::var("GITHUB_APP_ID").map_err(|_| {
-                GitHubError::NotConfigured("github_app_id not set".into())
-            }))?;
+        let app_id = self
+            .get_setting_string("github_app_id")
+            .or_else(|_| {
+                std::env::var("GITHUB_APP_ID")
+                    .map_err(|_| GitHubError::NotConfigured("github_app_id not set".into()))
+            })?;
 
-        let private_key = self.get_setting_string("github_app_private_key")
-            .or_else(|_| std::env::var("GITHUB_APP_PRIVATE_KEY").map_err(|_| {
-                GitHubError::NotConfigured("github_app_private_key not set".into())
-            }))?;
+        let private_key = self
+            .get_setting_string("github_app_private_key")
+            .or_else(|_| {
+                std::env::var("GITHUB_APP_PRIVATE_KEY").map_err(|_| {
+                    GitHubError::NotConfigured("github_app_private_key not set".into())
+                })
+            })?;
 
-        let app_slug = self.get_setting_string("github_app_slug")
-            .or_else(|_| std::env::var("GITHUB_APP_SLUG").map_err(|_| {
-                GitHubError::NotConfigured("github_app_slug not set".into())
-            }))?;
+        let app_slug = self
+            .get_setting_string("github_app_slug")
+            .or_else(|_| {
+                std::env::var("GITHUB_APP_SLUG")
+                    .map_err(|_| GitHubError::NotConfigured("github_app_slug not set".into()))
+            })?;
 
         Ok((app_id, private_key, app_slug))
     }
@@ -91,7 +99,11 @@ impl GitHubService {
         Ok(String::from_utf8_lossy(&bytes).to_string())
     }
 
-    fn generate_app_jwt(&self, app_id: &str, private_key_pem: &str) -> Result<String, GitHubError> {
+    fn generate_app_jwt(
+        &self,
+        app_id: &str,
+        private_key_pem: &str,
+    ) -> Result<String, GitHubError> {
         let now = Utc::now();
         let claims = JwtClaims {
             iat: (now - Duration::seconds(60)).timestamp(),
@@ -184,8 +196,11 @@ impl GitHubService {
             "GitHub App installed"
         );
 
-        let install_token = self.get_installation_token(installation_id, &app_jwt).await?;
-        self.fetch_and_store_repos(&integration, &install_token).await?;
+        let install_token = self
+            .get_installation_token(installation_id, &app_jwt)
+            .await?;
+        self.fetch_and_store_repos(&integration, &install_token)
+            .await?;
 
         Ok(integration)
     }
@@ -253,7 +268,10 @@ impl GitHubService {
         Ok(all_repos)
     }
 
-    pub fn list_integrations(&self, org_id: &OrgId) -> Result<Vec<GitHubIntegration>, GitHubError> {
+    pub fn list_integrations(
+        &self,
+        org_id: &OrgId,
+    ) -> Result<Vec<GitHubIntegration>, GitHubError> {
         Ok(self.store.list_github_integrations(org_id)?)
     }
 
@@ -287,7 +305,8 @@ impl GitHubService {
         self.store
             .delete_github_repos_by_integration(integration_id)?;
 
-        self.fetch_and_store_repos(&integration, &install_token).await
+        self.fetch_and_store_repos(&integration, &install_token)
+            .await
     }
 
     pub fn disconnect_integration(
@@ -296,7 +315,8 @@ impl GitHubService {
         actor_user_id: &str,
         integration_id: &GitHubIntegrationId,
     ) -> Result<(), GitHubError> {
-        self.org_service.require_admin_or_owner_pub(org_id, actor_user_id)?;
+        self.org_service
+            .require_admin_or_owner_pub(org_id, actor_user_id)?;
 
         self.store
             .get_github_integration(org_id, integration_id)

@@ -9,14 +9,14 @@ use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
 use crate::chat_tool_executor::ChatToolExecutor;
-use crate::chat_tools::agent_tool_definitions;
-use crate::claude::{
+use aura_tools::agent_tool_definitions;
+use aura_claude::{
     ClaudeClient, ClaudeStreamEvent, ContentBlock, RichMessage, ToolDefinition,
 };
 use crate::error::ChatError;
-use crate::project::ProjectService;
-use crate::spec_gen::{SpecGenerationService, SpecStreamEvent};
-use crate::task::TaskService;
+use aura_projects::ProjectService;
+use aura_specs::{SpecGenerationService, SpecStreamEvent};
+use aura_tasks::TaskService;
 
 const CHAT_MAX_TOKENS: u32 = 16384;
 
@@ -53,7 +53,6 @@ fn build_chat_system_prompt(project: &aura_core::Project) -> String {
 
     let folder = std::path::Path::new(&project.linked_folder_path);
     if folder.is_dir() {
-        // Detect tech stack from marker files
         let mut stack: Vec<&str> = Vec::new();
         let markers: &[(&str, &str)] = &[
             ("Cargo.toml", "Rust"),
@@ -76,7 +75,6 @@ fn build_chat_system_prompt(project: &aura_core::Project) -> String {
             prompt.push_str(&format!("- **Tech Stack**: {}\n", stack.join(", ")));
         }
 
-        // Top-level directory listing (1 level deep)
         if let Ok(entries) = std::fs::read_dir(folder) {
             let mut items: Vec<String> = Vec::new();
             for entry in entries.flatten() {
@@ -100,7 +98,6 @@ fn build_chat_system_prompt(project: &aura_core::Project) -> String {
             }
         }
 
-        // Key config file previews (first 30 lines, max ~2000 chars total)
         let config_files: &[&str] = &[
             "Cargo.toml", "package.json", "tsconfig.json", "pyproject.toml",
         ];
@@ -373,12 +370,12 @@ impl ChatService {
                         .collect();
                     RichMessage {
                         role: role.to_string(),
-                        content: crate::claude::MessageContent::Blocks(content_blocks),
+                        content: aura_claude::MessageContent::Blocks(content_blocks),
                     }
                 } else {
                     RichMessage {
                         role: role.to_string(),
-                        content: crate::claude::MessageContent::Text(m.content.clone()),
+                        content: aura_claude::MessageContent::Text(m.content.clone()),
                     }
                 }
             })
@@ -401,7 +398,6 @@ impl ChatService {
         let mut final_text = String::new();
 
         for iteration in 0..max_iters {
-            // Each iteration: call Claude with tools, handle response
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
             let client = self.claude_client.clone();
@@ -423,9 +419,8 @@ impl ChatService {
                     .await
             });
 
-            // Collect events from the stream
             let mut iter_text = String::new();
-            let mut iter_tool_calls: Vec<crate::claude::ToolCall> = Vec::new();
+            let mut iter_tool_calls: Vec<aura_claude::ToolCall> = Vec::new();
 
             while let Some(evt) = claude_rx.recv().await {
                 match evt {
@@ -439,7 +434,7 @@ impl ChatService {
                             name: name.clone(),
                             input: input.clone(),
                         });
-                        iter_tool_calls.push(crate::claude::ToolCall { id, name, input });
+                        iter_tool_calls.push(aura_claude::ToolCall { id, name, input });
                     }
                     ClaudeStreamEvent::ThinkingDelta(_) => {}
                     ClaudeStreamEvent::Done { stop_reason, .. } => {
@@ -471,13 +466,11 @@ impl ChatService {
 
             total_text.push_str(&iter_text);
 
-            // If Claude finished with end_turn (no tool calls), we're done
             if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
                 final_text = iter_text;
                 break;
             }
 
-            // Build the assistant message with both text and tool_use blocks
             let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
             let mut assistant_persist_blocks: Vec<ChatContentBlock> = Vec::new();
             if !iter_text.is_empty() {
@@ -515,7 +508,6 @@ impl ChatService {
                 error!(%project_id, error = %e, "Failed to persist assistant tool-use message");
             }
 
-            // Execute tool calls in parallel
             let tool_futures: Vec<_> = iter_tool_calls.iter().map(|tc| {
                 executor.execute(project_id, &tc.name, tc.input.clone())
             }).collect();
@@ -565,8 +557,6 @@ impl ChatService {
             }
         }
 
-        // Save the final assistant text (only from the last non-tool-use iteration;
-        // intermediate tool-use rounds were already persisted above).
         if !final_text.is_empty() {
             let assistant_reply = final_text.clone();
             let assistant_msg = ChatMessage {
@@ -609,9 +599,9 @@ impl ChatService {
         system_prompt: &str,
         messages: Vec<RichMessage>,
     ) -> Vec<RichMessage> {
-        use crate::claude::estimate_message_tokens;
+        use aura_claude::estimate_message_tokens;
 
-        let system_tokens = crate::claude::estimate_tokens(system_prompt);
+        let system_tokens = aura_claude::estimate_tokens(system_prompt);
         let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
         let total = system_tokens + total_msg_tokens;
 
@@ -636,8 +626,8 @@ impl ChatService {
         for msg in old_messages {
             let role = &msg.role;
             let text = match &msg.content {
-                crate::claude::MessageContent::Text(t) => t.clone(),
-                crate::claude::MessageContent::Blocks(blocks) => {
+                aura_claude::MessageContent::Text(t) => t.clone(),
+                aura_claude::MessageContent::Blocks(blocks) => {
                     blocks.iter().map(|b| match b {
                         ContentBlock::Text { text } => text.clone(),
                         ContentBlock::ToolUse { name, .. } => format!("[Tool call: {name}]"),
@@ -681,7 +671,7 @@ impl ChatService {
     }
 
     // -----------------------------------------------------------------------
-    // Title generation (unchanged)
+    // Title generation
     // -----------------------------------------------------------------------
 
     async fn maybe_generate_title(
@@ -737,7 +727,7 @@ impl ChatService {
     }
 
     // -----------------------------------------------------------------------
-    // Spec generation (unchanged)
+    // Spec generation
     // -----------------------------------------------------------------------
 
     async fn handle_generate_specs(

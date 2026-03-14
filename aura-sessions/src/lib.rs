@@ -1,14 +1,15 @@
+mod error;
+pub use error::SessionError;
+
 use std::sync::Arc;
 
 use chrono::Utc;
 
 use aura_core::*;
 use aura_store::RocksStore;
+use aura_claude::ClaudeClient;
 
-use crate::claude::ClaudeClient;
-use crate::error::SessionError;
-
-pub(crate) const SUMMARY_SYSTEM_PROMPT: &str = r#"
+pub const SUMMARY_SYSTEM_PROMPT: &str = r#"
 You are a context summarizer. Given the conversation history of an AI coding
 agent working on a software project, produce a concise summary that captures:
 
@@ -85,8 +86,10 @@ impl SessionService {
         output_tokens: u64,
     ) -> Result<Session, SessionError> {
         let mut session = self.get_session(project_id, agent_id, session_id)?;
-        let turn_usage = (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
-        session.context_usage_estimate = (session.context_usage_estimate + turn_usage).min(1.0);
+        let turn_usage =
+            (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
+        session.context_usage_estimate =
+            (session.context_usage_estimate + turn_usage).min(1.0);
         session.total_input_tokens += input_tokens;
         session.total_output_tokens += output_tokens;
         self.store.put_session(&session)?;
@@ -169,7 +172,10 @@ impl SessionService {
     /// Mark any leftover `Active` sessions for this project as `Completed`.
     /// Called on engine startup to clean up sessions orphaned by crashes or
     /// restarts.
-    pub fn close_stale_sessions(&self, project_id: &ProjectId) -> Result<Vec<Session>, SessionError> {
+    pub fn close_stale_sessions(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<Vec<Session>, SessionError> {
         let all = self.store.list_sessions_by_project(project_id)?;
         let mut closed = Vec::new();
         for mut session in all {

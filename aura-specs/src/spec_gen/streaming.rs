@@ -4,7 +4,7 @@ use tracing::{error, info};
 
 use aura_core::*;
 
-use crate::claude::ClaudeStreamEvent;
+use aura_claude::ClaudeStreamEvent;
 
 use super::parser::{IncrementalSpecParser, RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
 use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, MAX_TOKENS};

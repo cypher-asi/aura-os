@@ -1,3 +1,6 @@
+mod error;
+pub use error::TaskError;
+
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
@@ -5,9 +8,13 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use aura_core::*;
-use aura_store::RocksStore;
+use aura_settings::SettingsService;
+use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
+use aura_claude::ClaudeClient;
 
-use crate::error::TaskError;
+// ---------------------------------------------------------------------------
+// ProjectProgress
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectProgress {
@@ -29,13 +36,16 @@ pub struct ProjectProgress {
     pub total_messages: u64,
     pub total_sessions: u64,
     pub total_tests: u64,
-    // Quality signals
     pub total_parse_retries: u32,
     pub total_build_fix_attempts: u32,
     pub build_verify_failures: usize,
     pub execution_failures: usize,
     pub file_ops_failures: usize,
 }
+
+// ---------------------------------------------------------------------------
+// TaskService
+// ---------------------------------------------------------------------------
 
 pub struct TaskService {
     store: Arc<RocksStore>,
@@ -475,7 +485,7 @@ impl TaskService {
         let task_input: u64 = tasks.iter().map(|t| t.total_input_tokens).sum();
         let task_output: u64 = tasks.iter().map(|t| t.total_output_tokens).sum();
 
-        let pricing = crate::pricing::PricingService::new(self.store.clone());
+        let pricing = aura_pricing::PricingService::new(self.store.clone());
         let fee_schedule = pricing.get_fee_schedule();
 
         let total_parse_retries: u32 = tasks
@@ -539,8 +549,8 @@ impl TaskService {
             total_tokens: task_input + task_output,
             total_cost: tasks.iter().map(|t| {
                 let model = t.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp_rate, out_rate) = crate::pricing::lookup_rate_in(&fee_schedule, model);
-                crate::pricing::compute_cost_with_rates(
+                let (inp_rate, out_rate) = aura_pricing::lookup_rate_in(&fee_schedule, model);
+                aura_pricing::compute_cost_with_rates(
                     t.total_input_tokens, t.total_output_tokens, inp_rate, out_rate,
                 )
             }).sum(),
@@ -557,5 +567,228 @@ impl TaskService {
             execution_failures,
             file_ops_failures,
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TaskExtractionService
+// ---------------------------------------------------------------------------
+
+const EXTRACTION_MAX_TOKENS: u32 = 8192;
+
+pub(crate) const TASK_EXTRACTION_SYSTEM_PROMPT: &str = r#"
+You are a software implementation planner. Given a specification document,
+extract concrete implementation tasks.
+
+Respond with a JSON array. Each element has:
+- "title": short task title (imperative form, e.g., "Implement X")
+- "description": detailed description of what to implement and how to verify
+- "depends_on": array of task titles this task depends on (empty if none)
+
+Order tasks from most foundational to most dependent.
+Respond ONLY with the JSON array, no other text.
+"#;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct RawTaskOutput {
+    pub title: String,
+    pub description: String,
+    pub depends_on: Vec<String>,
+}
+
+pub struct TaskExtractionService {
+    store: Arc<RocksStore>,
+    settings: Arc<SettingsService>,
+    claude_client: Arc<ClaudeClient>,
+}
+
+impl TaskExtractionService {
+    pub fn new(
+        store: Arc<RocksStore>,
+        settings: Arc<SettingsService>,
+        claude_client: Arc<ClaudeClient>,
+    ) -> Self {
+        Self {
+            store,
+            settings,
+            claude_client,
+        }
+    }
+
+    async fn extract_tasks_from_spec(
+        &self,
+        spec: &Spec,
+        api_key: &str,
+    ) -> Result<Vec<(RawTaskOutput, u32)>, TaskError> {
+        let response = self
+            .claude_client
+            .complete(
+                api_key,
+                TASK_EXTRACTION_SYSTEM_PROMPT,
+                &spec.markdown_contents,
+                EXTRACTION_MAX_TOKENS,
+            )
+            .await?;
+
+        let raw_tasks = Self::parse_extraction_response(&response)?;
+
+        Ok(raw_tasks
+            .into_iter()
+            .enumerate()
+            .map(|(i, raw)| (raw, i as u32))
+            .collect())
+    }
+
+    pub async fn extract_all_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
+        let mut specs = self.store.list_specs_by_project(project_id)?;
+        specs.sort_by_key(|s| s.order_index);
+
+        let api_key = self.settings.get_decrypted_api_key()?;
+
+        let mut all_raw: Vec<(RawTaskOutput, ProjectId, SpecId, u32)> = Vec::new();
+
+        for spec in &specs {
+            let raw_tasks = self.extract_tasks_from_spec(spec, &api_key).await?;
+            for (raw, order) in raw_tasks {
+                all_raw.push((raw, *project_id, spec.spec_id, order));
+            }
+        }
+
+        let now = Utc::now();
+        let mut tasks: Vec<Task> = Vec::new();
+        let mut title_to_id: HashMap<String, TaskId> = HashMap::new();
+        let mut raw_deps: Vec<Vec<String>> = Vec::new();
+
+        for (raw, pid, sid, order) in &all_raw {
+            let task_id = TaskId::new();
+            title_to_id.insert(raw.title.clone(), task_id);
+            raw_deps.push(raw.depends_on.clone());
+
+            tasks.push(Task {
+                task_id,
+                project_id: *pid,
+                spec_id: *sid,
+                title: raw.title.clone(),
+                description: raw.description.clone(),
+                status: TaskStatus::Pending,
+                order_index: *order,
+                dependency_ids: vec![],
+                parent_task_id: None,
+                assigned_agent_id: None,
+                session_id: None,
+                execution_notes: String::new(),
+                files_changed: vec![],
+                live_output: String::new(),
+                build_steps: vec![],
+                test_steps: vec![],
+                user_id: None,
+                model: None,
+                total_input_tokens: 0,
+                total_output_tokens: 0,
+                created_at: now,
+                updated_at: now,
+            });
+        }
+
+        for (i, dep_titles) in raw_deps.iter().enumerate() {
+            let mut resolved_deps = Vec::new();
+            for title in dep_titles {
+                if let Some(&dep_id) = title_to_id.get(title) {
+                    resolved_deps.push(dep_id);
+                }
+            }
+            tasks[i].dependency_ids = resolved_deps;
+        }
+
+        // Auto-chain tasks within each spec: if task[i] has no dependencies
+        // and the previous task in the same spec exists, make it depend on
+        // that predecessor.
+        {
+            let mut last_in_spec: HashMap<SpecId, TaskId> = HashMap::new();
+            for task in &mut tasks {
+                if let Some(&prev_id) = last_in_spec.get(&task.spec_id) {
+                    if task.dependency_ids.is_empty() {
+                        task.dependency_ids.push(prev_id);
+                    }
+                }
+                last_in_spec.insert(task.spec_id, task.task_id);
+            }
+        }
+
+        for task in &mut tasks {
+            if task.dependency_ids.is_empty() {
+                task.status = TaskStatus::Ready;
+            }
+        }
+
+        TaskService::detect_cycles(&tasks)?;
+
+        let existing_tasks = self.store.list_tasks_by_project(project_id)?;
+        let mut ops: Vec<BatchOp> = Vec::new();
+
+        for old_task in &existing_tasks {
+            ops.push(BatchOp::Delete {
+                cf: ColumnFamilyName::Tasks,
+                key: format!(
+                    "{}:{}:{}",
+                    old_task.project_id, old_task.spec_id, old_task.task_id
+                ),
+            });
+        }
+
+        for task in &tasks {
+            ops.push(BatchOp::Put {
+                cf: ColumnFamilyName::Tasks,
+                key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
+                value: serde_json::to_vec(task)
+                    .map_err(|e| TaskError::ParseError(e.to_string()))?,
+            });
+        }
+
+        self.store.write_batch(ops)?;
+
+        Ok(tasks)
+    }
+
+    fn parse_extraction_response(response: &str) -> Result<Vec<RawTaskOutput>, TaskError> {
+        let trimmed = response.trim();
+
+        if let Ok(tasks) = serde_json::from_str::<Vec<RawTaskOutput>>(trimmed) {
+            if tasks.is_empty() {
+                return Err(TaskError::ParseError(
+                    "Claude returned an empty task array".into(),
+                ));
+            }
+            return Ok(tasks);
+        }
+
+        if let Some(json_str) = Self::extract_fenced_json(trimmed) {
+            if let Ok(tasks) = serde_json::from_str::<Vec<RawTaskOutput>>(&json_str) {
+                if tasks.is_empty() {
+                    return Err(TaskError::ParseError(
+                        "Claude returned an empty task array".into(),
+                    ));
+                }
+                return Ok(tasks);
+            }
+        }
+
+        Err(TaskError::ParseError(format!(
+            "failed to parse task extraction response: {}",
+            &trimmed[..trimmed.len().min(500)]
+        )))
+    }
+
+    fn extract_fenced_json(text: &str) -> Option<String> {
+        let start_markers = ["```json", "```"];
+        for marker in &start_markers {
+            if let Some(start) = text.find(marker) {
+                let after_marker = start + marker.len();
+                if let Some(end) = text[after_marker..].find("```") {
+                    return Some(text[after_marker..after_marker + end].trim().to_string());
+                }
+            }
+        }
+        None
     }
 }

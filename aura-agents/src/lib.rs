@@ -1,11 +1,12 @@
+mod error;
+pub use error::AgentError;
+
 use std::sync::Arc;
 
 use chrono::Utc;
 
 use aura_core::*;
 use aura_store::RocksStore;
-
-use crate::error::AgentError;
 
 pub struct AgentService {
     store: Arc<RocksStore>,

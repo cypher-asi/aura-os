@@ -11,7 +11,7 @@ use aura_core::*;
 use aura_settings::SettingsService;
 use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
 
-use crate::claude::ClaudeClient;
+use aura_claude::ClaudeClient;
 use crate::error::SpecGenError;
 
 use parser::{RawSpecOutput, parse_claude_response, raw_to_specs};

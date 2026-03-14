@@ -8,8 +8,8 @@ use tracing::info;
 use aura_core::*;
 use aura_store::RocksStore;
 
-use crate::project::{ProjectService, UpdateProjectInput};
-use crate::task::TaskService;
+use aura_projects::{ProjectService, UpdateProjectInput};
+use aura_tasks::TaskService;
 
 const MAX_TOOL_ITERATIONS: usize = 25;
 
@@ -198,7 +198,6 @@ impl ChatToolExecutor {
             Ok(id) => id,
             Err(e) => return e,
         };
-        // Delete tasks under this spec first
         if let Ok(tasks) = self.store.list_tasks_by_spec(project_id, &spec_id) {
             for t in &tasks {
                 let _ = self.store.delete_task(project_id, &spec_id, &t.task_id);
@@ -470,7 +469,6 @@ impl ChatToolExecutor {
         let base = Path::new(&project.linked_folder_path);
         let target = base.join(rel);
 
-        // Lexical normalization to prevent path traversal
         let norm_base = lexical_normalize(base);
         let norm_target = lexical_normalize(&target);
         if !norm_target.starts_with(&norm_base) {
@@ -536,7 +534,6 @@ impl ChatToolExecutor {
         let mut items: Vec<Value> = Vec::new();
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
-            // Skip hidden/build directories
             if name.starts_with('.') || name == "node_modules" || name == "target" || name == "__pycache__" {
                 continue;
             }
