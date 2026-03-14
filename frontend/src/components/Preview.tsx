@@ -389,8 +389,6 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
   const [editorPath, setEditorPath] = useState<string | null>(null);
-  const streamRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef(true);
   const hydratedRef = useRef<string | null>(null);
 
   const streamBuf = taskOutput.text;
@@ -472,18 +470,6 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       if (res.output) seedTaskOutput(task.task_id, res.output);
     }).catch(() => {});
   }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
-
-  useEffect(() => {
-    if (autoScrollRef.current && streamRef.current) {
-      streamRef.current.scrollTop = streamRef.current.scrollHeight;
-    }
-  }, [streamBuf]);
-
-  const handleStreamScroll = useCallback(() => {
-    const el = streamRef.current;
-    if (!el) return;
-    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-  }, []);
 
   const hasOutput = isActive || isTerminal;
   const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
@@ -737,7 +723,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       {showOutput && (
         <GroupCollapsible label={isActive ? "Live Output" : "Output"} defaultOpen className={styles.section}>
           <div className={styles.liveOutputSection}>
-            <div ref={streamRef} className={styles.activityList} onScroll={handleStreamScroll}>
+            <div className={styles.activityList}>
               {activity.map((item) => (
                 <div key={item.id} className={styles.activityItem} data-status={item.status}>
                   <span className={styles.activityIcon} data-status={item.status}>
@@ -939,9 +925,57 @@ function previewTitle(item: PreviewItem): string {
 export function Preview() {
   const { previewItem, closePreview, canGoBack, goBackPreview } = useSidekick();
   const lastItem = useRef<PreviewItem | null>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
 
   if (previewItem) lastItem.current = previewItem;
   const displayItem = previewItem ?? lastItem.current;
+
+  const resetKey = displayItem
+    ? displayItem.kind === "task" ? displayItem.task.task_id
+    : displayItem.kind === "sprint" ? displayItem.sprint.sprint_id
+    : displayItem.kind === "spec" ? displayItem.spec.spec_id
+    : displayItem.kind === "session" ? displayItem.session.session_id
+    : null
+    : null;
+
+  useEffect(() => {
+    autoScrollRef.current = true;
+  }, [resetKey]);
+
+  // Observe content mutations on previewBody but scroll the Sidebar's
+  // .content wrapper (the actual overflow container one level up).
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const scrollContainer = el.parentElement;
+    if (!scrollContainer) return;
+
+    const scrollIfNeeded = () => {
+      if (autoScrollRef.current) {
+        requestAnimationFrame(() => {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        });
+      }
+    };
+
+    const onScroll = () => {
+      const { scrollHeight, scrollTop, clientHeight } = scrollContainer;
+      autoScrollRef.current = scrollHeight - scrollTop - clientHeight < 40;
+    };
+
+    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
+
+    const observer = new MutationObserver(scrollIfNeeded);
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+
+    scrollIfNeeded();
+
+    return () => {
+      observer.disconnect();
+      scrollContainer.removeEventListener("scroll", onScroll);
+    };
+  }, [resetKey]);
 
   return (
     <Sidebar
@@ -972,7 +1006,7 @@ export function Preview() {
         ) : undefined
       }
     >
-      <div className={styles.previewBody}>
+      <div ref={bodyRef} className={styles.previewBody}>
         {displayItem?.kind === "sprint" && <SprintPreview sprint={displayItem.sprint} />}
         {displayItem?.kind === "spec" && <SpecPreview spec={displayItem.spec} />}
         {displayItem?.kind === "task" && <TaskPreview task={displayItem.task} />}

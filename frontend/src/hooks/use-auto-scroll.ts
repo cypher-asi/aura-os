@@ -1,17 +1,41 @@
 import { useEffect, useRef, useCallback } from "react";
 
+/**
+ * Auto-scrolls a container to the bottom whenever its content changes,
+ * but only if the user is already near the bottom. Uses MutationObserver
+ * to detect DOM changes rather than relying on specific state dependencies.
+ */
 export function useAutoScroll(
   ref: React.RefObject<HTMLElement | null>,
-  deps: unknown[],
+  resetKey?: unknown,
 ): { handleScroll: () => void } {
   const autoScrollRef = useRef(true);
 
   useEffect(() => {
-    if (autoScrollRef.current && ref.current) {
-      ref.current.scrollTop = ref.current.scrollHeight;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+    autoScrollRef.current = true;
+  }, [resetKey]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const scrollIfNeeded = () => {
+      if (autoScrollRef.current && el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    };
+
+    const observer = new MutationObserver(scrollIfNeeded);
+    observer.observe(el, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    scrollIfNeeded();
+
+    return () => observer.disconnect();
+  }, [ref, resetKey]);
 
   const handleScroll = useCallback(() => {
     const el = ref.current;

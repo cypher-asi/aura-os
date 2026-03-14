@@ -4,6 +4,7 @@ import { Text, Button } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
 import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
+import { useAutoScroll } from "../hooks/use-auto-scroll";
 import { useProjectContext } from "../context/ProjectContext";
 import { setLastChat } from "../utils/storage";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
@@ -36,14 +37,8 @@ export function ChatView() {
   const [selectedModel, setSelectedModel] = useState("opus-4.6");
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef(true);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
-
-  const scrollToBottom = useCallback(() => {
-    if (autoScrollRef.current && messageAreaRef.current) {
-      messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
-    }
-  }, []);
+  const { handleScroll } = useAutoScroll(messageAreaRef, chatSessionId);
 
   useEffect(() => {
     if (projectId && chatSessionId) {
@@ -72,21 +67,10 @@ export function ChatView() {
   }, [projectId, chatSessionId, resetMessages]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamingText, scrollToBottom]);
-
-  useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [rafRef]);
-
-  const handleScroll = () => {
-    const el = messageAreaRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    autoScrollRef.current = atBottom;
-  };
 
   const handleSend = useCallback(
     (content: string, action?: string) => {
