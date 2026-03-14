@@ -399,6 +399,8 @@ impl ChatService {
         let max_iters = ChatToolExecutor::max_iterations();
         let mut total_text = String::new();
         let mut final_text = String::new();
+        let mut accumulated_input_tokens: u64 = 0;
+        let mut accumulated_output_tokens: u64 = 0;
 
         for iteration in 0..max_iters {
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -467,6 +469,8 @@ impl ChatService {
                 }
             };
 
+            accumulated_input_tokens += stream_result.input_tokens;
+            accumulated_output_tokens += stream_result.output_tokens;
             total_text.push_str(&iter_text);
 
             if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
@@ -557,6 +561,20 @@ impl ChatService {
                     max_iters,
                     "Tool-use loop hit max iterations, stopping"
                 );
+            }
+        }
+
+        if accumulated_input_tokens > 0 || accumulated_output_tokens > 0 {
+            if let Ok(mut session) = self.store.get_chat_session(project_id, chat_session_id) {
+                session.total_input_tokens += accumulated_input_tokens;
+                session.total_output_tokens += accumulated_output_tokens;
+                if session.model.is_none() {
+                    session.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                }
+                session.updated_at = Utc::now();
+                if let Err(e) = self.store.put_chat_session(&session) {
+                    error!(%project_id, %chat_session_id, error = %e, "Failed to persist chat session tokens");
+                }
             }
         }
 
