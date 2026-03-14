@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
@@ -474,6 +475,11 @@ impl DevLoopEngine {
             .map(|p| p.linked_folder_path.clone())
             .unwrap_or_default();
 
+        let baseline_test_failures = {
+            let project = self.project_service.get_project(&project_id)?;
+            self.capture_test_baseline(&project).await
+        };
+
         let result = if let Some(cmd) = Self::extract_shell_command(&task) {
             let project = self.project_service.get_project(&project_id)?;
             self.execute_shell_task(&project, &task, &cmd).await
@@ -556,6 +562,7 @@ impl DevLoopEngine {
                     let (_, build_passed, build_attempts, _dup_bailouts, fix_inp, fix_out) = self
                         .verify_and_fix_build(
                             &project, &task, &session_ref, &api_key, &execution,
+                            &baseline_test_failures,
                         )
                         .await?;
                     let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
@@ -932,6 +939,11 @@ impl DevLoopEngine {
                 codebase_file_count: None,
             });
 
+            let baseline_test_failures = {
+                let project = self.project_service.get_project(&project_id)?;
+                self.capture_test_baseline(&project).await
+            };
+
             let task_start = Instant::now();
             let result = if let Some(cmd) = Self::extract_shell_command(&task) {
                 let project = self.project_service.get_project(&project_id)?;
@@ -1047,6 +1059,7 @@ impl DevLoopEngine {
                         let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out) = self
                             .verify_and_fix_build(
                                 &project, &task, &session, &api_key, &execution,
+                                &baseline_test_failures,
                             )
                             .await?;
                         let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
@@ -1440,10 +1453,12 @@ impl DevLoopEngine {
                             files_already_applied: false,
                         };
                         let mut test_fix_ops = Vec::new();
+                        let no_baseline = HashSet::new();
                         let (test_passed, _test_inp, _test_out) = self.run_and_handle_tests(
                             project, task, &dummy_session,
                             &self.settings.get_decrypted_api_key().unwrap_or_default(),
                             &dummy_exec, test_cmd, base_path, attempt, &mut test_fix_ops,
+                            &no_baseline,
                         ).await?;
                         if !test_passed {
                             if attempt < max_attempts {
@@ -1991,6 +2006,44 @@ impl DevLoopEngine {
         }
     }
 
+    /// Run the test suite and return the names of currently-failing tests.
+    ///
+    /// Used before task execution to establish a baseline so that
+    /// `verify_and_fix_build` can distinguish pre-existing failures from
+    /// regressions introduced by the current task.
+    async fn capture_test_baseline(&self, project: &Project) -> HashSet<String> {
+        let test_command = match project.test_command.as_ref().filter(|c| !c.trim().is_empty()) {
+            Some(cmd) => cmd,
+            None => return HashSet::new(),
+        };
+        let base_path = Path::new(&project.linked_folder_path);
+        match build_verify::run_build_command(base_path, test_command).await {
+            Ok(result) => {
+                let (tests, _) = build_verify::parse_test_output(
+                    &result.stdout, &result.stderr, result.success,
+                );
+                let failures: HashSet<String> = tests
+                    .into_iter()
+                    .filter(|t| t.status == "failed")
+                    .map(|t| t.name)
+                    .collect();
+                if !failures.is_empty() {
+                    info!(
+                        count = failures.len(),
+                        tests = ?failures,
+                        "captured {} pre-existing test failure(s) as baseline",
+                        failures.len(),
+                    );
+                }
+                failures
+            }
+            Err(e) => {
+                warn!(error = %e, "baseline test capture failed, assuming no baseline");
+                HashSet::new()
+            }
+        }
+    }
+
     /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens).
     async fn verify_and_fix_build(
         &self,
@@ -1999,6 +2052,7 @@ impl DevLoopEngine {
         session: &Session,
         api_key: &str,
         initial_execution: &TaskExecution,
+        baseline_test_failures: &HashSet<String>,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
         let build_command = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
@@ -2058,6 +2112,7 @@ impl DevLoopEngine {
                     let (test_result, test_inp, test_out) = self.run_and_handle_tests(
                         project, task, session, api_key, initial_execution,
                         test_cmd, base_path, attempt, &mut all_fix_ops,
+                        baseline_test_failures,
                     ).await?;
                     fix_input_tokens += test_inp;
                     fix_output_tokens += test_out;
@@ -2262,6 +2317,7 @@ impl DevLoopEngine {
         base_path: &Path,
         attempt: u32,
         all_fix_ops: &mut Vec<FileOp>,
+        baseline_test_failures: &HashSet<String>,
     ) -> Result<(bool, u64, u64), EngineError> {
         self.emit(EngineEvent::TestVerificationStarted {
             task_id: task.task_id,
@@ -2303,6 +2359,54 @@ impl DevLoopEngine {
                 summary: Some(summary),
             });
             return Ok((true, 0, 0));
+        }
+
+        if !baseline_test_failures.is_empty() {
+            let current_failures: HashSet<String> = tests
+                .iter()
+                .filter(|t| t.status == "failed")
+                .map(|t| t.name.clone())
+                .collect();
+            let new_failures: Vec<&String> = current_failures
+                .iter()
+                .filter(|name| !baseline_test_failures.contains(*name))
+                .collect();
+            if new_failures.is_empty() {
+                info!(
+                    task_id = %task.task_id,
+                    pre_existing = current_failures.len(),
+                    "all test failures are pre-existing (baseline), treating as passed"
+                );
+                let adjusted_summary = format!(
+                    "{summary} ({} pre-existing, ignored)",
+                    current_failures.len()
+                );
+                self.emit(EngineEvent::TestVerificationPassed {
+                    task_id: task.task_id,
+                    command: test_command.to_string(),
+                    stdout: test_result.stdout.clone(),
+                    tests: tests.clone(),
+                    summary: adjusted_summary.clone(),
+                    duration_ms: Some(test_duration_ms),
+                });
+                self.persist_test_step(task, TestStepRecord {
+                    kind: "passed_with_baseline_failures".into(),
+                    command: Some(test_command.to_string()),
+                    stderr: Some(test_result.stderr),
+                    stdout: Some(test_result.stdout),
+                    attempt: Some(attempt),
+                    tests,
+                    summary: Some(adjusted_summary),
+                });
+                return Ok((true, 0, 0));
+            }
+            info!(
+                task_id = %task.task_id,
+                new_failures = ?new_failures,
+                pre_existing = current_failures.len() - new_failures.len(),
+                "found {} new test failure(s) beyond baseline",
+                new_failures.len()
+            );
         }
 
         self.emit(EngineEvent::TestVerificationFailed {

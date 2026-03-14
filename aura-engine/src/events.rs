@@ -21,6 +21,8 @@ pub enum EngineEvent {
         agent_id: AgentId,
     },
     TaskStarted {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         task_title: String,
         session_id: SessionId,
@@ -32,6 +34,8 @@ pub enum EngineEvent {
         codebase_file_count: Option<u32>,
     },
     TaskCompleted {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         execution_notes: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -54,6 +58,8 @@ pub enum EngineEvent {
         model: Option<String>,
     },
     TaskFailed {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         reason: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,17 +74,25 @@ pub enum EngineEvent {
         model: Option<String>,
     },
     TaskRetrying {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         attempt: u32,
         reason: String,
     },
     TaskBecameReady {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
     },
     FollowUpTaskCreated {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
     },
     SessionRolledOver {
+        project_id: ProjectId,
+        agent_id: AgentId,
         old_session_id: SessionId,
         new_session_id: SessionId,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -87,12 +101,18 @@ pub enum EngineEvent {
         context_usage_pct: Option<f64>,
     },
     LoopPaused {
+        project_id: ProjectId,
+        agent_id: AgentId,
         completed_count: usize,
     },
     LoopStopped {
+        project_id: ProjectId,
+        agent_id: AgentId,
         completed_count: usize,
     },
     LoopFinished {
+        project_id: ProjectId,
+        agent_id: AgentId,
         outcome: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         total_duration_ms: Option<u64>,
@@ -116,14 +136,20 @@ pub enum EngineEvent {
         duplicate_error_bailouts: Option<u32>,
     },
     LoopIterationSummary {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         phase_timings: Vec<PhaseTimingEntry>,
     },
     TaskOutputDelta {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         delta: String,
     },
     FileOpsApplied {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         files_written: usize,
         files_deleted: usize,
@@ -154,14 +180,20 @@ pub enum EngineEvent {
     },
 
     BuildVerificationSkipped {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         reason: String,
     },
     BuildVerificationStarted {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
     },
     BuildVerificationPassed {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -169,6 +201,8 @@ pub enum EngineEvent {
         duration_ms: Option<u64>,
     },
     BuildVerificationFailed {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -180,15 +214,21 @@ pub enum EngineEvent {
         error_hash: Option<String>,
     },
     BuildFixAttempt {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         attempt: u32,
     },
 
     TestVerificationStarted {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
     },
     TestVerificationPassed {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -198,6 +238,8 @@ pub enum EngineEvent {
         duration_ms: Option<u64>,
     },
     TestVerificationFailed {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -209,6 +251,8 @@ pub enum EngineEvent {
         duration_ms: Option<u64>,
     },
     TestFixAttempt {
+        project_id: ProjectId,
+        agent_id: AgentId,
         task_id: TaskId,
         attempt: u32,
     },
