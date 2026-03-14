@@ -421,7 +421,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
           <div className={styles.notesContent}>
             <div className={styles.markdown}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {notes || ""}
+                {toBullets(notes || "")}
               </ReactMarkdown>
             </div>
           </div>
