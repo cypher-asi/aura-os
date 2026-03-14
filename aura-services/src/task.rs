@@ -79,6 +79,30 @@ impl TaskService {
         }
     }
 
+    /// Reset a single in-progress task back to `Ready`, clearing its agent
+    /// assignment. Used when a task is interrupted by pause/stop mid-execution.
+    pub fn reset_task_to_ready(
+        &self,
+        project_id: &ProjectId,
+        spec_id: &SpecId,
+        task_id: &TaskId,
+    ) -> Result<Task, TaskError> {
+        let mut task = self
+            .store
+            .get_task(project_id, spec_id, task_id)
+            .map_err(|e| match e {
+                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
+                other => TaskError::Store(other),
+            })?;
+        Self::validate_transition(task.status, TaskStatus::Ready)?;
+        task.status = TaskStatus::Ready;
+        task.assigned_agent_id = None;
+        task.session_id = None;
+        task.updated_at = Utc::now();
+        self.store.put_task(&task)?;
+        Ok(task)
+    }
+
     /// Reset any orphaned `InProgress` tasks back to `Ready`.
     /// Called on loop start to recover from crashes or unclean shutdowns.
     pub fn reset_in_progress_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
