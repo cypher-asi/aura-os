@@ -32,16 +32,15 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   return (
     <div className={styles.container} ref={dropdownRef}>
-      <div className={styles.trigger} onClick={() => setDropdownOpen((v) => !v)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={styles.trigger}
+        onClick={() => setDropdownOpen((v) => !v)}
+      >
         <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={<ChevronDown size={12} />}
-          aria-label="Switch team"
-        />
-      </div>
+        <ChevronDown size={12} className={styles.chevron} />
+      </Button>
 
       {dropdownOpen && (
         <div className={styles.dropdown}>
