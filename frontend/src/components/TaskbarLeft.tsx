@@ -12,7 +12,7 @@ export function TaskbarLeft({ onOpenSettings, onOpenOrgSettings }: Props) {
   const { user } = useAuth();
 
   return (
-    <div className={`taskbar-section ${styles.container}`}>
+    <div className={styles.container}>
       <div className={styles.btnWrap}>
         <Button
           variant="ghost"
