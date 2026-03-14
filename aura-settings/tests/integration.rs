@@ -114,6 +114,18 @@ fn get_api_key_info_when_not_set() {
 }
 
 #[test]
+fn has_api_key_reflects_stored_state() {
+    let (store, dir) = setup();
+    let svc = SettingsService::new(store, dir.path()).unwrap();
+
+    assert!(!svc.has_api_key());
+    svc.set_api_key("sk-ant-test-key").unwrap();
+    assert!(svc.has_api_key());
+    svc.delete_api_key().unwrap();
+    assert!(!svc.has_api_key());
+}
+
+#[test]
 fn update_api_key_status() {
     let (store, dir) = setup();
     let svc = SettingsService::new(store, dir.path()).unwrap();

@@ -164,6 +164,11 @@ impl SettingsService {
         Ok(())
     }
 
+    /// Check whether an API key has been stored.
+    pub fn has_api_key(&self) -> bool {
+        self.store.get_setting(API_KEY_SETTING).is_ok()
+    }
+
     /// Get a plain-text setting.
     pub fn get_setting(&self, key: &str) -> Result<Option<String>, SettingsError> {
         match self.store.get_setting(key) {

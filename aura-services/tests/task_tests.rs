@@ -35,6 +35,8 @@ fn make_task_with(
         execution_notes: String::new(),
         files_changed: vec![],
         live_output: String::new(),
+        build_steps: vec![],
+        test_steps: vec![],
         user_id: None,
         model: None,
         total_input_tokens: 0,
@@ -71,6 +73,7 @@ fn make_project() -> Project {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
         created_at: now,
         updated_at: now,
     }
@@ -88,8 +91,10 @@ fn legal_transitions_succeed() {
         (TaskStatus::InProgress, TaskStatus::Done),
         (TaskStatus::InProgress, TaskStatus::Failed),
         (TaskStatus::InProgress, TaskStatus::Blocked),
+        (TaskStatus::InProgress, TaskStatus::Ready),
         (TaskStatus::Failed, TaskStatus::Ready),
         (TaskStatus::Blocked, TaskStatus::Ready),
+        (TaskStatus::Done, TaskStatus::Ready),
     ];
 
     for (from, to) in legal {
@@ -109,7 +114,6 @@ fn illegal_transitions_fail() {
         (TaskStatus::Ready, TaskStatus::Done),
         (TaskStatus::Ready, TaskStatus::Failed),
         (TaskStatus::Ready, TaskStatus::Blocked),
-        (TaskStatus::Done, TaskStatus::Ready),
         (TaskStatus::Done, TaskStatus::InProgress),
         (TaskStatus::Done, TaskStatus::Pending),
         (TaskStatus::Failed, TaskStatus::Done),

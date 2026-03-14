@@ -180,10 +180,12 @@ async fn project_crud() {
     let project_dir = tempfile::tempdir().unwrap();
 
     // Create
+    let org_id = OrgId::new();
     let req = json_request(
         "POST",
         "/api/projects",
         Some(serde_json::json!({
+            "org_id": org_id,
             "name": "Test Project",
             "description": "A test",
             "linked_folder_path": project_dir.path().to_string_lossy()
@@ -244,10 +246,12 @@ async fn project_not_found() {
 async fn project_create_invalid_name() {
     let (app, _, _db, _data) = build_test_app();
 
+    let org_id = OrgId::new();
     let req = json_request(
         "POST",
         "/api/projects",
         Some(serde_json::json!({
+            "org_id": org_id,
             "name": "",
             "description": "desc",
             "linked_folder_path": "."
@@ -282,6 +286,7 @@ async fn task_list_and_progress() {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
         created_at: now,
         updated_at: now,
     };
@@ -315,6 +320,8 @@ async fn task_list_and_progress() {
         execution_notes: String::new(),
         files_changed: vec![],
         live_output: String::new(),
+        build_steps: vec![],
+        test_steps: vec![],
         user_id: None,
         model: None,
         total_input_tokens: 0,
@@ -362,6 +369,7 @@ async fn agent_list_empty() {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
         created_at: now,
         updated_at: now,
     };

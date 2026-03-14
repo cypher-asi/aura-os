@@ -256,6 +256,9 @@ fn engine_event_serialization() {
         task_id: TaskId::new(),
         task_title: "Test task".into(),
         session_id: SessionId::new(),
+        prompt_tokens_estimate: None,
+        codebase_snapshot_bytes: None,
+        codebase_file_count: None,
     };
     let json = serde_json::to_string(&event).unwrap();
     assert!(json.contains("task_started"));
@@ -266,6 +269,16 @@ fn engine_event_serialization() {
 fn engine_event_loop_finished_serialization() {
     let event = EngineEvent::LoopFinished {
         outcome: "all_tasks_complete".into(),
+        total_duration_ms: None,
+        tasks_completed: None,
+        tasks_failed: None,
+        tasks_retried: None,
+        total_input_tokens: None,
+        total_output_tokens: None,
+        sessions_used: None,
+        total_parse_retries: None,
+        total_build_fix_attempts: None,
+        duplicate_error_bailouts: None,
     };
     let json = serde_json::to_string(&event).unwrap();
     assert!(json.contains("loop_finished"));

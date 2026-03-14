@@ -22,6 +22,7 @@ fn valid_input(dir: &TempDir) -> CreateProjectInput {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
     }
 }
 
@@ -106,11 +107,7 @@ fn update_project_applies_partial_updates() {
             &project.project_id,
             UpdateProjectInput {
                 name: Some("New Name".into()),
-                description: None,
-                linked_folder_path: None,
-                github_integration_id: None,
-                github_repo_full_name: None,
-                build_command: None,
+                ..Default::default()
             },
         )
         .unwrap();

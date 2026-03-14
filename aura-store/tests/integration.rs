@@ -22,6 +22,7 @@ fn make_project() -> Project {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
         created_at: now,
         updated_at: now,
     }
@@ -58,6 +59,8 @@ fn make_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         execution_notes: String::new(),
         files_changed: vec![],
         live_output: String::new(),
+        build_steps: vec![],
+        test_steps: vec![],
         user_id: None,
         model: None,
         total_input_tokens: 0,

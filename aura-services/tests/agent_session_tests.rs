@@ -23,6 +23,7 @@ fn setup_project(store: &RocksStore) -> ProjectId {
         github_integration_id: None,
         github_repo_full_name: None,
         build_command: None,
+        test_command: None,
         created_at: now,
         updated_at: now,
     };
