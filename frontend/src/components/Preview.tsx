@@ -394,8 +394,8 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
               />
             )}
           </span>
-          {effectiveStatus === "failed" && failReason && (
-            <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason)}</Text>
+          {effectiveStatus === "failed" && (failReason || task.execution_notes) && (
+            <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason || task.execution_notes)}</Text>
           )}
         </div>
         <div className={styles.taskField}>

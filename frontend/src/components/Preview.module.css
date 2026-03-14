@@ -185,6 +185,9 @@
 
 .notesContent {
   padding: 0 var(--space-3);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .fileOpsList {
@@ -237,6 +240,8 @@
   font-size: 13px;
   line-height: 1.65;
   color: var(--color-text-secondary);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .specMarkdown {

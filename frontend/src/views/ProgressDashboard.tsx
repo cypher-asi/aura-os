@@ -47,13 +47,13 @@ export function ProgressDashboard() {
       </div>
 
       <div className={styles.statsGrid}>
-        <StatCard value={progress.total_tasks} label="Total Tasks" color="var(--color-text)" />
-        <StatCard value={progress.done_tasks} label="Tasks Complete" color="var(--status-done)" />
-        <StatCard value={progress.in_progress_tasks} label="Tasks Active" color="var(--status-in-progress)" />
-        <StatCard value={progress.ready_tasks} label="Tasks Ready" color="var(--status-ready)" />
-        <StatCard value={progress.pending_tasks} label="Tasks Pending" color="var(--status-pending)" />
-        <StatCard value={progress.blocked_tasks} label="Tasks Blocked" color="var(--status-blocked)" />
-        <StatCard value={progress.failed_tasks} label="Tasks Failed" color="var(--status-failed)" />
+        <StatCard value={progress.total_tasks} label="Total Tasks" />
+        <StatCard value={progress.done_tasks} label="Tasks Complete" />
+        <StatCard value={progress.in_progress_tasks} label="Tasks Active" />
+        <StatCard value={progress.ready_tasks} label="Tasks Ready" />
+        <StatCard value={progress.pending_tasks} label="Tasks Pending" />
+        <StatCard value={progress.blocked_tasks} label="Tasks Blocked" />
+        <StatCard value={progress.failed_tasks} label="Tasks Failed" />
       </div>
 
       <div style={{ margin: "var(--space-4) 0 var(--space-2)" }}>
@@ -63,13 +63,13 @@ export function ProgressDashboard() {
       </div>
 
       <div className={styles.statsGrid}>
-        <StatCard value={progress.total_tokens} label="Total Tokens" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.lines_changed} label="Lines Changed" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.lines_of_code} label="Lines of Code" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.total_commits} label="Total Commits" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.total_pull_requests} label="Pull Requests" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.total_messages} label="Total Messages" color="var(--color-text-muted)" fmt />
-        <StatCard value={progress.total_sessions} label="Total Sessions" color="var(--color-text-muted)" fmt />
+        <StatCard value={progress.total_tokens} label="Total Tokens" fmt />
+        <StatCard value={progress.lines_changed} label="Lines Changed" fmt />
+        <StatCard value={progress.lines_of_code} label="Lines of Code" fmt />
+        <StatCard value={progress.total_commits} label="Total Commits" fmt />
+        <StatCard value={progress.total_pull_requests} label="Pull Requests" fmt />
+        <StatCard value={progress.total_messages} label="Total Messages" fmt />
+        <StatCard value={progress.total_sessions} label="Total Sessions" fmt />
       </div>
     </div>
   );
@@ -82,13 +82,13 @@ function formatCompact(n: number): string {
   return n.toLocaleString();
 }
 
-function StatCard({ value, label, color, fmt }: { value: number; label: string; color: string; fmt?: boolean }) {
+function StatCard({ value, label, fmt }: { value: number; label: string; fmt?: boolean }) {
   const display = fmt ? formatCompact(value) : value;
   const title = fmt ? value.toLocaleString() : undefined;
   return (
     <Panel variant="solid" border="solid" style={{ padding: "var(--space-3)", textAlign: "center" }}>
-      <div className={styles.statValue} style={{ color }} title={title}>{display}</div>
-      <Text variant="muted" size="xs" align="center">{label}</Text>
+      <div className={styles.statValue} style={{ color: "var(--color-text-secondary)" }} title={title}>{display}</div>
+      <Text size="xs" align="center" style={{ color: "var(--color-text-muted)" }}>{label}</Text>
     </Panel>
   );
 }
