@@ -260,6 +260,16 @@ const SKIP_DIRS: &[&str] = &[
     "dist",
 ];
 
+/// References extracted from compiler error output for targeted context resolution.
+#[derive(Debug, Default)]
+pub struct ErrorReferences {
+    pub types_referenced: Vec<String>,
+    pub methods_not_found: Vec<(String, String)>,
+    pub missing_fields: Vec<(String, String)>,
+    pub source_locations: Vec<(String, u32)>,
+    pub wrong_arg_counts: Vec<String>,
+}
+
 const INCLUDE_EXTENSIONS: &[&str] = &[
     "rs", "ts", "tsx", "js", "jsx", "json", "toml", "md", "css", "html", "yaml", "yml", "py", "sh",
     "sql", "graphql",
@@ -326,4 +336,289 @@ fn walk_and_collect(
         }
     }
     Ok(())
+}
+
+const RESOLVE_BUDGET: usize = 10_240;
+
+/// Look up actual source files for types referenced in compiler errors and
+/// extract their public API signatures. Returns a formatted string suitable
+/// for insertion into a fix prompt, giving the model the real API surface.
+pub fn resolve_error_context(base_path: &Path, refs: &ErrorReferences) -> String {
+    if refs.types_referenced.is_empty() {
+        return String::new();
+    }
+
+    let mut output = String::from("## Actual API Reference (from source)\n\n");
+    let initial_len = output.len();
+    let mut remaining = RESOLVE_BUDGET;
+
+    for type_name in &refs.types_referenced {
+        if remaining == 0 {
+            break;
+        }
+
+        let sources = find_type_sources(base_path, type_name, &refs.source_locations);
+        if sources.is_empty() {
+            continue;
+        }
+
+        let mut section = String::new();
+        let mut header_written = false;
+
+        for (rel_path, content) in &sources {
+            if !header_written {
+                section.push_str(&format!("### {} ({})\n", type_name, rel_path));
+                header_written = true;
+            } else {
+                section.push_str(&format!("  (also in {})\n", rel_path));
+            }
+
+            if let Some(fields) = extract_struct_fields(content, type_name) {
+                section.push_str(&fields);
+                section.push('\n');
+            }
+
+            let sigs = extract_pub_signatures(content, type_name);
+            for sig in &sigs {
+                section.push_str(sig);
+                section.push('\n');
+            }
+        }
+
+        if header_written {
+            section.push('\n');
+            if section.len() <= remaining {
+                output.push_str(&section);
+                remaining = remaining.saturating_sub(section.len());
+            }
+        }
+    }
+
+    if output.len() <= initial_len {
+        return String::new();
+    }
+
+    output
+}
+
+fn find_type_sources(
+    base_path: &Path,
+    type_name: &str,
+    source_hints: &[(String, u32)],
+) -> Vec<(String, String)> {
+    use std::collections::HashSet;
+
+    let mut results: Vec<(String, String)> = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    let struct_pat = format!("struct {}", type_name);
+    let impl_pat = format!("impl {}", type_name);
+
+    for (hint_file, _) in source_hints {
+        if seen.contains(hint_file) {
+            continue;
+        }
+        let full = base_path.join(hint_file);
+        if let Ok(content) = std::fs::read_to_string(&full) {
+            if content.contains(&struct_pat) || content.contains(&impl_pat) {
+                seen.insert(hint_file.clone());
+                results.push((hint_file.clone(), content));
+            }
+        }
+    }
+
+    walk_for_type_sources(base_path, base_path, type_name, &mut results, &mut seen);
+    results
+}
+
+const MAX_TYPE_FILES: usize = 5;
+
+fn walk_for_type_sources(
+    base: &Path,
+    dir: &Path,
+    type_name: &str,
+    results: &mut Vec<(String, String)>,
+    seen: &mut std::collections::HashSet<String>,
+) {
+    if results.len() >= MAX_TYPE_FILES {
+        return;
+    }
+
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    let struct_pat = format!("struct {}", type_name);
+    let impl_pat = format!("impl {}", type_name);
+
+    let mut entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        if results.len() >= MAX_TYPE_FILES {
+            return;
+        }
+
+        let path = entry.path();
+        let fname = entry.file_name().to_string_lossy().to_string();
+
+        if path.is_dir() {
+            if SKIP_DIRS.contains(&fname.as_str()) {
+                continue;
+            }
+            walk_for_type_sources(base, &path, type_name, results, seen);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            let rel = path.strip_prefix(base).unwrap_or(&path).display().to_string();
+            if seen.contains(&rel) {
+                continue;
+            }
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if content.contains(&struct_pat) || content.contains(&impl_pat) {
+                    seen.insert(rel.clone());
+                    results.push((rel, content));
+                }
+            }
+        }
+    }
+}
+
+fn extract_struct_fields(content: &str, type_name: &str) -> Option<String> {
+    let struct_prefix_pub = format!("pub struct {}", type_name);
+    let struct_prefix = format!("struct {}", type_name);
+    let lines: Vec<&str> = content.lines().collect();
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        let after = trimmed
+            .strip_prefix(&struct_prefix_pub)
+            .or_else(|| trimmed.strip_prefix(&struct_prefix));
+        let after = match after {
+            Some(rest) => rest,
+            None => continue,
+        };
+        match after.chars().next() {
+            Some('{') | Some(' ') | Some('<') | None => {}
+            _ => continue,
+        }
+        if !trimmed.contains('{') {
+            if trimmed.ends_with(';') {
+                return None;
+            }
+            continue;
+        }
+
+        let mut result = String::new();
+        let mut depth: i32 = 0;
+        for j in i..lines.len() {
+            for ch in lines[j].chars() {
+                match ch {
+                    '{' => depth += 1,
+                    '}' => depth -= 1,
+                    _ => {}
+                }
+            }
+            result.push_str(lines[j].trim());
+            result.push('\n');
+            if depth <= 0 {
+                break;
+            }
+        }
+        return Some(result);
+    }
+    None
+}
+
+fn extract_pub_signatures(content: &str, type_name: &str) -> Vec<String> {
+    let mut signatures = Vec::new();
+    let mut in_impl = false;
+    let mut impl_depth: i32 = 0;
+    let mut body_entered = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        if !in_impl {
+            if is_impl_for_type(trimmed, type_name) {
+                in_impl = true;
+                impl_depth = 0;
+                body_entered = false;
+                for ch in trimmed.chars() {
+                    match ch {
+                        '{' => impl_depth += 1,
+                        '}' => impl_depth -= 1,
+                        _ => {}
+                    }
+                }
+                if impl_depth > 0 {
+                    body_entered = true;
+                }
+            }
+            continue;
+        }
+
+        for ch in trimmed.chars() {
+            match ch {
+                '{' => impl_depth += 1,
+                '}' => impl_depth -= 1,
+                _ => {}
+            }
+        }
+
+        if !body_entered {
+            if impl_depth > 0 {
+                body_entered = true;
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("pub fn ") || trimmed.starts_with("pub async fn ") {
+            let sig = match trimmed.find('{') {
+                Some(pos) => trimmed[..pos].trim(),
+                None => trimmed,
+            };
+            if !sig.is_empty() {
+                signatures.push(sig.to_string());
+            }
+        }
+
+        if impl_depth <= 0 {
+            in_impl = false;
+            body_entered = false;
+        }
+    }
+
+    signatures
+}
+
+/// Check whether a line is an `impl` block header for the given type name.
+/// Handles `impl Type`, `impl<T> Type<T>`, `impl Trait for Type`, etc.
+fn is_impl_for_type(line: &str, type_name: &str) -> bool {
+    if !line.starts_with("impl") {
+        return false;
+    }
+    if line.len() > 4 {
+        let fifth = line.as_bytes()[4];
+        if fifth.is_ascii_alphanumeric() || fifth == b'_' {
+            return false;
+        }
+    }
+
+    let bytes = line.as_bytes();
+    let tn_bytes = type_name.as_bytes();
+    let tn_len = tn_bytes.len();
+
+    let mut i = 4;
+    while i + tn_len <= bytes.len() {
+        if &bytes[i..i + tn_len] == tn_bytes {
+            let before_ok =
+                i == 0 || !(bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_');
+            let after_ok = i + tn_len >= bytes.len()
+                || !(bytes[i + tn_len].is_ascii_alphanumeric() || bytes[i + tn_len] == b'_');
+            if before_ok && after_ok {
+                return true;
+            }
+        }
+        i += 1;
+    }
+    false
 }

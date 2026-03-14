@@ -2337,6 +2337,7 @@ enum ErrorCategory {
     RustMissingMethod,
     RustTypeError,
     RustBorrowCheck,
+    RustApiHallucination,
     NpmDependency,
     NpmTypeScript,
     GenericSyntax,
@@ -2440,6 +2441,18 @@ fn error_category_guidance(categories: &[ErrorCategory]) -> String {
                 "FIX: Check ownership and lifetimes. Consider cloning, using references, ",
                 "or restructuring to avoid simultaneous mutable/immutable borrows.",
             ),
+            ErrorCategory::RustApiHallucination => concat!(
+                "DIAGNOSIS: Systematic API hallucination detected — your code assumes an API ",
+                "that does not exist.\n",
+                "ROOT CAUSE: You are calling multiple methods or using fields that are not part ",
+                "of the actual type's public API.\n",
+                "MANDATORY FIX:\n",
+                "- The actual API is shown in the \"Actual API Reference\" section below.\n",
+                "- Rewrite ALL calls to use ONLY the methods and fields listed there.\n",
+                "- Do NOT invent, guess, or assume method names — use exactly what exists.\n",
+                "- If the functionality you need does not exist in the current API, implement it ",
+                "or find an alternative approach.",
+            ),
             ErrorCategory::NpmDependency => concat!(
                 "DIAGNOSIS: Missing npm package or module.\n",
                 "FIX: Ensure the dependency exists in package.json and has been installed. ",
@@ -2463,6 +2476,68 @@ fn error_category_guidance(categories: &[ErrorCategory]) -> String {
         }
     }
     guidance
+}
+
+fn parse_error_references(stderr: &str) -> file_ops::ErrorReferences {
+    use regex::Regex;
+
+    let mut refs = file_ops::ErrorReferences::default();
+
+    let type_re = Regex::new(r"found for (?:struct|enum|trait|union) `(\w+)").unwrap();
+    for cap in type_re.captures_iter(stderr) {
+        let name = cap[1].to_string();
+        if !refs.types_referenced.contains(&name) {
+            refs.types_referenced.push(name);
+        }
+    }
+
+    let init_type_re = Regex::new(r"in initializer of `(?:\w+::)*(\w+)`").unwrap();
+    for cap in init_type_re.captures_iter(stderr) {
+        let name = cap[1].to_string();
+        if !refs.types_referenced.contains(&name) {
+            refs.types_referenced.push(name);
+        }
+    }
+
+    let method_re =
+        Regex::new(r"no method named `(\w+)` found for (?:\w+ )?`(?:&(?:mut )?)?(\w+)").unwrap();
+    for cap in method_re.captures_iter(stderr) {
+        let method = cap[1].to_string();
+        let type_name = cap[2].to_string();
+        refs.methods_not_found
+            .push((type_name.clone(), method));
+        if !refs.types_referenced.contains(&type_name) {
+            refs.types_referenced.push(type_name);
+        }
+    }
+
+    let field_re =
+        Regex::new(r"missing field `(\w+)` in initializer of `(?:\w+::)*(\w+)`").unwrap();
+    for cap in field_re.captures_iter(stderr) {
+        let field = cap[1].to_string();
+        let type_name = cap[2].to_string();
+        refs.missing_fields.push((type_name.clone(), field));
+        if !refs.types_referenced.contains(&type_name) {
+            refs.types_referenced.push(type_name);
+        }
+    }
+
+    let loc_re = Regex::new(r"-->\s*([\w\\/._-]+):(\d+):\d+").unwrap();
+    for cap in loc_re.captures_iter(stderr) {
+        let file = cap[1].to_string();
+        let line: u32 = cap[2].parse().unwrap_or(0);
+        if !refs.source_locations.iter().any(|(f, l)| f == &file && *l == line) {
+            refs.source_locations.push((file, line));
+        }
+    }
+
+    let arg_re = Regex::new(r"takes (\d+) arguments? but (\d+)").unwrap();
+    for cap in arg_re.captures_iter(stderr) {
+        refs.wrong_arg_counts
+            .push(format!("expected {} got {}", &cap[1], &cap[2]));
+    }
+
+    refs
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2518,7 +2593,24 @@ fn build_fix_prompt_with_history(
         }
     }
 
-    let categories = classify_build_errors(stderr);
+    let mut categories = classify_build_errors(stderr);
+    let error_refs = parse_error_references(stderr);
+    let resolved_context = file_ops::resolve_error_context(
+        Path::new(&project.linked_folder_path),
+        &error_refs,
+    );
+
+    {
+        let mut type_counts: std::collections::HashMap<&str, usize> =
+            std::collections::HashMap::new();
+        for (t, _) in &error_refs.methods_not_found {
+            *type_counts.entry(t.as_str()).or_insert(0) += 1;
+        }
+        if type_counts.values().any(|&c| c >= 5) || error_refs.wrong_arg_counts.len() >= 3 {
+            categories.push(ErrorCategory::RustApiHallucination);
+        }
+    }
+
     let guidance = error_category_guidance(&categories);
 
     prompt.push_str(&format!(
@@ -2539,6 +2631,19 @@ fn build_fix_prompt_with_history(
 
     if !stdout.is_empty() {
         prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", stdout));
+    }
+
+    if error_refs.methods_not_found.len() > 5 {
+        prompt.push_str(
+            "WARNING: You are calling 5+ methods that do not exist. You MUST use ONLY \
+             the methods listed in the \"Actual API Reference\" section below. Do NOT \
+             invent or guess method names.\n\n",
+        );
+    }
+
+    if !resolved_context.is_empty() {
+        prompt.push_str(&resolved_context);
+        prompt.push('\n');
     }
 
     if !codebase_snapshot.is_empty() {
