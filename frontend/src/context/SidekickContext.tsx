@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
 import type { ChatSession, Sprint, Spec, Task, Session } from "../types";
 
-type SidekickTab = "sprint" | "specs" | "tasks" | "progress" | "log";
+export type SidekickTab = "sprint" | "specs" | "tasks" | "progress" | "sessions" | "log";
 
 export type PreviewItem =
   | { kind: "sprint"; sprint: Sprint }

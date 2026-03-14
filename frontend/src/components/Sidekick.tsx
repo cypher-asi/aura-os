@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Sidebar, Tabs, Button, Text, Menu } from "@cypher-asi/zui";
 import { Archive, Info, ArrowLeft, Ellipsis } from "lucide-react";
 import { AutomationBar } from "./AutomationBar";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick, type SidekickTab } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useClickOutside } from "../hooks/use-click-outside";
 import { StatusBadge } from "./StatusBadge";
@@ -10,6 +10,7 @@ import { SprintList } from "../views/SprintList";
 import { SpecList } from "../views/SpecList";
 import { TaskList } from "../views/TaskList";
 import { ProgressDashboard } from "../views/ProgressDashboard";
+import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
 import styles from "./Sidekick.module.css";
 
@@ -81,6 +82,7 @@ export function Sidekick() {
     specs: <SpecList />,
     tasks: <TaskList />,
     progress: <ProgressDashboard />,
+    sessions: <SessionList />,
   };
 
   return (
@@ -103,9 +105,10 @@ export function Sidekick() {
               { id: "tasks", label: "Tasks" },
               { id: "log", label: "Log" },
               { id: "progress", label: "KPIs" },
+              { id: "sessions", label: "Sessions" },
             ]}
             value={activeTab}
-            onChange={(id) => setActiveTab(id as "sprint" | "specs" | "tasks" | "progress" | "log")}
+            onChange={(id) => setActiveTab(id as SidekickTab)}
             className={styles.tabsFullBleed}
             tabClassName={styles.sidekickTab}
           />
