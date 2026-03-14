@@ -61,6 +61,8 @@ impl SessionService {
             active_task_id,
             tasks_worked: Vec::new(),
             context_usage_estimate: 0.0,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
             summary_of_previous_context: summary,
             status: SessionStatus::Active,
             started_at: now,
@@ -81,6 +83,8 @@ impl SessionService {
         let mut session = self.get_session(project_id, agent_id, session_id)?;
         let turn_usage = (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
         session.context_usage_estimate = (session.context_usage_estimate + turn_usage).min(1.0);
+        session.total_input_tokens += input_tokens;
+        session.total_output_tokens += output_tokens;
         self.store.put_session(&session)?;
         Ok(session)
     }

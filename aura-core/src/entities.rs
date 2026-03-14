@@ -99,6 +99,10 @@ pub struct Session {
     #[serde(default)]
     pub tasks_worked: Vec<TaskId>,
     pub context_usage_estimate: f64,
+    #[serde(default)]
+    pub total_input_tokens: u64,
+    #[serde(default)]
+    pub total_output_tokens: u64,
     pub summary_of_previous_context: String,
     pub status: SessionStatus,
     pub started_at: DateTime<Utc>,

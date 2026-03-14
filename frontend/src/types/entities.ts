@@ -78,6 +78,8 @@ export interface Session {
   active_task_id: TaskId | null;
   tasks_worked: TaskId[];
   context_usage_estimate: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
   summary_of_previous_context: string;
   status: SessionStatus;
   started_at: string;
