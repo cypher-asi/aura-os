@@ -121,6 +121,10 @@ export const api = {
     }),
   deleteApiKey: () =>
     apiFetch<void>("/api/settings/api-key", { method: "DELETE" }),
+  getFeeSchedule: () =>
+    apiFetch<{ model: string; input_cost_per_million: number; output_cost_per_million: number; effective_date: string }[]>(
+      "/api/settings/fee-schedule",
+    ),
 
   // Orgs
   orgs: {

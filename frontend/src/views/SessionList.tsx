@@ -8,7 +8,7 @@ import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { MonitorCog } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatCost } from "../utils/format";
+import { formatCostFromTokens } from "../utils/pricing";
 import styles from "./SessionList.module.css";
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
@@ -66,7 +66,7 @@ export function SessionList() {
               </span>
               {totalTokens > 0 && (
                 <span className={styles.sessionCost}>
-                  {formatCost(session.total_input_tokens, session.total_output_tokens)}
+                  {formatCostFromTokens(session.total_input_tokens, session.total_output_tokens, session.model ?? undefined)}
                 </span>
               )}
             </span>

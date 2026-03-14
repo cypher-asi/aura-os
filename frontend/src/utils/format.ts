@@ -37,19 +37,6 @@ export function toBullets(text: string): string {
   return out.join("\n");
 }
 
-const COST_PER_INPUT_TOKEN = 5 / 1_000_000;
-const COST_PER_OUTPUT_TOKEN = 25 / 1_000_000;
-
-export function computeCost(inputTokens: number, outputTokens: number): number {
-  return inputTokens * COST_PER_INPUT_TOKEN + outputTokens * COST_PER_OUTPUT_TOKEN;
-}
-
-export function formatCost(inputTokens: number, outputTokens: number): string {
-  const cost = computeCost(inputTokens, outputTokens);
-  if (cost < 0.01) return `$${cost.toFixed(4)}`;
-  return `$${cost.toFixed(2)}`;
-}
-
 export function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 10_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";

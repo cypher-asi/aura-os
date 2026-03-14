@@ -9,7 +9,8 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput, type BuildStep, type TestStep } from "../context/EventContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
-import { formatRelativeTime, toBullets, formatCost, formatTokens, formatModelName } from "../utils/format";
+import { formatRelativeTime, toBullets, formatTokens, formatModelName } from "../utils/format";
+import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
@@ -703,7 +704,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             </div>
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Cost</span>
-              <Text size="sm">{formatCost(task.total_input_tokens, task.total_output_tokens)}</Text>
+              <Text size="sm">{formatCostFromTokens(task.total_input_tokens, task.total_output_tokens, task.model ?? undefined)}</Text>
             </div>
           </>
         )}
@@ -868,7 +869,7 @@ function SessionPreview({ session }: { session: Session }) {
         )}
         <div className={styles.taskField}>
           <Text variant="muted" size="sm">Cost</Text>
-          <Text size="sm">{formatCost(session.total_input_tokens, session.total_output_tokens)}</Text>
+          <Text size="sm">{formatCostFromTokens(session.total_input_tokens, session.total_output_tokens, session.model ?? undefined)}</Text>
         </div>
         <div className={styles.taskField}>
           <Text variant="muted" size="sm">Duration</Text>
