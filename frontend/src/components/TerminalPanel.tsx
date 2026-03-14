@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { useTerminal, type UseTerminalReturn } from "../hooks/use-terminal";
+import { useProjectContext } from "../context/ProjectContext";
 import { XTerminal } from "./XTerminal";
 import styles from "./TerminalPanel.module.css";
 
@@ -8,7 +9,6 @@ const STORAGE_KEY = "aura-terminal-panel";
 const DEFAULT_HEIGHT = 260;
 const MIN_HEIGHT = 120;
 const MAX_HEIGHT = 600;
-const HEADER_HEIGHT = 32;
 
 interface TerminalInstance {
   id: string;
@@ -79,7 +79,10 @@ function savePanelState(height: number, collapsed: boolean) {
   } catch { /* ignore */ }
 }
 
-export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
+export function TerminalPanel() {
+  const ctx = useProjectContext();
+  const cwd = ctx?.project.linked_folder_path;
+
   const [terminals, setTerminals] = useState<TerminalInstance[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const hookRefs = useRef<Map<string, UseTerminalReturn>>(new Map());
@@ -181,7 +184,7 @@ export function TerminalPanel({ cwd }: { cwd?: string } = {}) {
   return (
     <div
       className={`${styles.terminalPanel} ${dragging.current ? styles.noTransition : ""}`}
-      style={{ height: collapsed ? HEADER_HEIGHT : panelHeight }}
+      style={collapsed ? undefined : { height: panelHeight }}
     >
       <div
         className={`${styles.resizeHandle} ${dragging.current ? styles.resizeHandleActive : ""}`}
