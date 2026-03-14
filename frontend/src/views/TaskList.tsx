@@ -151,6 +151,13 @@ export function TaskList() {
     [explorerData],
   );
 
+  const previewTaskId =
+    sidekick.previewItem?.kind === "task" ? sidekick.previewItem.task.task_id : null;
+  const defaultSelectedIds = useMemo(
+    () => (previewTaskId ? [previewTaskId] : []),
+    [previewTaskId],
+  );
+
   const isEmpty = tasks.length === 0;
   const showEmpty = useDelayedEmpty(isEmpty, loading);
 
@@ -175,6 +182,7 @@ export function TaskList() {
       enableDragDrop={false}
       enableMultiSelect={false}
       defaultExpandedIds={defaultExpandedIds}
+      defaultSelectedIds={defaultSelectedIds}
       onSelect={(ids) => {
         const id = ids[0];
         if (!id) return;

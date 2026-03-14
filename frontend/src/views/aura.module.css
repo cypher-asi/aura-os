@@ -263,13 +263,13 @@
 
 .feedList button[aria-selected="true"],
 .taskExplorer button[aria-selected="true"] {
-  background: var(--color-accent-muted);
+  background: var(--color-overlay-subtle);
   color: #ffffff;
 }
 
 .feedList button[aria-selected="true"]:hover,
 .taskExplorer button[aria-selected="true"]:hover {
-  background: var(--color-accent-muted);
+  background: var(--color-overlay-light);
   color: #ffffff;
 }
 
