@@ -92,6 +92,7 @@ const RETRY_CORRECTION_PROMPT: &str =
     "Your previous response was not valid JSON. Respond with ONLY a valid JSON object matching the schema above. No prose, no markdown fences.";
 
 const MAX_EXECUTION_RETRIES: u32 = 2;
+const TASK_EXECUTION_MAX_TOKENS: u32 = 32_768;
 
 pub struct DevLoopEngine {
     store: Arc<RocksStore>,
@@ -443,7 +444,7 @@ impl DevLoopEngine {
                     api_key,
                     TASK_EXECUTION_SYSTEM_PROMPT,
                     &user_message,
-                    16384,
+                    TASK_EXECUTION_MAX_TOKENS,
                     stream_tx,
                 )
                 .await?;
@@ -500,7 +501,7 @@ impl DevLoopEngine {
                             api_key,
                             TASK_EXECUTION_SYSTEM_PROMPT,
                             messages,
-                            16384,
+                            TASK_EXECUTION_MAX_TOKENS,
                             stream_tx,
                         )
                         .await?;
