@@ -280,6 +280,8 @@ export const api = {
     }),
   getProgress: (projectId: ProjectId) =>
     apiFetch<ProjectProgress>(`/api/projects/${projectId}/progress`),
+  getTaskOutput: (projectId: ProjectId, taskId: TaskId) =>
+    apiFetch<{ output: string }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
 
   // Agents
   listAgents: (projectId: ProjectId) =>
