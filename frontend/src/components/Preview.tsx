@@ -262,7 +262,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       </div>
 
       {fileOps.length > 0 && (
-        <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen={isActive}>
+        <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen={isActive} className={styles.section}>
           <div className={styles.fileOpsList}>
             {fileOps.map((f) => {
               const fullPath = ctx?.project.linked_folder_path
@@ -300,7 +300,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       )}
 
       {showNotes && (
-        <GroupCollapsible label="Notes" defaultOpen>
+        <GroupCollapsible label="Notes" defaultOpen className={styles.section}>
           <div className={styles.notesContent}>
             <div className={styles.markdown}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
