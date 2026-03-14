@@ -88,6 +88,52 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                     info!(path = %path, "deleted file");
                 }
             }
+            FileOp::SearchReplace { path, replacements } => {
+                let full_path = base_path.join(path);
+                if let Err(e) = validate_path(base_path, &full_path) {
+                    error!(path = %path, error = %e, "path validation failed");
+                    return Err(e);
+                }
+                let mut content = tokio::fs::read_to_string(&full_path)
+                    .await
+                    .map_err(|e| {
+                        error!(path = %path, error = %e, "failed to read file for search-replace");
+                        EngineError::Io(format!("failed to read {path} for search-replace: {e}"))
+                    })?;
+
+                for (i, rep) in replacements.iter().enumerate() {
+                    let match_count = content.matches(&rep.search).count();
+                    if match_count == 0 {
+                        let preview = &rep.search[..rep.search.len().min(120)];
+                        return Err(EngineError::Parse(format!(
+                            "search-replace #{} in {path}: search string not found: {preview:?}",
+                            i + 1
+                        )));
+                    }
+                    if match_count > 1 {
+                        let preview = &rep.search[..rep.search.len().min(120)];
+                        return Err(EngineError::Parse(format!(
+                            "search-replace #{} in {path}: search string matched {match_count} \
+                             times (must be unique): {preview:?}",
+                            i + 1
+                        )));
+                    }
+                    content = content.replacen(&rep.search, &rep.replace, 1);
+                }
+
+                tokio::fs::write(&full_path, &content)
+                    .await
+                    .map_err(|e| {
+                        error!(path = %path, error = %e, "failed to write after search-replace");
+                        EngineError::Io(e.to_string())
+                    })?;
+                info!(
+                    path = %path,
+                    replacements = replacements.len(),
+                    bytes = content.len(),
+                    "applied search-replace"
+                );
+            }
         }
     }
 
