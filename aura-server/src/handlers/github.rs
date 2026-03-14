@@ -11,15 +11,15 @@ use crate::dto::{
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-fn map_gh_err(e: aura_services::GitHubError) -> (StatusCode, Json<ApiError>) {
+fn map_gh_err(e: aura_github::GitHubError) -> (StatusCode, Json<ApiError>) {
     match &e {
-        aura_services::GitHubError::NotConfigured(msg) => ApiError::bad_request(msg.clone()),
-        aura_services::GitHubError::IntegrationNotFound => {
+        aura_github::GitHubError::NotConfigured(msg) => ApiError::bad_request(msg.clone()),
+        aura_github::GitHubError::IntegrationNotFound => {
             ApiError::not_found("integration not found")
         }
-        aura_services::GitHubError::Org(org_err) => match org_err {
-            aura_services::OrgError::NotFound(_) => ApiError::not_found("org not found"),
-            aura_services::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
+        aura_github::GitHubError::Org(org_err) => match org_err {
+            aura_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
+            aura_orgs::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
             _ => ApiError::internal(e.to_string()),
         },
         _ => ApiError::internal(e.to_string()),

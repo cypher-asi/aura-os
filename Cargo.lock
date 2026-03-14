@@ -417,10 +417,17 @@ dependencies = [
 name = "aura-engine"
 version = "0.1.0"
 dependencies = [
+ "aura-agents",
+ "aura-chat",
+ "aura-claude",
  "aura-core",
- "aura-services",
+ "aura-pricing",
+ "aura-projects",
+ "aura-sessions",
  "aura-settings",
  "aura-store",
+ "aura-tasks",
+ "aura-tools",
  "chrono",
  "futures",
  "regex",
@@ -481,12 +488,23 @@ dependencies = [
 name = "aura-server"
 version = "0.1.0"
 dependencies = [
+ "aura-agents",
+ "aura-auth",
+ "aura-chat",
+ "aura-claude",
  "aura-core",
  "aura-engine",
- "aura-services",
+ "aura-github",
+ "aura-orgs",
+ "aura-pricing",
+ "aura-projects",
+ "aura-sessions",
  "aura-settings",
+ "aura-specs",
  "aura-store",
+ "aura-tasks",
  "aura-terminal",
+ "aura-tools",
  "axum",
  "base64 0.22.1",
  "chrono",

@@ -25,7 +25,7 @@ pub async fn get_agent(
         .agent_service
         .get_agent(&project_id, &agent_id)
         .map_err(|e| match &e {
-            aura_services::AgentError::NotFound => ApiError::not_found("agent not found"),
+            aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(Json(agent))
@@ -62,7 +62,7 @@ pub async fn get_session(
         .session_service
         .get_session(&project_id, &agent_id, &session_id)
         .map_err(|e| match &e {
-            aura_services::SessionError::NotFound => ApiError::not_found("session not found"),
+            aura_sessions::SessionError::NotFound => ApiError::not_found("session not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(Json(session))
@@ -76,7 +76,7 @@ pub async fn list_session_tasks(
         .session_service
         .get_session(&project_id, &agent_id, &session_id)
         .map_err(|e| match &e {
-            aura_services::SessionError::NotFound => ApiError::not_found("session not found"),
+            aura_sessions::SessionError::NotFound => ApiError::not_found("session not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
 

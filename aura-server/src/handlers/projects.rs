@@ -4,7 +4,7 @@ use axum::Json;
 use serde::Deserialize;
 
 use aura_core::{OrgId, Project, ProjectId};
-use aura_services::{CreateProjectInput, UpdateProjectInput};
+use aura_projects::{CreateProjectInput, UpdateProjectInput};
 
 #[derive(Debug, Deserialize)]
 pub struct ListProjectsQuery {
@@ -33,7 +33,7 @@ pub async fn create_project(
         .project_service
         .create_project(input)
         .map_err(|e| match &e {
-            aura_services::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
+            aura_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok((StatusCode::CREATED, Json(project)))
@@ -64,7 +64,7 @@ pub async fn get_project(
         .project_service
         .get_project(&project_id)
         .map_err(|e| match &e {
-            aura_services::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(Json(project))
@@ -88,8 +88,8 @@ pub async fn update_project(
         .project_service
         .update_project(&project_id, input)
         .map_err(|e| match &e {
-            aura_services::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
-            aura_services::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
+            aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            aura_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(Json(project))
@@ -103,7 +103,7 @@ pub async fn delete_project(
         .project_service
         .delete_project(&project_id)
         .map_err(|e| match &e {
-            aura_services::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(StatusCode::NO_CONTENT)
@@ -117,7 +117,7 @@ pub async fn archive_project(
         .project_service
         .archive_project(&project_id)
         .map_err(|e| match &e {
-            aura_services::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
+            aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
     Ok(Json(project))

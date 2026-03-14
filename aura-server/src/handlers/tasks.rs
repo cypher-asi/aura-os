@@ -6,7 +6,7 @@ use axum::Json;
 use serde::Serialize;
 
 use aura_core::{ProjectId, SpecId, Task, TaskId};
-use aura_services::task::ProjectProgress;
+use aura_tasks::ProjectProgress;
 
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
@@ -65,8 +65,8 @@ pub async fn transition_task(
         .task_service
         .transition_task(&project_id, &task.spec_id, &task_id, req.new_status)
         .map_err(|e| match &e {
-            aura_services::TaskError::NotFound => ApiError::not_found("task not found"),
-            aura_services::TaskError::IllegalTransition { .. } => {
+            aura_tasks::TaskError::NotFound => ApiError::not_found("task not found"),
+            aura_tasks::TaskError::IllegalTransition { .. } => {
                 ApiError::bad_request(e.to_string())
             }
             _ => ApiError::internal(e.to_string()),
@@ -92,8 +92,8 @@ pub async fn retry_task(
         .task_service
         .retry_task(&project_id, &task.spec_id, &task_id)
         .map_err(|e| match &e {
-            aura_services::TaskError::NotFound => ApiError::not_found("task not found"),
-            aura_services::TaskError::IllegalTransition { .. } => {
+            aura_tasks::TaskError::NotFound => ApiError::not_found("task not found"),
+            aura_tasks::TaskError::IllegalTransition { .. } => {
                 ApiError::bad_request(e.to_string())
             }
             _ => ApiError::internal(e.to_string()),
@@ -122,8 +122,8 @@ pub async fn get_progress(
             .iter()
             .map(|s| {
                 let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp, out) = aura_services::pricing::lookup_rate_in(&fee_schedule, model);
-                aura_services::pricing::compute_cost_with_rates(
+                let (inp, out) = aura_pricing::lookup_rate_in(&fee_schedule, model);
+                aura_pricing::compute_cost_with_rates(
                     s.total_input_tokens, s.total_output_tokens, inp, out,
                 )
             })

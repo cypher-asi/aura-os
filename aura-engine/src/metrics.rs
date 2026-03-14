@@ -5,7 +5,7 @@ use serde::Serialize;
 use tracing::warn;
 
 use aura_core::FeeScheduleEntry;
-use aura_services::pricing::{compute_cost_with_rates, lookup_rate_in};
+use aura_pricing::{compute_cost_with_rates, lookup_rate_in};
 use crate::events::PhaseTimingEntry;
 
 const METRICS_DIR: &str = ".aura";

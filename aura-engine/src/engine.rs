@@ -7,11 +7,15 @@ use tokio::sync::{mpsc, watch, Mutex};
 use tracing::{error, info, warn};
 
 use aura_core::*;
-use aura_services::{
-    AgentService, ChatToolExecutor, ClaudeClient, ClaudeStreamEvent,
-    ProjectService, SessionService, TaskService, ThinkingConfig, engine_tool_definitions,
+use aura_agents::AgentService;
+use aura_claude::{
+    ClaudeClient, ClaudeStreamEvent, ContentBlock, RichMessage, ThinkingConfig, DEFAULT_MODEL,
 };
-use aura_services::claude::{ContentBlock, RichMessage, DEFAULT_MODEL};
+use aura_projects::ProjectService;
+use aura_sessions::SessionService;
+use aura_tasks::TaskService;
+use aura_chat::ChatToolExecutor;
+use aura_tools::engine_tool_definitions;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
@@ -509,7 +513,7 @@ impl DevLoopEngine {
         let project_root = self.project_service.get_project(&project_id)
             .map(|p| p.linked_folder_path.clone())
             .unwrap_or_default();
-        let fee_schedule = aura_services::pricing::PricingService::new(self.store.clone())
+        let fee_schedule = aura_pricing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 
         let baseline_test_failures = {
@@ -895,7 +899,7 @@ impl DevLoopEngine {
             .map(|p| p.linked_folder_path.clone())
             .unwrap_or_default();
         let mut run_metrics = LoopRunMetrics::new(project_id.to_string());
-        let fee_schedule = aura_services::pricing::PricingService::new(self.store.clone())
+        let fee_schedule = aura_pricing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 
         macro_rules! flush_metrics {
@@ -1308,7 +1312,7 @@ impl DevLoopEngine {
                                             task_id: new_task.task_id,
                                         });
                                     }
-                                    Err(aura_services::TaskError::DuplicateFollowUp) => {
+                                    Err(aura_tasks::TaskError::DuplicateFollowUp) => {
                                         info!(title = %follow_up.title, "skipping duplicate follow-up task");
                                     }
                                     Err(e) => return Err(EngineError::Parse(format!("follow-up creation failed: {e}"))),

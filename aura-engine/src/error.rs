@@ -1,4 +1,8 @@
-use aura_services::{AgentError, ClaudeClientError, ProjectError, SessionError, TaskError};
+use aura_agents::AgentError;
+use aura_claude::ClaudeClientError;
+use aura_projects::ProjectError;
+use aura_sessions::SessionError;
+use aura_tasks::TaskError;
 use aura_settings::SettingsError;
 use aura_store::StoreError;
 

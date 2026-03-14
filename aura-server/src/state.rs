@@ -6,11 +6,17 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use aura_core::{AgentId, ProjectId, TaskId};
 use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_terminal::TerminalManager;
-use aura_services::{
-    AgentService, AuthService, ChatService, ClaudeClient, GitHubService, OrgService,
-    PricingService, ProjectService, SessionService, SpecGenerationService,
-    TaskExtractionService, TaskService,
-};
+use aura_agents::AgentService;
+use aura_auth::AuthService;
+use aura_chat::ChatService;
+use aura_claude::ClaudeClient;
+use aura_github::GitHubService;
+use aura_orgs::OrgService;
+use aura_pricing::PricingService;
+use aura_projects::ProjectService;
+use aura_sessions::SessionService;
+use aura_specs::SpecGenerationService;
+use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 

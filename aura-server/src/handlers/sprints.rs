@@ -11,7 +11,7 @@ use tokio_stream::StreamExt;
 use tracing::{error, info};
 
 use aura_core::{ProjectId, Sprint, SprintId};
-use aura_services::ClaudeStreamEvent;
+use aura_claude::ClaudeStreamEvent;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -217,7 +217,7 @@ pub async fn generate_sprint_stream(
 }
 
 async fn save_sprint_result(
-    claude_client: std::sync::Arc<aura_services::ClaudeClient>,
+    claude_client: std::sync::Arc<aura_claude::ClaudeClient>,
     store: std::sync::Arc<aura_store::RocksStore>,
     api_key: String,
     prompt: String,

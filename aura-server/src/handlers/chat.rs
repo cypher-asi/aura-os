@@ -10,7 +10,7 @@ use tokio_stream::StreamExt;
 use tracing::info;
 
 use aura_core::{ChatMessage, ChatSession, ChatSessionId, ProjectId};
-use aura_services::ChatStreamEvent;
+use aura_chat::ChatStreamEvent;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;

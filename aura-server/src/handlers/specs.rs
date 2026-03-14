@@ -10,7 +10,7 @@ use tracing::{error, info};
 
 use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
-use aura_services::SpecStreamEvent;
+use aura_specs::SpecStreamEvent;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -34,7 +34,7 @@ pub async fn get_spec(
         .spec_gen_service
         .get_spec(&project_id, &spec_id)
         .map_err(|e| match e {
-            aura_services::SpecGenError::Store(aura_store::StoreError::NotFound(_)) => {
+            aura_specs::SpecGenError::Store(aura_store::StoreError::NotFound(_)) => {
                 ApiError::not_found("spec not found")
             }
             _ => ApiError::internal(e.to_string()),
@@ -87,13 +87,13 @@ pub async fn generate_specs(
                 reason: e.to_string(),
             });
             Err(match &e {
-                aura_services::SpecGenError::ProjectNotFound(_) => {
+                aura_specs::SpecGenError::ProjectNotFound(_) => {
                     ApiError::not_found("project not found")
                 }
-                aura_services::SpecGenError::RequirementsFileNotFound(p) => {
+                aura_specs::SpecGenError::RequirementsFileNotFound(p) => {
                     ApiError::bad_request(format!("requirements file not found: {p}"))
                 }
-                aura_services::SpecGenError::Settings(_) => {
+                aura_specs::SpecGenError::Settings(_) => {
                     ApiError::bad_request("API key not configured")
                 }
                 _ => ApiError::internal(e.to_string()),

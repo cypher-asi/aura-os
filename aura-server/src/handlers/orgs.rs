@@ -10,14 +10,14 @@ use crate::dto::{
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-fn map_org_err(e: aura_services::OrgError) -> (StatusCode, Json<ApiError>) {
+fn map_org_err(e: aura_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
     match &e {
-        aura_services::OrgError::NotFound(_) => ApiError::not_found("org not found"),
-        aura_services::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
-        aura_services::OrgError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
-        aura_services::OrgError::InviteNotFound => ApiError::not_found("invite not found"),
-        aura_services::OrgError::InviteInvalid => ApiError::bad_request("invite expired or revoked"),
-        aura_services::OrgError::AlreadyMember => ApiError::conflict("already a member"),
+        aura_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
+        aura_orgs::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
+        aura_orgs::OrgError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
+        aura_orgs::OrgError::InviteNotFound => ApiError::not_found("invite not found"),
+        aura_orgs::OrgError::InviteInvalid => ApiError::bad_request("invite expired or revoked"),
+        aura_orgs::OrgError::AlreadyMember => ApiError::conflict("already a member"),
         _ => ApiError::internal(e.to_string()),
     }
 }

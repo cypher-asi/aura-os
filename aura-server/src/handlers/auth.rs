@@ -2,7 +2,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_services::AuthError;
+use aura_auth::AuthError;
 
 use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
 use crate::error::{ApiError, ApiResult};
