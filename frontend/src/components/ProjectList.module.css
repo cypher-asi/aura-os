@@ -40,9 +40,14 @@
   padding-right: 0;
 }
 
-/* Hide the icon spacer on parent (project) items only */
-.explorerWrap [class*="itemContent"][aria-expanded] [class*="iconSpacer"] {
+/* Hide the icon spacer on all items (no icon slot used) */
+.explorerWrap > [class*="explorer"] [class*="iconSpacer"] {
   display: none;
+}
+
+/* Child rows need relative positioning for the automation spinner overlay */
+.explorerWrap [class*="childrenInner"] [class*="itemContent"] {
+  position: relative;
 }
 
 .explorerWrap [class*="searchContainer"] input {
@@ -93,8 +98,10 @@
 .automationSpinner {
   animation: spin 1s linear infinite;
   color: var(--color-text-muted);
-  flex-shrink: 0;
-  margin-left: -14px;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 @keyframes spin {

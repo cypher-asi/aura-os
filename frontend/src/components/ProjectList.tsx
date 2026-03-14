@@ -237,11 +237,11 @@ export function ProjectList() {
                 return {
                   id: s.chat_session_id,
                   label: s.title,
-                  icon: isAutomating ? <Loader2 size={10} className={styles.automationSpinner} /> : undefined,
-                  suffix:
-                    streamingSessionId === s.chat_session_id ? (
-                      <span className={styles.streamingDot} />
-                    ) : undefined,
+                  suffix: isAutomating ? (
+                    <Loader2 size={10} className={styles.automationSpinner} />
+                  ) : streamingSessionId === s.chat_session_id ? (
+                    <span className={styles.streamingDot} />
+                  ) : undefined,
                   metadata: { type: "session", projectId: p.project_id },
                 };
               })
