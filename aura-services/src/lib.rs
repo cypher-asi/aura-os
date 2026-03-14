@@ -12,6 +12,7 @@ pub mod session;
 pub mod spec_gen;
 pub mod task;
 pub mod task_extraction;
+pub mod tools;
 
 pub use agent::AgentService;
 pub use auth::AuthService;
@@ -32,3 +33,4 @@ pub use session::SessionService;
 pub use spec_gen::{ProgressTx, SpecGenerationService, SpecStreamEvent};
 pub use task::TaskService;
 pub use task_extraction::TaskExtractionService;
+pub use tools::{core_tool_definitions, chat_tool_definitions, engine_tool_definitions};
