@@ -19,6 +19,8 @@ export interface Project {
   github_repo_full_name?: string;
   build_command?: string;
   test_command?: string;
+  specs_summary?: string;
+  specs_title?: string;
   created_at: string;
   updated_at: string;
 }
@@ -162,7 +164,7 @@ export interface ChatSession {
 }
 
 export interface ChatContentBlock {
-  type: "text" | "tool_use" | "tool_result";
+  type: "text" | "tool_use" | "tool_result" | "image";
   text?: string;
   id?: string;
   name?: string;
@@ -170,6 +172,8 @@ export interface ChatContentBlock {
   tool_use_id?: string;
   content?: string;
   is_error?: boolean;
+  media_type?: string;
+  data?: string;
 }
 
 export interface ChatMessage {

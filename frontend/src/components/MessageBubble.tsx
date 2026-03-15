@@ -7,11 +7,14 @@ import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 
+import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
+
 interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   toolCalls?: ToolCallEntry[];
+  contentBlocks?: DisplayContentBlockUnion[];
 }
 
 interface Props {
@@ -134,8 +137,31 @@ function formatResult(result: string): string {
 export function MessageBubble({ message }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+  const hasContentBlocks = message.contentBlocks && message.contentBlocks.length > 0;
 
-  if (!hasContent && !hasToolCalls) return null;
+  if (!hasContent && !hasToolCalls && !hasContentBlocks) return null;
+
+  const renderUserContent = () => {
+    if (hasContentBlocks) {
+      return (
+        <div className={styles.userMessageBlocks}>
+          {message.contentBlocks!.map((block, i) =>
+            block.type === "text" ? (
+              <span key={i}>{block.text}</span>
+            ) : (
+              <img
+                key={i}
+                src={`data:${block.media_type};base64,${block.data}`}
+                alt=""
+                className={styles.messageImage}
+              />
+            ),
+          )}
+        </div>
+      );
+    }
+    return message.content;
+  };
 
   return (
     <div
@@ -149,7 +175,7 @@ export function MessageBubble({ message }: Props) {
         }`}
       >
         {message.role === "user" ? (
-          message.content
+          renderUserContent()
         ) : (
           <div className={styles.markdown}>
             {hasToolCalls && (

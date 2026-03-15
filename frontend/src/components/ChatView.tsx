@@ -55,12 +55,20 @@ export function ChatView() {
       .then((msgs) => {
         resetMessages(
           msgs
-            .filter((m: ChatMessage) => m.content && m.content.trim().length > 0)
-            .map((m: ChatMessage) => ({
-              id: m.message_id,
-              role: m.role,
-              content: m.content,
-            })),
+            .filter((m: ChatMessage) => (m.content && m.content.trim().length > 0) || (m.content_blocks && m.content_blocks.length > 0))
+            .map((m: ChatMessage) => {
+              const blocks = (m.content_blocks ?? [])
+                .filter((b) => b.type === "text" || b.type === "image")
+                .map((b) =>
+                  b.type === "text" ? { type: "text" as const, text: b.text ?? "" } : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" }
+                );
+              return {
+                id: m.message_id,
+                role: m.role,
+                content: m.content,
+                contentBlocks: blocks.length > 0 ? blocks : undefined,
+              };
+            }),
         );
       })
       .catch(console.error);

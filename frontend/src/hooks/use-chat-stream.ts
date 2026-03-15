@@ -3,11 +3,25 @@ import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import type { ToolCallInfo, ToolResultInfo } from "../api/streams";
 
+export interface DisplayContentBlock {
+  type: "text";
+  text: string;
+}
+
+export interface DisplayImageBlock {
+  type: "image";
+  media_type: string;
+  data: string;
+}
+
+export type DisplayContentBlockUnion = DisplayContentBlock | DisplayImageBlock;
+
 export interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   toolCalls?: ToolCallEntry[];
+  contentBlocks?: DisplayContentBlockUnion[];
 }
 
 export interface ToolCallEntry {
@@ -53,10 +67,23 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       const hasAttachments = attachments && attachments.length > 0;
       if (!trimmed && !action && !hasAttachments) return;
 
+      const contentBlocks: DisplayMessage["contentBlocks"] =
+        attachments && attachments.length > 0
+          ? [
+              ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
+              ...attachments.map((a) => ({
+                type: "image" as const,
+                media_type: a.media_type,
+                data: a.data,
+              })),
+            ]
+          : undefined;
+
       const userMsg: DisplayMessage = {
         id: `temp-${Date.now()}`,
         role: "user",
-        content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed),
+        content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || (attachments?.length ? `[${attachments.length} image(s)]` : ""),
+        contentBlocks,
       };
 
       setMessages((prev) => [...prev, userMsg]);
