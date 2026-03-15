@@ -255,6 +255,7 @@ pub struct ChatService {
     store: Arc<RocksStore>,
     settings: Arc<SettingsService>,
     claude_client: Arc<ClaudeClient>,
+    billing_client: Arc<BillingClient>,
     spec_gen: Arc<SpecGenerationService>,
     project_service: Arc<ProjectService>,
     task_service: Arc<TaskService>,
@@ -265,6 +266,7 @@ impl ChatService {
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
         claude_client: Arc<ClaudeClient>,
+        billing_client: Arc<BillingClient>,
         spec_gen: Arc<SpecGenerationService>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
@@ -273,6 +275,7 @@ impl ChatService {
             store,
             settings,
             claude_client,
+            billing_client,
             spec_gen,
             project_service,
             task_service,
@@ -1063,6 +1066,15 @@ impl ChatService {
                 output_tokens: accumulated_output_tokens,
             });
 
+            self.debit_credits(
+                stream_result.input_tokens + stream_result.output_tokens,
+                "aura_chat",
+                Some(serde_json::json!({
+                    "project_id": project_id.to_string(),
+                    "agent_instance_id": agent_instance_id.to_string(),
+                })),
+            ).await;
+
             // Persist tokens incrementally so they're not lost if a later iteration hangs
             if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
                 instance.total_input_tokens += stream_result.input_tokens;
@@ -1549,6 +1561,41 @@ impl ChatService {
     }
 
     // -----------------------------------------------------------------------
+    // Credit debiting
+    // -----------------------------------------------------------------------
+
+    async fn debit_credits(
+        &self,
+        amount: u64,
+        reason: &str,
+        metadata: Option<serde_json::Value>,
+    ) {
+        if amount == 0 {
+            return;
+        }
+        let token = self.store
+            .get_setting("zero_auth_session")
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
+            .map(|s| s.access_token);
+        let Some(token) = token else {
+            warn!("No access token available for credit debit");
+            return;
+        };
+        match self.billing_client.debit_credits(&token, amount, reason, None, metadata).await {
+            Ok(resp) => {
+                info!(amount, reason, balance = resp.balance, tx = %resp.transaction_id, "Credits debited");
+            }
+            Err(BillingError::InsufficientCredits { available, required }) => {
+                warn!(available, required, "Insufficient credits for chat");
+            }
+            Err(e) => {
+                warn!(error = %e, reason, "Failed to debit credits");
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // Spec generation
     // -----------------------------------------------------------------------
 
@@ -1600,6 +1647,14 @@ impl ChatService {
                         input_tokens: spec_input_tokens,
                         output_tokens: spec_output_tokens,
                     });
+                    self.debit_credits(
+                        input_tokens + output_tokens,
+                        "aura_spec_gen",
+                        Some(serde_json::json!({
+                            "project_id": project_id.to_string(),
+                            "agent_instance_id": agent_instance_id.to_string(),
+                        })),
+                    ).await;
                 }
                 SpecStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));
