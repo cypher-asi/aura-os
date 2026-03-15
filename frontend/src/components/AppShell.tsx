@@ -13,6 +13,7 @@ import { SidebarSearchProvider, useSidebarSearch } from "../context/SidebarSearc
 import { useSidekick } from "../context/SidekickContext";
 import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
 import { AgentAppProvider } from "../apps/agents/AgentAppProvider";
+import { FeedProvider } from "../apps/feed/FeedProvider";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
 
@@ -182,7 +183,9 @@ export function AppShell() {
         <SidebarSearchProvider>
           <ProjectsProvider>
             <AgentAppProvider>
-              <AppContent />
+              <FeedProvider>
+                <AppContent />
+              </FeedProvider>
             </AgentAppProvider>
           </ProjectsProvider>
         </SidebarSearchProvider>

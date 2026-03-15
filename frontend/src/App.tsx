@@ -36,6 +36,9 @@ export default function App() {
                 {/* Agents app routes */}
                 <Route path="agents" element={null} />
                 <Route path="agents/:agentId" element={<AgentChatView />} />
+
+                {/* Feed app routes */}
+                <Route path="feed" element={null} />
               </Route>
             </Route>
           </Routes>
