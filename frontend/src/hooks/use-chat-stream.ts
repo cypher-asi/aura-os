@@ -38,17 +38,33 @@ interface UseChatStreamOptions {
   chatSessionId: string | undefined;
 }
 
+function decodeBase64Text(base64: string): string {
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return "";
+  }
+}
+
 export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions) {
   const sidekick = useSidekick();
 
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
+  const [thinkingText, setThinkingText] = useState("");
+  const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(null);
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
 
   const abortRef = useRef<AbortController | null>(null);
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
+  const thinkingBufferRef = useRef("");
+  const thinkingRafRef = useRef<number | null>(null);
+  const thinkingStartRef = useRef<number | null>(null);
   const toolCallsRef = useRef<ToolCallEntry[]>([]);
 
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
@@ -71,18 +87,28 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
         attachments && attachments.length > 0
           ? [
               ...(trimmed ? [{ type: "text" as const, text: trimmed }] : []),
-              ...attachments.map((a) => ({
-                type: "image" as const,
-                media_type: a.media_type,
-                data: a.data,
-              })),
+              ...attachments.map((a) =>
+                a.type === "text"
+                  ? {
+                      type: "text" as const,
+                      text: `[File: ${a.name ?? "document"}]\n\n${decodeBase64Text(a.data)}`,
+                    }
+                  : { type: "image" as const, media_type: a.media_type, data: a.data },
+              ),
             ]
           : undefined;
+
+      const attachmentLabel =
+        attachments && attachments.length > 0
+          ? attachments.some((a) => a.type === "text")
+            ? `[${attachments.length} file(s)]`
+            : `[${attachments.length} image(s)]`
+          : "";
 
       const userMsg: DisplayMessage = {
         id: `temp-${Date.now()}`,
         role: "user",
-        content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || (attachments?.length ? `[${attachments.length} image(s)]` : ""),
+        content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || attachmentLabel,
         contentBlocks,
       };
 
@@ -91,6 +117,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       sidekick.setStreamingSessionId(chatSessionId);
       setStreamingText("");
       streamBufferRef.current = "";
+      setThinkingText("");
+      thinkingBufferRef.current = "";
+      thinkingStartRef.current = null;
+      setThinkingDurationMs(null);
       toolCallsRef.current = [];
       setActiveToolCalls([]);
 
@@ -110,7 +140,22 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
         selectedModel,
         attachments,
         {
+          onThinkingDelta(text) {
+            if (thinkingStartRef.current === null) {
+              thinkingStartRef.current = Date.now();
+            }
+            thinkingBufferRef.current += text;
+            if (thinkingRafRef.current === null) {
+              thinkingRafRef.current = requestAnimationFrame(() => {
+                thinkingRafRef.current = null;
+                setThinkingText(thinkingBufferRef.current);
+              });
+            }
+          },
           onDelta(text) {
+            if (thinkingStartRef.current !== null && thinkingDurationMs === null) {
+              setThinkingDurationMs(Date.now() - thinkingStartRef.current);
+            }
             streamBufferRef.current += text;
             if (rafRef.current === null) {
               rafRef.current = requestAnimationFrame(() => {
@@ -158,6 +203,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             ]);
             setStreamingText("");
             streamBufferRef.current = "";
+            setThinkingText("");
+            thinkingBufferRef.current = "";
+            thinkingStartRef.current = null;
+            setThinkingDurationMs(null);
             toolCallsRef.current = [];
             setActiveToolCalls([]);
           },
@@ -179,6 +228,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             }
             setStreamingText("");
             streamBufferRef.current = "";
+            setThinkingText("");
+            thinkingBufferRef.current = "";
+            thinkingStartRef.current = null;
+            setThinkingDurationMs(null);
             toolCallsRef.current = [];
             setActiveToolCalls([]);
           },
@@ -198,6 +251,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
               toolCallsRef.current = [];
               setActiveToolCalls([]);
             }
+            setThinkingText("");
+            thinkingBufferRef.current = "";
+            thinkingStartRef.current = null;
+            setThinkingDurationMs(null);
             setIsStreaming(false);
             sidekick.setStreamingSessionId(null);
             abortRef.current = null;
@@ -228,6 +285,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
     }
     setStreamingText("");
     streamBufferRef.current = "";
+    setThinkingText("");
+    thinkingBufferRef.current = "";
+    thinkingStartRef.current = null;
+    setThinkingDurationMs(null);
     toolCallsRef.current = [];
     setActiveToolCalls([]);
     setIsStreaming(false);
@@ -239,6 +300,8 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
     messages,
     isStreaming,
     streamingText,
+    thinkingText,
+    thinkingDurationMs,
     activeToolCalls,
     sendMessage,
     stopStreaming,
