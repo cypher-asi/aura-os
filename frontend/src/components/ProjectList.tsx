@@ -294,13 +294,15 @@ export function ProjectList() {
       const id = ids[ids.length - 1];
       if (!id) return;
       if (projectMap.has(id)) {
+        if (id !== projectId) sidekick.closePreview();
         navigate(`/projects/${id}`);
       } else if (sessionMeta.has(id)) {
         const { projectId: pid } = sessionMeta.get(id)!;
+        if (pid !== projectId) sidekick.closePreview();
         navigate(`/projects/${pid}/chat/${id}`);
       }
     },
-    [projectMap, sessionMeta, navigate],
+    [projectMap, sessionMeta, navigate, projectId, sidekick],
   );
 
   const handleExpand = useCallback(
