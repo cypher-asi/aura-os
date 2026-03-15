@@ -17,9 +17,9 @@ export function TaskList() {
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
   const { subscribe } = useEventContext();
-  const [localSpecs, setLocalSpecs] = useState<Spec[]>([]);
-  const [localTasks, setLocalTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
+  const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -182,7 +182,7 @@ export function TaskList() {
   );
 
   const isEmpty = tasks.length === 0;
-  const showEmpty = useDelayedEmpty(isEmpty, loading);
+  const showEmpty = useDelayedEmpty(isEmpty, loading, sidekick.streamingSessionId ? 800 : 0);
 
   if (isEmpty) {
     if (!showEmpty) return null;
