@@ -145,6 +145,29 @@ fn archive_project_sets_archived_status() {
     assert_eq!(archived.current_status, ProjectStatus::Archived);
 }
 
+#[test]
+fn archived_projects_excluded_from_listings() {
+    let (store, dir) = setup();
+    let svc = ProjectService::new(store);
+
+    let p1 = svc.create_project(valid_input(&dir)).unwrap();
+    let p2 = svc.create_project(valid_input(&dir)).unwrap();
+    assert_eq!(svc.list_projects().unwrap().len(), 2);
+
+    svc.archive_project(&p1.project_id).unwrap();
+
+    let listed = svc.list_projects().unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].project_id, p2.project_id);
+
+    let by_org = svc.list_projects_by_org(&p1.org_id).unwrap();
+    assert!(by_org.iter().all(|p| p.project_id != p1.project_id));
+
+    // Archived project is still fetchable by ID
+    let fetched = svc.get_project(&p1.project_id).unwrap();
+    assert_eq!(fetched.current_status, ProjectStatus::Archived);
+}
+
 // ---------------------------------------------------------------------------
 // Spec generation response parser
 // ---------------------------------------------------------------------------

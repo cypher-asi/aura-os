@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Outlet } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project } from "../types";
+import type { EngineEvent } from "../types/events";
 import { useProjectRegister } from "../context/ProjectContext";
+import { useEventContext } from "../context/EventContext";
 import { PageEmptyState, Spinner } from "@cypher-asi/zui";
 
 export function ProjectLayout() {
@@ -13,6 +15,7 @@ export function ProjectLayout() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
+  const { subscribe } = useEventContext();
 
   useEffect(() => {
     if (!projectId) return;
@@ -25,6 +28,15 @@ export function ProjectLayout() {
   }, [projectId]);
 
   useEffect(() => {
+    if (!projectId) return;
+    return subscribe("spec_gen_completed", (e: EngineEvent) => {
+      if (e.project_id === projectId) {
+        api.getProject(projectId).then(setProject).catch(() => {});
+      }
+    });
+  }, [projectId, subscribe]);
+
+  useEffect(() => {
     return () => unregister();
   }, [unregister]);
 
@@ -33,8 +45,8 @@ export function ProjectLayout() {
 
     const handleArchive = async () => {
       try {
-        const updated = await api.archiveProject(project.project_id);
-        setProject(updated);
+        await api.archiveProject(project.project_id);
+        navigate("/");
       } catch (err) {
         setMessage(err instanceof Error ? err.message : "Failed to archive");
       }

@@ -144,6 +144,14 @@ export function ProjectList() {
     fetchProjects();
   }, [fetchProjects]);
 
+  const prevProjectIdRef = useRef(projectId);
+  useEffect(() => {
+    if (prevProjectIdRef.current && !projectId) {
+      fetchProjects();
+    }
+    prevProjectIdRef.current = projectId;
+  }, [projectId, fetchProjects]);
+
   useEffect(() => {
     if (!projectId) return;
     if (!(projectId in sessionsByProject)) {

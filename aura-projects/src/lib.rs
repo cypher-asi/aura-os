@@ -116,6 +116,8 @@ impl ProjectService {
             github_repo_full_name: input.github_repo_full_name,
             build_command: sanitize_command_option(input.build_command),
             test_command: sanitize_command_option(input.test_command),
+            specs_summary: None,
+            specs_title: None,
             created_at: now,
             updated_at: now,
         };
@@ -132,12 +134,19 @@ impl ProjectService {
     }
 
     pub fn list_projects(&self) -> Result<Vec<Project>, ProjectError> {
-        Ok(self.store.list_projects()?)
+        let all = self.store.list_projects()?;
+        Ok(all
+            .into_iter()
+            .filter(|p| p.current_status != ProjectStatus::Archived)
+            .collect())
     }
 
     pub fn list_projects_by_org(&self, org_id: &OrgId) -> Result<Vec<Project>, ProjectError> {
         let all = self.store.list_projects()?;
-        Ok(all.into_iter().filter(|p| p.org_id == *org_id).collect())
+        Ok(all
+            .into_iter()
+            .filter(|p| p.org_id == *org_id && p.current_status != ProjectStatus::Archived)
+            .collect())
     }
 
     pub fn verify_org_access(
