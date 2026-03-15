@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { api } from "../api/client";
 import { useOrg } from "../context/OrgContext";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
@@ -21,11 +21,18 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const [nameError, setNameError] = useState("");
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen || !activeOrg) return;
     api.orgs.listGithubRepos(activeOrg.org_id).then(setRepos).catch(() => setRepos([]));
   }, [isOpen, activeOrg]);
+
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => nameInputRef.current?.focus());
+    }
+  }, [isOpen]);
 
   const reset = useCallback(() => {
     setName("");
@@ -89,11 +96,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <Input
+          ref={nameInputRef}
           value={name}
           onChange={(e) => { setName(e.target.value); setNameError(""); }}
           placeholder="Project name"
           validationMessage={nameError}
-          autoFocus
         />
         <Input
           value={description}
