@@ -95,7 +95,7 @@ function AppLayout() {
             resizePosition="left"
             defaultWidth={320}
             minWidth={200}
-            maxWidth={600}
+            maxWidth={1200}
             storageKey="aura-preview"
             collapsible
             collapsed={!previewItem}
