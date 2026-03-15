@@ -1,3 +1,9 @@
+/* Override ZUI global focus-visible outline — individual components
+   that need focus rings define their own styles. */
+*:focus-visible {
+  outline: none;
+}
+
 :root {
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
