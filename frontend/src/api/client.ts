@@ -4,15 +4,16 @@ import type {
   SpecId,
   TaskId,
   AgentId,
+  AgentInstanceId,
   TaskStatus,
   Project,
   Sprint,
   Spec,
   Task,
   Agent,
+  AgentInstance,
   Session,
-  ChatSession,
-  ChatMessage,
+  Message,
   ApiKeyInfo,
   ProjectProgress,
   AuthSession,
@@ -93,8 +94,8 @@ export interface LoopStatusResponse {
   running: boolean;
   paused: boolean;
   project_id: ProjectId | null;
-  agent_id?: string | null;
-  active_agents?: string[];
+  agent_instance_id?: string | null;
+  active_agent_instances?: string[];
 }
 
 export const api = {
@@ -309,46 +310,57 @@ export const api = {
   listProjectSessions: (projectId: ProjectId) =>
     apiFetch<Session[]>(`/api/projects/${projectId}/sessions`),
 
-  // Agents
-  listAgents: (projectId: ProjectId) =>
-    apiFetch<Agent[]>(`/api/projects/${projectId}/agents`),
-  getAgent: (projectId: ProjectId, agentId: AgentId) =>
-    apiFetch<Agent>(`/api/projects/${projectId}/agents/${agentId}`),
-  listSessions: (projectId: ProjectId, agentId: AgentId) =>
-    apiFetch<Session[]>(
-      `/api/projects/${projectId}/agents/${agentId}/sessions`,
-    ),
-  getSession: (projectId: ProjectId, agentId: AgentId, sessionId: string) =>
-    apiFetch<Session>(
-      `/api/projects/${projectId}/agents/${agentId}/sessions/${sessionId}`,
-    ),
-  listSessionTasks: (projectId: ProjectId, agentId: AgentId, sessionId: string) =>
-    apiFetch<Task[]>(
-      `/api/projects/${projectId}/agents/${agentId}/sessions/${sessionId}/tasks`,
-    ),
+  // User-level Agents (templates)
+  agents: {
+    list: () => apiFetch<Agent[]>("/api/agents"),
+    create: (data: { name: string; role: string; personality: string; system_prompt: string; skills?: string[]; icon?: string }) =>
+      apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
+    get: (agentId: AgentId) => apiFetch<Agent>(`/api/agents/${agentId}`),
+    update: (agentId: AgentId, data: { name?: string; role?: string; personality?: string; system_prompt?: string; skills?: string[]; icon?: string | null }) =>
+      apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
+    delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
+  },
 
-  // Chat Sessions
-  createChatSession: (projectId: ProjectId, title: string) =>
-    apiFetch<ChatSession>(`/api/projects/${projectId}/chat-sessions`, {
+  // Agent Instances (project-level working copies)
+  createAgentInstance: (projectId: ProjectId, agentId: AgentId) =>
+    apiFetch<AgentInstance>(`/api/projects/${projectId}/agents`, {
       method: "POST",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ agent_id: agentId }),
     }),
-  listChatSessions: (projectId: ProjectId) =>
-    apiFetch<ChatSession[]>(`/api/projects/${projectId}/chat-sessions`),
-  updateChatSession: (projectId: ProjectId, chatSessionId: string, title: string) =>
-    apiFetch<ChatSession>(`/api/projects/${projectId}/chat-sessions/${chatSessionId}`, {
+  listAgentInstances: (projectId: ProjectId) =>
+    apiFetch<AgentInstance[]>(`/api/projects/${projectId}/agents`),
+  getAgentInstance: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<AgentInstance>(`/api/projects/${projectId}/agents/${agentInstanceId}`),
+  updateAgentInstance: (projectId: ProjectId, agentInstanceId: AgentInstanceId, data: Partial<Pick<AgentInstance, "name" | "role" | "personality" | "system_prompt" | "skills" | "icon" | "model">>) =>
+    apiFetch<AgentInstance>(`/api/projects/${projectId}/agents/${agentInstanceId}`, {
       method: "PUT",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(data),
     }),
-  deleteChatSession: (projectId: ProjectId, chatSessionId: string) =>
-    apiFetch<void>(`/api/projects/${projectId}/chat-sessions/${chatSessionId}`, {
+  deleteAgentInstance: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<void>(`/api/projects/${projectId}/agents/${agentInstanceId}`, {
       method: "DELETE",
     }),
-  getChatMessages: (projectId: ProjectId, chatSessionId: string) =>
-    apiFetch<ChatMessage[]>(
-      `/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages`,
+
+  // Messages (per agent instance)
+  getMessages: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<Message[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/messages`,
     ),
   sendMessageStream,
+
+  // Sessions (per agent instance)
+  listSessions: (projectId: ProjectId, agentInstanceId: AgentInstanceId) =>
+    apiFetch<Session[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions`,
+    ),
+  getSession: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<Session>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}`,
+    ),
+  listSessionTasks: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<Task[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/tasks`,
+    ),
 
   // Log entries
   getLogEntries: (limit = 1000) =>

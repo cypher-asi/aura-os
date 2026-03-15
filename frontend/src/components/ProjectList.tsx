@@ -4,15 +4,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useOrg } from "../context/OrgContext";
-import { clearLastChatIf } from "../utils/storage";
-import type { Project, ChatSession } from "../types";
+import { clearLastAgentIf } from "../utils/storage";
+import type { Project, AgentInstance } from "../types";
 import { ButtonPlus, Explorer, Menu } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { MessageSquare, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Bot, Pencil, Trash2, Loader2 } from "lucide-react";
 import { NewProjectModal } from "./NewProjectModal";
-import { DeleteProjectModal, DeleteSessionModal } from "./ProjectModals";
+import { DeleteProjectModal, DeleteAgentInstanceModal } from "./ProjectModals";
 import { useEventContext } from "../context/EventContext";
 import styles from "./ProjectList.module.css";
+
+const DEFAULT_AGENT_ID = "default";
 
 /**
  * Self-contained inline rename input that overlays the label of a tree node.
@@ -90,42 +92,42 @@ function InlineRenameInput({
 }
 
 const projectMenuItems: MenuItem[] = [
-  { id: "new-chat", label: "New Chat", icon: <MessageSquare size={14} /> },
+  { id: "add-agent", label: "Add Agent", icon: <Bot size={14} /> },
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
   { type: "separator" },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
-const sessionMenuItems: MenuItem[] = [
-  { id: "delete-session", label: "Delete", icon: <Trash2 size={14} /> },
+const agentMenuItems: MenuItem[] = [
+  { id: "delete-agent", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
 interface ContextMenuState {
   x: number;
   y: number;
   project?: Project;
-  session?: ChatSession;
+  agent?: AgentInstance;
 }
 
 export function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [sessionsByProject, setSessionsByProject] = useState<Record<string, ChatSession[]>>({});
-  const { projectId, chatSessionId } = useParams();
+  const [agentsByProject, setAgentsByProject] = useState<Record<string, AgentInstance[]>>({});
+  const { projectId, agentInstanceId } = useParams();
   const navigate = useNavigate();
   const sidekick = useSidekick();
   const { activeOrg } = useOrg();
 
   const { subscribe } = useEventContext();
   const [automatingProjectId, setAutomatingProjectId] = useState<string | null>(null);
-  const [automatingChatId, setAutomatingChatId] = useState<string | null>(null);
-  const chatSessionIdRef = useRef(chatSessionId);
+  const [automatingAgentInstanceId, setAutomatingAgentInstanceId] = useState<string | null>(null);
+  const agentInstanceIdRef = useRef(agentInstanceId);
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteSessionTarget, setDeleteSessionTarget] = useState<ChatSession | null>(null);
-  const [deleteSessionLoading, setDeleteSessionLoading] = useState(false);
+  const [deleteAgentTarget, setDeleteAgentTarget] = useState<AgentInstance | null>(null);
+  const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
 
   const ctxMenuRef = useRef<HTMLDivElement>(null);
@@ -134,9 +136,9 @@ export function ProjectList() {
     api.listProjects(activeOrg?.org_id).then(setProjects).catch(console.error);
   }, [activeOrg?.org_id]);
 
-  const fetchSessions = useCallback((pid: string) => {
-    api.listChatSessions(pid).then((sessions) => {
-      setSessionsByProject((prev) => ({ ...prev, [pid]: sessions }));
+  const fetchAgentInstances = useCallback((pid: string) => {
+    api.listAgentInstances(pid).then((agents) => {
+      setAgentsByProject((prev) => ({ ...prev, [pid]: agents }));
     }).catch(console.error);
   }, []);
 
@@ -154,18 +156,18 @@ export function ProjectList() {
 
   useEffect(() => {
     if (!projectId) return;
-    if (!(projectId in sessionsByProject)) {
-      fetchSessions(projectId);
+    if (!(projectId in agentsByProject)) {
+      fetchAgentInstances(projectId);
       return;
     }
-    if (chatSessionId) {
-      const cached = sessionsByProject[projectId] ?? [];
-      const found = cached.some((s) => s.chat_session_id === chatSessionId);
+    if (agentInstanceId) {
+      const cached = agentsByProject[projectId] ?? [];
+      const found = cached.some((s) => s.agent_instance_id === agentInstanceId);
       if (!found) {
-        fetchSessions(projectId);
+        fetchAgentInstances(projectId);
       }
     }
-  }, [projectId, chatSessionId]);
+  }, [projectId, agentInstanceId]);
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -188,33 +190,33 @@ export function ProjectList() {
   }, [ctxMenu]);
 
   useEffect(() => {
-    return sidekick.onSessionTitleUpdate((session) => {
-      setSessionsByProject((prev) => {
-        const pid = session.project_id;
+    return sidekick.onAgentInstanceUpdate((instance) => {
+      setAgentsByProject((prev) => {
+        const pid = instance.project_id;
         const list = prev[pid];
         if (!list) return prev;
         return {
           ...prev,
           [pid]: list.map((s) =>
-            s.chat_session_id === session.chat_session_id ? { ...s, title: session.title, updated_at: session.updated_at } : s,
+            s.agent_instance_id === instance.agent_instance_id ? { ...s, name: instance.name, updated_at: instance.updated_at } : s,
           ),
         };
       });
     });
   }, [sidekick]);
 
-  chatSessionIdRef.current = chatSessionId;
+  agentInstanceIdRef.current = agentInstanceId;
 
   useEffect(() => {
     const clearAutomation = () => {
       setAutomatingProjectId(null);
-      setAutomatingChatId(null);
+      setAutomatingAgentInstanceId(null);
     };
     const unsubs = [
       subscribe("loop_started", (e) => {
         if (e.project_id) {
           setAutomatingProjectId(e.project_id);
-          setAutomatingChatId(chatSessionIdRef.current ?? null);
+          setAutomatingAgentInstanceId(agentInstanceIdRef.current ?? null);
         }
       }),
       subscribe("loop_paused", clearAutomation),
@@ -229,17 +231,17 @@ export function ProjectList() {
     [projects],
   );
 
-  const sessionMeta = useMemo(() => {
-    const map = new Map<string, { projectId: string; session: ChatSession }>();
-    for (const [pid, sessions] of Object.entries(sessionsByProject)) {
-      for (const s of sessions) {
-        map.set(s.chat_session_id, { projectId: pid, session: s });
+  const agentMeta = useMemo(() => {
+    const map = new Map<string, { projectId: string; agent: AgentInstance }>();
+    for (const [pid, agents] of Object.entries(agentsByProject)) {
+      for (const s of agents) {
+        map.set(s.agent_instance_id, { projectId: pid, agent: s });
       }
     }
     return map;
-  }, [sessionsByProject]);
+  }, [agentsByProject]);
 
-  const { streamingSessionId } = sidekick;
+  const { streamingAgentInstanceId } = sidekick;
 
   const explorerData: ExplorerNode[] = useMemo(
     () =>
@@ -250,32 +252,32 @@ export function ProjectList() {
           <span className={styles.projectSuffix}>
             <span onClick={(e) => e.stopPropagation()} className={styles.newChatWrap}>
               <ButtonPlus
-                onClick={() => handleNewSession(p.project_id)}
+                onClick={() => handleAddAgent(p.project_id)}
                 size="sm"
-                title="New Chat"
+                title="Add Agent"
               />
             </span>
           </span>
         ),
         metadata: { type: "project" },
         children:
-          sessionsByProject[p.project_id] !== undefined
-            ? sessionsByProject[p.project_id].map((s) => {
-                const isAutomating = automatingProjectId === p.project_id && automatingChatId === s.chat_session_id;
+          agentsByProject[p.project_id] !== undefined
+            ? agentsByProject[p.project_id].map((s) => {
+                const isAutomating = automatingProjectId === p.project_id && automatingAgentInstanceId === s.agent_instance_id;
                 return {
-                  id: s.chat_session_id,
-                  label: s.title,
+                  id: s.agent_instance_id,
+                  label: s.name,
                   suffix: isAutomating
                     ? <span className={styles.sessionIndicator}><Loader2 size={10} className={styles.automationSpinner} /></span>
-                    : streamingSessionId === s.chat_session_id
+                    : streamingAgentInstanceId === s.agent_instance_id
                       ? <span className={styles.sessionIndicator}><span className={styles.streamingDot} /></span>
                       : undefined,
-                  metadata: { type: "session", projectId: p.project_id },
+                  metadata: { type: "agent", projectId: p.project_id },
                 };
               })
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],
       })),
-    [projects, sessionsByProject, streamingSessionId, automatingProjectId, automatingChatId],
+    [projects, agentsByProject, streamingAgentInstanceId, automatingProjectId, automatingAgentInstanceId],
   );
 
   const defaultExpandedIds = useMemo(
@@ -284,10 +286,10 @@ export function ProjectList() {
   );
 
   const defaultSelectedIds = useMemo(() => {
-    if (chatSessionId) return [chatSessionId];
+    if (agentInstanceId) return [agentInstanceId];
     if (projectId) return [projectId];
     return [];
-  }, [projectId, chatSessionId]);
+  }, [projectId, agentInstanceId]);
 
   const handleSelect = useCallback(
     (ids: string[]) => {
@@ -296,22 +298,22 @@ export function ProjectList() {
       if (projectMap.has(id)) {
         if (id !== projectId) sidekick.closePreview();
         navigate(`/projects/${id}`);
-      } else if (sessionMeta.has(id)) {
-        const { projectId: pid } = sessionMeta.get(id)!;
+      } else if (agentMeta.has(id)) {
+        const { projectId: pid } = agentMeta.get(id)!;
         if (pid !== projectId) sidekick.closePreview();
-        navigate(`/projects/${pid}/chat/${id}`);
+        navigate(`/projects/${pid}/agents/${id}`);
       }
     },
-    [projectMap, sessionMeta, navigate, projectId, sidekick],
+    [projectMap, agentMeta, navigate, projectId, sidekick],
   );
 
   const handleExpand = useCallback(
     (nodeId: string, expanded: boolean) => {
-      if (expanded && projectMap.has(nodeId) && !(nodeId in sessionsByProject)) {
-        fetchSessions(nodeId);
+      if (expanded && projectMap.has(nodeId) && !(nodeId in agentsByProject)) {
+        fetchAgentInstances(nodeId);
       }
     },
-    [projectMap, sessionsByProject, fetchSessions],
+    [projectMap, agentsByProject, fetchAgentInstances],
   );
 
   const handleKeyDown = useCallback(
@@ -341,42 +343,42 @@ export function ProjectList() {
         return;
       }
 
-      const meta = sessionMeta.get(nodeId);
+      const meta = agentMeta.get(nodeId);
       if (meta) {
         e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, session: meta.session });
+        setCtxMenu({ x: e.clientX, y: e.clientY, agent: meta.agent });
       }
     },
-    [projectMap, sessionMeta],
+    [projectMap, agentMeta],
   );
 
-  const handleNewSession = useCallback(
+  const handleAddAgent = useCallback(
     async (pid: string) => {
       try {
-        const session = await api.createChatSession(pid, "New Chat");
-        fetchSessions(pid);
-        navigate(`/projects/${pid}/chat/${session.chat_session_id}`);
+        const instance = await api.createAgentInstance(pid, DEFAULT_AGENT_ID);
+        fetchAgentInstances(pid);
+        navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`);
       } catch (err) {
-        console.error("Failed to create session", err);
+        console.error("Failed to create agent instance", err);
       }
     },
-    [fetchSessions, navigate],
+    [fetchAgentInstances, navigate],
   );
 
   const handleMenuAction = (actionId: string) => {
     if (!ctxMenu) return;
     const target = ctxMenu.project;
-    const sessionTarget = ctxMenu.session;
+    const agentTarget = ctxMenu.agent;
     setCtxMenu(null);
 
-    if (actionId === "new-chat" && target) {
-      handleNewSession(target.project_id);
+    if (actionId === "add-agent" && target) {
+      handleAddAgent(target.project_id);
     } else if (actionId === "rename" && target) {
       setRenameTarget(target);
     } else if (actionId === "delete" && target) {
       setDeleteTarget(target);
-    } else if (actionId === "delete-session" && sessionTarget) {
-      setDeleteSessionTarget(sessionTarget);
+    } else if (actionId === "delete-agent" && agentTarget) {
+      setDeleteAgentTarget(agentTarget);
     }
   };
 
@@ -402,12 +404,7 @@ export function ProjectList() {
       setShowNewProject(false);
       sidekick.closePreview();
       setProjects((prev) => [...prev, project]);
-      try {
-        const session = await api.createChatSession(project.project_id, "New Chat");
-        navigate(`/projects/${project.project_id}/chat/${session.chat_session_id}`);
-      } catch {
-        navigate(`/projects/${project.project_id}`);
-      }
+      navigate(`/projects/${project.project_id}`);
     },
     [navigate, sidekick],
   );
@@ -417,7 +414,7 @@ export function ProjectList() {
     setDeleteLoading(true);
     try {
       await api.deleteProject(deleteTarget.project_id);
-      clearLastChatIf({ projectId: deleteTarget.project_id });
+      clearLastAgentIf({ projectId: deleteTarget.project_id });
       if (projectId === deleteTarget.project_id) {
         navigate("/");
       }
@@ -430,37 +427,37 @@ export function ProjectList() {
     }
   };
 
-  const handleDeleteSession = async () => {
-    if (!deleteSessionTarget) return;
-    const { project_id: pid, chat_session_id: sid } = deleteSessionTarget;
-    setDeleteSessionLoading(true);
+  const handleDeleteAgent = async () => {
+    if (!deleteAgentTarget) return;
+    const { project_id: pid, agent_instance_id: aid } = deleteAgentTarget;
+    setDeleteAgentLoading(true);
 
-    const prevSessions = sessionsByProject[pid];
-    setSessionsByProject((prev) => ({
+    const prevAgents = agentsByProject[pid];
+    setAgentsByProject((prev) => ({
       ...prev,
-      [pid]: (prev[pid] ?? []).filter((s) => s.chat_session_id !== sid),
+      [pid]: (prev[pid] ?? []).filter((s) => s.agent_instance_id !== aid),
     }));
 
     try {
-      await api.deleteChatSession(pid, sid);
-      clearLastChatIf({ chatSessionId: sid });
-      if (chatSessionId === sid) {
-        const remaining = (prevSessions ?? []).filter(s => s.chat_session_id !== sid);
+      await api.deleteAgentInstance(pid, aid);
+      clearLastAgentIf({ agentInstanceId: aid });
+      if (agentInstanceId === aid) {
+        const remaining = (prevAgents ?? []).filter(s => s.agent_instance_id !== aid);
         if (remaining.length > 0) {
-          navigate(`/projects/${pid}/chat/${remaining[remaining.length - 1].chat_session_id}`);
+          navigate(`/projects/${pid}/agents/${remaining[remaining.length - 1].agent_instance_id}`);
         } else {
-          navigate(`/projects/${pid}/chat`);
+          navigate(`/projects/${pid}`);
         }
       }
-      setDeleteSessionTarget(null);
-      fetchSessions(pid);
+      setDeleteAgentTarget(null);
+      fetchAgentInstances(pid);
     } catch (err) {
-      console.error("Failed to delete session", err);
-      if (prevSessions) {
-        setSessionsByProject((prev) => ({ ...prev, [pid]: prevSessions }));
+      console.error("Failed to delete agent instance", err);
+      if (prevAgents) {
+        setAgentsByProject((prev) => ({ ...prev, [pid]: prevAgents }));
       }
     } finally {
-      setDeleteSessionLoading(false);
+      setDeleteAgentLoading(false);
     }
   };
 
@@ -492,7 +489,7 @@ export function ProjectList() {
             style={{ left: ctxMenu.x, top: ctxMenu.y }}
           >
             <Menu
-              items={ctxMenu.project ? projectMenuItems : sessionMenuItems}
+              items={ctxMenu.project ? projectMenuItems : agentMenuItems}
               onChange={handleMenuAction}
               background="solid"
               border="solid"
@@ -519,11 +516,11 @@ export function ProjectList() {
         onDelete={handleDelete}
       />
 
-      <DeleteSessionModal
-        target={deleteSessionTarget}
-        loading={deleteSessionLoading}
-        onClose={() => setDeleteSessionTarget(null)}
-        onDelete={handleDeleteSession}
+      <DeleteAgentInstanceModal
+        target={deleteAgentTarget}
+        loading={deleteAgentLoading}
+        onClose={() => setDeleteAgentTarget(null)}
+        onDelete={handleDeleteAgent}
       />
 
       <NewProjectModal

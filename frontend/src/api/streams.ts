@@ -4,8 +4,8 @@ import type {
   Sprint,
   Spec,
   Task,
-  ChatSession,
-  ChatMessage,
+  AgentInstance,
+  Message,
 } from "../types";
 import { streamSSE } from "./sse";
 
@@ -59,8 +59,8 @@ export interface ChatStreamCallbacks {
   onSpecsTitle?: (title: string) => void;
   onSpecsSummary?: (summary: string) => void;
   onTaskSaved?: (task: Task) => void;
-  onMessageSaved?: (message: ChatMessage) => void;
-  onTitleUpdated?: (session: ChatSession) => void;
+  onMessageSaved?: (message: Message) => void;
+  onAgentInstanceUpdated?: (instance: AgentInstance) => void;
   onError: (message: string) => void;
   onDone?: () => void;
 }
@@ -131,7 +131,7 @@ export function generateSpecsStream(
 
 export function sendMessageStream(
   projectId: ProjectId,
-  chatSessionId: string,
+  agentInstanceId: string,
   content: string,
   action: string | null,
   model: string,
@@ -143,8 +143,8 @@ export function sendMessageStream(
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
-  return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "specs_summary" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
-    `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
+  return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "specs_summary" | "task_saved" | "message_saved" | "agent_instance_updated" | "error" | "done">(
+    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/messages/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -188,10 +188,10 @@ export function sendMessageStream(
             cb.onTaskSaved?.(d.task as Task);
             break;
           case "message_saved":
-            cb.onMessageSaved?.(d.message as ChatMessage);
+            cb.onMessageSaved?.(d.message as Message);
             break;
-          case "title_updated":
-            cb.onTitleUpdated?.(d.session as ChatSession);
+          case "agent_instance_updated":
+            cb.onAgentInstanceUpdated?.(d.instance as AgentInstance);
             break;
           case "error":
             cb.onError(d.message as string);

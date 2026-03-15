@@ -1,15 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { PageEmptyState } from "@cypher-asi/zui";
 import { Rocket } from "lucide-react";
-import { getLastChat } from "../utils/storage";
+import { getLastAgent } from "../utils/storage";
 
 export function HomeView() {
-  const lastChat = getLastChat();
+  const lastAgent = getLastAgent();
 
-  if (lastChat) {
+  if (lastAgent) {
     return (
       <Navigate
-        to={`/projects/${lastChat.projectId}/chat/${lastChat.chatSessionId}`}
+        to={`/projects/${lastAgent.projectId}/agents/${lastAgent.agentInstanceId}`}
         replace
       />
     );

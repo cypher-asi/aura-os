@@ -1,23 +1,22 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
 import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
-import { setLastChat } from "../utils/storage";
+import { setLastAgent } from "../utils/storage";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
 import { ChatInputBar } from "./ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
-import type { ChatMessage } from "../types";
+import type { Message } from "../types";
 import styles from "./ChatView.module.css";
 
 export function ChatView() {
-  const { projectId, chatSessionId } = useParams<{
+  const { projectId, agentInstanceId } = useParams<{
     projectId: string;
-    chatSessionId: string;
+    agentInstanceId: string;
   }>();
-  const navigate = useNavigate();
 
   const {
     messages,
@@ -30,7 +29,7 @@ export function ChatView() {
     stopStreaming,
     resetMessages,
     rafRef,
-  } = useChatStream({ projectId, chatSessionId });
+  } = useChatStream({ projectId, agentInstanceId });
 
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState("opus-4.6");
@@ -38,28 +37,27 @@ export function ChatView() {
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
-  const autoCreateRef = useRef(false);
-  const { handleScroll } = useAutoScroll(messageAreaRef, chatSessionId);
+  const { handleScroll } = useAutoScroll(messageAreaRef, agentInstanceId);
 
   useEffect(() => {
-    if (projectId && chatSessionId) {
-      setLastChat(projectId, chatSessionId);
+    if (projectId && agentInstanceId) {
+      setLastAgent(projectId, agentInstanceId);
       requestAnimationFrame(() => inputBarRef.current?.focus());
     }
-  }, [projectId, chatSessionId]);
+  }, [projectId, agentInstanceId]);
 
   useEffect(() => {
-    if (!projectId || !chatSessionId) {
+    if (!projectId || !agentInstanceId) {
       resetMessages([]);
       return;
     }
     api
-      .getChatMessages(projectId, chatSessionId)
+      .getMessages(projectId, agentInstanceId)
       .then((msgs) => {
         resetMessages(
           msgs
-            .filter((m: ChatMessage) => (m.content && m.content.trim().length > 0) || (m.content_blocks && m.content_blocks.length > 0))
-            .map((m: ChatMessage) => {
+            .filter((m: Message) => (m.content && m.content.trim().length > 0) || (m.content_blocks && m.content_blocks.length > 0))
+            .map((m: Message) => {
               const blocks = (m.content_blocks ?? [])
                 .filter((b) => b.type === "text" || b.type === "image")
                 .map((b) =>
@@ -75,7 +73,7 @@ export function ChatView() {
         );
       })
       .catch(console.error);
-  }, [projectId, chatSessionId, resetMessages]);
+  }, [projectId, agentInstanceId, resetMessages]);
 
   useEffect(() => {
     return () => {
@@ -101,21 +99,7 @@ export function ChatView() {
     [sendMessage, selectedModel, attachments],
   );
 
-  useEffect(() => {
-    if (chatSessionId || !projectId || autoCreateRef.current) return;
-    autoCreateRef.current = true;
-    api
-      .createChatSession(projectId, "New Chat")
-      .then((session) => {
-        navigate(`/projects/${projectId}/chat/${session.chat_session_id}`, { replace: true });
-      })
-      .catch((err) => {
-        console.error("Failed to auto-create chat session", err);
-        autoCreateRef.current = false;
-      });
-  }, [chatSessionId, projectId, navigate]);
-
-  if (!chatSessionId) {
+  if (!agentInstanceId) {
     return null;
   }
 

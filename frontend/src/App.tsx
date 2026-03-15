@@ -24,9 +24,7 @@ export default function App() {
                 <Route index element={<HomeView />} />
                 <Route path="settings" element={<SettingsView />} />
                 <Route path="projects/:projectId" element={<ProjectLayout />}>
-                  <Route index element={<Navigate to="chat" replace />} />
-                  <Route path="chat" element={<ChatView />} />
-                  <Route path="chat/:chatSessionId" element={<ChatView />} />
+                  <Route path="agents/:agentInstanceId" element={<ChatView />} />
                   <Route path="execution" element={<ExecutionView />} />
                 </Route>
               </Route>

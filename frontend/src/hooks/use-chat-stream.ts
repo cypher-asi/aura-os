@@ -36,7 +36,7 @@ export interface ToolCallEntry {
 
 interface UseChatStreamOptions {
   projectId: string | undefined;
-  chatSessionId: string | undefined;
+  agentInstanceId: string | undefined;
 }
 
 function decodeBase64Text(base64: string): string {
@@ -50,7 +50,7 @@ function decodeBase64Text(base64: string): string {
   }
 }
 
-export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions) {
+export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptions) {
   const sidekick = useSidekick();
   const projectCtx = useProjectContext();
   const projectCtxRef = useRef(projectCtx);
@@ -83,7 +83,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       selectedModel: string,
       attachments?: import("../api/streams").ChatAttachment[],
     ) => {
-      if (!projectId || !chatSessionId || isStreaming) return;
+      if (!projectId || !agentInstanceId || isStreaming) return;
       const trimmed = content.trim();
       const hasAttachments = attachments && attachments.length > 0;
       if (!trimmed && !action && !hasAttachments) return;
@@ -119,7 +119,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
 
       setMessages((prev) => [...prev, userMsg]);
       setIsStreaming(true);
-      sidekick.setStreamingSessionId(chatSessionId);
+      sidekick.setStreamingAgentInstanceId(agentInstanceId);
       setStreamingText("");
       streamBufferRef.current = "";
       setThinkingText("");
@@ -140,7 +140,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
 
       await api.sendMessageStream(
         projectId,
-        chatSessionId,
+        agentInstanceId,
         userMsg.content,
         action,
         selectedModel,
@@ -256,8 +256,8 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             toolCallsRef.current = [];
             setActiveToolCalls([]);
           },
-          onTitleUpdated(session) {
-            sidekick.notifySessionTitleUpdate(session);
+          onAgentInstanceUpdated(instance) {
+            sidekick.notifyAgentInstanceUpdate(instance);
           },
           onError(message) {
             console.error("Chat stream error:", message);
@@ -302,7 +302,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             thinkingStartRef.current = null;
             setThinkingDurationMs(null);
             setIsStreaming(false);
-            sidekick.setStreamingSessionId(null);
+            sidekick.setStreamingAgentInstanceId(null);
             abortRef.current = null;
           },
         },
@@ -310,10 +310,10 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       );
 
       setIsStreaming(false);
-      sidekick.setStreamingSessionId(null);
+      sidekick.setStreamingAgentInstanceId(null);
       abortRef.current = null;
     },
-    [projectId, chatSessionId, isStreaming, sidekick],
+    [projectId, agentInstanceId, isStreaming, sidekick],
   );
 
   const stopStreaming = useCallback(() => {
@@ -338,7 +338,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
     toolCallsRef.current = [];
     setActiveToolCalls([]);
     setIsStreaming(false);
-    sidekick.setStreamingSessionId(null);
+    sidekick.setStreamingAgentInstanceId(null);
     abortRef.current = null;
   }, [sidekick]);
 

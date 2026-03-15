@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { ProjectId, Agent, Session } from "../types";
+import type { ProjectId, AgentInstance, Session } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
@@ -16,7 +16,7 @@ interface AgentStatusBarProps {
 export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
   const { connected, subscribe } = useEventContext();
   const sidekick = useSidekick();
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<AgentInstance[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentTaskTitles, setCurrentTaskTitles] = useState<Record<string, string | null>>({});
@@ -25,23 +25,23 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
 
   useClickOutside(dropdownRef, () => setDropdownOpen(false), dropdownOpen);
 
-  const selectedAgent = agents.find((a) => a.agent_id === selectedAgentId) ?? agents[0] ?? null;
+  const selectedAgent = agents.find((a) => a.agent_instance_id === selectedAgentId) ?? agents[0] ?? null;
 
-  const fetchSessions = useCallback((agentId: string) => {
+  const fetchSessions = useCallback((agentInstanceId: string) => {
     api
-      .listSessions(projectId, agentId)
+      .listSessions(projectId, agentInstanceId)
       .then((s) => setSessions(s))
       .catch(console.error);
   }, [projectId]);
 
   useEffect(() => {
     api
-      .listAgents(projectId)
+      .listAgentInstances(projectId)
       .then((list) => {
         setAgents(list);
         if (list.length > 0 && !selectedAgentId) {
-          setSelectedAgentId(list[0].agent_id);
-          fetchSessions(list[0].agent_id);
+          setSelectedAgentId(list[0].agent_instance_id);
+          fetchSessions(list[0].agent_instance_id);
         }
       })
       .catch(console.error);
@@ -49,9 +49,9 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
 
   useEffect(() => {
     if (selectedAgent) {
-      fetchSessions(selectedAgent.agent_id);
+      fetchSessions(selectedAgent.agent_instance_id);
     }
-  }, [selectedAgent?.agent_id, fetchSessions]);
+  }, [selectedAgent?.agent_instance_id, fetchSessions]);
 
   const isForProject = useCallback(
     (event: { project_id?: string }) => event.project_id === projectId,
@@ -62,7 +62,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
     const unsubs = [
       subscribe("loop_started", (e) => {
         if (!isForProject(e)) return;
-        api.listAgents(projectId).then(setAgents).catch(console.error);
+        api.listAgentInstances(projectId).then(setAgents).catch(console.error);
       }),
       subscribe("task_started", (e) => {
         if (!isForProject(e)) return;
@@ -87,7 +87,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
       }),
       subscribe("session_rolled_over", (e) => {
         if (!isForProject(e)) return;
-        if (selectedAgent) fetchSessions(selectedAgent.agent_id);
+        if (selectedAgent) fetchSessions(selectedAgent.agent_instance_id);
       }),
       subscribe("loop_paused", (e) => {
         if (!isForProject(e)) return;
@@ -116,7 +116,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
 
   const sessionCount = sessions.length;
   const currentTaskTitle = selectedAgent
-    ? currentTaskTitles[selectedAgent.agent_id] ?? null
+    ? currentTaskTitles[selectedAgent.agent_instance_id] ?? null
     : null;
 
   const handleSessionClick = (session: Session) => {
@@ -141,7 +141,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
           </>
         ) : (
           <select
-            value={selectedAgent?.agent_id ?? ""}
+            value={selectedAgent?.agent_instance_id ?? ""}
             onChange={(e) => setSelectedAgentId(e.target.value)}
             style={{
               background: "var(--color-bg-tertiary, #2a2a2a)",
@@ -153,7 +153,7 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
             }}
           >
             {agents.map((a) => (
-              <option key={a.agent_id} value={a.agent_id}>
+              <option key={a.agent_instance_id} value={a.agent_instance_id}>
                 {a.name} ({a.status})
               </option>
             ))}

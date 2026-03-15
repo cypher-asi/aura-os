@@ -70,6 +70,7 @@ export function ProgressDashboard() {
         <StatCard value={progress.total_commits} label="Total Commits" fmt />
         <StatCard value={progress.total_pull_requests} label="Pull Requests" fmt />
         <StatCard value={progress.total_messages} label="Total Messages" fmt />
+        <StatCard value={progress.total_agents} label="Agents" fmt />
         <StatCard value={progress.total_sessions} label="Total Sessions" fmt />
         <StatCard value={progress.total_tests} label="Tests" fmt />
       </div>

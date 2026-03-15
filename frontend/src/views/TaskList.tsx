@@ -182,7 +182,7 @@ export function TaskList() {
   );
 
   const isEmpty = tasks.length === 0;
-  const showEmpty = useDelayedEmpty(isEmpty, loading, sidekick.streamingSessionId ? 800 : 0);
+  const showEmpty = useDelayedEmpty(isEmpty, loading, sidekick.streamingAgentInstanceId ? 800 : 0);
 
   if (isEmpty) {
     if (!showEmpty) return null;

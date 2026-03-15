@@ -1,5 +1,5 @@
 import { Modal, Button } from "@cypher-asi/zui";
-import type { Project, ChatSession } from "../types";
+import type { Project, AgentInstance } from "../types";
 import styles from "./ProjectList.module.css";
 
 interface DeleteProjectModalProps {
@@ -32,19 +32,19 @@ export function DeleteProjectModal({ target, loading, onClose, onDelete }: Delet
   );
 }
 
-interface DeleteSessionModalProps {
-  target: ChatSession | null;
+interface DeleteAgentInstanceModalProps {
+  target: AgentInstance | null;
   loading: boolean;
   onClose: () => void;
   onDelete: () => void;
 }
 
-export function DeleteSessionModal({ target, loading, onClose, onDelete }: DeleteSessionModalProps) {
+export function DeleteAgentInstanceModal({ target, loading, onClose, onDelete }: DeleteAgentInstanceModalProps) {
   return (
     <Modal
       isOpen={!!target}
       onClose={onClose}
-      title="Delete Chat"
+      title="Delete Agent"
       size="sm"
       footer={
         <div className={styles.confirmFooter}>
@@ -56,7 +56,7 @@ export function DeleteSessionModal({ target, loading, onClose, onDelete }: Delet
       }
     >
       <div className={styles.confirmMessage}>
-        Are you sure you want to delete this chat session? This action cannot be undone.
+        Are you sure you want to remove &ldquo;{target?.name}&rdquo; and all its messages? This action cannot be undone.
       </div>
     </Modal>
   );

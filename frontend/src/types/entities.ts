@@ -1,4 +1,4 @@
-import type { ProjectId, SprintId, SpecId, TaskId, AgentId, SessionId } from "./ids";
+import type { ProjectId, SprintId, SpecId, TaskId, AgentId, AgentInstanceId, SessionId, MessageId } from "./ids";
 import type {
   ProjectStatus,
   TaskStatus,
@@ -81,7 +81,7 @@ export interface Task {
   order_index: number;
   dependency_ids: TaskId[];
   parent_task_id: TaskId | null;
-  assigned_agent_id: AgentId | null;
+  assigned_agent_instance_id: AgentInstanceId | null;
   session_id: SessionId | null;
   execution_notes: string;
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
@@ -98,18 +98,40 @@ export interface Task {
 
 export interface Agent {
   agent_id: AgentId;
-  project_id: ProjectId;
+  user_id: string;
   name: string;
+  role: string;
+  personality: string;
+  system_prompt: string;
+  skills: string[];
+  icon: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentInstance {
+  agent_instance_id: AgentInstanceId;
+  project_id: ProjectId;
+  agent_id: AgentId;
+  name: string;
+  role: string;
+  personality: string;
+  system_prompt: string;
+  skills: string[];
+  icon: string | null;
   status: AgentStatus;
   current_task_id: TaskId | null;
   current_session_id: SessionId | null;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  model?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface Session {
   session_id: SessionId;
-  agent_id: AgentId;
+  agent_instance_id: AgentInstanceId;
   project_id: ProjectId;
   active_task_id: TaskId | null;
   tasks_worked: TaskId[];
@@ -148,19 +170,9 @@ export interface ProjectProgress {
   total_commits: number;
   total_pull_requests: number;
   total_messages: number;
+  total_agents: number;
   total_sessions: number;
   total_tests: number;
-}
-
-export interface ChatSession {
-  chat_session_id: string;
-  project_id: string;
-  title: string;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  model?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface ChatContentBlock {
@@ -176,10 +188,10 @@ export interface ChatContentBlock {
   data?: string;
 }
 
-export interface ChatMessage {
-  message_id: string;
-  chat_session_id: string;
-  project_id: string;
+export interface Message {
+  message_id: MessageId;
+  agent_instance_id: AgentInstanceId;
+  project_id: ProjectId;
   role: "user" | "assistant" | "system";
   content: string;
   content_blocks?: ChatContentBlock[];

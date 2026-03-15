@@ -1,5 +1,5 @@
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
-import type { ChatSession, Spec, Task, Session } from "../types";
+import type { AgentInstance, Spec, Task, Session } from "../types";
 
 export type SidekickTab = "specs" | "tasks" | "progress" | "sessions" | "log";
 
@@ -17,10 +17,10 @@ interface PanelState {
   showInfo: boolean;
   specs: Spec[];
   tasks: Task[];
-  streamingSessionId: string | null;
+  streamingAgentInstanceId: string | null;
 }
 
-type SessionUpdateListener = (session: ChatSession) => void;
+type AgentInstanceUpdateListener = (instance: AgentInstance) => void;
 
 interface PanelActions {
   setActiveTab: (tab: SidekickTab) => void;
@@ -36,9 +36,9 @@ interface PanelActions {
   removeSpec: (specId: string) => void;
   pushTask: (task: Task) => void;
   clearGeneratedArtifacts: () => void;
-  setStreamingSessionId: (id: string | null) => void;
-  notifySessionTitleUpdate: (session: ChatSession) => void;
-  onSessionTitleUpdate: (listener: SessionUpdateListener) => () => void;
+  setStreamingAgentInstanceId: (id: string | null) => void;
+  notifyAgentInstanceUpdate: (instance: AgentInstance) => void;
+  onAgentInstanceUpdate: (listener: AgentInstanceUpdateListener) => () => void;
   updatePreviewTask: (patch: Partial<Task> & { task_id: string }) => void;
   updatePreviewSpecs: (specs: Spec[]) => void;
 }
@@ -53,14 +53,14 @@ const INITIAL_PANEL: PanelState = {
   showInfo: false,
   specs: [],
   tasks: [],
-  streamingSessionId: null,
+  streamingAgentInstanceId: null,
 };
 
 const SidekickContext = createContext<SidekickContextValue | null>(null);
 
 export function SidekickProvider({ children }: { children: React.ReactNode }) {
   const [panel, setPanel] = useState<PanelState>(INITIAL_PANEL);
-  const titleListeners = useRef<Set<SessionUpdateListener>>(new Set());
+  const titleListeners = useRef<Set<AgentInstanceUpdateListener>>(new Set());
 
   const setActiveTab = useCallback((tab: SidekickTab) => {
     setPanel((prev) => ({ ...prev, activeTab: tab, showInfo: false }));
@@ -143,15 +143,15 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     setPanel((prev) => ({ ...prev, specs: [], tasks: [] }));
   }, []);
 
-  const setStreamingSessionId = useCallback((id: string | null) => {
-    setPanel((prev) => ({ ...prev, streamingSessionId: id }));
+  const setStreamingAgentInstanceId = useCallback((id: string | null) => {
+    setPanel((prev) => ({ ...prev, streamingAgentInstanceId: id }));
   }, []);
 
-  const notifySessionTitleUpdate = useCallback((session: ChatSession) => {
-    titleListeners.current.forEach((fn) => fn(session));
+  const notifyAgentInstanceUpdate = useCallback((instance: AgentInstance) => {
+    titleListeners.current.forEach((fn) => fn(instance));
   }, []);
 
-  const onSessionTitleUpdate = useCallback((listener: SessionUpdateListener) => {
+  const onAgentInstanceUpdate = useCallback((listener: AgentInstanceUpdateListener) => {
     titleListeners.current.add(listener);
     return () => { titleListeners.current.delete(listener); };
   }, []);
@@ -196,9 +196,9 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         updatePreviewTask,
         updatePreviewSpecs,
         clearGeneratedArtifacts,
-        setStreamingSessionId,
-        notifySessionTitleUpdate,
-        onSessionTitleUpdate,
+        setStreamingAgentInstanceId,
+        notifyAgentInstanceUpdate,
+        onAgentInstanceUpdate,
       }}
     >
       {children}

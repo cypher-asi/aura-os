@@ -3,4 +3,6 @@ export type SprintId = string;
 export type SpecId = string;
 export type TaskId = string;
 export type AgentId = string;
+export type AgentInstanceId = string;
 export type SessionId = string;
+export type MessageId = string;

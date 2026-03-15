@@ -527,25 +527,25 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const handleViewSession = useCallback(async () => {
     if (!projectId || !effectiveSessionId) return;
     try {
-      let agentId = task.assigned_agent_id;
-      if (!agentId) {
-        const agents = await api.listAgents(projectId);
-        for (const a of agents) {
+      let agentInstanceId = task.assigned_agent_instance_id;
+      if (!agentInstanceId) {
+        const instances = await api.listAgentInstances(projectId);
+        for (const a of instances) {
           try {
-            const s = await api.getSession(projectId, a.agent_id, effectiveSessionId);
+            const s = await api.getSession(projectId, a.agent_instance_id, effectiveSessionId);
             sidekick.pushPreview({ kind: "session", session: s });
             return;
-          } catch { /* try next agent */ }
+          } catch { /* try next agent instance */ }
         }
-        console.error("Failed to load session: agent not found");
+        console.error("Failed to load session: agent instance not found");
         return;
       }
-      const session = await api.getSession(projectId, agentId, effectiveSessionId);
+      const session = await api.getSession(projectId, agentInstanceId, effectiveSessionId);
       sidekick.pushPreview({ kind: "session", session });
     } catch (err) {
       console.error("Failed to load session:", err);
     }
-  }, [projectId, effectiveSessionId, task.assigned_agent_id, sidekick]);
+  }, [projectId, effectiveSessionId, task.assigned_agent_instance_id, sidekick]);
 
   const emptyBuildMessage = isActive
     ? "Build verification pending..."
@@ -773,16 +773,11 @@ function SessionPreview({ session }: { session: Session }) {
     if (!projectId) return;
     setLoading(true);
     api
-      .listAgents(projectId)
-      .then((agents) => {
-        const agent = agents.find((a) => a.agent_id === session.agent_id);
-        if (!agent) return;
-        return api.listSessionTasks(projectId, agent.agent_id, session.session_id);
-      })
-      .then((t) => { if (t) setTasks(t); })
+      .listSessionTasks(projectId, session.agent_instance_id, session.session_id)
+      .then((t) => setTasks(t))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [projectId, session.session_id, session.agent_id]);
+  }, [projectId, session.session_id, session.agent_instance_id]);
 
   const contextPct = Math.round(session.context_usage_estimate * 100);
 
