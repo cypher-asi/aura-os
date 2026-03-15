@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { Text, Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { GitCommitVertical, Bot, User } from "lucide-react";
+import { Bot, User } from "lucide-react";
 import { useFeed } from "./FeedProvider";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
 import styles from "./FeedList.module.css";

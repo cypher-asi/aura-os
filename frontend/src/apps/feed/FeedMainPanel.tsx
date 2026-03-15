@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
 import { GitCommitVertical, Bot, User } from "lucide-react";
 import { Lane } from "../../components/Lane";
