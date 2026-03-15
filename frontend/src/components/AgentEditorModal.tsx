@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
+import { ImagePlus, X } from "lucide-react";
 import { api } from "../api/client";
 import type { Agent } from "../types";
 import styles from "./AgentEditorModal.module.css";
@@ -21,6 +22,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!agent;
 
@@ -54,6 +56,26 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
     onClose();
   }, [onClose]);
 
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d")!;
+      const scale = Math.max(128 / img.width, 128 / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      ctx.drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
+      setIcon(canvas.toDataURL("image/webp", 0.85));
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(file);
+    e.target.value = "";
+  }, []);
+
   const handleSave = async () => {
     if (!name.trim()) {
       setNameError("Name is required");
@@ -68,7 +90,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
         role: role.trim(),
         personality: personality.trim(),
         system_prompt: systemPrompt.trim(),
-        icon: icon.trim() || undefined,
+        icon: icon || undefined,
       };
       const saved = isEditing
         ? await api.agents.update(agent.agent_id, payload)
@@ -100,25 +122,44 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
       }
     >
       <div className={styles.form}>
-        <div className={styles.row}>
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>Name *</label>
-            <Input
-              ref={nameRef}
-              value={name}
-              onChange={(e) => { setName(e.target.value); setNameError(""); }}
-              placeholder="e.g. Atlas"
-              validationMessage={nameError}
-            />
-          </div>
-          <div className={`${styles.fieldGroup} ${styles.iconField}`}>
-            <label className={styles.label}>Icon</label>
-            <Input
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              placeholder="🤖"
-            />
-          </div>
+        <div className={styles.avatarRow}>
+          <button
+            type="button"
+            className={styles.avatarUpload}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {icon ? (
+              <img src={icon} alt="Agent avatar" className={styles.avatarImg} />
+            ) : (
+              <ImagePlus size={24} className={styles.avatarPlaceholder} />
+            )}
+            {icon && (
+              <span
+                className={styles.avatarRemove}
+                onClick={(e) => { e.stopPropagation(); setIcon(""); }}
+              >
+                <X size={12} />
+              </span>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className={styles.hiddenInput}
+            onChange={handleImageSelect}
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Name *</label>
+          <Input
+            ref={nameRef}
+            value={name}
+            onChange={(e) => { setName(e.target.value); setNameError(""); }}
+            placeholder="e.g. Atlas"
+            validationMessage={nameError}
+          />
         </div>
 
         <div className={styles.fieldGroup}>

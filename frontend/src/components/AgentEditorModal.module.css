@@ -16,18 +16,62 @@
   color: var(--color-text-secondary);
 }
 
-.row {
+.avatarRow {
   display: flex;
-  gap: var(--space-3);
+  justify-content: center;
 }
 
-.row > * {
-  flex: 1;
+.avatarUpload {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px dashed var(--color-border);
+  background: var(--color-bg-subtle);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.15s;
 }
 
-.iconField {
-  max-width: 100px;
-  flex: 0 0 auto;
+.avatarUpload:hover {
+  border-color: var(--color-primary);
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatarPlaceholder {
+  color: var(--color-text-tertiary);
+}
+
+.avatarRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-bg-overlay, rgba(0, 0, 0, 0.6));
+  color: var(--color-text-on-primary, #fff);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.avatarUpload:hover .avatarRemove {
+  display: flex;
+}
+
+.hiddenInput {
+  display: none;
 }
 
 .footer {
