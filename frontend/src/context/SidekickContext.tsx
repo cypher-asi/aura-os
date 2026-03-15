@@ -33,6 +33,7 @@ interface PanelActions {
   closePreview: () => void;
   toggleInfo: (title: string, content: ReactNode) => void;
   pushSpec: (spec: Spec) => void;
+  removeSpec: (specId: string) => void;
   pushTask: (task: Task) => void;
   clearGeneratedArtifacts: () => void;
   setStreamingSessionId: (id: string | null) => void;
@@ -117,6 +118,13 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const removeSpec = useCallback((specId: string) => {
+    setPanel((prev) => ({
+      ...prev,
+      specs: prev.specs.filter((s) => s.spec_id !== specId),
+    }));
+  }, []);
+
   const pushTask = useCallback((task: Task) => {
     setPanel((prev) => {
       const exists = prev.tasks.some((t) => t.task_id === task.task_id);
@@ -183,6 +191,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         closePreview,
         toggleInfo,
         pushSpec,
+        removeSpec,
         pushTask,
         updatePreviewTask,
         updatePreviewSpecs,

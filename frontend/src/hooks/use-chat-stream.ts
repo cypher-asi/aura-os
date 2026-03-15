@@ -66,6 +66,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
   const thinkingRafRef = useRef<number | null>(null);
   const thinkingStartRef = useRef<number | null>(null);
   const toolCallsRef = useRef<ToolCallEntry[]>([]);
+  const pendingSpecIdsRef = useRef<string[]>([]);
 
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
     setMessages(msgs);
@@ -123,6 +124,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
       setThinkingDurationMs(null);
       toolCallsRef.current = [];
       setActiveToolCalls([]);
+      pendingSpecIdsRef.current = [];
 
       if (action === "generate_specs") {
         sidekick.clearGeneratedArtifacts();
@@ -173,6 +175,21 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
             };
             toolCallsRef.current = [...toolCallsRef.current, entry];
             setActiveToolCalls([...toolCallsRef.current]);
+
+            if (info.name === "create_spec" && projectId) {
+              const pendingId = `pending-${info.id}`;
+              const now = new Date().toISOString();
+              sidekick.pushSpec({
+                spec_id: pendingId,
+                project_id: projectId,
+                title: (info.input.title as string) || "Generating…",
+                order_index: Date.now(),
+                markdown_contents: (info.input.markdown_contents as string) || "",
+                created_at: now,
+                updated_at: now,
+              });
+              pendingSpecIdsRef.current.push(pendingId);
+            }
           },
           onToolResult(info: ToolResultInfo) {
             toolCallsRef.current = toolCallsRef.current.map((tc) =>
@@ -181,8 +198,21 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
                 : tc,
             );
             setActiveToolCalls([...toolCallsRef.current]);
+
+            if (info.name === "create_spec" && info.is_error) {
+              const pendingId = `pending-${info.id}`;
+              const idx = pendingSpecIdsRef.current.indexOf(pendingId);
+              if (idx !== -1) {
+                pendingSpecIdsRef.current.splice(idx, 1);
+                sidekick.removeSpec(pendingId);
+              }
+            }
           },
           onSpecSaved(spec) {
+            const pendingId = pendingSpecIdsRef.current.shift();
+            if (pendingId) {
+              sidekick.removeSpec(pendingId);
+            }
             sidekick.pushSpec(spec);
           },
           onTaskSaved(task) {
