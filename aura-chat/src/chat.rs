@@ -389,7 +389,8 @@ impl ChatService {
             .manage_context_window(&api_key, &system, api_messages)
             .await;
 
-        // Ensure every tool_use has a matching tool_result (Anthropic API requirement)
+        // Ensure tool_use/tool_result pairing (Anthropic API requirement)
+        api_messages = Self::sanitize_orphan_tool_results(api_messages);
         api_messages = Self::sanitize_tool_use_results(api_messages);
 
         let tools: Vec<ToolDefinition> = agent_tool_definitions();
@@ -626,6 +627,91 @@ impl ChatService {
                             .iter()
                             .all(|b| matches!(b, ContentBlock::ToolResult { .. }))
             )
+    }
+
+    /// Removes or rewrites user messages whose tool_result blocks lack a matching
+    /// tool_use in the immediately previous message (e.g. from corrupted storage or
+    /// context-window summarization edge cases).
+    fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+        let mut result = Vec::with_capacity(messages.len());
+        for i in 0..messages.len() {
+            let msg = &messages[i];
+            let MessageContent::Blocks(blocks) = &msg.content else {
+                result.push(msg.clone());
+                continue;
+            };
+            let tool_result_blocks: Vec<_> = blocks
+                .iter()
+                .filter_map(|b| match b {
+                    ContentBlock::ToolResult { .. } => Some(b.clone()),
+                    _ => None,
+                })
+                .collect();
+            if tool_result_blocks.is_empty() || msg.role != "user" {
+                result.push(msg.clone());
+                continue;
+            }
+            let orig_count = tool_result_blocks.len();
+            let valid_ids: std::collections::HashSet<String> = match messages.get(i.wrapping_sub(1)) {
+                Some(prev) if prev.role == "assistant" => match &prev.content {
+                    MessageContent::Blocks(prev_blocks) => prev_blocks
+                        .iter()
+                        .filter_map(|b| match b {
+                            ContentBlock::ToolUse { id, .. } => Some(id.clone()),
+                            _ => None,
+                        })
+                        .collect(),
+                    _ => std::collections::HashSet::new(),
+                },
+                _ => std::collections::HashSet::new(),
+            };
+            let kept: Vec<ContentBlock> = tool_result_blocks
+                .into_iter()
+                .filter_map(|b| match &b {
+                    ContentBlock::ToolResult { tool_use_id, .. } if valid_ids.contains(tool_use_id) => {
+                        Some(b)
+                    }
+                    ContentBlock::ToolResult { tool_use_id, .. } => {
+                        warn!(tool_use_id, "Dropping orphan tool_result");
+                        None
+                    }
+                    _ => None,
+                })
+                .collect();
+            let other_blocks: Vec<ContentBlock> = blocks
+                .iter()
+                .filter(|b| !matches!(b, ContentBlock::ToolResult { .. }))
+                .cloned()
+                .collect();
+            if kept.is_empty() && other_blocks.is_empty() {
+                let preview: String = blocks
+                    .iter()
+                    .filter_map(|b| match b {
+                        ContentBlock::ToolResult { content, .. } => Some(content.as_str()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .chars()
+                    .take(200)
+                    .collect();
+                warn!(preview = %preview, "Converting orphan tool_result message to text");
+                result.push(RichMessage::user(&format!(
+                    "[Previous tool result was lost due to context: {}]",
+                    preview
+                )));
+            } else if kept.len() != orig_count {
+                let mut new_blocks = other_blocks;
+                new_blocks.extend(kept);
+                result.push(RichMessage {
+                    role: "user".into(),
+                    content: MessageContent::Blocks(new_blocks),
+                });
+            } else {
+                result.push(msg.clone());
+            }
+        }
+        result
     }
 
     /// Ensures every assistant message with tool_use blocks has a user message
