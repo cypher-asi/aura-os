@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { Tabs, Button, Text, Menu } from "@cypher-asi/zui";
-import { Archive, Info, ArrowLeft, Ellipsis } from "lucide-react";
+import { Button, Text, Menu } from "@cypher-asi/zui";
+import { Archive, Info, ArrowLeft, Ellipsis, FileText, ListTodo, ScrollText, BarChart3, MonitorCog } from "lucide-react";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -33,7 +33,22 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
   );
 }
 
+const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
+  { id: "specs", icon: <FileText size={16} />, title: "Specs" },
+  { id: "tasks", icon: <ListTodo size={16} />, title: "Tasks" },
+  { id: "log", icon: <ScrollText size={16} />, title: "Log" },
+  { id: "progress", icon: <BarChart3 size={16} />, title: "KPIs" },
+  { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
+];
+
 export function SidekickHeader() {
+  const ctx = useProjectContext();
+  const { showInfo } = useSidekick();
+  if (!ctx || showInfo) return null;
+  return <AutomationBar projectId={ctx.project.project_id} />;
+}
+
+export function SidekickTaskbar() {
   const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekick();
   const ctx = useProjectContext();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -44,7 +59,7 @@ export function SidekickHeader() {
   useLayoutEffect(() => {
     if (moreOpen && moreBtnRef.current) {
       const rect = moreBtnRef.current.getBoundingClientRect();
-      setMenuRect({ top: rect.bottom + 4, left: rect.right - 180 });
+      setMenuRect({ top: rect.top - 4, left: rect.right - 180 });
     } else {
       setMenuRect(null);
     }
@@ -57,70 +72,69 @@ export function SidekickHeader() {
   const { project, handleArchive } = ctx;
 
   return (
-    <>
-      <AutomationBar projectId={project.project_id} />
-      <div className={styles.panelHeader}>
-        <Tabs
-          tabs={[
-            { id: "specs", label: "Specs" },
-            { id: "tasks", label: "Tasks" },
-            { id: "log", label: "Log" },
-            { id: "progress", label: "KPIs" },
-            { id: "sessions", label: "Sessions" },
-          ]}
-          value={activeTab}
-          onChange={(id) => setActiveTab(id as SidekickTab)}
-          className={styles.tabsFullBleed}
-          tabClassName={styles.sidekickTab}
-        />
-        <div className={styles.actions}>
-          <div ref={moreBtnRef} className={styles.moreButtonWrap}>
-            <Button
-              variant="ghost"
-              size="sm"
-              iconOnly
-              icon={<Ellipsis size={16} />}
-              onClick={() => setMoreOpen((v) => !v)}
-              title="More actions"
-            />
-            {moreOpen &&
-              menuRect &&
-              createPortal(
-                <div
-                  ref={moreMenuRef}
-                  className={styles.moreMenu}
-                  style={{
-                    position: "fixed",
-                    top: menuRect.top,
-                    left: menuRect.left,
-                    zIndex: 100,
-                }}
-                >
-                  <Menu
-                    items={[
-                      ...(project.current_status !== "archived"
-                        ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
-                        : []),
-                      { id: "info", label: "Project Info", icon: <Info size={14} /> },
-                    ]}
-                    onChange={(id) => {
-                      setMoreOpen(false);
-                      if (id === "archive") handleArchive();
-                      if (id === "info") toggleInfo("Project Info", null);
-                    }}
-                    background="solid"
-                    border="solid"
-                    rounded="md"
-                    width={180}
-                    isOpen
-                  />
-                </div>,
-                document.body,
-              )}
-          </div>
-        </div>
+    <div className={styles.sidekickTaskbar}>
+      <div className={styles.sidekickTabBar}>
+        {TAB_ICONS.map(({ id, icon, title }) => (
+          <Button
+            key={id}
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={icon}
+            title={title}
+            aria-label={title}
+            onClick={() => setActiveTab(id)}
+            aria-pressed={activeTab === id}
+          />
+        ))}
       </div>
-    </>
+      <div ref={moreBtnRef} className={styles.moreButtonWrap}>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon={<Ellipsis size={16} />}
+          onClick={() => setMoreOpen((v) => !v)}
+          title="More actions"
+          aria-label="More actions"
+        />
+        {moreOpen &&
+          menuRect &&
+          createPortal(
+            <div
+              ref={moreMenuRef}
+              className={styles.moreMenu}
+              style={{
+                position: "fixed",
+                top: menuRect.top,
+                left: menuRect.left,
+                transform: "translateY(-100%)",
+                zIndex: 100,
+              }}
+            >
+              <Menu
+                items={[
+                  ...(project.current_status !== "archived"
+                    ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
+                    : []),
+                  { id: "info", label: "Project Info", icon: <Info size={14} /> },
+                ]}
+                onChange={(id) => {
+                  setMoreOpen(false);
+                  if (id === "archive") handleArchive();
+                  if (id === "info") toggleInfo("Project Info", null);
+                }}
+                background="solid"
+                border="solid"
+                rounded="md"
+                width={180}
+                isOpen
+              />
+            </div>,
+            document.body,
+          )}
+      </div>
+    </div>
   );
 }
 

@@ -3,10 +3,10 @@ import { Link, Outlet } from "react-router-dom";
 import { Topbar, ButtonWindow } from "@cypher-asi/zui";
 import { Lane } from "./Lane";
 import { ProjectList } from "./ProjectList";
-import { SidekickHeader, SidekickContent } from "./Sidekick";
+import { SidekickHeader, SidekickContent, SidekickTaskbar } from "./Sidekick";
 import { PreviewHeader, PreviewContent } from "./Preview";
 import { TaskbarLeft } from "./TaskbarLeft";
-import { TaskbarRight } from "./TaskbarRight";
+import { ConnectionDot } from "./ConnectionDot";
 import { TerminalPanelHeader, TerminalPanelBody } from "./TerminalPanel";
 import { TerminalPanelProvider } from "../context/TerminalPanelContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -28,6 +28,17 @@ function AgentChatLane() {
         style={{ borderLeft: "1px solid var(--color-border)" }}
         taskbar={
           <div style={{ display: "flex", flex: 1, minWidth: 0, alignItems: "stretch" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                paddingLeft: "var(--space-3)",
+                paddingRight: "var(--space-2)",
+                flexShrink: 0,
+              }}
+            >
+              <ConnectionDot />
+            </div>
             <TerminalPanelHeader />
           </div>
         }
@@ -81,6 +92,7 @@ function AppLayout() {
               <TaskbarLeft
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenOrgSettings={() => setOrgSettingsOpen(true)}
+                onBuyCredits={openOrgBilling}
               />
             }
           >
@@ -98,7 +110,7 @@ function AppLayout() {
             maxWidth={1200}
             storageKey="aura-sidekick"
             header={<SidekickHeader />}
-            taskbar={<TaskbarRight onBuyCredits={openOrgBilling} />}
+            taskbar={<SidekickTaskbar />}
             style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
           >
             <SidekickContent />

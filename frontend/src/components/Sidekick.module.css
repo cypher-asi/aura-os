@@ -25,36 +25,32 @@
   opacity: 0.8;
 }
 
-.panelHeader {
-  position: relative;
+/* Bottom taskbar: icon tabs + more menu */
+.sidekickTaskbar {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--color-border);
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
 }
 
-.tabsFullBleed {
-  border-bottom: none !important;
+.sidekickTabBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   flex: 1;
   min-width: 0;
 }
 
-.sidekickTab {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-.actions {
-  position: absolute;
-  right: var(--space-2);
-  top: 0;
-  height: 100%;
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
+.sidekickTabBar button[aria-pressed="true"] {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.08));
+  color: var(--color-text);
 }
 
 .moreButtonWrap {
   position: relative;
+  flex-shrink: 0;
 }
 
 .moreMenu {
