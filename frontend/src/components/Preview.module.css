@@ -100,58 +100,6 @@
   gap: var(--space-1);
 }
 
-.sprintEditor {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  height: 100%;
-  padding: 0 var(--space-3);
-}
-
-
-.sprintPromptArea {
-  flex: 1;
-  resize: none;
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  font-family: var(--font-sans, inherit);
-  font-size: 13px;
-  line-height: 1.65;
-  outline: none;
-  padding: 0;
-  min-height: 200px;
-}
-
-.sprintPromptArea::placeholder {
-  color: var(--color-text-muted);
-}
-
-.sprintFooter {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.lastGenerated {
-  white-space: nowrap;
-  text-align: center;
-}
-
-.tokenCount {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.generateBtn {
-  flex-shrink: 0;
-}
-
 .spinner {
   animation: spin 1s linear infinite;
 }
