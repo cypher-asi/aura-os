@@ -5,6 +5,7 @@
   padding: 0;
   gap: 0;
   overflow: visible;
+  min-width: 0;
 }
 
 .btnWrap {
@@ -15,6 +16,7 @@
 
 .taskbarBtn {
   width: 100%;
+  min-width: 0;
   justify-content: flex-start;
   border-radius: 0;
   font-size: var(--font-size-2xs, 11px);
@@ -41,4 +43,5 @@
 .orgWrap > div {
   border-top: none;
   background: none;
+  min-width: 0;
 }

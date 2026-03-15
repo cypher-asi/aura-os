@@ -102,4 +102,6 @@
   flex-shrink: 0;
   box-sizing: border-box;
   min-height: var(--control-height-sm, 28px);
+  overflow: hidden;
+  min-width: 0;
 }
