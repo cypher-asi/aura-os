@@ -51,7 +51,7 @@
   user-select: none;
 }
 
-/* Header when embedded in taskbar row - no borders, fills row */
+/* Header when embedded in taskbar row - tabs far left, icons far right */
 .terminalHeaderTaskbar {
   composes: terminalHeader;
   flex: 1;
@@ -66,6 +66,12 @@
   overflow: hidden;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
+  transition: height 0.25s ease-out;
+}
+
+.terminalBodyPanelCollapsed {
+  height: 0 !important;
+  min-height: 0;
 }
 
 .headerLabel {
@@ -180,5 +186,5 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
-  padding: 0;
+  padding: 8px;
 }
