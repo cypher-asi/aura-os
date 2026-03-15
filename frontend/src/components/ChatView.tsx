@@ -44,7 +44,7 @@ export function ChatView() {
   useEffect(() => {
     if (projectId && chatSessionId) {
       setLastChat(projectId, chatSessionId);
-      inputBarRef.current?.focus();
+      requestAnimationFrame(() => inputBarRef.current?.focus());
     }
   }, [projectId, chatSessionId]);
 
