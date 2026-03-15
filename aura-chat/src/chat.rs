@@ -614,6 +614,20 @@ impl ChatService {
     // Tool-use / tool-result sanitization (Anthropic API requirement)
     // -----------------------------------------------------------------------
 
+    /// Returns true if this is a user message containing only tool_result blocks.
+    /// Such messages require the immediately previous message to have matching tool_use.
+    fn is_tool_results_only(msg: &RichMessage) -> bool {
+        msg.role == "user"
+            && matches!(
+                &msg.content,
+                MessageContent::Blocks(blocks)
+                    if !blocks.is_empty()
+                        && blocks
+                            .iter()
+                            .all(|b| matches!(b, ContentBlock::ToolResult { .. }))
+            )
+    }
+
     /// Ensures every assistant message with tool_use blocks has a user message
     /// with matching tool_result blocks immediately after. Adds synthetic
     /// tool_results for any orphaned tool_use (e.g. from interrupted saves).
@@ -727,7 +741,11 @@ impl ChatService {
             "Context window approaching limit, summarizing older messages"
         );
 
-        let split_at = messages.len().saturating_sub(Self::KEEP_RECENT_MESSAGES);
+        let mut split_at = messages.len().saturating_sub(Self::KEEP_RECENT_MESSAGES);
+        // Never start recent_messages with orphan tool_result (no preceding tool_use)
+        while split_at > 0 && Self::is_tool_results_only(&messages[split_at]) {
+            split_at -= 1;
+        }
         let (old_messages, recent_messages) = messages.split_at(split_at);
 
         let mut summary_input = String::from(
