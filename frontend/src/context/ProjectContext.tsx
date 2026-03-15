@@ -1,9 +1,9 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, type ReactNode, type SetStateAction } from "react";
 import type { Project } from "../types";
 
 export interface ProjectActions {
   project: Project;
-  setProject: (p: Project) => void;
+  setProject: (update: SetStateAction<Project>) => void;
   message: string;
   handleArchive: () => void;
   navigateToExecution: () => void;

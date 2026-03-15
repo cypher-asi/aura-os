@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, type SetStateAction } from "react";
 import { useParams, useNavigate, Outlet } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project } from "../types";
@@ -11,19 +11,27 @@ export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProjectRaw] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
   const { subscribe } = useEventContext();
+
+  const setProjectSafe = useCallback((update: SetStateAction<Project>) => {
+    if (typeof update === "function") {
+      setProjectRaw(prev => prev ? update(prev) : prev);
+    } else {
+      setProjectRaw(update);
+    }
+  }, []);
 
   useEffect(() => {
     if (!projectId) return;
     setLoading(true);
     api
       .getProject(projectId)
-      .then(setProject)
-      .catch(() => setProject(null))
+      .then(setProjectRaw)
+      .catch(() => setProjectRaw(null))
       .finally(() => setLoading(false));
   }, [projectId]);
 
@@ -31,7 +39,7 @@ export function ProjectLayout() {
     if (!projectId) return;
     return subscribe("spec_gen_completed", (e: EngineEvent) => {
       if (e.project_id === projectId) {
-        api.getProject(projectId).then(setProject).catch(() => {});
+        api.getProject(projectId).then(setProjectRaw).catch(() => {});
       }
     });
   }, [projectId, subscribe]);
@@ -58,7 +66,7 @@ export function ProjectLayout() {
 
     register({
       project,
-      setProject,
+      setProject: setProjectSafe,
       message,
       handleArchive,
       navigateToExecution,

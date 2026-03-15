@@ -222,13 +222,13 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
           onSpecsTitle(title) {
             const ctx = projectCtxRef.current;
             if (ctx) {
-              ctx.setProject({ ...ctx.project, specs_title: title });
+              ctx.setProject(prev => ({ ...prev, specs_title: title }));
             }
           },
           onSpecsSummary(summary) {
             const ctx = projectCtxRef.current;
             if (ctx) {
-              ctx.setProject({ ...ctx.project, specs_summary: summary });
+              ctx.setProject(prev => ({ ...prev, specs_summary: summary }));
             }
           },
           onTaskSaved(task) {
