@@ -173,6 +173,110 @@
   50% { opacity: 0; }
 }
 
+/* Thinking block */
+.thinkingBlock {
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: var(--color-bg-secondary, #1a1a1a);
+}
+
+.thinkingHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #999);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.thinkingHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.thinkingHeaderActive {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.thinkingIcon {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.thinkingIconActive {
+  opacity: 1;
+  color: var(--color-accent, #60a5fa);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.thinkingLabel {
+  font-weight: 500;
+  color: var(--color-text-muted, #aaa);
+}
+
+.thinkingLabelShimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-text-muted, #aaa) 0%,
+    var(--color-text, #fff) 40%,
+    var(--color-text-muted, #aaa) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.thinkingChevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.thinkingContentWrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.thinkingContentExpanded {
+  max-height: 300px;
+}
+
+.thinkingContent {
+  padding: 0 12px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-muted, #888);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow-y: auto;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+}
+
 /* Input area — floats over messages with fade-to-dark gradient */
 .inputWrapper {
   position: absolute;
