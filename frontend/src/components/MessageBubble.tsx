@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight, Loader2, Wrench, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Wrench, CheckCircle2, XCircle, Sparkles, FileText } from "lucide-react";
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
@@ -134,6 +134,38 @@ function formatResult(result: string): string {
   }
 }
 
+const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
+
+function FileAttachmentBlock({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const match = text.match(FILE_PREFIX_RE);
+  if (!match) return <span>{text}</span>;
+
+  const fileName = match[1];
+  const fileContent = match[2];
+
+  return (
+    <div className={styles.fileAttachmentBlock}>
+      <button
+        className={styles.fileAttachmentHeader}
+        onClick={() => setExpanded(!expanded)}
+        type="button"
+      >
+        <FileText size={14} className={styles.fileAttachmentIcon} />
+        <span className={styles.fileAttachmentName}>{fileName}</span>
+        <span className={styles.fileAttachmentChevron}>
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+      {expanded && (
+        <div className={styles.fileAttachmentContent}>
+          <pre>{fileContent}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatDuration(ms: number): string {
   const seconds = Math.round(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
@@ -211,7 +243,11 @@ export function MessageBubble({ message }: Props) {
         <div className={styles.userMessageBlocks}>
           {message.contentBlocks!.map((block, i) =>
             block.type === "text" ? (
-              <span key={i}>{block.text}</span>
+              FILE_PREFIX_RE.test(block.text) ? (
+                <FileAttachmentBlock key={i} text={block.text} />
+              ) : (
+                <span key={i}>{block.text}</span>
+              )
             ) : (
               <img
                 key={i}

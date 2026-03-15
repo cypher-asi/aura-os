@@ -93,6 +93,73 @@
   object-fit: contain;
 }
 
+/* File attachment block (collapsible) in user messages */
+.fileAttachmentBlock {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
+
+.fileAttachmentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.fileAttachmentHeader:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.fileAttachmentIcon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.fileAttachmentName {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.fileAttachmentChevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.fileAttachmentContent {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+.fileAttachmentContent pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .bubbleAssistant {
   background: transparent;
   border: none;
