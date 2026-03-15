@@ -396,10 +396,15 @@ export function ProjectList() {
   const handleNewProjectClose = useCallback(() => setShowNewProject(false), []);
 
   const handleNewProjectCreated = useCallback(
-    (project: Project) => {
+    async (project: Project) => {
       setShowNewProject(false);
       setProjects((prev) => [...prev, project]);
-      navigate(`/projects/${project.project_id}`);
+      try {
+        const session = await api.createChatSession(project.project_id, "New Chat");
+        navigate(`/projects/${project.project_id}/chat/${session.chat_session_id}`);
+      } catch {
+        navigate(`/projects/${project.project_id}`);
+      }
     },
     [navigate],
   );
