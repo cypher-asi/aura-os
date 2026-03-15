@@ -9,6 +9,7 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use tower::ServiceExt;
 
 use aura_core::*;
+use aura_billing::{BillingClient, PricingService};
 use aura_engine::EngineEvent;
 use aura_server::state::{AppState, TaskOutputBuffers};
 use aura_services::*;
@@ -37,12 +38,16 @@ fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) 
         claude_client.clone(),
     ));
     let task_service = Arc::new(TaskService::new(store.clone()));
+    let pricing_service = Arc::new(PricingService::new(store.clone()));
+    let billing_client = Arc::new(BillingClient::new());
     let agent_service = Arc::new(AgentService::new(store.clone()));
+    let agent_instance_service = Arc::new(AgentInstanceService::new(store.clone()));
     let session_service = Arc::new(SessionService::new(store.clone()));
     let chat_service = Arc::new(ChatService::new(
         store.clone(),
         settings_service.clone(),
         claude_client.clone(),
+        billing_client.clone(),
         spec_gen_service.clone(),
         project_service.clone(),
         task_service.clone(),
@@ -59,18 +64,21 @@ fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) 
         github_service,
         auth_service,
         settings_service,
+        pricing_service,
+        billing_client,
         project_service,
         spec_gen_service,
         task_extraction_service,
         task_service,
         agent_service,
+        agent_instance_service,
         session_service,
         chat_service,
         claude_client,
         event_tx,
         event_broadcast,
-        loop_handle: Arc::new(Mutex::new(None)),
-        loop_project_id: Arc::new(Mutex::new(None)),
+        loop_registry: Arc::new(Mutex::new(HashMap::new())),
+        write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
         terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
     };
@@ -288,6 +296,7 @@ async fn task_list_and_progress() {
         build_command: None,
         test_command: None,
         specs_summary: None,
+        specs_title: None,
         created_at: now,
         updated_at: now,
     };
@@ -316,7 +325,7 @@ async fn task_list_and_progress() {
         order_index: 0,
         dependency_ids: vec![],
         parent_task_id: None,
-        assigned_agent_id: None,
+        assigned_agent_instance_id: None,
         session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
@@ -372,6 +381,7 @@ async fn agent_list_empty() {
         build_command: None,
         test_command: None,
         specs_summary: None,
+        specs_title: None,
         created_at: now,
         updated_at: now,
     };
