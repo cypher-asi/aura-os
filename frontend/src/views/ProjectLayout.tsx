@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, type SetStateAction } from "react";
 import { useParams, useNavigate, Outlet } from "react-router-dom";
 import { api } from "../api/client";
-import type { Project } from "../types";
+import type { Project, Spec, Task } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useProjectRegister } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
@@ -12,6 +12,8 @@ export function ProjectLayout() {
   const navigate = useNavigate();
 
   const [project, setProjectRaw] = useState<Project | null>(null);
+  const [initialSpecs, setInitialSpecs] = useState<Spec[]>([]);
+  const [initialTasks, setInitialTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
@@ -28,9 +30,16 @@ export function ProjectLayout() {
   useEffect(() => {
     if (!projectId) return;
     setLoading(true);
-    api
-      .getProject(projectId)
-      .then(setProjectRaw)
+    Promise.all([
+      api.getProject(projectId),
+      api.listSpecs(projectId).catch(() => [] as Spec[]),
+      api.listTasks(projectId).catch(() => [] as Task[]),
+    ])
+      .then(([proj, specs, tasks]) => {
+        setProjectRaw(proj);
+        setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
+        setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
+      })
       .catch(() => setProjectRaw(null))
       .finally(() => setLoading(false));
   }, [projectId]);
@@ -70,8 +79,10 @@ export function ProjectLayout() {
       message,
       handleArchive,
       navigateToExecution,
+      initialSpecs,
+      initialTasks,
     });
-  }, [project, message, navigate, register]);
+  }, [project, initialSpecs, initialTasks, message, navigate, register]);
 
   if (loading) return <Spinner />;
   if (!project) {
