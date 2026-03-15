@@ -10,7 +10,7 @@ use tokio_stream::StreamExt;
 use tracing::info;
 
 use aura_core::{ChatMessage, ChatSession, ChatSessionId, ProjectId};
-use aura_chat::ChatStreamEvent;
+use aura_chat::{ChatAttachment, ChatStreamEvent};
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -29,6 +29,8 @@ pub struct UpdateChatSessionRequest {
 pub struct SendMessageRequest {
     pub content: String,
     pub action: Option<String>,
+    #[serde(default)]
+    pub attachments: Option<Vec<ChatAttachment>>,
 }
 
 pub async fn create_chat_session(
@@ -102,9 +104,10 @@ pub async fn send_message_stream(
     let sid = chat_session_id;
     let content = body.content;
     let action = body.action;
+    let attachments = body.attachments.unwrap_or_default();
     tokio::spawn(async move {
         chat_service
-            .send_message_streaming(&pid, &sid, &content, action.as_deref(), tx)
+            .send_message_streaming(&pid, &sid, &content, action.as_deref(), &attachments, tx)
             .await;
     });
 

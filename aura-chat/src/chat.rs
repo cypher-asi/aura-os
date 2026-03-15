@@ -131,6 +131,20 @@ fn build_chat_system_prompt(project: &aura_core::Project) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Attachment (from API request)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ChatAttachment {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub media_type: String,
+    pub data: String,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
 // Stream events sent to the SSE handler
 // ---------------------------------------------------------------------------
 
@@ -267,6 +281,7 @@ impl ChatService {
         chat_session_id: &ChatSessionId,
         content: &str,
         action: Option<&str>,
+        attachments: &[ChatAttachment],
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -274,13 +289,37 @@ impl ChatService {
         };
 
         let now = Utc::now();
+
+        // Build content_blocks when we have image attachments
+        let content_blocks = if attachments.is_empty() {
+            None
+        } else {
+            let mut blocks: Vec<ChatContentBlock> = Vec::new();
+            if !content.trim().is_empty() {
+                blocks.push(ChatContentBlock::Text {
+                    text: content.to_string(),
+                });
+            }
+            for att in attachments.iter().filter(|a| a.type_ == "image") {
+                blocks.push(ChatContentBlock::Image {
+                    media_type: att.media_type.clone(),
+                    data: att.data.clone(),
+                });
+            }
+            if blocks.is_empty() {
+                None
+            } else {
+                Some(blocks)
+            }
+        };
+
         let user_msg = ChatMessage {
             message_id: ChatMessageId::new(),
             chat_session_id: *chat_session_id,
             project_id: *project_id,
             role: ChatRole::User,
             content: content.to_string(),
-            content_blocks: None,
+            content_blocks,
             created_at: now,
         };
         if let Err(e) = self.store.put_chat_message(&user_msg) {
