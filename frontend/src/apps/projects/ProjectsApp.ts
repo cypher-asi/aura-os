@@ -1,4 +1,4 @@
-import { FolderKanban } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { ProjectList } from "../../components/ProjectList";
 import { ProjectMainPanel } from "./ProjectMainPanel";
 import {
@@ -13,7 +13,7 @@ import type { AuraApp } from "../types";
 export const ProjectsApp: AuraApp = {
   id: "projects",
   label: "Projects",
-  icon: FolderKanban,
+  icon: FolderOpen,
   basePath: "/projects",
   LeftPanel: ProjectList,
   MainPanel: ProjectMainPanel,

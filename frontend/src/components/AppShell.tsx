@@ -86,28 +86,29 @@ function AppContent() {
         />
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <AppNavRail />
-
-          <Lane
-            resizable
-            resizePosition="right"
-            defaultWidth={200}
-            maxWidth={600}
-            storageKey="aura-sidebar"
-          >
-            <LeftPanel />
-          </Lane>
+          <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+            <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+              <AppNavRail onOpenSettings={() => setSettingsOpen(true)} />
+              <Lane
+                resizable
+                resizePosition="right"
+                defaultWidth={200}
+                maxWidth={600}
+                storageKey="aura-sidebar"
+              >
+                <LeftPanel />
+              </Lane>
+            </div>
+            <BottomTaskbar
+              onOpenOrgSettings={() => setOrgSettingsOpen(true)}
+              onBuyCredits={openOrgBilling}
+            />
+          </div>
 
           <MainPanel />
           <SidekickLane />
           {activeApp.PreviewPanel && <PreviewLane />}
         </div>
-
-        <BottomTaskbar
-          onOpenSettings={() => setSettingsOpen(true)}
-          onOpenOrgSettings={() => setOrgSettingsOpen(true)}
-          onBuyCredits={openOrgBilling}
-        />
       </div>
 
       <OrgSettingsPanel

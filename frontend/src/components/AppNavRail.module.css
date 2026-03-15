@@ -11,14 +11,24 @@
 }
 
 .btn,
-.active {
-  width: 36px;
-  height: 36px;
+.active,
+.profileBtn {
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
 }
 
-.active {
-  background: var(--color-bg-hover);
-  color: var(--color-text);
-  box-shadow: inset 2px 0 0 0 var(--color-accent, var(--color-text));
+.btn:hover,
+.active:hover,
+.profileBtn:hover {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.active:hover {
+  color: #ffffff !important;
+}
+
+.profileBtn {
+  margin-top: auto;
 }

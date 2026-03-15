@@ -1,31 +1,15 @@
-import { Button } from "@cypher-asi/zui";
-import { useAuth } from "../context/AuthContext";
 import { OrgSelector } from "./OrgSelector";
 import { CreditsBadge } from "./CreditsBadge";
 import styles from "./BottomTaskbar.module.css";
 
 interface Props {
-  onOpenSettings: () => void;
   onOpenOrgSettings: () => void;
   onBuyCredits?: () => void;
 }
 
-export function BottomTaskbar({ onOpenSettings, onOpenOrgSettings, onBuyCredits }: Props) {
-  const { user } = useAuth();
-
+export function BottomTaskbar({ onOpenOrgSettings, onBuyCredits }: Props) {
   return (
     <div className={styles.bar}>
-      <div className={styles.btnWrap}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={styles.taskbarBtn}
-          onClick={onOpenSettings}
-        >
-          {user?.display_name || "User"}
-        </Button>
-      </div>
-      <div className={styles.divider} />
       <div className={styles.orgWrap}>
         <OrgSelector onOpenSettings={onOpenOrgSettings} />
       </div>
