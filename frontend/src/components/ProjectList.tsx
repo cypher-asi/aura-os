@@ -444,7 +444,12 @@ export function ProjectList() {
       await api.deleteChatSession(pid, sid);
       clearLastChatIf({ chatSessionId: sid });
       if (chatSessionId === sid) {
-        navigate(`/projects/${pid}/chat`);
+        const remaining = (prevSessions ?? []).filter(s => s.chat_session_id !== sid);
+        if (remaining.length > 0) {
+          navigate(`/projects/${pid}/chat/${remaining[remaining.length - 1].chat_session_id}`);
+        } else {
+          navigate(`/projects/${pid}/chat`);
+        }
       }
       setDeleteSessionTarget(null);
       fetchSessions(pid);
