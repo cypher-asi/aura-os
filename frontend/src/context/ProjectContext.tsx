@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode, type SetStateAction } from "react";
-import type { Project } from "../types";
+import type { Project, Spec, Task } from "../types";
 
 export interface ProjectActions {
   project: Project;
@@ -7,6 +7,8 @@ export interface ProjectActions {
   message: string;
   handleArchive: () => void;
   navigateToExecution: () => void;
+  initialSpecs: Spec[];
+  initialTasks: Task[];
 }
 
 interface ProjectContextValue {
