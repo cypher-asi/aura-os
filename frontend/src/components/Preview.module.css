@@ -168,6 +168,9 @@
   margin-top: 2px;
   line-height: 1.4;
   color: var(--color-text-muted, #9ca3af);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section {

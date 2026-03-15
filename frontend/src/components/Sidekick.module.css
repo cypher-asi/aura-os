@@ -46,7 +46,8 @@
   min-width: 0;
 }
 
-.sidekickTabBar button[aria-pressed="true"] {
+.sidekickTabBar button:not(:disabled)[aria-pressed="true"],
+.sidekickTabBar button:not(:disabled):hover {
   color: #ffffff;
 }
 

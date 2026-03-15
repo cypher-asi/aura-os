@@ -165,6 +165,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             post(specs::generate_specs_stream),
         )
         .route(
+            "/api/projects/:project_id/specs/summary",
+            post(specs::generate_specs_summary),
+        )
+        .route(
             "/api/projects/:project_id/specs/:spec_id",
             get(specs::get_spec),
         )

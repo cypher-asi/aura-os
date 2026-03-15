@@ -31,3 +31,7 @@
   text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
 }
+
+.labelSecondary {
+  color: var(--color-text-muted);
+}

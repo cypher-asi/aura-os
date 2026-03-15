@@ -270,6 +270,10 @@ export const api = {
       method: "POST",
     }),
   generateSpecsStream,
+  generateSpecsSummary: (projectId: ProjectId) =>
+    apiFetch<Project>(`/api/projects/${projectId}/specs/summary`, {
+      method: "POST",
+    }),
 
   // Tasks
   listTasks: (projectId: ProjectId) =>

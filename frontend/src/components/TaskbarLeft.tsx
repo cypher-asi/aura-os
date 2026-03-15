@@ -1,14 +1,16 @@
 import { Button } from "@cypher-asi/zui";
 import { useAuth } from "../context/AuthContext";
 import { OrgSelector } from "./OrgSelector";
+import { CreditsBadge } from "./CreditsBadge";
 import styles from "./TaskbarLeft.module.css";
 
 interface Props {
   onOpenSettings: () => void;
   onOpenOrgSettings: () => void;
+  onBuyCredits?: () => void;
 }
 
-export function TaskbarLeft({ onOpenSettings, onOpenOrgSettings }: Props) {
+export function TaskbarLeft({ onOpenSettings, onOpenOrgSettings, onBuyCredits }: Props) {
   const { user } = useAuth();
 
   return (
@@ -26,6 +28,10 @@ export function TaskbarLeft({ onOpenSettings, onOpenOrgSettings }: Props) {
       <div className={styles.divider} />
       <div className={styles.orgWrap}>
         <OrgSelector onOpenSettings={onOpenOrgSettings} />
+      </div>
+      <div className={styles.divider} />
+      <div className={styles.creditsWrap}>
+        <CreditsBadge onClick={onBuyCredits} />
       </div>
     </div>
   );

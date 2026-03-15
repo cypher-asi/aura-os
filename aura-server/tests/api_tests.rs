@@ -287,6 +287,7 @@ async fn task_list_and_progress() {
         github_repo_full_name: None,
         build_command: None,
         test_command: None,
+        specs_summary: None,
         created_at: now,
         updated_at: now,
     };
@@ -370,6 +371,7 @@ async fn agent_list_empty() {
         github_repo_full_name: None,
         build_command: None,
         test_command: None,
+        specs_summary: None,
         created_at: now,
         updated_at: now,
     };

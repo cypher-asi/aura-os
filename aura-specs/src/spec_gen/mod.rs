@@ -38,8 +38,9 @@ You are an expert software architect. Given a requirements document, produce
 a comprehensive, detailed implementation specification broken into logical
 phases ordered from most foundational to least foundational.
 
-Each spec must be numbered sequentially starting at 1 (e.g., "Spec 01", "Spec 02", etc.).
-Include the spec number in the title like: "01 — Core Domain Types".
+Each spec must be numbered sequentially starting at 01, zero-padded to two digits
+(e.g., "01", "02", ... "10", "11").
+Include the spec number in the title like: "01: Core Domain Types" (two-digit number + colon + space + name, no em dash).
 
 Each spec must include a Tasks section with numbered tasks using the format
 <spec_number>.<task_number>, starting at 0. For example, Spec 01 has tasks
@@ -47,8 +48,8 @@ Each spec must include a Tasks section with numbered tasks using the format
 Task 0 for each spec should be the setup/scaffolding task.
 
 Respond with a JSON array. Each element has:
-- "title": short title for the spec section, prefixed with the zero-padded spec number
-  (e.g. "01 — Core Domain Types")
+- "title": short title for the spec section, prefixed with zero-padded spec number + colon
+  (e.g. "01: Core Domain Types", "02: Persistence Layer", "10: Frontend Shell")
 - "purpose": one detailed paragraph explaining what this section covers and why it matters
 - "markdown": full, thorough markdown body including ALL of the following:
   - Major concepts (with detailed explanations, not just bullet lists)
@@ -71,6 +72,12 @@ examples — not just high-level descriptions.
 Order the array so that the most fundamental sections come first.
 Respond ONLY with the JSON array, no other text.
 "#;
+
+pub(crate) const SPEC_SUMMARY_SYSTEM_PROMPT: &str =
+    "You write brief, specific project summaries. Reference the actual phases and what each one covers — do not be generic. Use plain prose, no bullets. Keep the summary to a maximum of 85 words. The summary should let a reader understand what this implementation plan contains without reading the specs. You will also produce a short 3-8 word title that captures the essence of the spec set. Output format: first line must be exactly 'TITLE: [your 3-8 word title]', then a blank line, then the 2-4 sentence summary.";
+
+pub(crate) const SPEC_SUMMARY_MAX_TOKENS: u32 = 512;
+pub(crate) const SPEC_SUMMARY_MAX_WORDS: usize = 85;
 
 pub struct SpecGenerationService {
     pub(crate) store: Arc<RocksStore>,
@@ -205,6 +212,11 @@ impl SpecGenerationService {
         }
         if !ops.is_empty() {
             self.store.write_batch(ops)?;
+        }
+        if let Ok(mut project) = self.store.get_project(project_id) {
+            project.specs_summary = None;
+            project.specs_title = None;
+            let _ = self.store.put_project(&project);
         }
         Ok(())
     }

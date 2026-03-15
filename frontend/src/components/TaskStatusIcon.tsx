@@ -93,18 +93,10 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
   return (
     <span className={styles.icon}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <circle
-          cx={CENTER}
-          cy={CENTER}
-          r={R}
-          fill="none"
-          stroke="var(--status-done, #01f4cb)"
-          strokeWidth={STROKE}
-        />
         <polyline
-          points="4.5 7.5 6.5 9.5 10 5"
+          points="3 7.5 6 10.5 11 4"
           fill="none"
-          stroke="var(--status-done, #01f4cb)"
+          stroke="var(--status-done, rgb(45, 212, 191))"
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeLinejoin="round"

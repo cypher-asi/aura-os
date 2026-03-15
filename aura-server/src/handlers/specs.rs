@@ -26,6 +26,23 @@ pub async fn list_specs(
     Ok(Json(specs))
 }
 
+pub async fn generate_specs_summary(
+    State(state): State<AppState>,
+    Path(project_id): Path<ProjectId>,
+) -> ApiResult<Json<aura_core::Project>> {
+    info!(%project_id, "Specs summary generation requested");
+    state
+        .spec_gen_service
+        .generate_specs_summary(&project_id)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let project = state
+        .project_service
+        .get_project(&project_id)
+        .map_err(|_e| ApiError::not_found("project not found"))?;
+    Ok(Json(project))
+}
+
 pub async fn get_spec(
     State(state): State<AppState>,
     Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,

@@ -37,10 +37,11 @@ export function CreditsBadge({ onClick }: Props) {
     };
   }, [activeOrg?.org_id]);
 
+  const displayCredits = credits !== null ? formatCredits(credits) : "0";
   return (
     <div className={styles.creditsBadge} onClick={onClick} role="button" tabIndex={0}>
+      <span className={displayCredits === "0" ? `${styles.label} ${styles.labelSecondary}` : styles.label}>{displayCredits}</span>
       <Coins size={14} className={styles.icon} />
-      <span className={styles.label}>{credits !== null ? formatCredits(credits) : "--"} credits</span>
     </div>
   );
 }

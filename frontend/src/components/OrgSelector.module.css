@@ -60,7 +60,7 @@
   border: none;
   cursor: pointer;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs, 11px);
   text-align: left;
 }
 

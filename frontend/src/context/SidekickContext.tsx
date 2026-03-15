@@ -39,6 +39,7 @@ interface PanelActions {
   notifySessionTitleUpdate: (session: ChatSession) => void;
   onSessionTitleUpdate: (listener: SessionUpdateListener) => () => void;
   updatePreviewTask: (patch: Partial<Task> & { task_id: string }) => void;
+  updatePreviewSpecs: (specs: Spec[]) => void;
 }
 
 type SidekickContextValue = PanelState & PanelActions;
@@ -161,6 +162,13 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updatePreviewSpecs = useCallback((specs: Spec[]) => {
+    setPanel((prev) => {
+      if (prev.previewItem?.kind !== "specs_overview") return prev;
+      return { ...prev, previewItem: { kind: "specs_overview", specs } };
+    });
+  }, []);
+
   return (
     <SidekickContext.Provider
       value={{
@@ -177,6 +185,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         pushSpec,
         pushTask,
         updatePreviewTask,
+        updatePreviewSpecs,
         clearGeneratedArtifacts,
         setStreamingSessionId,
         notifySessionTitleUpdate,

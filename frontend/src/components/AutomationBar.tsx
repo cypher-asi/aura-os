@@ -148,7 +148,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     <>
       <div className={styles.automationBar}>
         <div className={styles.automationLabel}>
-          <Text size="sm" style={{ fontWeight: 600 }}>Automation</Text>
+          <Text size="sm" style={{ fontWeight: 600 }}>
+            Automation
+          </Text>
           <StatusBadge status={status} />
           {agentCount > 1 && (
             <Text size="xs" style={{ opacity: 0.7 }}>{agentCount} agents</Text>

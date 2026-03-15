@@ -6,8 +6,72 @@ use aura_core::*;
 
 use aura_claude::ClaudeStreamEvent;
 
+use crate::SpecGenError;
 use super::parser::{IncrementalSpecParser, RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
-use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, MAX_TOKENS};
+use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, SPEC_SUMMARY_SYSTEM_PROMPT, MAX_TOKENS};
+
+/// Parses "TITLE: ...\n\nsummary" format. Returns (title, summary).
+/// Falls back to (None, full_text) if format not matched.
+fn parse_title_and_summary(text: &str, max_summary_words: usize) -> (Option<String>, String) {
+    let trimmed = text.trim();
+    let title_prefix = "TITLE:";
+    if let Some(i) = trimmed.to_uppercase().find(title_prefix) {
+        let after_prefix = trimmed[i + title_prefix.len()..].trim_start();
+        if let Some(double_newline) = after_prefix.find("\n\n") {
+            let title = after_prefix[..double_newline].trim().to_string();
+            let summary_raw = after_prefix[double_newline + 2..].trim();
+            let summary = truncate_to_max_words(summary_raw, max_summary_words);
+            let title_opt = if title.is_empty() { None } else { Some(title) };
+            return (title_opt, summary);
+        }
+        let first_line = after_prefix.lines().next().unwrap_or("").trim();
+        let rest: String = after_prefix.lines().skip(1).collect::<Vec<_>>().join("\n");
+        let title_opt = if first_line.is_empty() { None } else { Some(first_line.to_string()) };
+        let summary = truncate_to_max_words(rest.trim(), max_summary_words);
+        return (title_opt, summary);
+    }
+    let summary = truncate_to_max_words(trimmed, max_summary_words);
+    (None, summary)
+}
+
+fn truncate_to_max_words(s: &str, max_words: usize) -> String {
+    let words: Vec<&str> = s.split_whitespace().collect();
+    if words.len() <= max_words {
+        s.trim().to_string()
+    } else {
+        words.into_iter().take(max_words).collect::<Vec<_>>().join(" ").trim().to_string()
+    }
+}
+
+fn extract_purpose_excerpt(markdown: &str, max_chars: usize) -> String {
+    let marker = "## Purpose";
+    let content = match markdown.find(marker) {
+        Some(i) => {
+            let rest = &markdown[i + marker.len()..];
+            let rest = rest.trim_start_matches(|c: char| c == '\n' || c == ' ' || c == '\r');
+            rest
+        }
+        None => return String::new(),
+    };
+    let end = content
+        .find("\n\n## ")
+        .or_else(|| content.find("\n##"))
+        .unwrap_or(content.len());
+    let paragraph = content[..end].trim();
+    if paragraph.is_empty() {
+        return String::new();
+    }
+    if paragraph.len() <= max_chars {
+        paragraph.to_string()
+    } else {
+        let truncate_at = paragraph
+            .char_indices()
+            .nth(max_chars)
+            .map(|(i, _)| i)
+            .unwrap_or(paragraph.len());
+        format!("{}...", &paragraph[..truncate_at])
+    }
+}
 
 impl SpecGenerationService {
     pub async fn generate_specs_streaming(
@@ -126,8 +190,94 @@ impl SpecGenerationService {
             }
         }
 
+        send(SpecStreamEvent::Progress("Generating specs summary".into()));
+        if let Ok(api_key) = self.settings.get_decrypted_api_key() {
+            let mut lines: Vec<String> = Vec::new();
+            for (i, spec) in saved_specs.iter().enumerate() {
+                let purpose = extract_purpose_excerpt(&spec.markdown_contents, 200);
+                let excerpt = if purpose.is_empty() {
+                    spec.title.clone()
+                } else {
+                    format!("{}: {}", spec.title, purpose)
+                };
+                lines.push(format!("{}. {}", i + 1, excerpt));
+            }
+            let user_prompt = format!(
+                "Given these implementation specs:\n\n{}\n\nRespond in this exact format:\nTITLE: [3-8 word descriptive title for this spec set, e.g. \"API Integration & Scaffolding\"]\n\n[2-4 sentence summary, max {} words, describing what each phase covers]",
+                lines.join("\n"),
+                SPEC_SUMMARY_MAX_WORDS
+            );
+            match self
+                .claude_client
+                .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
+                .await
+            {
+                Ok(response) => {
+                    let (title, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
+                    if !summary.is_empty() {
+                        if let Ok(mut project) = self.store.get_project(project_id) {
+                            project.specs_summary = Some(summary);
+                            if let Some(t) = title {
+                                project.specs_title = Some(t.trim().to_string());
+                            }
+                            if let Err(e) = self.store.put_project(&project) {
+                                error!(%project_id, error = %e, "Failed to persist specs summary");
+                            } else {
+                                info!(%project_id, "Specs summary generated and persisted");
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!(%project_id, error = %e, "Failed to generate specs summary");
+                }
+            }
+        }
+
         info!(%project_id, count = saved_specs.len(), "Streaming spec generation complete");
         send(SpecStreamEvent::Complete(saved_specs));
+    }
+
+    /// Generate and persist a specs summary for a project that already has specs.
+    /// Returns the generated summary, or None if no specs or generation failed.
+    pub async fn generate_specs_summary(&self, project_id: &ProjectId) -> Result<Option<String>, SpecGenError> {
+        let specs = self.list_specs(project_id)?;
+        if specs.is_empty() {
+            return Ok(None);
+        }
+        let api_key = self.settings.get_decrypted_api_key()?;
+        let mut lines: Vec<String> = Vec::new();
+        for (i, spec) in specs.iter().enumerate() {
+            let purpose = extract_purpose_excerpt(&spec.markdown_contents, 200);
+            let excerpt = if purpose.is_empty() {
+                spec.title.clone()
+            } else {
+                format!("{}: {}", spec.title, purpose)
+            };
+            lines.push(format!("{}. {}", i + 1, excerpt));
+        }
+            let user_prompt = format!(
+                "Given these implementation specs:\n\n{}\n\nRespond in this exact format:\nTITLE: [3-8 word descriptive title for this spec set]\n\n[2-4 sentence summary, maximum {} words]. Name and briefly explain what each phase covers—what gets built, what it does, and how the phases connect. Be concrete and content-specific.",
+                lines.join("\n"),
+                SPEC_SUMMARY_MAX_WORDS
+            );
+        let response = self
+            .claude_client
+            .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
+            .await
+            .map_err(SpecGenError::Claude)?;
+        let (title, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
+        if summary.is_empty() {
+            return Ok(None);
+        }
+        let mut project = self.store.get_project(project_id).map_err(|e| SpecGenError::Store(e))?;
+        project.specs_summary = Some(summary.clone());
+        if let Some(t) = title {
+            project.specs_title = Some(t.trim().to_string());
+        }
+        self.store.put_project(&project).map_err(|e| SpecGenError::Store(e))?;
+        info!(%project_id, "Specs summary and title generated and persisted");
+        Ok(Some(summary))
     }
 
     fn load_project_and_key(
