@@ -42,10 +42,16 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
   }, []);
 
   const sendMessage = useCallback(
-    async (content: string, action: string | null = null, selectedModel: string) => {
+    async (
+      content: string,
+      action: string | null = null,
+      selectedModel: string,
+      attachments?: import("../api/streams").ChatAttachment[],
+    ) => {
       if (!projectId || !chatSessionId || isStreaming) return;
       const trimmed = content.trim();
-      if (!trimmed && !action) return;
+      const hasAttachments = attachments && attachments.length > 0;
+      if (!trimmed && !action && !hasAttachments) return;
 
       const userMsg: DisplayMessage = {
         id: `temp-${Date.now()}`,
@@ -75,6 +81,7 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
         userMsg.content,
         action,
         selectedModel,
+        attachments,
         {
           onDelta(text) {
             streamBufferRef.current += text;

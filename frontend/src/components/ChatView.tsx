@@ -8,7 +8,7 @@ import { useAutoScroll } from "../hooks/use-auto-scroll";
 import { setLastChat } from "../utils/storage";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
 import { ChatInputBar } from "./ChatInputBar";
-import type { ChatInputBarHandle } from "./ChatInputBar";
+import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
 import type { ChatMessage } from "../types";
 import styles from "./ChatView.module.css";
 
@@ -32,6 +32,7 @@ export function ChatView() {
 
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState("opus-4.6");
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
@@ -72,11 +73,16 @@ export function ChatView() {
   }, [rafRef]);
 
   const handleSend = useCallback(
-    (content: string, action?: string) => {
+    (content: string, action?: string, atts?: AttachmentItem[]) => {
       setInput("");
-      sendMessage(content, action ?? null, selectedModel);
+      const toSend = atts ?? attachments;
+      const apiAttachments = toSend.length > 0
+        ? toSend.map((a) => ({ type: "image" as const, media_type: a.mediaType, data: a.data, name: a.name }))
+        : undefined;
+      sendMessage(content, action ?? null, selectedModel, apiAttachments);
+      setAttachments([]);
     },
-    [sendMessage, selectedModel],
+    [sendMessage, selectedModel, attachments],
   );
 
   if (!chatSessionId) {
@@ -150,6 +156,8 @@ export function ChatView() {
           isStreaming={isStreaming}
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
         />
       </div>
     </div>

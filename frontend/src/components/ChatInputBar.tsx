@@ -19,14 +19,26 @@ export interface ChatInputBarHandle {
   focus: () => void;
 }
 
+export interface AttachmentItem {
+  id: string;
+  file: File;
+  data: string;
+  mediaType: string;
+  name: string;
+  preview?: string;
+}
+
 interface Props {
   input: string;
   onInputChange: (value: string) => void;
-  onSend: (content: string, action?: string) => void;
+  onSend: (content: string, action?: string, attachments?: AttachmentItem[]) => void;
   onStop: () => void;
   isStreaming: boolean;
   selectedModel: string;
   onModelChange: (model: string) => void;
+  attachments?: AttachmentItem[];
+  onAttachmentsChange?: (items: AttachmentItem[]) => void;
+  onRemoveAttachment?: (id: string) => void;
 }
 
 export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatInputBar({
@@ -37,6 +49,9 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   isStreaming,
   selectedModel,
   onModelChange,
+  attachments = [],
+  onAttachmentsChange: _onAttachmentsChange,
+  onRemoveAttachment: _onRemoveAttachment,
 }, ref) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const modelMenuRef = useRef<HTMLDivElement>(null);
@@ -121,7 +136,7 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
                 type="button"
                 className={styles.sendButton}
                 onClick={() => onSend(input)}
-                disabled={!input.trim()}
+                disabled={!input.trim() && attachments.length === 0}
                 aria-label="Send"
               >
                 <ArrowUp size={18} />

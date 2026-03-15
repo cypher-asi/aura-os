@@ -41,6 +41,13 @@ export interface ToolResultInfo {
   is_error: boolean;
 }
 
+export interface ChatAttachment {
+  type: "image";
+  media_type: string;
+  data: string;
+  name?: string;
+}
+
 export interface ChatStreamCallbacks {
   onDelta: (text: string) => void;
   onToolCall?: (info: ToolCallInfo) => void;
@@ -121,15 +128,20 @@ export function sendMessageStream(
   content: string,
   action: string | null,
   model: string,
+  attachments: ChatAttachment[] | undefined,
   cb: ChatStreamCallbacks,
   signal?: AbortSignal,
 ) {
+  const body: Record<string, unknown> = { content, action, model };
+  if (attachments && attachments.length > 0) {
+    body.attachments = attachments;
+  }
   return streamSSE<"delta" | "tool_call" | "tool_result" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
     `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content, action, model }),
+      body: JSON.stringify(body),
     },
     {
       onEvent(eventType, data) {
