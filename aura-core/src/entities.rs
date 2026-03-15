@@ -27,6 +27,10 @@ pub struct Project {
     pub build_command: Option<String>,
     #[serde(default)]
     pub test_command: Option<String>,
+    #[serde(default)]
+    pub specs_summary: Option<String>,
+    #[serde(default)]
+    pub specs_title: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -200,6 +204,10 @@ pub struct ChatMessage {
 pub enum ChatContentBlock {
     Text {
         text: String,
+    },
+    Image {
+        media_type: String,
+        data: String,
     },
     ToolUse {
         id: String,

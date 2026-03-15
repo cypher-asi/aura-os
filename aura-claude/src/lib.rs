@@ -31,6 +31,10 @@ pub fn estimate_message_tokens(msg: &RichMessage) -> u64 {
             for block in blocks {
                 total += match block {
                     ContentBlock::Text { text } => estimate_tokens(text),
+                    ContentBlock::Image { source } => {
+                        // Approximate: base64 is ~4 chars per 3 bytes; images ~1000 tokens each
+                        1000 + (source.data.len() as u64 / 4)
+                    }
                     ContentBlock::ToolUse { name, input, .. } => {
                         estimate_tokens(name)
                             + estimate_tokens(&input.to_string())
@@ -78,10 +82,21 @@ pub struct ToolStreamResponse {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageSource {
+    #[serde(rename = "type")]
+    pub source_type: String,
+    pub media_type: String,
+    pub data: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ContentBlock {
     Text {
         text: String,
+    },
+    Image {
+        source: ImageSource,
     },
     ToolUse {
         id: String,

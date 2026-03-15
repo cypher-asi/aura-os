@@ -11,7 +11,8 @@ use aura_store::RocksStore;
 use crate::chat_tool_executor::ChatToolExecutor;
 use aura_tools::agent_tool_definitions;
 use aura_claude::{
-    ClaudeClient, ClaudeStreamEvent, ContentBlock, MessageContent, RichMessage, ToolDefinition,
+    ClaudeClient, ClaudeStreamEvent, ContentBlock, ImageSource, MessageContent, RichMessage,
+    ToolDefinition,
 };
 use crate::error::ChatError;
 use aura_projects::ProjectService;
@@ -368,6 +369,13 @@ impl ChatService {
                                 tool_use_id: tool_use_id.clone(),
                                 content: content.clone(),
                                 is_error: *is_error,
+                            },
+                            ChatContentBlock::Image { media_type, data } => ContentBlock::Image {
+                                source: ImageSource {
+                                    source_type: "base64".to_string(),
+                                    media_type: media_type.clone(),
+                                    data: data.clone(),
+                                },
                             },
                         })
                         .collect();
@@ -846,6 +854,7 @@ impl ChatService {
                 aura_claude::MessageContent::Blocks(blocks) => {
                     blocks.iter().map(|b| match b {
                         ContentBlock::Text { text } => text.clone(),
+                        ContentBlock::Image { .. } => "[Image]".to_string(),
                         ContentBlock::ToolUse { name, .. } => format!("[Tool call: {name}]"),
                         ContentBlock::ToolResult { content, .. } => {
                             let preview: String = content.chars().take(100).collect();
