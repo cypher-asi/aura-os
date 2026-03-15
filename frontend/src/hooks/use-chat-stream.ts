@@ -225,6 +225,12 @@ export function useChatStream({ projectId, chatSessionId }: UseChatStreamOptions
               ctx.setProject({ ...ctx.project, specs_title: title });
             }
           },
+          onSpecsSummary(summary) {
+            const ctx = projectCtxRef.current;
+            if (ctx) {
+              ctx.setProject({ ...ctx.project, specs_summary: summary });
+            }
+          },
           onTaskSaved(task) {
             sidekick.pushTask(task);
           },

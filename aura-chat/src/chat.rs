@@ -174,6 +174,7 @@ pub enum ChatStreamEvent {
     },
     SpecSaved(Spec),
     SpecsTitle(String),
+    SpecsSummary(String),
     TaskSaved(Box<Task>),
     MessageSaved(ChatMessage),
     TitleUpdated(ChatSession),
@@ -1063,6 +1064,9 @@ impl ChatService {
                 }
                 SpecStreamEvent::SpecsTitle(title) => {
                     let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
+                }
+                SpecStreamEvent::SpecsSummary(summary) => {
+                    let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
                 }
                 SpecStreamEvent::TaskSaved(task) => {
                     let _ = tx.send(ChatStreamEvent::TaskSaved(task));

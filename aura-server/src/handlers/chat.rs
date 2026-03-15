@@ -156,6 +156,10 @@ pub async fn send_message_stream(
                 .event("specs_title")
                 .json_data(serde_json::json!({ "title": title }))
                 .unwrap(),
+            ChatStreamEvent::SpecsSummary(summary) => Event::default()
+                .event("specs_summary")
+                .json_data(serde_json::json!({ "summary": summary }))
+                .unwrap(),
             ChatStreamEvent::TaskSaved(task) => Event::default()
                 .event("task_saved")
                 .json_data(serde_json::json!({ "task": task }))

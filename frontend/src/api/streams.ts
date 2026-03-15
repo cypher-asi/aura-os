@@ -14,6 +14,7 @@ const BASE_URL = "";
 export interface SpecGenStreamCallbacks {
   onProgress: (stage: string) => void;
   onSpecsTitle?: (title: string) => void;
+  onSpecsSummary?: (summary: string) => void;
   onDelta: (text: string) => void;
   onGenerating: (tokens: number) => void;
   onSpecSaved: (spec: Spec) => void;
@@ -56,6 +57,7 @@ export interface ChatStreamCallbacks {
   onToolResult?: (info: ToolResultInfo) => void;
   onSpecSaved?: (spec: Spec) => void;
   onSpecsTitle?: (title: string) => void;
+  onSpecsSummary?: (summary: string) => void;
   onTaskSaved?: (task: Task) => void;
   onMessageSaved?: (message: ChatMessage) => void;
   onTitleUpdated?: (session: ChatSession) => void;
@@ -106,13 +108,14 @@ export function generateSpecsStream(
   cb: SpecGenStreamCallbacks,
   signal?: AbortSignal,
 ) {
-  return streamSSE<"progress" | "specs_title" | "delta" | "generating" | "spec_saved" | "task_saved" | "complete" | "error">(
+  return streamSSE<"progress" | "specs_title" | "specs_summary" | "delta" | "generating" | "spec_saved" | "task_saved" | "complete" | "error">(
     `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
     { method: "POST" },
     createSSEHandler(
       {
         progress: (d) => cb.onProgress(d.stage as string),
         specs_title: (d) => cb.onSpecsTitle?.(d.title as string),
+        specs_summary: (d) => cb.onSpecsSummary?.(d.summary as string),
         delta: (d) => cb.onDelta(d.text as string),
         generating: (d) => cb.onGenerating(d.tokens as number),
         spec_saved: (d) => cb.onSpecSaved(d.spec as Spec),
@@ -140,7 +143,7 @@ export function sendMessageStream(
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
-  return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
+  return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "specs_summary" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
     `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
     {
       method: "POST",
@@ -177,6 +180,9 @@ export function sendMessageStream(
             break;
           case "specs_title":
             cb.onSpecsTitle?.(d.title as string);
+            break;
+          case "specs_summary":
+            cb.onSpecsSummary?.(d.summary as string);
             break;
           case "task_saved":
             cb.onTaskSaved?.(d.task as Task);

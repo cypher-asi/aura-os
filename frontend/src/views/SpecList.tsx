@@ -97,7 +97,7 @@ export function SpecList() {
     return () => unsubs.forEach((fn) => fn());
   }, [projectId, subscribe, fetchSpecs]);
 
-  const specsTitle = ctx?.project?.specs_title;
+  const specsSummary = ctx?.project?.specs_summary;
 
   useEffect(() => {
     triedSummaryRef.current = false;
@@ -107,7 +107,7 @@ export function SpecList() {
     if (
       !projectId ||
       mergedSpecs.length === 0 ||
-      specsTitle ||
+      specsSummary ||
       generatingRef.current ||
       triedSummaryRef.current
     ) {
@@ -121,12 +121,12 @@ export function SpecList() {
         ctxRef.current?.setProject(updated);
       })
       .catch((err) => {
-        console.error("Failed to generate specs title:", err);
+        console.error("Failed to generate specs summary:", err);
       })
       .finally(() => {
         generatingRef.current = false;
       });
-  }, [projectId, mergedSpecs.length, specsTitle]);
+  }, [projectId, mergedSpecs.length, specsSummary]);
 
   const specById = useMemo(
     () => new Map(mergedSpecs.map((s) => [s.spec_id, s])),

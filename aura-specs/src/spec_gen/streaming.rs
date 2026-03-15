@@ -8,7 +8,7 @@ use aura_claude::ClaudeStreamEvent;
 
 use crate::SpecGenError;
 use super::parser::{IncrementalSpecParser, RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
-use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, SPEC_SUMMARY_SYSTEM_PROMPT, SPEC_TITLE_MAX_TOKENS, SPEC_TITLE_SYSTEM_PROMPT, MAX_TOKENS};
+use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, SPEC_OVERVIEW_MAX_TOKENS, SPEC_OVERVIEW_SYSTEM_PROMPT, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, SPEC_SUMMARY_SYSTEM_PROMPT, MAX_TOKENS};
 
 /// Parses "TITLE: ...\n\nsummary" format. Returns (title, summary).
 /// Falls back to (None, full_text) if format not matched.
@@ -94,24 +94,32 @@ impl SpecGenerationService {
             return;
         }
 
-        send(SpecStreamEvent::Progress("Generating spec title".into()));
+        send(SpecStreamEvent::Progress("Generating spec overview".into()));
         match self
             .claude_client
-            .complete(&api_key, SPEC_TITLE_SYSTEM_PROMPT, &requirements_content, SPEC_TITLE_MAX_TOKENS)
+            .complete(&api_key, SPEC_OVERVIEW_SYSTEM_PROMPT, &requirements_content, SPEC_OVERVIEW_MAX_TOKENS)
             .await
         {
-            Ok(raw_title) => {
-                let title = raw_title.trim().trim_matches('"').to_string();
-                if !title.is_empty() {
-                    if let Ok(mut project) = self.store.get_project(project_id) {
+            Ok(raw_overview) => {
+                let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
+                if let Ok(mut project) = self.store.get_project(project_id) {
+                    if let Some(ref title) = title_opt {
                         project.specs_title = Some(title.clone());
-                        let _ = self.store.put_project(&project);
                     }
+                    if !summary.is_empty() {
+                        project.specs_summary = Some(summary.clone());
+                    }
+                    let _ = self.store.put_project(&project);
+                }
+                if let Some(title) = title_opt {
                     send(SpecStreamEvent::SpecsTitle(title));
+                }
+                if !summary.is_empty() {
+                    send(SpecStreamEvent::SpecsSummary(summary));
                 }
             }
             Err(e) => {
-                error!(%project_id, error = %e, "Failed to generate spec title (continuing)");
+                error!(%project_id, error = %e, "Failed to generate spec overview (continuing)");
             }
         }
 
@@ -237,11 +245,12 @@ impl SpecGenerationService {
                     let (_title, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
                     if !summary.is_empty() {
                         if let Ok(mut project) = self.store.get_project(project_id) {
-                            project.specs_summary = Some(summary);
+                            project.specs_summary = Some(summary.clone());
                             if let Err(e) = self.store.put_project(&project) {
                                 error!(%project_id, error = %e, "Failed to persist specs summary");
                             } else {
                                 info!(%project_id, "Specs summary generated and persisted");
+                                send(SpecStreamEvent::SpecsSummary(summary));
                             }
                         }
                     }

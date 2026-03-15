@@ -150,6 +150,12 @@ pub async fn generate_specs_stream(
                     .json_data(serde_json::json!({ "title": title }))
                     .unwrap()
             }
+            SpecStreamEvent::SpecsSummary(summary) => {
+                Event::default()
+                    .event("specs_summary")
+                    .json_data(serde_json::json!({ "summary": summary }))
+                    .unwrap()
+            }
             SpecStreamEvent::Delta(text) => {
                 Event::default()
                     .event("delta")
