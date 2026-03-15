@@ -74,6 +74,34 @@ fn extract_purpose_excerpt(markdown: &str, max_chars: usize) -> String {
 }
 
 impl SpecGenerationService {
+    pub async fn generate_project_overview(
+        &self,
+        project_id: &ProjectId,
+        requirements_content: &str,
+    ) -> Result<(Option<String>, String), SpecGenError> {
+        let api_key = self.settings.get_decrypted_api_key()?;
+        let raw_overview = self
+            .claude_client
+            .complete(
+                &api_key,
+                SPEC_OVERVIEW_SYSTEM_PROMPT,
+                requirements_content,
+                SPEC_OVERVIEW_MAX_TOKENS,
+            )
+            .await?;
+        let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
+        if let Ok(mut project) = self.store.get_project(project_id) {
+            if let Some(ref title) = title_opt {
+                project.specs_title = Some(title.clone());
+            }
+            if !summary.is_empty() {
+                project.specs_summary = Some(summary.clone());
+            }
+            let _ = self.store.put_project(&project);
+        }
+        Ok((title_opt, summary))
+    }
+
     pub async fn generate_specs_streaming(
         &self,
         project_id: &ProjectId,
@@ -95,22 +123,8 @@ impl SpecGenerationService {
         }
 
         send(SpecStreamEvent::Progress("Generating spec overview".into()));
-        match self
-            .claude_client
-            .complete(&api_key, SPEC_OVERVIEW_SYSTEM_PROMPT, &requirements_content, SPEC_OVERVIEW_MAX_TOKENS)
-            .await
-        {
-            Ok(raw_overview) => {
-                let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
-                if let Ok(mut project) = self.store.get_project(project_id) {
-                    if let Some(ref title) = title_opt {
-                        project.specs_title = Some(title.clone());
-                    }
-                    if !summary.is_empty() {
-                        project.specs_summary = Some(summary.clone());
-                    }
-                    let _ = self.store.put_project(&project);
-                }
+        match self.generate_project_overview(project_id, &requirements_content).await {
+            Ok((title_opt, summary)) => {
                 if let Some(title) = title_opt {
                     send(SpecStreamEvent::SpecsTitle(title));
                 }
@@ -215,48 +229,6 @@ impl SpecGenerationService {
                 self.try_fallback_parse(project_id, &text, &tx, &mut saved_specs);
                 if saved_specs.is_empty() {
                     return;
-                }
-            }
-        }
-
-        send(SpecStreamEvent::Progress("Generating specs summary".into()));
-        if let Ok(api_key) = self.settings.get_decrypted_api_key() {
-            let mut lines: Vec<String> = Vec::new();
-            for (i, spec) in saved_specs.iter().enumerate() {
-                let purpose = extract_purpose_excerpt(&spec.markdown_contents, 200);
-                let excerpt = if purpose.is_empty() {
-                    spec.title.clone()
-                } else {
-                    format!("{}: {}", spec.title, purpose)
-                };
-                lines.push(format!("{}. {}", i + 1, excerpt));
-            }
-            let user_prompt = format!(
-                "Given these implementation specs:\n\n{}\n\nRespond in this exact format:\nTITLE: [3-8 word descriptive title for this spec set, e.g. \"API Integration & Scaffolding\"]\n\n[2-4 sentence summary, max {} words, describing what each phase covers]",
-                lines.join("\n"),
-                SPEC_SUMMARY_MAX_WORDS
-            );
-            match self
-                .claude_client
-                .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
-                .await
-            {
-                Ok(response) => {
-                    let (_title, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
-                    if !summary.is_empty() {
-                        if let Ok(mut project) = self.store.get_project(project_id) {
-                            project.specs_summary = Some(summary.clone());
-                            if let Err(e) = self.store.put_project(&project) {
-                                error!(%project_id, error = %e, "Failed to persist specs summary");
-                            } else {
-                                info!(%project_id, "Specs summary generated and persisted");
-                                send(SpecStreamEvent::SpecsSummary(summary));
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error!(%project_id, error = %e, "Failed to generate specs summary");
                 }
             }
         }

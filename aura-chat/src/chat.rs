@@ -433,6 +433,7 @@ impl ChatService {
         let mut final_text = String::new();
         let mut accumulated_input_tokens: u64 = 0;
         let mut accumulated_output_tokens: u64 = 0;
+        let mut specs_created_count: u32 = 0;
 
         for iteration in 0..max_iters {
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -559,6 +560,7 @@ impl ChatService {
             let mut result_persist_blocks: Vec<ChatContentBlock> = Vec::new();
             for (tc, result) in iter_tool_calls.iter().zip(tool_results) {
                 if let Some(spec) = result.saved_spec {
+                    specs_created_count += 1;
                     let _ = tx.send(ChatStreamEvent::SpecSaved(spec));
                 }
                 if let Some(task) = result.saved_task {
@@ -602,6 +604,54 @@ impl ChatService {
                     max_iters,
                     "Tool-use loop hit max iterations, stopping"
                 );
+            }
+        }
+
+        if specs_created_count > 0 {
+            if let Ok(project) = self.store.get_project(project_id) {
+                if project.specs_title.is_none() {
+                    let requirements_content = stored_messages
+                        .iter()
+                        .rev()
+                        .find(|m| m.role == ChatRole::User)
+                        .map(|m| {
+                            if let Some(blocks) = &m.content_blocks {
+                                blocks
+                                    .iter()
+                                    .filter_map(|b| match b {
+                                        ChatContentBlock::Text { text } => Some(text.as_str()),
+                                        _ => None,
+                                    })
+                                    .collect::<Vec<_>>()
+                                    .join("\n\n")
+                            } else {
+                                m.content.clone()
+                            }
+                        })
+                        .unwrap_or_default();
+
+                    if !requirements_content.is_empty() {
+                        match self
+                            .spec_gen
+                            .generate_project_overview(project_id, &requirements_content)
+                            .await
+                        {
+                            Ok((title_opt, summary)) => {
+                                if let Some(title) = title_opt {
+                                    let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
+                                }
+                                if !summary.is_empty() {
+                                    let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
+                                }
+                            }
+                            Err(e) => {
+                                let _ = tx.send(ChatStreamEvent::Error(
+                                    format!("Failed to generate project overview: {e}"),
+                                ));
+                            }
+                        }
+                    }
+                }
             }
         }
 

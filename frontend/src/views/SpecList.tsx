@@ -23,8 +23,6 @@ export function SpecList() {
   sidekickRef.current = sidekick;
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
-  const [summaryAttempt, setSummaryAttempt] = useState(0);
-
   const mergedSpecs = useMemo(
     () => mergeById(localSpecs, sidekick.specs, "spec_id"),
     [localSpecs, sidekick.specs],
@@ -88,35 +86,6 @@ export function SpecList() {
     ];
     return () => unsubs.forEach((fn) => fn());
   }, [projectId, subscribe, fetchSpecs]);
-
-  const specsSummary = ctx?.project?.specs_summary;
-
-  useEffect(() => {
-    setSummaryAttempt(0);
-  }, [mergedSpecs.length]);
-
-  useEffect(() => {
-    if (!projectId || mergedSpecs.length === 0 || specsSummary || summaryAttempt > 3) {
-      return;
-    }
-    const delay = summaryAttempt === 0 ? 1500 : 5000;
-    const timer = setTimeout(() => {
-      api
-        .generateSpecsSummary(projectId)
-        .then((updated) => {
-          if (updated.specs_summary) {
-            ctxRef.current?.setProject(updated);
-          } else {
-            setSummaryAttempt((prev) => prev + 1);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to generate specs summary:", err);
-          setSummaryAttempt((prev) => prev + 1);
-        });
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [projectId, mergedSpecs.length, specsSummary, summaryAttempt]);
 
   const specById = useMemo(
     () => new Map(mergedSpecs.map((s) => [s.spec_id, s])),
