@@ -459,6 +459,7 @@ impl ChatService {
         let mut accumulated_input_tokens: u64 = 0;
         let mut accumulated_output_tokens: u64 = 0;
         let mut title_generated = false;
+        let stream_timeout = std::time::Duration::from_secs(300);
 
         for iteration in 0..max_iters {
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -486,30 +487,47 @@ impl ChatService {
             let mut iter_text = String::new();
             let mut iter_tool_calls: Vec<aura_claude::ToolCall> = Vec::new();
 
-            while let Some(evt) = claude_rx.recv().await {
-                match evt {
-                    ClaudeStreamEvent::Delta(text) => {
-                        iter_text.push_str(&text);
-                        let _ = tx.send(ChatStreamEvent::Delta(text));
-                    }
-                    ClaudeStreamEvent::ToolUse { id, name, input } => {
-                        let _ = tx.send(ChatStreamEvent::ToolCall {
-                            id: id.clone(),
-                            name: name.clone(),
-                            input: input.clone(),
-                        });
-                        iter_tool_calls.push(aura_claude::ToolCall { id, name, input });
-                    }
-                    ClaudeStreamEvent::ThinkingDelta(text) => {
-                        let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
-                    }
-                    ClaudeStreamEvent::Done { stop_reason, .. } => {
-                        info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Chat iteration done");
-                    }
-                    ClaudeStreamEvent::Error(msg) => {
-                        let _ = tx.send(ChatStreamEvent::Error(msg));
+            let timed_out = loop {
+                match tokio::time::timeout(stream_timeout, claude_rx.recv()).await {
+                    Ok(Some(evt)) => match evt {
+                        ClaudeStreamEvent::Delta(text) => {
+                            iter_text.push_str(&text);
+                            let _ = tx.send(ChatStreamEvent::Delta(text));
+                        }
+                        ClaudeStreamEvent::ToolUse { id, name, input } => {
+                            let _ = tx.send(ChatStreamEvent::ToolCall {
+                                id: id.clone(),
+                                name: name.clone(),
+                                input: input.clone(),
+                            });
+                            iter_tool_calls.push(aura_claude::ToolCall { id, name, input });
+                        }
+                        ClaudeStreamEvent::ThinkingDelta(text) => {
+                            let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
+                        }
+                        ClaudeStreamEvent::Done { stop_reason, .. } => {
+                            info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Chat iteration done");
+                        }
+                        ClaudeStreamEvent::Error(msg) => {
+                            let _ = tx.send(ChatStreamEvent::Error(msg));
+                        }
+                    },
+                    Ok(None) => break false,
+                    Err(_) => {
+                        warn!(iteration, "Claude streaming timed out after {}s", stream_timeout.as_secs());
+                        stream_handle.abort();
+                        break true;
                     }
                 }
+            };
+
+            if timed_out {
+                send(ChatStreamEvent::Error("Claude API streaming timed out".to_string()));
+                if !total_text.is_empty() && !iter_text.is_empty() {
+                    total_text.push_str("\n\n");
+                }
+                total_text.push_str(&iter_text);
+                break;
             }
 
             let stream_result = match stream_handle.await {
@@ -542,6 +560,31 @@ impl ChatService {
                 input_tokens: accumulated_input_tokens,
                 output_tokens: accumulated_output_tokens,
             });
+
+            // Persist tokens incrementally so they're not lost if a later iteration hangs
+            if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
+                instance.total_input_tokens += stream_result.input_tokens;
+                instance.total_output_tokens += stream_result.output_tokens;
+                if instance.model.is_none() {
+                    instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                }
+                instance.updated_at = Utc::now();
+                if let Err(e) = self.store.put_agent_instance(&instance) {
+                    error!(%project_id, %agent_instance_id, error = %e, "Failed to persist iteration token usage");
+                } else {
+                    info!(
+                        iteration,
+                        %project_id, %agent_instance_id,
+                        iter_input = stream_result.input_tokens,
+                        iter_output = stream_result.output_tokens,
+                        total_input = instance.total_input_tokens,
+                        total_output = instance.total_output_tokens,
+                        "Token usage persisted after iteration"
+                    );
+                    let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
+                }
+            }
+
             if !total_text.is_empty() && !iter_text.is_empty() {
                 total_text.push_str("\n\n");
             }
@@ -676,34 +719,8 @@ impl ChatService {
         info!(
             %project_id, %agent_instance_id,
             accumulated_input_tokens, accumulated_output_tokens,
-            "Chat loop finished, persisting token usage"
+            "Chat loop finished"
         );
-        if accumulated_input_tokens > 0 || accumulated_output_tokens > 0 {
-            match self.store.get_agent_instance(project_id, agent_instance_id) {
-                Ok(mut instance) => {
-                    instance.total_input_tokens += accumulated_input_tokens;
-                    instance.total_output_tokens += accumulated_output_tokens;
-                    if instance.model.is_none() {
-                        instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
-                    }
-                    instance.updated_at = Utc::now();
-                    if let Err(e) = self.store.put_agent_instance(&instance) {
-                        error!(%project_id, %agent_instance_id, error = %e, "Failed to persist token usage on agent instance");
-                    } else {
-                        info!(
-                            %project_id, %agent_instance_id,
-                            total_input = instance.total_input_tokens,
-                            total_output = instance.total_output_tokens,
-                            "Token usage persisted to agent instance"
-                        );
-                        let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
-                    }
-                }
-                Err(e) => {
-                    error!(%project_id, %agent_instance_id, error = %e, "Failed to load agent instance for token persistence");
-                }
-            }
-        }
 
         if !total_text.is_empty() {
             let assistant_reply = total_text.clone();
