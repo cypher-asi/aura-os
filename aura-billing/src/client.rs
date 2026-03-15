@@ -9,12 +9,16 @@ use aura_core::{CheckoutSessionResponse, CreditBalance, CreditTier};
 use crate::error::BillingError;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct CheckoutRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     tier_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    custom_credits: Option<u64>,
-    entity_id: String,
+    credits: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    return_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cancel_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,9 +30,22 @@ struct ZpsCheckoutResponse {
 }
 
 #[derive(Debug, Deserialize)]
+struct ZpsTiersResponse {
+    tiers: Vec<ZpsTier>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ZpsTier {
+    id: String,
+    credits: u64,
+    #[serde(alias = "priceUsdCents")]
+    price_usd_cents: u64,
+    label: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct ZpsBalanceResponse {
-    #[serde(alias = "totalCredits")]
-    total_credits: u64,
+    balance: u64,
     #[serde(default)]
     purchases: Vec<ZpsPurchase>,
 }
@@ -68,7 +85,7 @@ impl BillingClient {
     }
 
     pub async fn get_tiers(&self) -> Result<Vec<CreditTier>, BillingError> {
-        let url = format!("{}/api/shanty/credits/tiers", self.base_url);
+        let url = format!("{}/api/credits/tiers", self.base_url);
         debug!(%url, "Fetching credit tiers");
 
         let resp = self.http.get(&url).send().await?;
@@ -81,14 +98,28 @@ impl BillingClient {
                 body,
             });
         }
-        resp.json().await.map_err(|e| BillingError::Deserialize(e.to_string()))
+        let zps: ZpsTiersResponse = resp
+            .json()
+            .await
+            .map_err(|e| BillingError::Deserialize(e.to_string()))?;
+
+        Ok(zps
+            .tiers
+            .into_iter()
+            .map(|t| CreditTier {
+                id: t.id,
+                credits: t.credits,
+                price_usd_cents: t.price_usd_cents,
+                label: t.label,
+            })
+            .collect())
     }
 
     pub async fn get_balance(
         &self,
         access_token: &str,
     ) -> Result<CreditBalance, BillingError> {
-        let url = format!("{}/api/shanty/credits/balance", self.base_url);
+        let url = format!("{}/api/credits/balance", self.base_url);
         debug!(%url, "Fetching credit balance");
 
         let resp = self
@@ -112,7 +143,7 @@ impl BillingClient {
             .map_err(|e| BillingError::Deserialize(e.to_string()))?;
 
         Ok(CreditBalance {
-            total_credits: zps.total_credits,
+            total_credits: zps.balance,
             purchases: zps
                 .purchases
                 .into_iter()
@@ -134,20 +165,20 @@ impl BillingClient {
     pub async fn create_checkout_session(
         &self,
         access_token: &str,
-        entity_id: &str,
         tier_id: Option<String>,
-        custom_credits: Option<u64>,
+        credits: Option<u64>,
     ) -> Result<CheckoutSessionResponse, BillingError> {
         let url = format!(
-            "{}/api/shanty/credits/checkout-session",
+            "{}/api/credits/checkout-session",
             self.base_url
         );
         debug!(%url, "Creating checkout session");
 
         let body = CheckoutRequest {
             tier_id,
-            custom_credits,
-            entity_id: entity_id.to_string(),
+            credits,
+            return_url: None,
+            cancel_url: None,
         };
 
         let resp = self

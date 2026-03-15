@@ -64,7 +64,7 @@ pub async fn get_credit_balance(
 
 pub async fn create_credit_checkout(
     State(state): State<AppState>,
-    Path(org_id): Path<String>,
+    Path(_org_id): Path<String>,
     Json(body): Json<CreateCreditCheckoutRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
     let session = get_auth_session(&state)?;
@@ -72,9 +72,8 @@ pub async fn create_credit_checkout(
         .billing_client
         .create_checkout_session(
             &session.access_token,
-            &org_id,
             body.tier_id,
-            body.custom_credits,
+            body.credits,
         )
         .await
     {

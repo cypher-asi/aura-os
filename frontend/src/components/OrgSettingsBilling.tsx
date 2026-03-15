@@ -62,9 +62,18 @@ export function OrgSettingsBilling({
   const [customCredits, setCustomCredits] = useState("");
   const rate = bestRate(tiers);
 
+  const MIN_CUSTOM_CREDITS = 10_000;
+  const MAX_CUSTOM_CREDITS = 100_000_000;
+
   const customNum = parseInt(customCredits, 10);
-  const customValid = !isNaN(customNum) && customNum > 0;
+  const customInRange =
+    !isNaN(customNum) &&
+    customNum >= MIN_CUSTOM_CREDITS &&
+    customNum <= MAX_CUSTOM_CREDITS;
+  const customValid = customInRange;
   const customPrice = customValid ? Math.ceil(customNum * rate) : 0;
+  const customOutOfRange =
+    customCredits !== "" && !isNaN(customNum) && customNum > 0 && !customInRange;
 
   const isPolling = pollingStatus === "polling";
 
@@ -200,7 +209,8 @@ export function OrgSettingsBilling({
                 <Input
                   size="sm"
                   type="number"
-                  min={1}
+                  min={MIN_CUSTOM_CREDITS}
+                  max={MAX_CUSTOM_CREDITS}
                   value={customCredits}
                   onChange={(e) => setCustomCredits(e.target.value)}
                   placeholder="e.g. 100000"
@@ -209,6 +219,12 @@ export function OrgSettingsBilling({
                 {customValid && (
                   <span className={billingStyles.customPrice}>
                     {formatUsd(customPrice)}
+                  </span>
+                )}
+                {customOutOfRange && (
+                  <span className={billingStyles.errorState}>
+                    Must be between {formatCreditsLong(MIN_CUSTOM_CREDITS)} and{" "}
+                    {formatCreditsLong(MAX_CUSTOM_CREDITS)} credits
                   </span>
                 )}
                 <Button

@@ -208,7 +208,7 @@ export const api = {
     createCreditCheckout: (orgId: string, tierId?: string, customCredits?: number) =>
       apiFetch<CheckoutSessionResponse>(`/api/orgs/${orgId}/credits/checkout`, {
         method: "POST",
-        body: JSON.stringify({ tier_id: tierId, custom_credits: customCredits }),
+        body: JSON.stringify({ tier_id: tierId, credits: customCredits }),
       }),
   },
 

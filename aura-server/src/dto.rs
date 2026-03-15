@@ -228,7 +228,7 @@ impl From<GitHubRepo> for GitHubRepoResponse {
 #[derive(Debug, Deserialize)]
 pub struct CreateCreditCheckoutRequest {
     pub tier_id: Option<String>,
-    pub custom_credits: Option<u64>,
+    pub credits: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
