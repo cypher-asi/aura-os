@@ -11,7 +11,7 @@ use aura_store::RocksStore;
 use crate::chat_tool_executor::ChatToolExecutor;
 use aura_tools::agent_tool_definitions;
 use aura_claude::{
-    ClaudeClient, ClaudeStreamEvent, ContentBlock, RichMessage, ToolDefinition,
+    ClaudeClient, ClaudeStreamEvent, ContentBlock, MessageContent, RichMessage, ToolDefinition,
 };
 use crate::error::ChatError;
 use aura_projects::ProjectService;
@@ -389,6 +389,9 @@ impl ChatService {
             .manage_context_window(&api_key, &system, api_messages)
             .await;
 
+        // Ensure every tool_use has a matching tool_result (Anthropic API requirement)
+        api_messages = Self::sanitize_tool_use_results(api_messages);
+
         let tools: Vec<ToolDefinition> = agent_tool_definitions();
         let executor = ChatToolExecutor::new(
             self.store.clone(),
@@ -608,6 +611,94 @@ impl ChatService {
     }
 
     // -----------------------------------------------------------------------
+    // Tool-use / tool-result sanitization (Anthropic API requirement)
+    // -----------------------------------------------------------------------
+
+    /// Ensures every assistant message with tool_use blocks has a user message
+    /// with matching tool_result blocks immediately after. Adds synthetic
+    /// tool_results for any orphaned tool_use (e.g. from interrupted saves).
+    fn sanitize_tool_use_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+        let mut result = Vec::with_capacity(messages.len() + 16);
+        let mut i = 0;
+        while i < messages.len() {
+            let msg = &messages[i];
+            let tool_use_ids: Vec<String> = match &msg.content {
+                MessageContent::Blocks(blocks) => blocks
+                    .iter()
+                    .filter_map(|b| match b {
+                        ContentBlock::ToolUse { id, .. } => Some(id.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+                MessageContent::Text(_) => vec![],
+            };
+
+            result.push(msg.clone());
+
+            if tool_use_ids.is_empty() {
+                i += 1;
+                continue;
+            }
+
+            let next = messages.get(i + 1);
+            let existing_ids: std::collections::HashSet<String> = match next {
+                Some(m) if m.role == "user" => match &m.content {
+                    MessageContent::Blocks(blocks) => blocks
+                        .iter()
+                        .filter_map(|b| match b {
+                            ContentBlock::ToolResult { tool_use_id, .. } => Some(tool_use_id.clone()),
+                            _ => None,
+                        })
+                        .collect(),
+                    _ => std::collections::HashSet::new(),
+                },
+                _ => std::collections::HashSet::new(),
+            };
+
+            let missing: Vec<String> = tool_use_ids
+                .into_iter()
+                .filter(|id| !existing_ids.contains(id))
+                .collect();
+
+            if !missing.is_empty() {
+                warn!(
+                    orphaned_count = missing.len(),
+                    ids = ?missing,
+                    "Adding synthetic tool_result for orphaned tool_use"
+                );
+                let synthetic: Vec<ContentBlock> = missing
+                    .into_iter()
+                    .map(|tool_use_id| ContentBlock::ToolResult {
+                        tool_use_id: tool_use_id.clone(),
+                        content: "Tool execution was interrupted or not completed."
+                            .to_string(),
+                        is_error: Some(true),
+                    })
+                    .collect();
+
+                if let Some(m) = next {
+                    if m.role == "user" {
+                        if let MessageContent::Blocks(blocks) = &m.content {
+                            let mut merged = blocks.clone();
+                            for b in &synthetic {
+                                merged.push(b.clone());
+                            }
+                            result.push(RichMessage {
+                                role: "user".into(),
+                                content: MessageContent::Blocks(merged),
+                            });
+                            i += 2;
+                            continue;
+                        }
+                    }
+                }
+                result.push(RichMessage::tool_results(synthetic));
+            }
+            i += 1;
+        }
+        result
+    }
+
     // Context window management
     // -----------------------------------------------------------------------
 
