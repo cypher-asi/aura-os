@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { Tabs, Button, Text, Menu } from "@cypher-asi/zui";
 import { Archive, Info, ArrowLeft, Ellipsis } from "lucide-react";
 import { AutomationBar } from "./AutomationBar";
@@ -36,9 +37,20 @@ export function SidekickHeader() {
   const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekick();
   const ctx = useProjectContext();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number } | null>(null);
   const moreBtnRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(moreBtnRef, () => setMoreOpen(false), moreOpen);
+  useLayoutEffect(() => {
+    if (moreOpen && moreBtnRef.current) {
+      const rect = moreBtnRef.current.getBoundingClientRect();
+      setMenuRect({ top: rect.bottom + 4, left: rect.right - 180 });
+    } else {
+      setMenuRect(null);
+    }
+  }, [moreOpen]);
+
+  useClickOutside([moreBtnRef, moreMenuRef], () => setMoreOpen(false), moreOpen);
 
   if (!ctx || showInfo) return null;
 
@@ -71,28 +83,40 @@ export function SidekickHeader() {
               onClick={() => setMoreOpen((v) => !v)}
               title="More actions"
             />
-            {moreOpen && (
-              <div className={styles.moreMenu}>
-                <Menu
-                  items={[
-                    ...(project.current_status !== "archived"
-                      ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
-                      : []),
-                    { id: "info", label: "Project Info", icon: <Info size={14} /> },
-                  ]}
-                  onChange={(id) => {
-                    setMoreOpen(false);
-                    if (id === "archive") handleArchive();
-                    if (id === "info") toggleInfo("Project Info", null);
-                  }}
-                  background="solid"
-                  border="solid"
-                  rounded="md"
-                  width={180}
-                  isOpen
-                />
-              </div>
-            )}
+            {moreOpen &&
+              menuRect &&
+              createPortal(
+                <div
+                  ref={moreMenuRef}
+                  className={styles.moreMenu}
+                  style={{
+                    position: "fixed",
+                    top: menuRect.top,
+                    left: menuRect.left,
+                    zIndex: 100,
+                }}
+                >
+                  <Menu
+                    items={[
+                      ...(project.current_status !== "archived"
+                        ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
+                        : []),
+                      { id: "info", label: "Project Info", icon: <Info size={14} /> },
+                    ]}
+                    onChange={(id) => {
+                      setMoreOpen(false);
+                      if (id === "archive") handleArchive();
+                      if (id === "info") toggleInfo("Project Info", null);
+                    }}
+                    background="solid"
+                    border="solid"
+                    rounded="md"
+                    width={180}
+                    isOpen
+                  />
+                </div>,
+                document.body,
+              )}
           </div>
         </div>
       </div>
