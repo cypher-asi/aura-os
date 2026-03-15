@@ -8,13 +8,40 @@ import { PreviewHeader, PreviewContent } from "./Preview";
 import { TaskbarLeft } from "./TaskbarLeft";
 import { TaskbarMiddle } from "./TaskbarMiddle";
 import { TaskbarRight } from "./TaskbarRight";
-import { TerminalPanel } from "./TerminalPanel";
+import { TerminalPanelHeader, TerminalPanelBody } from "./TerminalPanel";
+import { TerminalPanelProvider } from "../context/TerminalPanelContext";
+import { useProjectContext } from "../context/ProjectContext";
 import { SettingsModal } from "./SettingsModal";
 import { OrgSettingsPanel } from "./OrgSettingsPanel";
 import { SidekickProvider, useSidekick } from "../context/SidekickContext";
 import { ProjectContextProvider } from "../context/ProjectContext";
 import { OrgProvider } from "../context/OrgContext";
 import { windowCommand } from "../lib/windowCommand";
+
+function AgentChatLane() {
+  const ctx = useProjectContext();
+  const cwd = ctx?.project?.linked_folder_path;
+
+  return (
+    <TerminalPanelProvider cwd={cwd}>
+      <Lane
+        flex
+        style={{ borderLeft: "1px solid var(--color-border)" }}
+        taskbar={
+          <div style={{ display: "flex", flex: 1, minWidth: 0, alignItems: "stretch" }}>
+            <TaskbarMiddle />
+            <TerminalPanelHeader />
+          </div>
+        }
+        footer={<TerminalPanelBody />}
+      >
+        <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
+          <Outlet />
+        </main>
+      </Lane>
+    </TerminalPanelProvider>
+  );
+}
 
 function AppLayout() {
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
@@ -63,16 +90,7 @@ function AppLayout() {
           </Lane>
 
           {/* Lane 2: AgentChat */}
-          <Lane
-            flex
-            style={{ borderLeft: "1px solid var(--color-border)" }}
-            taskbar={<TaskbarMiddle />}
-            footer={<TerminalPanel />}
-          >
-            <main style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "auto" }}>
-              <Outlet />
-            </main>
-          </Lane>
+          <AgentChatLane />
 
           {/* Lane 3: Sidekick */}
           <Lane

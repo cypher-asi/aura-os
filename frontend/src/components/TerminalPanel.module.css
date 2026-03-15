@@ -51,6 +51,23 @@
   user-select: none;
 }
 
+/* Header when embedded in taskbar row - no borders, fills row */
+.terminalHeaderTaskbar {
+  composes: terminalHeader;
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+}
+
+.terminalBodyPanel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
 .headerLabel {
   font-size: 11px;
   font-weight: 600;
@@ -147,10 +164,21 @@
   color: var(--color-text, #d4d4d4);
 }
 
+.headerBtn:focus,
+.headerBtn:focus-visible,
+.terminalTab:focus,
+.terminalTab:focus-visible,
+.tabClose:focus,
+.tabClose:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: transparent;
+}
+
 .terminalBody {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   position: relative;
-  padding: var(--space-2, 8px);
+  padding: 0;
 }
