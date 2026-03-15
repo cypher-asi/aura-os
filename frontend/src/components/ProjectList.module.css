@@ -168,3 +168,11 @@
   background: var(--color-danger-hover);
   border-color: var(--color-danger-hover);
 }
+
+.agentAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}

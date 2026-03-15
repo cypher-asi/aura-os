@@ -277,6 +277,9 @@ export function ProjectList() {
                 return {
                   id: s.agent_instance_id,
                   label: s.name,
+                  icon: s.icon
+                    ? <img src={s.icon} alt="" className={styles.agentAvatar} />
+                    : <Bot size={16} />,
                   suffix: isAutomating
                     ? <span className={styles.sessionIndicator}><Loader2 size={10} className={styles.automationSpinner} /></span>
                     : streamingAgentInstanceId === s.agent_instance_id
