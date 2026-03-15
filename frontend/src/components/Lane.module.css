@@ -4,7 +4,6 @@
   flex-direction: column;
   height: 100%;
   flex-shrink: 0;
-  overflow: hidden;
 }
 
 .laneFlex {
@@ -21,6 +20,7 @@
 /* ── Collapse ── */
 
 .collapsed {
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -81,12 +81,15 @@
 
 .laneHeader {
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .laneContent {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Taskbar ── */

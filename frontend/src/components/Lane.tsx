@@ -19,6 +19,12 @@ export interface LaneProps {
   /** Take remaining horizontal space instead of a fixed width. */
   flex?: boolean;
 
+  /**
+   * When true the lane can collapse to zero width.
+   * The inner content keeps its open width so it clips rather than squishes.
+   */
+  collapsible?: boolean;
+
   /** Animate width to 0. Content stays in the DOM. */
   collapsed?: boolean;
 
@@ -39,6 +45,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       maxWidth = 400,
       storageKey = "lane-width",
       flex = false,
+      collapsible = false,
       collapsed = false,
       className,
       style,
@@ -98,7 +105,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
           </div>
         )}
 
-        <div className={styles.laneInner} style={flex ? undefined : { minWidth: openWidth }}>
+        <div className={styles.laneInner} style={collapsible ? { minWidth: openWidth } : undefined}>
           {header && <div className={styles.laneHeader}>{header}</div>}
           <div className={styles.laneContent}>{children}</div>
           {taskbar && <div className={styles.laneTaskbar}>{taskbar}</div>}

@@ -97,6 +97,7 @@ function AppLayout() {
             minWidth={200}
             maxWidth={600}
             storageKey="aura-preview"
+            collapsible
             collapsed={!previewItem}
             header={<PreviewHeader />}
             style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
