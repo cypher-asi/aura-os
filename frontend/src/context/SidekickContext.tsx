@@ -5,6 +5,7 @@ export type SidekickTab = "specs" | "tasks" | "progress" | "sessions" | "log";
 
 export type PreviewItem =
   | { kind: "spec"; spec: Spec }
+  | { kind: "specs_overview"; specs: Spec[] }
   | { kind: "task"; task: Task }
   | { kind: "session"; session: Session };
 
