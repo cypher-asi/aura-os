@@ -239,7 +239,17 @@ impl SpecGenerationService {
 
     /// Generate and persist a specs summary for a project that already has specs.
     /// Returns the generated summary, or None if no specs or generation failed.
+    /// Generate and persist a specs summary for a project that already has specs.
+    /// This is a fallback/manual-refresh mechanism. It will NOT overwrite
+    /// `specs_title` or `specs_summary` that were already set (e.g. by
+    /// `generate_project_overview` from the user's requirements).
     pub async fn generate_specs_summary(&self, project_id: &ProjectId) -> Result<Option<String>, SpecGenError> {
+        let project = self.store.get_project(project_id).map_err(SpecGenError::Store)?;
+        if project.specs_title.is_some() && project.specs_summary.is_some() {
+            info!(%project_id, "Project already has title and summary, skipping spec-derived generation");
+            return Ok(project.specs_summary);
+        }
+
         let specs = self.list_specs(project_id)?;
         if specs.is_empty() {
             info!(%project_id, "No specs found, skipping summary generation");
@@ -257,11 +267,11 @@ impl SpecGenerationService {
             };
             lines.push(format!("{}. {}", i + 1, excerpt));
         }
-            let user_prompt = format!(
-                "Given these implementation specs:\n\n{}\n\nRespond in this exact format:\nTITLE: [3-8 word descriptive title for this spec set]\n\n[2-4 sentence summary, maximum {} words]. Name and briefly explain what each phase covers—what gets built, what it does, and how the phases connect. Be concrete and content-specific.",
-                lines.join("\n"),
-                SPEC_SUMMARY_MAX_WORDS
-            );
+        let user_prompt = format!(
+            "Given these implementation specs:\n\n{}\n\nRespond in this exact format:\nTITLE: [3-8 word descriptive title for this spec set]\n\n[2-4 sentence summary, maximum {} words]. Name and briefly explain what each phase covers—what gets built, what it does, and how the phases connect. Be concrete and content-specific.",
+            lines.join("\n"),
+            SPEC_SUMMARY_MAX_WORDS
+        );
         let response = self
             .claude_client
             .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
@@ -271,14 +281,23 @@ impl SpecGenerationService {
         if summary.is_empty() {
             return Ok(None);
         }
-        let mut project = self.store.get_project(project_id).map_err(|e| SpecGenError::Store(e))?;
-        project.specs_summary = Some(summary.clone());
-        if let Some(t) = title {
-            project.specs_title = Some(t.trim().to_string());
+        let mut project = self.store.get_project(project_id).map_err(SpecGenError::Store)?;
+        let mut changed = false;
+        if project.specs_summary.is_none() {
+            project.specs_summary = Some(summary.clone());
+            changed = true;
         }
-        self.store.put_project(&project).map_err(|e| SpecGenError::Store(e))?;
-        info!(%project_id, "Specs summary and title generated and persisted");
-        Ok(Some(summary))
+        if project.specs_title.is_none() {
+            if let Some(t) = title {
+                project.specs_title = Some(t.trim().to_string());
+                changed = true;
+            }
+        }
+        if changed {
+            self.store.put_project(&project).map_err(SpecGenError::Store)?;
+            info!(%project_id, "Specs summary generated and persisted (fallback)");
+        }
+        Ok(project.specs_summary)
     }
 
     fn load_project_and_key(

@@ -615,48 +615,45 @@ impl ChatService {
         }
 
         if specs_created_count > 0 {
-            if let Ok(project) = self.store.get_project(project_id) {
-                if project.specs_title.is_none() {
-                    let requirements_content = stored_messages
-                        .iter()
-                        .rev()
-                        .find(|m| m.role == ChatRole::User)
-                        .map(|m| {
-                            if let Some(blocks) = &m.content_blocks {
-                                blocks
-                                    .iter()
-                                    .filter_map(|b| match b {
-                                        ChatContentBlock::Text { text } => Some(text.as_str()),
-                                        _ => None,
-                                    })
-                                    .collect::<Vec<_>>()
-                                    .join("\n\n")
-                            } else {
-                                m.content.clone()
-                            }
-                        })
-                        .unwrap_or_default();
+            let requirements_content: String = stored_messages
+                .iter()
+                .filter(|m| m.role == ChatRole::User)
+                .map(|m| {
+                    if let Some(blocks) = &m.content_blocks {
+                        blocks
+                            .iter()
+                            .filter_map(|b| match b {
+                                ChatContentBlock::Text { text } => Some(text.as_str()),
+                                _ => None,
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n\n")
+                    } else {
+                        m.content.clone()
+                    }
+                })
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n\n");
 
-                    if !requirements_content.is_empty() {
-                        match self
-                            .spec_gen
-                            .generate_project_overview(project_id, &requirements_content)
-                            .await
-                        {
-                            Ok((title_opt, summary)) => {
-                                if let Some(title) = title_opt {
-                                    let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
-                                }
-                                if !summary.is_empty() {
-                                    let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
-                                }
-                            }
-                            Err(e) => {
-                                let _ = tx.send(ChatStreamEvent::Error(
-                                    format!("Failed to generate project overview: {e}"),
-                                ));
-                            }
+            if !requirements_content.is_empty() {
+                match self
+                    .spec_gen
+                    .generate_project_overview(project_id, &requirements_content)
+                    .await
+                {
+                    Ok((title_opt, summary)) => {
+                        if let Some(title) = title_opt {
+                            let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
                         }
+                        if !summary.is_empty() {
+                            let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(ChatStreamEvent::Error(
+                            format!("Failed to generate project overview: {e}"),
+                        ));
                     }
                 }
             }
