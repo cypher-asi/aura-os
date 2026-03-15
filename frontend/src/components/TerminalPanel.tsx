@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
+import { cn } from "@cypher-asi/zui";
 import { useTerminal, type UseTerminalReturn } from "../hooks/use-terminal";
 import { useTerminalPanel, type TerminalInstance } from "../context/TerminalPanelContext";
 import { XTerminal } from "./XTerminal";
@@ -110,6 +111,7 @@ export function TerminalPanelBody() {
     terminals,
     activeId,
     collapsed,
+    contentReady,
     panelHeight,
     handleMouseDown,
     registerHook,
@@ -118,7 +120,11 @@ export function TerminalPanelBody() {
 
   return (
     <div
-      className={cn(styles.terminalBodyPanel, collapsed && styles.terminalBodyPanelCollapsed)}
+      className={cn(
+        styles.terminalBodyPanel,
+        collapsed && styles.terminalBodyPanelCollapsed,
+        !collapsed && contentReady && styles.terminalBodyPanelContentReady,
+      )}
       style={{ height: panelHeight }}
     >
       <div

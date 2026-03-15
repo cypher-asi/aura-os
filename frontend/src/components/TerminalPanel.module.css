@@ -27,7 +27,7 @@
 }
 
 .resizeHandle {
-  height: 4px;
+  height: 2px;
   cursor: row-resize;
   background: transparent;
   flex-shrink: 0;
@@ -52,11 +52,29 @@
 }
 
 /* Header when embedded in taskbar row - tabs far left, icons far right */
+/* Exact height: 30.5px to match other lane taskbars. Override base min-height/flex-shrink. */
 .terminalHeaderTaskbar {
   composes: terminalHeader;
   flex: 1;
   min-width: 0;
+  height: 30.5px;
+  min-height: 0;
+  max-height: 30.5px;
+  flex-shrink: 0;
+  overflow: hidden;
   border-bottom: none;
+  box-sizing: border-box;
+}
+
+/* Constrain inner content to prevent flex children from forcing overflow */
+.terminalHeaderTaskbar .tabList,
+.terminalHeaderTaskbar .headerActions {
+  min-height: 0;
+}
+
+.terminalHeaderTaskbar .headerBtn {
+  width: 20px;
+  height: 20px;
 }
 
 .terminalBodyPanel {
@@ -64,7 +82,6 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
-  border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   transition: height 0.25s ease-out;
 }
@@ -72,6 +89,19 @@
 .terminalBodyPanelCollapsed {
   height: 0 !important;
   min-height: 0;
+}
+
+/* Hide terminal content when collapsed or until contentReady (avoids first-load PTY flash) */
+.terminalBodyPanel .terminalBody {
+  opacity: 0;
+}
+
+.terminalBodyPanel.terminalBodyPanelContentReady .terminalBody {
+  opacity: 1;
+}
+
+.terminalBodyPanelCollapsed .terminalBody {
+  opacity: 0;
 }
 
 .headerLabel {
@@ -170,6 +200,17 @@
   color: var(--color-text, #d4d4d4);
 }
 
+/* Compact sizing when embedded in taskbar - match lane taskbar content height */
+.terminalHeaderTaskbar .headerBtn {
+  width: 20px;
+  height: 20px;
+}
+
+.terminalHeaderTaskbar .terminalTab {
+  padding: 2px 6px;
+  line-height: 1;
+}
+
 .headerBtn:focus,
 .headerBtn:focus-visible,
 .terminalTab:focus,
@@ -187,4 +228,5 @@
   overflow: hidden;
   position: relative;
   padding: 8px;
+  transition: opacity 0.28s ease-out;
 }

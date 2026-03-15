@@ -20,11 +20,16 @@ export interface TerminalInstance {
   hook: UseTerminalReturn;
 }
 
+const FIRST_EXPAND_DELAY_MS = 400;
+const SUBSEQUENT_EXPAND_DELAY_MS = 80;
+
 interface TerminalPanelState {
   terminals: TerminalInstance[];
   activeId: string | null;
   panelHeight: number;
   collapsed: boolean;
+  /** True after expand delay; hides initial PTY output flash on first load */
+  contentReady: boolean;
   cwd?: string;
   addTerminal: () => void;
   removeTerminal: (id: string) => void;
@@ -64,6 +69,8 @@ export function TerminalPanelProvider({
   const initial = useRef(loadPanelState());
   const [panelHeight, setPanelHeight] = useState(initial.current.height);
   const [collapsed, setCollapsed] = useState(true);
+  const [contentReady, setContentReady] = useState(false);
+  const hasBeenExpandedOnce = useRef(false);
   const dragging = useRef(false);
   const startY = useRef(0);
   const startHeight = useRef(0);
@@ -71,6 +78,20 @@ export function TerminalPanelProvider({
   useEffect(() => {
     savePanelState(panelHeight, collapsed);
   }, [panelHeight, collapsed]);
+
+  /* Delay showing terminal content on expand to hide initial PTY output flash */
+  useEffect(() => {
+    if (collapsed) {
+      setContentReady(false);
+      return;
+    }
+    const delay = hasBeenExpandedOnce.current ? SUBSEQUENT_EXPAND_DELAY_MS : FIRST_EXPAND_DELAY_MS;
+    const id = setTimeout(() => {
+      hasBeenExpandedOnce.current = true;
+      setContentReady(true);
+    }, delay);
+    return () => clearTimeout(id);
+  }, [collapsed]);
 
   const addTerminal = useCallback(() => {
     const num = nextNum.current++;
@@ -157,6 +178,7 @@ export function TerminalPanelProvider({
     activeId,
     panelHeight,
     collapsed,
+    contentReady,
     cwd,
     addTerminal,
     removeTerminal,

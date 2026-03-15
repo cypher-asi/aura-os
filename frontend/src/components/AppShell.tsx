@@ -6,7 +6,6 @@ import { ProjectList } from "./ProjectList";
 import { SidekickHeader, SidekickContent } from "./Sidekick";
 import { PreviewHeader, PreviewContent } from "./Preview";
 import { TaskbarLeft } from "./TaskbarLeft";
-import { TaskbarMiddle } from "./TaskbarMiddle";
 import { TaskbarRight } from "./TaskbarRight";
 import { TerminalPanelHeader, TerminalPanelBody } from "./TerminalPanel";
 import { TerminalPanelProvider } from "../context/TerminalPanelContext";
@@ -29,7 +28,6 @@ function AgentChatLane() {
         style={{ borderLeft: "1px solid var(--color-border)" }}
         taskbar={
           <div style={{ display: "flex", flex: 1, minWidth: 0, alignItems: "stretch" }}>
-            <TaskbarMiddle />
             <TerminalPanelHeader />
           </div>
         }
