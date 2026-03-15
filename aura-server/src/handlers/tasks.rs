@@ -114,11 +114,11 @@ pub async fn get_progress(
     if let Ok(sessions) = state.store.list_sessions_by_project(&project_id) {
         let fee_schedule = state.pricing_service.get_fee_schedule();
         progress.total_sessions = sessions.len() as u64;
-        progress.total_tokens = sessions
+        progress.total_tokens += sessions
             .iter()
             .map(|s| s.total_input_tokens + s.total_output_tokens)
-            .sum();
-        progress.total_cost = sessions
+            .sum::<u64>();
+        progress.total_cost += sessions
             .iter()
             .map(|s| {
                 let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
@@ -127,29 +127,51 @@ pub async fn get_progress(
                     s.total_input_tokens, s.total_output_tokens, inp, out,
                 )
             })
-            .sum();
+            .sum::<f64>();
     }
 
     // Agent instances: include token usage from agent instances
-    if let Ok(instances) = state.agent_instance_service.list_instances(&project_id) {
-        let fee_schedule = state.pricing_service.get_fee_schedule();
-        let instance_tokens: u64 = instances
-            .iter()
-            .map(|ai| ai.total_input_tokens + ai.total_output_tokens)
-            .sum();
-        let instance_cost: f64 = instances
-            .iter()
-            .map(|ai| {
-                let model = ai.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
-                aura_billing::compute_cost_with_rates(
-                    ai.total_input_tokens, ai.total_output_tokens, inp, out,
-                )
-            })
-            .sum();
-        progress.total_tokens += instance_tokens;
-        progress.total_cost += instance_cost;
-        progress.total_agents = instances.len() as u32;
+    match state.agent_instance_service.list_instances(&project_id) {
+        Ok(instances) => {
+            let fee_schedule = state.pricing_service.get_fee_schedule();
+            for ai in &instances {
+                tracing::debug!(
+                    %project_id,
+                    agent_instance_id = %ai.agent_instance_id,
+                    input = ai.total_input_tokens,
+                    output = ai.total_output_tokens,
+                    "Progress: agent instance token counts"
+                );
+            }
+            let instance_tokens: u64 = instances
+                .iter()
+                .map(|ai| ai.total_input_tokens + ai.total_output_tokens)
+                .sum();
+            let instance_cost: f64 = instances
+                .iter()
+                .map(|ai| {
+                    let model = ai.model.as_deref().unwrap_or("claude-opus-4-6");
+                    let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
+                    aura_billing::compute_cost_with_rates(
+                        ai.total_input_tokens, ai.total_output_tokens, inp, out,
+                    )
+                })
+                .sum();
+            progress.total_tokens += instance_tokens;
+            progress.total_cost += instance_cost;
+            progress.total_agents = instances.len() as u32;
+            tracing::info!(
+                %project_id,
+                instance_count = instances.len(),
+                instance_tokens,
+                total_tokens = progress.total_tokens,
+                total_cost = progress.total_cost,
+                "Progress: aggregated agent instance metrics"
+            );
+        }
+        Err(e) => {
+            tracing::error!(%project_id, error = %e, "Progress: failed to list agent instances");
+        }
     }
 
     // Messages: count from chat store
