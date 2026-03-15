@@ -307,6 +307,36 @@ interface StreamingBubbleProps {
   thinkingDurationMs?: number | null;
 }
 
+function StreamingIndicator({
+  text,
+  thinkingText,
+  toolCalls,
+}: {
+  text: string;
+  thinkingText?: string;
+  toolCalls?: ToolCallEntry[];
+}) {
+  const hasText = Boolean(text);
+  const hasThinking = Boolean(thinkingText);
+  const hasPendingTools = toolCalls?.some((tc) => tc.pending) ?? false;
+
+  if (hasText) {
+    return <span className={styles.streamingCursorGlow} />;
+  }
+
+  if (hasThinking || hasPendingTools) {
+    return null;
+  }
+
+  return (
+    <div className={styles.shimmerPlaceholder}>
+      <div className={styles.shimmerBar} />
+      <div className={styles.shimmerBar} />
+      <div className={styles.shimmerBar} />
+    </div>
+  );
+}
+
 export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDurationMs }: StreamingBubbleProps) {
   const isThinking = Boolean(thinkingText) && !text;
   return (
@@ -335,7 +365,7 @@ export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDuratio
               {text}
             </ReactMarkdown>
           )}
-          <span className={styles.streamingCursor} />
+          <StreamingIndicator text={text} thinkingText={thinkingText} toolCalls={toolCalls} />
         </div>
       </div>
     </div>
