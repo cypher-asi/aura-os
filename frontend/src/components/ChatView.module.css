@@ -539,18 +539,14 @@
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: var(--color-text-muted);
-  color: var(--color-bg);
+  background: var(--color-text, #e0e0e0);
+  color: var(--color-bg, #1a1a1a);
   cursor: pointer;
   transition: background 0.15s ease, opacity 0.15s ease;
   flex-shrink: 0;
 }
 
-.sendButton:not(:disabled) {
-  background: var(--color-text);
-}
-
-.sendButton:not(:disabled):hover {
+.sendButton:hover {
   opacity: 0.85;
 }
 
