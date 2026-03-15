@@ -7,6 +7,7 @@ use tracing::{error, info, warn};
 
 use aura_core::*;
 use aura_agents::AgentInstanceService;
+use aura_billing::{BillingClient, BillingError};
 use aura_claude::{ClaudeClient, DEFAULT_MODEL};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
@@ -53,6 +54,7 @@ pub struct DevLoopEngine {
     pub(crate) store: Arc<RocksStore>,
     pub(crate) settings: Arc<SettingsService>,
     pub(crate) claude_client: Arc<ClaudeClient>,
+    pub(crate) billing_client: Arc<BillingClient>,
     pub(crate) project_service: Arc<ProjectService>,
     pub(crate) task_service: Arc<TaskService>,
     pub(crate) agent_instance_service: Arc<AgentInstanceService>,
@@ -67,6 +69,7 @@ impl DevLoopEngine {
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
         claude_client: Arc<ClaudeClient>,
+        billing_client: Arc<BillingClient>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
         agent_instance_service: Arc<AgentInstanceService>,
@@ -77,6 +80,7 @@ impl DevLoopEngine {
             store,
             settings,
             claude_client,
+            billing_client,
             project_service,
             task_service,
             agent_instance_service,
@@ -404,6 +408,16 @@ impl DevLoopEngine {
                     total_output_tokens += execution.output_tokens;
                     total_parse_retries += execution.parse_retries;
 
+                    self.debit_credits(
+                        execution.input_tokens + execution.output_tokens,
+                        "aura_task",
+                        Some(serde_json::json!({
+                            "task_id": task.task_id.to_string(),
+                            "project_id": project_id.to_string(),
+                            "model": session.model,
+                        })),
+                    ).await;
+
                     let _write_guard = self.write_coordinator.acquire(&project_id).await;
 
                     let file_ops_start = Instant::now();
@@ -475,6 +489,18 @@ impl DevLoopEngine {
                         duplicate_error_bailouts += dup_bailouts;
                         total_input_tokens += fix_inp;
                         total_output_tokens += fix_out;
+
+                        if fix_inp + fix_out > 0 {
+                            self.debit_credits(
+                                fix_inp + fix_out,
+                                "aura_build_fix",
+                                Some(serde_json::json!({
+                                    "task_id": task.task_id.to_string(),
+                                    "project_id": project_id.to_string(),
+                                    "model": session.model,
+                                })),
+                            ).await;
+                        }
 
                         self.update_task_tracking(
                             &project_id, &task, &session.user_id, &session.model,
@@ -806,6 +832,43 @@ impl DevLoopEngine {
             .ok()
             .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
             .map(|s| s.user_id)
+    }
+
+    fn access_token(&self) -> Option<String> {
+        self.store
+            .get_setting("zero_auth_session")
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
+            .map(|s| s.access_token)
+    }
+
+    pub(crate) async fn debit_credits(
+        &self,
+        amount: u64,
+        reason: &str,
+        metadata: Option<serde_json::Value>,
+    ) {
+        if amount == 0 {
+            return;
+        }
+        let Some(token) = self.access_token() else {
+            warn!("No access token available for credit debit");
+            return;
+        };
+        match self.billing_client.debit_credits(&token, amount, reason, None, metadata).await {
+            Ok(resp) => {
+                info!(amount, reason, balance = resp.balance, tx = %resp.transaction_id, "Credits debited");
+            }
+            Err(BillingError::InsufficientCredits { available, required }) => {
+                warn!(available, required, "Insufficient credits");
+                self.emit(EngineEvent::LogLine {
+                    message: format!("Insufficient credits: have {available}, need {required}"),
+                });
+            }
+            Err(e) => {
+                warn!(error = %e, reason, "Failed to debit credits");
+            }
+        }
     }
 
     pub(crate) fn emit(&self, event: EngineEvent) {
