@@ -52,9 +52,57 @@ pub struct LoopStatusResponse {
     pub paused: bool,
     pub project_id: Option<ProjectId>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<AgentId>,
+    pub agent_instance_id: Option<AgentInstanceId>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub active_agents: Option<Vec<AgentId>>,
+    pub active_agent_instances: Option<Vec<AgentInstanceId>>,
+}
+
+// -- Agent DTOs (user-level) --
+
+#[derive(Debug, Deserialize)]
+pub struct CreateAgentRequest {
+    pub name: String,
+    pub role: String,
+    pub personality: String,
+    pub system_prompt: String,
+    #[serde(default)]
+    pub skills: Vec<String>,
+    pub icon: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateAgentRequest {
+    pub name: Option<String>,
+    pub role: Option<String>,
+    pub personality: Option<String>,
+    pub system_prompt: Option<String>,
+    pub skills: Option<Vec<String>>,
+    pub icon: Option<Option<String>>,
+}
+
+// -- AgentInstance DTOs (project-level) --
+
+#[derive(Debug, Deserialize)]
+pub struct CreateAgentInstanceRequest {
+    pub agent_id: AgentId,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateAgentInstanceRequest {
+    pub name: Option<String>,
+    pub role: Option<String>,
+    pub personality: Option<String>,
+    pub system_prompt: Option<String>,
+}
+
+// -- Message DTOs --
+
+#[derive(Debug, Deserialize)]
+pub struct SendMessageRequest {
+    pub content: String,
+    pub action: Option<String>,
+    #[serde(default)]
+    pub attachments: Option<Vec<aura_chat::ChatAttachment>>,
 }
 
 #[derive(Debug, Deserialize)]

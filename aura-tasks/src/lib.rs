@@ -36,6 +36,7 @@ pub struct ProjectProgress {
     pub total_messages: u64,
     pub total_sessions: u64,
     pub total_tests: u64,
+    pub total_agents: u32,
     pub total_parse_retries: u32,
     pub total_build_fix_attempts: u32,
     pub build_verify_failures: usize,
@@ -123,7 +124,7 @@ impl TaskService {
             })?;
         Self::validate_transition(task.status, TaskStatus::Ready)?;
         task.status = TaskStatus::Ready;
-        task.assigned_agent_id = None;
+        task.assigned_agent_instance_id = None;
         task.session_id = None;
         task.updated_at = Utc::now();
         self.store.put_task(&task)?;
@@ -154,7 +155,7 @@ impl TaskService {
         project_id: &ProjectId,
         spec_id: &SpecId,
         task_id: &TaskId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: Option<SessionId>,
     ) -> Result<Task, TaskError> {
         let mut task = self
@@ -166,7 +167,7 @@ impl TaskService {
             })?;
         Self::validate_transition(task.status, TaskStatus::InProgress)?;
         task.status = TaskStatus::InProgress;
-        task.assigned_agent_id = Some(*agent_id);
+        task.assigned_agent_instance_id = Some(*agent_instance_id);
         task.session_id = session_id;
         task.updated_at = Utc::now();
         self.store.put_task(&task)?;
@@ -239,7 +240,7 @@ impl TaskService {
 
         Self::validate_transition(task.status, TaskStatus::Ready)?;
         task.status = TaskStatus::Ready;
-        task.assigned_agent_id = None;
+        task.assigned_agent_instance_id = None;
         task.session_id = None;
         task.build_steps.clear();
         task.test_steps.clear();
@@ -392,7 +393,7 @@ impl TaskService {
     pub fn claim_next_task(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: Option<SessionId>,
     ) -> Result<Option<Task>, TaskError> {
         let lock = self.project_claim_lock(project_id);
@@ -401,7 +402,7 @@ impl TaskService {
         let task = self.select_next_task(project_id)?;
         match task {
             Some(t) => {
-                let assigned = self.assign_task(project_id, &t.spec_id, &t.task_id, agent_id, session_id)?;
+                let assigned = self.assign_task(project_id, &t.spec_id, &t.task_id, agent_instance_id, session_id)?;
                 Ok(Some(assigned))
             }
             None => Ok(None),
@@ -440,7 +441,7 @@ impl TaskService {
             order_index: originating_task.order_index + 1,
             dependency_ids,
             parent_task_id: Some(originating_task.task_id),
-            assigned_agent_id: None,
+            assigned_agent_instance_id: None,
             session_id: None,
             execution_notes: String::new(),
             files_changed: vec![],
@@ -561,6 +562,7 @@ impl TaskService {
             total_messages: 0,
             total_sessions: 0,
             total_tests: 0,
+            total_agents: 0,
             total_parse_retries,
             total_build_fix_attempts,
             build_verify_failures,
@@ -674,7 +676,7 @@ impl TaskExtractionService {
                 order_index: *order,
                 dependency_ids: vec![],
                 parent_task_id: None,
-                assigned_agent_id: None,
+                assigned_agent_instance_id: None,
                 session_id: None,
                 execution_notes: String::new(),
                 files_changed: vec![],

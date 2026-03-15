@@ -59,7 +59,7 @@ pub mod error {
 }
 
 // Top-level re-exports for backward compatibility
-pub use aura_agents::AgentService;
+pub use aura_agents::{AgentService, AgentInstanceService};
 pub use aura_auth::AuthService;
 pub use aura_chat::{ChatService, ChatStreamEvent, ChatToolExecutor, ToolExecResult};
 pub use aura_claude::{

@@ -3,10 +3,10 @@ use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use aura_core::{AgentId, ProjectId, TaskId};
+use aura_core::{AgentInstanceId, ProjectId, TaskId};
 use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_terminal::TerminalManager;
-use aura_agents::AgentService;
+use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
@@ -23,7 +23,7 @@ use aura_store::RocksStore;
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
 
 /// Tracks all active agent loops across projects.
-pub type LoopRegistry = Arc<Mutex<HashMap<AgentId, LoopHandle>>>;
+pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -39,6 +39,7 @@ pub struct AppState {
     pub task_extraction_service: Arc<TaskExtractionService>,
     pub task_service: Arc<TaskService>,
     pub agent_service: Arc<AgentService>,
+    pub agent_instance_service: Arc<AgentInstanceService>,
     pub session_service: Arc<SessionService>,
     pub chat_service: Arc<ChatService>,
     pub claude_client: Arc<ClaudeClient>,
@@ -58,7 +59,7 @@ impl AppState {
     }
 
     /// Get all active loops for a given project.
-    pub async fn loops_for_project(&self, project_id: &ProjectId) -> Vec<AgentId> {
+    pub async fn loops_for_project(&self, project_id: &ProjectId) -> Vec<AgentInstanceId> {
         let reg = self.loop_registry.lock().await;
         reg.iter()
             .filter(|(_, h)| h.project_id == *project_id && !h.is_finished())

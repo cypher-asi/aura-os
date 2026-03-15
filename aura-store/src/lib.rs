@@ -2,9 +2,10 @@ pub mod batch;
 pub mod error;
 pub mod store;
 mod store_agent;
-mod store_chat;
+mod store_agent_instance;
 mod store_github;
 mod store_log;
+mod store_messages;
 mod store_org;
 mod store_project;
 

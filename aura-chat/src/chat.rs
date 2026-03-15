@@ -49,8 +49,15 @@ For conversational questions about architecture, debugging, or best practices, r
 
 Use markdown formatting for code blocks and structured responses. Be concise."#;
 
-fn build_chat_system_prompt(project: &aura_core::Project) -> String {
-    let mut prompt = CHAT_SYSTEM_PROMPT_BASE.to_string();
+fn build_chat_system_prompt(project: &Project, custom_system_prompt: &str) -> String {
+    let mut prompt = if custom_system_prompt.is_empty() {
+        CHAT_SYSTEM_PROMPT_BASE.to_string()
+    } else {
+        let mut p = custom_system_prompt.to_string();
+        p.push_str("\n\n");
+        p.push_str(CHAT_SYSTEM_PROMPT_BASE);
+        p
+    };
 
     prompt.push_str(&format!(
         "\n\n## Current Project\n- **Name**: {}\n- **Description**: {}\n- **Folder**: {}\n- **Build**: {}\n- **Test**: {}\n",
@@ -176,8 +183,8 @@ pub enum ChatStreamEvent {
     SpecsTitle(String),
     SpecsSummary(String),
     TaskSaved(Box<Task>),
-    MessageSaved(ChatMessage),
-    TitleUpdated(ChatSession),
+    MessageSaved(Message),
+    AgentInstanceUpdated(AgentInstance),
     Error(String),
     Done,
 }
@@ -214,73 +221,14 @@ impl ChatService {
         }
     }
 
-    // -- Session CRUD (unchanged) -------------------------------------------
-
-    pub fn create_session(
-        &self,
-        project_id: &ProjectId,
-        title: &str,
-    ) -> Result<ChatSession, ChatError> {
-        let now = Utc::now();
-        let session = ChatSession {
-            chat_session_id: ChatSessionId::new(),
-            project_id: *project_id,
-            title: title.to_string(),
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            model: None,
-            created_at: now,
-            updated_at: now,
-        };
-        self.store.put_chat_session(&session)?;
-        info!(%project_id, session_id = %session.chat_session_id, "Chat session created");
-        Ok(session)
-    }
-
-    pub fn update_session_title(
-        &self,
-        project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
-        title: &str,
-    ) -> Result<ChatSession, ChatError> {
-        let mut session = self.store.get_chat_session(project_id, chat_session_id)?;
-        session.title = title.to_string();
-        session.updated_at = Utc::now();
-        self.store.put_chat_session(&session)?;
-        info!(%project_id, %chat_session_id, title, "Chat session title updated");
-        Ok(session)
-    }
-
-    pub fn list_sessions(
-        &self,
-        project_id: &ProjectId,
-    ) -> Result<Vec<ChatSession>, ChatError> {
-        let mut sessions = self.store.list_chat_sessions(project_id)?;
-        sessions.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-        Ok(sessions)
-    }
-
-    pub fn delete_session(
-        &self,
-        project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
-    ) -> Result<(), ChatError> {
-        self.store
-            .delete_chat_messages_by_session(project_id, chat_session_id)?;
-        self.store
-            .delete_chat_session(project_id, chat_session_id)?;
-        info!(%project_id, %chat_session_id, "Chat session deleted");
-        Ok(())
-    }
-
     pub fn list_messages(
         &self,
         project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
-    ) -> Result<Vec<ChatMessage>, ChatError> {
+        agent_instance_id: &AgentInstanceId,
+    ) -> Result<Vec<Message>, ChatError> {
         let mut messages = self
             .store
-            .list_chat_messages(project_id, chat_session_id)?;
+            .list_messages(project_id, agent_instance_id)?;
         messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         Ok(messages)
     }
@@ -290,7 +238,8 @@ impl ChatService {
     pub async fn send_message_streaming(
         &self,
         project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
+        agent_instance_id: &AgentInstanceId,
+        agent_instance: &AgentInstance,
         content: &str,
         action: Option<&str>,
         attachments: &[ChatAttachment],
@@ -302,7 +251,6 @@ impl ChatService {
 
         let now = Utc::now();
 
-        // Build content_blocks from attachments (images and text files)
         let content_blocks = if attachments.is_empty() {
             None
         } else {
@@ -319,7 +267,6 @@ impl ChatService {
                         data: att.data.clone(),
                     });
                 } else if att.type_ == "text" {
-                    // Decode base64 text and add as a Text block
                     let text = match B64.decode(&att.data) {
                         Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
                         Err(_) => continue,
@@ -341,16 +288,16 @@ impl ChatService {
             }
         };
 
-        let user_msg = ChatMessage {
-            message_id: ChatMessageId::new(),
-            chat_session_id: *chat_session_id,
+        let user_msg = Message {
+            message_id: MessageId::new(),
+            agent_instance_id: *agent_instance_id,
             project_id: *project_id,
             role: ChatRole::User,
             content: content.to_string(),
             content_blocks,
             created_at: now,
         };
-        if let Err(e) = self.store.put_chat_message(&user_msg) {
+        if let Err(e) = self.store.put_message(&user_msg) {
             send(ChatStreamEvent::Error(format!("Failed to save user message: {e}")));
             send(ChatStreamEvent::Done);
             return;
@@ -358,11 +305,11 @@ impl ChatService {
 
         match action {
             Some("generate_specs") => {
-                self.handle_generate_specs(project_id, chat_session_id, &tx)
+                self.handle_generate_specs(project_id, agent_instance_id, agent_instance, &tx)
                     .await;
             }
             _ => {
-                self.handle_chat_with_tools(project_id, chat_session_id, &tx)
+                self.handle_chat_with_tools(project_id, agent_instance_id, agent_instance, &tx)
                     .await;
             }
         }
@@ -377,7 +324,8 @@ impl ChatService {
     async fn handle_chat_with_tools(
         &self,
         project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
+        agent_instance_id: &AgentInstanceId,
+        agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -392,7 +340,7 @@ impl ChatService {
             }
         };
 
-        let stored_messages = match self.list_messages(project_id, chat_session_id) {
+        let stored_messages = match self.list_messages(project_id, agent_instance_id) {
             Ok(m) => m,
             Err(e) => {
                 send(ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
@@ -400,9 +348,16 @@ impl ChatService {
             }
         };
 
+        let custom_prompt = &agent_instance.system_prompt;
         let system = match self.store.get_project(project_id) {
-            Ok(p) => build_chat_system_prompt(&p),
-            Err(_) => CHAT_SYSTEM_PROMPT_BASE.to_string(),
+            Ok(p) => build_chat_system_prompt(&p, custom_prompt),
+            Err(_) => {
+                if custom_prompt.is_empty() {
+                    CHAT_SYSTEM_PROMPT_BASE.to_string()
+                } else {
+                    format!("{}\n\n{}", custom_prompt, CHAT_SYSTEM_PROMPT_BASE)
+                }
+            }
         };
 
         let mut api_messages: Vec<RichMessage> = stored_messages
@@ -459,12 +414,10 @@ impl ChatService {
             })
             .collect();
 
-        // Context window management: summarize old messages if too long
         api_messages = self
             .manage_context_window(&api_key, &system, api_messages)
             .await;
 
-        // Ensure tool_use/tool_result pairing (Anthropic API requirement)
         api_messages = Self::sanitize_orphan_tool_results(api_messages);
         api_messages = Self::sanitize_tool_use_results(api_messages);
 
@@ -584,16 +537,16 @@ impl ChatService {
             }
             api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
-            let assistant_iter_msg = ChatMessage {
-                message_id: ChatMessageId::new(),
-                chat_session_id: *chat_session_id,
+            let assistant_iter_msg = Message {
+                message_id: MessageId::new(),
+                agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
                 content: iter_text.clone(),
                 content_blocks: Some(assistant_persist_blocks),
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_chat_message(&assistant_iter_msg) {
+            if let Err(e) = self.store.put_message(&assistant_iter_msg) {
                 error!(%project_id, error = %e, "Failed to persist assistant tool-use message");
             }
 
@@ -630,16 +583,16 @@ impl ChatService {
             }
             api_messages.push(RichMessage::tool_results(result_blocks));
 
-            let tool_result_msg = ChatMessage {
-                message_id: ChatMessageId::new(),
-                chat_session_id: *chat_session_id,
+            let tool_result_msg = Message {
+                message_id: MessageId::new(),
+                agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::User,
                 content: String::new(),
                 content_blocks: Some(result_persist_blocks),
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_chat_message(&tool_result_msg) {
+            if let Err(e) = self.store.put_message(&tool_result_msg) {
                 error!(%project_id, error = %e, "Failed to persist tool result message");
             }
 
@@ -653,31 +606,31 @@ impl ChatService {
         }
 
         if accumulated_input_tokens > 0 || accumulated_output_tokens > 0 {
-            if let Ok(mut session) = self.store.get_chat_session(project_id, chat_session_id) {
-                session.total_input_tokens += accumulated_input_tokens;
-                session.total_output_tokens += accumulated_output_tokens;
-                if session.model.is_none() {
-                    session.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+            if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
+                instance.total_input_tokens += accumulated_input_tokens;
+                instance.total_output_tokens += accumulated_output_tokens;
+                if instance.model.is_none() {
+                    instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
                 }
-                session.updated_at = Utc::now();
-                if let Err(e) = self.store.put_chat_session(&session) {
-                    error!(%project_id, %chat_session_id, error = %e, "Failed to persist chat session tokens");
+                instance.updated_at = Utc::now();
+                if let Err(e) = self.store.put_agent_instance(&instance) {
+                    error!(%project_id, %agent_instance_id, error = %e, "Failed to persist token usage on agent instance");
                 }
             }
         }
 
         if !final_text.is_empty() {
             let assistant_reply = final_text.clone();
-            let assistant_msg = ChatMessage {
-                message_id: ChatMessageId::new(),
-                chat_session_id: *chat_session_id,
+            let assistant_msg = Message {
+                message_id: MessageId::new(),
+                agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
                 content: final_text,
                 content_blocks: None,
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_chat_message(&assistant_msg) {
+            if let Err(e) = self.store.put_message(&assistant_msg) {
                 error!(%project_id, error = %e, "Failed to save assistant message");
             } else {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
@@ -685,7 +638,8 @@ impl ChatService {
 
             self.maybe_generate_title(
                 project_id,
-                chat_session_id,
+                agent_instance_id,
+                agent_instance,
                 &api_key,
                 &stored_messages,
                 &assistant_reply,
@@ -699,8 +653,6 @@ impl ChatService {
     // Tool-use / tool-result sanitization (Anthropic API requirement)
     // -----------------------------------------------------------------------
 
-    /// Returns true if this is a user message containing only tool_result blocks.
-    /// Such messages require the immediately previous message to have matching tool_use.
     fn is_tool_results_only(msg: &RichMessage) -> bool {
         msg.role == "user"
             && matches!(
@@ -713,9 +665,6 @@ impl ChatService {
             )
     }
 
-    /// Removes or rewrites user messages whose tool_result blocks lack a matching
-    /// tool_use in the immediately previous message (e.g. from corrupted storage or
-    /// context-window summarization edge cases).
     fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
         let mut result = Vec::with_capacity(messages.len());
         for i in 0..messages.len() {
@@ -798,9 +747,6 @@ impl ChatService {
         result
     }
 
-    /// Ensures every assistant message with tool_use blocks has a user message
-    /// with matching tool_result blocks immediately after. Adds synthetic
-    /// tool_results for any orphaned tool_use (e.g. from interrupted saves).
     fn sanitize_tool_use_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
         let mut result = Vec::with_capacity(messages.len() + 16);
         let mut i = 0;
@@ -912,7 +858,6 @@ impl ChatService {
         );
 
         let mut split_at = messages.len().saturating_sub(Self::KEEP_RECENT_MESSAGES);
-        // Never start recent_messages with orphan tool_result (no preceding tool_use)
         while split_at > 0 && Self::is_tool_results_only(&messages[split_at]) {
             split_at -= 1;
         }
@@ -972,23 +917,20 @@ impl ChatService {
     }
 
     // -----------------------------------------------------------------------
-    // Title generation
+    // Title generation (updates AgentInstance name)
     // -----------------------------------------------------------------------
 
     async fn maybe_generate_title(
         &self,
         project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
+        agent_instance_id: &AgentInstanceId,
+        agent_instance: &AgentInstance,
         api_key: &str,
-        messages: &[ChatMessage],
+        messages: &[Message],
         assistant_reply: &str,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
-        let session = match self.store.get_chat_session(project_id, chat_session_id) {
-            Ok(s) => s,
-            Err(_) => return,
-        };
-        if session.title != "New Chat" {
+        if agent_instance.name != "New Chat" {
             return;
         }
 
@@ -1012,17 +954,21 @@ impl ChatService {
         {
             Ok(title) => {
                 let title = title.trim().trim_matches('"').to_string();
-                match self.update_session_title(project_id, chat_session_id, &title) {
-                    Ok(updated) => {
-                        let _ = tx.send(ChatStreamEvent::TitleUpdated(updated));
-                    }
-                    Err(e) => {
-                        error!(%project_id, error = %e, "Failed to update session title");
+                if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
+                    instance.name = title;
+                    instance.updated_at = Utc::now();
+                    match self.store.put_agent_instance(&instance) {
+                        Ok(()) => {
+                            let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
+                        }
+                        Err(e) => {
+                            error!(%project_id, error = %e, "Failed to update agent instance name");
+                        }
                     }
                 }
             }
             Err(e) => {
-                error!(%project_id, error = %e, "Failed to generate session title");
+                error!(%project_id, error = %e, "Failed to generate title");
             }
         }
     }
@@ -1034,7 +980,8 @@ impl ChatService {
     async fn handle_generate_specs(
         &self,
         project_id: &ProjectId,
-        chat_session_id: &ChatSessionId,
+        agent_instance_id: &AgentInstanceId,
+        _agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -1084,30 +1031,30 @@ impl ChatService {
         }
 
         if spec_input_tokens > 0 || spec_output_tokens > 0 {
-            if let Ok(mut session) = self.store.get_chat_session(project_id, chat_session_id) {
-                session.total_input_tokens += spec_input_tokens;
-                session.total_output_tokens += spec_output_tokens;
-                if session.model.is_none() {
-                    session.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+            if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
+                instance.total_input_tokens += spec_input_tokens;
+                instance.total_output_tokens += spec_output_tokens;
+                if instance.model.is_none() {
+                    instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
                 }
-                session.updated_at = Utc::now();
-                if let Err(e) = self.store.put_chat_session(&session) {
-                    error!(%project_id, %chat_session_id, error = %e, "Failed to persist spec-gen tokens on chat session");
+                instance.updated_at = Utc::now();
+                if let Err(e) = self.store.put_agent_instance(&instance) {
+                    error!(%project_id, %agent_instance_id, error = %e, "Failed to persist spec-gen tokens on agent instance");
                 }
             }
         }
 
         if !accumulated.is_empty() {
-            let assistant_msg = ChatMessage {
-                message_id: ChatMessageId::new(),
-                chat_session_id: *chat_session_id,
+            let assistant_msg = Message {
+                message_id: MessageId::new(),
+                agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
                 content: accumulated,
                 content_blocks: None,
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_chat_message(&assistant_msg) {
+            if let Err(e) = self.store.put_message(&assistant_msg) {
                 error!(%project_id, error = %e, "Failed to save spec gen assistant message");
             } else {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));

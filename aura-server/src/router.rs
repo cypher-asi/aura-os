@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, chat, dev_loop, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -202,46 +202,54 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/progress",
             get(tasks::get_progress),
         )
-        // Sessions (project-level)
+        // User-level Agents
         .route(
-            "/api/projects/:project_id/sessions",
-            get(agents::list_project_sessions),
-        )
-        // Agents
-        .route("/api/projects/:project_id/agents", get(agents::list_agents))
-        .route(
-            "/api/projects/:project_id/agents/:agent_id",
-            get(agents::get_agent),
+            "/api/agents",
+            post(agents::create_agent).get(agents::list_agents),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_id/sessions",
+            "/api/agents/:agent_id",
+            get(agents::get_agent)
+                .put(agents::update_agent)
+                .delete(agents::delete_agent),
+        )
+        // Project-level Agent Instances
+        .route(
+            "/api/projects/:project_id/agents",
+            post(agents::create_agent_instance).get(agents::list_agent_instances),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id",
+            get(agents::get_agent_instance)
+                .put(agents::update_agent_instance)
+                .delete(agents::delete_agent_instance),
+        )
+        // Messages (under agent instance)
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/messages",
+            get(agents::list_messages),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/messages/stream",
+            post(agents::send_message_stream),
+        )
+        // Sessions (under agent instance)
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions",
             get(agents::list_sessions),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_id/sessions/:session_id",
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id",
             get(agents::get_session),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_id/sessions/:session_id/tasks",
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/tasks",
             get(agents::list_session_tasks),
         )
-        // Chat Sessions
+        // Project-wide sessions
         .route(
-            "/api/projects/:project_id/chat-sessions",
-            post(chat::create_chat_session).get(chat::list_chat_sessions),
-        )
-        .route(
-            "/api/projects/:project_id/chat-sessions/:chat_session_id",
-            axum::routing::put(chat::update_chat_session)
-                .delete(chat::delete_chat_session),
-        )
-        .route(
-            "/api/projects/:project_id/chat-sessions/:chat_session_id/messages",
-            get(chat::list_messages),
-        )
-        .route(
-            "/api/projects/:project_id/chat-sessions/:chat_session_id/messages/stream",
-            post(chat::send_message_stream),
+            "/api/projects/:project_id/sessions",
+            get(agents::list_project_sessions),
         )
         // Log entries
         .route("/api/log-entries", get(log::list_log_entries))

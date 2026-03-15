@@ -18,11 +18,11 @@ pub struct PhaseTimingEntry {
 pub enum EngineEvent {
     LoopStarted {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
     },
     TaskStarted {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         task_title: String,
         session_id: SessionId,
@@ -35,7 +35,7 @@ pub enum EngineEvent {
     },
     TaskCompleted {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         execution_notes: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -59,7 +59,7 @@ pub enum EngineEvent {
     },
     TaskFailed {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         reason: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,24 +75,24 @@ pub enum EngineEvent {
     },
     TaskRetrying {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         attempt: u32,
         reason: String,
     },
     TaskBecameReady {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
     },
     FollowUpTaskCreated {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
     },
     SessionRolledOver {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         old_session_id: SessionId,
         new_session_id: SessionId,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -102,17 +102,17 @@ pub enum EngineEvent {
     },
     LoopPaused {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         completed_count: usize,
     },
     LoopStopped {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         completed_count: usize,
     },
     LoopFinished {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         outcome: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         total_duration_ms: Option<u64>,
@@ -137,19 +137,19 @@ pub enum EngineEvent {
     },
     LoopIterationSummary {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         phase_timings: Vec<PhaseTimingEntry>,
     },
     TaskOutputDelta {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         delta: String,
     },
     FileOpsApplied {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         files_written: usize,
         files_deleted: usize,
@@ -181,19 +181,19 @@ pub enum EngineEvent {
 
     BuildVerificationSkipped {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         reason: String,
     },
     BuildVerificationStarted {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
     },
     BuildVerificationPassed {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -202,7 +202,7 @@ pub enum EngineEvent {
     },
     BuildVerificationFailed {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -215,20 +215,20 @@ pub enum EngineEvent {
     },
     BuildFixAttempt {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         attempt: u32,
     },
 
     TestVerificationStarted {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
     },
     TestVerificationPassed {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -239,7 +239,7 @@ pub enum EngineEvent {
     },
     TestVerificationFailed {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         command: String,
         stdout: String,
@@ -252,7 +252,7 @@ pub enum EngineEvent {
     },
     TestFixAttempt {
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         attempt: u32,
     },

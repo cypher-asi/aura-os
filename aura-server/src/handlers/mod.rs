@@ -1,7 +1,6 @@
 pub mod agents;
 pub mod auth;
 pub mod billing;
-pub mod chat;
 pub mod dev_loop;
 pub mod github;
 pub mod log;

@@ -49,7 +49,7 @@ impl SessionService {
 
     pub fn create_session(
         &self,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         project_id: &ProjectId,
         active_task_id: Option<TaskId>,
         summary: String,
@@ -59,7 +59,7 @@ impl SessionService {
         let now = Utc::now();
         let session = Session {
             session_id: SessionId::new(),
-            agent_id: *agent_id,
+            agent_instance_id: *agent_instance_id,
             project_id: *project_id,
             active_task_id,
             tasks_worked: Vec::new(),
@@ -80,12 +80,12 @@ impl SessionService {
     pub fn update_context_usage(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         input_tokens: u64,
         output_tokens: u64,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_id, session_id)?;
+        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
         let turn_usage =
             (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
         session.context_usage_estimate =
@@ -103,29 +103,29 @@ impl SessionService {
     pub fn rollover_session(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         summary: String,
         next_task_id: Option<TaskId>,
     ) -> Result<Session, SessionError> {
-        let mut old_session = self.get_session(project_id, agent_id, session_id)?;
+        let mut old_session = self.get_session(project_id, agent_instance_id, session_id)?;
         let user_id = old_session.user_id.clone();
         let model = old_session.model.clone();
         old_session.status = SessionStatus::RolledOver;
         old_session.ended_at = Some(Utc::now());
         self.store.put_session(&old_session)?;
 
-        self.create_session(agent_id, project_id, next_task_id, summary, user_id, model)
+        self.create_session(agent_instance_id, project_id, next_task_id, summary, user_id, model)
     }
 
     pub fn end_session(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         status: SessionStatus,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_id, session_id)?;
+        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
         session.status = status;
         session.ended_at = Some(Utc::now());
         self.store.put_session(&session)?;
@@ -135,11 +135,11 @@ impl SessionService {
     pub fn get_session(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
     ) -> Result<Session, SessionError> {
         self.store
-            .get_session(project_id, agent_id, session_id)
+            .get_session(project_id, agent_instance_id, session_id)
             .map_err(|e| match e {
                 aura_store::StoreError::NotFound(_) => SessionError::NotFound,
                 other => SessionError::Store(other),
@@ -149,19 +149,19 @@ impl SessionService {
     pub fn list_sessions(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
     ) -> Result<Vec<Session>, SessionError> {
-        Ok(self.store.list_sessions_by_agent(project_id, agent_id)?)
+        Ok(self.store.list_sessions_by_agent(project_id, agent_instance_id)?)
     }
 
     pub fn record_task_worked(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         task_id: TaskId,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_id, session_id)?;
+        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
         if !session.tasks_worked.contains(&task_id) {
             session.tasks_worked.push(task_id);
             self.store.put_session(&session)?;
@@ -192,11 +192,11 @@ impl SessionService {
     pub fn session_count(
         &self,
         project_id: &ProjectId,
-        agent_id: &AgentId,
+        agent_instance_id: &AgentInstanceId,
     ) -> Result<usize, SessionError> {
         Ok(self
             .store
-            .list_sessions_by_agent(project_id, agent_id)?
+            .list_sessions_by_agent(project_id, agent_instance_id)?
             .len())
     }
 

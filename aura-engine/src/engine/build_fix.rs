@@ -357,7 +357,7 @@ impl DevLoopEngine {
             _ => {
                 self.emit(EngineEvent::BuildVerificationSkipped {
                     project_id: project.project_id,
-                    agent_id: session.agent_id,
+                    agent_instance_id: session.agent_instance_id,
                     task_id: task.task_id,
                     reason: "no build_command configured on project".into(),
                 });
@@ -387,7 +387,7 @@ impl DevLoopEngine {
             let build_step_start = Instant::now();
             self.emit(EngineEvent::BuildVerificationStarted {
                 project_id: project.project_id,
-                agent_id: session.agent_id,
+                agent_instance_id: session.agent_instance_id,
                 task_id: task.task_id,
                 command: build_command.clone(),
             });
@@ -405,7 +405,7 @@ impl DevLoopEngine {
             if build_result.success {
                 self.emit(EngineEvent::BuildVerificationPassed {
                     project_id: project.project_id,
-                    agent_id: session.agent_id,
+                    agent_instance_id: session.agent_instance_id,
                     task_id: task.task_id,
                     command: build_command.clone(),
                     stdout: build_result.stdout.clone(),
@@ -448,7 +448,7 @@ impl DevLoopEngine {
 
             self.emit(EngineEvent::BuildVerificationFailed {
                 project_id: project.project_id,
-                agent_id: session.agent_id,
+                agent_instance_id: session.agent_instance_id,
                 task_id: task.task_id,
                 command: build_command.clone(),
                 stdout: build_result.stdout.clone(),
@@ -489,7 +489,7 @@ impl DevLoopEngine {
 
             self.emit(EngineEvent::BuildFixAttempt {
                 project_id: project.project_id,
-                agent_id: session.agent_id,
+                agent_instance_id: session.agent_instance_id,
                 task_id: task.task_id,
                 attempt,
             });
@@ -576,7 +576,7 @@ impl DevLoopEngine {
                     if !fix_execution.file_ops.is_empty() {
                         self.emit(EngineEvent::FileOpsApplied {
                             project_id: project.project_id,
-                            agent_id: session.agent_id,
+                            agent_instance_id: session.agent_instance_id,
                             task_id: task.task_id,
                             files_written: fix_execution
                                 .file_ops
@@ -635,7 +635,7 @@ impl DevLoopEngine {
     ) -> Result<(bool, u64, u64), EngineError> {
         self.emit(EngineEvent::TestVerificationStarted {
             project_id: project.project_id,
-            agent_id: session.agent_id,
+            agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
             command: test_command.to_string(),
         });
@@ -659,7 +659,7 @@ impl DevLoopEngine {
         if test_result.success {
             self.emit(EngineEvent::TestVerificationPassed {
                 project_id: project.project_id,
-                agent_id: session.agent_id,
+                agent_instance_id: session.agent_instance_id,
                 task_id: task.task_id,
                 command: test_command.to_string(),
                 stdout: test_result.stdout.clone(),
@@ -701,7 +701,7 @@ impl DevLoopEngine {
                 );
                 self.emit(EngineEvent::TestVerificationPassed {
                     project_id: project.project_id,
-                    agent_id: session.agent_id,
+                    agent_instance_id: session.agent_instance_id,
                     task_id: task.task_id,
                     command: test_command.to_string(),
                     stdout: test_result.stdout.clone(),
@@ -731,7 +731,7 @@ impl DevLoopEngine {
 
         self.emit(EngineEvent::TestVerificationFailed {
             project_id: project.project_id,
-            agent_id: session.agent_id,
+            agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
             command: test_command.to_string(),
             stdout: test_result.stdout.clone(),
@@ -753,7 +753,7 @@ impl DevLoopEngine {
 
         self.emit(EngineEvent::TestFixAttempt {
             project_id: project.project_id,
-            agent_id: session.agent_id,
+            agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
             attempt,
         });
@@ -815,7 +815,7 @@ impl DevLoopEngine {
             Ok(fix_execution) => {
                 file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await?;
                 if !fix_execution.file_ops.is_empty() {
-                    self.emit_file_ops_applied(project.project_id, session.agent_id, task, &fix_execution.file_ops);
+                    self.emit_file_ops_applied(project.project_id, session.agent_instance_id, task, &fix_execution.file_ops);
                 }
                 all_fix_ops.extend(fix_execution.file_ops);
             }

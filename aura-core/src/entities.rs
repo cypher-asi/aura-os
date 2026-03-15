@@ -5,7 +5,7 @@ use crate::enums::{
     AgentStatus, ChatRole, InviteStatus, OrgRole, ProjectStatus, SessionStatus, TaskStatus,
 };
 use crate::ids::{
-    AgentId, ChatMessageId, ChatSessionId, GitHubIntegrationId, InviteId, OrgId, ProjectId,
+    AgentId, AgentInstanceId, GitHubIntegrationId, InviteId, MessageId, OrgId, ProjectId,
     SessionId, SpecId, SprintId, TaskId,
 };
 
@@ -113,7 +113,7 @@ pub struct Task {
     pub dependency_ids: Vec<TaskId>,
     #[serde(default)]
     pub parent_task_id: Option<TaskId>,
-    pub assigned_agent_id: Option<AgentId>,
+    pub assigned_agent_instance_id: Option<AgentInstanceId>,
     #[serde(default)]
     pub session_id: Option<SessionId>,
     pub execution_notes: String,
@@ -140,11 +140,41 @@ pub struct Task {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Agent {
     pub agent_id: AgentId,
-    pub project_id: ProjectId,
+    pub user_id: String,
     pub name: String,
+    pub role: String,
+    pub personality: String,
+    pub system_prompt: String,
+    #[serde(default)]
+    pub skills: Vec<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentInstance {
+    pub agent_instance_id: AgentInstanceId,
+    pub project_id: ProjectId,
+    pub agent_id: AgentId,
+    pub name: String,
+    pub role: String,
+    pub personality: String,
+    pub system_prompt: String,
+    #[serde(default)]
+    pub skills: Vec<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
     pub status: AgentStatus,
     pub current_task_id: Option<TaskId>,
     pub current_session_id: Option<SessionId>,
+    #[serde(default)]
+    pub total_input_tokens: u64,
+    #[serde(default)]
+    pub total_output_tokens: u64,
+    #[serde(default)]
+    pub model: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -152,7 +182,7 @@ pub struct Agent {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Session {
     pub session_id: SessionId,
-    pub agent_id: AgentId,
+    pub agent_instance_id: AgentInstanceId,
     pub project_id: ProjectId,
     pub active_task_id: Option<TaskId>,
     #[serde(default)]
@@ -173,24 +203,9 @@ pub struct Session {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ChatSession {
-    pub chat_session_id: ChatSessionId,
-    pub project_id: ProjectId,
-    pub title: String,
-    #[serde(default)]
-    pub total_input_tokens: u64,
-    #[serde(default)]
-    pub total_output_tokens: u64,
-    #[serde(default)]
-    pub model: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ChatMessage {
-    pub message_id: ChatMessageId,
-    pub chat_session_id: ChatSessionId,
+pub struct Message {
+    pub message_id: MessageId,
+    pub agent_instance_id: AgentInstanceId,
     pub project_id: ProjectId,
     pub role: ChatRole,
     pub content: String,

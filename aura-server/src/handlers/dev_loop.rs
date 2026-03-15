@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 
-use aura_core::{AgentId, ProjectId, TaskId};
+use aura_core::{AgentInstanceId, ProjectId, TaskId};
 use aura_engine::DevLoopEngine;
 
 use crate::dto::LoopStatusResponse;
@@ -14,7 +14,7 @@ use crate::state::AppState;
 
 #[derive(Debug, Deserialize, Default)]
 pub struct LoopQueryParams {
-    pub agent_id: Option<AgentId>,
+    pub agent_instance_id: Option<AgentInstanceId>,
     pub agent_name: Option<String>,
 }
 
@@ -32,7 +32,7 @@ pub async fn start_loop(
             state.claude_client.clone(),
             state.project_service.clone(),
             state.task_service.clone(),
-            state.agent_service.clone(),
+            state.agent_instance_service.clone(),
             state.session_service.clone(),
             state.event_tx.clone(),
         )
@@ -44,13 +44,13 @@ pub async fn start_loop(
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
-    let agent_id = loop_handle.agent_id;
-    let active_agents = {
+    let agent_instance_id = loop_handle.agent_instance_id;
+    let active_agent_instances = {
         let mut reg = state.loop_registry.lock().await;
-        reg.insert(agent_id, loop_handle);
+        reg.insert(agent_instance_id, loop_handle);
         reg.iter()
             .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-            .map(|(aid, _)| *aid)
+            .map(|(aiid, _)| *aiid)
             .collect::<Vec<_>>()
     };
 
@@ -60,8 +60,8 @@ pub async fn start_loop(
             running: true,
             paused: false,
             project_id: Some(project_id),
-            agent_id: Some(agent_id),
-            active_agents: Some(active_agents),
+            agent_instance_id: Some(agent_instance_id),
+            active_agent_instances: Some(active_agent_instances),
         }),
     ))
 }
@@ -75,10 +75,10 @@ pub async fn pause_loop(
     let reg = state.loop_registry.lock().await;
 
     let mut paused_any = false;
-    for (aid, handle) in reg.iter() {
+    for (aiid, handle) in reg.iter() {
         if handle.project_id == project_id && !handle.is_finished() {
-            if let Some(target) = params.agent_id {
-                if *aid == target {
+            if let Some(target) = params.agent_instance_id {
+                if *aiid == target {
                     handle.pause();
                     paused_any = true;
                 }
@@ -93,18 +93,18 @@ pub async fn pause_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    let active_agents: Vec<AgentId> = reg
+    let active_agent_instances: Vec<AgentInstanceId> = reg
         .iter()
         .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-        .map(|(aid, _)| *aid)
+        .map(|(aiid, _)| *aiid)
         .collect();
 
     Ok(Json(LoopStatusResponse {
         running: true,
         paused: true,
         project_id: Some(project_id),
-        agent_id: params.agent_id,
-        active_agents: Some(active_agents),
+        agent_instance_id: params.agent_instance_id,
+        active_agent_instances: Some(active_agent_instances),
     }))
 }
 
@@ -117,15 +117,15 @@ pub async fn stop_loop(
     let mut reg = state.loop_registry.lock().await;
 
     let mut stopped_any = false;
-    let agents_to_remove: Vec<AgentId> = reg
+    let instances_to_remove: Vec<AgentInstanceId> = reg
         .iter()
         .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-        .filter(|(aid, _)| params.agent_id.map_or(true, |t| **aid == t))
-        .map(|(aid, _)| *aid)
+        .filter(|(aiid, _)| params.agent_instance_id.map_or(true, |t| **aiid == t))
+        .map(|(aiid, _)| *aiid)
         .collect();
 
-    for aid in &agents_to_remove {
-        if let Some(h) = reg.remove(aid) {
+    for aiid in &instances_to_remove {
+        if let Some(h) = reg.remove(aiid) {
             h.stop();
             stopped_any = true;
         }
@@ -135,18 +135,18 @@ pub async fn stop_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    let remaining: Vec<AgentId> = reg
+    let remaining: Vec<AgentInstanceId> = reg
         .iter()
         .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-        .map(|(aid, _)| *aid)
+        .map(|(aiid, _)| *aiid)
         .collect();
 
     Ok(Json(LoopStatusResponse {
         running: !remaining.is_empty(),
         paused: false,
         project_id: Some(project_id),
-        agent_id: params.agent_id,
-        active_agents: Some(remaining),
+        agent_instance_id: params.agent_instance_id,
+        active_agent_instances: Some(remaining),
     }))
 }
 
@@ -161,8 +161,8 @@ pub async fn get_loop_status(
         running: !active.is_empty(),
         paused: false,
         project_id: Some(project_id),
-        agent_id: None,
-        active_agents: Some(active),
+        agent_instance_id: None,
+        active_agent_instances: Some(active),
     }))
 }
 
@@ -177,7 +177,7 @@ pub async fn run_single_task(
             state.claude_client.clone(),
             state.project_service.clone(),
             state.task_service.clone(),
-            state.agent_service.clone(),
+            state.agent_instance_service.clone(),
             state.session_service.clone(),
             state.event_tx.clone(),
         )
@@ -189,7 +189,7 @@ pub async fn run_single_task(
         if let Err(e) = engine.run_single_task(project_id, task_id).await {
             let _ = event_tx.send(aura_engine::EngineEvent::TaskFailed {
                 project_id,
-                agent_id: aura_core::AgentId::new(),
+                agent_instance_id: aura_core::AgentInstanceId::new(),
                 task_id,
                 reason: e.to_string(),
                 duration_ms: None,

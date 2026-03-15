@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, watch};
 use tracing::{error, info, warn};
 
 use aura_core::*;
-use aura_agents::AgentService;
+use aura_agents::AgentInstanceService;
 use aura_claude::{ClaudeClient, DEFAULT_MODEL};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
@@ -24,7 +24,7 @@ use crate::metrics::{self, LoopRunMetrics, TaskMetrics};
 
 pub struct LoopHandle {
     pub project_id: ProjectId,
-    pub agent_id: AgentId,
+    pub agent_instance_id: AgentInstanceId,
     stop_tx: watch::Sender<LoopCommand>,
     join_handle: tokio::task::JoinHandle<Result<LoopOutcome, EngineError>>,
 }
@@ -55,7 +55,7 @@ pub struct DevLoopEngine {
     pub(crate) claude_client: Arc<ClaudeClient>,
     pub(crate) project_service: Arc<ProjectService>,
     pub(crate) task_service: Arc<TaskService>,
-    pub(crate) agent_service: Arc<AgentService>,
+    pub(crate) agent_instance_service: Arc<AgentInstanceService>,
     pub(crate) session_service: Arc<SessionService>,
     pub(crate) event_tx: mpsc::UnboundedSender<EngineEvent>,
     pub(crate) write_coordinator: ProjectWriteCoordinator,
@@ -69,7 +69,7 @@ impl DevLoopEngine {
         claude_client: Arc<ClaudeClient>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
-        agent_service: Arc<AgentService>,
+        agent_instance_service: Arc<AgentInstanceService>,
         session_service: Arc<SessionService>,
         event_tx: mpsc::UnboundedSender<EngineEvent>,
     ) -> Self {
@@ -79,7 +79,7 @@ impl DevLoopEngine {
             claude_client,
             project_service,
             task_service,
-            agent_service,
+            agent_instance_service,
             session_service,
             event_tx,
             write_coordinator: ProjectWriteCoordinator::new(),
@@ -105,11 +105,11 @@ impl DevLoopEngine {
 
         let name = agent_name.unwrap_or_else(|| "dev-agent".into());
         let agent = self
-            .agent_service
-            .create_agent(&project_id, name)?;
+            .agent_instance_service
+            .create_instance(&project_id, name)?;
 
         let session = self.session_service.create_session(
-            &agent.agent_id,
+            &agent.agent_instance_id,
             &project_id,
             None,
             String::new(),
@@ -121,14 +121,14 @@ impl DevLoopEngine {
 
         self.emit(EngineEvent::LoopStarted {
             project_id,
-            agent_id: agent.agent_id,
+            agent_instance_id: agent.agent_instance_id,
         });
 
         let engine = self.clone();
-        let aid = agent.agent_id;
+        let aiid = agent.agent_instance_id;
         let join_handle = tokio::spawn(async move {
             let result = engine
-                .run_loop(project_id, aid, session, stop_rx)
+                .run_loop(project_id, aiid, session, stop_rx)
                 .await;
             if let Err(ref e) = result {
                 error!(error = %e, "run_loop exited with error, emitting LoopFinished");
@@ -138,7 +138,7 @@ impl DevLoopEngine {
                     for t in &orphaned {
                         engine.emit(EngineEvent::TaskBecameReady {
                             project_id,
-                            agent_id: aid,
+                            agent_instance_id: aiid,
                             task_id: t.task_id,
                         });
                     }
@@ -146,7 +146,7 @@ impl DevLoopEngine {
 
                 engine.emit(EngineEvent::LoopFinished {
                     project_id,
-                    agent_id: aid,
+                    agent_instance_id: aiid,
                     outcome: format!("error: {e}"),
                     total_duration_ms: None,
                     tasks_completed: None,
@@ -159,14 +159,14 @@ impl DevLoopEngine {
                     total_build_fix_attempts: None,
                     duplicate_error_bailouts: None,
                 });
-                let _ = engine.agent_service.finish_working(&project_id, &aid);
+                let _ = engine.agent_instance_service.finish_working(&project_id, &aiid);
             }
             result
         });
 
         Ok(LoopHandle {
             project_id,
-            agent_id: agent.agent_id,
+            agent_instance_id: agent.agent_instance_id,
             stop_tx,
             join_handle,
         })
@@ -175,7 +175,7 @@ impl DevLoopEngine {
     async fn run_loop(
         &self,
         project_id: ProjectId,
-        agent_id: AgentId,
+        agent_instance_id: AgentInstanceId,
         mut session: Session,
         mut stop_rx: watch::Receiver<LoopCommand>,
     ) -> Result<LoopOutcome, EngineError> {
@@ -234,35 +234,35 @@ impl DevLoopEngine {
 
         let orphaned = self.task_service.reset_in_progress_tasks(&project_id)?;
         for t in &orphaned {
-            self.emit(EngineEvent::TaskBecameReady { project_id, agent_id, task_id: t.task_id });
+            self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: t.task_id });
         }
 
         let promoted = self.task_service.resolve_initial_readiness(&project_id)?;
         for t in &promoted {
-            self.emit(EngineEvent::TaskBecameReady { project_id, agent_id, task_id: t.task_id });
+            self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: t.task_id });
         }
 
         loop {
             if *stop_rx.borrow() == LoopCommand::Pause {
                 let _ = self.session_service.end_session(
-                    &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                    &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                 );
-                let _ = self.agent_service.finish_working(&project_id, &agent_id);
-                self.emit(EngineEvent::LoopPaused { project_id, agent_id, completed_count });
+                let _ = self.agent_instance_service.finish_working(&project_id, &agent_instance_id);
+                self.emit(EngineEvent::LoopPaused { project_id, agent_instance_id, completed_count });
                 flush_metrics!("paused");
                 return Ok(LoopOutcome::Paused { completed_count });
             }
             if *stop_rx.borrow() == LoopCommand::Stop {
                 let _ = self.session_service.end_session(
-                    &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                    &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                 );
-                let _ = self.agent_service.finish_working(&project_id, &agent_id);
-                self.emit(EngineEvent::LoopStopped { project_id, agent_id, completed_count });
+                let _ = self.agent_instance_service.finish_working(&project_id, &agent_instance_id);
+                self.emit(EngineEvent::LoopStopped { project_id, agent_instance_id, completed_count });
                 flush_metrics!("stopped");
                 return Ok(LoopOutcome::Stopped { completed_count });
             }
 
-            let task = match self.task_service.claim_next_task(&project_id, &agent_id, Some(session.session_id))? {
+            let task = match self.task_service.claim_next_task(&project_id, &agent_instance_id, Some(session.session_id))? {
                 Some(t) => t,
                 None => {
                     let all_tasks = self.store.list_tasks_by_project(&project_id)?;
@@ -280,7 +280,7 @@ impl DevLoopEngine {
                             let _ = self.task_service.retry_task(
                                 &project_id, &t.spec_id, &t.task_id,
                             );
-                            self.emit(EngineEvent::TaskBecameReady { project_id, agent_id, task_id: t.task_id });
+                            self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: t.task_id });
                         }
                         continue;
                     }
@@ -288,7 +288,7 @@ impl DevLoopEngine {
                     let progress = self.task_service.get_project_progress(&project_id)?;
                     let loop_metrics = |outcome: &str| EngineEvent::LoopFinished {
                         project_id,
-                        agent_id,
+                        agent_instance_id,
                         outcome: outcome.into(),
                         total_duration_ms: Some(loop_start.elapsed().as_millis() as u64),
                         tasks_completed: Some(completed_count),
@@ -303,14 +303,14 @@ impl DevLoopEngine {
                     };
                     if progress.blocked_tasks > 0 || progress.failed_tasks > 0 {
                         let _ = self.session_service.end_session(
-                            &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                            &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                         );
                         self.emit(loop_metrics("all_tasks_blocked"));
                         flush_metrics!("all_tasks_blocked");
                         return Ok(LoopOutcome::AllTasksBlocked);
                     }
                     let _ = self.session_service.end_session(
-                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                        &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                     );
                     self.emit(loop_metrics("all_tasks_complete"));
                     flush_metrics!("all_tasks_complete");
@@ -319,16 +319,16 @@ impl DevLoopEngine {
             };
 
             self.session_service
-                .record_task_worked(&project_id, &agent_id, &session.session_id, task.task_id)?;
-            self.agent_service.start_working(
+                .record_task_worked(&project_id, &agent_instance_id, &session.session_id, task.task_id)?;
+            self.agent_instance_service.start_working(
                 &project_id,
-                &agent_id,
+                &agent_instance_id,
                 &task.task_id,
                 &session.session_id,
             )?;
             self.emit(EngineEvent::TaskStarted {
                 project_id,
-                agent_id,
+                agent_instance_id,
                 task_id: task.task_id,
                 task_title: task.title.clone(),
                 session_id: session.session_id,
@@ -345,7 +345,7 @@ impl DevLoopEngine {
             let task_start = Instant::now();
             let result = if let Some(cmd) = shell::extract_shell_command(&task) {
                 let project = self.project_service.get_project(&project_id)?;
-                Some(self.execute_shell_task(&project, &task, &cmd, agent_id).await)
+                Some(self.execute_shell_task(&project, &task, &cmd, agent_instance_id).await)
             } else {
                 tokio::select! {
                     res = self.execute_task_agentic(&project_id, &task, &session, &api_key) => {
@@ -361,22 +361,22 @@ impl DevLoopEngine {
                 let _ = self.task_service.reset_task_to_ready(
                     &project_id, &task.spec_id, &task.task_id,
                 );
-                self.emit(EngineEvent::TaskBecameReady { project_id, agent_id, task_id: task.task_id });
-                let _ = self.agent_service.finish_working(&project_id, &agent_id);
+                self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: task.task_id });
+                let _ = self.agent_instance_service.finish_working(&project_id, &agent_instance_id);
 
                 let cmd = *stop_rx.borrow();
                 if cmd == LoopCommand::Stop {
                     let _ = self.session_service.end_session(
-                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                        &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                     );
-                    self.emit(EngineEvent::LoopStopped { project_id, agent_id, completed_count });
+                    self.emit(EngineEvent::LoopStopped { project_id, agent_instance_id, completed_count });
                     flush_metrics!("stopped");
                     return Ok(LoopOutcome::Stopped { completed_count });
                 } else {
                     let _ = self.session_service.end_session(
-                        &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                        &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                     );
-                    self.emit(EngineEvent::LoopPaused { project_id, agent_id, completed_count });
+                    self.emit(EngineEvent::LoopPaused { project_id, agent_instance_id, completed_count });
                     flush_metrics!("paused");
                     return Ok(LoopOutcome::Paused { completed_count });
                 }
@@ -424,7 +424,7 @@ impl DevLoopEngine {
                         failed_count += 1;
                         self.emit(EngineEvent::TaskFailed {
                             project_id,
-                            agent_id,
+                            agent_instance_id,
                             task_id: task.task_id,
                             reason: e.to_string(),
                             duration_ms: Some(task_dur),
@@ -452,14 +452,14 @@ impl DevLoopEngine {
                             phase_timings: vec![],
                         });
                         let _ = self.session_service.update_context_usage(
-                            &project_id, &agent_id, &session.session_id,
+                            &project_id, &agent_instance_id, &session.session_id,
                             execution.input_tokens, execution.output_tokens,
                         );
                         work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
                         Some(reason)
                     } else {
                         let file_ops_duration_ms = file_ops_start.elapsed().as_millis() as u64;
-                        self.emit_file_ops_applied(project_id, agent_id, &task, &execution.file_ops);
+                        self.emit_file_ops_applied(project_id, agent_instance_id, &task, &execution.file_ops);
 
                         let build_start = Instant::now();
                         let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out) = self
@@ -492,7 +492,7 @@ impl DevLoopEngine {
                             failed_count += 1;
                             self.emit(EngineEvent::TaskFailed {
                                 project_id,
-                                agent_id,
+                                agent_instance_id,
                                 task_id: task.task_id,
                                 reason: reason.clone(),
                                 duration_ms: Some(task_duration_ms),
@@ -524,7 +524,7 @@ impl DevLoopEngine {
                                 ],
                             });
                             let _ = self.session_service.update_context_usage(
-                                &project_id, &agent_id, &session.session_id,
+                                &project_id, &agent_instance_id, &session.session_id,
                                 execution.input_tokens + fix_inp, execution.output_tokens + fix_out,
                             );
                             work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
@@ -540,7 +540,7 @@ impl DevLoopEngine {
                             completed_count += 1;
                             self.emit(EngineEvent::TaskCompleted {
                                 project_id,
-                                agent_id,
+                                agent_instance_id,
                                 task_id: task.task_id,
                                 execution_notes: execution.notes.clone(),
                                 duration_ms: Some(task_duration_ms),
@@ -561,7 +561,7 @@ impl DevLoopEngine {
                             ];
                             self.emit(EngineEvent::LoopIterationSummary {
                                 project_id,
-                                agent_id,
+                                agent_instance_id,
                                 task_id: task.task_id,
                                 phase_timings: task_phase_timings.clone(),
                             });
@@ -589,7 +589,7 @@ impl DevLoopEngine {
                                 .task_service
                                 .resolve_dependencies_after_completion(&project_id, &task.task_id)?;
                             for t in &newly_ready {
-                                self.emit(EngineEvent::TaskBecameReady { project_id, agent_id, task_id: t.task_id });
+                                self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: t.task_id });
                             }
 
                             for follow_up in &execution.follow_up_tasks {
@@ -607,7 +607,7 @@ impl DevLoopEngine {
                                         follow_up_count += 1;
                                         self.emit(EngineEvent::FollowUpTaskCreated {
                                             project_id,
-                                            agent_id,
+                                            agent_instance_id,
                                             task_id: new_task.task_id,
                                         });
                                     }
@@ -620,7 +620,7 @@ impl DevLoopEngine {
 
                             self.session_service.update_context_usage(
                                 &project_id,
-                                &agent_id,
+                                &agent_instance_id,
                                 &session.session_id,
                                 execution.input_tokens + fix_inp,
                                 execution.output_tokens + fix_out,
@@ -659,7 +659,7 @@ impl DevLoopEngine {
                     failed_count += 1;
                     self.emit(EngineEvent::TaskFailed {
                         project_id,
-                        agent_id,
+                        agent_instance_id,
                         task_id: task.task_id,
                         reason: e.to_string(),
                         duration_ms: Some(task_dur),
@@ -691,7 +691,7 @@ impl DevLoopEngine {
                 }
             };
 
-            self.agent_service.finish_working(&project_id, &agent_id)?;
+            self.agent_instance_service.finish_working(&project_id, &agent_instance_id)?;
 
             if failure_reason.is_some() {
                 continue;
@@ -699,7 +699,7 @@ impl DevLoopEngine {
 
             let current_session =
                 self.session_service
-                    .get_session(&project_id, &agent_id, &session.session_id)?;
+                    .get_session(&project_id, &agent_instance_id, &session.session_id)?;
             if self.session_service.should_rollover(&current_session) {
                 let project = self.project_service.get_project(&project_id)?;
                 let history = format!(
@@ -717,20 +717,20 @@ impl DevLoopEngine {
                         &history,
                     ) => { res? }
                     _ = stop_rx.changed() => {
-                        let _ = self.agent_service.finish_working(&project_id, &agent_id);
+                        let _ = self.agent_instance_service.finish_working(&project_id, &agent_instance_id);
                         let cmd = *stop_rx.borrow();
                         if cmd == LoopCommand::Stop {
                             let _ = self.session_service.end_session(
-                                &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                                &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                             );
-                            self.emit(EngineEvent::LoopStopped { project_id, agent_id, completed_count });
+                            self.emit(EngineEvent::LoopStopped { project_id, agent_instance_id, completed_count });
                             flush_metrics!("stopped");
                             return Ok(LoopOutcome::Stopped { completed_count });
                         } else {
                             let _ = self.session_service.end_session(
-                                &project_id, &agent_id, &session.session_id, SessionStatus::Completed,
+                                &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                             );
-                            self.emit(EngineEvent::LoopPaused { project_id, agent_id, completed_count });
+                            self.emit(EngineEvent::LoopPaused { project_id, agent_instance_id, completed_count });
                             flush_metrics!("paused");
                             return Ok(LoopOutcome::Paused { completed_count });
                         }
@@ -740,14 +740,14 @@ impl DevLoopEngine {
                 let context_usage_pct = current_session.context_usage_estimate * 100.0;
                 let new_session = self.session_service.rollover_session(
                     &project_id,
-                    &agent_id,
+                    &agent_instance_id,
                     &session.session_id,
                     summary,
                     None,
                 )?;
                 self.emit(EngineEvent::SessionRolledOver {
                     project_id,
-                    agent_id,
+                    agent_instance_id,
                     old_session_id: session.session_id,
                     new_session_id: new_session.session_id,
                     summary_duration_ms: Some(summary_duration_ms),
@@ -760,7 +760,7 @@ impl DevLoopEngine {
         }
     }
 
-    pub(crate) fn emit_file_ops_applied(&self, project_id: ProjectId, agent_id: AgentId, task: &Task, ops: &[FileOp]) {
+    pub(crate) fn emit_file_ops_applied(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId, task: &Task, ops: &[FileOp]) {
         let files_written = ops.iter().filter(|op| matches!(op, FileOp::Create { .. } | FileOp::Modify { .. } | FileOp::SearchReplace { .. })).count();
         let files_deleted = ops.iter().filter(|op| matches!(op, FileOp::Delete { .. })).count();
         let files: Vec<crate::events::FileOpSummary> = ops.iter().map(|op| {
@@ -774,7 +774,7 @@ impl DevLoopEngine {
         }).collect();
         self.emit(EngineEvent::FileOpsApplied {
             project_id,
-            agent_id,
+            agent_instance_id,
             task_id: task.task_id,
             files_written,
             files_deleted,

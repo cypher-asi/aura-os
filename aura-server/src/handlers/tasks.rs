@@ -130,25 +130,26 @@ pub async fn get_progress(
             .sum();
     }
 
-    // Chat sessions: include chat token usage in project totals
-    if let Ok(chat_sessions) = state.store.list_chat_sessions(&project_id) {
+    // Agent instances: include token usage from agent instances
+    if let Ok(instances) = state.agent_instance_service.list_instances(&project_id) {
         let fee_schedule = state.pricing_service.get_fee_schedule();
-        let chat_tokens: u64 = chat_sessions
+        let instance_tokens: u64 = instances
             .iter()
-            .map(|cs| cs.total_input_tokens + cs.total_output_tokens)
+            .map(|ai| ai.total_input_tokens + ai.total_output_tokens)
             .sum();
-        let chat_cost: f64 = chat_sessions
+        let instance_cost: f64 = instances
             .iter()
-            .map(|cs| {
-                let model = cs.model.as_deref().unwrap_or("claude-opus-4-6");
+            .map(|ai| {
+                let model = ai.model.as_deref().unwrap_or("claude-opus-4-6");
                 let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
                 aura_billing::compute_cost_with_rates(
-                    cs.total_input_tokens, cs.total_output_tokens, inp, out,
+                    ai.total_input_tokens, ai.total_output_tokens, inp, out,
                 )
             })
             .sum();
-        progress.total_tokens += chat_tokens;
-        progress.total_cost += chat_cost;
+        progress.total_tokens += instance_tokens;
+        progress.total_cost += instance_cost;
+        progress.total_agents = instances.len() as u32;
     }
 
     // Messages: count from chat store

@@ -19,7 +19,7 @@ use crate::state::TaskOutputBuffers;
 
 use aura_engine::EngineEvent;
 use aura_terminal::TerminalManager;
-use aura_agents::AgentService;
+use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
@@ -45,7 +45,7 @@ fn spawn_event_rebroadcast(
     tokio::spawn(async move {
         let mut write_count: u64 = 0;
         let mut delta_count: u64 = 0;
-        let mut delta_broadcast_buf: HashMap<aura_core::TaskId, (aura_core::ProjectId, aura_core::AgentId, String)> = HashMap::new();
+        let mut delta_broadcast_buf: HashMap<aura_core::TaskId, (aura_core::ProjectId, aura_core::AgentInstanceId, String)> = HashMap::new();
         let mut flush_interval = interval(Duration::from_millis(DELTA_BROADCAST_INTERVAL_MS));
         flush_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -54,7 +54,7 @@ fn spawn_event_rebroadcast(
                 maybe_event = rx.recv() => {
                     let Some(event) = maybe_event else { break };
                     match &event {
-                        EngineEvent::TaskOutputDelta { project_id, agent_id, task_id, delta } => {
+                        EngineEvent::TaskOutputDelta { project_id, agent_instance_id, task_id, delta } => {
                             if let Ok(mut bufs) = task_output_buffers.lock() {
                                 bufs.entry(*task_id).or_default().push_str(delta);
                             }
@@ -63,7 +63,7 @@ fn spawn_event_rebroadcast(
                                 flush_live_output(&store, &task_output_buffers);
                             }
                             let entry = delta_broadcast_buf.entry(*task_id)
-                                .or_insert_with(|| (*project_id, *agent_id, String::new()));
+                                .or_insert_with(|| (*project_id, *agent_instance_id, String::new()));
                             entry.2.push_str(delta);
                         }
                         EngineEvent::TaskCompleted { task_id, .. }
@@ -95,10 +95,10 @@ fn spawn_event_rebroadcast(
 
                     // Flush any buffered deltas before broadcasting a non-delta event,
                     // so the WS client always sees deltas before the event that follows them.
-                    for (task_id, (pid, aid, text)) in delta_broadcast_buf.drain() {
+                    for (task_id, (pid, aiid, text)) in delta_broadcast_buf.drain() {
                         let coalesced = EngineEvent::TaskOutputDelta {
                             project_id: pid,
-                            agent_id: aid,
+                            agent_instance_id: aiid,
                             task_id,
                             delta: text,
                         };
@@ -111,11 +111,11 @@ fn spawn_event_rebroadcast(
                     }
                 }
                 _ = flush_interval.tick() => {
-                    for (task_id, (pid, aid, text)) in delta_broadcast_buf.drain() {
+                    for (task_id, (pid, aiid, text)) in delta_broadcast_buf.drain() {
                         debug!(%task_id, len = text.len(), "Flushing coalesced delta");
                         let _ = broadcast_tx.send(EngineEvent::TaskOutputDelta {
                             project_id: pid,
-                            agent_id: aid,
+                            agent_instance_id: aiid,
                             task_id,
                             delta: text,
                         });
@@ -198,6 +198,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     ));
     let task_service = Arc::new(TaskService::new(store.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone()));
+    let agent_instance_service = Arc::new(AgentInstanceService::new(store.clone()));
     let session_service = Arc::new(SessionService::new(store.clone()));
     let chat_service = Arc::new(ChatService::new(
         store.clone(),
@@ -256,6 +257,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         task_extraction_service,
         task_service,
         agent_service,
+        agent_instance_service,
         session_service,
         chat_service,
         claude_client,
