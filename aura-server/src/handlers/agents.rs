@@ -198,6 +198,140 @@ pub async fn delete_agent_instance(
 }
 
 // ---------------------------------------------------------------------------
+// Agent-level messages (multi-project)
+// ---------------------------------------------------------------------------
+
+pub async fn list_agent_messages(
+    State(state): State<AppState>,
+    Path(agent_id): Path<AgentId>,
+) -> ApiResult<Json<Vec<Message>>> {
+    let messages = state
+        .chat_service
+        .list_agent_messages(&agent_id)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Json(messages))
+}
+
+pub async fn send_agent_message_stream(
+    State(state): State<AppState>,
+    Path(agent_id): Path<AgentId>,
+    Json(body): Json<SendMessageRequest>,
+) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+    info!(%agent_id, action = ?body.action, "Agent message stream requested");
+
+    let agent = state
+        .agent_service
+        .get_agent(DEFAULT_USER_ID, &agent_id)
+        .ok();
+
+    let instances = state
+        .store
+        .list_agent_instances_by_agent_id(&agent_id)
+        .unwrap_or_default();
+
+    let project_ids: Vec<ProjectId> = instances.iter().map(|i| i.project_id).collect();
+    let projects: Vec<aura_core::Project> = project_ids
+        .iter()
+        .filter_map(|pid| state.store.get_project(pid).ok())
+        .collect();
+
+    let (tx, rx) = mpsc::unbounded_channel::<ChatStreamEvent>();
+
+    let chat_service = state.chat_service.clone();
+    let content = body.content;
+    let action = body.action.clone();
+    let attachments = body.attachments.unwrap_or_default();
+
+    tokio::spawn(async move {
+        if let Some(ref agent) = agent {
+            chat_service
+                .send_agent_message_streaming(
+                    &agent_id,
+                    agent,
+                    &projects,
+                    &content,
+                    action.as_deref(),
+                    &attachments,
+                    tx,
+                )
+                .await;
+        } else {
+            let _ = tx.send(ChatStreamEvent::Error(
+                "agent not found".to_string(),
+            ));
+            let _ = tx.send(ChatStreamEvent::Done);
+        }
+    });
+
+    let stream = UnboundedReceiverStream::new(rx).map(move |evt| {
+        let sse_event = match &evt {
+            ChatStreamEvent::Delta(text) => Event::default()
+                .event("delta")
+                .json_data(serde_json::json!({ "text": text }))
+                .unwrap(),
+            ChatStreamEvent::ThinkingDelta(text) => Event::default()
+                .event("thinking_delta")
+                .json_data(serde_json::json!({ "text": text }))
+                .unwrap(),
+            ChatStreamEvent::ToolCall { id, name, input } => Event::default()
+                .event("tool_call")
+                .json_data(serde_json::json!({ "id": id, "name": name, "input": input }))
+                .unwrap(),
+            ChatStreamEvent::ToolResult {
+                id,
+                name,
+                result,
+                is_error,
+            } => Event::default()
+                .event("tool_result")
+                .json_data(serde_json::json!({
+                    "id": id, "name": name, "result": result, "is_error": is_error
+                }))
+                .unwrap(),
+            ChatStreamEvent::SpecSaved(spec) => Event::default()
+                .event("spec_saved")
+                .json_data(serde_json::json!({ "spec": spec }))
+                .unwrap(),
+            ChatStreamEvent::SpecsTitle(title) => Event::default()
+                .event("specs_title")
+                .json_data(serde_json::json!({ "title": title }))
+                .unwrap(),
+            ChatStreamEvent::SpecsSummary(summary) => Event::default()
+                .event("specs_summary")
+                .json_data(serde_json::json!({ "summary": summary }))
+                .unwrap(),
+            ChatStreamEvent::TaskSaved(task) => Event::default()
+                .event("task_saved")
+                .json_data(serde_json::json!({ "task": task }))
+                .unwrap(),
+            ChatStreamEvent::MessageSaved(msg) => Event::default()
+                .event("message_saved")
+                .json_data(serde_json::json!({ "message": msg }))
+                .unwrap(),
+            ChatStreamEvent::AgentInstanceUpdated(instance) => Event::default()
+                .event("agent_instance_updated")
+                .json_data(serde_json::json!({ "agent_instance": instance }))
+                .unwrap(),
+            ChatStreamEvent::TokenUsage { input_tokens, output_tokens } => Event::default()
+                .event("token_usage")
+                .json_data(serde_json::json!({ "input_tokens": input_tokens, "output_tokens": output_tokens }))
+                .unwrap(),
+            ChatStreamEvent::Error(msg) => Event::default()
+                .event("error")
+                .json_data(serde_json::json!({ "message": msg }))
+                .unwrap(),
+            ChatStreamEvent::Done => Event::default()
+                .event("done")
+                .json_data(serde_json::json!({}))
+                .unwrap(),
+        };
+        Ok(sse_event)
+    });
+
+    Sse::new(stream)
+}
+
+// ---------------------------------------------------------------------------
 // Messages (scoped to agent instance)
 // ---------------------------------------------------------------------------
 
