@@ -14,6 +14,7 @@ import { useSidekick } from "../context/SidekickContext";
 import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
 import { AgentAppProvider } from "../apps/agents/AgentAppProvider";
 import { FeedProvider } from "../apps/feed/FeedProvider";
+import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
 
@@ -184,7 +185,9 @@ export function AppShell() {
           <ProjectsProvider>
             <AgentAppProvider>
               <FeedProvider>
-                <AppContent />
+                <LeaderboardProvider>
+                  <AppContent />
+                </LeaderboardProvider>
               </FeedProvider>
             </AgentAppProvider>
           </ProjectsProvider>
