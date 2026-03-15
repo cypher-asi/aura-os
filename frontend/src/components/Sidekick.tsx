@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, Menu } from "@cypher-asi/zui";
-import { Archive, Info, ArrowLeft, Ellipsis, FileText, ListTodo, ScrollText, BarChart3, MonitorCog } from "lucide-react";
+import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, ScrollText, BarChart3, MonitorCog } from "lucide-react";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -35,7 +35,7 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
 
 const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
   { id: "specs", icon: <FileText size={16} />, title: "Specs" },
-  { id: "tasks", icon: <ListTodo size={16} />, title: "Tasks" },
+  { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
   { id: "log", icon: <ScrollText size={16} />, title: "Log" },
   { id: "progress", icon: <BarChart3 size={16} />, title: "KPIs" },
   { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
@@ -85,6 +85,7 @@ export function SidekickTaskbar() {
             aria-label={title}
             onClick={() => setActiveTab(id)}
             aria-pressed={activeTab === id}
+            selected={activeTab === id}
           />
         ))}
       </div>

@@ -47,8 +47,12 @@
 }
 
 .sidekickTabBar button[aria-pressed="true"] {
-  background: var(--color-bg-hover, rgba(255, 255, 255, 0.08));
   color: #ffffff;
+}
+
+.sidekickTabBar button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .moreButtonWrap {
