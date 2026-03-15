@@ -79,12 +79,17 @@ export function SpecList() {
   );
 
   const explorerData: ExplorerNode[] = useMemo(
-    () =>
-      mergedSpecs.map((spec) => ({
-        id: spec.spec_id,
-        label: spec.title,
-        metadata: { type: "spec" },
-      })),
+    () => [
+      {
+        id: "__specs_root__",
+        label: "Specs",
+        children: mergedSpecs.map((spec) => ({
+          id: spec.spec_id,
+          label: spec.title,
+          metadata: { type: "spec" },
+        })),
+      },
+    ],
     [mergedSpecs],
   );
 
@@ -119,6 +124,7 @@ export function SpecList() {
       searchPlaceholder="Search"
       enableDragDrop={false}
       enableMultiSelect={false}
+      defaultExpandedIds={["__specs_root__"]}
       defaultSelectedIds={selectedId ? [selectedId] : undefined}
       onSelect={handleSelect}
     />
