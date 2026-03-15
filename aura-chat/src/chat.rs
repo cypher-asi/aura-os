@@ -185,6 +185,10 @@ pub enum ChatStreamEvent {
     TaskSaved(Box<Task>),
     MessageSaved(Message),
     AgentInstanceUpdated(AgentInstance),
+    TokenUsage {
+        input_tokens: u64,
+        output_tokens: u64,
+    },
     Error(String),
     Done,
 }
@@ -512,6 +516,10 @@ impl ChatService {
 
             accumulated_input_tokens += stream_result.input_tokens;
             accumulated_output_tokens += stream_result.output_tokens;
+            let _ = tx.send(ChatStreamEvent::TokenUsage {
+                input_tokens: accumulated_input_tokens,
+                output_tokens: accumulated_output_tokens,
+            });
             if !total_text.is_empty() && !iter_text.is_empty() {
                 total_text.push_str("\n\n");
             }
@@ -615,28 +623,31 @@ impl ChatService {
         }
 
         if specs_created_count > 0 {
+            info!(%project_id, specs_created_count, "Specs created via tool calls, generating project overview");
             let requirements_content: String = stored_messages
                 .iter()
                 .filter(|m| m.role == ChatRole::User)
                 .map(|m| {
-                    if let Some(blocks) = &m.content_blocks {
-                        blocks
+                    let block_text = m.content_blocks.as_ref().and_then(|blocks| {
+                        let texts: Vec<&str> = blocks
                             .iter()
                             .filter_map(|b| match b {
                                 ChatContentBlock::Text { text } => Some(text.as_str()),
                                 _ => None,
                             })
-                            .collect::<Vec<_>>()
-                            .join("\n\n")
-                    } else {
-                        m.content.clone()
-                    }
+                            .collect();
+                        if texts.is_empty() { None } else { Some(texts.join("\n\n")) }
+                    });
+                    block_text.unwrap_or_else(|| m.content.clone())
                 })
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<_>>()
                 .join("\n\n");
 
-            if !requirements_content.is_empty() {
+            if requirements_content.is_empty() {
+                warn!(%project_id, "No user message text found for overview generation");
+            } else {
+                info!(%project_id, len = requirements_content.len(), "Generating project overview from user messages");
                 match self
                     .spec_gen
                     .generate_project_overview(project_id, &requirements_content)
@@ -644,6 +655,7 @@ impl ChatService {
                 {
                     Ok((title_opt, summary)) => {
                         if let Some(title) = title_opt {
+                            info!(%project_id, %title, "Project overview title generated");
                             let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
                         }
                         if !summary.is_empty() {
@@ -651,12 +663,15 @@ impl ChatService {
                         }
                     }
                     Err(e) => {
+                        error!(%project_id, error = %e, "Failed to generate project overview");
                         let _ = tx.send(ChatStreamEvent::Error(
                             format!("Failed to generate project overview: {e}"),
                         ));
                     }
                 }
             }
+        } else {
+            info!(%project_id, "No specs created in this chat turn, skipping overview generation");
         }
 
         if accumulated_input_tokens > 0 || accumulated_output_tokens > 0 {
@@ -669,6 +684,8 @@ impl ChatService {
                 instance.updated_at = Utc::now();
                 if let Err(e) = self.store.put_agent_instance(&instance) {
                     error!(%project_id, %agent_instance_id, error = %e, "Failed to persist token usage on agent instance");
+                } else {
+                    let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
                 }
             }
         }
@@ -1075,6 +1092,10 @@ impl ChatService {
                 SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
                     spec_input_tokens += input_tokens;
                     spec_output_tokens += output_tokens;
+                    let _ = tx.send(ChatStreamEvent::TokenUsage {
+                        input_tokens: spec_input_tokens,
+                        output_tokens: spec_output_tokens,
+                    });
                 }
                 SpecStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));
@@ -1094,6 +1115,8 @@ impl ChatService {
                 instance.updated_at = Utc::now();
                 if let Err(e) = self.store.put_agent_instance(&instance) {
                     error!(%project_id, %agent_instance_id, error = %e, "Failed to persist spec-gen tokens on agent instance");
+                } else {
+                    let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
                 }
             }
         }
