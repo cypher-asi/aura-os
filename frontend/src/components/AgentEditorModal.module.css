@@ -26,7 +26,8 @@
 }
 
 .iconField {
-  max-width: 80px;
+  max-width: 100px;
+  flex: 0 0 auto;
 }
 
 .footer {

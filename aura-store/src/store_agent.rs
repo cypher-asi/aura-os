@@ -44,7 +44,28 @@ impl RocksStore {
 
     pub fn list_agents_by_user(&self, user_id: &str) -> StoreResult<Vec<Agent>> {
         let prefix = format!("{user_id}:");
-        self.scan_cf::<Agent>(&self.cf_agents(), Some(&prefix))
+        let mut opts = rocksdb::ReadOptions::default();
+        opts.set_total_order_seek(true);
+        let iter = self.db.iterator_cf_opt(
+            &self.cf_agents(),
+            opts,
+            rocksdb::IteratorMode::From(prefix.as_bytes(), rocksdb::Direction::Forward),
+        );
+        let mut results = Vec::new();
+        for item in iter {
+            let (key, value) = item?;
+            if !key.starts_with(prefix.as_bytes()) {
+                break;
+            }
+            match serde_json::from_slice(&value) {
+                Ok(v) => results.push(v),
+                Err(e) => {
+                    let key_str = String::from_utf8_lossy(&key);
+                    tracing::warn!("Skipping unreadable agent entry {key_str}: {e}");
+                }
+            }
+        }
+        Ok(results)
     }
 
     // -- Session CRUD --
