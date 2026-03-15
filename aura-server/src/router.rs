@@ -213,6 +213,15 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
                 .put(agents::update_agent)
                 .delete(agents::delete_agent),
         )
+        // Agent-level messages (multi-project chat)
+        .route(
+            "/api/agents/:agent_id/messages",
+            get(agents::list_agent_messages),
+        )
+        .route(
+            "/api/agents/:agent_id/messages/stream",
+            post(agents::send_agent_message_stream),
+        )
         // Project-level Agent Instances
         .route(
             "/api/projects/:project_id/agents",
