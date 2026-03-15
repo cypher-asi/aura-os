@@ -42,7 +42,7 @@ export interface ToolResultInfo {
 }
 
 export interface ChatAttachment {
-  type: "image";
+  type: "image" | "text";
   media_type: string;
   data: string;
   name?: string;
@@ -50,6 +50,7 @@ export interface ChatAttachment {
 
 export interface ChatStreamCallbacks {
   onDelta: (text: string) => void;
+  onThinkingDelta?: (text: string) => void;
   onToolCall?: (info: ToolCallInfo) => void;
   onToolResult?: (info: ToolResultInfo) => void;
   onSpecSaved?: (spec: Spec) => void;
@@ -136,7 +137,7 @@ export function sendMessageStream(
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
-  return streamSSE<"delta" | "tool_call" | "tool_result" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
+  return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "task_saved" | "message_saved" | "title_updated" | "error" | "done">(
     `${BASE_URL}/api/projects/${projectId}/chat-sessions/${chatSessionId}/messages/stream`,
     {
       method: "POST",
@@ -149,6 +150,9 @@ export function sendMessageStream(
         switch (eventType) {
           case "delta":
             cb.onDelta(d.text as string);
+            break;
+          case "thinking_delta":
+            cb.onThinkingDelta?.(d.text as string);
             break;
           case "tool_call":
             cb.onToolCall?.({
