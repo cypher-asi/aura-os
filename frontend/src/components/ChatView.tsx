@@ -23,6 +23,8 @@ export function ChatView() {
     messages,
     isStreaming,
     streamingText,
+    thinkingText,
+    thinkingDurationMs,
     activeToolCalls,
     sendMessage,
     stopStreaming,
@@ -85,7 +87,12 @@ export function ChatView() {
       setInput("");
       const toSend = atts ?? attachments;
       const apiAttachments = toSend.length > 0
-        ? toSend.map((a) => ({ type: "image" as const, media_type: a.mediaType, data: a.data, name: a.name }))
+        ? toSend.map((a) => ({
+            type: a.attachmentType,
+            media_type: a.mediaType,
+            data: a.data,
+            name: a.name,
+          }))
         : undefined;
       sendMessage(content, action ?? null, selectedModel, apiAttachments);
       setAttachments([]);
@@ -124,7 +131,7 @@ export function ChatView() {
     );
   }
 
-  const hasMessages = messages.length > 0 || streamingText;
+  const hasMessages = messages.length > 0 || streamingText || thinkingText;
 
   return (
     <div className={styles.container}>
@@ -147,8 +154,13 @@ export function ChatView() {
                 {messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
-                {(streamingText || activeToolCalls.length > 0) && (
-                  <StreamingBubble text={streamingText} toolCalls={activeToolCalls} />
+                {(streamingText || thinkingText || activeToolCalls.length > 0) && (
+                  <StreamingBubble
+                    text={streamingText}
+                    toolCalls={activeToolCalls}
+                    thinkingText={thinkingText}
+                    thinkingDurationMs={thinkingDurationMs}
+                  />
                 )}
               </>
             )}
