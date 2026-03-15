@@ -50,7 +50,6 @@ function AppLayout() {
             resizable
             resizePosition="right"
             defaultWidth={200}
-            minWidth={140}
             maxWidth={300}
             storageKey="aura-sidebar"
             taskbar={
@@ -80,7 +79,6 @@ function AppLayout() {
             resizable
             resizePosition="left"
             defaultWidth={320}
-            minWidth={200}
             maxWidth={1200}
             storageKey="aura-sidekick"
             header={<SidekickHeader />}
@@ -94,7 +92,6 @@ function AppLayout() {
             resizable
             resizePosition="left"
             defaultWidth={320}
-            minWidth={200}
             maxWidth={1200}
             storageKey="aura-preview"
             collapsible
