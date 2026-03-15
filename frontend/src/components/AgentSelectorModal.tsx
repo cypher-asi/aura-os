@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Spinner, Text } from "@cypher-asi/zui";
+import { Bot } from "lucide-react";
 import { api } from "../api/client";
 import type { Agent, AgentInstance } from "../types";
 import { AgentEditorModal } from "./AgentEditorModal";
@@ -18,6 +19,7 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
   const [creating, setCreating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [showEditor, setShowEditor] = useState(false);
+  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
 
   const fetchAgents = useCallback(() => {
     setLoading(true);
@@ -95,10 +97,15 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
                   disabled={!!creating}
                 >
                   <div className={styles.cardIcon}>
-                    {agent.icon ? (
-                      <img src={agent.icon} alt="" className={styles.cardIconImg} />
+                    {agent.icon && !failedIcons.has(agent.agent_id) ? (
+                      <img
+                        src={agent.icon}
+                        alt=""
+                        className={styles.cardIconImg}
+                        onError={() => setFailedIcons((s) => new Set(s).add(agent.agent_id))}
+                      />
                     ) : (
-                      agent.name.charAt(0).toUpperCase()
+                      <Bot size={24} />
                     )}
                   </div>
                   <div className={styles.cardName}>{agent.name}</div>

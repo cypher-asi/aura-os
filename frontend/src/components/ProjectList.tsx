@@ -130,6 +130,7 @@ export function ProjectList() {
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
+  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
 
   const ctxMenuRef = useRef<HTMLDivElement>(null);
 
@@ -277,8 +278,13 @@ export function ProjectList() {
                 return {
                   id: s.agent_instance_id,
                   label: s.name,
-                  icon: s.icon
-                    ? <img src={s.icon} alt="" className={styles.agentAvatar} />
+                  icon: s.icon && !failedIcons.has(s.agent_instance_id)
+                    ? <img
+                        src={s.icon}
+                        alt=""
+                        className={styles.agentAvatar}
+                        onError={() => setFailedIcons((prev) => new Set(prev).add(s.agent_instance_id))}
+                      />
                     : <Bot size={16} />,
                   suffix: isAutomating
                     ? <span className={styles.sessionIndicator}><Loader2 size={10} className={styles.automationSpinner} /></span>
@@ -290,7 +296,7 @@ export function ProjectList() {
               })
             : [{ id: `_load_${p.project_id}`, label: "Loading...", disabled: true }],
       })),
-    [projects, agentsByProject, streamingAgentInstanceId, automatingProjectId, automatingAgentInstanceId],
+    [projects, agentsByProject, streamingAgentInstanceId, automatingProjectId, automatingAgentInstanceId, failedIcons],
   );
 
   const defaultExpandedIds = useMemo(
