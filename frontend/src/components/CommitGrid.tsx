@@ -1,8 +1,6 @@
 import { useMemo } from "react";
 import styles from "./CommitGrid.module.css";
 
-const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DEFAULT_LEVELS = [1, 4, 8, 12];
 
 interface DaySlot {
@@ -13,11 +11,6 @@ interface DaySlot {
 
 interface Week {
   days: (DaySlot | null)[];
-}
-
-interface MonthSpan {
-  label: string;
-  weeks: number;
 }
 
 function toISODate(d: Date): string {
@@ -45,14 +38,12 @@ function buildWeeks(
   start: Date,
   end: Date,
   data: Record<string, number>,
-): { weeks: Week[]; months: MonthSpan[] } {
+): Week[] {
   const startDay = start.getDay();
   const offset = startDay === 0 ? 6 : startDay - 1;
   const weekStart = addDays(start, -offset);
 
   const weeks: Week[] = [];
-  const months: MonthSpan[] = [];
-  let currentMonth = -1;
   let cursor = new Date(weekStart);
 
   while (cursor <= end || weeks.length === 0) {
@@ -69,24 +60,13 @@ function buildWeeks(
           dayOfWeek: d,
         });
       }
-
-      const month = cursor.getMonth();
-      if (d === 0) {
-        if (month !== currentMonth) {
-          currentMonth = month;
-          months.push({ label: MONTH_NAMES[month], weeks: 1 });
-        } else if (months.length > 0) {
-          months[months.length - 1].weeks++;
-        }
-      }
-
       cursor = addDays(cursor, 1);
     }
 
     weeks.push({ days: week });
   }
 
-  return { weeks, months };
+  return weeks;
 }
 
 function formatTooltip(date: string, count: number): string {
@@ -124,66 +104,30 @@ export function CommitGrid({
     return d;
   }, [startDate, end]);
 
-  const { weeks, months } = useMemo(
+  const weeks = useMemo(
     () => buildWeeks(start, end, data),
     [start, end, data],
   );
 
   return (
     <div className={`${styles.root}${className ? ` ${className}` : ""}`}>
-      <div className={styles.months}>
-        {months.map((m, i) => (
-          <span
-            key={`${m.label}-${i}`}
-            className={styles.monthLabel}
-            style={{ width: m.weeks * 15 }}
-          >
-            {m.weeks >= 2 ? m.label : ""}
-          </span>
+      <div className={styles.grid}>
+        {weeks.map((week, wi) => (
+          <div key={wi} className={styles.week}>
+            {week.days.map((slot, di) =>
+              slot ? (
+                <div
+                  key={slot.date}
+                  className={styles.cell}
+                  data-level={getLevel(slot.count, levels)}
+                  title={formatTooltip(slot.date, slot.count)}
+                />
+              ) : (
+                <div key={`empty-${wi}-${di}`} className={styles.placeholder} />
+              ),
+            )}
+          </div>
         ))}
-      </div>
-
-      <div className={styles.body}>
-        <div className={styles.dayLabels}>
-          {DAY_LABELS.map((label, i) => (
-            <span key={i} className={styles.dayLabel}>
-              {label}
-            </span>
-          ))}
-        </div>
-
-        <div className={styles.grid}>
-          {weeks.map((week, wi) => (
-            <div key={wi} className={styles.week}>
-              {week.days.map((slot, di) =>
-                slot ? (
-                  <div
-                    key={slot.date}
-                    className={styles.cell}
-                    data-level={getLevel(slot.count, levels)}
-                    title={formatTooltip(slot.date, slot.count)}
-                  />
-                ) : (
-                  <div key={`empty-${wi}-${di}`} className={styles.placeholder} />
-                ),
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className={styles.legend}>
-        <span>Less</span>
-        {[0, 1, 2, 3, 4].map((level) => (
-          <div
-            key={level}
-            className={styles.legendCell}
-            style={{
-              background: `var(--commit-${level})`,
-            }}
-          />
-        ))}
-        <span>More</span>
       </div>
     </div>
   );
