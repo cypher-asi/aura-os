@@ -17,3 +17,19 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+cargo-packager-updater = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
+
+[package.metadata.packager]
+product-name = "Aura"
+identifier = "com.aura.desktop"
+category = "DeveloperTool"
+icons = ["assets/aura-icon.png"]
+before-packaging-command = "cargo build --release --package aura-desktop"
+resources = ["../frontend/dist"]
+
+[package.metadata.packager.nsis]
+install-mode = "currentUser"
+
+[package.metadata.packager.macos]
+minimum-system-version = "10.15"
