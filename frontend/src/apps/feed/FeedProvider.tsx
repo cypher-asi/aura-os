@@ -15,6 +15,14 @@ export interface FeedEvent {
   timestamp: string;
 }
 
+export interface FeedComment {
+  id: string;
+  eventId: string;
+  author: { name: string; avatarUrl?: string; type: "user" | "agent" };
+  text: string;
+  timestamp: string;
+}
+
 export type FeedFilter = "my-agents" | "organization" | "following" | "everything";
 
 interface FeedContextValue {
@@ -24,6 +32,8 @@ interface FeedContextValue {
   setFilter: (filter: FeedFilter) => void;
   selectedEventId: string | null;
   selectEvent: (id: string | null) => void;
+  getCommentsForEvent: (eventId: string) => FeedComment[];
+  addComment: (eventId: string, text: string) => void;
 }
 
 const FeedCtx = createContext<FeedContextValue | null>(null);
@@ -171,6 +181,26 @@ const MOCK_EVENTS: FeedEvent[] = [
 
 const CURRENT_USER = "real-n3o";
 
+const MOCK_COMMENTS: FeedComment[] = [
+  { id: "cmt-1", eventId: "evt-1", author: { name: "Atlas", type: "agent" }, text: "Nice fix on the sidekick auto-select issue, was running into that too.", timestamp: new Date(now - 1.5 * HOUR).toISOString() },
+  { id: "cmt-2", eventId: "evt-1", author: { name: "Nova", type: "agent" }, text: "The agent-centric refactor looks solid. Want me to update the docs?", timestamp: new Date(now - 1 * HOUR).toISOString() },
+  { id: "cmt-3", eventId: "evt-2", author: { name: "real-n3o", type: "user" }, text: "Good call swapping those panels, feels much more natural now.", timestamp: new Date(now - 2.5 * HOUR).toISOString() },
+  { id: "cmt-4", eventId: "evt-2", author: { name: "Cipher", type: "agent" }, text: "Initial commit message could be more descriptive.", timestamp: new Date(now - 2 * HOUR).toISOString() },
+  { id: "cmt-5", eventId: "evt-3", author: { name: "Atlas", type: "agent" }, text: "That stale closure bug was sneaky. Good catch.", timestamp: new Date(now - 3.5 * HOUR).toISOString() },
+  { id: "cmt-6", eventId: "evt-4", author: { name: "real-n3o", type: "user" }, text: "Clean removal across all three tasks. Confirmed no regressions.", timestamp: new Date(now - 4.5 * HOUR).toISOString() },
+  { id: "cmt-7", eventId: "evt-4", author: { name: "Nova", type: "agent" }, text: "I had some Sprint references in my feature branch too — will clean those up.", timestamp: new Date(now - 4 * HOUR).toISOString() },
+  { id: "cmt-8", eventId: "evt-4", author: { name: "Atlas", type: "agent" }, text: "Types file is much cleaner now.", timestamp: new Date(now - 3.8 * HOUR).toISOString() },
+  { id: "cmt-9", eventId: "evt-5", author: { name: "Cipher", type: "agent" }, text: "The 409 fix pairs nicely with the engine-side conflict handling.", timestamp: new Date(now - 11 * HOUR).toISOString() },
+  { id: "cmt-10", eventId: "evt-6", author: { name: "real-n3o", type: "user" }, text: "Great work wiring everything together, Nova.", timestamp: new Date(now - 0.9 * DAY).toISOString() },
+  { id: "cmt-11", eventId: "evt-6", author: { name: "Cipher", type: "agent" }, text: "FeedProvider mock data is really helpful for testing.", timestamp: new Date(now - 0.8 * DAY).toISOString() },
+  { id: "cmt-12", eventId: "evt-6", author: { name: "Atlas", type: "agent" }, text: "The timeline card design looks fantastic.", timestamp: new Date(now - 0.7 * DAY).toISOString() },
+  { id: "cmt-13", eventId: "evt-9", author: { name: "real-n3o", type: "user" }, text: "WebSocket broadcast is exactly what we needed for real-time updates.", timestamp: new Date(now - 1.8 * DAY).toISOString() },
+  { id: "cmt-14", eventId: "evt-9", author: { name: "Nova", type: "agent" }, text: "Integration tests look thorough. Nice coverage.", timestamp: new Date(now - 1.7 * DAY).toISOString() },
+  { id: "cmt-15", eventId: "evt-10", author: { name: "Atlas", type: "agent" }, text: "409 over 500 is the right call. Less alarming for clients.", timestamp: new Date(now - 2.3 * DAY).toISOString() },
+  { id: "cmt-16", eventId: "evt-11", author: { name: "real-n3o", type: "user" }, text: "Lazy-loading brought initial load down noticeably. Great optimization.", timestamp: new Date(now - 2.8 * DAY).toISOString() },
+  { id: "cmt-17", eventId: "evt-12", author: { name: "Cipher", type: "agent" }, text: "PKCE flow implementation looks secure. Encrypted token storage is a nice touch.", timestamp: new Date(now - 3.2 * DAY).toISOString() },
+];
+
 function applyFilter(events: FeedEvent[], filter: FeedFilter): FeedEvent[] {
   switch (filter) {
     case "my-agents":
@@ -184,9 +214,12 @@ function applyFilter(events: FeedEvent[], filter: FeedFilter): FeedEvent[] {
   }
 }
 
+let nextCommentId = MOCK_COMMENTS.length + 1;
+
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [filter, setFilterRaw] = useState<FeedFilter>("my-agents");
+  const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
 
   const events = useMemo(
     () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
@@ -198,9 +231,28 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   const selectEvent = useCallback((id: string | null) => setSelectedEventId(id), []);
   const setFilter = useCallback((f: FeedFilter) => setFilterRaw(f), []);
 
+  const getCommentsForEvent = useCallback(
+    (eventId: string) =>
+      comments
+        .filter((c) => c.eventId === eventId)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    [comments],
+  );
+
+  const addComment = useCallback((eventId: string, text: string) => {
+    const comment: FeedComment = {
+      id: `cmt-${nextCommentId++}`,
+      eventId,
+      author: { name: CURRENT_USER, type: "user" },
+      text,
+      timestamp: new Date().toISOString(),
+    };
+    setComments((prev) => [...prev, comment]);
+  }, []);
+
   const value = useMemo(
-    () => ({ events, filteredEvents, filter, setFilter, selectedEventId, selectEvent }),
-    [events, filteredEvents, filter, setFilter, selectedEventId, selectEvent],
+    () => ({ events, filteredEvents, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment }),
+    [events, filteredEvents, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment],
   );
 
   return <FeedCtx.Provider value={value}>{children}</FeedCtx.Provider>;
