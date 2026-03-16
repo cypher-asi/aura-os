@@ -16,7 +16,6 @@ import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Spec, Task, Session } from "../types";
 import { StatusBadge } from "./StatusBadge";
-import { CodeEditor } from "../ide";
 import styles from "./Preview.module.css";
 
 function extractErrorMessage(raw: string): string {
@@ -360,7 +359,6 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
-  const [editorPath, setEditorPath] = useState<string | null>(null);
   const hydratedRef = useRef< string | null >(null);
 
   const streamBuf = taskOutput.text;
@@ -657,7 +655,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
               return (
                 <Item
                   key={f.path}
-                  onClick={() => setEditorPath(fullPath)}
+                  onClick={() => api.openIde(fullPath)}
                   className={styles.fileOpItem}
                 >
                   <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
@@ -667,10 +665,6 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             })}
           </div>
         </GroupCollapsible>
-      )}
-
-      {editorPath && (
-        <CodeEditor filePath={editorPath} onClose={() => setEditorPath(null)} />
       )}
 
       <GroupCollapsible label="Build Verification" count={taskOutput.buildSteps.length || undefined} defaultOpen className={styles.section}>
