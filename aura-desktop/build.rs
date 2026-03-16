@@ -71,4 +71,11 @@ fn main() {
     );
 
     println!("cargo:rustc-env=FRONTEND_DIST_DIR={}", dist_dir.display());
+
+    // Updater signing public key – set via env var during CI, fall back to a
+    // dev placeholder so local `cargo build` still succeeds.
+    let pub_key = std::env::var("UPDATER_PUBLIC_KEY")
+        .unwrap_or_else(|_| "NOT_SET__generate_with_cargo_packager_signer_generate".into());
+    println!("cargo:rustc-env=UPDATER_PUBLIC_KEY={pub_key}");
+    println!("cargo:rerun-if-env-changed=UPDATER_PUBLIC_KEY");
 }
