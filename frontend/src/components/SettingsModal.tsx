@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Modal, Heading, Label, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { LogOut } from "lucide-react";
 import { api } from "../api/client";
@@ -21,15 +21,34 @@ export function SettingsModal({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">("stable");
+  const [currentVersion, setCurrentVersion] = useState("");
+
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    api
-      .getApiKeyInfo()
-      .then(setInfo)
+    Promise.all([
+      api.getApiKeyInfo().then(setInfo),
+      api.getUpdateStatus().then((s) => {
+        setUpdateChannel(s.channel as "stable" | "nightly");
+        setCurrentVersion(s.current_version);
+      }),
+    ])
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [isOpen]);
+
+  const handleChannelChange = useCallback(
+    async (ch: "stable" | "nightly") => {
+      setUpdateChannel(ch);
+      try {
+        await api.setUpdateChannel(ch);
+      } catch {
+        setUpdateChannel(updateChannel);
+      }
+    },
+    [updateChannel],
+  );
 
   const handleSave = async () => {
     if (!keyInput.trim()) return;
@@ -126,6 +145,32 @@ export function SettingsModal({
             {message && (
               <Text variant="secondary" size="sm">{message}</Text>
             )}
+
+            <div className={styles.divider} />
+
+            <Heading level={4}>Updates</Heading>
+
+            <div className={styles.infoGrid}>
+              <Text variant="muted" size="sm" as="span">Version</Text>
+              <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>
+                {currentVersion || "—"}
+              </Text>
+              <Text variant="muted" size="sm" as="span">Channel</Text>
+              <select
+                className={styles.channelSelect}
+                value={updateChannel}
+                onChange={(e) => handleChannelChange(e.target.value as "stable" | "nightly")}
+              >
+                <option value="stable">Stable</option>
+                <option value="nightly">Nightly</option>
+              </select>
+            </div>
+
+            <Text variant="muted" size="sm">
+              {updateChannel === "nightly"
+                ? "You'll receive builds from every push to main."
+                : "You'll only receive tagged releases."}
+            </Text>
 
             <div className={styles.divider} />
 
