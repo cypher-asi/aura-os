@@ -293,6 +293,20 @@ impl BillingClient {
         })
     }
 
+    pub async fn ensure_has_credits(
+        &self,
+        access_token: &str,
+    ) -> Result<u64, BillingError> {
+        let balance = self.get_balance(access_token).await?;
+        if balance.total_credits == 0 {
+            return Err(BillingError::InsufficientCredits {
+                available: 0,
+                required: 1,
+            });
+        }
+        Ok(balance.total_credits)
+    }
+
     pub fn verify_internal_token(&self, token: &str) -> bool {
         if self.internal_token.is_empty() {
             return false;
