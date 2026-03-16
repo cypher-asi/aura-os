@@ -5,20 +5,12 @@
   overflow: hidden;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
 .legend {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-3);
-  margin-left: auto;
+  padding: var(--space-3) 0;
 }
 
 .legendItem {
@@ -55,7 +47,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 3px var(--space-1);
+  padding: 5px var(--space-1);
   border-radius: 4px;
   transition: background 100ms ease;
 }
@@ -88,22 +80,25 @@
 
 .barsCell {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
-.barRow {
+.chunksRow {
   display: flex;
-  align-items: center;
-  height: 4px;
-  cursor: default;
+  gap: 2px;
+  height: 10px;
+  min-width: 0;
+  transition: width 300ms ease;
 }
 
-.bar {
+.chunk {
   height: 100%;
   border-radius: 2px;
-  min-width: 2px;
-  transition: width 300ms ease;
+  min-width: 3px;
+  cursor: default;
+  transition: opacity 150ms ease;
+}
+
+.chunk:hover {
+  opacity: 0.8;
 }

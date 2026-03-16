@@ -6,12 +6,6 @@ import { getLeaderboard } from "./mockData";
 import { formatTokens } from "../../utils/format";
 import styles from "./LeaderboardMainPanel.module.css";
 
-const periodLabels: Record<string, string> = {
-  all: "All Time",
-  month: "This Month",
-  week: "This Week",
-};
-
 const AGENT_COLORS: Record<string, string> = {
   Atlas:  "#4aeaa8",
   Cipher: "#2db87a",
@@ -37,23 +31,6 @@ export function LeaderboardMainPanel() {
   return (
     <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
       <div className={styles.container}>
-        <div className={styles.header}>
-          <Text size="lg" style={{ fontWeight: 600 }}>
-            Leaderboard
-          </Text>
-          <Text variant="muted" size="sm">
-            {periodLabels[period]}
-          </Text>
-          <div className={styles.legend}>
-            {Object.entries(AGENT_COLORS).map(([name, color]) => (
-              <span key={name} className={styles.legendItem}>
-                <span className={styles.legendDot} style={{ background: color }} />
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
-
         <div className={styles.chartWrap}>
           <div className={styles.chartInner}>
             {users.map((user, i) => {
@@ -87,6 +64,15 @@ export function LeaderboardMainPanel() {
                 </div>
               );
             })}
+          </div>
+
+          <div className={styles.legend}>
+            {Object.entries(AGENT_COLORS).map(([name, color]) => (
+              <span key={name} className={styles.legendItem}>
+                <span className={styles.legendDot} style={{ background: color }} />
+                {name}
+              </span>
+            ))}
           </div>
         </div>
       </div>
