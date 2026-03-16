@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { Bot, User, Send, MapPin, Globe, Calendar } from "lucide-react";
+import { Bot, User, Send, MapPin, Globe, Calendar, Pencil } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { useProfile } from "./ProfileProvider";
+import { ProfileEditorModal } from "./ProfileEditorModal";
 import { timeAgo } from "../feed/FeedMainPanel";
 import styles from "./ProfileSidekickPanel.module.css";
 
@@ -20,51 +21,69 @@ function formatTokenCount(n: number): string {
 }
 
 function ProfileCard() {
-  const { profile, events, projects, totalTokenUsage } = useProfile();
+  const { profile, updateProfile, events, projects, totalTokenUsage } = useProfile();
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const totalCommits = events.reduce((sum, e) => sum + e.commits.length, 0);
 
   return (
-    <EntityCard
-      headerLabel="PROFILE"
-      headerStatus="ACTIVE"
-      image={profile.avatarUrl}
-      fallbackIcon={<User size={48} />}
-      name={profile.name}
-      subtitle={profile.handle}
-      stats={[
-        { value: projects.length, label: "Projects" },
-        { value: totalCommits, label: "Commits" },
-        { value: formatTokenCount(totalTokenUsage), label: "Tokens" },
-      ]}
-      footer="CYPHER-ASI // AURA"
-    >
-      <div className={styles.bioSection}>
-        <p className={styles.bioText}>{profile.bio}</p>
-      </div>
-
-      <div className={styles.metaGrid}>
-        <div className={styles.metaRow}>
-          <MapPin size={13} className={styles.metaIcon} />
-          <span className={styles.metaValue}>{profile.location}</span>
-        </div>
-        <div className={styles.metaRow}>
-          <Globe size={13} className={styles.metaIcon} />
-          <a
-            href={profile.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.metaLink}
+    <>
+      <EntityCard
+        headerLabel="PROFILE"
+        headerStatus="ACTIVE"
+        image={profile.avatarUrl}
+        fallbackIcon={<User size={48} />}
+        name={profile.name}
+        subtitle={profile.handle}
+        stats={[
+          { value: projects.length, label: "Projects" },
+          { value: totalCommits, label: "Commits" },
+          { value: formatTokenCount(totalTokenUsage), label: "Tokens" },
+        ]}
+        footer="CYPHER-ASI // AURA"
+      >
+        <div className={styles.bioSection}>
+          <p className={styles.bioText}>{profile.bio}</p>
+          <button
+            type="button"
+            className={styles.editButton}
+            onClick={() => setEditorOpen(true)}
           >
-            {profile.website.replace(/^https?:\/\//, "")}
-          </a>
+            <Pencil size={12} />
+            Edit Profile
+          </button>
         </div>
-        <div className={styles.metaRow}>
-          <Calendar size={13} className={styles.metaIcon} />
-          <span className={styles.metaValue}>Joined {formatJoinedDate(profile.joinedDate)}</span>
+
+        <div className={styles.metaGrid}>
+          <div className={styles.metaRow}>
+            <MapPin size={13} className={styles.metaIcon} />
+            <span className={styles.metaValue}>{profile.location}</span>
+          </div>
+          <div className={styles.metaRow}>
+            <Globe size={13} className={styles.metaIcon} />
+            <a
+              href={profile.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.metaLink}
+            >
+              {profile.website.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+          <div className={styles.metaRow}>
+            <Calendar size={13} className={styles.metaIcon} />
+            <span className={styles.metaValue}>Joined {formatJoinedDate(profile.joinedDate)}</span>
+          </div>
         </div>
-      </div>
-    </EntityCard>
+      </EntityCard>
+
+      <ProfileEditorModal
+        isOpen={editorOpen}
+        profile={profile}
+        onClose={() => setEditorOpen(false)}
+        onSave={updateProfile}
+      />
+    </>
   );
 }
 

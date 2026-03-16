@@ -20,6 +20,7 @@ export interface ProfileProject {
 
 interface ProfileContextValue {
   profile: UserProfileData;
+  updateProfile: (data: Partial<UserProfileData>) => void;
   projects: ProfileProject[];
   events: FeedEvent[];
   filteredEvents: FeedEvent[];
@@ -216,9 +217,14 @@ const CURRENT_USER = "real-n3o";
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
+  const [profile, setProfile] = useState<UserProfileData>(MOCK_PROFILE);
   const [selectedProject, setSelectedProjectRaw] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
+
+  const updateProfile = useCallback((data: Partial<UserProfileData>) => {
+    setProfile((prev) => ({ ...prev, ...data }));
+  }, []);
 
   const events = useMemo(
     () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
@@ -267,7 +273,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      profile: MOCK_PROFILE,
+      profile,
+      updateProfile,
       projects: MOCK_PROJECTS,
       events,
       filteredEvents,
@@ -280,7 +287,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       getCommentsForEvent,
       addComment,
     }),
-    [events, filteredEvents, commitActivity, selectedProject, setSelectedProject, selectedEventId, selectEvent, getCommentsForEvent, addComment],
+    [profile, updateProfile, events, filteredEvents, commitActivity, selectedProject, setSelectedProject, selectedEventId, selectEvent, getCommentsForEvent, addComment],
   );
 
   return <ProfileCtx.Provider value={value}>{children}</ProfileCtx.Provider>;
