@@ -28,3 +28,11 @@
   height: 100%;
   padding: var(--space-4);
 }
+
+.agentAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
