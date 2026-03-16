@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 
-export type SidekickTab = "specs" | "tasks" | "progress" | "sessions" | "log";
+export type SidekickTab = "specs" | "tasks" | "progress" | "sessions" | "log" | "files";
 
 export type PreviewItem =
   | { kind: "spec"; spec: Spec }

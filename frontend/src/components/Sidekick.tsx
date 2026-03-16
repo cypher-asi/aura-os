@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, Menu } from "@cypher-asi/zui";
-import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, ScrollText, BarChart3, MonitorCog } from "lucide-react";
+import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, ScrollText, BarChart3, MonitorCog, FolderOpen } from "lucide-react";
 import { PanelSearch } from "./PanelSearch";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
@@ -13,6 +13,7 @@ import { TaskList } from "../views/TaskList";
 import { ProgressDashboard } from "../views/ProgressDashboard";
 import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
+import { FileExplorer } from "./FileExplorer";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
@@ -40,6 +41,7 @@ const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
   { id: "log", icon: <ScrollText size={16} />, title: "Log" },
   { id: "progress", icon: <BarChart3 size={16} />, title: "KPIs" },
   { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
+  { id: "files", icon: <FolderOpen size={16} />, title: "Files" },
 ];
 
 export function SidekickHeader() {
@@ -145,6 +147,7 @@ const SEARCH_PLACEHOLDERS: Record<string, string> = {
   tasks: "Search tasks...",
   log: "Search logs...",
   sessions: "Search sessions...",
+  files: "Search files...",
 };
 
 export function SidekickContent() {
@@ -177,6 +180,7 @@ export function SidekickContent() {
     tasks: <TaskList searchQuery={searchQuery} />,
     progress: <ProgressDashboard />,
     sessions: <SessionList searchQuery={searchQuery} />,
+    files: <FileExplorer rootPath={project.linked_folder_path} searchQuery={searchQuery} />,
   };
 
   return (
