@@ -3,7 +3,7 @@ import styles from "./CommitGrid.module.css";
 
 const CELL_SIZE = 7;
 const GAP = 3;
-const MONTH_GAP = 8;
+const MONTH_GAP = 10;
 const COL_WIDTH = CELL_SIZE + GAP;
 const DEFAULT_LEVELS = [1, 4, 8, 12];
 
