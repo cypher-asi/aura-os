@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, Menu } from "@cypher-asi/zui";
-import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, ScrollText, BarChart3, MonitorCog, FolderOpen } from "lucide-react";
+import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, Logs, BarChart3, MonitorCog, Code } from "lucide-react";
 import { PanelSearch } from "./PanelSearch";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
@@ -38,10 +38,10 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
 const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
   { id: "specs", icon: <FileText size={16} />, title: "Specs" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
-  { id: "log", icon: <ScrollText size={16} />, title: "Log" },
+  { id: "log", icon: <Logs size={16} />, title: "Log" },
   { id: "progress", icon: <BarChart3 size={16} />, title: "KPIs" },
   { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
-  { id: "files", icon: <FolderOpen size={16} />, title: "Files" },
+  { id: "files", icon: <Code size={16} />, title: "Files" },
 ];
 
 export function SidekickHeader() {
