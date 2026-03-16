@@ -11,6 +11,7 @@ import { ExecutionView } from "./views/ExecutionView";
 import { LoginView } from "./views/LoginView";
 import { InviteAcceptView } from "./views/InviteAcceptView";
 import { AgentChatView } from "./apps/agents/AgentChatView";
+import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 
 export default function App() {
   return (
@@ -34,7 +35,7 @@ export default function App() {
                 </Route>
 
                 {/* Agents app routes */}
-                <Route path="agents" element={null} />
+                <Route path="agents" element={<AgentIndexRedirect />} />
                 <Route path="agents/:agentId" element={<AgentChatView />} />
 
                 {/* Leaderboard app routes */}

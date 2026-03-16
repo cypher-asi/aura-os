@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Text, Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
@@ -12,13 +12,6 @@ export function AgentList() {
   const { query: searchQuery } = useSidebarSearch();
   const navigate = useNavigate();
   const { agentId } = useParams();
-
-  useEffect(() => {
-    if (!loading && agents.length > 0 && !agentId) {
-      const last = agents[agents.length - 1];
-      navigate(`/agents/${last.agent_id}`, { replace: true });
-    }
-  }, [loading, agents, agentId, navigate]);
 
   const data: ExplorerNode[] = useMemo(
     () =>
