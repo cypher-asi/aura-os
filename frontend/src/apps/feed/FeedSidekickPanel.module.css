@@ -1,0 +1,141 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.commentList {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ── Comment item ── */
+
+.commentItem {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background 0.1s ease;
+}
+
+.commentItem:hover {
+  background: var(--color-bg-hover);
+}
+
+.commentAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.commentContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.commentHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.commentAuthor {
+  font-weight: 600;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text);
+}
+
+.commentTime {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.commentText {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Input area ── */
+
+.inputArea {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.inputField {
+  flex: 1;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text);
+  outline: none;
+  font-family: inherit;
+}
+
+.inputField::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.inputField:focus {
+  border-color: var(--color-text-secondary);
+}
+
+.sendButton {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sendButton:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-bg-hover);
+}
+
+.sendButton:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Empty state ── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-3);
+  color: var(--color-text-secondary);
+}
+
+.emptyIcon {
+  opacity: 0.3;
+}
