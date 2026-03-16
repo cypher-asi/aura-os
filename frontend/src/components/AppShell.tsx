@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Topbar, ButtonWindow } from "@cypher-asi/zui";
 import { Lane } from "./Lane";
@@ -108,6 +108,19 @@ function AppContent() {
 
   const { MainPanel } = activeApp;
 
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      document.documentElement.style.setProperty("--left-panel-width", `${w}px`);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -128,7 +141,7 @@ function AppContent() {
         <UpdateBanner />
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+          <div ref={leftPanelRef} style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
             <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
               <AppNavRail />
               <Lane
