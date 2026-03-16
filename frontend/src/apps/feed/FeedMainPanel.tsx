@@ -1,143 +1,43 @@
-import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { GitCommitVertical, Bot, User, MessageSquare } from "lucide-react";
+import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../components/Lane";
+import { CommitGrid } from "../../components/CommitGrid";
+import { ActivityCard } from "../../components/ActivityCard";
 import { useFeed } from "./FeedProvider";
-import type { FeedEvent, FeedComment } from "./FeedProvider";
 import styles from "./FeedMainPanel.module.css";
 
-const MAX_VISIBLE_COMMITS = 3;
-
-export function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function CommentPreview({ comments, onClick }: { comments: FeedComment[]; onClick: () => void }) {
-  if (comments.length === 0) return null;
-
-  const uniqueAuthors = [...new Map(comments.map((c) => [c.author.name, c.author])).values()].slice(0, 3);
-
-  return (
-    <button className={styles.commentPreview} onClick={onClick}>
-      <div className={styles.commentAvatarStack}>
-        {uniqueAuthors.map((author, i) => (
-          <div key={author.name} className={styles.commentAvatar} style={{ zIndex: uniqueAuthors.length - i }}>
-            {author.type === "agent" ? <Bot size={12} /> : <User size={12} />}
-          </div>
-        ))}
-      </div>
-      <span className={styles.commentCount}>
-        <MessageSquare size={12} />
-        {comments.length} comment{comments.length !== 1 ? "s" : ""}
-      </span>
-    </button>
-  );
-}
-
-function FeedCard({ event, isLast }: { event: FeedEvent; isLast: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const { selectedEventId, selectEvent, getCommentsForEvent } = useFeed();
-
-  const comments = getCommentsForEvent(event.id);
-  const isSelected = selectedEventId === event.id;
-
-  const visibleCommits = expanded
-    ? event.commits
-    : event.commits.slice(0, MAX_VISIBLE_COMMITS);
-  const hiddenCount = event.commits.length - MAX_VISIBLE_COMMITS;
-
-  const repoShort = event.repo.split("/").pop();
-  const isAgent = event.author.type === "agent";
-
-  return (
-    <div
-      className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}
-      onClick={() => selectEvent(event.id)}
-    >
-      <div className={styles.avatarCol}>
-        <div className={styles.avatar} data-agent={isAgent}>
-          {event.author.avatarUrl ? (
-            <img src={event.author.avatarUrl} alt={event.author.name} />
-          ) : isAgent ? (
-            <Bot size={18} />
-          ) : (
-            <User size={18} />
-          )}
-        </div>
-        {!isLast && <div className={styles.timeline} />}
-      </div>
-
-      <div className={styles.body}>
-        <div className={styles.header}>
-          <div className={styles.headerLine}>
-            <span className={styles.authorName}>{event.author.name}</span>
-            <span className={styles.headerDot}>&middot;</span>
-            <span className={styles.time}>{timeAgo(event.timestamp)}</span>
-          </div>
-          <span className={styles.action}>
-            Pushed {event.commits.length} commit{event.commits.length !== 1 ? "s" : ""} to{" "}
-            <span className={styles.branch}>{event.branch}</span> on{" "}
-            <span className={styles.repo}>{repoShort}</span>
-          </span>
-        </div>
-
-        <div className={styles.commits}>
-          {visibleCommits.map((c) => (
-            <div key={c.sha} className={styles.commit}>
-              <span className={styles.sha}>{c.sha.slice(0, 7)}</span>
-              <span className={styles.commitMsg}>{c.message}</span>
-            </div>
-          ))}
-          {!expanded && hiddenCount > 0 && (
-            <button
-              className={styles.moreCommits}
-              onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-            >
-              + {hiddenCount} more commit{hiddenCount !== 1 ? "s" : ""}
-            </button>
-          )}
-        </div>
-
-        <CommentPreview comments={comments} onClick={() => selectEvent(event.id)} />
-      </div>
-    </div>
-  );
-}
+export { timeAgo } from "../../components/ActivityCard";
 
 export function FeedMainPanel() {
-  const { filteredEvents } = useFeed();
-
-  if (filteredEvents.length === 0) {
-    return (
-      <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
-        <div className={styles.empty}>
-          <GitCommitVertical size={32} className={styles.emptyIcon} />
-          <Text variant="muted" size="sm">No activity in your feed yet</Text>
-        </div>
-      </Lane>
-    );
-  }
+  const { filteredEvents, commitActivity, selectedEventId, selectEvent, getCommentsForEvent } = useFeed();
 
   return (
     <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
       <div className={styles.container}>
         <div className={styles.scrollArea}>
-          <div className={styles.feedList}>
-            {filteredEvents.map((evt, i) => (
-              <FeedCard
-                key={evt.id}
-                event={evt}
-                isLast={i === filteredEvents.length - 1}
-              />
-            ))}
+          <div className={styles.commitGridWrapper}>
+            <CommitGrid data={commitActivity} />
           </div>
+
+          {filteredEvents.length === 0 ? (
+            <div className={styles.empty}>
+              <GitCommitVertical size={32} className={styles.emptyIcon} />
+              <Text variant="muted" size="sm">No activity in your feed yet</Text>
+            </div>
+          ) : (
+            <div className={styles.feedList}>
+              {filteredEvents.map((evt, i) => (
+                <ActivityCard
+                  key={evt.id}
+                  event={evt}
+                  isLast={i === filteredEvents.length - 1}
+                  isSelected={selectedEventId === evt.id}
+                  comments={getCommentsForEvent(evt.id)}
+                  onSelect={selectEvent}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </Lane>
