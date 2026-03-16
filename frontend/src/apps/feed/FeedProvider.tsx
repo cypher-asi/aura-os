@@ -15,8 +15,13 @@ export interface FeedEvent {
   timestamp: string;
 }
 
+export type FeedFilter = "my-agents" | "organization" | "following" | "everything";
+
 interface FeedContextValue {
   events: FeedEvent[];
+  filteredEvents: FeedEvent[];
+  filter: FeedFilter;
+  setFilter: (filter: FeedFilter) => void;
   selectedEventId: string | null;
   selectEvent: (id: string | null) => void;
 }
@@ -164,19 +169,38 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
 ];
 
+const CURRENT_USER = "real-n3o";
+
+function applyFilter(events: FeedEvent[], filter: FeedFilter): FeedEvent[] {
+  switch (filter) {
+    case "my-agents":
+      return events.filter((e) => e.author.type === "agent");
+    case "following":
+      return events.filter((e) => e.author.name === CURRENT_USER);
+    case "organization":
+    case "everything":
+    default:
+      return events;
+  }
+}
+
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [filter, setFilterRaw] = useState<FeedFilter>("everything");
 
   const events = useMemo(
     () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [],
   );
 
+  const filteredEvents = useMemo(() => applyFilter(events, filter), [events, filter]);
+
   const selectEvent = useCallback((id: string | null) => setSelectedEventId(id), []);
+  const setFilter = useCallback((f: FeedFilter) => setFilterRaw(f), []);
 
   const value = useMemo(
-    () => ({ events, selectedEventId, selectEvent }),
-    [events, selectedEventId, selectEvent],
+    () => ({ events, filteredEvents, filter, setFilter, selectedEventId, selectEvent }),
+    [events, filteredEvents, filter, setFilter, selectedEventId, selectEvent],
   );
 
   return <FeedCtx.Provider value={value}>{children}</FeedCtx.Provider>;
