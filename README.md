@@ -1,11 +1,13 @@
+<h1 align="center">AURA</h1>
+
 <p align="center">
-  <a href="#overview">Overview</a> · <a href="#core-concepts">Core Concepts</a> · <a href="#quick-start">Quick Start</a> · <a href="#principles">Principles</a> · <a href="#architecture">Architecture</a>
+  <b>Continuous Agentic Coding</b><br>
+  A local desktop app that turns requirements into structured specs and autonomously executes implementation tasks against a linked codebase.
 </p>
 
-# AURA
-
-**Continuous Agentic Coding**<br>
-A local desktop app that turns requirements into structured specs and autonomously executes implementation tasks against a linked codebase.
+<p align="center">
+  <a href="#overview">Overview</a> · <a href="#quick-start">Quick Start</a> · <a href="#architecture">Architecture</a> · <a href="#principles">Principles</a> · <a href="#specs">Specs</a>
+</p>
 
 ## Overview
 
