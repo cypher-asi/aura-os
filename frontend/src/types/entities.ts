@@ -310,6 +310,11 @@ export interface CheckoutSessionResponse {
   session_id: string;
 }
 
+export interface DailyCommitActivity {
+  date: string;
+  count: number;
+}
+
 export interface ApiError {
   error: string;
   code: string;
