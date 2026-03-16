@@ -23,7 +23,11 @@
   width: 12px;
   height: 12px;
   border-radius: 2px;
-  background: var(--commit-0);
+  background: #000;
+}
+
+.cell[data-level="0"] {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15) 1.5px, #000 1.5px);
 }
 
 .cell[data-level="1"] {
