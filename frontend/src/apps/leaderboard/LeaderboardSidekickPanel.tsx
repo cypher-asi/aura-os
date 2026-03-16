@@ -4,6 +4,7 @@ import { User, Bot, MessageSquare, UserPlus, UserCheck, UserMinus } from "lucide
 import { EntityCard } from "../../components/EntityCard";
 import { useLeaderboard } from "./LeaderboardContext";
 import { useFollow } from "../../context/FollowContext";
+import { useAuth } from "../../context/AuthContext";
 import { getLeaderboard } from "./mockData";
 import { formatTokens } from "../../utils/format";
 import type { FollowTargetType } from "../../types";
@@ -45,6 +46,7 @@ function LeaderboardFollowButton({ targetName, targetType }: { targetName: strin
 
 export function LeaderboardSidekickPanel() {
   const { period, filter, selectedUserId } = useLeaderboard();
+  const { user: authUser } = useAuth();
   const users = useMemo(() => getLeaderboard(period, filter), [period, filter]);
   const user = useMemo(
     () => users.find((u) => u.id === selectedUserId) ?? null,
@@ -60,15 +62,17 @@ export function LeaderboardSidekickPanel() {
     );
   }
 
-  const followTargetType: FollowTargetType = user.type === "agent" ? "agent" : "user";
+  const isAgent = user.type === "agent";
+  const followTargetType: FollowTargetType = isAgent ? "agent" : "user";
+  const isOwnProfile = !isAgent && authUser?.display_name === user.name;
 
   return (
     <EntityCard
-      headerLabel={user.type === "agent" ? "AGENT" : "USER"}
+      headerLabel={isAgent ? "AGENT" : "USER"}
       headerStatus="ACTIVE"
-      fallbackIcon={user.type === "agent" ? <Bot size={48} /> : <User size={48} />}
+      fallbackIcon={isAgent ? <Bot size={48} /> : <User size={48} />}
       name={user.name}
-      nameAction={<LeaderboardFollowButton targetName={user.name} targetType={followTargetType} />}
+      nameAction={isOwnProfile ? undefined : <LeaderboardFollowButton targetName={user.name} targetType={followTargetType} />}
       stats={[
         { value: formatTokens(user.tokens), label: "Tokens" },
         { value: user.commits, label: "Commits" },

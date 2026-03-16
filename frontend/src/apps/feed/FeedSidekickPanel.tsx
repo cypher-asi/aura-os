@@ -4,6 +4,7 @@ import { Bot, User, MessageSquare, Send, UserPlus, UserCheck, UserMinus } from "
 import { EntityCard } from "../../components/EntityCard";
 import { useFeed } from "./FeedProvider";
 import { useFollow } from "../../context/FollowContext";
+import { useAuth } from "../../context/AuthContext";
 import { timeAgo } from "./FeedMainPanel";
 import type { FollowTargetType } from "../../types";
 import styles from "./FeedSidekickPanel.module.css";
@@ -37,9 +38,11 @@ function ProfileFollowButton({ targetName, targetType }: { targetName: string; t
 
 function ProfilePanel() {
   const { selectedProfile, events } = useFeed();
+  const { user } = useAuth();
   if (!selectedProfile) return null;
 
   const isAgent = selectedProfile.type === "agent";
+  const isOwnProfile = !isAgent && user?.display_name === selectedProfile.name;
   const profileEvents = events.filter((e) => e.author.name === selectedProfile.name);
   const totalCommits = profileEvents.reduce((sum, e) => sum + e.commits.length, 0);
 
@@ -52,10 +55,12 @@ function ProfilePanel() {
         fallbackIcon={isAgent ? <Bot size={48} /> : <User size={48} />}
         name={selectedProfile.name}
         nameAction={
-          <ProfileFollowButton
-            targetName={selectedProfile.name}
-            targetType={isAgent ? "agent" : "user"}
-          />
+          isOwnProfile ? undefined : (
+            <ProfileFollowButton
+              targetName={selectedProfile.name}
+              targetType={isAgent ? "agent" : "user"}
+            />
+          )
         }
         stats={[
           { value: profileEvents.length, label: "Posts" },
