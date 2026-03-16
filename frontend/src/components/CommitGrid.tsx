@@ -1,22 +1,20 @@
-import { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import styles from "./CommitGrid.module.css";
 
-const CELL_SIZE = 7;
-const GAP = 3;
-const MONTH_GAP = 10;
-const DAYS_PER_WEEK = 7;
-const ROWS = 4;
-const MONTH_BLOCK_WIDTH = DAYS_PER_WEEK * CELL_SIZE + (DAYS_PER_WEEK - 1) * GAP;
+const DEFAULT_DAYS = 30;
+const HOURS = 24;
+const HOURS_PER_GROUP = 6;
+const DAYS_PER_GROUP = 4;
 const DEFAULT_LEVELS = [1, 4, 8, 12];
 
-interface DaySlot {
-  date: string;
+interface HourSlot {
+  key: string;
   count: number;
 }
 
-interface MonthBlock {
-  key: string;
-  weeks: (DaySlot | null)[][];
+interface DayRow {
+  date: string;
+  hours: HourSlot[];
 }
 
 function toISODate(d: Date): string {
@@ -34,70 +32,48 @@ function getLevel(count: number, thresholds: number[]): number {
   return 1;
 }
 
-function buildMonthBlocks(
-  start: Date,
-  end: Date,
+function buildGrid(
+  endDate: Date,
+  days: number,
   data: Record<string, number>,
-): MonthBlock[] {
-  const blocks: MonthBlock[] = [];
-  let year = start.getFullYear();
-  let month = start.getMonth();
-
-  while (new Date(year, month, 1) <= end) {
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDow = new Date(year, month, 1).getDay();
-    const mondayOffset = firstDow === 0 ? 6 : firstDow - 1;
-
-    const weeks: (DaySlot | null)[][] = [];
-    let week: (DaySlot | null)[] = [];
-
-    for (let i = 0; i < mondayOffset; i++) week.push(null);
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(year, month, day);
-      const iso = toISODate(d);
-      const inRange = d >= start && d <= end;
-
-      week.push(inRange ? { date: iso, count: data[iso] ?? 0 } : null);
-
-      if (week.length === DAYS_PER_WEEK) {
-        weeks.push(week);
-        week = [];
-      }
+): DayRow[] {
+  const rows: DayRow[] = [];
+  for (let d = days - 1; d >= 0; d--) {
+    const date = new Date(endDate);
+    date.setDate(date.getDate() - d);
+    const dateStr = toISODate(date);
+    const hours: HourSlot[] = [];
+    for (let h = 0; h < HOURS; h++) {
+      const key = `${dateStr}:${String(h).padStart(2, "0")}`;
+      hours.push({ key, count: data[key] ?? 0 });
     }
-
-    if (week.length > 0) {
-      while (week.length < DAYS_PER_WEEK) week.push(null);
-      weeks.push(week);
-    }
-
-    while (weeks.length < ROWS) {
-      weeks.push(Array(DAYS_PER_WEEK).fill(null));
-    }
-
-    blocks.push({ key: `${year}-${month}`, weeks: weeks.slice(0, ROWS) });
-
-    month++;
-    if (month > 11) { month = 0; year++; }
+    rows.push({ date: dateStr, hours });
   }
-
-  return blocks;
+  return rows;
 }
 
-function formatTooltip(date: string, count: number): string {
+function formatTooltip(date: string, hour: number, count: number): string {
   const d = new Date(date + "T00:00:00");
   const label = d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
-  if (count === 0) return `No commits on ${label}`;
-  return `${count} commit${count === 1 ? "" : "s"} on ${label}`;
+  const hourLabel = `${String(hour).padStart(2, "0")}:00`;
+  if (count === 0) return `No commits – ${label}, ${hourLabel}`;
+  return `${count} commit${count === 1 ? "" : "s"} – ${label}, ${hourLabel}`;
+}
+
+function groupBy<T>(arr: T[], size: number): T[][] {
+  const groups: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    groups.push(arr.slice(i, i + size));
+  }
+  return groups;
 }
 
 interface CommitGridProps {
   data: Record<string, number>;
-  startDate?: Date;
+  days?: number;
   endDate?: Date;
   levels?: number[];
   className?: string;
@@ -105,69 +81,47 @@ interface CommitGridProps {
 
 export function CommitGrid({
   data,
-  startDate,
+  days = DEFAULT_DAYS,
   endDate,
   levels = DEFAULT_LEVELS,
   className,
 }: CommitGridProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [maxMonths, setMaxMonths] = useState<number | null>(null);
-
-  const measure = useCallback(() => {
-    if (containerRef.current) {
-      const width = containerRef.current.clientWidth;
-      setMaxMonths(Math.floor((width + MONTH_GAP) / (MONTH_BLOCK_WIDTH + MONTH_GAP)));
-    }
-  }, []);
-
-  useEffect(() => {
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
-  }, [measure]);
-
   const end = useMemo(() => endDate ?? new Date(), [endDate]);
-  const start = useMemo(() => {
-    if (startDate) return startDate;
-    const months = maxMonths ?? 12;
-    const d = new Date(end);
-    d.setMonth(d.getMonth() - months + 1);
-    d.setDate(1);
-    return d;
-  }, [startDate, end, maxMonths]);
 
-  const blocks = useMemo(
-    () => buildMonthBlocks(start, end, data),
-    [start, end, data],
+  const rows = useMemo(
+    () => buildGrid(end, days, data),
+    [end, days, data],
   );
 
+  const dayGroups = useMemo(() => groupBy(rows, DAYS_PER_GROUP), [rows]);
+
   return (
-    <div ref={containerRef} className={`${styles.root}${className ? ` ${className}` : ""}`}>
-      {maxMonths !== null && (
-        <div className={styles.grid}>
-          {blocks.map((block) => (
-            <div key={block.key} className={styles.monthBlock}>
-              {block.weeks.map((week, wi) => (
-                <div key={wi} className={styles.weekRow}>
-                  {week.map((slot, di) =>
-                    slot ? (
-                      <div
-                        key={slot.date}
-                        className={styles.cell}
-                        data-level={getLevel(slot.count, levels)}
-                        title={formatTooltip(slot.date, slot.count)}
-                      />
-                    ) : (
-                      <div key={`e-${wi}-${di}`} className={styles.placeholder} />
-                    ),
-                  )}
+    <div className={`${styles.root}${className ? ` ${className}` : ""}`}>
+      <div className={styles.grid}>
+        {dayGroups.map((group, gi) => (
+          <div key={gi} className={styles.dayGroup}>
+            {group.map((row) => {
+              const hourGroups = groupBy(row.hours, HOURS_PER_GROUP);
+              return (
+                <div key={row.date} className={styles.dayRow}>
+                  {hourGroups.map((hg, hgi) => (
+                    <div key={hgi} className={styles.hourGroup}>
+                      {hg.map((slot, hi) => (
+                        <div
+                          key={slot.key}
+                          className={styles.cell}
+                          data-level={getLevel(slot.count, levels)}
+                          title={formatTooltip(row.date, hgi * HOURS_PER_GROUP + hi, slot.count)}
+                        />
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

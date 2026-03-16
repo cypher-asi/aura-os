@@ -164,21 +164,27 @@ function buildMockCommitActivity(): Record<string, number> {
   const activity: Record<string, number> = {};
   const today = new Date();
 
-  for (let i = 0; i < 365; i++) {
+  for (let i = 0; i < 30; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = toISODate(d);
-    const rand = Math.random();
-    if (rand < 0.3) continue;
-    if (rand < 0.55) activity[key] = Math.ceil(Math.random() * 2);
-    else if (rand < 0.8) activity[key] = Math.ceil(Math.random() * 6) + 2;
-    else if (rand < 0.93) activity[key] = Math.ceil(Math.random() * 6) + 8;
-    else activity[key] = Math.ceil(Math.random() * 8) + 12;
+    const dateKey = toISODate(d);
+    for (let h = 0; h < 24; h++) {
+      const key = `${dateKey}:${String(h).padStart(2, "0")}`;
+      const rand = Math.random();
+      if (h < 6 || h > 22) { if (rand > 0.95) activity[key] = 1; continue; }
+      if (rand < 0.45) continue;
+      if (rand < 0.65) activity[key] = Math.ceil(Math.random() * 2);
+      else if (rand < 0.82) activity[key] = Math.ceil(Math.random() * 5) + 2;
+      else if (rand < 0.93) activity[key] = Math.ceil(Math.random() * 5) + 7;
+      else activity[key] = Math.ceil(Math.random() * 6) + 12;
+    }
   }
 
   for (const evt of MOCK_EVENTS) {
-    const key = evt.timestamp.slice(0, 10);
-    activity[key] = (activity[key] ?? 0) + evt.commits.length;
+    const ts = new Date(evt.timestamp);
+    const dateKey = evt.timestamp.slice(0, 10);
+    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
+    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
   }
 
   return activity;
@@ -191,8 +197,10 @@ function buildRepoActivityMap(): Map<string, Record<string, number>> {
   for (const evt of MOCK_EVENTS) {
     if (!map.has(evt.repo)) map.set(evt.repo, {});
     const repoActivity = map.get(evt.repo)!;
-    const key = evt.timestamp.slice(0, 10);
-    repoActivity[key] = (repoActivity[key] ?? 0) + evt.commits.length;
+    const ts = new Date(evt.timestamp);
+    const dateKey = evt.timestamp.slice(0, 10);
+    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
+    repoActivity[hourKey] = (repoActivity[hourKey] ?? 0) + evt.commits.length;
   }
   return map;
 }

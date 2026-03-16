@@ -1,6 +1,4 @@
 .root {
-  width: 100%;
-
   --commit-0: rgba(255, 255, 255, 0.08);
   --commit-1: #0d4a3a;
   --commit-2: #1a7a5a;
@@ -10,18 +8,22 @@
 
 .grid {
   display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-items: flex-start;
 }
 
-.monthBlock {
+.dayGroup {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  flex-shrink: 0;
 }
 
-.weekRow {
+.dayRow {
+  display: flex;
+  gap: 10px;
+}
+
+.hourGroup {
   display: flex;
   gap: 3px;
 }
@@ -51,11 +53,4 @@
 
 .cell[data-level="4"] {
   background: var(--commit-4);
-}
-
-.placeholder {
-  width: 7px;
-  height: 7px;
-  border-radius: 1px;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.15) 1.2px, #000 1.2px);
 }
