@@ -13,8 +13,14 @@ function formatJoinedDate(iso: string): string {
   });
 }
 
+function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
 function ProfileCard() {
-  const { profile, events, projects } = useProfile();
+  const { profile, events, projects, totalTokenUsage } = useProfile();
 
   const totalCommits = events.reduce((sum, e) => sum + e.commits.length, 0);
 
@@ -29,7 +35,7 @@ function ProfileCard() {
       stats={[
         { value: projects.length, label: "Projects" },
         { value: totalCommits, label: "Commits" },
-        { value: events.length, label: "Pushes" },
+        { value: formatTokenCount(totalTokenUsage), label: "Tokens" },
       ]}
       footer="CYPHER-ASI // AURA"
     >

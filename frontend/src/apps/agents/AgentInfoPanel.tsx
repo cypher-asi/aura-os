@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
-import { Bot, Loader2 } from "lucide-react";
+import { Bot, Loader2, Calendar } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { SidekickActions } from "../../components/SidekickActions";
 import { AgentEditorModal } from "../../components/AgentEditorModal";
@@ -75,9 +75,13 @@ export function AgentInfoPanel() {
           </div>
         )}
 
-        <div className={styles.section}>
-          <Text size="xs" variant="muted" weight="medium">Created</Text>
-          <Text size="sm">{new Date(a.created_at).toLocaleDateString()}</Text>
+        <div className={styles.metaGrid}>
+          <div className={styles.metaRow}>
+            <Calendar size={13} className={styles.metaIcon} />
+            <span className={styles.metaValue}>
+              Birthed {new Date(a.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </span>
+          </div>
         </div>
 
         {a.skills.length > 0 && (

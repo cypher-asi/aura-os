@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Coins } from "lucide-react";
+
 import { useOrg } from "../context/OrgContext";
 import { useEventContext } from "../context/EventContext";
 import { api } from "../api/client";
@@ -73,8 +73,7 @@ export function CreditsBadge({ onClick }: Props) {
   const displayCredits = credits !== null ? formatCredits(credits) : "---";
   return (
     <div className={styles.creditsBadge} onClick={onClick} role="button" tabIndex={0}>
-      <span className={styles.label}>{displayCredits}</span>
-      <Coins size={14} className={styles.icon} />
+      <span className={styles.label}>{displayCredits} Z</span>
     </div>
   );
 }

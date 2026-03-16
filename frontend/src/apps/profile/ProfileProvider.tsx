@@ -24,6 +24,7 @@ interface ProfileContextValue {
   events: FeedEvent[];
   filteredEvents: FeedEvent[];
   commitActivity: Record<string, number>;
+  totalTokenUsage: number;
   selectedProject: string | null;
   setSelectedProject: (id: string | null) => void;
   selectedEventId: string | null;
@@ -37,10 +38,11 @@ const ProfileCtx = createContext<ProfileContextValue | null>(null);
 const MOCK_PROFILE: UserProfileData = {
   name: "real-n3o",
   handle: "@real-n3o",
-  bio: "Building autonomous coding agents. Systems engineer. Open-source contributor.",
-  website: "https://cypher-asi.dev",
-  location: "Los Angeles, CA",
-  joinedDate: "2024-11-15T00:00:00Z",
+  bio: "Building autonomous swarms of agentic intelligence. Sovereign. Private. Decentralized.",
+  website: "https://cypher.net",
+  location: "San Francisco, CA",
+  joinedDate: "2026-03-01T00:00:00Z",
+  avatarUrl: "/avatar-n3o.png",
 };
 
 const MOCK_PROJECTS: ProfileProject[] = [
@@ -207,6 +209,8 @@ function buildRepoActivityMap(): Map<string, Record<string, number>> {
 
 const REPO_ACTIVITY_MAP = buildRepoActivityMap();
 
+const MOCK_TOTAL_TOKEN_USAGE = 3_996_254;
+
 const CURRENT_USER = "real-n3o";
 
 let nextCommentId = MOCK_COMMENTS.length + 1;
@@ -268,6 +272,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       events,
       filteredEvents,
       commitActivity,
+      totalTokenUsage: MOCK_TOTAL_TOKEN_USAGE,
       selectedProject,
       setSelectedProject,
       selectedEventId,
