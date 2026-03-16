@@ -39,6 +39,7 @@ interface EventContextValue {
   events: EngineEvent[];
   latestEvent: EngineEvent | null;
   lastEventAt: number | null;
+  getLastEventAt: () => number | null;
   subscribe: (type: EngineEventType, callback: EventCallback) => () => void;
   getTaskOutput: (taskId: string) => TaskOutputEntry;
   subscribeTaskOutput: (taskId: string, listener: TaskOutputListener) => () => void;
@@ -197,6 +198,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const getLastEventAt = useCallback(() => lastEventAtRef.current, []);
+
   const seedTaskOutput = useCallback(
     (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => {
       if (!text && (!buildSteps || buildSteps.length === 0) && (!testSteps || testSteps.length === 0)) return;
@@ -222,6 +225,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         events: stream.events,
         latestEvent: stream.latestEvent,
         lastEventAt: lastEventAtRef.current,
+        getLastEventAt,
         subscribe,
         getTaskOutput,
         subscribeTaskOutput,

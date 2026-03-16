@@ -1,5 +1,5 @@
 .avatar {
-  border-radius: var(--radius-full, 9999px);
+  border-radius: 50%;
   background: var(--color-bg-hover);
   display: flex;
   align-items: center;

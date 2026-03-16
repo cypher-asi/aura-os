@@ -4,20 +4,21 @@ import { useEventContext } from "../context/EventContext";
 import styles from "./ConnectionDot.module.css";
 
 export function ConnectionDot() {
-  const { connected, lastEventAt } = useEventContext();
+  const { connected, getLastEventAt } = useEventContext();
   const [stale, setStale] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
+    if (!connected) {
+      setStale(false);
+      return;
+    }
     intervalRef.current = setInterval(() => {
-      if (connected && lastEventAt) {
-        setStale(Date.now() - lastEventAt > 10_000);
-      } else {
-        setStale(false);
-      }
+      const ts = getLastEventAt();
+      setStale(ts !== null && Date.now() - ts > 10_000);
     }, 2_000);
     return () => clearInterval(intervalRef.current);
-  }, [connected, lastEventAt]);
+  }, [connected, getLastEventAt]);
 
   if (!connected) {
     return (
