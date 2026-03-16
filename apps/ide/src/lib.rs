@@ -46,6 +46,7 @@ pub fn open_ide_window<E: 'static>(
     info!(%url, "opening IDE window");
 
     let webview = WebViewBuilder::new()
+        .with_background_color((0, 0, 0, 255))
         .with_url(&url)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {

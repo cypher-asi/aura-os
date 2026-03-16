@@ -442,6 +442,7 @@ fn main() {
 
     let _main_webview = {
         let builder = WebViewBuilder::new_with_web_context(&mut web_context)
+            .with_background_color((0, 0, 0, 255))
             .with_url(&url)
             .with_ipc_handler(ipc_handler(proxy.clone(), main_window_id))
             .with_new_window_req_handler(|uri, _features| {
