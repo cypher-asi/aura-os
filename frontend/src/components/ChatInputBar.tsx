@@ -189,12 +189,16 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
     [addFiles],
   );
 
-  const autoResizeTextarea = () => {
+  const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
-  };
+  }, []);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [input, autoResizeTextarea]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -248,10 +252,7 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
           ref={textareaRef}
           className={styles.textarea}
           value={input}
-          onChange={(e) => {
-            onInputChange(e.target.value);
-            autoResizeTextarea();
-          }}
+          onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Message ${agentName ?? "AURA"}...`}
           rows={1}
