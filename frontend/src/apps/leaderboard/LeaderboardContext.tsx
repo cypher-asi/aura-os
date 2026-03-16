@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { TimePeriod, LeaderboardFilter } from "./mockData";
 
@@ -7,6 +7,8 @@ interface LeaderboardContextValue {
   setPeriod: (p: TimePeriod) => void;
   filter: LeaderboardFilter;
   setFilter: (f: LeaderboardFilter) => void;
+  selectedUserId: string | null;
+  selectUser: (id: string | null) => void;
 }
 
 const LeaderboardCtx = createContext<LeaderboardContextValue | null>(null);
@@ -14,8 +16,14 @@ const LeaderboardCtx = createContext<LeaderboardContextValue | null>(null);
 export function LeaderboardProvider({ children }: { children: ReactNode }) {
   const [period, setPeriod] = useState<TimePeriod>("all");
   const [filter, setFilter] = useState<LeaderboardFilter>("everything");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const value = useMemo(() => ({ period, setPeriod, filter, setFilter }), [period, filter]);
+  const selectUser = useCallback((id: string | null) => setSelectedUserId(id), []);
+
+  const value = useMemo(
+    () => ({ period, setPeriod, filter, setFilter, selectedUserId, selectUser }),
+    [period, filter, selectedUserId, selectUser],
+  );
 
   return (
     <LeaderboardCtx.Provider value={value}>{children}</LeaderboardCtx.Provider>
@@ -27,4 +35,9 @@ export function useLeaderboard() {
   if (!ctx)
     throw new Error("useLeaderboard must be used within LeaderboardProvider");
   return ctx;
+}
+
+export function useLeaderboardSidekickCollapsed() {
+  const { selectedUserId } = useLeaderboard();
+  return !selectedUserId;
 }
