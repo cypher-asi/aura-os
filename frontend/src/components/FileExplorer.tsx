@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { api, type DirEntry } from "../api/client";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Folder, File, FolderOpen } from "lucide-react";
 
@@ -78,13 +78,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
     [filteredData, onFileSelect],
   );
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
-        <Spinner size="md" />
-      </div>
-    );
-  }
+  if (loading) return null;
 
   if (error) {
     return (
