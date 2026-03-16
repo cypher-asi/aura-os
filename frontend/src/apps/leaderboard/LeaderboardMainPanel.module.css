@@ -14,50 +14,49 @@
   flex-shrink: 0;
 }
 
-.tableWrap {
+.legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chartWrap {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-2) var(--space-5);
 }
 
-.table {
+.chartInner {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.table thead {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.table th {
-  text-align: left;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-bg);
-}
-
-.thRank {
-  width: 52px;
-  text-align: center !important;
-}
-
-.thName {
-  width: auto;
-}
-
-.thStat {
-  width: 100px;
-  text-align: right !important;
+  margin-left: max(0px, calc(50vw - 240px - var(--left-panel-width, 248px) - 1px - var(--space-5)));
+  margin-right: auto;
 }
 
 .row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-1);
+  border-radius: 4px;
   transition: background 100ms ease;
 }
 
@@ -65,35 +64,46 @@
   background: var(--color-bg-hover);
 }
 
-.row td {
-  padding: var(--space-2) var(--space-3);
-  font-size: 13px;
-}
-
-.cellRank {
-  width: 52px;
-  text-align: center;
+.rankCell {
+  flex-shrink: 0;
+  width: 28px;
+  display: flex;
+  justify-content: center;
 }
 
 .rankBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-size: var(--text-xs);
+  font-size: 11px;
   font-weight: 600;
-  background: var(--color-bg-hover);
-  color: var(--color-text-muted);
-}
-
-.cellName {
-  font-weight: 500;
-}
-
-.cellStat {
-  text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
+}
+
+.nameCell {
+  flex-shrink: 0;
+  width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barsCell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  height: 4px;
+  cursor: default;
+}
+
+.bar {
+  height: 100%;
+  border-radius: 2px;
+  min-width: 2px;
+  transition: width 300ms ease;
 }
