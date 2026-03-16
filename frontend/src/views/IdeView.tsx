@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ButtonWindow, Spinner, Text } from "@cypher-asi/zui";
+import { ButtonWindow, Spinner, Text, Topbar } from "@cypher-asi/zui";
 import { Save, X } from "lucide-react";
 import hljs from "highlight.js/lib/common";
 import { api } from "../api/client";
@@ -227,19 +227,19 @@ export function IdeView() {
   return (
     <div className={styles.root}>
       {/* ---- Titlebar ---- */}
-      <div
-        className={styles.titlebar}
+      <Topbar
+        className="titlebar-drag"
         onDoubleClick={() => windowCommand("maximize")}
-      >
-        <div className={styles.titlebarTitle}>
-          {activeTab ? `${filenameFromPath(activeTab.path)} \u2014 AURA IDE` : "AURA IDE"}
-        </div>
-        <div className={styles.titlebarActions}>
-          <ButtonWindow action="minimize" size="sm" onClick={() => windowCommand("minimize")} />
-          <ButtonWindow action="maximize" size="sm" onClick={() => windowCommand("maximize")} />
-          <ButtonWindow action="close" size="sm" onClick={() => windowCommand("close")} />
-        </div>
-      </div>
+        icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
+        title={<span className="titlebar-center">AURA IDE</span>}
+        actions={
+          <div className="titlebar-no-drag" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <ButtonWindow action="minimize" size="sm" onClick={() => windowCommand("minimize")} />
+            <ButtonWindow action="maximize" size="sm" onClick={() => windowCommand("maximize")} />
+            <ButtonWindow action="close" size="sm" onClick={() => windowCommand("close")} />
+          </div>
+        }
+      />
 
       {/* ---- Body ---- */}
       <div className={styles.body}>
