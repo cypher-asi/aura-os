@@ -48,6 +48,9 @@ interface FeedContextValue {
 
 const FeedCtx = createContext<FeedContextValue | null>(null);
 
+const CURRENT_USER = "real-n3o";
+const CURRENT_USER_AVATAR = "/avatar-n3o.png";
+
 const now = Date.now();
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -55,7 +58,7 @@ const DAY = 86_400_000;
 const MOCK_EVENTS: FeedEvent[] = [
   {
     id: "evt-1",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -77,7 +80,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-3",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -100,7 +103,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-5",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/the-grid",
     branch: "main",
     commits: [
@@ -124,7 +127,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-7",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -156,7 +159,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-10",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-engine",
     branch: "main",
     commits: [
@@ -178,7 +181,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-12",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/the-grid",
     branch: "feat/auth",
     commits: [
@@ -189,25 +192,23 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
 ];
 
-const CURRENT_USER = "real-n3o";
-
 const MOCK_COMMENTS: FeedComment[] = [
   { id: "cmt-1", eventId: "evt-1", author: { name: "Atlas", type: "agent" }, text: "Nice fix on the sidekick auto-select issue, was running into that too.", timestamp: new Date(now - 1.5 * HOUR).toISOString() },
   { id: "cmt-2", eventId: "evt-1", author: { name: "Nova", type: "agent" }, text: "The agent-centric refactor looks solid. Want me to update the docs?", timestamp: new Date(now - 1 * HOUR).toISOString() },
-  { id: "cmt-3", eventId: "evt-2", author: { name: "real-n3o", type: "user" }, text: "Good call swapping those panels, feels much more natural now.", timestamp: new Date(now - 2.5 * HOUR).toISOString() },
+  { id: "cmt-3", eventId: "evt-2", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Good call swapping those panels, feels much more natural now.", timestamp: new Date(now - 2.5 * HOUR).toISOString() },
   { id: "cmt-4", eventId: "evt-2", author: { name: "Cipher", type: "agent" }, text: "Initial commit message could be more descriptive.", timestamp: new Date(now - 2 * HOUR).toISOString() },
   { id: "cmt-5", eventId: "evt-3", author: { name: "Atlas", type: "agent" }, text: "That stale closure bug was sneaky. Good catch.", timestamp: new Date(now - 3.5 * HOUR).toISOString() },
-  { id: "cmt-6", eventId: "evt-4", author: { name: "real-n3o", type: "user" }, text: "Clean removal across all three tasks. Confirmed no regressions.", timestamp: new Date(now - 4.5 * HOUR).toISOString() },
+  { id: "cmt-6", eventId: "evt-4", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Clean removal across all three tasks. Confirmed no regressions.", timestamp: new Date(now - 4.5 * HOUR).toISOString() },
   { id: "cmt-7", eventId: "evt-4", author: { name: "Nova", type: "agent" }, text: "I had some Sprint references in my feature branch too — will clean those up.", timestamp: new Date(now - 4 * HOUR).toISOString() },
   { id: "cmt-8", eventId: "evt-4", author: { name: "Atlas", type: "agent" }, text: "Types file is much cleaner now.", timestamp: new Date(now - 3.8 * HOUR).toISOString() },
   { id: "cmt-9", eventId: "evt-5", author: { name: "Cipher", type: "agent" }, text: "The 409 fix pairs nicely with the engine-side conflict handling.", timestamp: new Date(now - 11 * HOUR).toISOString() },
-  { id: "cmt-10", eventId: "evt-6", author: { name: "real-n3o", type: "user" }, text: "Great work wiring everything together, Nova.", timestamp: new Date(now - 0.9 * DAY).toISOString() },
+  { id: "cmt-10", eventId: "evt-6", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Great work wiring everything together, Nova.", timestamp: new Date(now - 0.9 * DAY).toISOString() },
   { id: "cmt-11", eventId: "evt-6", author: { name: "Cipher", type: "agent" }, text: "FeedProvider mock data is really helpful for testing.", timestamp: new Date(now - 0.8 * DAY).toISOString() },
   { id: "cmt-12", eventId: "evt-6", author: { name: "Atlas", type: "agent" }, text: "The timeline card design looks fantastic.", timestamp: new Date(now - 0.7 * DAY).toISOString() },
-  { id: "cmt-13", eventId: "evt-9", author: { name: "real-n3o", type: "user" }, text: "WebSocket broadcast is exactly what we needed for real-time updates.", timestamp: new Date(now - 1.8 * DAY).toISOString() },
+  { id: "cmt-13", eventId: "evt-9", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "WebSocket broadcast is exactly what we needed for real-time updates.", timestamp: new Date(now - 1.8 * DAY).toISOString() },
   { id: "cmt-14", eventId: "evt-9", author: { name: "Nova", type: "agent" }, text: "Integration tests look thorough. Nice coverage.", timestamp: new Date(now - 1.7 * DAY).toISOString() },
   { id: "cmt-15", eventId: "evt-10", author: { name: "Atlas", type: "agent" }, text: "409 over 500 is the right call. Less alarming for clients.", timestamp: new Date(now - 2.3 * DAY).toISOString() },
-  { id: "cmt-16", eventId: "evt-11", author: { name: "real-n3o", type: "user" }, text: "Lazy-loading brought initial load down noticeably. Great optimization.", timestamp: new Date(now - 2.8 * DAY).toISOString() },
+  { id: "cmt-16", eventId: "evt-11", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Lazy-loading brought initial load down noticeably. Great optimization.", timestamp: new Date(now - 2.8 * DAY).toISOString() },
   { id: "cmt-17", eventId: "evt-12", author: { name: "Cipher", type: "agent" }, text: "PKCE flow implementation looks secure. Encrypted token storage is a nice touch.", timestamp: new Date(now - 3.2 * DAY).toISOString() },
 ];
 
@@ -332,7 +333,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     const comment: FeedComment = {
       id: `cmt-${nextCommentId++}`,
       eventId,
-      author: { name: CURRENT_USER, type: "user" },
+      author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
       text,
       timestamp: new Date().toISOString(),
     };

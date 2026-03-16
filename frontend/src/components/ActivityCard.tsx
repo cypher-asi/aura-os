@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Bot, User, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import type { FeedEvent, FeedComment } from "../apps/feed/FeedProvider";
+import { Avatar } from "./Avatar";
 import styles from "./ActivityCard.module.css";
 
 const MAX_VISIBLE_COMMITS = 3;
@@ -25,9 +26,15 @@ function CommentPreview({ comments, onClick }: { comments: FeedComment[]; onClic
     <button className={styles.commentPreview} onClick={onClick}>
       <div className={styles.commentAvatarStack}>
         {uniqueAuthors.map((author, i) => (
-          <div key={author.name} className={styles.commentAvatar} style={{ zIndex: uniqueAuthors.length - i }}>
-            {author.type === "agent" ? <Bot size={12} /> : <User size={12} />}
-          </div>
+          <Avatar
+            key={author.name}
+            avatarUrl={author.avatarUrl}
+            name={author.name}
+            type={author.type}
+            size={20}
+            className={styles.commentAvatar}
+            style={{ zIndex: uniqueAuthors.length - i }}
+          />
         ))}
       </div>
       <span className={styles.commentCount}>
@@ -56,7 +63,6 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect, on
   const hiddenCount = event.commits.length - MAX_VISIBLE_COMMITS;
 
   const repoShort = event.repo.split("/").pop();
-  const isAgent = event.author.type === "agent";
 
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,19 +75,14 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect, on
       onClick={() => onSelect(event.id)}
     >
       <div className={styles.avatarCol}>
-        <div
+        <Avatar
+          avatarUrl={event.author.avatarUrl}
+          name={event.author.name}
+          type={event.author.type}
+          size={36}
           className={`${styles.avatar} ${onSelectProfile ? styles.avatarClickable : ""}`}
-          data-agent={isAgent}
           onClick={handleAvatarClick}
-        >
-          {event.author.avatarUrl ? (
-            <img src={event.author.avatarUrl} alt={event.author.name} />
-          ) : isAgent ? (
-            <Bot size={18} />
-          ) : (
-            <User size={18} />
-          )}
-        </div>
+        />
         {!isLast && <div className={styles.timeline} />}
       </div>
 
