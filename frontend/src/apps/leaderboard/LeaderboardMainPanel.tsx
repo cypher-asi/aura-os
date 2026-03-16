@@ -44,20 +44,9 @@ export function LeaderboardMainPanel() {
             <tbody>
               {users.map((user, i) => {
                 const rank = i + 1;
-                const rankClass =
-                  rank === 1
-                    ? styles.gold
-                    : rank === 2
-                      ? styles.silver
-                      : rank === 3
-                        ? styles.bronze
-                        : "";
 
                 return (
-                  <tr
-                    key={user.id}
-                    className={`${styles.row} ${rankClass}`}
-                  >
+                  <tr key={user.id} className={styles.row}>
                     <td className={styles.cellRank}>
                       <span className={styles.rankBadge}>{rank}</span>
                     </td>

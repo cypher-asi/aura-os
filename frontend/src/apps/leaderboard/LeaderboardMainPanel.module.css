@@ -45,6 +45,7 @@
 
 .thRank {
   width: 52px;
+  text-align: center !important;
 }
 
 .thName {
@@ -71,6 +72,7 @@
 
 .cellRank {
   width: 52px;
+  text-align: center;
 }
 
 .rankBadge {
@@ -94,20 +96,4 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
-}
-
-/* Top-3 medal accents */
-.gold .rankBadge {
-  background: rgba(255, 215, 0, 0.15);
-  color: #ffd700;
-}
-
-.silver .rankBadge {
-  background: rgba(192, 192, 192, 0.15);
-  color: #c0c0c0;
-}
-
-.bronze .rankBadge {
-  background: rgba(205, 127, 50, 0.15);
-  color: #cd7f32;
 }
