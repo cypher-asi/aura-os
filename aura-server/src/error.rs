@@ -56,6 +56,17 @@ impl ApiError {
         )
     }
 
+    pub fn payment_required(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::PAYMENT_REQUIRED,
+            Json(Self {
+                error: msg.into(),
+                code: "insufficient_credits".to_string(),
+                details: None,
+            }),
+        )
+    }
+
     pub fn conflict(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::CONFLICT,
