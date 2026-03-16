@@ -29,6 +29,7 @@ import type {
   CreditTier,
   CreditBalance,
   CheckoutSessionResponse,
+  DailyCommitActivity,
 } from "../types";
 import {
   generateSprintStream,
@@ -445,4 +446,22 @@ export const api = {
   },
   getLoopStatus: (projectId: ProjectId) =>
     apiFetch<LoopStatusResponse>(`/api/projects/${projectId}/loop/status`),
+
+  // Activity
+  activity: {
+    getCommitHistory: (params: {
+      user_ids?: string[];
+      agent_ids?: string[];
+      start_date?: string;
+      end_date?: string;
+    }) => {
+      const qp = new URLSearchParams();
+      if (params.user_ids?.length) qp.set("user_ids", params.user_ids.join(","));
+      if (params.agent_ids?.length) qp.set("agent_ids", params.agent_ids.join(","));
+      if (params.start_date) qp.set("start_date", params.start_date);
+      if (params.end_date) qp.set("end_date", params.end_date);
+      const qs = qp.toString();
+      return apiFetch<DailyCommitActivity[]>(`/api/activity/commits${qs ? `?${qs}` : ""}`);
+    },
+  },
 };
