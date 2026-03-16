@@ -92,7 +92,14 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     }));
     throw new ApiClientError(res.status, err);
   }
-  if (res.status === 204) return undefined as T;
+  const contentLength = res.headers.get("content-length");
+  if (
+    res.status === 204 ||
+    contentLength === "0" ||
+    (contentLength === null && res.status === 202)
+  ) {
+    return undefined as T;
+  }
   return res.json();
 }
 
