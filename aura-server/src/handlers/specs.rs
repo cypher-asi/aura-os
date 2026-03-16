@@ -30,6 +30,7 @@ pub async fn generate_specs_summary(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<aura_core::Project>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, "Specs summary regeneration requested");
     state
         .spec_gen_service
@@ -63,6 +64,7 @@ pub async fn generate_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, "Spec generation requested");
 
     let _ = state.event_tx.send(EngineEvent::SpecGenStarted {
@@ -122,7 +124,8 @@ pub async fn generate_specs(
 pub async fn generate_specs_stream(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
-) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, "Streaming spec generation requested");
 
     let _ = state.event_tx.send(EngineEvent::SpecGenStarted { project_id });
@@ -217,5 +220,5 @@ pub async fn generate_specs_stream(
         Ok(sse_event)
     });
 
-    Sse::new(stream)
+    Ok(Sse::new(stream))
 }
