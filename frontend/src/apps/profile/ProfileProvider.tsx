@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import type { FeedEvent, FeedCommit, FeedComment } from "../feed/FeedProvider";
+import type { FeedEvent, FeedComment } from "../feed/FeedProvider";
 
 export interface UserProfileData {
   name: string;

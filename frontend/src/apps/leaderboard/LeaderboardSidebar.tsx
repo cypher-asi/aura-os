@@ -1,33 +1,34 @@
 import { useMemo, useCallback } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Calendar, CalendarDays, Clock } from "lucide-react";
+import { Bot, Building2, UserCheck, Globe } from "lucide-react";
 import { useLeaderboard } from "./LeaderboardContext";
-import type { TimePeriod } from "./mockData";
+import type { LeaderboardFilter } from "./mockData";
 import styles from "./LeaderboardSidebar.module.css";
 
-const periods: { id: TimePeriod; label: string; icon: React.ReactNode }[] = [
-  { id: "all", label: "All Time", icon: <Calendar size={14} /> },
-  { id: "month", label: "This Month", icon: <CalendarDays size={14} /> },
-  { id: "week", label: "This Week", icon: <Clock size={14} /> },
+const filters: { id: LeaderboardFilter; label: string; icon: React.ReactNode }[] = [
+  { id: "my-agents", label: "My Agents", icon: <Bot size={14} /> },
+  { id: "organization", label: "Organization", icon: <Building2 size={14} /> },
+  { id: "following", label: "Following", icon: <UserCheck size={14} /> },
+  { id: "everything", label: "Everything", icon: <Globe size={14} /> },
 ];
 
 export function LeaderboardSidebar() {
-  const { period, setPeriod } = useLeaderboard();
+  const { filter, setFilter } = useLeaderboard();
 
   const data: ExplorerNode[] = useMemo(
-    () => periods.map((p) => ({ id: p.id, label: p.label, icon: p.icon })),
+    () => filters.map((f) => ({ id: f.id, label: f.label, icon: f.icon })),
     [],
   );
 
-  const defaultSelectedIds = useMemo(() => [period], [period]);
+  const defaultSelectedIds = useMemo(() => [filter], [filter]);
 
   const handleSelect = useCallback(
     (ids: string[]) => {
-      const id = ids[ids.length - 1] as TimePeriod | undefined;
-      if (id) setPeriod(id);
+      const id = ids[ids.length - 1] as LeaderboardFilter | undefined;
+      if (id) setFilter(id);
     },
-    [setPeriod],
+    [setFilter],
   );
 
   return (

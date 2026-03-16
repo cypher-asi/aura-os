@@ -14,8 +14,8 @@ const periodLabels: Record<string, string> = {
 };
 
 export function LeaderboardMainPanel() {
-  const { period } = useLeaderboard();
-  const users = useMemo(() => getLeaderboard(period), [period]);
+  const { period, filter } = useLeaderboard();
+  const users = useMemo(() => getLeaderboard(period, filter), [period, filter]);
 
   return (
     <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
