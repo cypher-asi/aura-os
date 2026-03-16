@@ -28,6 +28,7 @@ export type FeedFilter = "my-agents" | "organization" | "following" | "everythin
 interface FeedContextValue {
   events: FeedEvent[];
   filteredEvents: FeedEvent[];
+  commitActivity: Record<string, number>;
   filter: FeedFilter;
   setFilter: (filter: FeedFilter) => void;
   selectedEventId: string | null;
@@ -214,6 +215,56 @@ function applyFilter(events: FeedEvent[], filter: FeedFilter): FeedEvent[] {
   }
 }
 
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function buildMockCommitActivity(): Record<string, number> {
+  const activity: Record<string, number> = {};
+  const today = new Date();
+
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateKey = toISODate(d);
+    for (let h = 0; h < 24; h++) {
+      const key = `${dateKey}:${String(h).padStart(2, "0")}`;
+      const rand = Math.random();
+      if (h < 6 || h > 22) { if (rand > 0.95) activity[key] = 1; continue; }
+      if (rand < 0.45) continue;
+      if (rand < 0.65) activity[key] = Math.ceil(Math.random() * 2);
+      else if (rand < 0.82) activity[key] = Math.ceil(Math.random() * 5) + 2;
+      else if (rand < 0.93) activity[key] = Math.ceil(Math.random() * 5) + 7;
+      else activity[key] = Math.ceil(Math.random() * 6) + 12;
+    }
+  }
+
+  for (const evt of MOCK_EVENTS) {
+    const ts = new Date(evt.timestamp);
+    const dateKey = evt.timestamp.slice(0, 10);
+    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
+    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
+  }
+
+  return activity;
+}
+
+const MOCK_COMMIT_ACTIVITY = buildMockCommitActivity();
+
+function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
+  const activity: Record<string, number> = {};
+  for (const evt of events) {
+    const ts = new Date(evt.timestamp);
+    const dateKey = evt.timestamp.slice(0, 10);
+    const hourKey = `${dateKey}:${String(ts.getHours()).padStart(2, "0")}`;
+    activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
+  }
+  return activity;
+}
+
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function FeedProvider({ children }: { children: ReactNode }) {
@@ -227,6 +278,11 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const filteredEvents = useMemo(() => applyFilter(events, filter), [events, filter]);
+
+  const commitActivity = useMemo(() => {
+    if (filter === "everything" || filter === "organization") return MOCK_COMMIT_ACTIVITY;
+    return commitActivityFromEvents(filteredEvents);
+  }, [filter, filteredEvents]);
 
   const selectEvent = useCallback((id: string | null) => setSelectedEventId(id), []);
   const setFilter = useCallback((f: FeedFilter) => setFilterRaw(f), []);
@@ -251,8 +307,8 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ events, filteredEvents, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment }),
-    [events, filteredEvents, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment],
+    () => ({ events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment }),
+    [events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment],
   );
 
   return <FeedCtx.Provider value={value}>{children}</FeedCtx.Provider>;
