@@ -11,9 +11,8 @@ import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { FileText } from "lucide-react";
-import { PanelSearch } from "../components/PanelSearch";
 
-export function SpecList({ searchQuery: externalQuery }: { searchQuery?: string }) {
+export function SpecList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
@@ -132,11 +131,9 @@ export function SpecList({ searchQuery: externalQuery }: { searchQuery?: string 
     }
   };
 
-  const [localQuery, setLocalQuery] = useState("");
-  const activeQuery = externalQuery ?? localQuery;
   const filteredData = useMemo(
-    () => filterExplorerNodes(explorerData, activeQuery),
-    [explorerData, activeQuery],
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
   );
 
   const isEmpty = mergedSpecs.length === 0;
@@ -155,13 +152,6 @@ export function SpecList({ searchQuery: externalQuery }: { searchQuery?: string 
 
   return (
     <>
-      {externalQuery === undefined && (
-        <PanelSearch
-          placeholder="Search specs..."
-          value={localQuery}
-          onChange={setLocalQuery}
-        />
-      )}
       <Explorer
         data={filteredData}
         expandOnSelect

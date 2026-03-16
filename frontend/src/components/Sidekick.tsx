@@ -1,7 +1,8 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, Menu } from "@cypher-asi/zui";
 import { Archive, Info, ArrowLeft, Ellipsis, FileText, Check, ScrollText, BarChart3, MonitorCog } from "lucide-react";
+import { PanelSearch } from "./PanelSearch";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -139,9 +140,21 @@ export function SidekickTaskbar() {
   );
 }
 
+const SEARCH_PLACEHOLDERS: Record<string, string> = {
+  specs: "Search specs...",
+  tasks: "Search tasks...",
+  log: "Search logs...",
+  sessions: "Search sessions...",
+};
+
 export function SidekickContent() {
   const { activeTab, showInfo, toggleInfo } = useSidekick();
   const ctx = useProjectContext();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setSearchQuery("");
+  }, [activeTab]);
 
   if (!ctx) {
     return (
@@ -157,15 +170,24 @@ export function SidekickContent() {
     return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
   }
 
+  const searchable = activeTab !== "progress";
+
   const tabContent: Record<string, React.ReactNode> = {
-    specs: <SpecList />,
-    tasks: <TaskList />,
+    specs: <SpecList searchQuery={searchQuery} />,
+    tasks: <TaskList searchQuery={searchQuery} />,
     progress: <ProgressDashboard />,
-    sessions: <SessionList />,
+    sessions: <SessionList searchQuery={searchQuery} />,
   };
 
   return (
     <div className={styles.sidekickBody}>
+      {searchable && (
+        <PanelSearch
+          placeholder={SEARCH_PLACEHOLDERS[activeTab] ?? "Search..."}
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+      )}
       <div className={styles.sidekickContent}>
         {activeTab !== "log" && (
           <div className={styles.tabContent}>
@@ -173,7 +195,7 @@ export function SidekickContent() {
           </div>
         )}
         <div className={styles.tabContent} style={activeTab === "log" ? undefined : { display: "none" }}>
-          <SidekickLog />
+          <SidekickLog searchQuery={searchQuery} />
         </div>
       </div>
     </div>

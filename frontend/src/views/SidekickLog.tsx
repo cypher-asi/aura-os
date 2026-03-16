@@ -203,7 +203,7 @@ function LogRow({
   );
 }
 
-export function SidekickLog({ searchQuery }: { searchQuery?: string }) {
+export function SidekickLog({ searchQuery }: { searchQuery: string }) {
   const { entries, contentRef, handleScroll } = useLogStream();
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(

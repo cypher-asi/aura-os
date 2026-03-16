@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "../api/client";
 import type { Spec, Task, TaskStatus, AgentInstance } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
-import { PanelSearch } from "../components/PanelSearch";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
@@ -14,7 +13,7 @@ import styles from "./aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { ListTodo } from "lucide-react";
 
-export function TaskList({ searchQuery: externalQuery }: { searchQuery?: string }) {
+export function TaskList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
@@ -213,11 +212,9 @@ export function TaskList({ searchQuery: externalQuery }: { searchQuery?: string 
     [previewTaskId],
   );
 
-  const [localQuery, setLocalQuery] = useState("");
-  const activeQuery = externalQuery ?? localQuery;
   const filteredData = useMemo(
-    () => filterExplorerNodes(explorerData, activeQuery),
-    [explorerData, activeQuery],
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
   );
 
   const isEmpty = tasks.length === 0;
@@ -236,13 +233,6 @@ export function TaskList({ searchQuery: externalQuery }: { searchQuery?: string 
 
   return (
     <>
-      {externalQuery === undefined && (
-        <PanelSearch
-          placeholder="Search tasks..."
-          value={localQuery}
-          onChange={setLocalQuery}
-        />
-      )}
       <Explorer
         data={filteredData}
         className={styles.taskExplorer}

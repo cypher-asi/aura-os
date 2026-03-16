@@ -8,7 +8,6 @@ import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { MonitorCog } from "lucide-react";
-import { PanelSearch } from "../components/PanelSearch";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatCostFromTokens } from "../utils/pricing";
 import styles from "./SessionList.module.css";
@@ -25,7 +24,7 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
   return `${hr}h ${min % 60}m`;
 }
 
-export function SessionList({ searchQuery: externalQuery }: { searchQuery?: string }) {
+export function SessionList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -89,11 +88,9 @@ export function SessionList({ searchQuery: externalQuery }: { searchQuery?: stri
     }
   };
 
-  const [localQuery, setLocalQuery] = useState("");
-  const activeQuery = externalQuery ?? localQuery;
   const filteredData = useMemo(
-    () => filterExplorerNodes(explorerData, activeQuery),
-    [explorerData, activeQuery],
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
   );
 
   const isEmpty = sessions.length === 0;
@@ -114,13 +111,6 @@ export function SessionList({ searchQuery: externalQuery }: { searchQuery?: stri
 
   return (
     <div className={styles.sessionListWrap}>
-      {externalQuery === undefined && (
-        <PanelSearch
-          placeholder="Search sessions..."
-          value={localQuery}
-          onChange={setLocalQuery}
-        />
-      )}
       <Explorer
         data={filteredData}
         enableMultiSelect={false}
