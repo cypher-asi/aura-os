@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench, MinusCircle, SkipForward, FileText } from "lucide-react";
-import { api } from "../api/client";
+import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput, type BuildStep, type TestStep } from "../context/EventContext";
@@ -149,6 +149,7 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
     try {
       await api.runTask(projectId, task.task_id);
     } catch (err) {
+      if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
       setRunning(false);
     }

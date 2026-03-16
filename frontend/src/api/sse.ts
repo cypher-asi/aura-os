@@ -14,7 +14,12 @@ export async function streamSSE<T extends string>(
 
   if (!response.ok) {
     const text = await response.text().catch(() => response.statusText);
-    const err = new Error(`SSE request failed (${response.status}): ${text}`);
+    let message = `SSE request failed (${response.status}): ${text}`;
+    try {
+      const body = JSON.parse(text);
+      if (body.error) message = body.error;
+    } catch { /* use raw text */ }
+    const err = new Error(message);
     callbacks.onError?.(err);
     return;
   }

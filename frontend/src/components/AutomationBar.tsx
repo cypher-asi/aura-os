@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square } from "lucide-react";
-import { api } from "../api/client";
+import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { StatusBadge } from "./StatusBadge";
@@ -92,6 +92,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
         }
         setPaused(false);
         setStarting(false);
+        if (e.outcome === "insufficient_credits") {
+          dispatchInsufficientCredits();
+        }
       }),
     ];
     return () => unsubs.forEach((u) => u());
@@ -115,6 +118,9 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
       setPaused(false);
     } catch (err) {
       setStarting(false);
+      if (isInsufficientCreditsError(err)) {
+        dispatchInsufficientCredits();
+      }
       console.error("Failed to start loop", err);
     }
   };

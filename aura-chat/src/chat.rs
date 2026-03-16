@@ -1588,6 +1588,7 @@ impl ChatService {
         self.billing_client
             .ensure_has_credits(&token)
             .await
+            .map(|_| ())
             .map_err(|_| "Insufficient credits. Please purchase credits to continue.".to_string())
     }
 

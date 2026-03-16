@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { api } from "../api/client";
+import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import type { ToolCallInfo, ToolResultInfo } from "../api/streams";
@@ -272,6 +272,9 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
           },
           onError(message) {
             console.error("Chat stream error:", message);
+            if (isInsufficientCreditsError(message)) {
+              dispatchInsufficientCredits();
+            }
             if (streamBufferRef.current) {
               setMessages((prev) => [
                 ...prev,

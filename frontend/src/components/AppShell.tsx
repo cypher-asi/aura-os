@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Topbar, ButtonWindow } from "@cypher-asi/zui";
 import { Lane } from "./Lane";
@@ -18,6 +18,7 @@ import { FeedProvider } from "../apps/feed/FeedProvider";
 import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
+import { INSUFFICIENT_CREDITS_EVENT } from "../api/client";
 
 const useAlwaysOpen = () => false;
 
@@ -97,6 +98,12 @@ function AppContent() {
     setOrgInitialSection("billing");
     setOrgSettingsOpen(true);
   }, []);
+
+  useEffect(() => {
+    const handler = () => openOrgBilling();
+    window.addEventListener(INSUFFICIENT_CREDITS_EVENT, handler);
+    return () => window.removeEventListener(INSUFFICIENT_CREDITS_EVENT, handler);
+  }, [openOrgBilling]);
 
   const { MainPanel } = activeApp;
 

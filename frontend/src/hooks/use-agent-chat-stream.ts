@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from "react";
-import { api } from "../api/client";
+import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import type { ToolCallInfo, ToolResultInfo } from "../api/streams";
 import type {
   DisplayMessage,
@@ -143,6 +143,9 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
           onTokenUsage() {},
           onError(message) {
             console.error("Agent chat stream error:", message);
+            if (isInsufficientCreditsError(message)) {
+              dispatchInsufficientCredits();
+            }
             if (streamBufferRef.current) {
               setMessages((prev) => [
                 ...prev,

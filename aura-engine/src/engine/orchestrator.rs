@@ -288,7 +288,7 @@ impl DevLoopEngine {
                     duplicate_error_bailouts: Some(duplicate_error_bailouts),
                 });
                 flush_metrics!("insufficient_credits");
-                return Ok(LoopOutcome::AllDone { completed_count });
+                return Ok(LoopOutcome::AllTasksComplete);
             }
 
             let task = match self.task_service.claim_next_task(&project_id, &agent_instance_id, Some(session.session_id))? {

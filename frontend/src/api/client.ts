@@ -57,6 +57,25 @@ export class ApiClientError extends Error {
   }
 }
 
+export const INSUFFICIENT_CREDITS_EVENT = "insufficient-credits";
+
+export function isInsufficientCreditsError(err: unknown): boolean {
+  if (err instanceof ApiClientError) {
+    return err.status === 402 || err.body.code === "insufficient_credits";
+  }
+  if (typeof err === "string") {
+    return err.toLowerCase().includes("insufficient credits");
+  }
+  if (err instanceof Error) {
+    return err.message.toLowerCase().includes("insufficient credits");
+  }
+  return false;
+}
+
+export function dispatchInsufficientCredits(): void {
+  window.dispatchEvent(new CustomEvent(INSUFFICIENT_CREDITS_EVENT));
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
