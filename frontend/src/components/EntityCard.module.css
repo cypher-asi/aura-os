@@ -67,10 +67,18 @@
 
 .nameRow {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3);
   border-bottom: 1px solid var(--color-border);
+}
+
+.nameText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 
 .displayName {
@@ -86,6 +94,11 @@
   font-family: var(--font-mono, monospace);
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text-secondary);
+}
+
+.nameAction {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* ── Body (slotted children) ── */

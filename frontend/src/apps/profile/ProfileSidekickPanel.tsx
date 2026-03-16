@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { Bot, User, Send, MapPin, Globe, Calendar, Pencil } from "lucide-react";
+import { Bot, User, Send, MapPin, Globe, Calendar, Pencil, UserPlus, UserCheck, UserMinus } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { useProfile } from "./ProfileProvider";
+import { useFollow } from "../../context/FollowContext";
+import { useAuth } from "../../context/AuthContext";
 import { ProfileEditorModal } from "./ProfileEditorModal";
 import { timeAgo } from "../feed/FeedMainPanel";
 import styles from "./ProfileSidekickPanel.module.css";
@@ -20,10 +22,39 @@ function formatTokenCount(n: number): string {
   return String(n);
 }
 
+function FollowButton({ targetName }: { targetName: string }) {
+  const { isFollowing, toggleFollow } = useFollow();
+  const [hover, setHover] = useState(false);
+  const following = isFollowing("user", targetName);
+
+  const icon = following
+    ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
+    : <UserPlus size={12} />;
+
+  const label = following
+    ? hover ? "Unfollow" : "Following"
+    : "Follow";
+
+  return (
+    <button
+      type="button"
+      className={`${styles.editButton} ${following ? styles.followingButton : ""}`}
+      onClick={() => toggleFollow("user", targetName)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 function ProfileCard() {
   const { profile, updateProfile, events, projects, totalTokenUsage } = useProfile();
+  const { user } = useAuth();
   const [editorOpen, setEditorOpen] = useState(false);
 
+  const isOwnProfile = user?.display_name === profile.name;
   const totalCommits = events.reduce((sum, e) => sum + e.commits.length, 0);
 
   return (
@@ -44,14 +75,20 @@ function ProfileCard() {
       >
         <div className={styles.bioSection}>
           <p className={styles.bioText}>{profile.bio}</p>
-          <button
-            type="button"
-            className={styles.editButton}
-            onClick={() => setEditorOpen(true)}
-          >
-            <Pencil size={12} />
-            Edit Profile
-          </button>
+          <div className={styles.profileActions}>
+            {isOwnProfile ? (
+              <button
+                type="button"
+                className={styles.editButton}
+                onClick={() => setEditorOpen(true)}
+              >
+                <Pencil size={12} />
+                Edit Profile
+              </button>
+            ) : (
+              <FollowButton targetName={profile.name} />
+            )}
+          </div>
         </div>
 
         <div className={styles.metaGrid}>

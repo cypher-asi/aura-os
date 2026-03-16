@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -259,6 +259,19 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/projects/:project_id/sessions",
             get(agents::list_project_sessions),
+        )
+        // Follows
+        .route(
+            "/api/follows",
+            post(follows::follow).get(follows::list_follows),
+        )
+        .route(
+            "/api/follows/:target_type/:target_id",
+            delete(follows::unfollow),
+        )
+        .route(
+            "/api/follows/check/:target_type/:target_id",
+            get(follows::check_follow),
         )
         // Log entries
         .route("/api/log-entries", get(log::list_log_entries))

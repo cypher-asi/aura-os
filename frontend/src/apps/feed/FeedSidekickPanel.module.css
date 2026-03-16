@@ -13,7 +13,7 @@
   gap: var(--space-1);
 }
 
-/* ── Comment item ── */
+/* -- Comment item -- */
 
 .commentItem {
   display: flex;
@@ -39,6 +39,16 @@
   flex-shrink: 0;
 }
 
+.commentAvatarClickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.commentAvatarClickable:hover {
+  box-shadow: 0 0 0 2px var(--color-text-secondary);
+  transform: scale(1.08);
+}
+
 .commentContent {
   flex: 1;
   min-width: 0;
@@ -59,6 +69,14 @@
   color: var(--color-text);
 }
 
+.commentAuthorClickable {
+  cursor: pointer;
+}
+
+.commentAuthorClickable:hover {
+  text-decoration: underline;
+}
+
 .commentTime {
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text-secondary);
@@ -72,7 +90,7 @@
   line-height: 1.5;
 }
 
-/* ── Input area ── */
+/* -- Input area -- */
 
 .inputArea {
   display: flex;
@@ -124,7 +142,7 @@
   cursor: default;
 }
 
-/* ── Empty state ── */
+/* -- Empty state -- */
 
 .emptyState {
   display: flex;
@@ -138,4 +156,85 @@
 
 .emptyIcon {
   opacity: 0.3;
+}
+
+/* -- Follow button -- */
+
+.followRow {
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.followButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 80px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs, 11px);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.followButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+  background: var(--color-bg-hover);
+}
+
+.followingState {
+  color: var(--color-success, #4aeaa8);
+  border-color: var(--color-success, #4aeaa8);
+}
+
+.followingState:hover {
+  color: var(--color-danger, #f87171);
+  border-color: var(--color-danger, #f87171);
+}
+
+/* -- Profile recent activity -- */
+
+.recentSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.recentItem {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-1) 0;
+}
+
+.recentRepo {
+  font-size: var(--font-size-xs, 11px);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.recentMsg {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recentTime {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+  opacity: 0.6;
 }

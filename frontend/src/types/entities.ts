@@ -315,6 +315,15 @@ export interface DailyCommitActivity {
   count: number;
 }
 
+export type FollowTargetType = "user" | "agent";
+
+export interface Follow {
+  follower_user_id: string;
+  target_type: FollowTargetType;
+  target_id: string;
+  created_at: string;
+}
+
 export interface ApiError {
   error: string;
   code: string;

@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { FeedEvent, FeedComment } from "../feed/FeedProvider";
+import { useAuth } from "../../context/AuthContext";
 
 export interface UserProfileData {
   name: string;
@@ -36,9 +37,8 @@ interface ProfileContextValue {
 
 const ProfileCtx = createContext<ProfileContextValue | null>(null);
 
-const MOCK_PROFILE: UserProfileData = {
+const MOCK_PROFILE: Omit<UserProfileData, "handle"> = {
   name: "real-n3o",
-  handle: "@real-n3o",
   bio: "Building autonomous swarms of agentic intelligence. Sovereign. Private. Decentralized.",
   website: "https://cypher.net",
   location: "San Francisco, CA",
@@ -217,7 +217,18 @@ const CURRENT_USER = "real-n3o";
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<UserProfileData>(MOCK_PROFILE);
+  const { user } = useAuth();
+  const zid = user?.primary_zid || "";
+
+  const [profile, setProfile] = useState<UserProfileData>(() => ({
+    ...MOCK_PROFILE,
+    handle: zid ? `@${zid}` : "",
+  }));
+
+  useEffect(() => {
+    if (zid) setProfile((prev) => ({ ...prev, handle: `@${zid}` }));
+  }, [zid]);
+
   const [selectedProject, setSelectedProjectRaw] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);

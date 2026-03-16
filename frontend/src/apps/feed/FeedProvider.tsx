@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, useCallback } from "react";
 import type { ReactNode } from "react";
+import { useFollow } from "../../context/FollowContext";
 
 export interface FeedCommit {
   sha: string;
@@ -25,6 +26,12 @@ export interface FeedComment {
 
 export type FeedFilter = "my-agents" | "organization" | "following" | "everything";
 
+export interface FeedSelectedProfile {
+  name: string;
+  type: "user" | "agent";
+  avatarUrl?: string;
+}
+
 interface FeedContextValue {
   events: FeedEvent[];
   filteredEvents: FeedEvent[];
@@ -33,6 +40,8 @@ interface FeedContextValue {
   setFilter: (filter: FeedFilter) => void;
   selectedEventId: string | null;
   selectEvent: (id: string | null) => void;
+  selectedProfile: FeedSelectedProfile | null;
+  selectProfile: (profile: FeedSelectedProfile | null) => void;
   getCommentsForEvent: (eventId: string) => FeedComment[];
   addComment: (eventId: string, text: string) => void;
 }
@@ -202,12 +211,17 @@ const MOCK_COMMENTS: FeedComment[] = [
   { id: "cmt-17", eventId: "evt-12", author: { name: "Cipher", type: "agent" }, text: "PKCE flow implementation looks secure. Encrypted token storage is a nice touch.", timestamp: new Date(now - 3.2 * DAY).toISOString() },
 ];
 
-function applyFilter(events: FeedEvent[], filter: FeedFilter): FeedEvent[] {
+function applyFilter(
+  events: FeedEvent[],
+  filter: FeedFilter,
+  followedNames?: Set<string>,
+): FeedEvent[] {
   switch (filter) {
     case "my-agents":
       return events.filter((e) => e.author.type === "agent");
     case "following":
-      return events.filter((e) => e.author.name === CURRENT_USER);
+      if (!followedNames || followedNames.size === 0) return [];
+      return events.filter((e) => followedNames.has(e.author.name));
     case "organization":
     case "everything":
     default:
@@ -269,22 +283,41 @@ let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function FeedProvider({ children }: { children: ReactNode }) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<FeedSelectedProfile | null>(null);
   const [filter, setFilterRaw] = useState<FeedFilter>("my-agents");
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
+  const { follows } = useFollow();
+
+  const followedNames = useMemo(
+    () => new Set(follows.map((f) => f.target_id)),
+    [follows],
+  );
 
   const events = useMemo(
     () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [],
   );
 
-  const filteredEvents = useMemo(() => applyFilter(events, filter), [events, filter]);
+  const filteredEvents = useMemo(
+    () => applyFilter(events, filter, followedNames),
+    [events, filter, followedNames],
+  );
 
   const commitActivity = useMemo(() => {
     if (filter === "everything" || filter === "organization") return MOCK_COMMIT_ACTIVITY;
     return commitActivityFromEvents(filteredEvents);
   }, [filter, filteredEvents]);
 
-  const selectEvent = useCallback((id: string | null) => setSelectedEventId(id), []);
+  const selectEvent = useCallback((id: string | null) => {
+    setSelectedEventId(id);
+    if (id) setSelectedProfile(null);
+  }, []);
+
+  const selectProfile = useCallback((profile: FeedSelectedProfile | null) => {
+    setSelectedProfile(profile);
+    if (profile) setSelectedEventId(null);
+  }, []);
+
   const setFilter = useCallback((f: FeedFilter) => setFilterRaw(f), []);
 
   const getCommentsForEvent = useCallback(
@@ -307,8 +340,8 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment }),
-    [events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, getCommentsForEvent, addComment],
+    () => ({ events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, selectedProfile, selectProfile, getCommentsForEvent, addComment }),
+    [events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, selectedProfile, selectProfile, getCommentsForEvent, addComment],
   );
 
   return <FeedCtx.Provider value={value}>{children}</FeedCtx.Provider>;
@@ -321,6 +354,6 @@ export function useFeed() {
 }
 
 export function useFeedSidekickCollapsed() {
-  const { selectedEventId } = useFeed();
-  return !selectedEventId;
+  const { selectedEventId, selectedProfile } = useFeed();
+  return !selectedEventId && !selectedProfile;
 }

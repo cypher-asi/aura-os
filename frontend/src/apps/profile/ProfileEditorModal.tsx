@@ -13,7 +13,6 @@ interface ProfileEditorModalProps {
 
 export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: ProfileEditorModalProps) {
   const [name, setName] = useState("");
-  const [handle, setHandle] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const [location, setLocation] = useState("");
@@ -25,7 +24,6 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
   useEffect(() => {
     if (!isOpen) return;
     setName(profile.name);
-    setHandle(profile.handle);
     setBio(profile.bio);
     setWebsite(profile.website);
     setLocation(profile.location);
@@ -70,7 +68,6 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     setNameError("");
     onSave({
       name: name.trim(),
-      handle: handle.trim(),
       bio: bio.trim(),
       website: website.trim(),
       location: location.trim(),
@@ -140,8 +137,8 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Handle</label>
           <Input
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
+            value={profile.handle}
+            disabled
             placeholder="@handle"
           />
         </div>

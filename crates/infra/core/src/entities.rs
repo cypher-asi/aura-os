@@ -2,7 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::enums::{
-    AgentStatus, ChatRole, InviteStatus, OrgRole, ProjectStatus, SessionStatus, TaskStatus,
+    AgentStatus, ChatRole, FollowTargetType, InviteStatus, OrgRole, ProjectStatus, SessionStatus,
+    TaskStatus,
 };
 use crate::ids::{
     AgentId, AgentInstanceId, GitHubIntegrationId, InviteId, MessageId, OrgId, ProjectId,
@@ -352,6 +353,14 @@ pub struct DebitResponse {
     pub success: bool,
     pub balance: u64,
     pub transaction_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Follow {
+    pub follower_user_id: String,
+    pub target_type: FollowTargetType,
+    pub target_id: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

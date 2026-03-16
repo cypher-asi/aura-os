@@ -4,7 +4,25 @@ import { useFeed } from "./FeedProvider";
 import styles from "./FeedSidekickHeader.module.css";
 
 export function FeedSidekickHeader() {
-  const { selectedEventId, events, selectEvent } = useFeed();
+  const { selectedEventId, events, selectEvent, selectedProfile, selectProfile } = useFeed();
+
+  if (selectedProfile) {
+    return (
+      <div className={styles.header}>
+        <span className={styles.meta}>{selectedProfile.name}</span>
+        <span className={styles.separator}>&middot;</span>
+        <span className={styles.meta}>{selectedProfile.type === "agent" ? "Agent" : "User"}</span>
+        <span className={styles.spacer} />
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon={<X size={14} />}
+          onClick={() => selectProfile(null)}
+        />
+      </div>
+    );
+  }
 
   const event = selectedEventId ? events.find((e) => e.id === selectedEventId) : null;
 

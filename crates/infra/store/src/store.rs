@@ -24,6 +24,7 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "github_integrations",
     "github_repos",
     "log_entries",
+    "follows",
 ];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;

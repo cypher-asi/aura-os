@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { EventProvider } from "./context/EventContext";
+import { FollowProvider } from "./context/FollowContext";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { HomeView } from "./views/HomeView";
@@ -19,6 +20,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <EventProvider>
+          <FollowProvider>
           <Routes>
             <Route path="login" element={<LoginView />} />
             <Route path="ide" element={<IdeView />} />
@@ -51,6 +53,7 @@ export default function App() {
               </Route>
             </Route>
           </Routes>
+          </FollowProvider>
         </EventProvider>
       </AuthProvider>
     </BrowserRouter>

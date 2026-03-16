@@ -18,9 +18,6 @@ export interface LeaderboardUser {
   agents: number;
   breakdown: AgentContribution[];
 }
-
-const CURRENT_USER = "real-n3o";
-
 function scaleEntry(u: LeaderboardUser, factor: number, jitter: number): LeaderboardUser {
   const j = () => 1 + (Math.sin(u.id.charCodeAt(1) * jitter) * 0.3);
   const f = factor * j();
@@ -277,12 +274,17 @@ const dataByPeriod: Record<TimePeriod, LeaderboardUser[]> = {
   week: weekData,
 };
 
-function applyFilter(users: LeaderboardUser[], filter: LeaderboardFilter): LeaderboardUser[] {
+function applyFilter(
+  users: LeaderboardUser[],
+  filter: LeaderboardFilter,
+  followedNames?: Set<string>,
+): LeaderboardUser[] {
   switch (filter) {
     case "my-agents":
       return users.filter((u) => u.type === "agent");
     case "following":
-      return users.filter((u) => u.name === CURRENT_USER);
+      if (!followedNames || followedNames.size === 0) return [];
+      return users.filter((u) => followedNames.has(u.name));
     case "organization":
     case "everything":
     default:
@@ -290,6 +292,10 @@ function applyFilter(users: LeaderboardUser[], filter: LeaderboardFilter): Leade
   }
 }
 
-export function getLeaderboard(period: TimePeriod, filter: LeaderboardFilter = "everything"): LeaderboardUser[] {
-  return applyFilter(dataByPeriod[period], filter);
+export function getLeaderboard(
+  period: TimePeriod,
+  filter: LeaderboardFilter = "everything",
+  followedNames?: Set<string>,
+): LeaderboardUser[] {
+  return applyFilter(dataByPeriod[period], filter, followedNames);
 }

@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { User, Bot, MessageSquare } from "lucide-react";
+import { User, Bot, MessageSquare, UserPlus, UserCheck, UserMinus } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { useLeaderboard } from "./LeaderboardContext";
+import { useFollow } from "../../context/FollowContext";
 import { getLeaderboard } from "./mockData";
 import { formatTokens } from "../../utils/format";
+import type { FollowTargetType } from "../../types";
 import styles from "./LeaderboardSidekickPanel.module.css";
 
 const AGENT_COLORS: Record<string, string> = {
@@ -13,6 +15,33 @@ const AGENT_COLORS: Record<string, string> = {
   Nova:   "#1a7a5a",
   Bolt:   "#0d4a3a",
 };
+
+function LeaderboardFollowButton({ targetName, targetType }: { targetName: string; targetType: FollowTargetType }) {
+  const { isFollowing, toggleFollow } = useFollow();
+  const [hover, setHover] = useState(false);
+  const following = isFollowing(targetType, targetName);
+
+  const icon = following
+    ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
+    : <UserPlus size={12} />;
+
+  const label = following
+    ? hover ? "Unfollow" : "Following"
+    : "Follow";
+
+  return (
+    <button
+      type="button"
+      className={`${styles.followButton} ${following ? styles.followingState : ""}`}
+      onClick={() => toggleFollow(targetType, targetName)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
 
 export function LeaderboardSidekickPanel() {
   const { period, filter, selectedUserId } = useLeaderboard();
@@ -31,12 +60,15 @@ export function LeaderboardSidekickPanel() {
     );
   }
 
+  const followTargetType: FollowTargetType = user.type === "agent" ? "agent" : "user";
+
   return (
     <EntityCard
       headerLabel={user.type === "agent" ? "AGENT" : "USER"}
       headerStatus="ACTIVE"
       fallbackIcon={user.type === "agent" ? <Bot size={48} /> : <User size={48} />}
       name={user.name}
+      nameAction={<LeaderboardFollowButton targetName={user.name} targetType={followTargetType} />}
       stats={[
         { value: formatTokens(user.tokens), label: "Tokens" },
         { value: user.commits, label: "Commits" },

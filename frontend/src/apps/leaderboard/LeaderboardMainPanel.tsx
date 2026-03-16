@@ -3,6 +3,7 @@ import { Text } from "@cypher-asi/zui";
 import { Lane } from "../../components/Lane";
 import { useLeaderboard } from "./LeaderboardContext";
 import { getLeaderboard } from "./mockData";
+import { useFollow } from "../../context/FollowContext";
 import { formatTokens } from "../../utils/format";
 import styles from "./LeaderboardMainPanel.module.css";
 
@@ -21,7 +22,17 @@ function agentColor(name: string): string {
 
 export function LeaderboardMainPanel() {
   const { period, filter, selectedUserId, selectUser } = useLeaderboard();
-  const users = useMemo(() => getLeaderboard(period, filter), [period, filter]);
+  const { follows } = useFollow();
+
+  const followedNames = useMemo(
+    () => new Set(follows.map((f) => f.target_id)),
+    [follows],
+  );
+
+  const users = useMemo(
+    () => getLeaderboard(period, filter, followedNames),
+    [period, filter, followedNames],
+  );
 
   const maxTokens = useMemo(
     () => Math.max(...users.map((u) => u.tokens), 1),

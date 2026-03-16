@@ -44,9 +44,10 @@ export interface ActivityCardProps {
   isSelected: boolean;
   comments: FeedComment[];
   onSelect: (id: string) => void;
+  onSelectProfile?: (author: { name: string; type: "user" | "agent"; avatarUrl?: string }) => void;
 }
 
-export function ActivityCard({ event, isLast, isSelected, comments, onSelect }: ActivityCardProps) {
+export function ActivityCard({ event, isLast, isSelected, comments, onSelect, onSelectProfile }: ActivityCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const visibleCommits = expanded
@@ -57,13 +58,22 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect }: 
   const repoShort = event.repo.split("/").pop();
   const isAgent = event.author.type === "agent";
 
+  const handleAvatarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelectProfile?.(event.author);
+  };
+
   return (
     <div
       className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}
       onClick={() => onSelect(event.id)}
     >
       <div className={styles.avatarCol}>
-        <div className={styles.avatar} data-agent={isAgent}>
+        <div
+          className={`${styles.avatar} ${onSelectProfile ? styles.avatarClickable : ""}`}
+          data-agent={isAgent}
+          onClick={handleAvatarClick}
+        >
           {event.author.avatarUrl ? (
             <img src={event.author.avatarUrl} alt={event.author.name} />
           ) : isAgent ? (

@@ -45,6 +45,16 @@
   color: var(--color-text);
 }
 
+.avatarClickable {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.avatarClickable:hover {
+  box-shadow: 0 0 0 2px var(--color-text-secondary);
+  transform: scale(1.08);
+}
+
 .timeline {
   width: 2px;
   flex: 1;

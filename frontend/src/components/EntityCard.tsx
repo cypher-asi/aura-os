@@ -8,6 +8,7 @@ interface EntityCardProps {
   fallbackIcon: ReactNode;
   name: string;
   subtitle?: string;
+  nameAction?: ReactNode;
   children?: ReactNode;
   stats?: { value: string | number; label: string }[];
   footer?: string;
@@ -20,6 +21,7 @@ export function EntityCard({
   fallbackIcon,
   name,
   subtitle,
+  nameAction,
   children,
   stats,
   footer,
@@ -43,8 +45,11 @@ export function EntityCard({
         </div>
 
         <div className={styles.nameRow}>
-          <span className={styles.displayName}>{name}</span>
-          {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
+          <div className={styles.nameText}>
+            <span className={styles.displayName}>{name}</span>
+            {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
+          </div>
+          {nameAction && <div className={styles.nameAction}>{nameAction}</div>}
         </div>
 
         {children && <div className={styles.body}>{children}</div>}

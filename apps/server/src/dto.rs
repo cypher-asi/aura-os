@@ -223,6 +223,19 @@ impl From<GitHubRepo> for GitHubRepoResponse {
     }
 }
 
+// -- Follow DTOs --
+
+#[derive(Debug, Deserialize)]
+pub struct FollowRequest {
+    pub target_type: FollowTargetType,
+    pub target_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FollowCheckResponse {
+    pub following: bool,
+}
+
 // -- Billing/Credits DTOs --
 
 #[derive(Debug, Deserialize)]
