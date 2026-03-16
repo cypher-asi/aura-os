@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { Bot, User, Send, MapPin, Globe, Calendar, Pencil, UserPlus, UserCheck, UserMinus } from "lucide-react";
+import { Bot, User, Send, MapPin, Globe, Calendar } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
+import { FollowEditButton } from "../../components/FollowEditButton";
 import { useProfile } from "./ProfileProvider";
-import { useFollow } from "../../context/FollowContext";
 import { useAuth } from "../../context/AuthContext";
 import { ProfileEditorModal } from "./ProfileEditorModal";
 import { timeAgo } from "../feed/FeedMainPanel";
@@ -20,33 +20,6 @@ function formatTokenCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
-}
-
-function FollowButton({ targetName }: { targetName: string }) {
-  const { isFollowing, toggleFollow } = useFollow();
-  const [hover, setHover] = useState(false);
-  const following = isFollowing("user", targetName);
-
-  const icon = following
-    ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
-    : <UserPlus size={12} />;
-
-  const label = following
-    ? hover ? "Unfollow" : "Following"
-    : "Follow";
-
-  return (
-    <button
-      type="button"
-      className={`${styles.editButton} ${following ? styles.followingButton : ""}`}
-      onClick={() => toggleFollow("user", targetName)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      {icon}
-      {label}
-    </button>
-  );
 }
 
 function ProfileCard() {
@@ -66,6 +39,14 @@ function ProfileCard() {
         fallbackIcon={<User size={48} />}
         name={profile.name}
         subtitle={profile.handle}
+        nameAction={
+          <FollowEditButton
+            isOwner={isOwnProfile}
+            targetType="user"
+            targetName={profile.name}
+            onEdit={() => setEditorOpen(true)}
+          />
+        }
         stats={[
           { value: projects.length, label: "Projects" },
           { value: totalCommits, label: "Commits" },
@@ -75,20 +56,6 @@ function ProfileCard() {
       >
         <div className={styles.bioSection}>
           <p className={styles.bioText}>{profile.bio}</p>
-          <div className={styles.profileActions}>
-            {isOwnProfile ? (
-              <button
-                type="button"
-                className={styles.editButton}
-                onClick={() => setEditorOpen(true)}
-              >
-                <Pencil size={12} />
-                Edit Profile
-              </button>
-            ) : (
-              <FollowButton targetName={profile.name} />
-            )}
-          </div>
         </div>
 
         <div className={styles.metaGrid}>

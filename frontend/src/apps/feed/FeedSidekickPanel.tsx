@@ -1,40 +1,12 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { Bot, User, MessageSquare, Send, UserPlus, UserCheck, UserMinus } from "lucide-react";
+import { Bot, User, MessageSquare, Send } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
+import { FollowEditButton } from "../../components/FollowEditButton";
 import { useFeed } from "./FeedProvider";
-import { useFollow } from "../../context/FollowContext";
 import { useAuth } from "../../context/AuthContext";
 import { timeAgo } from "./FeedMainPanel";
-import type { FollowTargetType } from "../../types";
 import styles from "./FeedSidekickPanel.module.css";
-
-function ProfileFollowButton({ targetName, targetType }: { targetName: string; targetType: FollowTargetType }) {
-  const { isFollowing, toggleFollow } = useFollow();
-  const [hover, setHover] = useState(false);
-  const following = isFollowing(targetType, targetName);
-
-  const icon = following
-    ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
-    : <UserPlus size={12} />;
-
-  const label = following
-    ? hover ? "Unfollow" : "Following"
-    : "Follow";
-
-  return (
-    <button
-      type="button"
-      className={`${styles.followButton} ${following ? styles.followingState : ""}`}
-      onClick={() => toggleFollow(targetType, targetName)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
 
 function ProfilePanel() {
   const { selectedProfile, events } = useFeed();
@@ -56,9 +28,10 @@ function ProfilePanel() {
         name={selectedProfile.name}
         nameAction={
           isOwnProfile ? undefined : (
-            <ProfileFollowButton
-              targetName={selectedProfile.name}
+            <FollowEditButton
+              isOwner={false}
               targetType={isAgent ? "agent" : "user"}
+              targetName={selectedProfile.name}
             />
           )
         }

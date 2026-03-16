@@ -1,44 +1,19 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
-import { Bot, Loader2, Calendar, UserPlus, UserCheck, UserMinus } from "lucide-react";
+import { Bot, Loader2, Calendar } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
+import { FollowEditButton } from "../../components/FollowEditButton";
 import { SidekickActions } from "../../components/SidekickActions";
 import { AgentEditorModal } from "../../components/AgentEditorModal";
 import { api } from "../../api/client";
 import { useAgentApp } from "./AgentAppProvider";
-import { useFollow } from "../../context/FollowContext";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./AgentInfoPanel.module.css";
-
-function AgentFollowButton({ agentName }: { agentName: string }) {
-  const { isFollowing, toggleFollow } = useFollow();
-  const [hover, setHover] = useState(false);
-  const following = isFollowing("agent", agentName);
-
-  const icon = following
-    ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
-    : <UserPlus size={12} />;
-
-  const label = following
-    ? hover ? "Unfollow" : "Following"
-    : "Follow";
-
-  return (
-    <button
-      type="button"
-      className={`${styles.followButton} ${following ? styles.followingState : ""}`}
-      onClick={() => toggleFollow("agent", agentName)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
 
 export function AgentInfoPanel() {
   const { selectedAgent, selectAgent, refresh } = useAgentApp();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showEditor, setShowEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -75,6 +50,7 @@ export function AgentInfoPanel() {
 
   const a = selectedAgent;
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
+  const isOwnAgent = user?.user_id === a.user_id;
 
   return (
     <div className={styles.wrapper}>
@@ -85,7 +61,14 @@ export function AgentInfoPanel() {
         fallbackIcon={<Bot size={48} />}
         name={a.name}
         subtitle={a.role}
-        nameAction={<AgentFollowButton agentName={a.name} />}
+        nameAction={
+          <FollowEditButton
+            isOwner={isOwnAgent}
+            targetType="agent"
+            targetName={a.name}
+            onEdit={() => setShowEditor(true)}
+          />
+        }
         footer="CYPHER-ASI // AURA"
       >
         {imageUrl && (
@@ -135,10 +118,11 @@ export function AgentInfoPanel() {
 
       </EntityCard>
 
-      <SidekickActions
-        onEdit={() => setShowEditor(true)}
-        onDelete={() => setShowDeleteConfirm(true)}
-      />
+      {isOwnAgent && (
+        <SidekickActions
+          onDelete={() => setShowDeleteConfirm(true)}
+        />
+      )}
 
       <AgentEditorModal
         isOpen={showEditor}
