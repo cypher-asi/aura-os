@@ -389,6 +389,21 @@ export const api = {
       body: JSON.stringify({ path, content }),
     }),
 
+  // Updates
+  getUpdateStatus: () =>
+    apiFetch<{ update: { status: string; version?: string; channel?: string; error?: string }; channel: string; current_version: string }>(
+      "/api/update-status",
+    ),
+  installUpdate: () =>
+    apiFetch<{ ok: boolean; error?: string }>("/api/update-install", {
+      method: "POST",
+    }),
+  setUpdateChannel: (channel: "stable" | "nightly") =>
+    apiFetch<{ ok: boolean; channel: string }>("/api/update-channel", {
+      method: "POST",
+      body: JSON.stringify({ channel }),
+    }),
+
   // Loop
   startLoop: (projectId: ProjectId, agentName?: string) => {
     const params = agentName ? `?agent_name=${encodeURIComponent(agentName)}` : "";

@@ -6,6 +6,7 @@ import { Lane } from "./Lane";
 import { AppNavRail } from "./AppNavRail";
 import { BottomTaskbar } from "./BottomTaskbar";
 import { SettingsModal } from "./SettingsModal";
+import { UpdateBanner } from "./UpdateBanner";
 import { OrgSettingsPanel } from "./OrgSettingsPanel";
 import { OrgProvider } from "../context/OrgContext";
 import { AppProvider, useAppContext } from "../context/AppContext";
@@ -132,6 +133,8 @@ function AppContent() {
             </div>
           }
         />
+
+        <UpdateBanner />
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <div style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
