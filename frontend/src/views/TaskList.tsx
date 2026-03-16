@@ -2,11 +2,13 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "../api/client";
 import type { Spec, Task, TaskStatus, AgentInstance } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
+import { PanelSearch } from "../components/PanelSearch";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
+import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import styles from "./aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
@@ -225,23 +227,34 @@ export function TaskList() {
     );
   }
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredData = useMemo(
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
+  );
+
   return (
-    <Explorer
-      data={explorerData}
-      className={styles.taskExplorer}
-      searchable
-      searchPlaceholder="Search"
-      expandOnSelect
-      enableDragDrop={false}
-      enableMultiSelect={false}
-      defaultExpandedIds={defaultExpandedIds}
-      defaultSelectedIds={defaultSelectedIds}
-      onSelect={(ids) => {
-        const id = ids[0];
-        if (!id) return;
-        const task = taskMap.get(id);
-        if (task) sidekick.viewTask(task);
-      }}
-    />
+    <>
+      <PanelSearch
+        placeholder="Search tasks..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
+      <Explorer
+        data={filteredData}
+        className={styles.taskExplorer}
+        expandOnSelect
+        enableDragDrop={false}
+        enableMultiSelect={false}
+        defaultExpandedIds={defaultExpandedIds}
+        defaultSelectedIds={defaultSelectedIds}
+        onSelect={(ids) => {
+          const id = ids[0];
+          if (!id) return;
+          const task = taskMap.get(id);
+          if (task) sidekick.viewTask(task);
+        }}
+      />
+    </>
   );
 }

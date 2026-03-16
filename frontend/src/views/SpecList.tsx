@@ -7,9 +7,11 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
+import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { FileText } from "lucide-react";
+import { PanelSearch } from "../components/PanelSearch";
 
 export function SpecList() {
   const ctx = useProjectContext();
@@ -144,17 +146,28 @@ export function SpecList() {
     );
   }
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredData = useMemo(
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
+  );
+
   return (
-    <Explorer
-      data={explorerData}
-      searchable
-      searchPlaceholder="Search"
-      expandOnSelect
-      enableDragDrop={false}
-      enableMultiSelect={false}
-      defaultExpandedIds={defaultExpandedIds}
-      defaultSelectedIds={defaultSelectedIds}
-      onSelect={handleSelect}
-    />
+    <>
+      <PanelSearch
+        placeholder="Search specs..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
+      <Explorer
+        data={filteredData}
+        expandOnSelect
+        enableDragDrop={false}
+        enableMultiSelect={false}
+        defaultExpandedIds={defaultExpandedIds}
+        defaultSelectedIds={defaultSelectedIds}
+        onSelect={handleSelect}
+      />
+    </>
   );
 }

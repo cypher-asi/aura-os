@@ -4,9 +4,11 @@ import type { Session } from "../types";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
+import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { MonitorCog } from "lucide-react";
+import { PanelSearch } from "../components/PanelSearch";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatCostFromTokens } from "../utils/pricing";
 import styles from "./SessionList.module.css";
@@ -103,12 +105,21 @@ export function SessionList() {
     );
   }
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredData = useMemo(
+    () => filterExplorerNodes(explorerData, searchQuery),
+    [explorerData, searchQuery],
+  );
+
   return (
     <div className={styles.sessionListWrap}>
+      <PanelSearch
+        placeholder="Search sessions..."
+        value={searchQuery}
+        onChange={setSearchQuery}
+      />
       <Explorer
-        data={explorerData}
-        searchable
-        searchPlaceholder="Search sessions"
+        data={filteredData}
         enableMultiSelect={false}
         defaultSelectedIds={selectedId ? [selectedId] : undefined}
         onSelect={handleSelect}

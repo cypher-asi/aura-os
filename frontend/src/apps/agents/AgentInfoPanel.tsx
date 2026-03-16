@@ -193,7 +193,7 @@ export function AgentInfoPanel() {
             <div className={styles.section}>
               <Text size="xs" variant="muted" weight="medium">Skills</Text>
               <div className={styles.skills}>
-                {a.skills.map((s) => <Badge key={s} variant="pending">{s}</Badge>)}
+                {a.skills.map((s) => <Badge key={s} variant="pending" className={styles.skillBadge}>{s}</Badge>)}
               </div>
             </div>
           )}

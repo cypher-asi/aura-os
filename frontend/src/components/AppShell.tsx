@@ -1,13 +1,13 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Topbar, ButtonWindow, Input } from "@cypher-asi/zui";
-import { Search } from "lucide-react";
+import { Topbar, ButtonWindow } from "@cypher-asi/zui";
 import { Lane } from "./Lane";
 import { AppNavRail } from "./AppNavRail";
 import { BottomTaskbar } from "./BottomTaskbar";
 import { SettingsModal } from "./SettingsModal";
 import { UpdateBanner } from "./UpdateBanner";
 import { OrgSettingsPanel } from "./OrgSettingsPanel";
+import { PanelSearch } from "./PanelSearch";
 import { OrgProvider } from "../context/OrgContext";
 import { AppProvider, useAppContext } from "../context/AppContext";
 import { SidebarSearchProvider, useSidebarSearch } from "../context/SidebarSearchContext";
@@ -18,7 +18,6 @@ import { FeedProvider } from "../apps/feed/FeedProvider";
 import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
-import shellStyles from "./AppShell.module.css";
 
 const useAlwaysOpen = () => false;
 
@@ -79,41 +78,12 @@ function SidebarSearchInput() {
   const { query, setQuery, action } = useSidebarSearch();
 
   return (
-    <div className={shellStyles.sidebarSearch} style={{ position: "relative", padding: "var(--space-2) 0" }}>
-      <Search
-        size={14}
-        style={{
-          position: "absolute",
-          left: "var(--space-4, 16px)",
-          top: "50%",
-          transform: "translateY(-50%)",
-          color: "var(--color-text-muted)",
-          pointerEvents: "none",
-        }}
-      />
-      <Input
-        size="sm"
-        placeholder="Search..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        style={{
-          paddingLeft: "calc(var(--space-4, 16px) + 14px + var(--space-2, 8px))",
-          paddingRight: action ? "calc(var(--control-height-sm, 28px) + 2px)" : undefined,
-        }}
-      />
-      {action && (
-        <div style={{
-          position: "absolute",
-          right: "var(--space-2, 8px)",
-          top: "50%",
-          transform: "translateY(-50%)",
-          display: "flex",
-          alignItems: "center",
-        }}>
-          {action}
-        </div>
-      )}
-    </div>
+    <PanelSearch
+      placeholder="Search Agents..."
+      value={query}
+      onChange={setQuery}
+      action={action}
+    />
   );
 }
 
