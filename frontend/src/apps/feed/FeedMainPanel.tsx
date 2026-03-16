@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { GitCommitVertical, Bot, User } from "lucide-react";
+import { GitCommitVertical, Bot, User, MessageSquare } from "lucide-react";
 import { Lane } from "../../components/Lane";
 import { useFeed } from "./FeedProvider";
-import type { FeedEvent } from "./FeedProvider";
+import type { FeedEvent, FeedComment } from "./FeedProvider";
 import styles from "./FeedMainPanel.module.css";
 
 const MAX_VISIBLE_COMMITS = 3;
 
-function timeAgo(iso: string): string {
+export function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1) return "just now";
@@ -19,8 +19,34 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function CommentPreview({ comments, onClick }: { comments: FeedComment[]; onClick: () => void }) {
+  if (comments.length === 0) return null;
+
+  const uniqueAuthors = [...new Map(comments.map((c) => [c.author.name, c.author])).values()].slice(0, 3);
+
+  return (
+    <button className={styles.commentPreview} onClick={onClick}>
+      <div className={styles.commentAvatarStack}>
+        {uniqueAuthors.map((author, i) => (
+          <div key={author.name} className={styles.commentAvatar} style={{ zIndex: uniqueAuthors.length - i }}>
+            {author.type === "agent" ? <Bot size={12} /> : <User size={12} />}
+          </div>
+        ))}
+      </div>
+      <span className={styles.commentCount}>
+        <MessageSquare size={12} />
+        {comments.length} comment{comments.length !== 1 ? "s" : ""}
+      </span>
+    </button>
+  );
+}
+
 function FeedCard({ event, isLast }: { event: FeedEvent; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const { selectedEventId, selectEvent, getCommentsForEvent } = useFeed();
+
+  const comments = getCommentsForEvent(event.id);
+  const isSelected = selectedEventId === event.id;
 
   const visibleCommits = expanded
     ? event.commits
@@ -31,7 +57,10 @@ function FeedCard({ event, isLast }: { event: FeedEvent; isLast: boolean }) {
   const isAgent = event.author.type === "agent";
 
   return (
-    <div className={styles.card}>
+    <div
+      className={`${styles.card} ${isSelected ? styles.cardActive : ""}`}
+      onClick={() => selectEvent(event.id)}
+    >
       <div className={styles.avatarCol}>
         <div className={styles.avatar} data-agent={isAgent}>
           {event.author.avatarUrl ? (
@@ -66,12 +95,14 @@ function FeedCard({ event, isLast }: { event: FeedEvent; isLast: boolean }) {
           {!expanded && hiddenCount > 0 && (
             <button
               className={styles.moreCommits}
-              onClick={() => setExpanded(true)}
+              onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
             >
               + {hiddenCount} more commit{hiddenCount !== 1 ? "s" : ""}
             </button>
           )}
         </div>
+
+        <CommentPreview comments={comments} onClick={() => selectEvent(event.id)} />
       </div>
     </div>
   );

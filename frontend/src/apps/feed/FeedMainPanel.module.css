@@ -166,6 +166,59 @@
   color: var(--color-text);
 }
 
+/* ── Active card ── */
+
+.cardActive {
+  background: var(--color-bg-hover);
+}
+
+/* ── Comment preview ── */
+
+.commentPreview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.commentPreview:hover {
+  color: var(--color-text);
+}
+
+.commentAvatarStack {
+  display: flex;
+  flex-direction: row;
+}
+
+.commentAvatar {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  border: 2px solid var(--color-bg);
+  margin-left: -6px;
+}
+
+.commentAvatar:first-child {
+  margin-left: 0;
+}
+
+.commentCount {
+  font-size: var(--font-size-xs, 11px);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ── Separator ── */
 
 .separator {
