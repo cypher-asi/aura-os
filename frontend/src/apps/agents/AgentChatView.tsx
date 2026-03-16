@@ -39,6 +39,7 @@ export function AgentChatView() {
 
   useEffect(() => {
     if (agentId) {
+      localStorage.setItem("aura:lastAgentId", agentId);
       requestAnimationFrame(() => inputBarRef.current?.focus());
       api.agents.get(agentId as never).then((a) => {
         selectAgent(a);

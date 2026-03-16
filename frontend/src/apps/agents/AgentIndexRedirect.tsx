@@ -17,6 +17,7 @@ export function AgentIndexRedirect() {
     );
   }
 
-  const last = agents[agents.length - 1];
-  return <Navigate to={`/agents/${last.agent_id}`} replace />;
+  const lastId = localStorage.getItem("aura:lastAgentId");
+  const target = agents.find((a) => a.agent_id === lastId) ?? agents[0];
+  return <Navigate to={`/agents/${target.agent_id}`} replace />;
 }
