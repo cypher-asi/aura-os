@@ -414,10 +414,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ path }),
     }),
-  openIde: (path: string) =>
+  openIde: (path: string, root?: string) =>
     apiFetch<{ ok: boolean }>("/api/open-ide", {
       method: "POST",
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ path, root }),
     }),
   readFile: (path: string) =>
     apiFetch<{ ok: boolean; content?: string; path?: string; error?: string }>("/api/read-file", {

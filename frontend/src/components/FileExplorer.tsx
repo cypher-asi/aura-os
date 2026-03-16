@@ -71,7 +71,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
         if (onFileSelect) {
           onFileSelect(id);
         } else {
-          api.openIde(id);
+          api.openIde(id, rootPath);
         }
       }
     },

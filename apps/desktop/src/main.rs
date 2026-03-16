@@ -30,7 +30,7 @@ enum WinCmd {
 #[derive(Debug)]
 enum UserEvent {
     WindowCommand { window_id: WindowId, cmd: WinCmd },
-    OpenIdeWindow { file_path: String },
+    OpenIdeWindow { file_path: String, root_path: Option<String> },
 }
 
 fn ipc_handler(proxy: EventLoopProxy<UserEvent>, window_id: WindowId) -> impl Fn(wry::http::Request<String>) + 'static {
@@ -258,6 +258,7 @@ async fn list_directory(Json(req): Json<ListDirectoryRequest>) -> Json<serde_jso
 #[derive(serde::Deserialize)]
 struct OpenIdeRequest {
     path: String,
+    root: Option<String>,
 }
 
 async fn open_ide(
@@ -265,7 +266,7 @@ async fn open_ide(
     Json(req): Json<OpenIdeRequest>,
 ) -> Json<serde_json::Value> {
     info!(path = %req.path, "requesting IDE window");
-    let _ = proxy.send_event(UserEvent::OpenIdeWindow { file_path: req.path });
+    let _ = proxy.send_event(UserEvent::OpenIdeWindow { file_path: req.path, root_path: req.root });
     Json(serde_json::json!({ "ok": true }))
 }
 
@@ -498,12 +499,13 @@ fn main() {
                         }
                     }
                 }
-                UserEvent::OpenIdeWindow { file_path } => {
+                UserEvent::OpenIdeWindow { file_path, root_path } => {
                     let p = proxy.clone();
                     let (win, wv) = aura_ide::open_ide_window(
                         elwt,
                         &base_url,
                         &file_path,
+                        root_path.as_deref(),
                         Some(icon_data.to_icon()),
                         move |wid| Box::new(ipc_handler(p, wid)),
                     );

@@ -19,6 +19,7 @@ pub fn open_ide_window<E: 'static>(
     event_loop: &EventLoopWindowTarget<E>,
     base_url: &str,
     file_path: &str,
+    root_path: Option<&str>,
     icon: Option<Icon>,
     make_ipc: impl FnOnce(WindowId) -> Box<dyn Fn(wry::http::Request<String>) + 'static>,
 ) -> (Window, WebView) {
@@ -38,7 +39,10 @@ pub fn open_ide_window<E: 'static>(
     let ipc = make_ipc(window.id());
 
     let encoded_path = urlencoding::encode(file_path);
-    let url = format!("{base_url}/ide?file={encoded_path}");
+    let mut url = format!("{base_url}/ide?file={encoded_path}");
+    if let Some(root) = root_path {
+        url.push_str(&format!("&root={}", urlencoding::encode(root)));
+    }
     info!(%url, "opening IDE window");
 
     let webview = WebViewBuilder::new()
