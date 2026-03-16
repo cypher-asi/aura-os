@@ -18,4 +18,6 @@ export interface AuraApp {
   PreviewPanel?: ComponentType;
   PreviewHeader?: ComponentType;
   Provider?: ComponentType<{ children: ReactNode }>;
+  /** Placeholder text shown in the sidebar search input when this app is active. */
+  searchPlaceholder?: string;
 }

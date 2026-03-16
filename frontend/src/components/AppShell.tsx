@@ -78,10 +78,11 @@ function PreviewLane() {
 
 function SidebarSearchInput() {
   const { query, setQuery, action } = useSidebarSearch();
+  const { activeApp } = useAppContext();
 
   return (
     <PanelSearch
-      placeholder="Search Agents..."
+      placeholder={activeApp.searchPlaceholder ?? "Search..."}
       value={query}
       onChange={setQuery}
       action={action}

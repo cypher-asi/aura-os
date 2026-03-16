@@ -23,4 +23,5 @@ export const ProjectsApp: AuraApp = {
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
   Provider: ProjectsProvider,
+  searchPlaceholder: "Search Projects...",
 };

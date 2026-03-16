@@ -14,4 +14,5 @@ export const AgentsApp: AuraApp = {
   MainPanel: AgentMainPanel,
   SidekickPanel: AgentInfoPanel,
   Provider: AgentAppProvider,
+  searchPlaceholder: "Search Agents...",
 };
