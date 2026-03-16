@@ -5,6 +5,7 @@ import { Save, X } from "lucide-react";
 import hljs from "highlight.js/lib/common";
 import { api } from "../api/client";
 import { FileExplorer } from "../components/FileExplorer";
+import { Lane } from "../components/Lane";
 import { filenameFromPath, langFromPath } from "../ide/lang";
 import { windowCommand } from "../lib/windowCommand";
 import styles from "./IdeView.module.css";
@@ -244,14 +245,22 @@ export function IdeView() {
       {/* ---- Body ---- */}
       <div className={styles.body}>
         {/* Sidebar with file explorer */}
-        <div className={`${styles.sidebar} ${rootPath ? styles.open : ""}`}>
-          {rootPath && (
+        {rootPath && (
+          <Lane
+            resizable
+            resizePosition="right"
+            defaultWidth={220}
+            minWidth={120}
+            maxWidth={480}
+            storageKey="ide-sidebar-width"
+            className={styles.sidebar}
+          >
             <FileExplorer
               rootPath={rootPath}
               onFileSelect={handleFileSelect}
             />
-          )}
-        </div>
+          </Lane>
+        )}
 
         <div className={styles.editorPane}>
           {/* Tab bar */}

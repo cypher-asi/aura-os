@@ -17,17 +17,8 @@
 }
 
 .sidebar {
-  width: 0;
-  flex-shrink: 0;
-  background: var(--color-surface, #161b22);
+  background: var(--color-bg, #0d1117);
   border-right: 1px solid var(--color-border, #30363d);
-  overflow: hidden;
-  transition: width 0.15s ease;
-}
-
-.sidebar.open {
-  width: 220px;
-  overflow-y: auto;
 }
 
 .editorPane {
@@ -174,7 +165,7 @@
   text-align: right;
   user-select: none;
   color: var(--color-text-muted, #484f58);
-  background: var(--color-surface, #161b22);
+  background: var(--color-bg, #0d1117);
   border-right: 1px solid var(--color-border, #30363d);
   min-width: 48px;
   overflow: hidden;
@@ -249,7 +240,7 @@
   gap: 16px;
   font-size: 11px;
   color: var(--color-text-muted, #484f58);
-  background: var(--color-surface, #161b22);
+  background: var(--color-bg, #0d1117);
   border-top: 1px solid var(--color-border, #30363d);
 }
 

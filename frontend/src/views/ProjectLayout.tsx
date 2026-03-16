@@ -5,7 +5,7 @@ import type { Project, Spec, Task } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useProjectRegister } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
-import { PageEmptyState, Spinner } from "@cypher-asi/zui";
+import { PageEmptyState } from "@cypher-asi/zui";
 
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -91,9 +91,9 @@ export function ProjectLayout() {
     return () => unregister();
   }, [project, initialSpecs, initialTasks, message, navigate, register, unregister]);
 
-  if (loading) return <Spinner />;
+  if (loading) return null;
   if (!project) return <PageEmptyState title="Project not found" />;
-  if (project.project_id !== projectId) return <Spinner />;
+  if (project.project_id !== projectId) return null;
 
   return <Outlet />;
 }
