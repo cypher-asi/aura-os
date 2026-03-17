@@ -97,11 +97,19 @@ function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
 
 function SpecPreview({ spec }: { spec: import("../types").Spec }) {
   return (
-    <div className={`${styles.markdown} ${styles.specMarkdown}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-        {spec.markdown_contents}
-      </ReactMarkdown>
-    </div>
+    <>
+      <div className={styles.taskMeta}>
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Title</span>
+          <Text size="sm">{spec.title}</Text>
+        </div>
+      </div>
+      <div className={`${styles.markdown} ${styles.specMarkdown}`}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+          {spec.markdown_contents}
+        </ReactMarkdown>
+      </div>
+    </>
   );
 }
 
@@ -602,6 +610,10 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     <>
       <div className={styles.taskMeta}>
         <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Title</span>
+          <Text size="sm">{task.title}</Text>
+        </div>
+        <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Status</span>
           <span className={styles.statusRow}>
             <TaskStatusIcon status={effectiveStatus} />
@@ -946,9 +958,9 @@ function SessionPreview({ session }: { session: Session }) {
 
 function previewTitle(item: PreviewItem): string {
   switch (item.kind) {
-    case "spec": return item.spec.title;
+    case "spec": return "Spec";
     case "specs_overview": return "Specs";
-    case "task": return item.task.title;
+    case "task": return "Task";
     case "session": return `Session ${item.session.session_id.slice(0, 8)}`;
   }
 }
