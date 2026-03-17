@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench, MinusCircle, SkipForward, FileText } from "lucide-react";
+import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench, MinusCircle, SkipForward, FileText, Terminal } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -367,6 +367,8 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [failReason, setFailReason] = useState<string | null>(null);
   const [agentInstance, setAgentInstance] = useState<AgentInstance | null>(null);
   const hydratedRef = useRef< string | null >(null);
+  const [showRawOutput, setShowRawOutput] = useState(false);
+  const rawOutputRef = useRef<HTMLPreElement>(null);
 
   const streamBuf = taskOutput.text;
   const liveFileOps = taskOutput.fileOps;
@@ -518,6 +520,13 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     return items;
   }, [hasOutput, isActive, isTerminal, streamBuf, taskOutput.buildSteps, taskOutput.testSteps]);
   const showOutput = activity.length > 0;
+
+  useEffect(() => {
+    if (showRawOutput && rawOutputRef.current) {
+      const el = rawOutputRef.current;
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [showRawOutput, streamBuf]);
 
   const handleRetry = useCallback(async () => {
     if (!projectId || retrying) return;
@@ -759,10 +768,24 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
                 </div>
               ))}
             </div>
-            {isActive && streamBuf.length > 0 && (
-              <Text variant="muted" size="xs" className={styles.streamProgress}>
-                Streaming: {(streamBuf.length / 1024).toFixed(1)} KB received
-              </Text>
+            {streamBuf.length > 0 && (
+              <div className={styles.rawOutputToggleRow}>
+                <button
+                  className={styles.rawOutputToggle}
+                  onClick={() => setShowRawOutput((v) => !v)}
+                >
+                  <Terminal size={11} />
+                  {showRawOutput ? "Hide raw output" : "Show raw output"}
+                </button>
+                <Text variant="muted" size="xs" className={styles.streamProgress}>
+                  {(streamBuf.length / 1024).toFixed(1)} KB
+                </Text>
+              </div>
+            )}
+            {showRawOutput && streamBuf.length > 0 && (
+              <pre ref={rawOutputRef} className={styles.rawOutput}>
+                {streamBuf}
+              </pre>
             )}
           </div>
         </GroupCollapsible>
