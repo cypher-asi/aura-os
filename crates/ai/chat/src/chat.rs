@@ -866,7 +866,7 @@ impl ChatService {
                 instance.total_input_tokens += result.total_input_tokens;
                 instance.total_output_tokens += result.total_output_tokens;
                 if instance.model.is_none() {
-                    instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                    instance.model = Some(self.llm_config.default_model.clone());
                 }
                 instance.updated_at = Utc::now();
                 if let Err(e) = self.store.put_agent_instance(&instance) {
@@ -1315,7 +1315,7 @@ impl ChatService {
                     instance.total_input_tokens += spec_input_tokens;
                     instance.total_output_tokens += spec_output_tokens;
                     if instance.model.is_none() {
-                        instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                        instance.model = Some(self.llm_config.default_model.clone());
                     }
                     instance.updated_at = Utc::now();
                     if let Err(e) = self.store.put_agent_instance(&instance) {
