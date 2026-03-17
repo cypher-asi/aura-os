@@ -1,8 +1,11 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Mutex};
 use tracing::{info, warn};
+
+const PRE_FLIGHT_CACHE_TTL_SECS: u64 = 30;
 
 use aura_claude::{
     ClaudeStreamEvent, LlmProvider, LlmResponse, RichMessage,
@@ -46,6 +49,7 @@ pub struct MeteredLlm {
     billing: Arc<BillingClient>,
     store: Arc<RocksStore>,
     credits_exhausted: AtomicBool,
+    last_preflight_ok: Mutex<Option<Instant>>,
 }
 
 impl MeteredLlm {
@@ -59,6 +63,7 @@ impl MeteredLlm {
             billing,
             store,
             credits_exhausted: AtomicBool::new(false),
+            last_preflight_ok: Mutex::new(None),
         }
     }
 
@@ -80,6 +85,17 @@ impl MeteredLlm {
             self.credits_exhausted.store(true, Ordering::SeqCst);
             return Err(MeteredLlmError::InsufficientCredits);
         };
+
+        if !self.credits_exhausted.load(Ordering::SeqCst) {
+            let cache = self.last_preflight_ok.lock().await;
+            if let Some(ts) = *cache {
+                if ts.elapsed().as_secs() < PRE_FLIGHT_CACHE_TTL_SECS {
+                    return Ok(());
+                }
+            }
+            drop(cache);
+        }
+
         if self.credits_exhausted.load(Ordering::SeqCst) {
             match self.billing.ensure_has_credits(&token).await {
                 Ok(_) => {
@@ -94,6 +110,8 @@ impl MeteredLlm {
                 return Err(MeteredLlmError::InsufficientCredits);
             }
         }
+
+        *self.last_preflight_ok.lock().await = Some(Instant::now());
         Ok(())
     }
 
