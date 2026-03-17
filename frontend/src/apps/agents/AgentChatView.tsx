@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
 import { useAgentApp } from "./AgentAppProvider";
-import { MessageBubble, StreamingBubble } from "../../components/MessageBubble";
+import { MessageBubble, StreamingBubble, CookingIndicator } from "../../components/MessageBubble";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import type { Message } from "../../types";
@@ -110,7 +110,7 @@ export function AgentChatView() {
   }
 
   const agentName = selectedAgent?.name;
-  const hasMessages = messages.length > 0 || streamingText || thinkingText;
+  const hasMessages = messages.length > 0 || isStreaming || streamingText || thinkingText;
 
   return (
     <div className={styles.container}>
@@ -133,6 +133,9 @@ export function AgentChatView() {
                 {messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
+                {isStreaming && !streamingText && !thinkingText && activeToolCalls.length === 0 && (
+                  <CookingIndicator />
+                )}
                 {(streamingText || thinkingText || activeToolCalls.length > 0) && (
                   <StreamingBubble
                     text={streamingText}
