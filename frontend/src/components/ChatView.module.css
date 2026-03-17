@@ -228,31 +228,6 @@
   50% { opacity: 0.3; box-shadow: none; }
 }
 
-/* Shimmer placeholder — waiting phase before any content arrives */
-.shimmerPlaceholder {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.shimmerBar {
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.08) 40%,
-    rgba(255, 255, 255, 0.03) 80%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-.shimmerBar:nth-child(1) { width: 80%; }
-.shimmerBar:nth-child(2) { width: 55%; animation-delay: 0.15s; }
-.shimmerBar:nth-child(3) { width: 35%; animation-delay: 0.3s; }
-
 /* Thinking block — content-specific styles (structure in ResponseBlock) */
 .thinkingBlock {
   margin-bottom: 10px;
@@ -437,8 +412,8 @@
 
 .inputRow {
   display: flex;
-  align-items: center;
-  height: var(--control-height-sm, 32px);
+  align-items: flex-end;
+  min-height: var(--control-height-sm, 32px);
   padding: 0 4px;
 }
 
@@ -451,13 +426,13 @@
   color: var(--color-text);
   font-family: inherit;
   font-size: 13px;
-  line-height: var(--control-height-sm, 32px);
-  padding: 0 6px;
-  height: var(--control-height-sm, 32px);
-  min-height: 0;
-  max-height: var(--control-height-sm, 32px);
+  line-height: 1.5;
+  padding: 6px 6px;
+  height: auto;
+  min-height: var(--control-height-sm, 32px);
+  max-height: 200px;
   outline: none;
-  overflow: hidden;
+  overflow-y: auto;
   border-radius: 0;
 }
 
@@ -589,27 +564,3 @@
   background: var(--color-text-muted);
 }
 
-/* Cooking indicator — shown immediately after sending, before LLM content arrives */
-.cookingIndicator {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: var(--space-2) 0;
-}
-
-
-.cookingText {
-  font-size: 14px;
-  font-weight: 500;
-  background: linear-gradient(
-    90deg,
-    var(--color-text-muted, #aaa) 0%,
-    var(--color-text, #fff) 40%,
-    var(--color-text-muted, #aaa) 80%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 2s ease-in-out infinite;
-}
