@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -115,6 +116,7 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
   const { subscribe } = useEventContext();
   const ctx = useProjectContext();
   const sidekick = useSidekick();
+  const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState(task.status);
@@ -148,14 +150,14 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
     if (!projectId || running) return;
     setRunning(true);
     try {
-      await api.runTask(projectId, task.task_id);
+      await api.runTask(projectId, task.task_id, agentInstanceId);
       sidekick.pushTask({ ...task, status: "in_progress" });
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
       setRunning(false);
     }
-  }, [projectId, task.task_id, running]);
+  }, [projectId, task.task_id, running, agentInstanceId]);
 
   const visible = status === "ready";
 
@@ -357,6 +359,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectContext();
   const sidekick = useSidekick();
+  const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const [retrying, setRetrying] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
@@ -511,9 +514,8 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       await api.retryTask(projectId, task.task_id);
       setLiveStatus("ready");
       setFailReason(null);
-      // Auto-run the task after resetting it
       try {
-        await api.runTask(projectId, task.task_id);
+        await api.runTask(projectId, task.task_id, routeAgentInstanceId);
       } catch {
         // Task is at least reset to Ready; user can run manually
       }
