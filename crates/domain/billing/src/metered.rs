@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 use tracing::{info, warn};
 
 use aura_claude::{
-    ClaudeClient, ClaudeStreamEvent, LlmResponse, RichMessage, ThinkingConfig,
+    ClaudeStreamEvent, LlmProvider, LlmResponse, RichMessage, ThinkingConfig,
     ToolDefinition, ToolStreamResponse,
 };
 use aura_core::ZeroAuthSession;
@@ -26,26 +26,18 @@ pub enum MeteredLlmError {
 }
 
 pub struct MeteredLlm {
-    provider: Arc<ClaudeClient>,
+    provider: Arc<dyn LlmProvider>,
     billing: Arc<BillingClient>,
     store: Arc<RocksStore>,
 }
 
 impl MeteredLlm {
     pub fn new(
-        provider: Arc<ClaudeClient>,
+        provider: Arc<dyn LlmProvider>,
         billing: Arc<BillingClient>,
         store: Arc<RocksStore>,
     ) -> Self {
         Self { provider, billing, store }
-    }
-
-    pub fn provider(&self) -> &ClaudeClient {
-        &self.provider
-    }
-
-    pub fn provider_arc(&self) -> Arc<ClaudeClient> {
-        self.provider.clone()
     }
 
     fn access_token(&self) -> Option<String> {
@@ -105,7 +97,7 @@ impl MeteredLlm {
         metadata: Option<serde_json::Value>,
     ) -> Result<LlmResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
-        let resp = self.provider.complete_with_usage(api_key, system_prompt, user_message, max_tokens).await?;
+        let resp = self.provider.complete(api_key, system_prompt, user_message, max_tokens).await?;
         self.debit(resp.input_tokens, resp.output_tokens, reason, metadata).await;
         Ok(resp)
     }
@@ -201,7 +193,7 @@ impl MeteredLlm {
     ) -> Result<ToolStreamResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
         let resp = self.provider.complete_stream_with_tools(
-            api_key, system_prompt, messages, tools, max_tokens, event_tx,
+            api_key, system_prompt, messages, tools, max_tokens, None, event_tx,
         ).await?;
         self.debit(resp.input_tokens, resp.output_tokens, reason, metadata).await;
         Ok(resp)
@@ -220,8 +212,8 @@ impl MeteredLlm {
         metadata: Option<serde_json::Value>,
     ) -> Result<ToolStreamResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
-        let resp = self.provider.complete_stream_with_tools_thinking(
-            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
+        let resp = self.provider.complete_stream_with_tools(
+            api_key, system_prompt, messages, tools, max_tokens, Some(thinking), event_tx,
         ).await?;
         self.debit(resp.input_tokens, resp.output_tokens, reason, metadata).await;
         Ok(resp)

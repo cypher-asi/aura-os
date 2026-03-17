@@ -2,6 +2,7 @@ mod error;
 
 pub use error::ClaudeClientError;
 
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::{debug, error, info};
@@ -164,6 +165,54 @@ pub struct LlmResponse {
     pub text: String,
     pub input_tokens: u64,
     pub output_tokens: u64,
+}
+
+// ---------------------------------------------------------------------------
+// Provider trait -- the abstraction that all callers depend on
+// ---------------------------------------------------------------------------
+
+#[async_trait]
+pub trait LlmProvider: Send + Sync {
+    /// Non-streaming completion that returns text with token usage.
+    async fn complete(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError>;
+
+    /// Single-turn streaming completion.
+    async fn complete_stream(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError>;
+
+    /// Multi-turn streaming completion (no tools).
+    async fn complete_stream_multi(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<(String, String)>,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError>;
+
+    /// Multi-turn streaming with tool definitions and optional thinking.
+    async fn complete_stream_with_tools(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -784,5 +833,59 @@ impl ClaudeClient {
 impl Default for ClaudeClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[async_trait]
+impl LlmProvider for ClaudeClient {
+    async fn complete(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
+        self.complete_with_usage(api_key, system_prompt, user_message, max_tokens)
+            .await
+    }
+
+    async fn complete_stream(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError> {
+        ClaudeClient::complete_stream(self, api_key, system_prompt, user_message, max_tokens, event_tx)
+            .await
+    }
+
+    async fn complete_stream_multi(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<(String, String)>,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError> {
+        ClaudeClient::complete_stream_multi(self, api_key, system_prompt, messages, max_tokens, event_tx)
+            .await
+    }
+
+    async fn complete_stream_with_tools(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        self.complete_stream_with_tools_inner(
+            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
+        )
+        .await
     }
 }

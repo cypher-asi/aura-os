@@ -221,9 +221,9 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         Arc::new(SettingsService::new(store.clone(), data_dir).expect("failed to init settings"));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
-    let claude_client = Arc::new(ClaudeClient::new());
+    let claude_client: Arc<dyn aura_claude::LlmProvider> = Arc::new(ClaudeClient::new());
     let llm = Arc::new(MeteredLlm::new(
-        claude_client.clone(),
+        claude_client,
         billing_client.clone(),
         store.clone(),
     ));

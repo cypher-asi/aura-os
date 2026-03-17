@@ -350,6 +350,7 @@ dependencies = [
 name = "aura-billing"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "aura-claude",
  "aura-core",
  "aura-settings",
@@ -392,6 +393,7 @@ dependencies = [
 name = "aura-claude"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bytes",
  "reqwest 0.11.27",
  "serde",
