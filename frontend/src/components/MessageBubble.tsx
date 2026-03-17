@@ -8,6 +8,7 @@ import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 import { ResponseBlock } from "./ResponseBlock";
+import { CookingIndicator, getStreamingPhaseLabel } from "./CookingIndicator";
 
 import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
 
@@ -329,33 +330,14 @@ function StreamingIndicator({
   thinkingText?: string;
   toolCalls?: ToolCallEntry[];
 }) {
-  const hasText = Boolean(text);
-  const hasThinking = Boolean(thinkingText);
-  const hasPendingTools = toolCalls?.some((tc) => tc.pending) ?? false;
+  const label = getStreamingPhaseLabel({
+    streamingText: text,
+    thinkingText,
+    toolCalls: toolCalls ?? [],
+  });
 
-  if (hasText) {
-    return <span className={styles.streamingCursorGlow} />;
-  }
-
-  if (hasThinking || hasPendingTools) {
-    return null;
-  }
-
-  return (
-    <div className={styles.shimmerPlaceholder}>
-      <div className={styles.shimmerBar} />
-      <div className={styles.shimmerBar} />
-      <div className={styles.shimmerBar} />
-    </div>
-  );
-}
-
-export function CookingIndicator() {
-  return (
-    <div className={styles.cookingIndicator}>
-      <span className={styles.cookingText}>Cooking...</span>
-    </div>
-  );
+  if (label) return <CookingIndicator label={label} />;
+  return <span className={styles.streamingCursorGlow} />;
 }
 
 export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDurationMs }: StreamingBubbleProps) {
