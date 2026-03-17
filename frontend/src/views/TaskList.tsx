@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "../api/client";
-import type { Spec, Task, TaskStatus, AgentInstance } from "../types";
+import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
@@ -21,7 +21,6 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading, setLoading] = useState(false);
-  const [agentInstances, setAgentInstances] = useState<AgentInstance[]>([]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -32,7 +31,6 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-    api.listAgentInstances(projectId).then(setAgentInstances).catch(console.error);
   }, [projectId]);
 
   const updateTaskStatus = useCallback(
@@ -100,11 +98,6 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);
-  const agentMap = useMemo(
-    () => new Map(agentInstances.map((a) => [a.agent_instance_id, a])),
-    [agentInstances],
-  );
-
   const groupedTasks = useMemo(
     () =>
       specs.map((spec) => ({
@@ -136,34 +129,10 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
       function toNode(task: Task): ExplorerNode {
         const subtasks = childrenByParent.get(task.task_id);
-        const agent = task.assigned_agent_instance_id
-          ? agentMap.get(task.assigned_agent_instance_id)
-          : undefined;
         return {
           id: task.task_id,
           label: task.title,
-          suffix: (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {agent && (
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    opacity: 0.7,
-                    whiteSpace: "nowrap",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {agent.icon ? (
-                    <img src={agent.icon} alt="" style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "cover" }} />
-                  ) : null}
-                  {agent.name}
-                </span>
-              )}
-              <TaskStatusIcon status={task.status} />
-            </span>
-          ),
+          suffix: <TaskStatusIcon status={task.status} />,
           metadata: { type: "task" },
           ...(subtasks && subtasks.length > 0
             ? { children: subtasks.map(toNode) }
@@ -198,7 +167,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     }
 
     return specNodes;
-  }, [groupedTasks, ungrouped, agentMap]);
+  }, [groupedTasks, ungrouped]);
 
   const defaultExpandedIds = useMemo(
     () => explorerData.map((node) => node.id),
