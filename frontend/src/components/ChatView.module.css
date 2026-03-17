@@ -189,11 +189,16 @@
 }
 .markdown pre {
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 10px;
+  border-radius: 0;
+  padding: 0 12px;
+  min-height: var(--control-height-sm, 32px);
+  display: flex;
+  align-items: center;
   overflow-x: auto;
   margin-bottom: 10px;
   font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .markdown pre code { background: none; padding: 0; font-size: 12px; }
 .markdown table {
@@ -407,7 +412,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   padding: 0;
   transition: border-color 0.15s ease;
@@ -516,16 +521,8 @@
 .inputRow {
   display: flex;
   align-items: center;
-  padding: 0 6px;
-}
-
-.inputArrow {
-  color: var(--color-text-muted);
-  font-size: 14px;
-  flex-shrink: 0;
-  padding: 0 2px;
-  user-select: none;
-  opacity: 0.6;
+  height: var(--control-height-sm, 32px);
+  padding: 0 4px;
 }
 
 .textarea {
@@ -536,13 +533,14 @@
   background: transparent;
   color: var(--color-text);
   font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 10px 8px;
-  min-height: 24px;
-  max-height: 160px;
+  font-size: 13px;
+  line-height: var(--control-height-sm, 32px);
+  padding: 0 6px;
+  height: var(--control-height-sm, 32px);
+  min-height: 0;
+  max-height: var(--control-height-sm, 32px);
   outline: none;
-  overflow-y: auto;
+  overflow: hidden;
   border-radius: 0;
 }
 
@@ -582,9 +580,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
   border: none;
   background: transparent;
   color: var(--color-text-muted);
@@ -646,9 +644,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
   border: none;
   background: transparent;
   color: var(--color-text-muted);

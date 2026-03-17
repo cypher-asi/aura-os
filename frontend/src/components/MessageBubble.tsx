@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight, Loader2, Wrench, CheckCircle2, XCircle, Sparkles, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, Sparkles, FileText } from "lucide-react";
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
@@ -53,33 +53,26 @@ const TOOL_LABELS: Record<string, string> = {
 function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
   const [expanded, setExpanded] = useState(false);
   const label = TOOL_LABELS[entry.name] || entry.name;
-
   const inputSummary = summarizeInput(entry.name, entry.input);
 
+  const stateClass = entry.pending
+    ? toolStyles.taskActive
+    : entry.isError
+      ? toolStyles.taskError
+      : toolStyles.taskDone;
+
   return (
-    <div className={toolStyles.toolBlock}>
+    <div className={`${toolStyles.toolBlock} ${stateClass}`}>
       <button
         className={toolStyles.toolHeader}
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className={toolStyles.toolIcon}>
-          {entry.pending ? (
-            <Loader2 size={14} className={toolStyles.spinner} />
-          ) : entry.isError ? (
-            <XCircle size={14} className={toolStyles.errorIcon} />
-          ) : (
-            <CheckCircle2 size={14} className={toolStyles.successIcon} />
-          )}
-        </span>
-        <Wrench size={12} className={toolStyles.wrenchIcon} />
+        <span className={toolStyles.taskCheck} />
         <span className={toolStyles.toolName}>{label}</span>
         {inputSummary && (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
         )}
-        <span className={toolStyles.chevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
       </button>
       {expanded && (
         <div className={toolStyles.toolBody}>
@@ -101,6 +94,30 @@ function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
+  const pendingCount = entries.filter((e) => e.pending).length;
+  const total = entries.length;
+  const allDone = pendingCount === 0;
+
+  return (
+    <div className={toolStyles.toolCallsContainer}>
+      <div className={toolStyles.toolCallsHeader}>
+        <span className={`${toolStyles.headerDot} ${allDone ? toolStyles.headerDotDone : ""}`} />
+        <span className={toolStyles.headerText}>
+          {allDone ? (
+            <>Ran <strong>{total}</strong> {total === 1 ? "action" : "actions"}</>
+          ) : (
+            <><strong>Working</strong> on {total} to-do{total !== 1 ? "s" : ""}</>
+          )}
+        </span>
+      </div>
+      {entries.map((tc) => (
+        <ToolCallBlock key={tc.id} entry={tc} />
+      ))}
     </div>
   );
 }
@@ -280,11 +297,7 @@ export function MessageBubble({ message }: Props) {
         ) : (
           <div className={styles.markdown}>
             {hasToolCalls && (
-              <div className={toolStyles.toolCallsContainer}>
-                {message.toolCalls!.map((tc) => (
-                  <ToolCallBlock key={tc.id} entry={tc} />
-                ))}
-              </div>
+              <ToolCallsList entries={message.toolCalls!} />
             )}
             {hasContent && (
               <ReactMarkdown
@@ -352,11 +365,7 @@ export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDuratio
             />
           )}
           {toolCalls && toolCalls.length > 0 && (
-            <div className={toolStyles.toolCallsContainer}>
-              {toolCalls.map((tc) => (
-                <ToolCallBlock key={tc.id} entry={tc} />
-              ))}
-            </div>
+            <ToolCallsList entries={toolCalls} />
           )}
           {text && (
             <ReactMarkdown

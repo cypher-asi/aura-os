@@ -257,7 +257,6 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
           >
             <Plus size={16} />
           </button>
-          <span className={styles.inputArrow}>→</span>
           <textarea
             ref={textareaRef}
             className={styles.textarea}
