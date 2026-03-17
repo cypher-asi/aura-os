@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use aura_core::*;
@@ -69,24 +70,82 @@ impl RocksStore {
     }
 
     /// Re-key agents stored under `"default"` to the real authenticated user ID.
-    /// Idempotent: no-op if no `default:*` entries exist.
+    /// Skips any agent whose name already exists for the target user to avoid
+    /// creating duplicates across server restarts.
     pub fn migrate_agents_from_default(&self, new_user_id: &str) -> StoreResult<usize> {
         if new_user_id == "default" {
             return Ok(0);
         }
         let old_agents = self.list_agents_by_user("default")?;
+        if old_agents.is_empty() {
+            return Ok(0);
+        }
+        let existing_names: HashSet<String> = self
+            .list_agents_by_user(new_user_id)?
+            .into_iter()
+            .map(|a| a.name)
+            .collect();
         let mut count = 0;
         for mut agent in old_agents {
             let old_key = format!("default:{}", agent.agent_id);
-            agent.user_id = new_user_id.to_string();
-            self.put_agent(&agent)?;
+            if !existing_names.contains(&agent.name) {
+                agent.user_id = new_user_id.to_string();
+                self.put_agent(&agent)?;
+                count += 1;
+            }
             self.db.delete_cf(&self.cf_agents(), old_key.as_bytes())?;
-            count += 1;
         }
         if count > 0 {
             tracing::info!("Migrated {count} agents from 'default' to '{new_user_id}'");
         }
         Ok(count)
+    }
+
+    /// Remove duplicate agents that accumulated from repeated seed+migrate cycles.
+    /// For each user, keeps only the oldest agent per name and deletes the rest.
+    /// Runs only once (guarded by a persistent setting flag).
+    pub fn dedup_agents_by_user(&self) -> StoreResult<()> {
+        if self.get_setting("agents_deduped_v1").is_ok() {
+            return Ok(());
+        }
+        let mut opts = rocksdb::ReadOptions::default();
+        opts.set_total_order_seek(true);
+        let iter = self.db.iterator_cf_opt(
+            &self.cf_agents(),
+            opts,
+            rocksdb::IteratorMode::Start,
+        );
+        let mut by_user: HashMap<String, Vec<Agent>> = HashMap::new();
+        for item in iter {
+            let (_key, value) = item?;
+            if let Ok(agent) = serde_json::from_slice::<Agent>(&value) {
+                by_user.entry(agent.user_id.clone()).or_default().push(agent);
+            }
+        }
+        let mut total_removed = 0;
+        for (user_id, agents) in &by_user {
+            let mut seen: HashMap<&str, &Agent> = HashMap::new();
+            for agent in agents {
+                if let Some(existing) = seen.get(agent.name.as_str()) {
+                    let to_delete = if agent.created_at < existing.created_at {
+                        let evicted = *existing;
+                        seen.insert(&agent.name, agent);
+                        evicted
+                    } else {
+                        agent
+                    };
+                    self.delete_agent(&user_id, &to_delete.agent_id)?;
+                    total_removed += 1;
+                } else {
+                    seen.insert(&agent.name, agent);
+                }
+            }
+        }
+        if total_removed > 0 {
+            tracing::info!("Dedup: removed {total_removed} duplicate agents");
+        }
+        self.put_setting("agents_deduped_v1", b"1")?;
+        Ok(())
     }
 
     // -- Session CRUD --

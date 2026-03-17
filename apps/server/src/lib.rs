@@ -170,10 +170,15 @@ fn finalize_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers
     }
 }
 
-fn seed_default_agents(agent_service: &AgentService) {
+fn seed_default_agents(store: &RocksStore, agent_service: &AgentService) {
+    if store.get_setting("default_agents_seeded").is_ok() {
+        return;
+    }
+
     let user_id = "default";
     if let Ok(existing) = agent_service.list_agents(user_id) {
         if !existing.is_empty() {
+            let _ = store.put_setting("default_agents_seeded", b"1");
             return;
         }
     }
@@ -208,6 +213,8 @@ fn seed_default_agents(agent_service: &AgentService) {
             info!(name, "Seeded default agent");
         }
     }
+
+    let _ = store.put_setting("default_agents_seeded", b"1");
 }
 
 pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
@@ -275,7 +282,10 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         }
     }
 
-    seed_default_agents(&agent_service);
+    seed_default_agents(&store, &agent_service);
+    if let Err(e) = store.dedup_agents_by_user() {
+        warn!(error = %e, "Failed to deduplicate agents");
+    }
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(4096);
