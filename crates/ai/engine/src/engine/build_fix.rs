@@ -315,7 +315,7 @@ impl DevLoopEngine {
             None => return HashSet::new(),
         };
         let base_path = Path::new(&project.linked_folder_path);
-        match build_verify::run_build_command(base_path, test_command).await {
+        match build_verify::run_build_command(base_path, test_command, None).await {
             Ok(result) => {
                 let (tests, _) = build_verify::parse_test_output(
                     &result.stdout, &result.stderr, result.success,
@@ -399,7 +399,22 @@ impl DevLoopEngine {
                 attempt: Some(attempt),
             });
 
-            let build_result = build_verify::run_build_command(base_path, &build_command).await?;
+            let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
+            let fwd_event_tx = self.event_tx.clone();
+            let fwd_pid = project.project_id;
+            let fwd_aiid = session.agent_instance_id;
+            let fwd_tid = task.task_id;
+            tokio::spawn(async move {
+                while let Some(line) = line_rx.recv().await {
+                    let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                        project_id: fwd_pid,
+                        agent_instance_id: fwd_aiid,
+                        task_id: fwd_tid,
+                        delta: line,
+                    });
+                }
+            });
+            let build_result = build_verify::run_build_command(base_path, &build_command, Some(line_tx)).await?;
             let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
 
             if build_result.success {
@@ -650,7 +665,7 @@ impl DevLoopEngine {
         });
 
         let test_start = Instant::now();
-        let test_result = build_verify::run_build_command(base_path, test_command).await?;
+        let test_result = build_verify::run_build_command(base_path, test_command, None).await?;
         let test_duration_ms = test_start.elapsed().as_millis() as u64;
         let (tests, summary) = build_verify::parse_test_output(
             &test_result.stdout, &test_result.stderr, test_result.success,

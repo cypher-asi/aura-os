@@ -428,7 +428,23 @@ impl DevLoopEngine {
                 delta: format!("Running: {command} (attempt {attempt}/{max_attempts})\n"),
             });
 
-            let result = build_verify::run_build_command(base_path, command).await?;
+            let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
+            let fwd_event_tx = self.event_tx.clone();
+            let fwd_pid = project.project_id;
+            let fwd_aiid = agent_instance_id;
+            let fwd_tid = task.task_id;
+            tokio::spawn(async move {
+                while let Some(line) = line_rx.recv().await {
+                    let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                        project_id: fwd_pid,
+                        agent_instance_id: fwd_aiid,
+                        task_id: fwd_tid,
+                        delta: line,
+                    });
+                }
+            });
+
+            let result = build_verify::run_build_command(base_path, command, Some(line_tx)).await?;
             let shell_step_duration_ms = shell_step_start.elapsed().as_millis() as u64;
 
             if result.success {

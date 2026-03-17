@@ -2,7 +2,9 @@ use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
 
+use tokio::io::AsyncBufReadExt;
 use tokio::process::Command;
+use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
 use aura_core::IndividualTestResult;
@@ -48,6 +50,7 @@ fn needs_shell(cmd: &str) -> bool {
 pub async fn run_build_command(
     project_dir: &Path,
     build_command: &str,
+    output_tx: Option<UnboundedSender<String>>,
 ) -> Result<BuildResult, EngineError> {
     if build_command.split_whitespace().next().is_none() {
         return Err(EngineError::Parse("build_command is empty".into()));
@@ -92,19 +95,35 @@ pub async fn run_build_command(
     let stdout_pipe = child.stdout.take();
     let stderr_pipe = child.stderr.take();
 
+    let stdout_tx = output_tx.clone();
     let stdout_handle = tokio::spawn(async move {
-        let mut buf = Vec::new();
-        if let Some(mut pipe) = stdout_pipe {
-            let _ = tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf).await;
+        let mut collected = String::new();
+        if let Some(pipe) = stdout_pipe {
+            let mut reader = tokio::io::BufReader::new(pipe).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                if let Some(ref tx) = stdout_tx {
+                    let _ = tx.send(format!("{line}\n"));
+                }
+                collected.push_str(&line);
+                collected.push('\n');
+            }
         }
-        String::from_utf8_lossy(&buf).to_string()
+        collected
     });
+    let stderr_tx = output_tx;
     let stderr_handle = tokio::spawn(async move {
-        let mut buf = Vec::new();
-        if let Some(mut pipe) = stderr_pipe {
-            let _ = tokio::io::AsyncReadExt::read_to_end(&mut pipe, &mut buf).await;
+        let mut collected = String::new();
+        if let Some(pipe) = stderr_pipe {
+            let mut reader = tokio::io::BufReader::new(pipe).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                if let Some(ref tx) = stderr_tx {
+                    let _ = tx.send(format!("{line}\n"));
+                }
+                collected.push_str(&line);
+                collected.push('\n');
+            }
         }
-        String::from_utf8_lossy(&buf).to_string()
+        collected
     });
 
     let result = match tokio::time::timeout(BUILD_TIMEOUT, child.wait()).await {
