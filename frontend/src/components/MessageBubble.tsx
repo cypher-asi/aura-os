@@ -3,10 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
+import { ResponseBlock } from "./ResponseBlock";
 
 import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
 
@@ -231,27 +232,21 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
       : "Thought";
 
   return (
-    <div className={styles.thinkingBlock}>
-      <button
-        className={`${styles.thinkingHeader} ${isStreaming ? styles.thinkingHeaderActive : ""}`}
-        onClick={() => setExpanded(!expanded)}
-        type="button"
-      >
+    <ResponseBlock
+      expanded={expanded}
+      onExpandedChange={setExpanded}
+      maxExpandedHeight={300}
+      className={styles.thinkingBlock}
+      header={
         <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>
           {durationLabel}
         </span>
-        <span className={styles.thinkingChevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-      </button>
-      <div
-        className={`${styles.thinkingContentWrap} ${expanded ? styles.thinkingContentExpanded : ""}`}
-      >
-        <div ref={contentRef} className={styles.thinkingContent}>
-          {stripEmojis(text)}
-        </div>
+      }
+    >
+      <div ref={contentRef} className={styles.thinkingContent}>
+        {stripEmojis(text)}
       </div>
-    </div>
+    </ResponseBlock>
   );
 }
 
