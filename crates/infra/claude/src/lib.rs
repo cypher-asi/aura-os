@@ -152,6 +152,21 @@ impl RichMessage {
 }
 
 // ---------------------------------------------------------------------------
+// Generic type aliases (provider-agnostic names for callers)
+// ---------------------------------------------------------------------------
+
+pub type LlmStreamEvent = ClaudeStreamEvent;
+pub type LlmToolResponse = ToolStreamResponse;
+pub type LlmError = ClaudeClientError;
+
+#[derive(Debug, Clone)]
+pub struct LlmResponse {
+    pub text: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+}
+
+// ---------------------------------------------------------------------------
 // Stream events
 // ---------------------------------------------------------------------------
 
@@ -226,6 +241,16 @@ struct ToolMessagesRequest {
 struct MessagesResponse {
     content: Vec<ResponseContentBlock>,
     stop_reason: Option<String>,
+    #[serde(default)]
+    usage: Option<UsageBlock>,
+}
+
+#[derive(Deserialize, Default)]
+struct UsageBlock {
+    #[serde(default)]
+    input_tokens: u64,
+    #[serde(default)]
+    output_tokens: u64,
 }
 
 #[derive(Deserialize)]
@@ -265,6 +290,18 @@ impl ClaudeClient {
         user_message: &str,
         max_tokens: u32,
     ) -> Result<String, ClaudeClientError> {
+        self.complete_with_usage(api_key, system_prompt, user_message, max_tokens)
+            .await
+            .map(|r| r.text)
+    }
+
+    pub async fn complete_with_usage(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
         let request = SimpleMessagesRequest {
             model: DEFAULT_MODEL.to_string(),
             max_tokens,
@@ -329,6 +366,8 @@ impl ClaudeClient {
             return Err(ClaudeClientError::Truncated { max_tokens });
         }
 
+        let usage = body.usage.unwrap_or_default();
+
         let text = body
             .content
             .into_iter()
@@ -343,8 +382,12 @@ impl ClaudeClient {
             ));
         }
 
-        debug!(response_len = text.len(), "Claude response text extracted");
-        Ok(text)
+        debug!(response_len = text.len(), input_tokens = usage.input_tokens, output_tokens = usage.output_tokens, "Claude response text extracted");
+        Ok(LlmResponse {
+            text,
+            input_tokens: usage.input_tokens,
+            output_tokens: usage.output_tokens,
+        })
     }
 
     /// Streaming variant of `complete()`. Sends token deltas to `event_tx` as they
