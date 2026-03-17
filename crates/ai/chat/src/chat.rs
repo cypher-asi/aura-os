@@ -48,7 +48,7 @@ When creating specs with create_spec:
 
 For conversational questions about architecture, debugging, or best practices, respond with helpful text.
 
-Use markdown formatting for code blocks and structured responses. Be concise."#;
+Use markdown formatting for code blocks and structured responses. Be concise. Do NOT use emojis in your responses."#;
 
 fn build_chat_system_prompt(project: &Project, custom_system_prompt: &str) -> String {
     let mut prompt = if custom_system_prompt.is_empty() {

@@ -36,7 +36,7 @@ pub enum SpecStreamEvent {
 pub(crate) const MAX_TOKENS: u32 = 32768;
 
 pub(crate) const SPEC_OVERVIEW_SYSTEM_PROMPT: &str =
-    "You generate a concise project title and summary from a requirements document. Output format: first line must be exactly 'TITLE: [your 3-6 word title]', then a blank line, then a 2-3 sentence summary (max 85 words) that captures what is being built and the major components involved. No quotes around the title, no punctuation at the end of the title.";
+    "You generate a concise project title and summary from a requirements document. Output format: first line must be exactly 'TITLE: [your 3-6 word title]', then a blank line, then a 2-3 sentence summary (max 85 words) that captures what is being built and the major components involved. No quotes around the title, no punctuation at the end of the title. Do not use emojis.";
 
 pub(crate) const SPEC_OVERVIEW_MAX_TOKENS: u32 = 256;
 
@@ -78,6 +78,7 @@ questions. Include actual code signatures, type definitions, and concrete
 examples — not just high-level descriptions.
 
 Order the array so that the most fundamental sections come first.
+Do NOT use emojis anywhere in the output.
 Respond ONLY with the JSON array, no other text.
 "#;
 

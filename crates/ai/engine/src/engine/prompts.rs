@@ -19,6 +19,7 @@ Rules:
 - "follow_up_tasks": optional array of {{"title", "description"}} if you discover missing prerequisites; otherwise omit or use []
 - For "modify", always provide the complete new file content, not a diff
 - If you cannot complete the task, set notes to explain why and leave file_ops as []
+- Do NOT use emojis in any text fields
 
 ## Language-Specific Rules (MUST FOLLOW)
 
@@ -51,6 +52,7 @@ Rules:
 - "notes": brief summary of what you fixed
 - "file_ops": array of file operations
 - "follow_up_tasks": optional array of {{"title", "description"}}; omit or use []
+- Do NOT use emojis in any text fields
 
 ## File Operation Types
 
@@ -159,6 +161,7 @@ Rules:
 - For TypeScript: use forward slashes in import paths
 - If a build fails, read the errors carefully and fix them before calling task_done
 - Do NOT call task_done until the build passes
+- Do NOT use emojis in notes or any text output
 
 SCOPE: Stay strictly on-task.
 - ONLY implement what the task description asks for. Do NOT fix pre-existing bugs, failing tests, or code issues that are unrelated to your task.
