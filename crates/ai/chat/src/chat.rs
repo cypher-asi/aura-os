@@ -1099,7 +1099,7 @@ impl ChatService {
         result
     }
 
-    // Context window management
+    // Context window management (progressive tiered compaction)
     // -----------------------------------------------------------------------
 
     async fn manage_context_window(
@@ -1117,20 +1117,86 @@ impl ChatService {
         let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
         let total = system_tokens + total_msg_tokens;
 
-        if total <= max_context_tokens || messages.len() <= keep_recent_messages {
+        if total <= max_context_tokens / 2 || messages.len() <= keep_recent_messages {
             return messages;
         }
 
+        let utilization = total as f64 / max_context_tokens as f64;
+
+        // Tier 1 (50-75%): compact tool results in older messages only
+        if utilization <= 0.75 {
+            info!(
+                total_tokens = total,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Tier-1 compaction: truncating large tool results in older messages"
+            );
+            return Self::compact_tool_results_in_history(messages, keep_recent_messages);
+        }
+
+        // Tier 2 (75-90%): summarize the oldest half of messages, keep more recent ones
+        if utilization <= 0.90 {
+            info!(
+                total_tokens = total,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Tier-2 compaction: summarizing older messages"
+            );
+            let split_at = Self::find_safe_split(&messages, keep_recent_messages);
+            return self.summarize_and_keep(api_key, &messages, split_at).await;
+        }
+
+        // Tier 3 (>90%): aggressive summarization with fewer kept messages
         info!(
             total_tokens = total,
-            message_count = messages.len(),
-            "Context window approaching limit, summarizing older messages"
+            utilization_pct = (utilization * 100.0) as u32,
+            "Tier-3 compaction: aggressive summarization"
         );
+        let aggressive_keep = keep_recent_messages.max(4) / 2;
+        let split_at = Self::find_safe_split(&messages, aggressive_keep);
+        self.summarize_and_keep(api_key, &messages, split_at).await
+    }
 
-        let mut split_at = messages.len().saturating_sub(keep_recent_messages);
+    fn compact_tool_results_in_history(
+        mut messages: Vec<RichMessage>,
+        keep_recent: usize,
+    ) -> Vec<RichMessage> {
+        let cutoff = messages.len().saturating_sub(keep_recent);
+        for msg in &mut messages[..cutoff] {
+            if msg.role != "user" {
+                continue;
+            }
+            if let MessageContent::Blocks(blocks) = &mut msg.content {
+                for block in blocks.iter_mut() {
+                    if let ContentBlock::ToolResult { content, .. } = block {
+                        if content.len() > 2000 {
+                            let head: String = content.chars().take(500).collect();
+                            let tail: String = content.chars().rev().take(200)
+                                .collect::<Vec<_>>().into_iter().rev().collect();
+                            let omitted = content.len() - 700;
+                            *content = format!(
+                                "{head}\n[...{omitted} chars omitted...]\n{tail}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        messages
+    }
+
+    fn find_safe_split(messages: &[RichMessage], keep_recent: usize) -> usize {
+        let mut split_at = messages.len().saturating_sub(keep_recent);
         while split_at > 0 && Self::is_tool_results_only(&messages[split_at]) {
             split_at -= 1;
         }
+        split_at
+    }
+
+    async fn summarize_and_keep(
+        &self,
+        api_key: &str,
+        messages: &[RichMessage],
+        split_at: usize,
+    ) -> Vec<RichMessage> {
         let (old_messages, recent_messages) = messages.split_at(split_at);
 
         let mut summary_input = String::from(
