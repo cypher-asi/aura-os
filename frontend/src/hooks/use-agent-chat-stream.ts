@@ -35,7 +35,7 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
     async (
       content: string,
       action: string | null = null,
-      selectedModel: string,
+      _selectedModel?: string | null,
       attachments?: import("../api/streams").ChatAttachment[],
     ) => {
       if (!agentId || isStreaming) return;
@@ -68,7 +68,7 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
         agentId,
         userMsg.content,
         action,
-        selectedModel,
+        null,
         attachments,
         {
           onThinkingDelta(text) {
@@ -122,6 +122,9 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
             const finalToolCalls = toolCallsRef.current.length > 0
               ? [...toolCallsRef.current]
               : undefined;
+            const savedThinking = msg.thinking || thinkingBufferRef.current || undefined;
+            const savedThinkingDuration = msg.thinking_duration_ms
+              ?? (thinkingStartRef.current != null ? Date.now() - thinkingStartRef.current : null);
             setMessages((prev) => [
               ...prev,
               {
@@ -129,6 +132,8 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
                 role: "assistant",
                 content: msg.content,
                 toolCalls: finalToolCalls,
+                thinkingText: savedThinking,
+                thinkingDurationMs: savedThinkingDuration,
               },
             ]);
             setStreamingText("");
@@ -147,6 +152,10 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
               dispatchInsufficientCredits();
             }
             if (streamBufferRef.current) {
+              const savedThinking = thinkingBufferRef.current || undefined;
+              const savedThinkingDuration = thinkingStartRef.current != null
+                ? Date.now() - thinkingStartRef.current
+                : null;
               setMessages((prev) => [
                 ...prev,
                 {
@@ -154,6 +163,8 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
                   role: "assistant",
                   content: streamBufferRef.current + `\n\n*Error: ${message}*`,
                   toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                  thinkingText: savedThinking,
+                  thinkingDurationMs: savedThinkingDuration,
                 },
               ]);
             }
@@ -168,6 +179,10 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
           },
           onDone() {
             if (streamBufferRef.current && !isStreaming) {
+              const savedThinking = thinkingBufferRef.current || undefined;
+              const savedThinkingDuration = thinkingStartRef.current != null
+                ? Date.now() - thinkingStartRef.current
+                : null;
               setMessages((prev) => [
                 ...prev,
                 {
@@ -175,6 +190,8 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
                   role: "assistant",
                   content: streamBufferRef.current,
                   toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                  thinkingText: savedThinking,
+                  thinkingDurationMs: savedThinkingDuration,
                 },
               ]);
               setStreamingText("");
@@ -202,6 +219,10 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     if (streamBufferRef.current) {
+      const savedThinking = thinkingBufferRef.current || undefined;
+      const savedThinkingDuration = thinkingStartRef.current != null
+        ? Date.now() - thinkingStartRef.current
+        : null;
       setMessages((prev) => [
         ...prev,
         {
@@ -209,6 +230,8 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
           role: "assistant",
           content: streamBufferRef.current,
           toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+          thinkingText: savedThinking,
+          thinkingDurationMs: savedThinkingDuration,
         },
       ]);
     }

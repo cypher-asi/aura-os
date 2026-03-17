@@ -6,11 +6,18 @@ edition = "2021"
 [dependencies]
 aura-core = { path = "../../infra/core" }
 aura-store = { path = "../../infra/store" }
+aura-claude = { path = "../../infra/claude" }
+aura-settings = { path = "../settings" }
+async-trait = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
+tempfile = "3"
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }

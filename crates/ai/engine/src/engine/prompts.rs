@@ -19,6 +19,7 @@ Rules:
 - "follow_up_tasks": optional array of {{"title", "description"}} if you discover missing prerequisites; otherwise omit or use []
 - For "modify", always provide the complete new file content, not a diff
 - If you cannot complete the task, set notes to explain why and leave file_ops as []
+- Do NOT use emojis in any text fields
 
 ## Language-Specific Rules (MUST FOLLOW)
 
@@ -51,6 +52,7 @@ Rules:
 - "notes": brief summary of what you fixed
 - "file_ops": array of file operations
 - "follow_up_tasks": optional array of {{"title", "description"}}; omit or use []
+- Do NOT use emojis in any text fields
 
 ## File Operation Types
 
@@ -99,18 +101,51 @@ Response schema:
 "#, hash = "#")
 }
 
-pub(crate) fn agentic_execution_system_prompt(project: &Project) -> String {
+pub(crate) fn agentic_execution_system_prompt(
+    project: &Project,
+    agent: Option<&AgentInstance>,
+) -> String {
     let build_cmd = project.build_command.as_deref().unwrap_or("(not configured)");
     let test_cmd = project.test_command.as_deref().unwrap_or("(not configured)");
+
+    let mut preamble = String::new();
+    if let Some(a) = agent {
+        if !a.system_prompt.is_empty() {
+            preamble.push_str(&a.system_prompt);
+            preamble.push_str("\n\n");
+        }
+        let has_identity = !a.name.is_empty() || !a.role.is_empty() || !a.personality.is_empty();
+        if has_identity {
+            preamble.push_str("You are");
+            if !a.name.is_empty() {
+                preamble.push_str(&format!(" {}", a.name));
+            }
+            if !a.role.is_empty() {
+                preamble.push_str(&format!(", a {}", a.role));
+            }
+            preamble.push('.');
+            if !a.personality.is_empty() {
+                preamble.push_str(&format!(" {}", a.personality));
+            }
+            preamble.push_str("\n\n");
+        }
+        if !a.skills.is_empty() {
+            preamble.push_str(&format!(
+                "Your capabilities include: {}.\n\n",
+                a.skills.join(", ")
+            ));
+        }
+    }
+
     format!(
-        r#"You are an expert software engineer executing a single implementation task.
+        r#"{preamble}You are an expert software engineer executing a single implementation task.
 You have tools to explore the codebase, make changes, and verify your work.
 
 Workflow:
 1. Use get_task_context if you need to review the task details
 2. Explore relevant files using read_file, search_code, find_files, list_files
 3. Make changes using write_file (new files) or edit_file (targeted edits)
-4. Verify your changes compile: run_command with the build command
+4. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
 5. Fix any errors iteratively
 6. When done, call task_done with your notes
 
@@ -124,12 +159,13 @@ Rules:
 - Never use non-ASCII characters (em dashes, smart quotes, ellipsis) in source code
 - For Rust: use raw string literals for multi-line strings, prefer serde_json::json!() for JSON in tests
 - For TypeScript: use forward slashes in import paths
-- If a build fails, read the errors carefully and fix them before calling task_done
+- If a build or test compilation fails, read the errors carefully and fix them before calling task_done
 - Do NOT call task_done until the build passes
+- Do NOT use emojis in notes or any text output
 
 SCOPE: Stay strictly on-task.
-- ONLY implement what the task description asks for. Do NOT fix pre-existing bugs, failing tests, or code issues that are unrelated to your task.
-- If `cargo test --workspace` or the test command shows failures in test files you did NOT modify, IGNORE them. Only fix tests that directly test the feature you are implementing.
+- ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
+- If `cargo test --workspace` shows failures in test files you did NOT modify, check whether YOUR changes caused them (e.g., you changed a struct and tests that use it now fail). If so, fix them. If they are pre-existing and unrelated to your changes, IGNORE them.
 - Once your task-specific changes compile and any directly-related tests pass, call task_done immediately. Do NOT keep exploring or "improving" unrelated code.
 - When verifying, prefer scoped commands (e.g. `cargo test -p <crate> --lib <module>`) over workspace-wide commands to avoid noise from pre-existing failures.
 - NEVER output raw JSON with file_ops in your text response. Always use the provided tools (write_file, edit_file, task_done, etc.) to make changes and signal completion.
@@ -315,10 +351,12 @@ pub(crate) fn build_fix_prompt_with_history(
         ));
     }
 
-    prompt.push_str(&format!("## stderr\n```\n{}\n```\n\n", stderr));
+    let truncated_stderr = truncate_prompt_output(stderr, 8000);
+    prompt.push_str(&format!("## stderr\n```\n{}\n```\n\n", truncated_stderr));
 
     if !stdout.is_empty() {
-        prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", stdout));
+        let truncated_stdout = truncate_prompt_output(stdout, 4000);
+        prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", truncated_stdout));
     }
 
     if error_refs.methods_not_found.len() > 5 {
@@ -334,6 +372,16 @@ pub(crate) fn build_fix_prompt_with_history(
         prompt.push('\n');
     }
 
+    let error_source_files = file_ops::resolve_error_source_files(
+        Path::new(&project.linked_folder_path),
+        &error_refs,
+        file_ops::ERROR_SOURCE_BUDGET,
+    );
+    if !error_source_files.is_empty() {
+        prompt.push_str(&error_source_files);
+        prompt.push('\n');
+    }
+
     if !codebase_snapshot.is_empty() {
         prompt.push_str(&format!(
             "# Current Codebase Files (after previous changes)\n{}\n",
@@ -342,4 +390,14 @@ pub(crate) fn build_fix_prompt_with_history(
     }
 
     prompt
+}
+
+fn truncate_prompt_output(s: &str, max_chars: usize) -> String {
+    if s.len() <= max_chars {
+        return s.to_string();
+    }
+    let half = max_chars / 2;
+    let start = &s[..half];
+    let end = &s[s.len() - half..];
+    format!("{start}\n\n... (truncated {0} bytes) ...\n\n{end}", s.len() - max_chars)
 }

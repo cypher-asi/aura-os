@@ -7,6 +7,7 @@ import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
 import { useAgentApp } from "./AgentAppProvider";
 import { MessageBubble, StreamingBubble } from "../../components/MessageBubble";
+import { CookingIndicator } from "../../components/CookingIndicator";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import type { Message } from "../../types";
@@ -30,7 +31,6 @@ export function AgentChatView() {
   } = useAgentChatStream({ agentId });
 
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState("opus-4.6");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
@@ -63,7 +63,8 @@ export function AgentChatView() {
           msgs
             .filter((m: Message) =>
               (m.content && m.content.trim().length > 0) ||
-              (m.content_blocks && m.content_blocks.length > 0),
+              (m.content_blocks && m.content_blocks.length > 0) ||
+              m.thinking,
             )
             .map((m: Message) => {
               const blocks = (m.content_blocks ?? [])
@@ -78,6 +79,8 @@ export function AgentChatView() {
                 role: m.role,
                 content: m.content,
                 contentBlocks: blocks.length > 0 ? blocks : undefined,
+                thinkingText: m.thinking || undefined,
+                thinkingDurationMs: m.thinking_duration_ms ?? null,
               };
             }),
         );
@@ -103,10 +106,10 @@ export function AgentChatView() {
             name: a.name,
           }))
         : undefined;
-      sendMessage(content, action ?? null, selectedModel, apiAttachments);
+      sendMessage(content, action ?? null, null, apiAttachments);
       setAttachments([]);
     },
-    [sendMessage, selectedModel, attachments],
+    [sendMessage, attachments],
   );
 
   if (!agentId) {
@@ -114,7 +117,7 @@ export function AgentChatView() {
   }
 
   const agentName = selectedAgent?.name;
-  const hasMessages = messages.length > 0 || streamingText || thinkingText;
+  const hasMessages = messages.length > 0 || isStreaming || streamingText || thinkingText;
 
   return (
     <div className={styles.container}>
@@ -137,6 +140,9 @@ export function AgentChatView() {
                 {messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
+                {isStreaming && !streamingText && !thinkingText && activeToolCalls.length === 0 && (
+                  <CookingIndicator />
+                )}
                 {(streamingText || thinkingText || activeToolCalls.length > 0) && (
                   <StreamingBubble
                     text={streamingText}
@@ -157,8 +163,6 @@ export function AgentChatView() {
           onSend={handleSend}
           onStop={stopStreaming}
           isStreaming={isStreaming}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
           agentName={agentName}
           attachments={attachments}
           onAttachmentsChange={setAttachments}

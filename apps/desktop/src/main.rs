@@ -31,11 +31,17 @@ enum WinCmd {
 enum UserEvent {
     WindowCommand { window_id: WindowId, cmd: WinCmd },
     OpenIdeWindow { file_path: String, root_path: Option<String> },
+    ShowWindow { window_id: WindowId },
 }
 
 fn ipc_handler(proxy: EventLoopProxy<UserEvent>, window_id: WindowId) -> impl Fn(wry::http::Request<String>) + 'static {
     move |req: wry::http::Request<String>| {
         let msg = req.body().trim();
+        if msg == "ready" {
+            debug!("IPC ready signal");
+            let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
+            return;
+        }
         let cmd = match msg {
             "minimize" => Some(WinCmd::Minimize),
             "maximize" => Some(WinCmd::Maximize),
@@ -384,7 +390,7 @@ fn main() {
         rt.block_on(async move {
             let update_state = UpdateState::new(UpdateChannel::Stable);
 
-            let app_state = aura_server::build_app_state(&db_path, &data_dir);
+            let app_state = aura_server::build_app_state(&db_path);
             let app = aura_server::create_router_with_frontend(app_state, frontend_dir)
                 .route("/api/pick-folder", axum_post(pick_folder))
                 .route("/api/pick-file", axum_post(pick_file))
@@ -431,6 +437,7 @@ fn main() {
     let window = WindowBuilder::new()
         .with_title("AURA")
         .with_decorations(false)
+        .with_visible(false)
         .with_window_icon(Some(icon_data.to_icon()))
         .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0))
         .build(&event_loop)
@@ -440,10 +447,18 @@ fn main() {
 
     let mut web_context = WebContext::new(Some(webview_data_dir));
 
+    const READY_SCRIPT: &str = "\
+        if (document.readyState === 'loading') { \
+            document.addEventListener('DOMContentLoaded', function() { window.ipc.postMessage('ready'); }); \
+        } else { \
+            window.ipc.postMessage('ready'); \
+        }";
+
     let _main_webview = {
         let builder = WebViewBuilder::new_with_web_context(&mut web_context)
             .with_background_color((0, 0, 0, 255))
             .with_url(&url)
+            .with_initialization_script(READY_SCRIPT)
             .with_ipc_handler(ipc_handler(proxy.clone(), main_window_id))
             .with_new_window_req_handler(|uri, _features| {
                 let _ = open::that(&uri);
@@ -463,6 +478,14 @@ fn main() {
 
         webview
     };
+
+    {
+        let fallback_proxy = proxy.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let _ = fallback_proxy.send_event(UserEvent::ShowWindow { window_id: main_window_id });
+        });
+    }
 
     let mut ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)> = HashMap::new();
     let base_url = url;
@@ -510,7 +533,20 @@ fn main() {
                         Some(icon_data.to_icon()),
                         move |wid| Box::new(ipc_handler(p, wid)),
                     );
-                    ide_windows.insert(win.id(), (win, wv));
+                    let ide_wid = win.id();
+                    ide_windows.insert(ide_wid, (win, wv));
+                    let fallback_proxy = proxy.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                        let _ = fallback_proxy.send_event(UserEvent::ShowWindow { window_id: ide_wid });
+                    });
+                }
+                UserEvent::ShowWindow { window_id } => {
+                    if window_id == main_window_id {
+                        window.set_visible(true);
+                    } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
+                        ide_win.set_visible(true);
+                    }
                 }
             },
             _ => {}

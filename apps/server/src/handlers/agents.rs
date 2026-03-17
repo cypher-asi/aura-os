@@ -8,8 +8,11 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
 use tracing::info;
 
+use axum::http::StatusCode;
+
 use aura_core::{
     Agent, AgentId, AgentInstance, AgentInstanceId, Message, ProjectId, Session, SessionId, Task,
+    ZeroAuthSession,
 };
 use aura_chat::ChatStreamEvent;
 use aura_engine::EngineEvent;
@@ -21,7 +24,15 @@ use crate::dto::{
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-const DEFAULT_USER_ID: &str = "default";
+fn get_user_id(state: &AppState) -> Result<String, (StatusCode, Json<ApiError>)> {
+    let session_bytes = state
+        .store
+        .get_setting("zero_auth_session")
+        .map_err(|_| ApiError::unauthorized("not authenticated"))?;
+    let session: ZeroAuthSession =
+        serde_json::from_slice(&session_bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(session.user_id)
+}
 
 // ---------------------------------------------------------------------------
 // User-level Agent CRUD
@@ -31,10 +42,11 @@ pub async fn create_agent(
     State(state): State<AppState>,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
+    let user_id = get_user_id(&state)?;
     let agent = state
         .agent_service
         .create_agent(
-            DEFAULT_USER_ID,
+            &user_id,
             body.name,
             body.role,
             body.personality,
@@ -47,9 +59,11 @@ pub async fn create_agent(
 }
 
 pub async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Agent>>> {
+    let user_id = get_user_id(&state)?;
+    let _ = state.store.migrate_agents_from_default(&user_id);
     let agents = state
         .agent_service
-        .list_agents(DEFAULT_USER_ID)
+        .list_agents(&user_id)
         .map_err(|e| ApiError::internal(e.to_string()))?;
     Ok(Json(agents))
 }
@@ -58,9 +72,10 @@ pub async fn get_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Agent>> {
+    let user_id = get_user_id(&state)?;
     let agent = state
         .agent_service
-        .get_agent(DEFAULT_USER_ID, &agent_id)
+        .get_agent(&user_id, &agent_id)
         .map_err(|e| match &e {
             aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(e.to_string()),
@@ -73,10 +88,11 @@ pub async fn update_agent(
     Path(agent_id): Path<AgentId>,
     Json(body): Json<UpdateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
+    let user_id = get_user_id(&state)?;
     let agent = state
         .agent_service
         .update_agent(
-            DEFAULT_USER_ID,
+            &user_id,
             &agent_id,
             body.name,
             body.role,
@@ -96,9 +112,10 @@ pub async fn delete_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {
+    let user_id = get_user_id(&state)?;
     state
         .agent_service
-        .delete_agent(DEFAULT_USER_ID, &agent_id)
+        .delete_agent(&user_id, &agent_id)
         .map_err(|e| match &e {
             aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
             _ => ApiError::internal(e.to_string()),
@@ -115,9 +132,10 @@ pub async fn create_agent_instance(
     Path(project_id): Path<ProjectId>,
     Json(body): Json<CreateAgentInstanceRequest>,
 ) -> ApiResult<Json<AgentInstance>> {
+    let user_id = get_user_id(&state)?;
     let agent = state
         .agent_service
-        .get_agent(DEFAULT_USER_ID, &body.agent_id)
+        .get_agent(&user_id, &body.agent_id)
         .map_err(|e| match &e {
             aura_agents::AgentError::NotFound => ApiError::not_found("agent template not found"),
             _ => ApiError::internal(e.to_string()),
@@ -216,13 +234,12 @@ pub async fn send_agent_message_stream(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendMessageRequest>,
-) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
-    let agent = state
-        .agent_service
-        .get_agent(DEFAULT_USER_ID, &agent_id)
-        .ok();
+    let uid = get_user_id(&state).ok();
+    let agent = uid.and_then(|uid| state.agent_service.get_agent(&uid, &agent_id).ok());
 
     let instances = state
         .store
@@ -328,7 +345,7 @@ pub async fn send_agent_message_stream(
         Ok(sse_event)
     });
 
-    Sse::new(stream)
+    Ok(Sse::new(stream))
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +367,8 @@ pub async fn send_message_stream(
     State(state): State<AppState>,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendMessageRequest>,
-) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
     let agent_instance = state
@@ -478,7 +496,7 @@ pub async fn send_message_stream(
         Ok(sse_event)
     });
 
-    Sse::new(stream)
+    Ok(Sse::new(stream))
 }
 
 // ---------------------------------------------------------------------------

@@ -42,8 +42,8 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             cy={CENTER}
             r={R}
             fill="none"
-            stroke="var(--status-pending, #5c6078)"
             strokeWidth={STROKE}
+            style={{ stroke: "var(--color-text-secondary)" }}
           />
         </svg>
       </span>
@@ -64,10 +64,10 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             cy={CENTER}
             r={R}
             fill="none"
-            stroke="var(--status-in-progress, #9CDCFE)"
             strokeWidth={STROKE}
             strokeDasharray={`${CIRCUMFERENCE * 0.25} ${CIRCUMFERENCE * 0.75}`}
             strokeLinecap="round"
+            style={{ stroke: "var(--color-text-muted, #6b7280)" }}
           />
         </svg>
       </span>
@@ -82,8 +82,8 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             cx={CENTER}
             cy={CENTER}
             r={R}
-            fill="var(--status-failed, #ff6b6b)"
             stroke="none"
+            style={{ fill: "var(--status-failed, #ff6b6b)" }}
           />
         </svg>
       </span>
@@ -96,10 +96,10 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
         <polyline
           points="3 7.5 6 10.5 11 4"
           fill="none"
-          stroke="var(--status-done, rgb(45, 212, 191))"
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ stroke: "var(--color-text-secondary)" }}
         />
       </svg>
     </span>

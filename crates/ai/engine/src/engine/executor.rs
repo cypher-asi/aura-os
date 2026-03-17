@@ -3,17 +3,18 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
+use async_trait::async_trait;
 use tokio::sync::{mpsc, Mutex};
 use tracing::warn;
 
 use aura_core::*;
 use aura_claude::{
-    ClaudeStreamEvent, ContentBlock, RichMessage, ThinkingConfig, DEFAULT_MODEL,
+    ClaudeStreamEvent, RichMessage, StreamTokenCapture, ThinkingConfig, ToolCall,
 };
-use aura_chat::ChatToolExecutor;
+use aura_chat::{ChatToolExecutor, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent, run_tool_loop};
 use aura_tools::engine_tool_definitions;
 
-use super::build_fix::{normalize_error_signature, BuildFixAttemptRecord};
+use super::build_fix::{auto_correct_build_command, normalize_error_signature, BuildFixAttemptRecord};
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
 use super::prompts::*;
@@ -33,6 +34,7 @@ impl DevLoopEngine {
         self: Arc<Self>,
         project_id: ProjectId,
         task_id: TaskId,
+        agent_instance_id: Option<AgentInstanceId>,
     ) -> Result<(), EngineError> {
         let api_key = self.settings.get_decrypted_api_key()?;
 
@@ -55,11 +57,16 @@ impl DevLoopEngine {
         }
 
         let user_id = self.current_user_id();
-        let model = Some(DEFAULT_MODEL.to_string());
+        let model = Some(self.llm_config.default_model.clone());
 
-        let agent = self
-            .agent_instance_service
-            .create_instance(&project_id, "dev-agent".into())?;
+        let agent = if let Some(aiid) = agent_instance_id {
+            self.agent_instance_service
+                .get_instance(&project_id, &aiid)
+                .map_err(|_| EngineError::Parse(format!("agent instance {aiid} not found")))?
+        } else {
+            self.agent_instance_service
+                .create_instance(&project_id, "dev-agent".into())?
+        };
         let session = self.session_service.create_session(
             &agent.agent_instance_id,
             &project_id,
@@ -94,9 +101,8 @@ impl DevLoopEngine {
         let task_start = Instant::now();
         let model_name = model.clone();
 
-        let project_root = self.project_service.get_project(&project_id)
-            .map(|p| p.linked_folder_path.clone())
-            .unwrap_or_default();
+        let project_root = self.project_service.get_project(&project_id)?
+            .linked_folder_path.clone();
         let fee_schedule = aura_billing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 
@@ -105,287 +111,292 @@ impl DevLoopEngine {
             self.capture_test_baseline(&project).await
         };
 
-        let result = if let Some(cmd) = shell::extract_shell_command(&task) {
+        let execution_result = if let Some(cmd) = shell::extract_shell_command(&task) {
             let project = self.project_service.get_project(&project_id)?;
             self.execute_shell_task(&project, &task, &cmd, aiid).await
         } else {
-            self.execute_task_agentic(&project_id, &task, &session, &api_key).await
+            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent)).await
         };
 
-        let end_status = match result {
-            Ok(execution) => {
-                let llm_duration_ms = task_start.elapsed().as_millis() as u64;
-                let project = self.project_service.get_project(&project_id)?;
-                let base_path = Path::new(&project.linked_folder_path);
+        let outcome = self.finalize_task_execution(
+            project_id, aiid, &task, &session, &api_key,
+            &user_id, &model, task_start, &baseline_test_failures,
+            execution_result,
+        ).await?;
 
-                let file_changes = if execution.files_already_applied {
-                    simple_file_changes(&execution.file_ops)
-                } else {
-                    file_ops::compute_file_changes(base_path, &execution.file_ops)
-                };
+        if !project_root.is_empty() {
+            let task_metrics = match &outcome {
+                TaskOutcome::Completed { timings, .. } => {
+                    metrics::TaskMetrics::completed(
+                        task.task_id.to_string(), task.title.clone(),
+                        timings.task_duration_ms, model_name.clone(),
+                    )
+                    .with_tokens(timings.total_input(), timings.total_output())
+                    .with_llm_duration(timings.llm_duration_ms)
+                    .with_file_ops_duration(timings.file_ops_duration_ms)
+                    .with_build_verify_duration(timings.build_verify_duration_ms)
+                    .with_files_changed(timings.files_changed)
+                    .with_parse_retries(timings.parse_retries)
+                    .with_build_fix_attempts(timings.build_fix_attempts)
+                    .with_phase_timings(vec![
+                        PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
+                        PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
+                        PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
+                    ])
+                }
+                TaskOutcome::Failed { reason, phase, timings, .. } => {
+                    metrics::TaskMetrics::failed(
+                        task.task_id.to_string(), task.title.clone(),
+                        timings.task_duration_ms, model_name.clone(), phase, reason.clone(),
+                    )
+                    .with_tokens(timings.total_input(), timings.total_output())
+                    .with_llm_duration(timings.llm_duration_ms)
+                    .with_file_ops_duration(timings.file_ops_duration_ms)
+                    .with_build_verify_duration(timings.build_verify_duration_ms)
+                    .with_files_changed(timings.files_changed)
+                    .with_parse_retries(timings.parse_retries)
+                    .with_build_fix_attempts(timings.build_fix_attempts)
+                    .with_phase_timings(vec![
+                        PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
+                        PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
+                        PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
+                    ])
+                }
+            };
+            metrics::write_single_task_metrics(
+                Path::new(&project_root), &project_id.to_string(), task_metrics, &fee_schedule,
+            );
+        }
 
-                self.update_task_tracking(
-                    &project_id, &task, &user_id, &model,
-                    execution.input_tokens, execution.output_tokens,
-                );
-
-                let _write_guard = self.write_coordinator.acquire(&project_id).await;
-
-                let file_ops_start = Instant::now();
-                let apply_result = if execution.files_already_applied {
-                    Ok(())
-                } else {
-                    file_ops::apply_file_ops(base_path, &execution.file_ops).await
-                };
-                if let Err(e) = apply_result {
-                    let reason = format!("file operation failed: {e}");
-                    let task_dur = task_start.elapsed().as_millis() as u64;
-                    let _ = self.task_service.fail_task(
-                        &project_id, &task.spec_id, &task.task_id, &reason,
-                    );
-                    self.emit(EngineEvent::TaskFailed {
-                        project_id,
-                        agent_instance_id: aiid,
-                        task_id: task.task_id,
-                        reason: e.to_string(),
-                        duration_ms: Some(task_dur),
-                        phase: Some("file_ops".into()),
-                        parse_retries: Some(execution.parse_retries),
-                        build_fix_attempts: None,
-                        model: model_name.clone(),
+        if let TaskOutcome::Completed { follow_up_tasks, .. } = &outcome {
+            for follow_up in follow_up_tasks {
+                if let Ok(new_task) = self.task_service.create_follow_up_task(
+                    &task, follow_up.title.clone(), follow_up.description.clone(), vec![],
+                ) {
+                    self.emit(EngineEvent::FollowUpTaskCreated {
+                        project_id, agent_instance_id: aiid, task_id: new_task.task_id,
                     });
-                    if !project_root.is_empty() {
-                        metrics::write_single_task_metrics(
-                            Path::new(&project_root),
-                            &project_id.to_string(),
-                            metrics::TaskMetrics {
-                                task_id: task.task_id.to_string(),
-                                title: task.title.clone(),
-                                outcome: "failed".into(),
-                                duration_ms: task_dur,
-                                llm_duration_ms: Some(llm_duration_ms),
-                                build_verify_duration_ms: None,
-                                file_ops_duration_ms: None,
-                                input_tokens: execution.input_tokens,
-                                output_tokens: execution.output_tokens,
-                                files_changed: execution.file_ops.len() as u32,
-                                parse_retries: execution.parse_retries,
-                                build_fix_attempts: 0,
-                                model: model_name.clone(),
-                                failure_phase: Some("file_ops".into()),
-                                failure_reason: Some(reason),
-                                phase_timings: vec![],
-                            },
-                            &fee_schedule,
-                        );
-                    }
-                    let _ = self.session_service.update_context_usage(
-                        &project_id, &agent.agent_instance_id, &session.session_id,
-                        execution.input_tokens, execution.output_tokens,
-                    );
-                    SessionStatus::Failed
-                } else {
-                    let file_ops_duration_ms = file_ops_start.elapsed().as_millis() as u64;
-                    self.emit_file_ops_applied(project_id, aiid, &task, &execution.file_ops);
-
-                    let session_ref = self.session_service.get_session(
-                        &project_id, &agent.agent_instance_id, &session.session_id,
-                    ).unwrap_or_else(|_| session.clone());
-
-                    let build_start = Instant::now();
-                    let (_, build_passed, build_attempts, _dup_bailouts, fix_inp, fix_out) = self
-                        .verify_and_fix_build(
-                            &project, &task, &session_ref, &api_key, &execution,
-                            &baseline_test_failures,
-                        )
-                        .await?;
-                    let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
-                    let task_duration_ms = task_start.elapsed().as_millis() as u64;
-
-                    let total_input = execution.input_tokens + fix_inp;
-                    let total_output = execution.output_tokens + fix_out;
-
-                    self.update_task_tracking(
-                        &project_id, &task, &user_id, &model, fix_inp, fix_out,
-                    );
-
-                    if build_passed {
-                        let _ = self.task_service.complete_task(
-                            &project_id, &task.spec_id, &task.task_id,
-                            &execution.notes, file_changes,
-                        );
-                        self.emit(EngineEvent::TaskCompleted {
-                            project_id,
-                            agent_instance_id: aiid,
-                            task_id: task.task_id,
-                            execution_notes: execution.notes.clone(),
-                            duration_ms: Some(task_duration_ms),
-                            input_tokens: Some(total_input),
-                            output_tokens: Some(total_output),
-                            llm_duration_ms: Some(llm_duration_ms),
-                            build_verify_duration_ms: Some(build_verify_duration_ms),
-                            files_changed_count: Some(execution.file_ops.len() as u32),
-                            parse_retries: Some(execution.parse_retries),
-                            build_fix_attempts: Some(build_attempts),
-                            model: model_name.clone(),
-                        });
-
-                        if !project_root.is_empty() {
-                            metrics::write_single_task_metrics(
-                                Path::new(&project_root),
-                                &project_id.to_string(),
-                                metrics::TaskMetrics {
-                                    task_id: task.task_id.to_string(),
-                                    title: task.title.clone(),
-                                    outcome: "completed".into(),
-                                    duration_ms: task_duration_ms,
-                                    llm_duration_ms: Some(llm_duration_ms),
-                                    build_verify_duration_ms: Some(build_verify_duration_ms),
-                                    file_ops_duration_ms: Some(file_ops_duration_ms),
-                                    input_tokens: total_input,
-                                    output_tokens: total_output,
-                                    files_changed: execution.file_ops.len() as u32,
-                                    parse_retries: execution.parse_retries,
-                                    build_fix_attempts: build_attempts,
-                                    model: model_name.clone(),
-                                    failure_phase: None,
-                                    failure_reason: None,
-                                    phase_timings: vec![
-                                        PhaseTimingEntry { phase: "llm_call".into(), duration_ms: llm_duration_ms },
-                                        PhaseTimingEntry { phase: "file_ops".into(), duration_ms: file_ops_duration_ms },
-                                        PhaseTimingEntry { phase: "build_verify".into(), duration_ms: build_verify_duration_ms },
-                                    ],
-                                },
-                                &fee_schedule,
-                            );
-                        }
-
-                        let newly_ready = self
-                            .task_service
-                            .resolve_dependencies_after_completion(&project_id, &task.task_id)
-                            .unwrap_or_default();
-                        for t in &newly_ready {
-                            self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id: aiid, task_id: t.task_id });
-                        }
-
-                        for follow_up in &execution.follow_up_tasks {
-                            if let Ok(new_task) = self.task_service.create_follow_up_task(
-                                &task,
-                                follow_up.title.clone(),
-                                follow_up.description.clone(),
-                                vec![],
-                            ) {
-                                self.emit(EngineEvent::FollowUpTaskCreated {
-                                    project_id,
-                                    agent_instance_id: aiid,
-                                    task_id: new_task.task_id,
-                                });
-                            }
-                        }
-                    } else {
-                        let reason = "build verification failed after all fix attempts".to_string();
-                        let _ = self.task_service.fail_task(
-                            &project_id, &task.spec_id, &task.task_id, &reason,
-                        );
-                        self.emit(EngineEvent::TaskFailed {
-                            project_id,
-                            agent_instance_id: aiid,
-                            task_id: task.task_id,
-                            reason: reason.clone(),
-                            duration_ms: Some(task_duration_ms),
-                            phase: Some("build_verify".into()),
-                            parse_retries: Some(execution.parse_retries),
-                            build_fix_attempts: Some(build_attempts),
-                            model: model_name.clone(),
-                        });
-                        if !project_root.is_empty() {
-                            metrics::write_single_task_metrics(
-                                Path::new(&project_root),
-                                &project_id.to_string(),
-                                metrics::TaskMetrics {
-                                    task_id: task.task_id.to_string(),
-                                    title: task.title.clone(),
-                                    outcome: "failed".into(),
-                                    duration_ms: task_duration_ms,
-                                    llm_duration_ms: Some(llm_duration_ms),
-                                    build_verify_duration_ms: Some(build_verify_duration_ms),
-                                    file_ops_duration_ms: Some(file_ops_duration_ms),
-                                    input_tokens: total_input,
-                                    output_tokens: total_output,
-                                    files_changed: execution.file_ops.len() as u32,
-                                    parse_retries: execution.parse_retries,
-                                    build_fix_attempts: build_attempts,
-                                    model: model_name.clone(),
-                                    failure_phase: Some("build_verify".into()),
-                                    failure_reason: Some(reason),
-                                    phase_timings: vec![
-                                        PhaseTimingEntry { phase: "llm_call".into(), duration_ms: llm_duration_ms },
-                                        PhaseTimingEntry { phase: "file_ops".into(), duration_ms: file_ops_duration_ms },
-                                        PhaseTimingEntry { phase: "build_verify".into(), duration_ms: build_verify_duration_ms },
-                                    ],
-                                },
-                                &fee_schedule,
-                            );
-                        }
-                    }
-                    let _ = self.session_service.update_context_usage(
-                        &project_id, &agent.agent_instance_id, &session.session_id,
-                        total_input, total_output,
-                    );
-                    SessionStatus::Completed
                 }
             }
+        }
+
+        let end_status = if outcome.is_completed() { SessionStatus::Completed } else { SessionStatus::Failed };
+
+        if let Err(e) = self.session_service.end_session(
+            &project_id, &agent.agent_instance_id, &session.session_id, end_status,
+        ) { warn!(error = %e, "failed to end session after single task"); }
+        if let Err(e) = self.agent_instance_service.finish_working(&project_id, &agent.agent_instance_id) {
+            warn!(error = %e, "failed to finish_working after single task");
+        }
+        Ok(())
+    }
+
+    /// Shared finalization logic for a dispatched task. Handles file ops,
+    /// build verification, task state transitions, and event emission.
+    /// Callers handle metrics recording, work logs, and follow-up creation.
+    pub(crate) async fn finalize_task_execution(
+        &self,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+        task: &Task,
+        session: &Session,
+        api_key: &str,
+        user_id: &Option<String>,
+        model: &Option<String>,
+        task_start: Instant,
+        baseline_test_failures: &HashSet<String>,
+        execution_result: Result<TaskExecution, EngineError>,
+    ) -> Result<TaskOutcome, EngineError> {
+        let execution = match execution_result {
+            Ok(exec) => exec,
             Err(e) => {
+                let credit_failure = matches!(e, EngineError::InsufficientCredits);
                 let reason = format!("execution error: {e}");
                 let task_dur = task_start.elapsed().as_millis() as u64;
-                let _ = self.task_service.fail_task(
+                if let Err(e2) = self.task_service.fail_task(
                     &project_id, &task.spec_id, &task.task_id, &reason,
-                );
+                ) { warn!(task_id = %task.task_id, error = %e2, "failed to mark task as failed"); }
+                let phase = if credit_failure { "insufficient_credits" } else { "execution" };
                 self.emit(EngineEvent::TaskFailed {
                     project_id,
-                    agent_instance_id: aiid,
+                    agent_instance_id,
                     task_id: task.task_id,
                     reason: e.to_string(),
                     duration_ms: Some(task_dur),
-                    phase: Some("execution".into()),
+                    phase: Some(phase.into()),
                     parse_retries: None,
                     build_fix_attempts: None,
-                    model: model_name.clone(),
+                    model: model.clone(),
                 });
-                if !project_root.is_empty() {
-                    metrics::write_single_task_metrics(
-                        Path::new(&project_root),
-                        &project_id.to_string(),
-                        metrics::TaskMetrics {
-                            task_id: task.task_id.to_string(),
-                            title: task.title.clone(),
-                            outcome: "failed".into(),
-                            duration_ms: task_dur,
-                            llm_duration_ms: None,
-                            build_verify_duration_ms: None,
-                            file_ops_duration_ms: None,
-                            input_tokens: 0,
-                            output_tokens: 0,
-                            files_changed: 0,
-                            parse_retries: 0,
-                            build_fix_attempts: 0,
-                            model: model_name.clone(),
-                            failure_phase: Some("execution".into()),
-                            failure_reason: Some(reason),
-                            phase_timings: vec![],
-                        },
-                        &fee_schedule,
-                    );
-                }
-                SessionStatus::Failed
+                return Ok(TaskOutcome::Failed {
+                    reason,
+                    phase: phase.to_string(),
+                    credit_failure,
+                    timings: TaskTimings { task_duration_ms: task_dur, ..Default::default() },
+                });
             }
         };
 
-        let _ = self.session_service.end_session(
-            &project_id, &agent.agent_instance_id, &session.session_id, end_status,
+        let llm_duration_ms = task_start.elapsed().as_millis() as u64;
+        let project = self.project_service.get_project(&project_id)?;
+        let base_path = Path::new(&project.linked_folder_path);
+
+        let file_changes = if execution.files_already_applied {
+            simple_file_changes(&execution.file_ops)
+        } else {
+            file_ops::compute_file_changes(base_path, &execution.file_ops)
+        };
+
+        self.update_task_tracking(
+            &project_id, task, user_id, model,
+            execution.input_tokens, execution.output_tokens,
         );
-        let _ = self.agent_instance_service.finish_working(&project_id, &agent.agent_instance_id);
-        Ok(())
+
+        let _write_guard = self.write_coordinator.acquire(&project_id).await;
+
+        let file_ops_start = Instant::now();
+        let apply_result = if execution.files_already_applied {
+            Ok(())
+        } else {
+            file_ops::apply_file_ops(base_path, &execution.file_ops).await
+        };
+        if let Err(e) = apply_result {
+            let reason = format!("file operation failed: {e}");
+            let task_dur = task_start.elapsed().as_millis() as u64;
+            if let Err(e2) = self.task_service.fail_task(
+                &project_id, &task.spec_id, &task.task_id, &reason,
+            ) { warn!(task_id = %task.task_id, error = %e2, "failed to mark task as failed"); }
+            self.emit(EngineEvent::TaskFailed {
+                project_id,
+                agent_instance_id,
+                task_id: task.task_id,
+                reason: e.to_string(),
+                duration_ms: Some(task_dur),
+                phase: Some("file_ops".into()),
+                parse_retries: Some(execution.parse_retries),
+                build_fix_attempts: None,
+                model: model.clone(),
+            });
+            if let Err(e2) = self.session_service.update_context_usage(
+                &project_id, &agent_instance_id, &session.session_id,
+                execution.input_tokens, execution.output_tokens,
+            ) { warn!(error = %e2, "failed to update context usage"); }
+            return Ok(TaskOutcome::Failed {
+                reason,
+                phase: "file_ops".to_string(),
+                credit_failure: false,
+                timings: TaskTimings {
+                    input_tokens: execution.input_tokens,
+                    output_tokens: execution.output_tokens,
+                    parse_retries: execution.parse_retries,
+                    llm_duration_ms,
+                    task_duration_ms: task_dur,
+                    files_changed: execution.file_ops.len() as u32,
+                    ..Default::default()
+                },
+            });
+        }
+        let file_ops_duration_ms = file_ops_start.elapsed().as_millis() as u64;
+        self.emit_file_ops_applied(project_id, agent_instance_id, task, &execution.file_ops);
+
+        let build_start = Instant::now();
+        let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out) = self
+            .verify_and_fix_build(
+                &project, task, session, api_key, &execution,
+                baseline_test_failures,
+            )
+            .await?;
+        let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
+        let task_duration_ms = task_start.elapsed().as_millis() as u64;
+
+        self.update_task_tracking(&project_id, task, user_id, model, fix_inp, fix_out);
+
+        let total_input = execution.input_tokens + fix_inp;
+        let total_output = execution.output_tokens + fix_out;
+
+        let timings = TaskTimings {
+            input_tokens: execution.input_tokens,
+            output_tokens: execution.output_tokens,
+            fix_input_tokens: fix_inp,
+            fix_output_tokens: fix_out,
+            parse_retries: execution.parse_retries,
+            build_fix_attempts: build_attempts,
+            duplicate_error_bailouts: dup_bailouts,
+            llm_duration_ms,
+            file_ops_duration_ms,
+            build_verify_duration_ms,
+            task_duration_ms,
+            files_changed: execution.file_ops.len() as u32,
+        };
+
+        if !build_passed {
+            let reason = "build verification failed after all fix attempts".to_string();
+            if let Err(e) = self.task_service.fail_task(
+                &project_id, &task.spec_id, &task.task_id, &reason,
+            ) { warn!(task_id = %task.task_id, error = %e, "failed to mark task as failed"); }
+            self.emit(EngineEvent::TaskFailed {
+                project_id,
+                agent_instance_id,
+                task_id: task.task_id,
+                reason: reason.clone(),
+                duration_ms: Some(task_duration_ms),
+                phase: Some("build_verify".into()),
+                parse_retries: Some(execution.parse_retries),
+                build_fix_attempts: Some(build_attempts),
+                model: model.clone(),
+            });
+            if let Err(e) = self.session_service.update_context_usage(
+                &project_id, &agent_instance_id, &session.session_id,
+                total_input, total_output,
+            ) { warn!(error = %e, "failed to update context usage"); }
+            return Ok(TaskOutcome::Failed {
+                reason,
+                phase: "build_verify".to_string(),
+                credit_failure: false,
+                timings,
+            });
+        }
+
+        if let Err(e) = self.task_service.complete_task(
+            &project_id, &task.spec_id, &task.task_id,
+            &execution.notes, file_changes,
+        ) { warn!(task_id = %task.task_id, error = %e, "failed to mark task as completed"); }
+
+        self.emit(EngineEvent::TaskCompleted {
+            project_id,
+            agent_instance_id,
+            task_id: task.task_id,
+            execution_notes: execution.notes.clone(),
+            duration_ms: Some(task_duration_ms),
+            input_tokens: Some(total_input),
+            output_tokens: Some(total_output),
+            llm_duration_ms: Some(llm_duration_ms),
+            build_verify_duration_ms: Some(build_verify_duration_ms),
+            files_changed_count: Some(execution.file_ops.len() as u32),
+            parse_retries: Some(execution.parse_retries),
+            build_fix_attempts: Some(build_attempts),
+            model: model.clone(),
+        });
+
+        let newly_ready = self
+            .task_service
+            .resolve_dependencies_after_completion(&project_id, &task.task_id)
+            .unwrap_or_default();
+        for t in &newly_ready {
+            self.emit(EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id: t.task_id });
+        }
+
+        if let Err(e) = self.session_service.update_context_usage(
+            &project_id, &agent_instance_id, &session.session_id,
+            total_input, total_output,
+        ) { warn!(error = %e, "failed to update context usage"); }
+
+        Ok(TaskOutcome::Completed {
+            notes: execution.notes,
+            follow_up_tasks: execution.follow_up_tasks,
+            file_ops: execution.file_ops,
+            timings,
+        })
     }
 
     pub(crate) async fn execute_shell_task(
@@ -395,8 +406,19 @@ impl DevLoopEngine {
         command: &str,
         agent_instance_id: AgentInstanceId,
     ) -> Result<TaskExecution, EngineError> {
+        let command = if let Some(corrected) = auto_correct_build_command(command) {
+            warn!(
+                old = %command, new = %corrected,
+                "eagerly rewriting server-starting shell command"
+            );
+            corrected
+        } else {
+            command.to_string()
+        };
+        let command = command.as_str();
+
         let base_path = Path::new(&project.linked_folder_path);
-        let max_attempts: u32 = MAX_SHELL_TASK_RETRIES;
+        let max_attempts: u32 = self.engine_config.max_shell_task_retries;
         let mut prior_attempts_shell: Vec<BuildFixAttemptRecord> = Vec::new();
 
         for attempt in 1..=max_attempts {
@@ -422,7 +444,23 @@ impl DevLoopEngine {
                 delta: format!("Running: {command} (attempt {attempt}/{max_attempts})\n"),
             });
 
-            let result = build_verify::run_build_command(base_path, command).await?;
+            let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
+            let fwd_event_tx = self.event_tx.clone();
+            let fwd_pid = project.project_id;
+            let fwd_aiid = agent_instance_id;
+            let fwd_tid = task.task_id;
+            tokio::spawn(async move {
+                while let Some(line) = line_rx.recv().await {
+                    let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                        project_id: fwd_pid,
+                        agent_instance_id: fwd_aiid,
+                        task_id: fwd_tid,
+                        delta: line,
+                    });
+                }
+            });
+
+            let result = build_verify::run_build_command(base_path, command, Some(line_tx)).await?;
             let shell_step_duration_ms = shell_step_start.elapsed().as_millis() as u64;
 
             if result.success {
@@ -471,11 +509,12 @@ impl DevLoopEngine {
                         };
                         let mut test_fix_ops = Vec::new();
                         let no_baseline = HashSet::new();
+                        let mut prior_test_attempts = Vec::new();
                         let (test_passed, _test_inp, _test_out) = self.run_and_handle_tests(
                             project, task, &dummy_session,
-                            &self.settings.get_decrypted_api_key().unwrap_or_default(),
+                            &self.settings.get_decrypted_api_key()?,
                             &dummy_exec, test_cmd, base_path, attempt, &mut test_fix_ops,
-                            &no_baseline,
+                            &no_baseline, &mut prior_test_attempts,
                         ).await?;
                         if !test_passed {
                             if attempt < max_attempts {
@@ -577,7 +616,7 @@ impl DevLoopEngine {
 
                 let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
                 let codebase_snapshot =
-                    file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+                    file_ops::read_relevant_files(&project.linked_folder_path, 30_000)?;
                 let fix_prompt = build_fix_prompt_with_history(
                     project, &spec, task,
                     &Session {
@@ -605,21 +644,18 @@ impl DevLoopEngine {
                 );
 
                 let api_key = self.settings.get_decrypted_api_key()?;
-                let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-                let forwarder = tokio::spawn(async move {
-                    while let Some(evt) = stream_rx.recv().await {
-                        drop(evt);
-                    }
-                });
+                let (stream_tx, sink_handle) = StreamTokenCapture::sink();
 
-                let response = self.claude_client.complete_stream(
+                let response = self.llm.complete_stream(
                     &api_key,
                     &build_fix_system_prompt(),
                     &fix_prompt,
-                    TASK_EXECUTION_MAX_TOKENS,
+                    self.llm_config.task_execution_max_tokens,
                     stream_tx,
+                    "aura_build_fix",
+                    None,
                 ).await?;
-                let _ = forwarder.await;
+                let _ = sink_handle.finalize().await;
 
                 let mut attempt_files: Vec<String> = Vec::new();
                 if let Ok(fix_execution) = parse_execution_response(&response) {
@@ -655,182 +691,124 @@ impl DevLoopEngine {
         task: &Task,
         session: &Session,
         api_key: &str,
+        agent: Option<&AgentInstance>,
     ) -> Result<TaskExecution, EngineError> {
         let project = self.project_service.get_project(project_id)?;
         let spec = self.store.get_spec(project_id, &task.spec_id)?;
 
-        let system_prompt = agentic_execution_system_prompt(&project);
+        let system_prompt = agentic_execution_system_prompt(&project, agent);
         let task_context = build_agentic_task_context(&project, &spec, task, session);
         let tools = engine_tool_definitions();
-        let executor = ChatToolExecutor::new(
-            self.store.clone(),
-            self.project_service.clone(),
-            self.task_service.clone(),
-        );
 
-        let task_id = task.task_id;
-        let mut api_messages: Vec<RichMessage> = vec![RichMessage::user(&task_context)];
-        let mut total_input_tokens: u64 = 0;
-        let mut total_output_tokens: u64 = 0;
-        let mut tracked_file_ops: Vec<FileOp> = Vec::new();
-        let mut notes = String::new();
-        let mut follow_ups: Vec<FollowUpSuggestion> = Vec::new();
-        let mut task_done_called = false;
+        let api_messages: Vec<RichMessage> = vec![RichMessage::user(&task_context)];
 
         let pid = *project_id;
         let aiid = session.agent_instance_id;
-        const MAX_AGENTIC_ITERATIONS: usize = 50;
+        let task_id = task.task_id;
 
-        for iteration in 0..MAX_AGENTIC_ITERATIONS {
-            let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-            let event_tx = self.event_tx.clone();
-            let tid = task_id;
-            let fwd_pid = pid;
-            let fwd_aiid = aiid;
-            let forwarder = tokio::spawn(async move {
-                while let Some(evt) = claude_rx.recv().await {
-                    if let ClaudeStreamEvent::Delta(text) = evt {
-                        let _ = event_tx.send(EngineEvent::TaskOutputDelta {
+        let tracked_file_ops: Arc<Mutex<Vec<FileOp>>> = Arc::new(Mutex::new(Vec::new()));
+        let notes: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+        let follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let executor = EngineToolLoopExecutor {
+            inner: ChatToolExecutor::new(
+                self.store.clone(),
+                self.project_service.clone(),
+                self.task_service.clone(),
+            ),
+            project_id: pid,
+            project: project.clone(),
+            spec: spec.clone(),
+            task: task.clone(),
+            session: session.clone(),
+            engine_event_tx: self.event_tx.clone(),
+            agent_instance_id: aiid,
+            task_id,
+            tracked_file_ops: tracked_file_ops.clone(),
+            notes: notes.clone(),
+            follow_ups: follow_ups.clone(),
+        };
+
+        let config = ToolLoopConfig {
+            max_iterations: self.engine_config.max_agentic_iterations,
+            max_tokens: self.llm_config.task_execution_max_tokens,
+            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
+            stream_timeout: std::time::Duration::from_secs(self.llm_config.stream_timeout_secs),
+            billing_reason: "aura_task",
+            max_context_tokens: Some(self.llm_config.max_context_tokens),
+        };
+
+        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
+        let engine_tx = self.event_tx.clone();
+        let fwd_pid = pid;
+        let fwd_aiid = aiid;
+        let fwd_tid = task_id;
+        let forwarder = tokio::spawn(async move {
+            while let Some(evt) = loop_rx.recv().await {
+                match evt {
+                    ToolLoopEvent::Delta(text) => {
+                        let _ = engine_tx.send(EngineEvent::TaskOutputDelta {
                             project_id: fwd_pid,
                             agent_instance_id: fwd_aiid,
-                            task_id: tid,
+                            task_id: fwd_tid,
                             delta: text,
                         });
                     }
-                }
-            });
-
-            let thinking = ThinkingConfig::enabled(10_000);
-            let stream_result = self
-                .claude_client
-                .complete_stream_with_tools_thinking(
-                    api_key,
-                    &system_prompt,
-                    api_messages.clone(),
-                    tools.clone(),
-                    TASK_EXECUTION_MAX_TOKENS,
-                    thinking,
-                    claude_tx,
-                )
-                .await?;
-            let _ = forwarder.await;
-
-            total_input_tokens += stream_result.input_tokens;
-            total_output_tokens += stream_result.output_tokens;
-
-            if stream_result.stop_reason != "tool_use" || stream_result.tool_calls.is_empty() {
-                if notes.is_empty() && !stream_result.text.is_empty() {
-                    notes = stream_result.text.clone();
-                }
-                break;
-            }
-
-            let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-            if !stream_result.text.is_empty() {
-                assistant_blocks.push(ContentBlock::Text {
-                    text: stream_result.text.clone(),
-                });
-            }
-            for tc in &stream_result.tool_calls {
-                assistant_blocks.push(ContentBlock::ToolUse {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    input: tc.input.clone(),
-                });
-            }
-            api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
-
-            let mut executor_indices: Vec<usize> = Vec::new();
-            for (i, tc) in stream_result.tool_calls.iter().enumerate() {
-                match tc.name.as_str() {
-                    "task_done" | "get_task_context" => {}
-                    _ => {
-                        track_file_op(&tc.name, &tc.input, &mut tracked_file_ops);
-                        executor_indices.push(i);
-                    }
-                }
-            }
-
-            let executor_futures: Vec<_> = executor_indices.iter().map(|&i| {
-                let tc = &stream_result.tool_calls[i];
-                executor.execute(project_id, &tc.name, tc.input.clone())
-            }).collect();
-            let executor_results = futures::future::join_all(executor_futures).await;
-
-            let mut result_blocks: Vec<ContentBlock> = Vec::new();
-            let mut exec_result_iter = executor_results.into_iter();
-            for tc in &stream_result.tool_calls {
-                match tc.name.as_str() {
-                    "task_done" => {
-                        notes = tc.input.get("notes")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("")
-                            .to_string();
-                        if let Some(arr) = tc.input.get("follow_ups").and_then(|v| v.as_array()) {
-                            for fu in arr {
-                                let title = fu.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                let desc = fu.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                follow_ups.push(FollowUpSuggestion { title, description: desc });
-                            }
-                        }
-                        result_blocks.push(ContentBlock::ToolResult {
-                            tool_use_id: tc.id.clone(),
-                            content: r#"{"status":"completed"}"#.to_string(),
-                            is_error: None,
-                        });
-                        task_done_called = true;
-                    }
-                    "get_task_context" => {
-                        let ctx = build_agentic_task_context(&project, &spec, task, session);
-                        result_blocks.push(ContentBlock::ToolResult {
-                            tool_use_id: tc.id.clone(),
-                            content: ctx,
-                            is_error: None,
+                    ToolLoopEvent::Error(msg) => {
+                        let _ = engine_tx.send(EngineEvent::TaskOutputDelta {
+                            project_id: fwd_pid,
+                            agent_instance_id: fwd_aiid,
+                            task_id: fwd_tid,
+                            delta: format!("\n[error] {msg}\n"),
                         });
                     }
-                    _ => {
-                        if let Some(result) = exec_result_iter.next() {
-                            let _ = self.event_tx.send(EngineEvent::TaskOutputDelta {
-                                project_id: pid,
-                                agent_instance_id: aiid,
-                                task_id,
-                                delta: format!("\n[tool: {} -> {}]\n", tc.name,
-                                    if result.is_error { "error" } else { "ok" }),
-                            });
-                            result_blocks.push(ContentBlock::ToolResult {
-                                tool_use_id: tc.id.clone(),
-                                content: result.content,
-                                is_error: if result.is_error { Some(true) } else { None },
-                            });
-                        }
-                    }
+                    _ => {}
                 }
             }
-            api_messages.push(RichMessage::tool_results(result_blocks));
+        });
 
-            if task_done_called {
-                break;
-            }
+        let result = run_tool_loop(
+            self.llm.clone(),
+            api_key,
+            &system_prompt,
+            api_messages,
+            tools,
+            &config,
+            &executor,
+            &loop_tx,
+        )
+        .await;
+        drop(loop_tx);
+        let _ = forwarder.await;
 
-            if iteration + 1 >= MAX_AGENTIC_ITERATIONS {
-                warn!(
-                    task_id = %task_id,
-                    "agentic tool-use loop hit max iterations ({}), stopping",
-                    MAX_AGENTIC_ITERATIONS
-                );
-            }
+        if result.insufficient_credits {
+            return Err(EngineError::InsufficientCredits);
+        }
+        if let Some(ref err) = result.llm_error {
+            return Err(EngineError::LlmError(err.clone()));
+        }
+        if result.timed_out {
+            return Err(EngineError::LlmError("LLM streaming timed out".into()));
         }
 
+        let tracked_file_ops = tracked_file_ops.lock().await.clone();
+        let mut notes = notes.lock().await.clone();
+        let follow_ups = follow_ups.lock().await.clone();
+
         if notes.is_empty() {
-            notes = "Task completed via agentic tool-use loop".to_string();
+            if !result.text.is_empty() {
+                notes = result.text;
+            } else {
+                notes = "Task completed via agentic tool-use loop".to_string();
+            }
         }
 
         Ok(TaskExecution {
             notes,
             file_ops: tracked_file_ops,
             follow_up_tasks: follow_ups,
-            input_tokens: total_input_tokens,
-            output_tokens: total_output_tokens,
+            input_tokens: result.total_input_tokens,
+            output_tokens: result.total_output_tokens,
             parse_retries: 0,
             files_already_applied: true,
         })
@@ -852,11 +830,11 @@ impl DevLoopEngine {
             build_execution_prompt(&project, &spec, task, session, &codebase_snapshot);
 
         let task_id = task.task_id;
-
-        let token_counts: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
-
         let pid = *project_id;
         let aiid = session.agent_instance_id;
+
+        let mut total_inp = 0u64;
+        let mut total_out = 0u64;
 
         let response = {
             let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -864,42 +842,45 @@ impl DevLoopEngine {
             let tid = task_id;
             let fwd_pid = pid;
             let fwd_aiid = aiid;
-            let tc = token_counts.clone();
             let forwarder = tokio::spawn(async move {
+                let (mut inp, mut out) = (0u64, 0u64);
                 while let Some(evt) = stream_rx.recv().await {
                     match evt {
                         ClaudeStreamEvent::Delta(text) => {
                             let _ = event_tx.send(EngineEvent::TaskOutputDelta { project_id: fwd_pid, agent_instance_id: fwd_aiid, task_id: tid, delta: text });
                         }
                         ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                            let mut g = tc.lock().await;
-                            g.0 += input_tokens;
-                            g.1 += output_tokens;
+                            inp += input_tokens;
+                            out += output_tokens;
                         }
                         _ => {}
                     }
                 }
+                (inp, out)
             });
 
             let resp = self
-                .claude_client
+                .llm
                 .complete_stream(
                     api_key,
                     &task_execution_system_prompt(),
                     &user_message,
-                    TASK_EXECUTION_MAX_TOKENS,
+                    self.llm_config.task_execution_max_tokens,
                     stream_tx,
+                    "aura_task",
+                    None,
                 )
                 .await?;
-            let _ = forwarder.await;
+            let (inp, out) = forwarder.await.unwrap_or((0, 0));
+            total_inp += inp;
+            total_out += out;
             resp
         };
 
         match parse_execution_response(&response) {
             Ok(mut execution) => {
-                let (inp, out) = *token_counts.lock().await;
-                execution.input_tokens = inp;
-                execution.output_tokens = out;
+                execution.input_tokens = total_inp;
+                execution.output_tokens = total_out;
                 execution.parse_retries = 0;
 
                 let validation_report = file_ops::validate_all_file_ops(&execution.file_ops);
@@ -925,34 +906,27 @@ impl DevLoopEngine {
                         ("user".to_string(), correction_prompt),
                     ];
 
-                    let (stream_tx2, mut stream_rx2) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-                    let tc2 = token_counts.clone();
-                    let forwarder2 = tokio::spawn(async move {
-                        while let Some(evt) = stream_rx2.recv().await {
-                            if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                                let mut g = tc2.lock().await;
-                                g.0 += input_tokens;
-                                g.1 += output_tokens;
-                            }
-                        }
-                    });
+                    let (sink_tx, sink_handle) = StreamTokenCapture::sink();
 
                     let corrected = self
-                        .claude_client
+                        .llm
                         .complete_stream_multi(
                             api_key,
                             &task_execution_system_prompt(),
                             messages,
-                            TASK_EXECUTION_MAX_TOKENS,
-                            stream_tx2,
+                            self.llm_config.task_execution_max_tokens,
+                            sink_tx,
+                            "aura_task",
+                            None,
                         )
                         .await?;
-                    let _ = forwarder2.await;
+                    let (inp, out) = sink_handle.finalize().await;
+                    total_inp += inp;
+                    total_out += out;
 
                     if let Ok(mut corrected_exec) = parse_execution_response(&corrected) {
-                        let (inp, out) = *token_counts.lock().await;
-                        corrected_exec.input_tokens = inp;
-                        corrected_exec.output_tokens = out;
+                        corrected_exec.input_tokens = total_inp;
+                        corrected_exec.output_tokens = total_out;
                         corrected_exec.parse_retries = 1;
                         return Ok(corrected_exec);
                     }
@@ -964,7 +938,7 @@ impl DevLoopEngine {
                 warn!(task_id = %task_id, error = %first_err, "first execution parse failed, retrying");
 
                 let mut last_response = response;
-                for attempt in 1..=MAX_EXECUTION_RETRIES {
+                for attempt in 1..=self.engine_config.max_execution_retries {
                     self.emit(EngineEvent::TaskRetrying {
                         project_id: pid,
                         agent_instance_id: aiid,
@@ -979,35 +953,28 @@ impl DevLoopEngine {
                         ("user".to_string(), RETRY_CORRECTION_PROMPT.to_string()),
                     ];
 
-                    let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-                    let tc = token_counts.clone();
-                    let forwarder = tokio::spawn(async move {
-                        while let Some(evt) = stream_rx.recv().await {
-                            if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                                let mut g = tc.lock().await;
-                                g.0 += input_tokens;
-                                g.1 += output_tokens;
-                            }
-                        }
-                    });
+                    let (sink_tx, sink_handle) = StreamTokenCapture::sink();
 
                     let retry_resp = self
-                        .claude_client
+                        .llm
                         .complete_stream_multi(
                             api_key,
                             &task_execution_system_prompt(),
                             messages,
-                            TASK_EXECUTION_MAX_TOKENS,
-                            stream_tx,
+                            self.llm_config.task_execution_max_tokens,
+                            sink_tx,
+                            "aura_task",
+                            None,
                         )
                         .await?;
-                    let _ = forwarder.await;
+                    let (inp, out) = sink_handle.finalize().await;
+                    total_inp += inp;
+                    total_out += out;
 
                     match parse_execution_response(&retry_resp) {
                         Ok(mut execution) => {
-                            let (inp, out) = *token_counts.lock().await;
-                            execution.input_tokens = inp;
-                            execution.output_tokens = out;
+                            execution.input_tokens = total_inp;
+                            execution.output_tokens = total_out;
                             execution.parse_retries = attempt;
                             return Ok(execution);
                         }
@@ -1021,5 +988,171 @@ impl DevLoopEngine {
                 Err(first_err)
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ToolExecutor for the agentic engine loop
+// ---------------------------------------------------------------------------
+
+struct EngineToolLoopExecutor {
+    inner: ChatToolExecutor,
+    project_id: ProjectId,
+    project: Project,
+    spec: Spec,
+    task: Task,
+    session: Session,
+    engine_event_tx: mpsc::UnboundedSender<EngineEvent>,
+    agent_instance_id: AgentInstanceId,
+    task_id: TaskId,
+    tracked_file_ops: Arc<Mutex<Vec<FileOp>>>,
+    notes: Arc<Mutex<String>>,
+    follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>>,
+}
+
+#[async_trait]
+impl ToolExecutor for EngineToolLoopExecutor {
+    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
+        let mut executor_indices: Vec<usize> = Vec::new();
+        for (i, tc) in tool_calls.iter().enumerate() {
+            match tc.name.as_str() {
+                "task_done" | "get_task_context" => {}
+                _ => {
+                    {
+                        let mut ops = self.tracked_file_ops.lock().await;
+                        track_file_op(&tc.name, &tc.input, &mut ops);
+                    }
+                    executor_indices.push(i);
+                }
+            }
+        }
+
+        let executor_futures: Vec<_> = executor_indices
+            .iter()
+            .map(|&i| {
+                let tc = &tool_calls[i];
+                self.inner.execute(&self.project_id, &tc.name, tc.input.clone())
+            })
+            .collect();
+        let executor_results = futures::future::join_all(executor_futures).await;
+
+        let mut exec_result_iter = executor_results.into_iter();
+        let mut results = Vec::with_capacity(tool_calls.len());
+        let mut stop = false;
+
+        for tc in tool_calls {
+            match tc.name.as_str() {
+                "task_done" => {
+                    let task_notes = tc
+                        .input
+                        .get("notes")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    {
+                        let mut n = self.notes.lock().await;
+                        *n = task_notes;
+                    }
+                    if let Some(arr) = tc.input.get("follow_ups").and_then(|v| v.as_array()) {
+                        let mut fu_lock = self.follow_ups.lock().await;
+                        for fu in arr {
+                            let title = fu
+                                .get("title")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            let desc = fu
+                                .get("description")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            fu_lock.push(FollowUpSuggestion {
+                                title,
+                                description: desc,
+                            });
+                        }
+                    }
+                    results.push(ToolCallResult {
+                        tool_use_id: tc.id.clone(),
+                        content: r#"{"status":"completed"}"#.to_string(),
+                        is_error: false,
+                        stop_loop: true,
+                    });
+                    stop = true;
+                }
+                "get_task_context" => {
+                    let ctx = build_agentic_task_context(
+                        &self.project,
+                        &self.spec,
+                        &self.task,
+                        &self.session,
+                    );
+                    results.push(ToolCallResult {
+                        tool_use_id: tc.id.clone(),
+                        content: ctx,
+                        is_error: false,
+                        stop_loop: false,
+                    });
+                }
+                _ => {
+                    if let Some(result) = exec_result_iter.next() {
+                        let arg_hint = match tc.name.as_str() {
+                            "read_file" | "write_file" | "edit_file" | "delete_file" => tc
+                                .input
+                                .get("path")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            "list_files" => tc
+                                .input
+                                .get("directory")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            "search_code" => tc
+                                .input
+                                .get("pattern")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            "run_command" => tc
+                                .input
+                                .get("command")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                            _ => String::new(),
+                        };
+                        let status_str = if result.is_error { "error" } else { "ok" };
+                        let marker = if arg_hint.is_empty() {
+                            format!("\n[tool: {} -> {}]\n", tc.name, status_str)
+                        } else {
+                            format!("\n[tool: {}({}) -> {}]\n", tc.name, arg_hint, status_str)
+                        };
+                        let _ = self.engine_event_tx.send(EngineEvent::TaskOutputDelta {
+                            project_id: self.project_id,
+                            agent_instance_id: self.agent_instance_id,
+                            task_id: self.task_id,
+                            delta: marker,
+                        });
+                        results.push(ToolCallResult {
+                            tool_use_id: tc.id.clone(),
+                            content: result.content,
+                            is_error: result.is_error,
+                            stop_loop: false,
+                        });
+                    }
+                }
+            }
+        }
+
+        // If task_done was in the batch, mark all remaining results as stop_loop too
+        if stop {
+            for r in &mut results {
+                r.stop_loop = true;
+            }
+        }
+
+        results
     }
 }

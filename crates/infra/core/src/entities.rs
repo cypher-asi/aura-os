@@ -116,6 +116,8 @@ pub struct Task {
     pub parent_task_id: Option<TaskId>,
     pub assigned_agent_instance_id: Option<AgentInstanceId>,
     #[serde(default)]
+    pub completed_by_agent_instance_id: Option<AgentInstanceId>,
+    #[serde(default)]
     pub session_id: Option<SessionId>,
     pub execution_notes: String,
     #[serde(default)]
@@ -212,6 +214,10 @@ pub struct Message {
     pub content: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_blocks: Option<Vec<ChatContentBlock>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thinking_duration_ms: Option<u64>,
     pub created_at: DateTime<Utc>,
 }
 

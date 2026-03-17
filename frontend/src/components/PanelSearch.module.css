@@ -10,7 +10,8 @@
   border-radius: 0 !important;
   box-shadow: none !important;
   outline: none !important;
-  font-size: var(--text-xs, 12px) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
   line-height: 1 !important;
 }
 

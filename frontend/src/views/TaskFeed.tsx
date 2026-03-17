@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import type { ProjectId, Task, AgentInstance } from "../types";
+import { useEffect, useState } from "react";
+import type { ProjectId, Task } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
@@ -14,16 +14,9 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
   const { subscribe } = useEventContext();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [agentInstances, setAgentInstances] = useState<AgentInstance[]>([]);
-
-  const agentMap = useMemo(
-    () => new Map(agentInstances.map((a) => [a.agent_instance_id, a])),
-    [agentInstances],
-  );
 
   useEffect(() => {
     api.listTasks(projectId).then(setTasks).catch(console.error);
-    api.listAgentInstances(projectId).then(setAgentInstances).catch(console.error);
     const interval = setInterval(() => {
       api.listTasks(projectId).then(setTasks).catch(console.error);
     }, 15000);
@@ -105,11 +98,7 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
         <Heading level={5}>Task Feed ({tasks.length})</Heading>
       </div>
       <div className={styles.feedList}>
-        {displayed.map((task) => {
-          const agent = task.assigned_agent_instance_id
-            ? agentMap.get(task.assigned_agent_instance_id)
-            : undefined;
-          return (
+        {displayed.map((task) => (
             <Item
               key={task.task_id}
               selected={task.task_id === activeTaskId}
@@ -118,18 +107,9 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
               <Item.Icon><TaskStatusIcon status={task.status} /></Item.Icon>
               <Item.Label>
                 {task.parent_task_id ? `↳ ${task.title}` : task.title}
-                {agent && (
-                  <span style={{ marginLeft: 8, fontSize: "0.75rem", opacity: 0.6, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    {agent.icon ? (
-                      <img src={agent.icon} alt="" style={{ width: 14, height: 14, borderRadius: "50%", objectFit: "cover" }} />
-                    ) : null}
-                    {agent.name}
-                  </span>
-                )}
               </Item.Label>
             </Item>
-          );
-        })}
+        ))}
         {tasks.length === 0 && (
           <Text variant="muted" size="sm" align="center" style={{ padding: "var(--space-4)" }}>
             No tasks

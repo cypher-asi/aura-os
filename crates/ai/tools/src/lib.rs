@@ -5,7 +5,33 @@ fn tool(name: &str, description: &str, schema: serde_json::Value) -> ToolDefinit
         name: name.into(),
         description: description.into(),
         input_schema: schema,
+        cache_control: None,
     }
+}
+
+/// Build a tool definition with property-level descriptions stripped from the
+/// JSON schema. Keeps property names, types, enums, required, and nested
+/// structure — only removes the verbose "description" field on each property.
+/// Used for management tools that are invoked less frequently, saving ~5-8K
+/// tokens per turn from the tool block.
+fn compact_tool(name: &str, description: &str, schema: serde_json::Value) -> ToolDefinition {
+    ToolDefinition {
+        name: name.into(),
+        description: description.into(),
+        input_schema: strip_property_descriptions(schema),
+        cache_control: None,
+    }
+}
+
+fn strip_property_descriptions(mut schema: serde_json::Value) -> serde_json::Value {
+    if let Some(props) = schema.get_mut("properties").and_then(|p| p.as_object_mut()) {
+        for (_key, prop_val) in props.iter_mut() {
+            if let Some(obj) = prop_val.as_object_mut() {
+                obj.remove("description");
+            }
+        }
+    }
+    schema
 }
 
 /// Core filesystem, search, and shell tools shared by both chat agent and engine.
@@ -197,7 +223,7 @@ pub fn multi_project_tool_definitions() -> Vec<ToolDefinition> {
 fn chat_management_tools() -> Vec<ToolDefinition> {
     vec![
         // ── Specs ──────────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "list_specs",
             "List all specs in the current project.",
             serde_json::json!({
@@ -206,7 +232,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "get_spec",
             "Get a single spec by ID.",
             serde_json::json!({
@@ -217,20 +243,20 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["spec_id"]
             }),
         ),
-        tool(
+        compact_tool(
             "create_spec",
-            "Create a new spec in the project.",
+            "Create a new spec. Title format: zero-padded number + colon + space, e.g. '01: Core Domain Types'.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "title": { "type": "string", "description": "Short spec title prefixed with zero-padded two-digit number + colon + space, e.g. '01: Core Domain Types'. No em dashes." },
-                    "markdown_contents": { "type": "string", "description": "Full markdown body of the spec" },
-                    "sprint_id": { "type": "string", "description": "Optional sprint to attach this spec to" }
+                    "title": { "type": "string" },
+                    "markdown_contents": { "type": "string" },
+                    "sprint_id": { "type": "string" }
                 },
                 "required": ["title", "markdown_contents"]
             }),
         ),
-        tool(
+        compact_tool(
             "update_spec",
             "Update an existing spec's title or contents.",
             serde_json::json!({
@@ -243,7 +269,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["spec_id"]
             }),
         ),
-        tool(
+        compact_tool(
             "delete_spec",
             "Delete a spec and its tasks from the project.",
             serde_json::json!({
@@ -255,18 +281,18 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
             }),
         ),
         // ── Tasks ──────────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "list_tasks",
             "List all tasks in the project, optionally filtered by spec_id.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "spec_id": { "type": "string", "description": "If provided, only list tasks under this spec" }
+                    "spec_id": { "type": "string" }
                 },
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "create_task",
             "Create a new task under a spec.",
             serde_json::json!({
@@ -279,7 +305,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["spec_id", "title", "description"]
             }),
         ),
-        tool(
+        compact_tool(
             "update_task",
             "Update a task's title, description, or status.",
             serde_json::json!({
@@ -296,19 +322,19 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["task_id"]
             }),
         ),
-        tool(
+        compact_tool(
             "delete_task",
-            "Delete a task from the project.",
+            "Delete a task from the project. Requires task_id and parent spec_id.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
                     "task_id": { "type": "string" },
-                    "spec_id": { "type": "string", "description": "The parent spec ID (required for storage key)" }
+                    "spec_id": { "type": "string" }
                 },
                 "required": ["task_id", "spec_id"]
             }),
         ),
-        tool(
+        compact_tool(
             "transition_task",
             "Transition a task to a new status (e.g. pending -> ready, ready -> done).",
             serde_json::json!({
@@ -323,7 +349,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["task_id", "status"]
             }),
         ),
-        tool(
+        compact_tool(
             "run_task",
             "Trigger execution of a single task by the dev-loop engine.",
             serde_json::json!({
@@ -335,7 +361,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
             }),
         ),
         // ── Sprints ────────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "list_sprints",
             "List all sprints in the current project.",
             serde_json::json!({
@@ -344,19 +370,19 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "create_sprint",
-            "Create a new sprint.",
+            "Create a new sprint with a title and prompt describing what it should accomplish.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
                     "title": { "type": "string" },
-                    "prompt": { "type": "string", "description": "The user prompt / description for what this sprint should accomplish" }
+                    "prompt": { "type": "string" }
                 },
                 "required": ["title", "prompt"]
             }),
         ),
-        tool(
+        compact_tool(
             "update_sprint",
             "Update a sprint's title or prompt.",
             serde_json::json!({
@@ -369,7 +395,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": ["sprint_id"]
             }),
         ),
-        tool(
+        compact_tool(
             "delete_sprint",
             "Delete a sprint from the project.",
             serde_json::json!({
@@ -381,7 +407,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
             }),
         ),
         // ── Project ────────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "get_project",
             "Get the current project's details (name, folder, status, etc.).",
             serde_json::json!({
@@ -390,28 +416,22 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "update_project",
-            "Update the current project's name, description, build_command, or test_command.",
+            "Update the current project's name, description, build_command, or test_command. Commands must be valid shell commands with no extra text.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
                     "name": { "type": "string" },
                     "description": { "type": "string" },
-                    "build_command": {
-                        "type": "string",
-                        "description": "The exact shell command to run for build verification, e.g. \"cargo build --workspace\" or \"npm run build\". Must be a valid shell command with NO extra text or explanation -- only the command itself."
-                    },
-                    "test_command": {
-                        "type": "string",
-                        "description": "The exact shell command to run tests, e.g. \"cargo test\" or \"npm test\". Must be a valid shell command with NO extra text or explanation -- only the command itself."
-                    }
+                    "build_command": { "type": "string" },
+                    "test_command": { "type": "string" }
                 },
                 "required": []
             }),
         ),
         // ── Dev loop ───────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "start_dev_loop",
             "Start the autonomous dev loop for the project. It will pick up ready tasks and execute them.",
             serde_json::json!({
@@ -420,7 +440,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "pause_dev_loop",
             "Pause the currently running dev loop.",
             serde_json::json!({
@@ -429,7 +449,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
-        tool(
+        compact_tool(
             "stop_dev_loop",
             "Stop the currently running dev loop.",
             serde_json::json!({
@@ -439,7 +459,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
             }),
         ),
         // ── Progress ───────────────────────────────────────────────────
-        tool(
+        compact_tool(
             "get_progress",
             "Get task progress summary for the project (counts by status).",
             serde_json::json!({

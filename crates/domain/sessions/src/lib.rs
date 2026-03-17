@@ -7,21 +7,9 @@ use chrono::Utc;
 
 use aura_core::*;
 use aura_store::RocksStore;
-use aura_claude::ClaudeClient;
+use aura_billing::MeteredLlm;
 
-pub const SUMMARY_SYSTEM_PROMPT: &str = r#"
-You are a context summarizer. Given the conversation history of an AI coding
-agent working on a software project, produce a concise summary that captures:
-
-1. What tasks were completed and their outcomes
-2. Key decisions made
-3. Current state of the codebase (files changed, patterns established)
-4. What the next task should focus on
-5. Any blockers or concerns
-
-Keep the summary under 2000 tokens. Be specific about file paths and code patterns.
-Respond with the summary text only, no JSON wrapping.
-"#;
+pub use aura_core::SESSION_SUMMARY_SYSTEM_PROMPT as SUMMARY_SYSTEM_PROMPT;
 
 pub struct SessionService {
     store: Arc<RocksStore>,
@@ -202,14 +190,202 @@ impl SessionService {
 
     pub async fn generate_rollover_summary(
         &self,
-        claude_client: &ClaudeClient,
+        llm: &MeteredLlm,
         api_key: &str,
         conversation_history: &str,
     ) -> Result<String, SessionError> {
-        let summary = claude_client
-            .complete(api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048)
+        let resp = llm
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048, "aura_session_rollover", None)
+            .await?;
+        Ok(resp.text)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use aura_claude::mock::{MockLlmProvider, MockResponse};
+    use aura_billing::BillingClient;
+
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    async fn start_mock_billing_server() -> String {
+        use axum::{routing::{get, post}, Json, Router};
+        use tokio::net::TcpListener;
+
+        let app = Router::new()
+            .route(
+                "/api/credits/balance",
+                get(|| async {
+                    Json(serde_json::json!({"balance": 999999, "purchases": []}))
+                }),
+            )
+            .route(
+                "/api/credits/debit",
+                post(|| async {
+                    Json(serde_json::json!({
+                        "success": true,
+                        "balance": 999998,
+                        "transactionId": "tx-1"
+                    }))
+                }),
+            );
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+        url
+    }
+
+    async fn make_test_llm(
+        mock: Arc<MockLlmProvider>,
+    ) -> (MeteredLlm, tempfile::TempDir) {
+        let url = start_mock_billing_server().await;
+        let billing = {
+            let _guard = ENV_LOCK.lock().unwrap();
+            std::env::set_var("BILLING_SERVER_URL", &url);
+            Arc::new(BillingClient::new())
+        };
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+
+        let session = serde_json::to_vec(&aura_core::ZeroAuthSession {
+            user_id: "u1".into(),
+            display_name: "Test".into(),
+            profile_image: String::new(),
+            primary_zid: "zid-1".into(),
+            zero_wallet: "w1".into(),
+            wallets: vec![],
+            access_token: "test-token".into(),
+            created_at: chrono::Utc::now(),
+            validated_at: chrono::Utc::now(),
+        })
+        .unwrap();
+        store.put_setting("zero_auth_session", &session).unwrap();
+
+        let llm = MeteredLlm::new(mock, billing, store);
+        (llm, tmp)
+    }
+
+    // -----------------------------------------------------------------------
+    // SessionService basic operations
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn should_rollover_at_threshold() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let svc = SessionService::with_threshold(store, 0.5);
+
+        let below = Session {
+            session_id: SessionId::new(),
+            agent_instance_id: AgentInstanceId::new(),
+            project_id: ProjectId::new(),
+            active_task_id: None,
+            tasks_worked: vec![],
+            context_usage_estimate: 0.49,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            summary_of_previous_context: String::new(),
+            status: SessionStatus::Active,
+            user_id: None,
+            model: None,
+            started_at: Utc::now(),
+            ended_at: None,
+        };
+        assert!(!svc.should_rollover(&below));
+
+        let at = Session {
+            context_usage_estimate: 0.5,
+            ..below.clone()
+        };
+        assert!(svc.should_rollover(&at));
+
+        let above = Session {
+            context_usage_estimate: 0.8,
+            ..below
+        };
+        assert!(svc.should_rollover(&above));
+    }
+
+    #[test]
+    fn create_and_get_session() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let svc = SessionService::new(store);
+
+        let pid = ProjectId::new();
+        let aid = AgentInstanceId::new();
+        let session = svc
+            .create_session(&aid, &pid, None, "initial context".into(), None, None)
+            .unwrap();
+
+        assert_eq!(session.status, SessionStatus::Active);
+        assert_eq!(session.summary_of_previous_context, "initial context");
+
+        let fetched = svc
+            .get_session(&pid, &aid, &session.session_id)
+            .unwrap();
+        assert_eq!(fetched.session_id, session.session_id);
+    }
+
+    #[test]
+    fn rollover_session_ends_old_creates_new() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let svc = SessionService::new(store);
+
+        let pid = ProjectId::new();
+        let aid = AgentInstanceId::new();
+        let old = svc
+            .create_session(&aid, &pid, None, String::new(), None, None)
+            .unwrap();
+
+        let new_session = svc
+            .rollover_session(&pid, &aid, &old.session_id, "summary".into(), None)
+            .unwrap();
+
+        let old_fetched = svc.get_session(&pid, &aid, &old.session_id).unwrap();
+        assert_eq!(old_fetched.status, SessionStatus::RolledOver);
+        assert!(old_fetched.ended_at.is_some());
+
+        assert_eq!(new_session.status, SessionStatus::Active);
+        assert_eq!(new_session.summary_of_previous_context, "summary");
+        assert_ne!(new_session.session_id, old.session_id);
+    }
+
+    // -----------------------------------------------------------------------
+    // generate_rollover_summary with MockLlmProvider
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn generate_summary_returns_llm_text() {
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![
+            MockResponse::text("The user discussed authentication and database setup.")
+                .with_tokens(200, 100),
+        ]));
+
+        let (llm, _tmp_llm) = make_test_llm(mock.clone()).await;
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let svc = SessionService::new(store);
+
+        let summary = svc
+            .generate_rollover_summary(
+                &llm,
+                "test-key",
+                "User: How do I set up auth?\nAssistant: Use JWT tokens.",
+            )
             .await
-            .map_err(SessionError::Claude)?;
-        Ok(summary)
+            .unwrap();
+
+        assert_eq!(summary, "The user discussed authentication and database setup.");
+        assert_eq!(mock.call_count(), 1);
+
+        let calls = mock.recorded_calls().await;
+        assert_eq!(calls[0].system_prompt, SUMMARY_SYSTEM_PROMPT);
     }
 }

@@ -1,3 +1,4 @@
+use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_core::ProjectId;
 use aura_settings::SettingsError;
@@ -19,4 +20,16 @@ pub enum SpecGenError {
     Settings(#[from] SettingsError),
     #[error("response parse error: {0}")]
     ParseError(String),
+    #[error("insufficient credits")]
+    InsufficientCredits,
+}
+
+impl From<MeteredLlmError> for SpecGenError {
+    fn from(e: MeteredLlmError) -> Self {
+        match e {
+            MeteredLlmError::InsufficientCredits => SpecGenError::InsufficientCredits,
+            MeteredLlmError::Llm(e) => SpecGenError::Claude(e),
+            MeteredLlmError::Billing(e) => SpecGenError::ParseError(e.to_string()),
+        }
+    }
 }

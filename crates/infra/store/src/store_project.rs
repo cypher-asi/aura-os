@@ -171,4 +171,43 @@ impl RocksStore {
         let all: Vec<Task> = self.scan_cf::<Task>(&self.cf_tasks(), None)?;
         Ok(all.into_iter().find(|t| t.task_id == *task_id))
     }
+
+    /// Atomically read-modify-write a task using its composite key.
+    /// Acquires `task_write_lock` so no other writer can interleave.
+    pub fn atomic_update_task<F>(
+        &self,
+        project_id: &ProjectId,
+        spec_id: &SpecId,
+        task_id: &TaskId,
+        f: F,
+    ) -> StoreResult<Task>
+    where
+        F: FnOnce(&mut Task),
+    {
+        let _guard = self.task_write_lock.lock().unwrap_or_else(|e| e.into_inner());
+        let mut task = self.get_task(project_id, spec_id, task_id)?;
+        f(&mut task);
+        self.put_task(&task)?;
+        Ok(task)
+    }
+
+    /// Atomically read-modify-write a task looked up by task_id alone.
+    /// Acquires `task_write_lock` so no other writer can interleave.
+    pub fn atomic_update_task_by_id<F>(
+        &self,
+        task_id: &TaskId,
+        f: F,
+    ) -> StoreResult<Option<Task>>
+    where
+        F: FnOnce(&mut Task),
+    {
+        let _guard = self.task_write_lock.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(mut task) = self.find_task_by_id(task_id)? {
+            f(&mut task);
+            self.put_task(&task)?;
+            Ok(Some(task))
+        } else {
+            Ok(None)
+        }
+    }
 }

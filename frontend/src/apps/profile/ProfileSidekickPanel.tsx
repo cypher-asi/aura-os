@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
-import { Bot, User, Send, MapPin, Globe, Calendar } from "lucide-react";
+import { User, Send, MapPin, Globe, Calendar, Pencil } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
+import { Avatar } from "../../components/Avatar";
 import { useProfile } from "./ProfileProvider";
 import { useAuth } from "../../context/AuthContext";
 import { ProfileEditorModal } from "./ProfileEditorModal";
@@ -27,11 +28,14 @@ function ProfileCard() {
   const { user } = useAuth();
   const [editorOpen, setEditorOpen] = useState(false);
 
-  const isOwnProfile = user?.display_name === profile.name;
+  const isOwnProfile = !!user && (
+    user.display_name === profile.name ||
+    profile.handle === `@${user.primary_zid}`
+  );
   const totalCommits = events.reduce((sum, e) => sum + e.commits.length, 0);
 
   return (
-    <>
+    <div className={styles.profileCardWrapper}>
       <EntityCard
         headerLabel="PROFILE"
         headerStatus="ACTIVE"
@@ -40,12 +44,13 @@ function ProfileCard() {
         name={profile.name}
         subtitle={profile.handle}
         nameAction={
-          <FollowEditButton
-            isOwner={isOwnProfile}
-            targetType="user"
-            targetName={profile.name}
-            onEdit={() => setEditorOpen(true)}
-          />
+          !isOwnProfile ? (
+            <FollowEditButton
+              isOwner={false}
+              targetType="user"
+              targetName={profile.name}
+            />
+          ) : undefined
         }
         stats={[
           { value: projects.length, label: "Projects" },
@@ -81,13 +86,23 @@ function ProfileCard() {
         </div>
       </EntityCard>
 
+      {isOwnProfile && (
+        <button
+          type="button"
+          className={styles.floatingEditButton}
+          onClick={() => setEditorOpen(true)}
+        >
+          <Pencil size={14} />
+        </button>
+      )}
+
       <ProfileEditorModal
         isOpen={editorOpen}
         profile={profile}
         onClose={() => setEditorOpen(false)}
         onSave={updateProfile}
       />
-    </>
+    </div>
   );
 }
 
@@ -123,9 +138,13 @@ function CommentsPanel() {
         ) : (
           comments.map((c) => (
             <div key={c.id} className={styles.commentItem}>
-              <div className={styles.commentAvatar}>
-                {c.author.type === "agent" ? <Bot size={14} /> : <User size={14} />}
-              </div>
+              <Avatar
+                avatarUrl={c.author.avatarUrl}
+                name={c.author.name}
+                type={c.author.type}
+                size={28}
+                className={styles.commentAvatar}
+              />
               <div className={styles.commentContent}>
                 <div className={styles.commentHeader}>
                   <span className={styles.commentAuthor}>{c.author.name}</span>

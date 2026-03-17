@@ -133,12 +133,12 @@ export function sendAgentMessageStream(
   agentId: string,
   content: string,
   action: string | null,
-  model: string,
-  attachments: ChatAttachment[] | undefined,
-  cb: ChatStreamCallbacks,
+  _model?: string | null,
+  attachments?: ChatAttachment[],
+  cb: ChatStreamCallbacks = {} as ChatStreamCallbacks,
   signal?: AbortSignal,
 ) {
-  const body: Record<string, unknown> = { content, action, model };
+  const body: Record<string, unknown> = { content, action };
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
@@ -219,12 +219,12 @@ export function sendMessageStream(
   agentInstanceId: string,
   content: string,
   action: string | null,
-  model: string,
-  attachments: ChatAttachment[] | undefined,
-  cb: ChatStreamCallbacks,
+  _model?: string | null,
+  attachments?: ChatAttachment[],
+  cb: ChatStreamCallbacks = {} as ChatStreamCallbacks,
   signal?: AbortSignal,
 ) {
-  const body: Record<string, unknown> = { content, action, model };
+  const body: Record<string, unknown> = { content, action };
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }

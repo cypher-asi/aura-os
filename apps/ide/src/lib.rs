@@ -29,6 +29,7 @@ pub fn open_ide_window<E: 'static>(
     let mut wb = WindowBuilder::new()
         .with_title(&title)
         .with_decorations(false)
+        .with_visible(false)
         .with_inner_size(tao::dpi::LogicalSize::new(1100.0, 750.0));
 
     if let Some(ic) = icon {
@@ -45,9 +46,17 @@ pub fn open_ide_window<E: 'static>(
     }
     info!(%url, "opening IDE window");
 
+    let ready_script = "\
+        if (document.readyState === 'loading') { \
+            document.addEventListener('DOMContentLoaded', function() { window.ipc.postMessage('ready'); }); \
+        } else { \
+            window.ipc.postMessage('ready'); \
+        }";
+
     let webview = WebViewBuilder::new()
         .with_background_color((0, 0, 0, 255))
         .with_url(&url)
+        .with_initialization_script(ready_script)
         .with_ipc_handler(ipc)
         .with_new_window_req_handler(|uri, _features| {
             let _ = open::that(&uri);

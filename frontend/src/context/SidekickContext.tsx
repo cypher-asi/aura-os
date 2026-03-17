@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
+import type { LogEntry } from "../hooks/use-log-stream";
 
 export type SidekickTab = "specs" | "tasks" | "stats" | "sessions" | "log" | "files";
 
@@ -7,7 +8,8 @@ export type PreviewItem =
   | { kind: "spec"; spec: Spec }
   | { kind: "specs_overview"; specs: Spec[] }
   | { kind: "task"; task: Task }
-  | { kind: "session"; session: Session };
+  | { kind: "session"; session: Session }
+  | { kind: "log"; entry: LogEntry };
 
 interface PanelState {
   activeTab: SidekickTab;

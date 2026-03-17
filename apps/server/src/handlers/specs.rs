@@ -30,7 +30,6 @@ pub async fn generate_specs_summary(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<aura_core::Project>> {
-    super::billing::require_credits(&state).await?;
     info!(%project_id, "Specs summary regeneration requested");
     state
         .spec_gen_service

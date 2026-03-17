@@ -2,4 +2,3 @@ export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "ar
 export type TaskStatus = "pending" | "ready" | "in_progress" | "blocked" | "done" | "failed";
 export type AgentStatus = "idle" | "working" | "blocked" | "stopped" | "error";
 export type SessionStatus = "active" | "completed" | "failed" | "rolled_over";
-export type ApiKeyStatus = "not_set" | "valid" | "invalid" | "validation_pending" | "validation_failed";

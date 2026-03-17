@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use aura_core::*;
 use aura_settings::SettingsService;
 use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
-use aura_claude::ClaudeClient;
+use aura_billing::MeteredLlm;
 
 // ---------------------------------------------------------------------------
 // ProjectProgress
@@ -73,6 +73,7 @@ impl TaskService {
         task_id: &TaskId,
         new_status: TaskStatus,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -115,6 +116,7 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -158,6 +160,7 @@ impl TaskService {
         agent_instance_id: &AgentInstanceId,
         session_id: Option<SessionId>,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -182,6 +185,7 @@ impl TaskService {
         notes: &str,
         files_changed: Vec<FileChangeSummary>,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -191,6 +195,7 @@ impl TaskService {
             })?;
         Self::validate_transition(task.status, TaskStatus::Done)?;
         task.status = TaskStatus::Done;
+        task.completed_by_agent_instance_id = task.assigned_agent_instance_id;
         task.execution_notes = notes.to_string();
         task.files_changed = files_changed;
         task.updated_at = Utc::now();
@@ -205,6 +210,7 @@ impl TaskService {
         task_id: &TaskId,
         reason: &str,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -226,6 +232,7 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
+        let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
             .get_task(project_id, spec_id, task_id)
@@ -442,6 +449,7 @@ impl TaskService {
             dependency_ids,
             parent_task_id: Some(originating_task.task_id),
             assigned_agent_instance_id: None,
+            completed_by_agent_instance_id: None,
             session_id: None,
             execution_notes: String::new(),
             files_changed: vec![],
@@ -578,19 +586,6 @@ impl TaskService {
 
 const EXTRACTION_MAX_TOKENS: u32 = 8192;
 
-pub(crate) const TASK_EXTRACTION_SYSTEM_PROMPT: &str = r#"
-You are a software implementation planner. Given a specification document,
-extract concrete implementation tasks.
-
-Respond with a JSON array. Each element has:
-- "title": short task title (imperative form, e.g., "Implement X")
-- "description": detailed description of what to implement and how to verify
-- "depends_on": array of task titles this task depends on (empty if none)
-
-Order tasks from most foundational to most dependent.
-Respond ONLY with the JSON array, no other text.
-"#;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct RawTaskOutput {
     pub title: String,
@@ -601,19 +596,19 @@ pub(crate) struct RawTaskOutput {
 pub struct TaskExtractionService {
     store: Arc<RocksStore>,
     settings: Arc<SettingsService>,
-    claude_client: Arc<ClaudeClient>,
+    llm: Arc<MeteredLlm>,
 }
 
 impl TaskExtractionService {
     pub fn new(
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
-        claude_client: Arc<ClaudeClient>,
+        llm: Arc<MeteredLlm>,
     ) -> Self {
         Self {
             store,
             settings,
-            claude_client,
+            llm,
         }
     }
 
@@ -622,17 +617,20 @@ impl TaskExtractionService {
         spec: &Spec,
         api_key: &str,
     ) -> Result<Vec<(RawTaskOutput, u32)>, TaskError> {
-        let response = self
-            .claude_client
-            .complete(
+        let resp = self
+            .llm
+            .complete_with_model(
+                aura_claude::MID_MODEL,
                 api_key,
                 TASK_EXTRACTION_SYSTEM_PROMPT,
                 &spec.markdown_contents,
                 EXTRACTION_MAX_TOKENS,
+                "aura_task_extraction",
+                None,
             )
             .await?;
 
-        let raw_tasks = Self::parse_extraction_response(&response)?;
+        let raw_tasks = Self::parse_extraction_response(&resp.text)?;
 
         Ok(raw_tasks
             .into_iter()
@@ -677,6 +675,7 @@ impl TaskExtractionService {
                 dependency_ids: vec![],
                 parent_task_id: None,
                 assigned_agent_instance_id: None,
+                completed_by_agent_instance_id: None,
                 session_id: None,
                 execution_notes: String::new(),
                 files_changed: vec![],
@@ -792,5 +791,93 @@ impl TaskExtractionService {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // parse_extraction_response
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn parse_valid_task_json() {
+        let input = r#"[
+            {"title": "Setup DB", "description": "Create tables", "depends_on": []},
+            {"title": "Add API", "description": "REST endpoints", "depends_on": ["Setup DB"]}
+        ]"#;
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].title, "Setup DB");
+        assert!(tasks[0].depends_on.is_empty());
+        assert_eq!(tasks[1].title, "Add API");
+        assert_eq!(tasks[1].depends_on, vec!["Setup DB"]);
+    }
+
+    #[test]
+    fn parse_fenced_task_json() {
+        let input = r#"
+Here are the extracted tasks:
+
+```json
+[{"title": "Init project", "description": "Scaffold", "depends_on": []}]
+```
+"#;
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].title, "Init project");
+    }
+
+    #[test]
+    fn parse_empty_task_array_errors() {
+        let input = "[]";
+        let err = TaskExtractionService::parse_extraction_response(input).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("empty"), "expected empty error, got: {msg}");
+    }
+
+    #[test]
+    fn parse_invalid_task_json_errors() {
+        let input = "not json at all";
+        assert!(TaskExtractionService::parse_extraction_response(input).is_err());
+    }
+
+    #[test]
+    fn parse_fenced_without_lang_tag() {
+        let input = "```\n[{\"title\":\"T\",\"description\":\"D\",\"depends_on\":[]}]\n```";
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // extract_fenced_json
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn extract_fenced_json_with_lang() {
+        let input = "text\n```json\n{\"key\":\"val\"}\n```\nmore";
+        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        assert_eq!(result, "{\"key\":\"val\"}");
+    }
+
+    #[test]
+    fn extract_fenced_json_without_lang() {
+        let input = "```\n[1,2,3]\n```";
+        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        assert_eq!(result, "[1,2,3]");
+    }
+
+    #[test]
+    fn extract_fenced_json_no_fence_returns_none() {
+        let input = "no fences here";
+        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
+    }
+
+    #[test]
+    fn extract_fenced_json_unclosed_returns_none() {
+        let input = "```json\n{\"key\":\"val\"}";
+        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
     }
 }

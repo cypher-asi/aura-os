@@ -206,15 +206,17 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 2px 8px;
-  border-radius: 9999px;
+  padding: 0 5px;
+  border-radius: var(--radius-sm, 3px);
   line-height: 18px;
   cursor: pointer;
   user-select: none;
-  border: 1px solid transparent;
+  border: none;
+  min-width: 42px;
+  text-align: center;
   background: var(--color-bg-subtle, rgba(255, 255, 255, 0.06));
   color: var(--color-text-muted);
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  transition: background 0.1s, color 0.1s;
 }
 
 .logFilterChip:hover {
@@ -225,56 +227,48 @@
   composes: logFilterChip;
   background: rgba(255, 255, 255, 0.14);
   color: var(--color-text);
-  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .logFilterChipActive_loop {
   composes: logFilterChip;
-  background: rgba(59, 130, 246, 0.18);
-  color: rgb(96, 165, 250);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(74, 222, 128, 0.15);
+  color: rgb(74, 222, 128);
 }
 
 .logFilterChipActive_task {
   composes: logFilterChip;
-  background: rgba(168, 85, 247, 0.18);
-  color: rgb(192, 132, 252);
-  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(52, 211, 153, 0.15);
+  color: rgb(52, 211, 153);
 }
 
 .logFilterChipActive_output {
   composes: logFilterChip;
-  background: rgba(107, 114, 128, 0.18);
-  color: rgb(156, 163, 175);
-  border-color: rgba(107, 114, 128, 0.3);
+  background: rgba(134, 239, 172, 0.15);
+  color: rgb(134, 239, 172);
 }
 
 .logFilterChipActive_files {
   composes: logFilterChip;
-  background: rgba(234, 179, 8, 0.18);
-  color: rgb(250, 204, 21);
-  border-color: rgba(234, 179, 8, 0.3);
+  background: rgba(163, 230, 53, 0.15);
+  color: rgb(163, 230, 53);
 }
 
 .logFilterChipActive_session {
   composes: logFilterChip;
-  background: rgba(20, 184, 166, 0.18);
+  background: rgba(45, 212, 191, 0.15);
   color: rgb(45, 212, 191);
-  border-color: rgba(20, 184, 166, 0.3);
 }
 
 .logFilterChipActive_log {
   composes: logFilterChip;
-  background: rgba(107, 114, 128, 0.18);
-  color: rgb(156, 163, 175);
-  border-color: rgba(107, 114, 128, 0.3);
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(22, 163, 74);
 }
 
 .logFilterChipActive_spec {
   composes: logFilterChip;
-  background: rgba(244, 114, 182, 0.18);
-  color: rgb(244, 114, 182);
-  border-color: rgba(244, 114, 182, 0.3);
+  background: rgba(94, 234, 212, 0.15);
+  color: rgb(94, 234, 212);
 }
 
 .logFilterMore {
@@ -283,10 +277,7 @@
 }
 
 .logFilterDropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 100;
+  z-index: 9999;
   min-width: 130px;
   padding: var(--space-1) 0;
   background: var(--color-bg-solid, #1a1a1a);
@@ -376,44 +367,44 @@
 
 .logBadge_loop {
   composes: logBadge;
-  background: rgba(59, 130, 246, 0.15);
-  color: rgb(96, 165, 250);
+  background: rgba(74, 222, 128, 0.15);
+  color: rgb(74, 222, 128);
 }
 
 .logBadge_task {
   composes: logBadge;
-  background: rgba(168, 85, 247, 0.15);
-  color: rgb(192, 132, 252);
+  background: rgba(52, 211, 153, 0.15);
+  color: rgb(52, 211, 153);
 }
 
 .logBadge_output {
   composes: logBadge;
-  background: rgba(107, 114, 128, 0.15);
-  color: rgb(156, 163, 175);
+  background: rgba(134, 239, 172, 0.15);
+  color: rgb(134, 239, 172);
 }
 
 .logBadge_files {
   composes: logBadge;
-  background: rgba(234, 179, 8, 0.15);
-  color: rgb(250, 204, 21);
+  background: rgba(163, 230, 53, 0.15);
+  color: rgb(163, 230, 53);
 }
 
 .logBadge_session {
   composes: logBadge;
-  background: rgba(20, 184, 166, 0.15);
+  background: rgba(45, 212, 191, 0.15);
   color: rgb(45, 212, 191);
 }
 
 .logBadge_log {
   composes: logBadge;
-  background: rgba(107, 114, 128, 0.15);
-  color: rgb(156, 163, 175);
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(22, 163, 74);
 }
 
 .logBadge_spec {
   composes: logBadge;
-  background: rgba(244, 114, 182, 0.15);
-  color: rgb(244, 114, 182);
+  background: rgba(94, 234, 212, 0.15);
+  color: rgb(94, 234, 212);
 }
 
 .logSummary {
@@ -461,4 +452,9 @@
 .stopRing {
   transform-origin: center;
   animation: spinRing 1.2s linear infinite;
+}
+
+.automationSpinner {
+  animation: spinRing 1s linear infinite;
+  color: var(--color-text-muted);
 }

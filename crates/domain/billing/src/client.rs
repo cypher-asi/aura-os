@@ -102,7 +102,9 @@ pub struct BillingClient {
 impl BillingClient {
     pub fn new() -> Self {
         let base_url = env::var("BILLING_SERVER_URL")
-            .unwrap_or_else(|_| "https://billing.zero.tech".to_string());
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "https://billing.zero.tech".to_string());
         let internal_token =
             env::var("BILLING_INTERNAL_TOKEN").unwrap_or_default();
 

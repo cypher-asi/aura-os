@@ -1,8 +1,5 @@
 import { useRef, useState, useImperativeHandle, forwardRef, useCallback, useEffect } from "react";
-import { Menu } from "@cypher-asi/zui";
-import type { MenuItem } from "@cypher-asi/zui";
-import { ArrowUp, ChevronDown, Plus, X, FileText } from "lucide-react";
-import { useClickOutside } from "../hooks/use-click-outside";
+import { ArrowUp, Plus, X, FileText } from "lucide-react";
 import styles from "./ChatView.module.css";
 
 const MAX_ATTACHMENTS = 5;
@@ -12,15 +9,7 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const TEXT_TYPES = ["text/plain", "text/markdown", "text/x-markdown"];
 const TEXT_EXTENSIONS = [".md", ".txt", ".markdown"];
 
-const MODEL_OPTIONS: Record<string, string> = {
-  "opus-4.6": "Opus 4.6",
-  "gpt-5.3-codex": "GPT 5.3 Codex",
-};
-
-const modelMenuItems: MenuItem[] = [
-  { id: "opus-4.6", label: "Opus 4.6" },
-  { id: "gpt-5.3-codex", label: "GPT 5.3 Codex" },
-];
+const ACTIVE_MODEL_LABEL = "Opus 4.6";
 
 export interface ChatInputBarHandle {
   focus: () => void;
@@ -42,8 +31,8 @@ interface Props {
   onSend: (content: string, action?: string, attachments?: AttachmentItem[]) => void;
   onStop: () => void;
   isStreaming: boolean;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
+  selectedModel?: string;
+  onModelChange?: (model: string) => void;
   agentName?: string;
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (items: AttachmentItem[]) => void;
@@ -56,24 +45,17 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   onSend,
   onStop,
   isStreaming,
-  selectedModel,
-  onModelChange,
-  agentName,
   attachments = [],
   onAttachmentsChange,
   onRemoveAttachment,
 }, ref) {
-  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => textareaRef.current?.focus(),
   }));
-
-  useClickOutside(modelMenuRef, () => setModelMenuOpen(false), modelMenuOpen);
 
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
@@ -189,12 +171,17 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
     [addFiles],
   );
 
-  const autoResizeTextarea = () => {
+  const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 160) + "px";
-  };
+    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    el.style.overflowY = el.scrollHeight > 200 ? "auto" : "hidden";
+  }, []);
+
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [input, autoResizeTextarea]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -244,79 +231,51 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
             ))}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          className={styles.textarea}
-          value={input}
-          onChange={(e) => {
-            onInputChange(e.target.value);
-            autoResizeTextarea();
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder={`Message ${agentName ?? "AURA"}...`}
-          rows={1}
-        />
-        <div className={styles.inputToolbar}>
-          <div className={styles.toolbarLeft}>
+        <div className={styles.inputRow}>
+          <button
+            type="button"
+            className={styles.attachButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canAddMore}
+            aria-label="Attach file"
+          >
+            <Plus size={16} strokeWidth={1} />
+          </button>
+          <textarea
+            ref={textareaRef}
+            className={styles.textarea}
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add a follow-up"
+            rows={1}
+          />
+          {isStreaming ? (
             <button
               type="button"
-              className={styles.attachButton}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canAddMore}
-              aria-label="Attach file"
+              className={`${styles.sendButton} ${styles.stopButton}`}
+              onClick={onStop}
+              aria-label="Stop"
             >
-              <Plus size={16} />
+              <span className={styles.stopIcon} />
             </button>
-            <div ref={modelMenuRef} className={styles.modelMenuWrap}>
-              <button
-                type="button"
-                className={styles.modelButton}
-                onClick={() => setModelMenuOpen((v) => !v)}
-              >
-                {MODEL_OPTIONS[selectedModel]} <ChevronDown size={12} />
-              </button>
-              {modelMenuOpen && (
-                <div className={styles.modelMenu}>
-                  <Menu
-                    items={modelMenuItems}
-                    value={selectedModel}
-                    onChange={(id) => {
-                      onModelChange(id);
-                      setModelMenuOpen(false);
-                    }}
-                    background="solid"
-                    border="solid"
-                    rounded="md"
-                    width={180}
-                    isOpen
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={styles.toolbarRight}>
-            {isStreaming ? (
-              <button
-                type="button"
-                className={`${styles.sendButton} ${styles.stopButton}`}
-                onClick={onStop}
-                aria-label="Stop"
-              >
-                <span className={styles.stopIcon} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.sendButton}
-                onClick={() => onSend(input)}
-                disabled={!input.trim() && attachments.length === 0}
-                aria-label="Send"
-              >
-                <ArrowUp size={18} />
-              </button>
-            )}
-          </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.sendButton}
+              onClick={() => onSend(input)}
+              disabled={!input.trim() && attachments.length === 0}
+              aria-label="Send"
+            >
+              <ArrowUp size={16} />
+            </button>
+          )}
         </div>
+      </div>
+      <div className={styles.inputInfoBar}>
+        <span className={styles.modelButton}>{ACTIVE_MODEL_LABEL}</span>
+        <span className={styles.infoDot}>·</span>
+        <span className={styles.infoText}>/ for commands</span>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
-import { Play, Pause, Square } from "lucide-react";
+import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
@@ -17,6 +18,7 @@ interface AutomationBarProps {
 export function AutomationBar({ projectId }: AutomationBarProps) {
   const { subscribe, connected } = useEventContext();
   const { setActiveTab } = useSidekick();
+  const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -113,9 +115,10 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     try {
       setStarting(true);
       setActiveTab("tasks");
-      const res = await api.startLoop(projectId);
+      const res = await api.startLoop(projectId, agentInstanceId);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
       setPaused(false);
+      setStarting(false);
     } catch (err) {
       setStarting(false);
       if (isInsufficientCreditsError(err)) {
@@ -170,7 +173,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
             variant="ghost"
             size="sm"
             iconOnly
-            icon={<Play size={14} />}
+            icon={starting ? <Loader2 size={14} className={styles.automationSpinner} /> : <Play size={14} />}
             onClick={handleStart}
             disabled={!canPlay}
             title={paused ? "Resume" : "Start"}

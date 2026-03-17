@@ -3,12 +3,20 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight, Loader2, Wrench, CheckCircle2, XCircle, Sparkles, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
+import { ResponseBlock } from "./ResponseBlock";
+import { CookingIndicator, getStreamingPhaseLabel } from "./CookingIndicator";
 
 import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
+
+function stripEmojis(text: string): string {
+  return text
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/ {2,}/g, " ");
+}
 
 interface DisplayMessage {
   id: string;
@@ -16,6 +24,8 @@ interface DisplayMessage {
   content: string;
   toolCalls?: ToolCallEntry[];
   contentBlocks?: DisplayContentBlockUnion[];
+  thinkingText?: string;
+  thinkingDurationMs?: number | null;
 }
 
 interface Props {
@@ -53,35 +63,28 @@ const TOOL_LABELS: Record<string, string> = {
 function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
   const [expanded, setExpanded] = useState(false);
   const label = TOOL_LABELS[entry.name] || entry.name;
-
   const inputSummary = summarizeInput(entry.name, entry.input);
 
+  const stateClass = entry.pending
+    ? toolStyles.taskActive
+    : entry.isError
+      ? toolStyles.taskError
+      : toolStyles.taskDone;
+
   return (
-    <div className={toolStyles.toolBlock}>
+    <div className={`${toolStyles.toolBlock} ${stateClass}`}>
       <button
         className={toolStyles.toolHeader}
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className={toolStyles.toolIcon}>
-          {entry.pending ? (
-            <Loader2 size={14} className={toolStyles.spinner} />
-          ) : entry.isError ? (
-            <XCircle size={14} className={toolStyles.errorIcon} />
-          ) : (
-            <CheckCircle2 size={14} className={toolStyles.successIcon} />
-          )}
-        </span>
-        <Wrench size={12} className={toolStyles.wrenchIcon} />
+        <span className={toolStyles.taskCheck} />
         <span className={toolStyles.toolName}>{label}</span>
         {inputSummary && (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
         )}
-        <span className={toolStyles.chevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
       </button>
-      {expanded && (
+      <div className={`${toolStyles.toolBodyWrap} ${expanded ? toolStyles.toolBodyExpanded : ""}`}>
         <div className={toolStyles.toolBody}>
           <div className={toolStyles.section}>
             <div className={toolStyles.sectionLabel}>Input</div>
@@ -100,7 +103,31 @@ function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
             </div>
           )}
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
+  const pendingCount = entries.filter((e) => e.pending).length;
+  const total = entries.length;
+  const allDone = pendingCount === 0;
+
+  return (
+    <div className={toolStyles.toolCallsContainer}>
+      <div className={toolStyles.toolCallsHeader}>
+        <span className={`${toolStyles.headerDot} ${allDone ? toolStyles.headerDotDone : ""}`} />
+        <span className={toolStyles.headerText}>
+          {allDone ? (
+            <>Ran <strong>{total}</strong> {total === 1 ? "action" : "actions"}</>
+          ) : (
+            <><strong>Working</strong> on {total} to-do{total !== 1 ? "s" : ""}</>
+          )}
+        </span>
+      </div>
+      {entries.map((tc) => (
+        <ToolCallBlock key={tc.id} entry={tc} />
+      ))}
     </div>
   );
 }
@@ -138,32 +165,21 @@ function formatResult(result: string): string {
 const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
 
 function FileAttachmentBlock({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
   const match = text.match(FILE_PREFIX_RE);
   if (!match) return <span>{text}</span>;
 
-  const fileName = match[1];
-  const fileContent = match[2];
-
   return (
-    <div className={styles.fileAttachmentBlock}>
-      <button
-        className={styles.fileAttachmentHeader}
-        onClick={() => setExpanded(!expanded)}
-        type="button"
-      >
-        <FileText size={14} className={styles.fileAttachmentIcon} />
-        <span className={styles.fileAttachmentName}>{fileName}</span>
-        <span className={styles.fileAttachmentChevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-      </button>
-      {expanded && (
-        <div className={styles.fileAttachmentContent}>
-          <pre>{fileContent}</pre>
-        </div>
-      )}
-    </div>
+    <ResponseBlock
+      header={
+        <>
+          <FileText size={14} className={styles.fileAttachmentIcon} />
+          <span className={styles.fileAttachmentName}>{match[1]}</span>
+        </>
+      }
+      contentClassName={styles.fileAttachmentContent}
+    >
+      <pre>{match[2]}</pre>
+    </ResponseBlock>
   );
 }
 
@@ -206,28 +222,21 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
       : "Thought";
 
   return (
-    <div className={styles.thinkingBlock}>
-      <button
-        className={`${styles.thinkingHeader} ${isStreaming ? styles.thinkingHeaderActive : ""}`}
-        onClick={() => setExpanded(!expanded)}
-        type="button"
-      >
-        <Sparkles size={14} className={`${styles.thinkingIcon} ${isStreaming ? styles.thinkingIconActive : ""}`} />
+    <ResponseBlock
+      expanded={expanded}
+      onExpandedChange={setExpanded}
+      maxExpandedHeight={300}
+      className={styles.thinkingBlock}
+      header={
         <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>
           {durationLabel}
         </span>
-        <span className={styles.thinkingChevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-      </button>
-      <div
-        className={`${styles.thinkingContentWrap} ${expanded ? styles.thinkingContentExpanded : ""}`}
-      >
-        <div ref={contentRef} className={styles.thinkingContent}>
-          {text}
-        </div>
+      }
+    >
+      <div ref={contentRef} className={styles.thinkingContent}>
+        {stripEmojis(text)}
       </div>
-    </div>
+    </ResponseBlock>
   );
 }
 
@@ -235,8 +244,9 @@ export function MessageBubble({ message }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasContentBlocks = message.contentBlocks && message.contentBlocks.length > 0;
+  const hasThinking = message.thinkingText && message.thinkingText.length > 0;
 
-  if (!hasContent && !hasToolCalls && !hasContentBlocks) return null;
+  if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking) return null;
 
   const renderUserContent = () => {
     if (hasContentBlocks) {
@@ -279,19 +289,22 @@ export function MessageBubble({ message }: Props) {
           renderUserContent()
         ) : (
           <div className={styles.markdown}>
+            {hasThinking && (
+              <ThinkingBlock
+                text={message.thinkingText!}
+                isStreaming={false}
+                durationMs={message.thinkingDurationMs}
+              />
+            )}
             {hasToolCalls && (
-              <div className={toolStyles.toolCallsContainer}>
-                {message.toolCalls!.map((tc) => (
-                  <ToolCallBlock key={tc.id} entry={tc} />
-                ))}
-              </div>
+              <ToolCallsList entries={message.toolCalls!} />
             )}
             {hasContent && (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeHighlight]}
               >
-                {message.content}
+                {stripEmojis(message.content)}
               </ReactMarkdown>
             )}
           </div>
@@ -317,25 +330,13 @@ function StreamingIndicator({
   thinkingText?: string;
   toolCalls?: ToolCallEntry[];
 }) {
-  const hasText = Boolean(text);
-  const hasThinking = Boolean(thinkingText);
-  const hasPendingTools = toolCalls?.some((tc) => tc.pending) ?? false;
+  const label = getStreamingPhaseLabel({
+    streamingText: text,
+    thinkingText,
+    toolCalls: toolCalls ?? [],
+  });
 
-  if (hasText) {
-    return <span className={styles.streamingCursorGlow} />;
-  }
-
-  if (hasThinking || hasPendingTools) {
-    return null;
-  }
-
-  return (
-    <div className={styles.shimmerPlaceholder}>
-      <div className={styles.shimmerBar} />
-      <div className={styles.shimmerBar} />
-      <div className={styles.shimmerBar} />
-    </div>
-  );
+  return <CookingIndicator label={label ?? "Cooking..."} />;
 }
 
 export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDurationMs }: StreamingBubbleProps) {
@@ -352,18 +353,14 @@ export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDuratio
             />
           )}
           {toolCalls && toolCalls.length > 0 && (
-            <div className={toolStyles.toolCallsContainer}>
-              {toolCalls.map((tc) => (
-                <ToolCallBlock key={tc.id} entry={tc} />
-              ))}
-            </div>
+            <ToolCallsList entries={toolCalls} />
           )}
           {text && (
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkBreaks]}
               rehypePlugins={[rehypeHighlight]}
             >
-              {text}
+              {stripEmojis(text)}
             </ReactMarkdown>
           )}
           <StreamingIndicator text={text} thinkingText={thinkingText} toolCalls={toolCalls} />

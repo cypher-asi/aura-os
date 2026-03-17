@@ -3,11 +3,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub struct SetApiKeyRequest {
-    pub api_key: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct SetSettingRequest {
     pub value: String,
 }

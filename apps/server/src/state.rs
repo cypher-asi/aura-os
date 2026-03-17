@@ -9,13 +9,12 @@ use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
-use aura_claude::ClaudeClient;
 use aura_github::GitHubService;
 use aura_orgs::OrgService;
-use aura_billing::{BillingClient, PricingService};
+use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
-use aura_specs::SpecGenerationService;
+use aura_specs::{SpecGenerationService, SprintGenerationService};
 use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
@@ -42,7 +41,8 @@ pub struct AppState {
     pub agent_instance_service: Arc<AgentInstanceService>,
     pub session_service: Arc<SessionService>,
     pub chat_service: Arc<ChatService>,
-    pub claude_client: Arc<ClaudeClient>,
+    pub sprint_gen: Arc<SprintGenerationService>,
+    pub llm: Arc<MeteredLlm>,
     pub event_tx: mpsc::UnboundedSender<EngineEvent>,
     pub event_broadcast: broadcast::Sender<EngineEvent>,
     pub loop_registry: LoopRegistry,

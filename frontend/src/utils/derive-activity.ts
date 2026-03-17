@@ -24,8 +24,8 @@ export function deriveActivity(buffer: string): ActivityItem[] {
   return deriveLegacyJsonActivity(buffer);
 }
 
-const TOOL_MARKER_RE = /\[tool:\s*(\S+)\s*->\s*(ok|error)\]/g;
-const TOOL_MARKER_TEST = /\[tool:\s*\S+\s*->\s*(?:ok|error)\]/;
+const TOOL_MARKER_RE = /\[tool:\s*(\S+?)(?:\(([^)]*)\))?\s*->\s*(ok|error)\]/g;
+const TOOL_MARKER_TEST = /\[tool:\s*\S+?(?:\([^)]*\))?\s*->\s*(?:ok|error)\]/;
 
 function isAgenticFormat(buffer: string): boolean {
   return TOOL_MARKER_TEST.test(buffer) || !buffer.trimStart().startsWith("{");
@@ -39,8 +39,9 @@ function deriveAgenticActivity(buffer: string): ActivityItem[] {
   let idx = 0;
   while ((match = TOOL_MARKER_RE.exec(buffer)) !== null) {
     const toolName = match[1];
-    const result = match[2];
-    const msg = agenticToolLabel(toolName);
+    const toolArg = match[2] || undefined;
+    const result = match[3];
+    const msg = agenticToolLabel(toolName, toolArg);
     const detail = result === "error" ? "(failed)" : undefined;
     items.push({ id: `tool-${idx}`, message: msg, detail, status: "done" });
     idx++;
@@ -70,39 +71,59 @@ function findLastToolMarkerEnd(buffer: string): number {
   return lastEnd;
 }
 
-function agenticToolLabel(toolName: string): string {
+function agenticToolLabel(toolName: string, arg?: string): string {
+  const shortArg = arg ? shortenArg(arg, 60) : "";
   switch (toolName) {
-    case "read_file": return "Read file";
-    case "write_file": return "Write file";
-    case "edit_file": return "Edit file";
-    case "delete_file": return "Delete file";
-    case "list_files": return "List files";
-    case "search_code": return "Search code";
-    case "run_command": return "Run command";
+    case "read_file": return shortArg ? `Read \`${shortArg}\`` : "Read file";
+    case "write_file": return shortArg ? `Write \`${shortArg}\`` : "Write file";
+    case "edit_file": return shortArg ? `Edit \`${shortArg}\`` : "Edit file";
+    case "delete_file": return shortArg ? `Delete \`${shortArg}\`` : "Delete file";
+    case "list_files": return shortArg ? `List \`${shortArg}\`` : "List files";
+    case "search_code": return shortArg ? `Search: ${shortArg}` : "Search code";
+    case "run_command": return shortArg ? `Run: \`${shortArg}\`` : "Run command";
     case "task_done": return "Task complete";
     case "get_task_context": return "Load task context";
-    default: return `Tool: ${toolName}`;
+    default: return shortArg ? `${toolName}: ${shortArg}` : `Tool: ${toolName}`;
   }
 }
 
+function shortenArg(arg: string, max: number): string {
+  if (arg.length <= max) return arg;
+  return arg.slice(0, max - 1) + "\u2026";
+}
+
 function summarizeTrailingText(text: string): string {
-  const lower = text.toLowerCase();
-  if (lower.includes("implement") || lower.includes("writing") || lower.includes("creating")) {
-    return "Implementing changes";
-  }
-  if (lower.includes("read") || lower.includes("look") || lower.includes("check") || lower.includes("explore") || lower.includes("examin")) {
-    return "Analyzing codebase";
-  }
-  if (lower.includes("build") || lower.includes("compil")) {
-    return "Building project";
-  }
-  if (lower.includes("test")) {
-    return "Running tests";
-  }
-  if (lower.includes("fix") || lower.includes("correct") || lower.includes("resolv")) {
-    return "Fixing issues";
-  }
+  const firstLine = extractFirstMeaningfulLine(text);
+  if (firstLine) return firstLine;
   return "Generating response";
+}
+
+const MAX_SUMMARY_LEN = 100;
+
+function extractFirstMeaningfulLine(text: string): string | null {
+  const lines = text.split("\n");
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.length < 4) continue;
+    if (/^[\s\-*#`>|=]+$/.test(line)) continue;
+
+    let cleaned = line
+      .replace(/^#+\s*/, "")
+      .replace(/^\d+\.\s+/, "")
+      .replace(/^[-*]\s+/, "")
+      .replace(/^>\s+/, "")
+      .trim();
+
+    if (!cleaned) continue;
+
+    if (cleaned.length > MAX_SUMMARY_LEN) {
+      const cutoff = cleaned.lastIndexOf(" ", MAX_SUMMARY_LEN);
+      cleaned = cleaned.slice(0, cutoff > 40 ? cutoff : MAX_SUMMARY_LEN) + "\u2026";
+    }
+    return cleaned;
+  }
+  return null;
 }
 
 function deriveLegacyJsonActivity(buffer: string): ActivityItem[] {

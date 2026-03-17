@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Instant;
 
-use tokio::sync::{mpsc, Mutex};
 use tracing::{info, warn};
 
 use aura_core::*;
-use aura_claude::ClaudeStreamEvent;
+use aura_claude::StreamTokenCapture;
 
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
@@ -17,6 +15,8 @@ use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp};
+
+const BUILD_FIX_SNAPSHOT_BUDGET: usize = 30_000;
 
 /// Tracks a single build-fix attempt for the retry history prompt.
 pub(crate) struct BuildFixAttemptRecord {
@@ -77,6 +77,31 @@ fn normalize_line_col_refs(line: &str) -> String {
     result
 }
 
+/// Rewrite known server-starting commands to their build/check equivalents.
+///
+/// When a build command times out, it's usually because the command starts a
+/// long-running process. This function maps common run commands to their
+/// compile-only counterparts.
+pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
+    let trimmed = cmd.trim();
+    if trimmed == "cargo run" || trimmed.starts_with("cargo run ") {
+        let mut corrected = trimmed.replacen("cargo run", "cargo build", 1);
+        if let Some(idx) = corrected.find(" -- ") {
+            corrected.truncate(idx);
+        } else if corrected.ends_with(" --") {
+            corrected.truncate(corrected.len() - 3);
+        }
+        return Some(corrected);
+    }
+    if trimmed == "npm start" {
+        return Some("npm run build".to_string());
+    }
+    if trimmed.contains("runserver") {
+        return Some(trimmed.replace("runserver", "check"));
+    }
+    None
+}
+
 /// Classify build errors into categories so the fix prompt can include
 /// targeted guidance instead of generic "try a different approach."
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,6 +111,7 @@ pub(crate) enum ErrorCategory {
     RustMissingMethod,
     RustTypeError,
     RustBorrowCheck,
+    RustStructFieldMismatch,
     RustApiHallucination,
     NpmDependency,
     NpmTypeScript,
@@ -114,6 +140,12 @@ pub(crate) fn classify_build_errors(stderr: &str) -> Vec<ErrorCategory> {
 
     if stderr.contains("no method named") || stderr.contains("E0599") {
         categories.push(ErrorCategory::RustMissingMethod);
+    }
+
+    if stderr.contains("missing field") || stderr.contains("E0063")
+        || stderr.contains("has no field named") || stderr.contains("E0560")
+    {
+        categories.push(ErrorCategory::RustStructFieldMismatch);
     }
 
     if stderr.contains("the trait") && stderr.contains("is not implemented")
@@ -189,6 +221,13 @@ pub(crate) fn error_category_guidance(categories: &[ErrorCategory]) -> String {
                 "DIAGNOSIS: Borrow checker violation.\n",
                 "FIX: Check ownership and lifetimes. Consider cloning, using references, ",
                 "or restructuring to avoid simultaneous mutable/immutable borrows.",
+            ),
+            ErrorCategory::RustStructFieldMismatch => concat!(
+                "DIAGNOSIS: Struct field mismatch -- fields were added, removed, or renamed.\n",
+                "FIX: Read the actual struct definition in the 'Actual API Reference' section below. ",
+                "Update every initializer and field access to match the current struct fields exactly. ",
+                "Add any new required fields (use Default/None for Option types), remove fields that ",
+                "no longer exist, and rename fields that were renamed.\n",
             ),
             ErrorCategory::RustApiHallucination => concat!(
                 "DIAGNOSIS: Systematic API hallucination detected -- your code assumes an API ",
@@ -291,17 +330,17 @@ pub(crate) fn parse_error_references(stderr: &str) -> file_ops::ErrorReferences 
 
 impl DevLoopEngine {
     pub(crate) fn persist_build_step(&self, task: &Task, step: BuildStepRecord) {
-        if let Ok(mut t) = self.store.get_task(&task.project_id, &task.spec_id, &task.task_id) {
-            t.build_steps.push(step);
-            let _ = self.store.put_task(&t);
-        }
+        let _ = self.store.atomic_update_task(
+            &task.project_id, &task.spec_id, &task.task_id,
+            |t| { t.build_steps.push(step); },
+        );
     }
 
     pub(crate) fn persist_test_step(&self, task: &Task, step: TestStepRecord) {
-        if let Ok(mut t) = self.store.get_task(&task.project_id, &task.spec_id, &task.task_id) {
-            t.test_steps.push(step);
-            let _ = self.store.put_task(&t);
-        }
+        let _ = self.store.atomic_update_task(
+            &task.project_id, &task.spec_id, &task.task_id,
+            |t| { t.test_steps.push(step); },
+        );
     }
 
     /// Run the test suite and return the names of currently-failing tests.
@@ -315,7 +354,7 @@ impl DevLoopEngine {
             None => return HashSet::new(),
         };
         let base_path = Path::new(&project.linked_folder_path);
-        match build_verify::run_build_command(base_path, test_command).await {
+        match build_verify::run_build_command(base_path, test_command, None).await {
             Ok(result) => {
                 let (tests, _) = build_verify::parse_test_output(
                     &result.stdout, &result.stderr, result.success,
@@ -352,7 +391,7 @@ impl DevLoopEngine {
         initial_execution: &TaskExecution,
         baseline_test_failures: &HashSet<String>,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
-        let build_command = match &project.build_command {
+        let mut build_command = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
                 self.emit(EngineEvent::BuildVerificationSkipped {
@@ -372,6 +411,21 @@ impl DevLoopEngine {
             }
         };
 
+        if let Some(corrected) = auto_correct_build_command(&build_command) {
+            warn!(
+                old = %build_command, new = %corrected,
+                "eagerly rewriting server-starting build command"
+            );
+            let _ = self.project_service.update_project(
+                &project.project_id,
+                aura_projects::UpdateProjectInput {
+                    build_command: Some(corrected.clone()),
+                    ..Default::default()
+                },
+            );
+            build_command = corrected;
+        }
+
         let test_command = project.test_command.as_ref()
             .filter(|cmd| !cmd.trim().is_empty())
             .cloned();
@@ -379,11 +433,12 @@ impl DevLoopEngine {
         let base_path = Path::new(&project.linked_folder_path);
         let mut all_fix_ops: Vec<FileOp> = Vec::new();
         let mut prior_attempts: Vec<BuildFixAttemptRecord> = Vec::new();
+        let mut prior_test_attempts: Vec<BuildFixAttemptRecord> = Vec::new();
         let mut duplicate_bailouts: u32 = 0;
         let mut fix_input_tokens: u64 = 0;
         let mut fix_output_tokens: u64 = 0;
 
-        for attempt in 1..=MAX_BUILD_FIX_RETRIES {
+        for attempt in 1..=self.engine_config.max_build_fix_retries {
             let build_step_start = Instant::now();
             self.emit(EngineEvent::BuildVerificationStarted {
                 project_id: project.project_id,
@@ -399,8 +454,41 @@ impl DevLoopEngine {
                 attempt: Some(attempt),
             });
 
-            let build_result = build_verify::run_build_command(base_path, &build_command).await?;
+            let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
+            let fwd_event_tx = self.event_tx.clone();
+            let fwd_pid = project.project_id;
+            let fwd_aiid = session.agent_instance_id;
+            let fwd_tid = task.task_id;
+            tokio::spawn(async move {
+                while let Some(line) = line_rx.recv().await {
+                    let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                        project_id: fwd_pid,
+                        agent_instance_id: fwd_aiid,
+                        task_id: fwd_tid,
+                        delta: line,
+                    });
+                }
+            });
+            let build_result = build_verify::run_build_command(base_path, &build_command, Some(line_tx)).await?;
             let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
+
+            if build_result.timed_out {
+                if let Some(corrected) = auto_correct_build_command(&build_command) {
+                    warn!(
+                        old = %build_command, new = %corrected,
+                        "build command timed out, auto-correcting"
+                    );
+                    let _ = self.project_service.update_project(
+                        &project.project_id,
+                        aura_projects::UpdateProjectInput {
+                            build_command: Some(corrected.clone()),
+                            ..Default::default()
+                        },
+                    );
+                    build_command = corrected;
+                    continue;
+                }
+            }
 
             if build_result.success {
                 self.emit(EngineEvent::BuildVerificationPassed {
@@ -423,7 +511,7 @@ impl DevLoopEngine {
                     let (test_result, test_inp, test_out) = self.run_and_handle_tests(
                         project, task, session, api_key, initial_execution,
                         test_cmd, base_path, attempt, &mut all_fix_ops,
-                        baseline_test_failures,
+                        baseline_test_failures, &mut prior_test_attempts,
                     ).await?;
                     fix_input_tokens += test_inp;
                     fix_output_tokens += test_out;
@@ -465,7 +553,7 @@ impl DevLoopEngine {
                 attempt: Some(attempt),
             });
 
-            if attempt == MAX_BUILD_FIX_RETRIES {
+            if attempt == self.engine_config.max_build_fix_retries {
                 info!(task_id = %task.task_id, "build still failing after max retries");
                 return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
             }
@@ -503,7 +591,7 @@ impl DevLoopEngine {
 
             let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
             let codebase_snapshot =
-                file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+                file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
 
             let fix_prompt = build_fix_prompt_with_history(
                 project,
@@ -518,36 +606,22 @@ impl DevLoopEngine {
                 &prior_attempts,
             );
 
-            let fix_tc: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
-            let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-            let fix_tc_clone = fix_tc.clone();
-            let forwarder = tokio::spawn(async move {
-                while let Some(evt) = stream_rx.recv().await {
-                    if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                        let mut g = fix_tc_clone.lock().await;
-                        g.0 += input_tokens;
-                        g.1 += output_tokens;
-                    }
-                }
-            });
-
+            let (tx, handle) = StreamTokenCapture::sink();
             let response = self
-                .claude_client
+                .llm
                 .complete_stream(
                     api_key,
                     &build_fix_system_prompt(),
                     &fix_prompt,
-                    TASK_EXECUTION_MAX_TOKENS,
-                    stream_tx,
+                    self.llm_config.task_execution_max_tokens,
+                    tx,
+                    "aura_build_fix",
+                    None,
                 )
                 .await?;
-            let _ = forwarder.await;
-
-            {
-                let g = fix_tc.lock().await;
-                fix_input_tokens += g.0;
-                fix_output_tokens += g.1;
-            }
+            let (cap_inp, cap_out) = handle.finalize().await;
+            fix_input_tokens += cap_inp;
+            fix_output_tokens += cap_out;
 
             let mut attempt_files_changed: Vec<String> = Vec::new();
 
@@ -616,7 +690,7 @@ impl DevLoopEngine {
             }
         }
 
-        Ok((all_fix_ops, false, MAX_BUILD_FIX_RETRIES, duplicate_bailouts, fix_input_tokens, fix_output_tokens))
+        Ok((all_fix_ops, false, self.engine_config.max_build_fix_retries, duplicate_bailouts, fix_input_tokens, fix_output_tokens))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -632,6 +706,7 @@ impl DevLoopEngine {
         attempt: u32,
         all_fix_ops: &mut Vec<FileOp>,
         baseline_test_failures: &HashSet<String>,
+        prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
     ) -> Result<(bool, u64, u64), EngineError> {
         self.emit(EngineEvent::TestVerificationStarted {
             project_id: project.project_id,
@@ -650,7 +725,7 @@ impl DevLoopEngine {
         });
 
         let test_start = Instant::now();
-        let test_result = build_verify::run_build_command(base_path, test_command).await?;
+        let test_result = build_verify::run_build_command(base_path, test_command, None).await?;
         let test_duration_ms = test_start.elapsed().as_millis() as u64;
         let (tests, summary) = build_verify::parse_test_output(
             &test_result.stdout, &test_result.stderr, test_result.success,
@@ -769,7 +844,7 @@ impl DevLoopEngine {
 
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
         let codebase_snapshot =
-            file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
 
         let fix_prompt = build_fix_prompt_with_history(
             project,
@@ -781,35 +856,23 @@ impl DevLoopEngine {
             &test_result.stderr,
             &test_result.stdout,
             &initial_execution.notes,
-            &[],
+            prior_test_attempts,
         );
 
-        let test_fix_tc: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
-        let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-        let test_fix_tc_clone = test_fix_tc.clone();
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = stream_rx.recv().await {
-                if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                    let mut g = test_fix_tc_clone.lock().await;
-                    g.0 += input_tokens;
-                    g.1 += output_tokens;
-                }
-            }
-        });
-
+        let (tx, handle) = StreamTokenCapture::sink();
         let response = self
-            .claude_client
+            .llm
             .complete_stream(
                 api_key,
                 &build_fix_system_prompt(),
                 &fix_prompt,
-                TASK_EXECUTION_MAX_TOKENS,
-                stream_tx,
+                self.llm_config.task_execution_max_tokens,
+                tx,
+                "aura_build_fix",
+                None,
             )
             .await?;
-        let _ = forwarder.await;
-
-        let (test_fix_inp, test_fix_out) = *test_fix_tc.lock().await;
+        let (test_fix_inp, test_fix_out) = handle.finalize().await;
 
         match parse_execution_response(&response) {
             Ok(fix_execution) => {
@@ -817,6 +880,23 @@ impl DevLoopEngine {
                 if !fix_execution.file_ops.is_empty() {
                     self.emit_file_ops_applied(project.project_id, session.agent_instance_id, task, &fix_execution.file_ops);
                 }
+
+                let attempt_files: Vec<String> = fix_execution.file_ops.iter().map(|op| {
+                    let (op_name, path) = match op {
+                        FileOp::Create { path, .. } => ("create", path.as_str()),
+                        FileOp::Modify { path, .. } => ("modify", path.as_str()),
+                        FileOp::Delete { path } => ("delete", path.as_str()),
+                        FileOp::SearchReplace { path, .. } => ("search_replace", path.as_str()),
+                    };
+                    format!("{op_name} {path}")
+                }).collect();
+                let sig = normalize_error_signature(&test_result.stderr);
+                prior_test_attempts.push(BuildFixAttemptRecord {
+                    stderr: test_result.stderr.clone(),
+                    error_signature: sig,
+                    files_changed: attempt_files,
+                });
+
                 all_fix_ops.extend(fix_execution.file_ops);
             }
             Err(e) => {
@@ -830,5 +910,166 @@ impl DevLoopEngine {
         }
 
         Ok((false, test_fix_inp, test_fix_out))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // auto_correct_build_command
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn auto_correct_cargo_run() {
+        assert_eq!(
+            auto_correct_build_command("cargo run"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_with_args() {
+        assert_eq!(
+            auto_correct_build_command("cargo run --release"),
+            Some("cargo build --release".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_strips_binary_args() {
+        assert_eq!(
+            auto_correct_build_command("cargo run -p spectra-app -- --help"),
+            Some("cargo build -p spectra-app".into())
+        );
+        assert_eq!(
+            auto_correct_build_command("cargo run -- --port 8080"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_trailing_double_dash() {
+        assert_eq!(
+            auto_correct_build_command("cargo run --"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_npm_start() {
+        assert_eq!(
+            auto_correct_build_command("npm start"),
+            Some("npm run build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_django_runserver() {
+        assert_eq!(
+            auto_correct_build_command("python manage.py runserver"),
+            Some("python manage.py check".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_returns_none_for_normal_build() {
+        assert_eq!(auto_correct_build_command("cargo build"), None);
+        assert_eq!(auto_correct_build_command("npm run build"), None);
+        assert_eq!(auto_correct_build_command("make"), None);
+    }
+
+    // -----------------------------------------------------------------------
+    // normalize_error_signature
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn normalize_strips_line_numbers() {
+        let stderr = "error[E0308]: mismatched types\n  --> src/main.rs:52:32\n";
+        let sig = normalize_error_signature(stderr);
+        assert!(sig.contains("error[E0308]: mismatched types"));
+        assert!(sig.contains("-->LOCATION"));
+        assert!(!sig.contains(":52:32"));
+    }
+
+    #[test]
+    fn normalize_deduplicates_same_errors() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+error[E0308]: mismatched types
+  --> src/main.rs:20:5
+";
+        let sig = normalize_error_signature(stderr);
+        let lines: Vec<&str> = sig.lines().collect();
+        let error_count = lines.iter().filter(|l| l.contains("E0308")).count();
+        assert_eq!(error_count, 1, "duplicate errors should be deduped");
+    }
+
+    #[test]
+    fn normalize_skips_help_lines() {
+        let stderr = "\
+error: cannot find value `x`
+help: consider importing this
+For more information about this error, try `rustc --explain E0425`
+";
+        let sig = normalize_error_signature(stderr);
+        assert!(!sig.contains("help:"));
+        assert!(!sig.contains("For more information"));
+    }
+
+    // -----------------------------------------------------------------------
+    // classify_build_errors
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn classify_rust_string_literal() {
+        let errors = classify_build_errors("error: unknown start of token \\u{201c}");
+        assert!(errors.contains(&ErrorCategory::RustStringLiteral));
+    }
+
+    #[test]
+    fn classify_rust_missing_module() {
+        let errors = classify_build_errors("error[E0583]: file not found for module `foo`");
+        assert!(errors.contains(&ErrorCategory::RustMissingModule));
+    }
+
+    #[test]
+    fn classify_rust_borrow_check() {
+        let errors = classify_build_errors("error[E0502]: cannot borrow `x` as mutable");
+        assert!(errors.contains(&ErrorCategory::RustBorrowCheck));
+    }
+
+    #[test]
+    fn classify_npm_dependency() {
+        let errors = classify_build_errors("Error: Cannot find module 'express'");
+        assert!(errors.contains(&ErrorCategory::NpmDependency));
+    }
+
+    #[test]
+    fn classify_npm_typescript() {
+        let errors = classify_build_errors("error TS2304: Cannot find name 'foo'");
+        assert!(errors.contains(&ErrorCategory::NpmTypeScript));
+    }
+
+    #[test]
+    fn classify_generic_syntax() {
+        let errors = classify_build_errors("syntax error near unexpected token");
+        assert!(errors.contains(&ErrorCategory::GenericSyntax));
+    }
+
+    #[test]
+    fn classify_unknown_fallback() {
+        let errors = classify_build_errors("something completely unknown happened");
+        assert!(errors.contains(&ErrorCategory::Unknown));
+    }
+
+    #[test]
+    fn classify_multiple_categories() {
+        let stderr = "error[E0599]: no method named `foo`\nerror[E0502]: cannot borrow `x`";
+        let errors = classify_build_errors(stderr);
+        assert!(errors.contains(&ErrorCategory::RustMissingMethod));
+        assert!(errors.contains(&ErrorCategory::RustBorrowCheck));
     }
 }

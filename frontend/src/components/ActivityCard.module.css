@@ -24,7 +24,7 @@
 .avatar {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-full, 9999px);
+  border-radius: 50%;
   background: var(--color-bg-hover);
   display: flex;
   align-items: center;
@@ -100,7 +100,7 @@
 }
 
 .action {
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--font-size-xs, 11px);
   color: var(--color-text-secondary);
 }
 
@@ -115,13 +115,22 @@
 
 .repo {
   font-weight: 500;
-  color: var(--color-text);
+  color: #fff;
 }
 
 .time {
   font-size: var(--font-size-xs, 11px);
   color: var(--color-text-secondary);
   white-space: nowrap;
+}
+
+/* ── Summary ── */
+
+.summary {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* ── Commits list ── */
@@ -199,7 +208,7 @@
 .commentAvatar {
   width: 20px;
   height: 20px;
-  border-radius: var(--radius-full, 9999px);
+  border-radius: 50%;
   background: var(--color-bg-hover);
   display: flex;
   align-items: center;

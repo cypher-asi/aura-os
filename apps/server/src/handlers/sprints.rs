@@ -133,16 +133,12 @@ pub async fn delete_sprint(
     Ok(Json(()))
 }
 
-const GENERATE_SYSTEM_PROMPT: &str = "\
-You are a requirements engineer. Take the user's input and expand it into a comprehensive, \
-well-structured requirements document. Preserve the user's intent. Output only the document text.";
-
 pub async fn generate_sprint(
     State(state): State<AppState>,
     Path((project_id, sprint_id)): Path<(ProjectId, SprintId)>,
 ) -> ApiResult<Json<Sprint>> {
     super::billing::require_credits(&state).await?;
-    let mut sprint = state
+    let sprint = state
         .store
         .get_sprint(&project_id, &sprint_id)
         .map_err(|e| match e {
@@ -155,22 +151,12 @@ pub async fn generate_sprint(
         .get_decrypted_api_key()
         .map_err(|e| ApiError::internal(format!("API key error: {e}")))?;
 
-    let expanded = state
-        .claude_client
-        .complete(&api_key, GENERATE_SYSTEM_PROMPT, &sprint.prompt, 8192)
+    let sprint = state
+        .sprint_gen
+        .generate(&api_key, sprint)
         .await
-        .map_err(|e| ApiError::internal(format!("LLM generation failed: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("Sprint generation failed: {e}")))?;
 
-    sprint.prompt = expanded;
-    sprint.generated_at = Some(Utc::now());
-    sprint.updated_at = Utc::now();
-
-    state
-        .store
-        .put_sprint(&sprint)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    info!(%project_id, %sprint_id, "Sprint generated via LLM");
     Ok(Json(sprint))
 }
 
@@ -195,20 +181,30 @@ pub async fn generate_sprint_stream(
     let (claude_tx, claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
     let (sse_tx, sse_rx) = mpsc::unbounded_channel::<Event>();
 
-    let prompt = sprint.prompt.clone();
     let sse_tx_fwd = sse_tx.clone();
+    let sprint_gen = state.sprint_gen.clone();
 
-    tokio::spawn(save_sprint_result(
-        state.claude_client.clone(),
-        state.store.clone(),
-        api_key,
-        prompt.clone(),
-        sprint,
-        project_id,
-        sprint_id,
-        claude_tx,
-        sse_tx,
-    ));
+    tokio::spawn(async move {
+        match sprint_gen.generate_stream(&api_key, sprint, claude_tx).await {
+            Ok(sprint) => {
+                let _ = sse_tx.send(
+                    Event::default()
+                        .event("done")
+                        .json_data(serde_json::json!({ "sprint": sprint }))
+                        .unwrap(),
+                );
+            }
+            Err(e) => {
+                error!(%project_id, %sprint_id, error = %e, "Streaming sprint generation failed");
+                let _ = sse_tx.send(
+                    Event::default()
+                        .event("error")
+                        .json_data(serde_json::json!({ "message": e.to_string() }))
+                        .unwrap(),
+                );
+            }
+        }
+    });
 
     tokio::spawn(forward_claude_events(claude_rx, sse_tx_fwd));
 
@@ -216,64 +212,6 @@ pub async fn generate_sprint_stream(
         .map(|evt| Ok::<_, Infallible>(evt));
 
     Ok(Sse::new(stream))
-}
-
-async fn save_sprint_result(
-    claude_client: std::sync::Arc<aura_claude::ClaudeClient>,
-    store: std::sync::Arc<aura_store::RocksStore>,
-    api_key: String,
-    prompt: String,
-    mut sprint: Sprint,
-    project_id: ProjectId,
-    sprint_id: SprintId,
-    claude_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-    sse_tx: mpsc::UnboundedSender<Event>,
-) {
-    let result = claude_client
-        .complete_stream(
-            &api_key,
-            GENERATE_SYSTEM_PROMPT,
-            &prompt,
-            8192,
-            claude_tx,
-        )
-        .await;
-
-    match result {
-        Ok(full_text) => {
-            sprint.prompt = full_text;
-            sprint.generated_at = Some(Utc::now());
-            sprint.updated_at = Utc::now();
-
-            if let Err(e) = store.put_sprint(&sprint) {
-                error!(%project_id, %sprint_id, error = %e, "Failed to save generated sprint");
-                let _ = sse_tx.send(
-                    Event::default()
-                        .event("error")
-                        .json_data(serde_json::json!({ "message": e.to_string() }))
-                        .unwrap(),
-                );
-                return;
-            }
-
-            info!(%project_id, %sprint_id, "Sprint generated via streaming LLM");
-            let _ = sse_tx.send(
-                Event::default()
-                    .event("done")
-                    .json_data(serde_json::json!({ "sprint": sprint }))
-                    .unwrap(),
-            );
-        }
-        Err(e) => {
-            error!(%project_id, %sprint_id, error = %e, "Streaming sprint generation failed");
-            let _ = sse_tx.send(
-                Event::default()
-                    .event("error")
-                    .json_data(serde_json::json!({ "message": e.to_string() }))
-                    .unwrap(),
-            );
-        }
-    }
 }
 
 async fn forward_claude_events(

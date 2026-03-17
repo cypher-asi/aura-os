@@ -77,7 +77,11 @@
 .bubbleUser {
   background: var(--color-bg-secondary, #1e1e1e);
   color: #ffffff;
-  border-bottom-right-radius: 4px;
+  border-radius: 3px 3px 0 3px;
+  min-height: var(--control-height-sm, 32px);
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
 }
 
 .userMessageBlocks {
@@ -93,69 +97,32 @@
   object-fit: contain;
 }
 
-/* File attachment block (collapsible) in user messages */
-.fileAttachmentBlock {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
-  width: 100%;
-}
-
-.fileAttachmentHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-
-.fileAttachmentHeader:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
+/* File attachment block — content-specific styles (structure in ResponseBlock) */
 .fileAttachmentIcon {
   flex-shrink: 0;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .fileAttachmentName {
   font-weight: 500;
+  color: var(--color-text-muted, #aaa);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
 }
 
-.fileAttachmentChevron {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
 .fileAttachmentContent {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
   max-height: 300px;
   overflow-y: auto;
-  padding: 10px 12px;
 }
 
 .fileAttachmentContent pre {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 11.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -186,26 +153,41 @@
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;
+  color: var(--color-text-secondary);
 }
 .markdown pre {
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 10px;
+  border-radius: 0;
+  padding: 0 12px;
+  min-height: var(--control-height-sm, 32px);
+  display: flex;
+  align-items: center;
   overflow-x: auto;
   margin-bottom: 10px;
   font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
-.markdown pre code { background: none; padding: 0; font-size: 12px; }
+.markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: var(--control-height-sm, 32px);
+  vertical-align: middle;
+  color: var(--color-text-secondary);
+}
 .markdown table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 10px;
   font-size: 12px;
+  color: var(--color-text-secondary);
 }
 .markdown th, .markdown td {
   border: 1px solid var(--color-border);
   padding: 5px 8px;
   text-align: left;
+  color: var(--color-text-secondary);
 }
 .markdown th {
   background: var(--color-bg-secondary);
@@ -214,106 +196,25 @@
 .markdown ul, .markdown ol {
   padding-left: 18px;
   margin-bottom: 8px;
+  color: var(--color-text-secondary);
 }
-.markdown li { margin-bottom: 2px; }
+.markdown li { margin-bottom: 2px; color: var(--color-text-secondary); }
+.markdown hr {
+  border: none;
+  height: 16px;
+}
 .markdown blockquote {
   border-left: 2px solid var(--color-accent);
   padding-left: 10px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
   font-size: 12.5px;
 }
 
-/* Streaming cursor — smooth glow for writing phase */
-.streamingCursorGlow {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  background: var(--color-accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  border-radius: 1px;
-  animation: cursorGlow 1.2s ease-in-out infinite;
-}
 
-@keyframes cursorGlow {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px var(--color-accent); }
-  50% { opacity: 0.3; box-shadow: none; }
-}
-
-/* Shimmer placeholder — waiting phase before any content arrives */
-.shimmerPlaceholder {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.shimmerBar {
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.08) 40%,
-    rgba(255, 255, 255, 0.03) 80%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
-}
-
-.shimmerBar:nth-child(1) { width: 80%; }
-.shimmerBar:nth-child(2) { width: 55%; animation-delay: 0.15s; }
-.shimmerBar:nth-child(3) { width: 35%; animation-delay: 0.3s; }
-
-/* Thinking block */
+/* Thinking block — content-specific styles (structure in ResponseBlock) */
 .thinkingBlock {
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 8px;
-  overflow: hidden;
   margin-bottom: 10px;
-  background: var(--color-bg-secondary, #1a1a1a);
-}
-
-.thinkingHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted, #999);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-
-.thinkingHeader:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.thinkingHeaderActive {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.thinkingIcon {
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity 0.2s ease;
-}
-
-.thinkingIconActive {
-  opacity: 1;
-  color: var(--color-accent, #60a5fa);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
 }
 
 .thinkingLabel {
@@ -340,34 +241,14 @@
   100% { background-position: -100% 0; }
 }
 
-.thinkingChevron {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  flex-shrink: 0;
-  opacity: 0.5;
-}
-
-.thinkingContentWrap {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease;
-}
-
-.thinkingContentExpanded {
-  max-height: 300px;
-}
-
 .thinkingContent {
-  padding: 0 12px 10px;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 280px;
   overflow-y: auto;
-  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
 }
 
 /* Input area — floats over messages with fade-to-dark gradient */
@@ -407,10 +288,10 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background: var(--color-bg-secondary, #1e1e1e);
+  border-radius: 0;
+  background: transparent;
   padding: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
   max-width: 680px;
   margin-left: auto;
   margin-right: auto;
@@ -510,25 +391,33 @@
 }
 
 .inputContainer:focus-within {
-  border-color: var(--color-border);
-  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--control-height-sm, 32px);
+  padding: 0 4px;
 }
 
 .textarea {
+  flex: 1;
   width: 100%;
   resize: none;
   border: none;
   background: transparent;
   color: var(--color-text);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
-  padding: 14px 18px 4px;
-  min-height: 24px;
-  max-height: 160px;
+  padding: 6px 6px;
+  height: auto;
+  min-height: var(--control-height-sm, 32px);
+  max-height: 200px;
   outline: none;
   overflow-y: auto;
-  border-radius: 24px 24px 0 0;
+  border-radius: 0;
 }
 
 .textarea::placeholder {
@@ -540,43 +429,42 @@
   cursor: not-allowed;
 }
 
-.inputToolbar {
+.inputInfoBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px 8px;
-  gap: var(--space-2);
+  gap: 6px;
+  padding: 8px 4px 0;
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.toolbarLeft {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.infoDot {
+  color: var(--color-text-secondary);
+  font-size: 11px;
 }
 
-.toolbarRight {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.infoText {
+  color: var(--color-text-secondary);
+  font-size: 11px;
 }
 
 .attachButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: #fff;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .attachButton:hover {
-  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
   color: var(--color-text);
 }
 
@@ -599,22 +487,22 @@
 .modelButton {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
   white-space: nowrap;
 }
 
 .modelButton:hover {
-  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
   color: var(--color-text);
+  opacity: 1;
 }
 
 .modelMenu {
@@ -628,35 +516,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
   border: none;
-  background: var(--color-text, #e0e0e0);
-  color: var(--color-bg, #1a1a1a);
+  background: transparent;
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
-.sendButton:hover {
-  opacity: 0.85;
+.sendButton:hover:not(:disabled) {
+  color: var(--color-text);
 }
 
 .sendButton:disabled {
-  opacity: 0.35;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
 .stopButton {
-  background: #2f2f2f !important;
+  color: var(--color-text) !important;
   opacity: 1 !important;
 }
 
 .stopIcon {
   display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: #fff;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-text-muted);
 }
+

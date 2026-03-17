@@ -23,6 +23,8 @@ export interface DisplayMessage {
   content: string;
   toolCalls?: ToolCallEntry[];
   contentBlocks?: DisplayContentBlockUnion[];
+  thinkingText?: string;
+  thinkingDurationMs?: number | null;
 }
 
 export interface ToolCallEntry {
@@ -81,7 +83,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
     async (
       content: string,
       action: string | null = null,
-      selectedModel: string,
+      _selectedModel?: string | null,
       attachments?: import("../api/streams").ChatAttachment[],
     ) => {
       if (!projectId || !agentInstanceId || isStreaming) return;
@@ -145,7 +147,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         agentInstanceId,
         userMsg.content,
         action,
-        selectedModel,
+        null,
         attachments,
         {
           onThinkingDelta(text) {
@@ -245,6 +247,9 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             const finalToolCalls = toolCallsRef.current.length > 0
               ? [...toolCallsRef.current]
               : undefined;
+            const savedThinking = msg.thinking || thinkingBufferRef.current || undefined;
+            const savedThinkingDuration = msg.thinking_duration_ms
+              ?? (thinkingStartRef.current != null ? Date.now() - thinkingStartRef.current : null);
             setMessages((prev) => [
               ...prev,
               {
@@ -252,6 +257,8 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
                 role: "assistant",
                 content: msg.content,
                 toolCalls: finalToolCalls,
+                thinkingText: savedThinking,
+                thinkingDurationMs: savedThinkingDuration,
               },
             ]);
             setStreamingText("");
@@ -276,6 +283,10 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
               dispatchInsufficientCredits();
             }
             if (streamBufferRef.current) {
+              const savedThinking = thinkingBufferRef.current || undefined;
+              const savedThinkingDuration = thinkingStartRef.current != null
+                ? Date.now() - thinkingStartRef.current
+                : null;
               setMessages((prev) => [
                 ...prev,
                 {
@@ -283,6 +294,8 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
                   role: "assistant",
                   content: streamBufferRef.current + `\n\n*Error: ${message}*`,
                   toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                  thinkingText: savedThinking,
+                  thinkingDurationMs: savedThinkingDuration,
                 },
               ]);
             }
@@ -297,6 +310,10 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
           },
           onDone() {
             if (streamBufferRef.current && !isStreaming) {
+              const savedThinking = thinkingBufferRef.current || undefined;
+              const savedThinkingDuration = thinkingStartRef.current != null
+                ? Date.now() - thinkingStartRef.current
+                : null;
               setMessages((prev) => [
                 ...prev,
                 {
@@ -304,6 +321,8 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
                   role: "assistant",
                   content: streamBufferRef.current,
                   toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                  thinkingText: savedThinking,
+                  thinkingDurationMs: savedThinkingDuration,
                 },
               ]);
               setStreamingText("");
@@ -333,6 +352,10 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     if (streamBufferRef.current) {
+      const savedThinking = thinkingBufferRef.current || undefined;
+      const savedThinkingDuration = thinkingStartRef.current != null
+        ? Date.now() - thinkingStartRef.current
+        : null;
       setMessages((prev) => [
         ...prev,
         {
@@ -340,6 +363,8 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
           role: "assistant",
           content: streamBufferRef.current,
           toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+          thinkingText: savedThinking,
+          thinkingDurationMs: savedThinkingDuration,
         },
       ]);
     }

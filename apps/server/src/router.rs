@@ -104,9 +104,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         // Settings
         .route(
             "/api/settings/api-key",
-            post(settings::set_api_key)
-                .get(settings::get_api_key_info)
-                .delete(settings::delete_api_key),
+            get(settings::get_api_key_info),
         )
         .route(
             "/api/settings/fee-schedule",

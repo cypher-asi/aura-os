@@ -478,6 +478,49 @@ pub fn resolve_error_context(base_path: &Path, refs: &ErrorReferences) -> String
     output
 }
 
+pub const ERROR_SOURCE_BUDGET: usize = 15_360;
+
+/// Read the actual source files where compiler errors occur (from
+/// `ErrorReferences.source_locations`), deduplicated by file path.
+/// Returns a formatted `## Error Source Files` section for the fix prompt,
+/// giving the model visibility into the files it needs to edit.
+pub fn resolve_error_source_files(
+    base_path: &Path,
+    refs: &ErrorReferences,
+    budget: usize,
+) -> String {
+    if refs.source_locations.is_empty() {
+        return String::new();
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    let mut output = String::from("## Error Source Files\n\n");
+    let initial_len = output.len();
+    let mut remaining = budget;
+
+    for (file, _line) in &refs.source_locations {
+        if !seen.insert(file.clone()) {
+            continue;
+        }
+        let full = base_path.join(file);
+        let content = match std::fs::read_to_string(&full) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let section = format!("--- {} ---\n{}\n\n", file, content);
+        if section.len() > remaining {
+            break;
+        }
+        output.push_str(&section);
+        remaining = remaining.saturating_sub(section.len());
+    }
+
+    if output.len() <= initial_len {
+        return String::new();
+    }
+    output
+}
+
 fn find_type_sources(
     base_path: &Path,
     type_name: &str,

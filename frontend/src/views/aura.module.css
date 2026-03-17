@@ -24,13 +24,14 @@
 .progressBarContainer {
   background: var(--color-bg-secondary);
   border-radius: 0;
-  height: 4px;
+  height: 10px;
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background: rgb(20, 184, 166);
+  background: linear-gradient(90deg, #0d4a3a, #1a7a5a, #2db87a, #4aeaa8);
+  border-radius: 0;
   transition: width 0.4s ease;
 }
 
@@ -177,44 +178,44 @@
 
 .logBadge_loop {
   composes: logBadge;
-  background: rgba(59, 130, 246, 0.15);
-  color: rgb(96, 165, 250);
+  background: rgba(74, 222, 128, 0.15);
+  color: rgb(74, 222, 128);
 }
 
 .logBadge_task {
   composes: logBadge;
-  background: rgba(168, 85, 247, 0.15);
-  color: rgb(192, 132, 252);
+  background: rgba(52, 211, 153, 0.15);
+  color: rgb(52, 211, 153);
 }
 
 .logBadge_output {
   composes: logBadge;
-  background: rgba(107, 114, 128, 0.15);
-  color: rgb(156, 163, 175);
+  background: rgba(134, 239, 172, 0.15);
+  color: rgb(134, 239, 172);
 }
 
 .logBadge_files {
   composes: logBadge;
-  background: rgba(234, 179, 8, 0.15);
-  color: rgb(250, 204, 21);
+  background: rgba(163, 230, 53, 0.15);
+  color: rgb(163, 230, 53);
 }
 
 .logBadge_session {
   composes: logBadge;
-  background: rgba(20, 184, 166, 0.15);
+  background: rgba(45, 212, 191, 0.15);
   color: rgb(45, 212, 191);
 }
 
 .logBadge_log {
   composes: logBadge;
-  background: rgba(107, 114, 128, 0.15);
-  color: rgb(156, 163, 175);
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(22, 163, 74);
 }
 
 .logBadge_spec {
   composes: logBadge;
-  background: rgba(244, 114, 182, 0.15);
-  color: rgb(244, 114, 182);
+  background: rgba(94, 234, 212, 0.15);
+  color: rgb(94, 234, 212);
 }
 
 .logSummary {

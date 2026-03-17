@@ -1,56 +1,170 @@
 .toolCallsContainer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   margin-bottom: 10px;
 }
 
+/* ── Summary header: ● Working on N to-dos ── */
+
+.toolCallsHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin-bottom: 2px;
+}
+
+.headerDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-muted, #888);
+  flex-shrink: 0;
+}
+
+.headerDotDone {
+  background: #fff;
+}
+
+.headerText {
+  font-size: 13px;
+  color: var(--color-text, #ddd);
+}
+
+/* ── Checklist item row ── */
+
 .toolBlock {
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--color-bg-secondary, #1a1a1a);
+  border: none;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  padding-left: 18px;
 }
 
 .toolHeader {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  padding: 6px 10px;
+  padding: 2px 0;
   border: none;
   background: transparent;
   color: var(--color-text-muted, #999);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s ease;
 }
 
 .toolHeader:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
 }
 
-.toolIcon {
-  display: flex;
-  align-items: center;
+/* ── Checkbox icon (CSS-drawn) ── */
+
+.taskCheck {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-text-muted, #666);
   flex-shrink: 0;
+  position: relative;
+  box-sizing: border-box;
 }
 
-.wrenchIcon {
-  opacity: 0.5;
-  flex-shrink: 0;
+/* Active: filled inner square */
+.taskActive .taskCheck {
+  border-color: var(--color-text, #ddd);
 }
+
+.taskActive .taskCheck::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: var(--color-text, #ddd);
+}
+
+.taskActive .toolName {
+  font-weight: 600;
+  color: var(--color-text, #fff);
+}
+
+/* Done: square with X */
+.taskDone .taskCheck {
+  border-color: var(--color-text-muted, #666);
+}
+
+.taskDone .taskCheck::before,
+.taskDone .taskCheck::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 1.5px;
+  background: var(--color-text-muted, #666);
+  border-radius: 1px;
+}
+
+.taskDone .taskCheck::before {
+  transform: rotate(45deg);
+}
+
+.taskDone .taskCheck::after {
+  transform: rotate(-45deg);
+}
+
+.taskDone .toolName {
+  color: var(--color-text-muted, #666);
+}
+
+.taskDone .toolSummary {
+  color: var(--color-text-muted, #666);
+}
+
+/* Error: square with X in red */
+.taskError .taskCheck {
+  border-color: #f87171;
+}
+
+.taskError .taskCheck::before,
+.taskError .taskCheck::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 1.5px;
+  background: #f87171;
+  border-radius: 1px;
+}
+
+.taskError .taskCheck::before {
+  transform: rotate(45deg);
+}
+
+.taskError .taskCheck::after {
+  transform: rotate(-45deg);
+}
+
+.taskError .toolName {
+  color: #f87171;
+}
+
+/* ── Shared item parts ── */
 
 .toolName {
-  font-weight: 500;
-  color: var(--color-text, #ddd);
+  font-weight: 400;
+  color: var(--color-text-muted, #aaa);
   white-space: nowrap;
 }
 
 .toolSummary {
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted, #666);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   overflow: hidden;
@@ -60,21 +174,26 @@
   min-width: 0;
 }
 
-.chevron {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  flex-shrink: 0;
-  opacity: 0.5;
+/* ── Expandable detail body ── */
+
+.toolBodyWrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.toolBodyExpanded {
+  max-height: 500px;
 }
 
 .toolBody {
-  padding: 0 10px 8px;
-  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  padding: 4px 0 8px 22px;
+  margin-left: 18px;
+  border-left: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
 }
 
 .section {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sectionLabel {
@@ -88,15 +207,16 @@
 
 .json {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  line-height: 1.5;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: transparent;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  padding: 10px 12px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--color-text, #ccc);
+  color: var(--color-text-secondary);
   max-height: 200px;
   overflow-y: auto;
   margin: 0;
@@ -104,22 +224,4 @@
 
 .errorText {
   color: #f87171;
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-  color: var(--color-accent, #60a5fa);
-}
-
-.successIcon {
-  color: #4ade80;
-}
-
-.errorIcon {
-  color: #f87171;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }

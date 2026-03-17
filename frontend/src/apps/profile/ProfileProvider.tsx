@@ -52,6 +52,9 @@ const MOCK_PROJECTS: ProfileProject[] = [
   { id: "proj-3", name: "aura-engine", repo: "cypher-asi/aura-engine" },
 ];
 
+const CURRENT_USER = "real-n3o";
+const CURRENT_USER_AVATAR = "/avatar-n3o.png";
+
 const now = Date.now();
 const HOUR = 3_600_000;
 const DAY = 86_400_000;
@@ -59,7 +62,7 @@ const DAY = 86_400_000;
 const MOCK_EVENTS: FeedEvent[] = [
   {
     id: "p-evt-1",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -70,7 +73,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-2",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -81,7 +84,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-3",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/the-grid",
     branch: "main",
     commits: [
@@ -92,7 +95,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-4",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -103,7 +106,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-5",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/the-grid",
     branch: "feat/auth",
     commits: [
@@ -114,7 +117,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-6",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-engine",
     branch: "main",
     commits: [
@@ -126,7 +129,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-7",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-engine",
     branch: "dev",
     commits: [
@@ -136,7 +139,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-8",
-    author: { name: "real-n3o", type: "user" },
+    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
     repo: "cypher-asi/aura-code",
     branch: "feat/profile",
     commits: [
@@ -212,8 +215,6 @@ const REPO_ACTIVITY_MAP = buildRepoActivityMap();
 
 const MOCK_TOTAL_TOKEN_USAGE = 3_996_254;
 
-const CURRENT_USER = "real-n3o";
-
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
@@ -275,7 +276,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const comment: FeedComment = {
       id: `p-cmt-${nextCommentId++}`,
       eventId,
-      author: { name: CURRENT_USER, type: "user" },
+      author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
       text,
       timestamp: new Date().toISOString(),
     };

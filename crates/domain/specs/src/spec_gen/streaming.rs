@@ -8,7 +8,7 @@ use aura_claude::ClaudeStreamEvent;
 
 use crate::SpecGenError;
 use super::parser::{IncrementalSpecParser, RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
-use super::{SpecGenerationService, SpecStreamEvent, SPEC_GENERATION_SYSTEM_PROMPT, SPEC_OVERVIEW_MAX_TOKENS, SPEC_OVERVIEW_SYSTEM_PROMPT, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, SPEC_SUMMARY_SYSTEM_PROMPT, MAX_TOKENS};
+use super::{SpecGenerationService, SpecStreamEvent, SPEC_OVERVIEW_MAX_TOKENS, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, MAX_TOKENS};
 
 /// Parses "TITLE: ...\n\nsummary" format. Returns (title, summary).
 /// Falls back to (None, full_text) if format not matched.
@@ -80,15 +80,19 @@ impl SpecGenerationService {
         requirements_content: &str,
     ) -> Result<(String, String), SpecGenError> {
         let api_key = self.settings.get_decrypted_api_key()?;
-        let raw_overview = self
-            .claude_client
-            .complete(
+        let resp = self
+            .llm
+            .complete_with_model(
+                aura_claude::FAST_MODEL,
                 &api_key,
                 SPEC_OVERVIEW_SYSTEM_PROMPT,
                 requirements_content,
                 SPEC_OVERVIEW_MAX_TOKENS,
+                "aura_spec_gen",
+                None,
             )
             .await?;
+        let raw_overview = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
         let title = title_opt.ok_or_else(|| {
             SpecGenError::ParseError(format!(
@@ -145,17 +149,19 @@ impl SpecGenerationService {
 
         let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
-        let client = self.claude_client.clone();
+        let llm = self.llm.clone();
         let api_key_owned = api_key;
         let req_owned = requirements_content;
         let stream_handle = tokio::spawn(async move {
-            client
+            llm
                 .complete_stream(
                     &api_key_owned,
                     SPEC_GENERATION_SYSTEM_PROMPT,
                     &req_owned,
                     MAX_TOKENS,
                     claude_tx,
+                    "aura_spec_gen",
+                    None,
                 )
                 .await
         });
@@ -264,11 +270,11 @@ impl SpecGenerationService {
             lines.join("\n"),
             SPEC_SUMMARY_MAX_WORDS
         );
-        let response = self
-            .claude_client
-            .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
-            .await
-            .map_err(SpecGenError::Claude)?;
+        let resp = self
+            .llm
+            .complete_with_model(aura_claude::FAST_MODEL, &api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS, "aura_spec_gen", None)
+            .await?;
+        let response = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
         let title = title_opt.ok_or_else(|| {
             SpecGenError::ParseError("LLM did not produce a TITLE line".to_string())
@@ -417,5 +423,107 @@ impl SpecGenerationService {
                 send(SpecStreamEvent::Error(format!("Parse error: {e}")));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // parse_title_and_summary
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn parse_title_and_summary_standard_format() {
+        let input = "TITLE: My Project\n\nThis is the summary of the project.";
+        let (title, summary) = parse_title_and_summary(input, 100);
+        assert_eq!(title, Some("My Project".to_string()));
+        assert_eq!(summary, "This is the summary of the project.");
+    }
+
+    #[test]
+    fn parse_title_and_summary_case_insensitive() {
+        let input = "title: Cool App\n\nA cool application.";
+        let (title, summary) = parse_title_and_summary(input, 100);
+        assert_eq!(title, Some("Cool App".to_string()));
+        assert_eq!(summary, "A cool application.");
+    }
+
+    #[test]
+    fn parse_title_and_summary_no_title_prefix() {
+        let input = "Just a summary without any title marker.";
+        let (title, summary) = parse_title_and_summary(input, 100);
+        assert!(title.is_none());
+        assert_eq!(summary, "Just a summary without any title marker.");
+    }
+
+    #[test]
+    fn parse_title_and_summary_truncates_long_summary() {
+        let input = "TITLE: T\n\none two three four five six seven eight nine ten eleven";
+        let (title, summary) = parse_title_and_summary(input, 5);
+        assert_eq!(title, Some("T".to_string()));
+        assert_eq!(summary, "one two three four five");
+    }
+
+    #[test]
+    fn parse_title_and_summary_whitespace_only_after_prefix() {
+        let input = "TITLE:   ";
+        let (title, summary) = parse_title_and_summary(input, 100);
+        assert!(title.is_none());
+        assert!(summary.is_empty());
+    }
+
+    #[test]
+    fn parse_title_and_summary_single_line_title() {
+        let input = "TITLE: Only Title";
+        let (title, summary) = parse_title_and_summary(input, 100);
+        assert_eq!(title, Some("Only Title".to_string()));
+        assert!(summary.is_empty() || summary == "");
+    }
+
+    // -----------------------------------------------------------------------
+    // truncate_to_max_words
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn truncate_within_limit() {
+        assert_eq!(truncate_to_max_words("a b c", 5), "a b c");
+    }
+
+    #[test]
+    fn truncate_over_limit() {
+        assert_eq!(truncate_to_max_words("a b c d e f", 3), "a b c");
+    }
+
+    #[test]
+    fn truncate_empty() {
+        assert_eq!(truncate_to_max_words("", 10), "");
+    }
+
+    // -----------------------------------------------------------------------
+    // extract_purpose_excerpt
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn extract_purpose_from_markdown() {
+        let md = "## Purpose\n\nThis module handles authentication.\n\n## Tasks\n\n| ID | T |";
+        let excerpt = extract_purpose_excerpt(md, 500);
+        assert_eq!(excerpt, "This module handles authentication.");
+    }
+
+    #[test]
+    fn extract_purpose_truncates() {
+        let md = "## Purpose\n\nA very long description that goes on and on.";
+        let excerpt = extract_purpose_excerpt(md, 10);
+        assert!(excerpt.ends_with("..."));
+        assert!(excerpt.len() <= 15);
+    }
+
+    #[test]
+    fn extract_purpose_missing_section() {
+        let md = "## Tasks\n\nSome tasks here.";
+        let excerpt = extract_purpose_excerpt(md, 500);
+        assert!(excerpt.is_empty());
     }
 }

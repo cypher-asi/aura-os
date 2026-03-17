@@ -30,8 +30,7 @@ pub async fn start_loop(
         DevLoopEngine::new(
             state.store.clone(),
             state.settings_service.clone(),
-            state.claude_client.clone(),
-            state.billing_client.clone(),
+            state.llm.clone(),
             state.project_service.clone(),
             state.task_service.clone(),
             state.agent_instance_service.clone(),
@@ -42,7 +41,7 @@ pub async fn start_loop(
     );
 
     let loop_handle = engine
-        .start(project_id, params.agent_name)
+        .start(project_id, params.agent_instance_id)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
@@ -171,14 +170,14 @@ pub async fn get_loop_status(
 pub async fn run_single_task(
     State(state): State<AppState>,
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
     super::billing::require_credits(&state).await?;
     let engine = Arc::new(
         DevLoopEngine::new(
             state.store.clone(),
             state.settings_service.clone(),
-            state.claude_client.clone(),
-            state.billing_client.clone(),
+            state.llm.clone(),
             state.project_service.clone(),
             state.task_service.clone(),
             state.agent_instance_service.clone(),
@@ -188,9 +187,10 @@ pub async fn run_single_task(
         .with_write_coordinator(state.write_coordinator.clone()),
     );
 
+    let agent_instance_id = params.agent_instance_id;
     let event_tx = state.event_tx.clone();
     tokio::spawn(async move {
-        if let Err(e) = engine.run_single_task(project_id, task_id).await {
+        if let Err(e) = engine.run_single_task(project_id, task_id, agent_instance_id).await {
             let _ = event_tx.send(aura_engine::EngineEvent::TaskFailed {
                 project_id,
                 agent_instance_id: aura_core::AgentInstanceId::new(),

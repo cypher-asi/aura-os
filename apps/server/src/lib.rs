@@ -25,7 +25,7 @@ use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
 use aura_github::GitHubService;
 use aura_orgs::OrgService;
-use aura_billing::{BillingClient, PricingService};
+use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
 use aura_specs::SpecGenerationService;
@@ -132,11 +132,10 @@ fn flush_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
         bufs.iter().map(|(k, v)| (*k, v.clone())).collect()
     };
     for (task_id, text) in snapshot {
-        if let Ok(Some(mut task)) = store.find_task_by_id(&task_id) {
+        if let Err(e) = store.atomic_update_task_by_id(&task_id, |task| {
             task.live_output = text;
-            if let Err(e) = store.put_task(&task) {
-                warn!(%task_id, "Failed to flush live_output: {e}");
-            }
+        }) {
+            warn!(%task_id, "Failed to flush live_output: {e}");
         }
     }
 }
@@ -148,11 +147,10 @@ fn finalize_live_output(
 ) {
     let final_text = buffers.lock().ok().and_then(|mut bufs| bufs.remove(task_id));
     if let Some(text) = final_text {
-        if let Ok(Some(mut task)) = store.find_task_by_id(task_id) {
+        if let Err(e) = store.atomic_update_task_by_id(task_id, |task| {
             task.live_output = text;
-            if let Err(e) = store.put_task(&task) {
-                warn!(%task_id, "Failed to finalize live_output: {e}");
-            }
+        }) {
+            warn!(%task_id, "Failed to finalize live_output: {e}");
         }
     }
 }
@@ -164,19 +162,23 @@ fn finalize_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers
         drained
     };
     for (task_id, text) in entries {
-        if let Ok(Some(mut task)) = store.find_task_by_id(&task_id) {
+        if let Err(e) = store.atomic_update_task_by_id(&task_id, |task| {
             task.live_output = text;
-            if let Err(e) = store.put_task(&task) {
-                warn!(%task_id, "Failed to finalize live_output: {e}");
-            }
+        }) {
+            warn!(%task_id, "Failed to finalize live_output: {e}");
         }
     }
 }
 
-fn seed_default_agents(agent_service: &AgentService) {
+fn seed_default_agents(store: &RocksStore, agent_service: &AgentService) {
+    if store.get_setting("default_agents_seeded").is_ok() {
+        return;
+    }
+
     let user_id = "default";
     if let Ok(existing) = agent_service.list_agents(user_id) {
         if !existing.is_empty() {
+            let _ = store.put_setting("default_agents_seeded", b"1");
             return;
         }
     }
@@ -211,31 +213,37 @@ fn seed_default_agents(agent_service: &AgentService) {
             info!(name, "Seeded default agent");
         }
     }
+
+    let _ = store.put_setting("default_agents_seeded", b"1");
 }
 
-pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
+pub fn build_app_state(db_path: &Path) -> AppState {
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let github_service = Arc::new(GitHubService::new(store.clone(), org_service.clone()));
     let mut auth_service = AuthService::new(store.clone());
     auth_service.set_org_service(org_service.clone());
     let auth_service = Arc::new(auth_service);
-    let settings_service =
-        Arc::new(SettingsService::new(store.clone(), data_dir).expect("failed to init settings"));
+    let settings_service = Arc::new(SettingsService::new(store.clone()));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
-    let claude_client = Arc::new(ClaudeClient::new());
+    let claude_client: Arc<dyn aura_claude::LlmProvider> = Arc::new(ClaudeClient::new());
+    let llm = Arc::new(MeteredLlm::new(
+        claude_client,
+        billing_client.clone(),
+        store.clone(),
+    ));
     let project_service = Arc::new(ProjectService::new(store.clone()));
     project_service.cleanup_empty_projects();
     let spec_gen_service = Arc::new(SpecGenerationService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
+        llm.clone(),
     ));
     let task_extraction_service = Arc::new(TaskExtractionService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
+        llm.clone(),
     ));
     let task_service = Arc::new(TaskService::new(store.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone()));
@@ -244,8 +252,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let chat_service = Arc::new(ChatService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
-        billing_client.clone(),
+        llm.clone(),
         spec_gen_service.clone(),
         project_service.clone(),
         task_service.clone(),
@@ -274,7 +281,10 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         }
     }
 
-    seed_default_agents(&agent_service);
+    seed_default_agents(&store, &agent_service);
+    if let Err(e) = store.dedup_agents_by_user() {
+        warn!(error = %e, "Failed to deduplicate agents");
+    }
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(4096);
@@ -287,6 +297,11 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         store.clone(),
         task_output_buffers.clone(),
     );
+
+    let sprint_gen = Arc::new(aura_specs::SprintGenerationService::new(
+        llm.clone(),
+        store.clone(),
+    ));
 
     AppState {
         store,
@@ -304,7 +319,8 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         agent_instance_service,
         session_service,
         chat_service,
-        claude_client,
+        sprint_gen,
+        llm,
         event_tx,
         event_broadcast,
         loop_registry: Arc::new(Mutex::new(HashMap::new())),

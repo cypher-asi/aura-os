@@ -4,7 +4,6 @@ import type {
   TaskStatus,
   AgentStatus,
   SessionStatus,
-  ApiKeyStatus,
 } from "./enums";
 
 export interface Project {
@@ -82,6 +81,7 @@ export interface Task {
   dependency_ids: TaskId[];
   parent_task_id: TaskId | null;
   assigned_agent_instance_id: AgentInstanceId | null;
+  completed_by_agent_instance_id: AgentInstanceId | null;
   session_id: SessionId | null;
   execution_notes: string;
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
@@ -147,10 +147,7 @@ export interface Session {
 }
 
 export interface ApiKeyInfo {
-  status: ApiKeyStatus;
-  masked_key: string | null;
-  last_validated_at: string | null;
-  updated_at: string | null;
+  configured: boolean;
 }
 
 export interface ProjectProgress {
@@ -195,6 +192,8 @@ export interface Message {
   role: "user" | "assistant" | "system";
   content: string;
   content_blocks?: ChatContentBlock[];
+  thinking?: string;
+  thinking_duration_ms?: number;
   created_at: string;
 }
 

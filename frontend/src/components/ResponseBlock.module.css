@@ -1,0 +1,50 @@
+.block {
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 12px;
+  min-height: var(--control-height-sm, 32px);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #999);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.bodyWrap {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.bodyExpanded {
+  max-height: 320px;
+}
+
+.content {
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  padding: 10px 12px;
+}

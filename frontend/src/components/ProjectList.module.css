@@ -99,8 +99,9 @@
   justify-content: center;
   margin-left: auto;
   flex-shrink: 0;
-  width: var(--control-height-sm);
-  height: var(--control-height-sm);
+  margin-top: -4px;
+  margin-bottom: -4px;
+  width: var(--control-height-sm, 32px);
 }
 
 .automationSpinner {

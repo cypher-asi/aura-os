@@ -92,7 +92,14 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     }));
     throw new ApiClientError(res.status, err);
   }
-  if (res.status === 204) return undefined as T;
+  const contentLength = res.headers.get("content-length");
+  if (
+    res.status === 204 ||
+    contentLength === "0" ||
+    (contentLength === null && res.status === 202)
+  ) {
+    return undefined as T;
+  }
   return res.json();
 }
 
@@ -150,13 +157,6 @@ export const api = {
 
   // Settings
   getApiKeyInfo: () => apiFetch<ApiKeyInfo>("/api/settings/api-key"),
-  setApiKey: (apiKey: string) =>
-    apiFetch<ApiKeyInfo>("/api/settings/api-key", {
-      method: "POST",
-      body: JSON.stringify({ api_key: apiKey }),
-    }),
-  deleteApiKey: () =>
-    apiFetch<void>("/api/settings/api-key", { method: "DELETE" }),
   getFeeSchedule: () =>
     apiFetch<{ model: string; input_cost_per_million: number; output_cost_per_million: number; effective_date: string }[]>(
       "/api/settings/fee-schedule",
@@ -323,10 +323,12 @@ export const api = {
     apiFetch<Task>(`/api/projects/${projectId}/tasks/${taskId}/retry`, {
       method: "POST",
     }),
-  runTask: (projectId: ProjectId, taskId: TaskId) =>
-    apiFetch<void>(`/api/projects/${projectId}/tasks/${taskId}/run`, {
+  runTask: (projectId: ProjectId, taskId: TaskId, agentInstanceId?: string) => {
+    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
+    return apiFetch<void>(`/api/projects/${projectId}/tasks/${taskId}/run${params}`, {
       method: "POST",
-    }),
+    });
+  },
   getProgress: (projectId: ProjectId) =>
     apiFetch<ProjectProgress>(`/api/projects/${projectId}/progress`),
   getTaskOutput: (projectId: ProjectId, taskId: TaskId) =>
@@ -446,8 +448,8 @@ export const api = {
     }),
 
   // Loop
-  startLoop: (projectId: ProjectId, agentName?: string) => {
-    const params = agentName ? `?agent_name=${encodeURIComponent(agentName)}` : "";
+  startLoop: (projectId: ProjectId, agentInstanceId?: string) => {
+    const params = agentInstanceId ? `?agent_instance_id=${agentInstanceId}` : "";
     return apiFetch<LoopStatusResponse>(
       `/api/projects/${projectId}/loop/start${params}`,
       { method: "POST" },

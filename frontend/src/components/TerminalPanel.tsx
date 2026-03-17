@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type MouseEvent } from "react";
 import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@cypher-asi/zui";
 import { useTerminal, type UseTerminalReturn } from "../hooks/use-terminal";
@@ -71,8 +71,14 @@ export function TerminalPanelHeader() {
     collapsed,
   } = useTerminalPanel();
 
+  const handleBackgroundClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (!(e.target as HTMLElement).closest("button")) {
+      toggleCollapse();
+    }
+  };
+
   return (
-    <div className={styles.terminalHeaderTaskbar}>
+    <div className={styles.terminalHeaderTaskbar} onClick={handleBackgroundClick}>
       <div className={styles.tabList}>
         {terminals.map((t, i) => (
           <TerminalTab

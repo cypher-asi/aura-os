@@ -4,20 +4,9 @@ use axum::Json;
 
 use aura_core::ApiKeyInfo;
 
-use crate::dto::{GetSettingResponse, SetApiKeyRequest, SetSettingRequest};
+use crate::dto::{GetSettingResponse, SetSettingRequest};
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-
-pub async fn set_api_key(
-    State(state): State<AppState>,
-    Json(req): Json<SetApiKeyRequest>,
-) -> ApiResult<(StatusCode, Json<ApiKeyInfo>)> {
-    let info = state
-        .settings_service
-        .set_api_key(&req.api_key)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok((StatusCode::CREATED, Json(info)))
-}
 
 pub async fn get_api_key_info(State(state): State<AppState>) -> ApiResult<Json<ApiKeyInfo>> {
     let info = state
@@ -25,14 +14,6 @@ pub async fn get_api_key_info(State(state): State<AppState>) -> ApiResult<Json<A
         .get_api_key_info()
         .map_err(|e| ApiError::internal(e.to_string()))?;
     Ok(Json(info))
-}
-
-pub async fn delete_api_key(State(state): State<AppState>) -> ApiResult<StatusCode> {
-    state
-        .settings_service
-        .delete_api_key()
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn get_setting(

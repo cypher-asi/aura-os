@@ -49,10 +49,22 @@ fn sanitize_shell_command(cmd: &str) -> String {
     trimmed.to_string()
 }
 
+fn rewrite_server_commands(cmd: &str) -> String {
+    let trimmed = cmd.trim();
+    if trimmed == "cargo run" || trimmed.starts_with("cargo run ") {
+        return trimmed.replacen("cargo run", "cargo build", 1);
+    }
+    if trimmed == "npm start" {
+        return "npm run build".to_string();
+    }
+    trimmed.to_string()
+}
+
 fn sanitize_command_option(cmd: Option<String>) -> Option<String> {
     cmd.map(|c| {
         let sanitized = sanitize_shell_command(&c);
-        if sanitized.is_empty() { c } else { sanitized }
+        let sanitized = if sanitized.is_empty() { c } else { sanitized };
+        rewrite_server_commands(&sanitized)
     })
 }
 

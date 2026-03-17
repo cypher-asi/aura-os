@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use rocksdb::{ColumnFamilyDescriptor, DBWithThreadMode, MultiThreaded, Options, WriteBatch};
 use serde::de::DeserializeOwned;
@@ -31,6 +31,10 @@ pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
 
 pub struct RocksStore {
     pub(crate) db: Arc<RocksDB>,
+    /// Serializes all read-modify-write cycles on task records to prevent
+    /// concurrent clobbering between engine step persistence and server
+    /// live_output flushes.
+    pub(crate) task_write_lock: Mutex<()>,
 }
 
 impl RocksStore {
@@ -49,7 +53,16 @@ impl RocksStore {
             .collect();
 
         let db = RocksDB::open_cf_descriptors(&opts, path, cf_descriptors)?;
-        Ok(Self { db: Arc::new(db) })
+        Ok(Self {
+            db: Arc::new(db),
+            task_write_lock: Mutex::new(()),
+        })
+    }
+
+    /// Acquire the task write lock. Callers outside the store crate can use this
+    /// to serialize their own read-modify-write sequences on task records.
+    pub fn lock_task_writes(&self) -> std::sync::MutexGuard<'_, ()> {
+        self.task_write_lock.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     pub(crate) fn cf_handle(&self, name: &str) -> Arc<rocksdb::BoundColumnFamily<'_>> {

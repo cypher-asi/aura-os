@@ -1,19 +1,21 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use aura_core::*;
-use aura_billing::{BillingClient, BillingError};
+use aura_billing::MeteredLlm;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
 use crate::chat_tool_executor::ChatToolExecutor;
+use crate::tool_loop::{run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent};
 use aura_tools::{agent_tool_definitions, multi_project_tool_definitions};
 use aura_claude::{
-    ClaudeClient, ClaudeStreamEvent, ContentBlock, ImageSource, MessageContent, RichMessage,
-    ThinkingConfig, ToolDefinition,
+    ContentBlock, ImageSource, MessageContent, RichMessage,
+    ThinkingConfig, ToolCall, ToolDefinition,
 };
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
@@ -23,32 +25,6 @@ use aura_projects::ProjectService;
 use aura_specs::{SpecGenerationService, SpecStreamEvent};
 use aura_tasks::TaskService;
 
-const CHAT_MAX_TOKENS: u32 = 24_576;
-const THINKING_BUDGET: u32 = 10_000;
-
-const CHAT_SYSTEM_PROMPT_BASE: &str = r#"You are Aura, an AI software engineering assistant embedded in a project management and code execution platform.
-
-You have access to tools that let you directly manage the user's project:
-- **Specs**: list, create, update, delete technical specifications
-- **Tasks**: list, create, update, delete, transition status, trigger execution
-- **Sprints**: list, create, update, delete sprint plans
-- **Project**: view and update project settings (name, description, build/test commands)
-- **Dev Loop**: start, pause, or stop the autonomous development loop
-- **Filesystem**: read, write, edit, delete files and list directories in the project folder
-- **Search**: search_code for regex pattern search, find_files for glob matching
-- **Shell**: run_command to execute build, test, git, or other commands
-- **Progress**: view task completion metrics
-
-When the user asks you to create, modify, or manage project artifacts, USE YOUR TOOLS to do it directly rather than just describing what to do. Be proactive -- if the user says "add a task for X", call create_task. If they say "show me the specs", call list_specs.
-
-When creating specs with create_spec:
-- Title format: two-digit zero-padded number + colon + space + short name (e.g. "01: Core Domain Types")
-- Number specs sequentially based on existing specs (check with list_specs first)
-- Do NOT use em dashes (—) in the title
-
-For conversational questions about architecture, debugging, or best practices, respond with helpful text.
-
-Use markdown formatting for code blocks and structured responses. Be concise."#;
 
 fn build_chat_system_prompt(project: &Project, custom_system_prompt: &str) -> String {
     let mut prompt = if custom_system_prompt.is_empty() {
@@ -178,6 +154,241 @@ fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> Str
     prompt
 }
 
+fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
+    messages
+        .iter()
+        .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
+        .map(|m| {
+            let role = match m.role {
+                ChatRole::User => "user",
+                ChatRole::Assistant => "assistant",
+                ChatRole::System => "user",
+            };
+            if let Some(blocks) = &m.content_blocks {
+                let content_blocks: Vec<ContentBlock> = blocks
+                    .iter()
+                    .map(|b| match b {
+                        ChatContentBlock::Text { text } => ContentBlock::Text {
+                            text: text.clone(),
+                        },
+                        ChatContentBlock::ToolUse { id, name, input } => {
+                            ContentBlock::ToolUse {
+                                id: id.clone(),
+                                name: name.clone(),
+                                input: input.clone(),
+                            }
+                        }
+                        ChatContentBlock::ToolResult {
+                            tool_use_id,
+                            content,
+                            is_error,
+                        } => ContentBlock::ToolResult {
+                            tool_use_id: tool_use_id.clone(),
+                            content: content.clone(),
+                            is_error: *is_error,
+                        },
+                        ChatContentBlock::Image { media_type, data } => ContentBlock::Image {
+                            source: ImageSource {
+                                source_type: "base64".to_string(),
+                                media_type: media_type.clone(),
+                                data: data.clone(),
+                            },
+                        },
+                    })
+                    .collect();
+                RichMessage {
+                    role: role.to_string(),
+                    content: MessageContent::Blocks(content_blocks),
+                }
+            } else {
+                RichMessage {
+                    role: role.to_string(),
+                    content: MessageContent::Text(m.content.clone()),
+                }
+            }
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// ToolExecutor for single-project chat
+// ---------------------------------------------------------------------------
+
+struct ChatToolLoopExecutor {
+    inner: ChatToolExecutor,
+    project_id: ProjectId,
+    chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
+}
+
+#[async_trait]
+impl ToolExecutor for ChatToolLoopExecutor {
+    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
+        let futures: Vec<_> = tool_calls
+            .iter()
+            .map(|tc| self.inner.execute(&self.project_id, &tc.name, tc.input.clone()))
+            .collect();
+        let results = futures::future::join_all(futures).await;
+
+        results
+            .into_iter()
+            .zip(tool_calls)
+            .map(|(result, tc)| {
+                if let Some(spec) = result.saved_spec {
+                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
+                }
+                if let Some(task) = result.saved_task {
+                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
+                }
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: result.content,
+                    is_error: result.is_error,
+                    stop_loop: false,
+                }
+            })
+            .collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ToolExecutor for multi-project agent chat
+// ---------------------------------------------------------------------------
+
+struct AgentToolLoopExecutor {
+    inner: ChatToolExecutor,
+    allowed_project_ids: std::collections::HashSet<String>,
+    chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
+}
+
+#[async_trait]
+impl ToolExecutor for AgentToolLoopExecutor {
+    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
+        let futures: Vec<_> = tool_calls
+            .iter()
+            .map(|tc| {
+                let pid_str = tc
+                    .input
+                    .get("project_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let project_id = if self.allowed_project_ids.contains(pid_str) {
+                    pid_str.parse::<ProjectId>().ok()
+                } else {
+                    None
+                };
+                async move {
+                    match project_id {
+                        Some(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
+                        None => crate::chat_tool_executor::ToolExecResult::err_static(
+                            "Missing or invalid project_id. You must specify a valid project_id from the available projects."
+                        ),
+                    }
+                }
+            })
+            .collect();
+        let exec_results = futures::future::join_all(futures).await;
+
+        exec_results
+            .into_iter()
+            .zip(tool_calls)
+            .map(|(result, tc)| {
+                if let Some(spec) = result.saved_spec {
+                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
+                }
+                if let Some(task) = result.saved_task {
+                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
+                }
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: result.content,
+                    is_error: result.is_error,
+                    stop_loop: false,
+                }
+            })
+            .collect()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Forward ToolLoopEvents to ChatStreamEvent channel
+// ---------------------------------------------------------------------------
+
+fn forward_tool_loop_event(evt: ToolLoopEvent, tx: &mpsc::UnboundedSender<ChatStreamEvent>) {
+    match evt {
+        ToolLoopEvent::Delta(text) => {
+            let _ = tx.send(ChatStreamEvent::Delta(text));
+        }
+        ToolLoopEvent::ThinkingDelta(text) => {
+            let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
+        }
+        ToolLoopEvent::ToolUseDetected { id, name, input } => {
+            let _ = tx.send(ChatStreamEvent::ToolCall { id, name, input });
+        }
+        ToolLoopEvent::ToolResult {
+            tool_use_id,
+            tool_name,
+            content,
+            is_error,
+        } => {
+            let _ = tx.send(ChatStreamEvent::ToolResult {
+                id: tool_use_id,
+                name: tool_name,
+                result: content,
+                is_error,
+            });
+        }
+        ToolLoopEvent::IterationTokenUsage {
+            input_tokens,
+            output_tokens,
+        } => {
+            let _ = tx.send(ChatStreamEvent::TokenUsage {
+                input_tokens,
+                output_tokens,
+            });
+        }
+        ToolLoopEvent::Error(msg) => {
+            let _ = tx.send(ChatStreamEvent::Error(msg));
+        }
+    }
+}
+
+fn build_attachment_blocks(
+    content: &str,
+    attachments: &[ChatAttachment],
+) -> Option<Vec<ChatContentBlock>> {
+    if attachments.is_empty() {
+        return None;
+    }
+    let mut blocks: Vec<ChatContentBlock> = Vec::new();
+    if !content.trim().is_empty() {
+        blocks.push(ChatContentBlock::Text {
+            text: content.to_string(),
+        });
+    }
+    for att in attachments {
+        if att.type_ == "image" {
+            blocks.push(ChatContentBlock::Image {
+                media_type: att.media_type.clone(),
+                data: att.data.clone(),
+            });
+        } else if att.type_ == "text" {
+            let text = match B64.decode(&att.data) {
+                Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+                Err(_) => continue,
+            };
+            let header = att
+                .name
+                .as_deref()
+                .map(|n| format!("[File: {}]\n\n", n))
+                .unwrap_or_default();
+            blocks.push(ChatContentBlock::Text {
+                text: format!("{}{}", header, text),
+            });
+        }
+    }
+    if blocks.is_empty() { None } else { Some(blocks) }
+}
+
 fn extract_user_text(messages: &[Message]) -> String {
     messages
         .iter()
@@ -254,31 +465,42 @@ pub enum ChatStreamEvent {
 pub struct ChatService {
     store: Arc<RocksStore>,
     settings: Arc<SettingsService>,
-    claude_client: Arc<ClaudeClient>,
-    billing_client: Arc<BillingClient>,
+    llm: Arc<MeteredLlm>,
     spec_gen: Arc<SpecGenerationService>,
     project_service: Arc<ProjectService>,
     task_service: Arc<TaskService>,
+    llm_config: LlmConfig,
 }
 
 impl ChatService {
     pub fn new(
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
-        claude_client: Arc<ClaudeClient>,
-        billing_client: Arc<BillingClient>,
+        llm: Arc<MeteredLlm>,
         spec_gen: Arc<SpecGenerationService>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
     ) -> Self {
+        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, LlmConfig::from_env())
+    }
+
+    pub fn with_config(
+        store: Arc<RocksStore>,
+        settings: Arc<SettingsService>,
+        llm: Arc<MeteredLlm>,
+        spec_gen: Arc<SpecGenerationService>,
+        project_service: Arc<ProjectService>,
+        task_service: Arc<TaskService>,
+        llm_config: LlmConfig,
+    ) -> Self {
         Self {
             store,
             settings,
-            claude_client,
-            billing_client,
+            llm,
             spec_gen,
             project_service,
             task_service,
+            llm_config,
         }
     }
 
@@ -319,50 +541,8 @@ impl ChatService {
             let _ = tx.send(evt);
         };
 
-        if let Err(msg) = self.check_credits().await {
-            send(ChatStreamEvent::Error(msg));
-            send(ChatStreamEvent::Done);
-            return;
-        }
-
         let now = Utc::now();
-
-        let content_blocks = if attachments.is_empty() {
-            None
-        } else {
-            let mut blocks: Vec<ChatContentBlock> = Vec::new();
-            if !content.trim().is_empty() {
-                blocks.push(ChatContentBlock::Text {
-                    text: content.to_string(),
-                });
-            }
-            for att in attachments.iter() {
-                if att.type_ == "image" {
-                    blocks.push(ChatContentBlock::Image {
-                        media_type: att.media_type.clone(),
-                        data: att.data.clone(),
-                    });
-                } else if att.type_ == "text" {
-                    let text = match B64.decode(&att.data) {
-                        Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
-                        Err(_) => continue,
-                    };
-                    let header = att
-                        .name
-                        .as_deref()
-                        .map(|n| format!("[File: {}]\n\n", n))
-                        .unwrap_or_default();
-                    blocks.push(ChatContentBlock::Text {
-                        text: format!("{}{}", header, text),
-                    });
-                }
-            }
-            if blocks.is_empty() {
-                None
-            } else {
-                Some(blocks)
-            }
-        };
+        let content_blocks = build_attachment_blocks(content, attachments);
 
         let user_msg = Message {
             message_id: MessageId::new(),
@@ -371,6 +551,8 @@ impl ChatService {
             role: ChatRole::User,
             content: content.to_string(),
             content_blocks,
+            thinking: None,
+            thinking_duration_ms: None,
             created_at: now,
         };
         if let Err(e) = self.store.put_message(&user_msg) {
@@ -409,46 +591,8 @@ impl ChatService {
             let _ = tx.send(evt);
         };
 
-        if let Err(msg) = self.check_credits().await {
-            send(ChatStreamEvent::Error(msg));
-            send(ChatStreamEvent::Done);
-            return;
-        }
-
         let now = Utc::now();
-
-        let content_blocks = if attachments.is_empty() {
-            None
-        } else {
-            let mut blocks: Vec<ChatContentBlock> = Vec::new();
-            if !content.trim().is_empty() {
-                blocks.push(ChatContentBlock::Text {
-                    text: content.to_string(),
-                });
-            }
-            for att in attachments.iter() {
-                if att.type_ == "image" {
-                    blocks.push(ChatContentBlock::Image {
-                        media_type: att.media_type.clone(),
-                        data: att.data.clone(),
-                    });
-                } else if att.type_ == "text" {
-                    let text = match B64.decode(&att.data) {
-                        Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
-                        Err(_) => continue,
-                    };
-                    let header = att
-                        .name
-                        .as_deref()
-                        .map(|n| format!("[File: {}]\n\n", n))
-                        .unwrap_or_default();
-                    blocks.push(ChatContentBlock::Text {
-                        text: format!("{}{}", header, text),
-                    });
-                }
-            }
-            if blocks.is_empty() { None } else { Some(blocks) }
-        };
+        let content_blocks = build_attachment_blocks(content, attachments);
 
         let dummy_project_id = ProjectId::nil();
         let dummy_agent_instance_id = AgentInstanceId::nil();
@@ -460,6 +604,8 @@ impl ChatService {
             role: ChatRole::User,
             content: content.to_string(),
             content_blocks,
+            thinking: None,
+            thinking_duration_ms: None,
             created_at: now,
         };
         if let Err(e) = self.store.put_agent_message(agent_id, &user_msg) {
@@ -503,59 +649,7 @@ impl ChatService {
 
         let system = build_multi_project_system_prompt(agent, projects);
 
-        let mut api_messages: Vec<RichMessage> = stored_messages
-            .iter()
-            .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
-            .map(|m| {
-                let role = match m.role {
-                    ChatRole::User => "user",
-                    ChatRole::Assistant => "assistant",
-                    ChatRole::System => "user",
-                };
-                if let Some(blocks) = &m.content_blocks {
-                    let content_blocks: Vec<ContentBlock> = blocks
-                        .iter()
-                        .map(|b| match b {
-                            ChatContentBlock::Text { text } => ContentBlock::Text {
-                                text: text.clone(),
-                            },
-                            ChatContentBlock::ToolUse { id, name, input } => {
-                                ContentBlock::ToolUse {
-                                    id: id.clone(),
-                                    name: name.clone(),
-                                    input: input.clone(),
-                                }
-                            }
-                            ChatContentBlock::ToolResult {
-                                tool_use_id,
-                                content,
-                                is_error,
-                            } => ContentBlock::ToolResult {
-                                tool_use_id: tool_use_id.clone(),
-                                content: content.clone(),
-                                is_error: *is_error,
-                            },
-                            ChatContentBlock::Image { media_type, data } => ContentBlock::Image {
-                                source: ImageSource {
-                                    source_type: "base64".to_string(),
-                                    media_type: media_type.clone(),
-                                    data: data.clone(),
-                                },
-                            },
-                        })
-                        .collect();
-                    RichMessage {
-                        role: role.to_string(),
-                        content: aura_claude::MessageContent::Blocks(content_blocks),
-                    }
-                } else {
-                    RichMessage {
-                        role: role.to_string(),
-                        content: aura_claude::MessageContent::Text(m.content.clone()),
-                    }
-                }
-            })
-            .collect();
+        let mut api_messages = convert_messages_to_rich(&stored_messages);
 
         api_messages = self
             .manage_context_window(&api_key, &system, api_messages)
@@ -571,250 +665,71 @@ impl ChatService {
             .map(|p| p.project_id.to_string())
             .collect();
 
-        let executor = ChatToolExecutor::new(
-            self.store.clone(),
-            self.project_service.clone(),
-            self.task_service.clone(),
-        );
+        let executor = AgentToolLoopExecutor {
+            inner: ChatToolExecutor::new(
+                self.store.clone(),
+                self.project_service.clone(),
+                self.task_service.clone(),
+            ),
+            allowed_project_ids,
+            chat_tx: tx.clone(),
+        };
 
-        let max_iters = ChatToolExecutor::max_iterations();
-        let mut total_text = String::new();
-        let mut accumulated_input_tokens: u64 = 0;
-        let mut accumulated_output_tokens: u64 = 0;
-        let stream_timeout = std::time::Duration::from_secs(300);
+        let config = ToolLoopConfig {
+            max_iterations: ChatToolExecutor::max_iterations(),
+            max_tokens: self.llm_config.chat_max_tokens,
+            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
+            stream_timeout: std::time::Duration::from_secs(300),
+            billing_reason: "aura_chat",
+            max_context_tokens: Some(self.llm_config.max_context_tokens),
+        };
+
+        let thinking_start = std::time::Instant::now();
+
+        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
+        let tx_clone = tx.clone();
+        let forwarder = tokio::spawn(async move {
+            while let Some(evt) = loop_rx.recv().await {
+                forward_tool_loop_event(evt, &tx_clone);
+            }
+        });
+
+        let result = run_tool_loop(
+            self.llm.clone(),
+            &api_key,
+            &system,
+            api_messages,
+            tools,
+            &config,
+            &executor,
+            &loop_tx,
+        )
+        .await;
+        drop(loop_tx);
+        let _ = forwarder.await;
+
+        info!(
+            ?agent_id,
+            result.total_input_tokens,
+            result.total_output_tokens,
+            "Agent chat loop finished"
+        );
 
         let dummy_project_id = ProjectId::nil();
         let dummy_agent_instance_id = AgentInstanceId::nil();
 
-        for iteration in 0..max_iters {
-            let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-
-            let client = self.claude_client.clone();
-            let api_key_owned = api_key.clone();
-            let system_owned = system.clone();
-            let msgs_owned = api_messages.clone();
-            let tools_owned = tools.clone();
-
-            let stream_handle = tokio::spawn(async move {
-                client
-                    .complete_stream_with_tools_thinking(
-                        &api_key_owned,
-                        &system_owned,
-                        msgs_owned,
-                        tools_owned,
-                        CHAT_MAX_TOKENS,
-                        ThinkingConfig::enabled(THINKING_BUDGET),
-                        claude_tx,
-                    )
-                    .await
-            });
-
-            let mut iter_text = String::new();
-            let mut iter_tool_calls: Vec<aura_claude::ToolCall> = Vec::new();
-
-            let timed_out = loop {
-                match tokio::time::timeout(stream_timeout, claude_rx.recv()).await {
-                    Ok(Some(evt)) => match evt {
-                        ClaudeStreamEvent::Delta(text) => {
-                            iter_text.push_str(&text);
-                            let _ = tx.send(ChatStreamEvent::Delta(text));
-                        }
-                        ClaudeStreamEvent::ToolUse { id, name, input } => {
-                            let _ = tx.send(ChatStreamEvent::ToolCall {
-                                id: id.clone(),
-                                name: name.clone(),
-                                input: input.clone(),
-                            });
-                            iter_tool_calls.push(aura_claude::ToolCall { id, name, input });
-                        }
-                        ClaudeStreamEvent::ThinkingDelta(text) => {
-                            let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
-                        }
-                        ClaudeStreamEvent::Done { stop_reason, .. } => {
-                            info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Agent chat iteration done");
-                        }
-                        ClaudeStreamEvent::Error(msg) => {
-                            let _ = tx.send(ChatStreamEvent::Error(msg));
-                        }
-                    },
-                    Ok(None) => break false,
-                    Err(_) => {
-                        warn!(iteration, "Claude streaming timed out after {}s", stream_timeout.as_secs());
-                        stream_handle.abort();
-                        break true;
-                    }
-                }
-            };
-
-            if timed_out {
-                send(ChatStreamEvent::Error("Claude API streaming timed out".to_string()));
-                if !total_text.is_empty() && !iter_text.is_empty() {
-                    total_text.push_str("\n\n");
-                }
-                total_text.push_str(&iter_text);
-                break;
-            }
-
-            let stream_result = match stream_handle.await {
-                Ok(Ok(r)) => r,
-                Ok(Err(e)) => {
-                    if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Claude API error: {e}")));
-                    }
-                    if !total_text.is_empty() && !iter_text.is_empty() {
-                        total_text.push_str("\n\n");
-                    }
-                    total_text.push_str(&iter_text);
-                    break;
-                }
-                Err(e) => {
-                    if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Stream task error: {e}")));
-                    }
-                    if !total_text.is_empty() && !iter_text.is_empty() {
-                        total_text.push_str("\n\n");
-                    }
-                    total_text.push_str(&iter_text);
-                    break;
-                }
-            };
-
-            accumulated_input_tokens += stream_result.input_tokens;
-            accumulated_output_tokens += stream_result.output_tokens;
-            let _ = tx.send(ChatStreamEvent::TokenUsage {
-                input_tokens: accumulated_input_tokens,
-                output_tokens: accumulated_output_tokens,
-            });
-
-            if !total_text.is_empty() && !iter_text.is_empty() {
-                total_text.push_str("\n\n");
-            }
-            total_text.push_str(&iter_text);
-
-            if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
-                break;
-            }
-
-            let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-            let mut assistant_persist_blocks: Vec<ChatContentBlock> = Vec::new();
-            if !iter_text.is_empty() {
-                assistant_blocks.push(ContentBlock::Text {
-                    text: iter_text.clone(),
-                });
-                assistant_persist_blocks.push(ChatContentBlock::Text {
-                    text: iter_text.clone(),
-                });
-            }
-            for tc in &iter_tool_calls {
-                assistant_blocks.push(ContentBlock::ToolUse {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    input: tc.input.clone(),
-                });
-                assistant_persist_blocks.push(ChatContentBlock::ToolUse {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    input: tc.input.clone(),
-                });
-            }
-            api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
-
-            let assistant_iter_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: dummy_agent_instance_id,
-                project_id: dummy_project_id,
-                role: ChatRole::Assistant,
-                content: String::new(),
-                content_blocks: Some(assistant_persist_blocks),
-                created_at: Utc::now(),
-            };
-            if let Err(e) = self.store.put_agent_message(agent_id, &assistant_iter_msg) {
-                error!(?agent_id, error = %e, "Failed to persist assistant tool-use message");
-            }
-
-            let mut tool_results = Vec::with_capacity(iter_tool_calls.len());
-            for tc in &iter_tool_calls {
-                let pid_str = tc.input.get("project_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let project_id = if allowed_project_ids.contains(pid_str) {
-                    pid_str.parse::<ProjectId>().ok()
-                } else {
-                    None
-                };
-                let result = match project_id {
-                    Some(pid) => executor.execute(&pid, &tc.name, tc.input.clone()).await,
-                    None => crate::chat_tool_executor::ToolExecResult::err_static(
-                        "Missing or invalid project_id. You must specify a valid project_id from the available projects."
-                    ),
-                };
-                tool_results.push(result);
-            }
-
-            let mut result_blocks: Vec<ContentBlock> = Vec::new();
-            let mut result_persist_blocks: Vec<ChatContentBlock> = Vec::new();
-            for (tc, result) in iter_tool_calls.iter().zip(tool_results) {
-                if let Some(spec) = result.saved_spec {
-                    let _ = tx.send(ChatStreamEvent::SpecSaved(spec));
-                }
-                if let Some(task) = result.saved_task {
-                    let _ = tx.send(ChatStreamEvent::TaskSaved(task));
-                }
-                let _ = tx.send(ChatStreamEvent::ToolResult {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    result: result.content.clone(),
-                    is_error: result.is_error,
-                });
-                result_blocks.push(ContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content.clone(),
-                    is_error: if result.is_error { Some(true) } else { None },
-                });
-                result_persist_blocks.push(ChatContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content,
-                    is_error: if result.is_error { Some(true) } else { None },
-                });
-            }
-            api_messages.push(RichMessage::tool_results(result_blocks));
-
-            let tool_result_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: dummy_agent_instance_id,
-                project_id: dummy_project_id,
-                role: ChatRole::User,
-                content: String::new(),
-                content_blocks: Some(result_persist_blocks),
-                created_at: Utc::now(),
-            };
-            if let Err(e) = self.store.put_agent_message(agent_id, &tool_result_msg) {
-                error!(?agent_id, error = %e, "Failed to persist tool result message");
-            }
-
-            if iteration + 1 >= max_iters {
-                warn!(
-                    ?agent_id,
-                    max_iters,
-                    "Agent tool-use loop hit max iterations, stopping"
-                );
-            }
-        }
-
-        info!(
-            ?agent_id,
-            accumulated_input_tokens, accumulated_output_tokens,
-            "Agent chat loop finished"
-        );
-
-        if !total_text.is_empty() {
+        if !result.text.is_empty() {
+            let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
+            let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
             let assistant_msg = Message {
                 message_id: MessageId::new(),
                 agent_instance_id: dummy_agent_instance_id,
                 project_id: dummy_project_id,
                 role: ChatRole::Assistant,
-                content: total_text,
+                content: result.text,
                 content_blocks: None,
+                thinking,
+                thinking_duration_ms,
                 created_at: Utc::now(),
             };
             if let Err(e) = self.store.put_agent_message(agent_id, &assistant_msg) {
@@ -868,59 +783,7 @@ impl ChatService {
             }
         };
 
-        let mut api_messages: Vec<RichMessage> = stored_messages
-            .iter()
-            .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
-            .map(|m| {
-                let role = match m.role {
-                    ChatRole::User => "user",
-                    ChatRole::Assistant => "assistant",
-                    ChatRole::System => "user",
-                };
-                if let Some(blocks) = &m.content_blocks {
-                    let content_blocks: Vec<ContentBlock> = blocks
-                        .iter()
-                        .map(|b| match b {
-                            ChatContentBlock::Text { text } => ContentBlock::Text {
-                                text: text.clone(),
-                            },
-                            ChatContentBlock::ToolUse { id, name, input } => {
-                                ContentBlock::ToolUse {
-                                    id: id.clone(),
-                                    name: name.clone(),
-                                    input: input.clone(),
-                                }
-                            }
-                            ChatContentBlock::ToolResult {
-                                tool_use_id,
-                                content,
-                                is_error,
-                            } => ContentBlock::ToolResult {
-                                tool_use_id: tool_use_id.clone(),
-                                content: content.clone(),
-                                is_error: *is_error,
-                            },
-                            ChatContentBlock::Image { media_type, data } => ContentBlock::Image {
-                                source: ImageSource {
-                                    source_type: "base64".to_string(),
-                                    media_type: media_type.clone(),
-                                    data: data.clone(),
-                                },
-                            },
-                        })
-                        .collect();
-                    RichMessage {
-                        role: role.to_string(),
-                        content: aura_claude::MessageContent::Blocks(content_blocks),
-                    }
-                } else {
-                    RichMessage {
-                        role: role.to_string(),
-                        content: aura_claude::MessageContent::Text(m.content.clone()),
-                    }
-                }
-            })
-            .collect();
+        let mut api_messages = convert_messages_to_rich(&stored_messages);
 
         api_messages = self
             .manage_context_window(&api_key, &system, api_messages)
@@ -930,17 +793,6 @@ impl ChatService {
         api_messages = Self::sanitize_tool_use_results(api_messages);
 
         let tools: Vec<ToolDefinition> = agent_tool_definitions();
-        let executor = ChatToolExecutor::new(
-            self.store.clone(),
-            self.project_service.clone(),
-            self.task_service.clone(),
-        );
-
-        let max_iters = ChatToolExecutor::max_iterations();
-        let mut total_text = String::new();
-        let mut accumulated_input_tokens: u64 = 0;
-        let mut accumulated_output_tokens: u64 = 0;
-        let stream_timeout = std::time::Duration::from_secs(300);
 
         let has_text_attachments = stored_messages.iter().any(|m| {
             m.role == ChatRole::User
@@ -978,255 +830,85 @@ impl ChatService {
             }
         }
 
-        for iteration in 0..max_iters {
-            let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+        let executor = ChatToolLoopExecutor {
+            inner: ChatToolExecutor::new(
+                self.store.clone(),
+                self.project_service.clone(),
+                self.task_service.clone(),
+            ),
+            project_id: *project_id,
+            chat_tx: tx.clone(),
+        };
 
-            let client = self.claude_client.clone();
-            let api_key_owned = api_key.clone();
-            let system_owned = system.clone();
-            let msgs_owned = api_messages.clone();
-            let tools_owned = tools.clone();
+        let config = ToolLoopConfig {
+            max_iterations: ChatToolExecutor::max_iterations(),
+            max_tokens: self.llm_config.chat_max_tokens,
+            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
+            stream_timeout: std::time::Duration::from_secs(300),
+            billing_reason: "aura_chat",
+            max_context_tokens: Some(self.llm_config.max_context_tokens),
+        };
 
-            let stream_handle = tokio::spawn(async move {
-                client
-                    .complete_stream_with_tools_thinking(
-                        &api_key_owned,
-                        &system_owned,
-                        msgs_owned,
-                        tools_owned,
-                        CHAT_MAX_TOKENS,
-                        ThinkingConfig::enabled(THINKING_BUDGET),
-                        claude_tx,
-                    )
-                    .await
-            });
+        let thinking_start = std::time::Instant::now();
 
-            let mut iter_text = String::new();
-            let mut iter_tool_calls: Vec<aura_claude::ToolCall> = Vec::new();
-
-            let timed_out = loop {
-                match tokio::time::timeout(stream_timeout, claude_rx.recv()).await {
-                    Ok(Some(evt)) => match evt {
-                        ClaudeStreamEvent::Delta(text) => {
-                            iter_text.push_str(&text);
-                            let _ = tx.send(ChatStreamEvent::Delta(text));
-                        }
-                        ClaudeStreamEvent::ToolUse { id, name, input } => {
-                            let _ = tx.send(ChatStreamEvent::ToolCall {
-                                id: id.clone(),
-                                name: name.clone(),
-                                input: input.clone(),
-                            });
-                            iter_tool_calls.push(aura_claude::ToolCall { id, name, input });
-                        }
-                        ClaudeStreamEvent::ThinkingDelta(text) => {
-                            let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
-                        }
-                        ClaudeStreamEvent::Done { stop_reason, .. } => {
-                            info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Chat iteration done");
-                        }
-                        ClaudeStreamEvent::Error(msg) => {
-                            let _ = tx.send(ChatStreamEvent::Error(msg));
-                        }
-                    },
-                    Ok(None) => break false,
-                    Err(_) => {
-                        warn!(iteration, "Claude streaming timed out after {}s", stream_timeout.as_secs());
-                        stream_handle.abort();
-                        break true;
-                    }
-                }
-            };
-
-            if timed_out {
-                send(ChatStreamEvent::Error("Claude API streaming timed out".to_string()));
-                if !total_text.is_empty() && !iter_text.is_empty() {
-                    total_text.push_str("\n\n");
-                }
-                total_text.push_str(&iter_text);
-                break;
+        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
+        let tx_clone = tx.clone();
+        let forwarder = tokio::spawn(async move {
+            while let Some(evt) = loop_rx.recv().await {
+                forward_tool_loop_event(evt, &tx_clone);
             }
+        });
 
-            let stream_result = match stream_handle.await {
-                Ok(Ok(r)) => r,
-                Ok(Err(e)) => {
-                    if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Claude API error: {e}")));
-                    }
-                    if !total_text.is_empty() && !iter_text.is_empty() {
-                        total_text.push_str("\n\n");
-                    }
-                    total_text.push_str(&iter_text);
-                    break;
-                }
-                Err(e) => {
-                    if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Stream task error: {e}")));
-                    }
-                    if !total_text.is_empty() && !iter_text.is_empty() {
-                        total_text.push_str("\n\n");
-                    }
-                    total_text.push_str(&iter_text);
-                    break;
-                }
-            };
+        let result = run_tool_loop(
+            self.llm.clone(),
+            &api_key,
+            &system,
+            api_messages,
+            tools,
+            &config,
+            &executor,
+            &loop_tx,
+        )
+        .await;
+        drop(loop_tx);
+        let _ = forwarder.await;
 
-            accumulated_input_tokens += stream_result.input_tokens;
-            accumulated_output_tokens += stream_result.output_tokens;
-            let _ = tx.send(ChatStreamEvent::TokenUsage {
-                input_tokens: accumulated_input_tokens,
-                output_tokens: accumulated_output_tokens,
-            });
-
-            self.debit_credits(
-                stream_result.input_tokens + stream_result.output_tokens,
-                "aura_chat",
-                Some(serde_json::json!({
-                    "project_id": project_id.to_string(),
-                    "agent_instance_id": agent_instance_id.to_string(),
-                })),
-            ).await;
-
-            // Persist tokens incrementally so they're not lost if a later iteration hangs
+        // Persist accumulated token usage on the agent instance
+        if result.total_input_tokens > 0 || result.total_output_tokens > 0 {
             if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
-                instance.total_input_tokens += stream_result.input_tokens;
-                instance.total_output_tokens += stream_result.output_tokens;
+                instance.total_input_tokens += result.total_input_tokens;
+                instance.total_output_tokens += result.total_output_tokens;
                 if instance.model.is_none() {
-                    instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                    instance.model = Some(self.llm_config.default_model.clone());
                 }
                 instance.updated_at = Utc::now();
                 if let Err(e) = self.store.put_agent_instance(&instance) {
-                    error!(%project_id, %agent_instance_id, error = %e, "Failed to persist iteration token usage");
+                    error!(%project_id, %agent_instance_id, error = %e, "Failed to persist token usage");
                 } else {
-                    info!(
-                        iteration,
-                        %project_id, %agent_instance_id,
-                        iter_input = stream_result.input_tokens,
-                        iter_output = stream_result.output_tokens,
-                        total_input = instance.total_input_tokens,
-                        total_output = instance.total_output_tokens,
-                        "Token usage persisted after iteration"
-                    );
                     let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
                 }
-            }
-
-            if !total_text.is_empty() && !iter_text.is_empty() {
-                total_text.push_str("\n\n");
-            }
-            total_text.push_str(&iter_text);
-
-            if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
-                break;
-            }
-
-            let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-            let mut assistant_persist_blocks: Vec<ChatContentBlock> = Vec::new();
-            if !iter_text.is_empty() {
-                assistant_blocks.push(ContentBlock::Text {
-                    text: iter_text.clone(),
-                });
-                assistant_persist_blocks.push(ChatContentBlock::Text {
-                    text: iter_text.clone(),
-                });
-            }
-            for tc in &iter_tool_calls {
-                assistant_blocks.push(ContentBlock::ToolUse {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    input: tc.input.clone(),
-                });
-                assistant_persist_blocks.push(ChatContentBlock::ToolUse {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    input: tc.input.clone(),
-                });
-            }
-            api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
-
-            let assistant_iter_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: *agent_instance_id,
-                project_id: *project_id,
-                role: ChatRole::Assistant,
-                content: String::new(),
-                content_blocks: Some(assistant_persist_blocks),
-                created_at: Utc::now(),
-            };
-            if let Err(e) = self.store.put_message(&assistant_iter_msg) {
-                error!(%project_id, error = %e, "Failed to persist assistant tool-use message");
-            }
-
-            let tool_futures: Vec<_> = iter_tool_calls.iter().map(|tc| {
-                executor.execute(project_id, &tc.name, tc.input.clone())
-            }).collect();
-            let tool_results = futures::future::join_all(tool_futures).await;
-
-            let mut result_blocks: Vec<ContentBlock> = Vec::new();
-            let mut result_persist_blocks: Vec<ChatContentBlock> = Vec::new();
-            for (tc, result) in iter_tool_calls.iter().zip(tool_results) {
-                if let Some(spec) = result.saved_spec {
-                    let _ = tx.send(ChatStreamEvent::SpecSaved(spec));
-                }
-                if let Some(task) = result.saved_task {
-                    let _ = tx.send(ChatStreamEvent::TaskSaved(task));
-                }
-                let _ = tx.send(ChatStreamEvent::ToolResult {
-                    id: tc.id.clone(),
-                    name: tc.name.clone(),
-                    result: result.content.clone(),
-                    is_error: result.is_error,
-                });
-                result_blocks.push(ContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content.clone(),
-                    is_error: if result.is_error { Some(true) } else { None },
-                });
-                result_persist_blocks.push(ChatContentBlock::ToolResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content,
-                    is_error: if result.is_error { Some(true) } else { None },
-                });
-            }
-            api_messages.push(RichMessage::tool_results(result_blocks));
-
-            let tool_result_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: *agent_instance_id,
-                project_id: *project_id,
-                role: ChatRole::User,
-                content: String::new(),
-                content_blocks: Some(result_persist_blocks),
-                created_at: Utc::now(),
-            };
-            if let Err(e) = self.store.put_message(&tool_result_msg) {
-                error!(%project_id, error = %e, "Failed to persist tool result message");
-            }
-
-            if iteration + 1 >= max_iters {
-                warn!(
-                    %project_id,
-                    max_iters,
-                    "Tool-use loop hit max iterations, stopping"
-                );
             }
         }
 
         info!(
             %project_id, %agent_instance_id,
-            accumulated_input_tokens, accumulated_output_tokens,
+            result.total_input_tokens, result.total_output_tokens,
             "Chat loop finished"
         );
 
-        if !total_text.is_empty() {
-            let assistant_reply = total_text.clone();
+        if !result.text.is_empty() {
+            let assistant_reply = result.text.clone();
+            let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
+            let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
             let assistant_msg = Message {
                 message_id: MessageId::new(),
                 agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
-                content: total_text,
+                content: result.text,
                 content_blocks: None,
+                thinking,
+                thinking_duration_ms,
                 created_at: Utc::now(),
             };
             if let Err(e) = self.store.put_message(&assistant_msg) {
@@ -1428,11 +1110,8 @@ impl ChatService {
         result
     }
 
-    // Context window management
+    // Context window management (progressive tiered compaction)
     // -----------------------------------------------------------------------
-
-    const MAX_CONTEXT_TOKENS: u64 = 150_000;
-    const KEEP_RECENT_MESSAGES: usize = 10;
 
     async fn manage_context_window(
         &self,
@@ -1442,24 +1121,93 @@ impl ChatService {
     ) -> Vec<RichMessage> {
         use aura_claude::estimate_message_tokens;
 
+        let max_context_tokens = self.llm_config.max_context_tokens;
+        let keep_recent_messages = self.llm_config.keep_recent_messages;
+
         let system_tokens = aura_claude::estimate_tokens(system_prompt);
         let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
         let total = system_tokens + total_msg_tokens;
 
-        if total <= Self::MAX_CONTEXT_TOKENS || messages.len() <= Self::KEEP_RECENT_MESSAGES {
+        if total <= max_context_tokens / 2 || messages.len() <= keep_recent_messages {
             return messages;
         }
 
+        let utilization = total as f64 / max_context_tokens as f64;
+
+        // Tier 1 (50-75%): compact tool results in older messages only
+        if utilization <= 0.75 {
+            info!(
+                total_tokens = total,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Tier-1 compaction: truncating large tool results in older messages"
+            );
+            return Self::compact_tool_results_in_history(messages, keep_recent_messages);
+        }
+
+        // Tier 2 (75-90%): summarize the oldest half of messages, keep more recent ones
+        if utilization <= 0.90 {
+            info!(
+                total_tokens = total,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Tier-2 compaction: summarizing older messages"
+            );
+            let split_at = Self::find_safe_split(&messages, keep_recent_messages);
+            return self.summarize_and_keep(api_key, &messages, split_at).await;
+        }
+
+        // Tier 3 (>90%): aggressive summarization with fewer kept messages
         info!(
             total_tokens = total,
-            message_count = messages.len(),
-            "Context window approaching limit, summarizing older messages"
+            utilization_pct = (utilization * 100.0) as u32,
+            "Tier-3 compaction: aggressive summarization"
         );
+        let aggressive_keep = keep_recent_messages.max(4) / 2;
+        let split_at = Self::find_safe_split(&messages, aggressive_keep);
+        self.summarize_and_keep(api_key, &messages, split_at).await
+    }
 
-        let mut split_at = messages.len().saturating_sub(Self::KEEP_RECENT_MESSAGES);
+    fn compact_tool_results_in_history(
+        mut messages: Vec<RichMessage>,
+        keep_recent: usize,
+    ) -> Vec<RichMessage> {
+        let cutoff = messages.len().saturating_sub(keep_recent);
+        for msg in &mut messages[..cutoff] {
+            if msg.role != "user" {
+                continue;
+            }
+            if let MessageContent::Blocks(blocks) = &mut msg.content {
+                for block in blocks.iter_mut() {
+                    if let ContentBlock::ToolResult { content, .. } = block {
+                        if content.len() > 2000 {
+                            let head: String = content.chars().take(500).collect();
+                            let tail: String = content.chars().rev().take(200)
+                                .collect::<Vec<_>>().into_iter().rev().collect();
+                            let omitted = content.len() - 700;
+                            *content = format!(
+                                "{head}\n[...{omitted} chars omitted...]\n{tail}"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        messages
+    }
+
+    fn find_safe_split(messages: &[RichMessage], keep_recent: usize) -> usize {
+        let mut split_at = messages.len().saturating_sub(keep_recent);
         while split_at > 0 && Self::is_tool_results_only(&messages[split_at]) {
             split_at -= 1;
         }
+        split_at
+    }
+
+    async fn summarize_and_keep(
+        &self,
+        api_key: &str,
+        messages: &[RichMessage],
+        split_at: usize,
+    ) -> Vec<RichMessage> {
         let (old_messages, recent_messages) = messages.split_at(split_at);
 
         let mut summary_input = String::from(
@@ -1489,11 +1237,12 @@ impl ChatService {
         }
 
         match self
-            .claude_client
-            .complete(api_key, "You summarize conversations concisely.", &summary_input, 1024)
+            .llm
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, CONTEXT_SUMMARY_SYSTEM_PROMPT, &summary_input, 1024, "aura_context_summary", None)
             .await
         {
-            Ok(summary) => {
+            Ok(resp) => {
+                let summary = resp.text;
                 let mut result = vec![RichMessage::user(&format!(
                     "Previous conversation summary:\n{summary}"
                 ))];
@@ -1547,11 +1296,12 @@ impl ChatService {
         );
 
         match self
-            .claude_client
-            .complete(api_key, "You generate short chat titles.", &title_prompt, 30)
+            .llm
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, TITLE_GEN_SYSTEM_PROMPT, &title_prompt, 30, "aura_title_gen", None)
             .await
         {
-            Ok(title) => {
+            Ok(resp) => {
+                let title = resp.text;
                 let title = title.trim().trim_matches('"').to_string();
                 if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
                     instance.name = title;
@@ -1568,57 +1318,6 @@ impl ChatService {
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate title");
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Credit checks & debiting
-    // -----------------------------------------------------------------------
-
-    async fn check_credits(&self) -> Result<(), String> {
-        let token = self.store
-            .get_setting("zero_auth_session")
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
-            .map(|s| s.access_token);
-        let Some(token) = token else {
-            return Err("Not authenticated. Please log in to continue.".to_string());
-        };
-        self.billing_client
-            .ensure_has_credits(&token)
-            .await
-            .map(|_| ())
-            .map_err(|_| "Insufficient credits. Please purchase credits to continue.".to_string())
-    }
-
-    async fn debit_credits(
-        &self,
-        amount: u64,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
-    ) {
-        if amount == 0 {
-            return;
-        }
-        let token = self.store
-            .get_setting("zero_auth_session")
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
-            .map(|s| s.access_token);
-        let Some(token) = token else {
-            warn!("No access token available for credit debit");
-            return;
-        };
-        match self.billing_client.debit_credits(&token, amount, reason, None, metadata).await {
-            Ok(resp) => {
-                info!(amount, reason, balance = resp.balance, tx = %resp.transaction_id, "Credits debited");
-            }
-            Err(BillingError::InsufficientCredits { available, required }) => {
-                warn!(available, required, "Insufficient credits for chat");
-            }
-            Err(e) => {
-                warn!(error = %e, reason, "Failed to debit credits");
             }
         }
     }
@@ -1675,14 +1374,6 @@ impl ChatService {
                         input_tokens: spec_input_tokens,
                         output_tokens: spec_output_tokens,
                     });
-                    self.debit_credits(
-                        input_tokens + output_tokens,
-                        "aura_spec_gen",
-                        Some(serde_json::json!({
-                            "project_id": project_id.to_string(),
-                            "agent_instance_id": agent_instance_id.to_string(),
-                        })),
-                    ).await;
                 }
                 SpecStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));
@@ -1703,7 +1394,7 @@ impl ChatService {
                     instance.total_input_tokens += spec_input_tokens;
                     instance.total_output_tokens += spec_output_tokens;
                     if instance.model.is_none() {
-                        instance.model = Some(aura_claude::DEFAULT_MODEL.to_string());
+                        instance.model = Some(self.llm_config.default_model.clone());
                     }
                     instance.updated_at = Utc::now();
                     if let Err(e) = self.store.put_agent_instance(&instance) {
@@ -1732,6 +1423,8 @@ impl ChatService {
                 role: ChatRole::Assistant,
                 content: accumulated,
                 content_blocks: None,
+                thinking: None,
+                thinking_duration_ms: None,
                 created_at: Utc::now(),
             };
             if let Err(e) = self.store.put_message(&assistant_msg) {
@@ -1740,5 +1433,255 @@ impl ChatService {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn make_project(name: &str, folder: &str) -> Project {
+        Project {
+            project_id: ProjectId::new(),
+            org_id: OrgId::new(),
+            name: name.into(),
+            description: "Test project description".into(),
+            linked_folder_path: folder.into(),
+            requirements_doc_path: None,
+            current_status: ProjectStatus::Planning,
+            github_integration_id: None,
+            github_repo_full_name: None,
+            build_command: Some("cargo build".into()),
+            test_command: Some("cargo test".into()),
+            specs_summary: None,
+            specs_title: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn make_agent(system_prompt: &str) -> Agent {
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "u1".into(),
+            name: "TestAgent".into(),
+            role: "developer".into(),
+            personality: String::new(),
+            system_prompt: system_prompt.into(),
+            skills: vec![],
+            icon: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn make_message(role: ChatRole, content: &str) -> Message {
+        Message {
+            message_id: MessageId::new(),
+            agent_instance_id: AgentInstanceId::new(),
+            project_id: ProjectId::new(),
+            role,
+            content: content.into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: Utc::now(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // convert_messages_to_rich
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn convert_empty_messages() {
+        let result = convert_messages_to_rich(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn convert_text_only_messages() {
+        let messages = vec![
+            make_message(ChatRole::User, "Hello"),
+            make_message(ChatRole::Assistant, "Hi there"),
+        ];
+        let rich = convert_messages_to_rich(&messages);
+        assert_eq!(rich.len(), 2);
+        assert_eq!(rich[0].role, "user");
+        assert_eq!(rich[1].role, "assistant");
+        match &rich[0].content {
+            MessageContent::Text(t) => assert_eq!(t, "Hello"),
+            _ => panic!("expected Text content"),
+        }
+    }
+
+    #[test]
+    fn convert_system_message_mapped_to_user() {
+        let messages = vec![make_message(ChatRole::System, "system msg")];
+        let rich = convert_messages_to_rich(&messages);
+        assert!(rich.is_empty(), "System messages should be filtered out");
+    }
+
+    #[test]
+    fn convert_messages_with_content_blocks() {
+        let mut msg = make_message(ChatRole::User, "");
+        msg.content_blocks = Some(vec![
+            ChatContentBlock::Text {
+                text: "check this".into(),
+            },
+            ChatContentBlock::ToolUse {
+                id: "t1".into(),
+                name: "read_file".into(),
+                input: serde_json::json!({"path": "a.rs"}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "file contents".into(),
+                is_error: None,
+            },
+            ChatContentBlock::Image {
+                media_type: "image/png".into(),
+                data: "base64data".into(),
+            },
+        ]);
+
+        let rich = convert_messages_to_rich(&[msg]);
+        assert_eq!(rich.len(), 1);
+        match &rich[0].content {
+            MessageContent::Blocks(blocks) => {
+                assert_eq!(blocks.len(), 4);
+                matches!(&blocks[0], ContentBlock::Text { .. });
+                matches!(&blocks[1], ContentBlock::ToolUse { .. });
+                matches!(&blocks[2], ContentBlock::ToolResult { .. });
+                matches!(&blocks[3], ContentBlock::Image { .. });
+            }
+            _ => panic!("expected Blocks content"),
+        }
+    }
+
+    #[test]
+    fn convert_filters_out_system_keeps_user_and_assistant() {
+        let messages = vec![
+            make_message(ChatRole::System, "sys"),
+            make_message(ChatRole::User, "u1"),
+            make_message(ChatRole::Assistant, "a1"),
+            make_message(ChatRole::User, "u2"),
+        ];
+        let rich = convert_messages_to_rich(&messages);
+        assert_eq!(rich.len(), 3);
+        assert_eq!(rich[0].role, "user");
+        assert_eq!(rich[1].role, "assistant");
+        assert_eq!(rich[2].role, "user");
+    }
+
+    // -----------------------------------------------------------------------
+    // build_chat_system_prompt
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn system_prompt_uses_base_when_custom_empty() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_prepends_custom() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "Custom instructions here.");
+        assert!(prompt.starts_with("Custom instructions here."));
+        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_includes_project_details() {
+        let mut project = make_project("MyApp", "/nonexistent/path");
+        project.description = "A web application".into();
+        project.build_command = Some("npm run build".into());
+        project.test_command = None;
+
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("MyApp"));
+        assert!(prompt.contains("A web application"));
+        assert!(prompt.contains("npm run build"));
+        assert!(prompt.contains("(not set)"));
+    }
+
+    #[test]
+    fn system_prompt_detects_tech_stack() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), "[package]").unwrap();
+        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+
+        let project = make_project("MultiStack", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Rust"));
+        assert!(prompt.contains("Node.js/TypeScript"));
+    }
+
+    #[test]
+    fn system_prompt_lists_project_structure() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("README.md"), "# Hi").unwrap();
+
+        let project = make_project("Structured", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Project Structure"));
+        assert!(prompt.contains("src/"));
+        assert!(prompt.contains("README.md"));
+    }
+
+    // -----------------------------------------------------------------------
+    // build_multi_project_system_prompt
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn multi_project_prompt_uses_base_when_agent_empty() {
+        let agent = make_agent("");
+        let projects = vec![make_project("ProjA", "/a"), make_project("ProjB", "/b")];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("multi-project mode"));
+    }
+
+    #[test]
+    fn multi_project_prompt_uses_custom_agent_prompt() {
+        let agent = make_agent("You are a special agent.");
+        let projects = vec![make_project("P1", "/p1")];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.starts_with("You are a special agent."));
+        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
+    }
+
+    #[test]
+    fn multi_project_prompt_lists_all_projects() {
+        let agent = make_agent("");
+        let projects = vec![
+            make_project("Alpha", "/alpha"),
+            make_project("Beta", "/beta"),
+            make_project("Gamma", "/gamma"),
+        ];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.contains("**Alpha**"));
+        assert!(prompt.contains("**Beta**"));
+        assert!(prompt.contains("**Gamma**"));
+        assert!(prompt.contains("/alpha"));
+        assert!(prompt.contains("/beta"));
+        assert!(prompt.contains("/gamma"));
+    }
+
+    #[test]
+    fn multi_project_prompt_includes_project_commands() {
+        let agent = make_agent("");
+        let mut p = make_project("WithCmd", "/cmd");
+        p.build_command = Some("make".into());
+        p.test_command = None;
+        let prompt = build_multi_project_system_prompt(&agent, &[p]);
+        assert!(prompt.contains("make"));
+        assert!(prompt.contains("(not set)"));
     }
 }

@@ -3,6 +3,7 @@ import { Text } from "@cypher-asi/zui";
 import { Bot, User, MessageSquare, Send } from "lucide-react";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
+import { Avatar } from "../../components/Avatar";
 import { useFeed } from "./FeedProvider";
 import { useAuth } from "../../context/AuthContext";
 import { timeAgo } from "./FeedMainPanel";
@@ -100,12 +101,14 @@ function CommentsPanel() {
         ) : (
           comments.map((c) => (
             <div key={c.id} className={styles.commentItem}>
-              <div
+              <Avatar
+                avatarUrl={c.author.avatarUrl}
+                name={c.author.name}
+                type={c.author.type}
+                size={28}
                 className={`${styles.commentAvatar} ${styles.commentAvatarClickable}`}
                 onClick={() => handleAuthorClick(c.author)}
-              >
-                {c.author.type === "agent" ? <Bot size={14} /> : <User size={14} />}
-              </div>
+              />
               <div className={styles.commentContent}>
                 <div className={styles.commentHeader}>
                   <span

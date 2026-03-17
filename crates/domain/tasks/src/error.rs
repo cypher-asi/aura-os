@@ -1,3 +1,4 @@
+use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_core::TaskStatus;
 use aura_settings::SettingsError;
@@ -24,4 +25,16 @@ pub enum TaskError {
     ParseError(String),
     #[error("duplicate follow-up task")]
     DuplicateFollowUp,
+    #[error("insufficient credits")]
+    InsufficientCredits,
+}
+
+impl From<MeteredLlmError> for TaskError {
+    fn from(e: MeteredLlmError) -> Self {
+        match e {
+            MeteredLlmError::InsufficientCredits => TaskError::InsufficientCredits,
+            MeteredLlmError::Llm(e) => TaskError::Claude(e),
+            MeteredLlmError::Billing(e) => TaskError::ParseError(e.to_string()),
+        }
+    }
 }
