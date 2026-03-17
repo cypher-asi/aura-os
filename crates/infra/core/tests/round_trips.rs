@@ -122,6 +122,7 @@ fn sample_project() -> Project {
         build_command: None,
         test_command: None,
         specs_summary: None,
+        specs_title: None,
         created_at: now,
         updated_at: now,
     }
@@ -153,7 +154,8 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         order_index: 1,
         dependency_ids: vec![],
         parent_task_id: None,
-        assigned_agent_id: None,
+        assigned_agent_instance_id: None,
+        completed_by_agent_instance_id: None,
         session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
@@ -169,25 +171,50 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
     }
 }
 
-fn sample_agent(project_id: ProjectId) -> Agent {
+fn sample_agent() -> Agent {
     let now = Utc::now();
     Agent {
         agent_id: AgentId::new(),
-        project_id,
+        user_id: "user-1".into(),
         name: "Agent-1".into(),
-        status: AgentStatus::Idle,
-        current_task_id: None,
-        current_session_id: None,
+        role: "Engineer".into(),
+        personality: "Helpful".into(),
+        system_prompt: "You are a helpful engineer.".into(),
+        skills: vec![],
+        icon: None,
         created_at: now,
         updated_at: now,
     }
 }
 
-fn sample_session(agent_id: AgentId, project_id: ProjectId) -> Session {
+fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInstance {
+    let now = Utc::now();
+    AgentInstance {
+        agent_instance_id: AgentInstanceId::new(),
+        project_id,
+        agent_id,
+        name: "Agent-1".into(),
+        role: "Engineer".into(),
+        personality: "Helpful".into(),
+        system_prompt: "You are a helpful engineer.".into(),
+        skills: vec![],
+        icon: None,
+        status: AgentStatus::Idle,
+        current_task_id: None,
+        current_session_id: None,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        model: None,
+        created_at: now,
+        updated_at: now,
+    }
+}
+
+fn sample_session(agent_instance_id: AgentInstanceId, project_id: ProjectId) -> Session {
     let now = Utc::now();
     Session {
         session_id: SessionId::new(),
-        agent_id,
+        agent_instance_id,
         project_id,
         active_task_id: None,
         tasks_worked: Vec::new(),
@@ -226,11 +253,16 @@ test_entity_round_trip!(task_round_trip, {
     sample_task(p.project_id, s.spec_id)
 });
 test_entity_round_trip!(agent_round_trip, {
+    sample_agent()
+});
+test_entity_round_trip!(agent_instance_round_trip, {
     let p = sample_project();
-    sample_agent(p.project_id)
+    let a = sample_agent();
+    sample_agent_instance(p.project_id, a.agent_id)
 });
 test_entity_round_trip!(session_round_trip, {
     let p = sample_project();
-    let a = sample_agent(p.project_id);
-    sample_session(a.agent_id, p.project_id)
+    let a = sample_agent();
+    let instance = sample_agent_instance(p.project_id, a.agent_id);
+    sample_session(instance.agent_instance_id, p.project_id)
 });

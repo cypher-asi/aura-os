@@ -42,6 +42,8 @@ function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): st
       return `task:${item.task.task_id}`;
     case "session":
       return `session:${item.session.session_id}`;
+    case "log":
+      return `log:${item.entry.timestamp}:${item.entry.summary}`;
   }
 }
 

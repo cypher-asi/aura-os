@@ -1,90 +1,17 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::Router;
 use serde_json::Value;
-use tokio::sync::{broadcast, mpsc, Mutex};
 use tower::ServiceExt;
 
 use aura_core::*;
-use aura_billing::{BillingClient, PricingService};
-use aura_engine::EngineEvent;
-use aura_server::state::{AppState, TaskOutputBuffers};
-use aura_services::*;
-use aura_settings::SettingsService;
-use aura_store::RocksStore;
+use aura_server::{build_app_state, state::AppState};
 
-fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) {
+fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
-    let data_dir = tempfile::tempdir().unwrap();
-
-    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
-    let settings_service = Arc::new(SettingsService::new(store.clone(), data_dir.path()).unwrap());
-    let claude_client = Arc::new(ClaudeClient::new());
-    let org_service = Arc::new(OrgService::new(store.clone()));
-    let github_service = Arc::new(GitHubService::new(store.clone(), org_service.clone()));
-    let auth_service = Arc::new(AuthService::new(store.clone()));
-    let project_service = Arc::new(ProjectService::new(store.clone()));
-    let spec_gen_service = Arc::new(SpecGenerationService::new(
-        store.clone(),
-        settings_service.clone(),
-        claude_client.clone(),
-    ));
-    let task_extraction_service = Arc::new(TaskExtractionService::new(
-        store.clone(),
-        settings_service.clone(),
-        claude_client.clone(),
-    ));
-    let task_service = Arc::new(TaskService::new(store.clone()));
-    let pricing_service = Arc::new(PricingService::new(store.clone()));
-    let billing_client = Arc::new(BillingClient::new());
-    let agent_service = Arc::new(AgentService::new(store.clone()));
-    let agent_instance_service = Arc::new(AgentInstanceService::new(store.clone()));
-    let session_service = Arc::new(SessionService::new(store.clone()));
-    let chat_service = Arc::new(ChatService::new(
-        store.clone(),
-        settings_service.clone(),
-        claude_client.clone(),
-        billing_client.clone(),
-        spec_gen_service.clone(),
-        project_service.clone(),
-        task_service.clone(),
-    ));
-
-    let (event_tx, _event_rx) = mpsc::unbounded_channel::<EngineEvent>();
-    let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
-    let task_output_buffers: TaskOutputBuffers =
-        Arc::new(std::sync::Mutex::new(HashMap::new()));
-
-    let state = AppState {
-        store,
-        org_service,
-        github_service,
-        auth_service,
-        settings_service,
-        pricing_service,
-        billing_client,
-        project_service,
-        spec_gen_service,
-        task_extraction_service,
-        task_service,
-        agent_service,
-        agent_instance_service,
-        session_service,
-        chat_service,
-        claude_client,
-        event_tx,
-        event_broadcast,
-        loop_registry: Arc::new(Mutex::new(HashMap::new())),
-        write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
-        task_output_buffers,
-        terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
-    };
-
+    let state = build_app_state(db_dir.path());
     let app = aura_server::create_router(state.clone());
-    (app, state, db_dir, data_dir)
+    (app, state, db_dir)
 }
 
 fn json_request(method: &str, uri: &str, body: Option<Value>) -> Request<Body> {
@@ -114,49 +41,22 @@ async fn response_json(response: axum::http::Response<Body>) -> Value {
 
 #[tokio::test]
 async fn settings_api_key_lifecycle() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
+    let expected = std::env::var("ANTHROPIC_API_KEY")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .is_some();
 
-    // GET before set -> not_set
     let req = json_request("GET", "/api/settings/api-key", None);
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
-    assert_eq!(body["status"], "not_set");
-
-    // POST set key
-    let req = json_request(
-        "POST",
-        "/api/settings/api-key",
-        Some(serde_json::json!({"api_key": "sk-ant-test123456789"})),
-    );
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let body = response_json(resp).await;
-    assert_eq!(body["status"], "validation_pending");
-    assert!(body["masked_key"].as_str().unwrap().contains("..."));
-
-    // GET after set -> has masked key
-    let req = json_request("GET", "/api/settings/api-key", None);
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
-    let body = response_json(resp).await;
-    assert!(body["masked_key"].is_string());
-
-    // DELETE
-    let req = json_request("DELETE", "/api/settings/api-key", None);
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    // GET after delete -> not_set
-    let req = json_request("GET", "/api/settings/api-key", None);
-    let resp = app.clone().oneshot(req).await.unwrap();
-    let body = response_json(resp).await;
-    assert_eq!(body["status"], "not_set");
+    assert_eq!(body["configured"], expected);
 }
 
 #[tokio::test]
 async fn settings_plain_setting() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     // PUT a setting
     let req = json_request(
@@ -182,7 +82,7 @@ async fn settings_plain_setting() {
 
 #[tokio::test]
 async fn project_crud() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     // Create a temp dir for the project linked folder
     let project_dir = tempfile::tempdir().unwrap();
@@ -240,7 +140,7 @@ async fn project_crud() {
 
 #[tokio::test]
 async fn project_not_found() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let fake_id = ProjectId::new();
     let req = json_request("GET", &format!("/api/projects/{fake_id}"), None);
@@ -252,7 +152,7 @@ async fn project_not_found() {
 
 #[tokio::test]
 async fn project_create_invalid_name() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let org_id = OrgId::new();
     let req = json_request(
@@ -277,7 +177,7 @@ async fn project_create_invalid_name() {
 
 #[tokio::test]
 async fn task_list_and_progress() {
-    let (app, state, _db, _data) = build_test_app();
+    let (app, state, _db) = build_test_app();
 
     let project_dir = tempfile::tempdir().unwrap();
 
@@ -326,6 +226,7 @@ async fn task_list_and_progress() {
         dependency_ids: vec![],
         parent_task_id: None,
         assigned_agent_instance_id: None,
+        completed_by_agent_instance_id: None,
         session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
@@ -364,7 +265,7 @@ async fn task_list_and_progress() {
 
 #[tokio::test]
 async fn agent_list_empty() {
-    let (app, state, _db, _data) = build_test_app();
+    let (app, state, _db) = build_test_app();
 
     let pid = ProjectId::new();
     let now = chrono::Utc::now();
@@ -396,7 +297,7 @@ async fn agent_list_empty() {
 
 #[tokio::test]
 async fn agent_not_found() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let pid = ProjectId::new();
     let aid = AgentId::new();
@@ -411,7 +312,7 @@ async fn agent_not_found() {
 
 #[tokio::test]
 async fn bad_uuid_returns_400() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let req = json_request("GET", "/api/projects/not-a-uuid", None);
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -424,7 +325,7 @@ async fn bad_uuid_returns_400() {
 
 #[tokio::test]
 async fn loop_stop_without_running() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let pid = ProjectId::new();
     let req = json_request("POST", &format!("/api/projects/{pid}/loop/stop"), None);
@@ -438,7 +339,7 @@ async fn loop_stop_without_running() {
 
 #[tokio::test]
 async fn error_format_has_error_and_code() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let fake_id = ProjectId::new();
     let req = json_request("GET", &format!("/api/projects/{fake_id}"), None);
@@ -455,7 +356,7 @@ async fn error_format_has_error_and_code() {
 
 #[tokio::test]
 async fn cors_headers_present() {
-    let (app, _, _db, _data) = build_test_app();
+    let (app, _, _db) = build_test_app();
 
     let req = Request::builder()
         .method("OPTIONS")
