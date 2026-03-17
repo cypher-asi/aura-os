@@ -23,6 +23,8 @@ fn find_frontend_dir() -> Option<PathBuf> {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()
@@ -34,7 +36,7 @@ async fn main() {
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
 
     let db_path = data_dir.join("db");
-    let state = aura_server::build_app_state(&db_path, &data_dir);
+    let state = aura_server::build_app_state(&db_path);
 
     let frontend_dir = find_frontend_dir();
     if let Some(ref dir) = frontend_dir {
