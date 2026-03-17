@@ -116,6 +116,20 @@ impl DevLoopEngine {
                 .create_instance(&project_id, "dev-agent".into())?
         };
 
+        let agent = if agent.status == AgentStatus::Working {
+            info!(
+                agent_instance_id = %agent.agent_instance_id,
+                "resetting stale Working agent to Idle before starting loop"
+            );
+            self.agent_instance_service
+                .finish_working(&project_id, &agent.agent_instance_id)?;
+            self.agent_instance_service
+                .get_instance(&project_id, &agent.agent_instance_id)
+                .map_err(|_| EngineError::Parse(format!("agent instance {} not found", agent.agent_instance_id)))?
+        } else {
+            agent
+        };
+
         let session = self.session_service.create_session(
             &agent.agent_instance_id,
             &project_id,
