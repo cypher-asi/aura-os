@@ -16,6 +16,8 @@ use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp};
 
+const BUILD_FIX_SNAPSHOT_BUDGET: usize = 30_000;
+
 /// Tracks a single build-fix attempt for the retry history prompt.
 pub(crate) struct BuildFixAttemptRecord {
     pub stderr: String,
@@ -574,7 +576,7 @@ impl DevLoopEngine {
 
             let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
             let codebase_snapshot =
-                file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+                file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
 
             let fix_prompt = build_fix_prompt_with_history(
                 project,
@@ -826,7 +828,7 @@ impl DevLoopEngine {
 
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
         let codebase_snapshot =
-            file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
 
         let fix_prompt = build_fix_prompt_with_history(
             project,

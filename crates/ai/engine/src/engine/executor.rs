@@ -615,7 +615,7 @@ impl DevLoopEngine {
 
                 let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
                 let codebase_snapshot =
-                    file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+                    file_ops::read_relevant_files(&project.linked_folder_path, 30_000)?;
                 let fix_prompt = build_fix_prompt_with_history(
                     project, &spec, task,
                     &Session {
