@@ -15,9 +15,55 @@ Still open:
 
 - Host reachability beyond localhost assumptions
 - Mobile/remote auth hardening
-- Mobile-first monitor/chat/control UX polish
-- Realtime/background resilience for mobile clients
+- Parity-first mobile UX for existing desktop/web functionality
+- Realtime/background resilience for mobile clients after parity
 - PWA production hardening beyond shell caching
+
+## Scope Reset: Parity First
+
+The immediate goal is not to invent a separate mobile product surface.
+
+The goal is:
+
+- match the existing web/desktop functionality that already translates well to mobile
+- reuse the current web UI as much as possible
+- hide only the desktop-only capabilities that cannot work honestly on mobile
+- defer sessions, deeper realtime hardening, and advanced mobile-specific behavior until after parity
+
+In practice this means:
+
+- prefer adapting existing routes, views, and components over creating mobile-only replacements
+- keep project, task, chat, execution, org, billing, and settings flows where they already exist
+- only introduce mobile-specific chrome where the desktop shell model breaks down
+
+## Parity Matrix
+
+### Provide In The Parity Phase
+
+- Sign in and sign out
+- Switch orgs and view billing/settings surfaces
+- Browse projects and agents
+- Open project execution view
+- View tasks, logs, specs, stats, and high-value existing panels
+- Chat with agents
+- Trigger lightweight control actions that already exist in the current UI, such as start, pause, stop, and retry
+
+### Defer Until After Parity
+
+- Session-focused workflows
+- Background/resume-specific live reliability
+- New mobile-only monitor/control information architecture
+- Advanced offline behavior
+- Full PWA hardening beyond installability and shell caching
+
+### Keep Desktop-Only
+
+- Linking local folders from a phone
+- File and folder pickers for the host machine
+- IDE editing routes
+- Embedded terminal and PTY workflows
+- Direct host filesystem browsing and “open in IDE” behavior
+- Local build/test execution as if the phone were the host
 
 ## Coordination Rules
 
@@ -107,7 +153,7 @@ Branch:
 
 Goal:
 
-- Make auth reliable for mobile and remote clients, not just same-machine desktop usage.
+- Make auth reliable for mobile and remote clients without expanding into session-centric product work yet.
 
 Deliverables:
 
@@ -128,6 +174,7 @@ Primary ownership:
 Out of scope:
 
 - Host connectivity primitives unless strictly needed
+- Session-centric UX redesign
 - PWA cache work
 
 Acceptance criteria:
@@ -142,21 +189,21 @@ Suggested commits:
 - `Add explicit expired-session handling`
 - `Improve mobile login error states`
 
-## Workstream C: Mobile Companion UX
+## Workstream C: Desktop/Web Parity UX
 
 Branch:
 
-- `codex/mobile-companion-ux`
+- `codex/mobile-parity-ux`
 
 Goal:
 
-- Turn the shell into a polished companion product for monitoring, chat, and lightweight controls.
+- Adapt the existing web/desktop UI so the current feature set is usable on mobile with minimal divergence.
 
 Deliverables:
 
-- Improved mobile project/task/session/chat layout
+- Improved mobile project/task/chat/execution layout
 - Better drawer and navigation behavior
-- Mobile-first monitor/chat/control screens
+- Reuse of existing views and components wherever possible
 - Explicit empty, loading, and unsupported states
 
 Primary ownership:
@@ -167,24 +214,26 @@ Primary ownership:
 - `frontend/src/components/Preview.tsx`
 - `frontend/src/views/ExecutionView.tsx`
 - `frontend/src/components/ChatView.tsx`
+- `frontend/src/views/*` that already power desktop/web parity
 - relevant CSS modules
 
 Out of scope:
 
 - Rewriting auth or connectivity layers
+- Session-first IA changes
 - Service worker changes
 
 Acceptance criteria:
 
-- Core mobile flows feel intentional on a narrow viewport
-- Monitoring and control actions are reachable without desktop chrome
+- Existing desktop/web functionality that translates to mobile is reachable and usable on a narrow viewport
+- Monitoring, chat, and control actions are reachable without desktop chrome
 - Unsupported desktop-only actions are explained clearly
 
 Suggested commits:
 
 - `Refine mobile project navigation and drawers`
-- `Add touch-first execution controls`
-- `Polish mobile empty and error states`
+- `Adapt execution and chat views for parity on mobile`
+- `Polish unsupported desktop-only states`
 
 ## Workstream D: Realtime and Background Resilience
 
@@ -194,7 +243,7 @@ Branch:
 
 Goal:
 
-- Make live mobile behavior robust when the app backgrounds, resumes, or temporarily loses connectivity.
+- Improve live mobile behavior after parity ships.
 
 Deliverables:
 
@@ -214,7 +263,7 @@ Primary ownership:
 Out of scope:
 
 - Auth redesign
-- General mobile navigation polish
+- Parity-phase UI adaptation
 
 Acceptance criteria:
 
@@ -272,19 +321,22 @@ Suggested commits:
 
 ## Merge Order
 
-Preferred merge order:
+Preferred merge order for the parity phase:
 
 1. Workstream A: Host Connectivity
 2. Workstream B: Mobile Auth and Session Model
-3. Workstream D: Realtime and Background Resilience
-4. Workstream C: Mobile Companion UX
+3. Workstream C: Desktop/Web Parity UX
+
+Then later:
+
+4. Workstream D: Realtime and Background Resilience
 5. Workstream E: PWA Hardening and QA
 
 Reason:
 
 - Connectivity and auth define the real mobile foundation.
-- Realtime behavior depends on the connection model.
-- UX polish should land after the infrastructure is stable.
+- Parity UX should land before deeper mobile-specific behavior.
+- Realtime hardening should follow the stabilized parity surface.
 - PWA hardening should finish against the stabilized product shape.
 
 ## Merge Conflict Avoidance
@@ -293,7 +345,7 @@ To avoid stepping on each other:
 
 - A owns network/bootstrap files
 - B owns auth/session files
-- C owns mobile presentation files
+- C owns parity/mobile presentation files
 - D owns live event and reconnect files
 - E owns service worker and test files
 
@@ -319,6 +371,6 @@ The mobile companion follow-up is complete when:
 
 - A phone can reach a live Aura host without localhost hacks
 - Mobile auth/session behavior is reliable
-- Monitoring/chat/control flows are intentionally mobile-first
-- Realtime behavior survives reconnect and resume
+- Existing desktop/web functionality that translates to mobile has parity
+- Realtime behavior survives reconnect and resume in a later hardening phase
 - PWA installability and update behavior are stable
