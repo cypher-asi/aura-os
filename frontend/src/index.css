@@ -5,6 +5,7 @@
 }
 
 :root {
+  color-scheme: dark;
   --font-sans: 'Inter Variable', sans-serif;
   --color-text-muted: #555;
   --status-pending: #5c6078;
