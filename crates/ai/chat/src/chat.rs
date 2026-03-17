@@ -263,38 +263,49 @@ struct AgentToolLoopExecutor {
 #[async_trait]
 impl ToolExecutor for AgentToolLoopExecutor {
     async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
-        let mut results = Vec::with_capacity(tool_calls.len());
-        for tc in tool_calls {
-            let pid_str = tc
-                .input
-                .get("project_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let project_id = if self.allowed_project_ids.contains(pid_str) {
-                pid_str.parse::<ProjectId>().ok()
-            } else {
-                None
-            };
-            let result = match project_id {
-                Some(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
-                None => crate::chat_tool_executor::ToolExecResult::err_static(
-                    "Missing or invalid project_id. You must specify a valid project_id from the available projects."
-                ),
-            };
-            if let Some(spec) = result.saved_spec {
-                let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
-            }
-            if let Some(task) = result.saved_task {
-                let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
-            }
-            results.push(ToolCallResult {
-                tool_use_id: tc.id.clone(),
-                content: result.content,
-                is_error: result.is_error,
-                stop_loop: false,
-            });
-        }
-        results
+        let futures: Vec<_> = tool_calls
+            .iter()
+            .map(|tc| {
+                let pid_str = tc
+                    .input
+                    .get("project_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let project_id = if self.allowed_project_ids.contains(pid_str) {
+                    pid_str.parse::<ProjectId>().ok()
+                } else {
+                    None
+                };
+                async move {
+                    match project_id {
+                        Some(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
+                        None => crate::chat_tool_executor::ToolExecResult::err_static(
+                            "Missing or invalid project_id. You must specify a valid project_id from the available projects."
+                        ),
+                    }
+                }
+            })
+            .collect();
+        let exec_results = futures::future::join_all(futures).await;
+
+        exec_results
+            .into_iter()
+            .zip(tool_calls)
+            .map(|(result, tc)| {
+                if let Some(spec) = result.saved_spec {
+                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
+                }
+                if let Some(task) = result.saved_task {
+                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
+                }
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: result.content,
+                    is_error: result.is_error,
+                    stop_loop: false,
+                }
+            })
+            .collect()
     }
 }
 
