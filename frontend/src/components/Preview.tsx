@@ -15,7 +15,7 @@ import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity } from "../utils/derive-activity";
 import type { PreviewItem } from "../context/SidekickContext";
-import type { Spec, Task, Session } from "../types";
+import type { Spec, Task, Session, AgentInstance } from "../types";
 import { StatusBadge } from "./StatusBadge";
 import styles from "./Preview.module.css";
 
@@ -365,6 +365,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
+  const [agentInstance, setAgentInstance] = useState<AgentInstance | null>(null);
   const hydratedRef = useRef< string | null >(null);
 
   const streamBuf = taskOutput.text;
@@ -380,7 +381,18 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     setLiveStatus(null);
     setLiveSessionId(null);
     setFailReason(null);
+    setAgentInstance(null);
   }, [task.task_id]);
+
+  useEffect(() => {
+    if (!projectId || !task.assigned_agent_instance_id) {
+      setAgentInstance(null);
+      return;
+    }
+    api.getAgentInstance(projectId, task.assigned_agent_instance_id)
+      .then(setAgentInstance)
+      .catch(() => setAgentInstance(null));
+  }, [projectId, task.assigned_agent_instance_id]);
 
   useEffect(() => {
     const unsubs = [
@@ -588,6 +600,17 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
             <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason || task.execution_notes)}</Text>
           )}
         </div>
+        {agentInstance && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel}>Agent</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {agentInstance.icon && (
+                <img src={agentInstance.icon} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+              )}
+              <Text size="sm">{agentInstance.name}</Text>
+            </span>
+          </div>
+        )}
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Description</span>
           {task.description ? (
