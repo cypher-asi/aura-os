@@ -164,8 +164,8 @@ Rules:
 - Do NOT use emojis in notes or any text output
 
 SCOPE: Stay strictly on-task.
-- ONLY implement what the task description asks for. Do NOT fix pre-existing bugs, failing tests, or code issues that are unrelated to your task.
-- If `cargo test --workspace` or the test command shows failures in test files you did NOT modify, IGNORE them. Only fix tests that directly test the feature you are implementing.
+- ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
+- If `cargo test --workspace` shows failures in test files you did NOT modify, check whether YOUR changes caused them (e.g., you changed a struct and tests that use it now fail). If so, fix them. If they are pre-existing and unrelated to your changes, IGNORE them.
 - Once your task-specific changes compile and any directly-related tests pass, call task_done immediately. Do NOT keep exploring or "improving" unrelated code.
 - When verifying, prefer scoped commands (e.g. `cargo test -p <crate> --lib <module>`) over workspace-wide commands to avoid noise from pre-existing failures.
 - NEVER output raw JSON with file_ops in your text response. Always use the provided tools (write_file, edit_file, task_done, etc.) to make changes and signal completion.
