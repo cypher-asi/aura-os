@@ -456,4 +456,5 @@
 
 .automationSpinner {
   animation: spinRing 1s linear infinite;
+  color: var(--color-text-muted);
 }

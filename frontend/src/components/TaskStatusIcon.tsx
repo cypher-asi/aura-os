@@ -67,7 +67,7 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             strokeWidth={STROKE}
             strokeDasharray={`${CIRCUMFERENCE * 0.25} ${CIRCUMFERENCE * 0.75}`}
             strokeLinecap="round"
-            style={{ stroke: "var(--status-in-progress, #9CDCFE)" }}
+            style={{ stroke: "var(--color-text-muted, #6b7280)" }}
           />
         </svg>
       </span>

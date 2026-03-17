@@ -179,7 +179,7 @@
 .toolBodyWrap {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
+  transition: max-height 0.3s ease;
 }
 
 .toolBodyExpanded {
@@ -207,15 +207,16 @@
 
 .json {
   font-family: var(--font-mono, monospace);
-  font-size: 11px;
-  line-height: 1.5;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: transparent;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 0;
+  padding: 10px 12px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  color: var(--color-text, #ccc);
+  color: var(--color-text-secondary);
   max-height: 200px;
   overflow-y: auto;
   margin: 0;

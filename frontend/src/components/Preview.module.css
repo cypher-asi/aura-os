@@ -112,6 +112,7 @@
 
 .spinner {
   animation: spin 1s linear infinite;
+  color: var(--color-text-muted);
 }
 
 @keyframes spin {
@@ -360,7 +361,7 @@
 }
 
 .activityIcon[data-status="active"] {
-  color: var(--color-accent, #3b82f6);
+  color: var(--color-text-muted, #6b7280);
 }
 
 .activityBody {

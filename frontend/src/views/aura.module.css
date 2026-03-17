@@ -24,13 +24,14 @@
 .progressBarContainer {
   background: var(--color-bg-secondary);
   border-radius: 0;
-  height: 4px;
+  height: 10px;
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background: rgb(20, 184, 166);
+  background: linear-gradient(90deg, #0d4a3a, #1a7a5a, #2db87a, #4aeaa8);
+  border-radius: 0;
   transition: width 0.4s ease;
 }
 

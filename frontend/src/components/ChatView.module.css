@@ -477,6 +477,7 @@
   color: #fff;
   cursor: pointer;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .attachButton:hover {
@@ -540,6 +541,7 @@
   cursor: pointer;
   transition: color 0.15s ease;
   flex-shrink: 0;
+  margin-bottom: 4px;
 }
 
 .sendButton:hover:not(:disabled) {
