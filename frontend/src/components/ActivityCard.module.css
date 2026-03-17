@@ -124,6 +124,15 @@
   white-space: nowrap;
 }
 
+/* ── Summary ── */
+
+.summary {
+  font-size: var(--font-size-sm, 13px);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
 /* ── Commits list ── */
 
 .commits {

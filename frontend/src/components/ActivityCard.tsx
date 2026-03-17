@@ -100,6 +100,10 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect, on
           </span>
         </div>
 
+        {event.summary && (
+          <p className={styles.summary}>{event.summary}</p>
+        )}
+
         <div className={styles.commits}>
           {visibleCommits.map((c) => (
             <div key={c.sha} className={styles.commit}>
