@@ -262,13 +262,16 @@ test("mobile project header can switch between execution and chat", async ({ pag
   await expect(page).toHaveURL(/\/projects\/proj-1\/execution$/);
 });
 
-test("mobile projects route shows the shared project browser", async ({ page }) => {
+test("mobile projects route keeps the welcome view and opens project navigation", async ({ page }) => {
   await mockAuthenticatedApp(page);
 
   await page.goto("/projects");
 
-  await expect(page.getByText("Demo Project")).toBeVisible();
-  await expect(page.getByText("Welcome to AURA")).toBeHidden();
+  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
 });
 
 test("mobile drawer exposes team and app settings", async ({ page }) => {
