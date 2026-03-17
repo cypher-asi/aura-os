@@ -10,6 +10,12 @@ import toolStyles from "./ToolCallBlock.module.css";
 
 import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
 
+function stripEmojis(text: string): string {
+  return text
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/ {2,}/g, " ");
+}
+
 interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -241,7 +247,7 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
         className={`${styles.thinkingContentWrap} ${expanded ? styles.thinkingContentExpanded : ""}`}
       >
         <div ref={contentRef} className={styles.thinkingContent}>
-          {text}
+          {stripEmojis(text)}
         </div>
       </div>
     </div>
@@ -304,7 +310,7 @@ export function MessageBubble({ message }: Props) {
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeHighlight]}
               >
-                {message.content}
+                {stripEmojis(message.content)}
               </ReactMarkdown>
             )}
           </div>
@@ -381,7 +387,7 @@ export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDuratio
               remarkPlugins={[remarkGfm, remarkBreaks]}
               rehypePlugins={[rehypeHighlight]}
             >
-              {text}
+              {stripEmojis(text)}
             </ReactMarkdown>
           )}
           <StreamingIndicator text={text} thinkingText={thinkingText} toolCalls={toolCalls} />
