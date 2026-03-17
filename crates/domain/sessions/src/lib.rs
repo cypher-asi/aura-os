@@ -195,7 +195,7 @@ impl SessionService {
         conversation_history: &str,
     ) -> Result<String, SessionError> {
         let resp = llm
-            .complete(api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048, "aura_session_rollover", None)
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048, "aura_session_rollover", None)
             .await?;
         Ok(resp.text)
     }

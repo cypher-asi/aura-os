@@ -159,6 +159,24 @@ impl MeteredLlm {
         Ok(resp)
     }
 
+    /// Like `complete`, but sends the request to a specific model (e.g. haiku
+    /// for cheap auxiliary tasks). The debit is computed at that model's rates.
+    pub async fn complete_with_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+        reason: &str,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<LlmResponse, MeteredLlmError> {
+        self.pre_flight_check().await?;
+        let resp = self.provider.complete_with_model(model, api_key, system_prompt, user_message, max_tokens).await?;
+        self.debit(model, resp.input_tokens, resp.output_tokens, reason, metadata).await?;
+        Ok(resp)
+    }
+
     pub async fn complete_stream(
         &self,
         api_key: &str,

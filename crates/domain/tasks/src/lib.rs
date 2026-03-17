@@ -619,7 +619,8 @@ impl TaskExtractionService {
     ) -> Result<Vec<(RawTaskOutput, u32)>, TaskError> {
         let resp = self
             .llm
-            .complete(
+            .complete_with_model(
+                aura_claude::MID_MODEL,
                 api_key,
                 TASK_EXTRACTION_SYSTEM_PROMPT,
                 &spec.markdown_contents,

@@ -10,6 +10,8 @@ use tracing::{debug, error, info};
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
+pub const FAST_MODEL: &str = "claude-haiku-3-5";
+pub const MID_MODEL: &str = "claude-sonnet-4-5";
 
 /// Deprecated: use `aura_billing::PricingService::compute_cost` or the pure
 /// functions in `aura_billing` instead. Kept temporarily for backward compat.
@@ -214,6 +216,20 @@ pub trait LlmProvider: Send + Sync {
         thinking: Option<ThinkingConfig>,
         event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
     ) -> Result<ToolStreamResponse, ClaudeClientError>;
+
+    /// Non-streaming completion with explicit model override.
+    /// Default delegates to `complete()`, ignoring the model parameter.
+    async fn complete_with_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
+        let _ = model;
+        self.complete(api_key, system_prompt, user_message, max_tokens).await
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -352,8 +368,19 @@ impl ClaudeClient {
         user_message: &str,
         max_tokens: u32,
     ) -> Result<LlmResponse, ClaudeClientError> {
+        self.complete_with_usage_model(DEFAULT_MODEL, api_key, system_prompt, user_message, max_tokens).await
+    }
+
+    pub async fn complete_with_usage_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
         let request = SimpleMessagesRequest {
-            model: DEFAULT_MODEL.to_string(),
+            model: model.to_string(),
             max_tokens,
             system: system_prompt.to_string(),
             messages: vec![SimpleMessage {
@@ -365,7 +392,7 @@ impl ClaudeClient {
 
         let url = format!("{}/v1/messages", self.base_url);
         info!(
-            model = DEFAULT_MODEL,
+            model,
             max_tokens,
             user_msg_len = user_message.len(),
             url = %url,
@@ -967,6 +994,18 @@ impl LlmProvider for ClaudeClient {
             api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
         )
         .await
+    }
+
+    async fn complete_with_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
+        self.complete_with_usage_model(model, api_key, system_prompt, user_message, max_tokens)
+            .await
     }
 }
 

@@ -1159,7 +1159,7 @@ impl ChatService {
 
         match self
             .llm
-            .complete(api_key, CONTEXT_SUMMARY_SYSTEM_PROMPT, &summary_input, 1024, "aura_context_summary", None)
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, CONTEXT_SUMMARY_SYSTEM_PROMPT, &summary_input, 1024, "aura_context_summary", None)
             .await
         {
             Ok(resp) => {
@@ -1218,7 +1218,7 @@ impl ChatService {
 
         match self
             .llm
-            .complete(api_key, TITLE_GEN_SYSTEM_PROMPT, &title_prompt, 30, "aura_title_gen", None)
+            .complete_with_model(aura_claude::FAST_MODEL, api_key, TITLE_GEN_SYSTEM_PROMPT, &title_prompt, 30, "aura_title_gen", None)
             .await
         {
             Ok(resp) => {

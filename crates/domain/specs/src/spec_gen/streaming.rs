@@ -82,7 +82,8 @@ impl SpecGenerationService {
         let api_key = self.settings.get_decrypted_api_key()?;
         let resp = self
             .llm
-            .complete(
+            .complete_with_model(
+                aura_claude::FAST_MODEL,
                 &api_key,
                 SPEC_OVERVIEW_SYSTEM_PROMPT,
                 requirements_content,
@@ -271,7 +272,7 @@ impl SpecGenerationService {
         );
         let resp = self
             .llm
-            .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS, "aura_spec_gen", None)
+            .complete_with_model(aura_claude::FAST_MODEL, &api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS, "aura_spec_gen", None)
             .await?;
         let response = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);

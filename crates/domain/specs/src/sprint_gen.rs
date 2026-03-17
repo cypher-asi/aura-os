@@ -32,7 +32,8 @@ impl SprintGenerationService {
     ) -> Result<Sprint, SpecGenError> {
         let resp = self
             .llm
-            .complete(
+            .complete_with_model(
+                aura_claude::MID_MODEL,
                 api_key,
                 SPRINT_SYSTEM_PROMPT,
                 &sprint.prompt,
