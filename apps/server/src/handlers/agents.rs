@@ -234,7 +234,8 @@ pub async fn send_agent_message_stream(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendMessageRequest>,
-) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     let uid = get_user_id(&state).ok();
@@ -344,7 +345,7 @@ pub async fn send_agent_message_stream(
         Ok(sse_event)
     });
 
-    Sse::new(stream)
+    Ok(Sse::new(stream))
 }
 
 // ---------------------------------------------------------------------------
@@ -366,7 +367,8 @@ pub async fn send_message_stream(
     State(state): State<AppState>,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendMessageRequest>,
-) -> Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>> {
+) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
     let agent_instance = state
@@ -494,7 +496,7 @@ pub async fn send_message_stream(
         Ok(sse_event)
     });
 
-    Sse::new(stream)
+    Ok(Sse::new(stream))
 }
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ pub async fn start_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
+    super::billing::require_credits(&state).await?;
     state.gc_finished_loops().await;
 
     let engine = Arc::new(
@@ -171,6 +172,7 @@ pub async fn run_single_task(
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
+    super::billing::require_credits(&state).await?;
     let engine = Arc::new(
         DevLoopEngine::new(
             state.store.clone(),

@@ -63,6 +63,7 @@ pub async fn generate_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, "Spec generation requested");
 
     let _ = state.event_tx.send(EngineEvent::SpecGenStarted {
@@ -123,6 +124,7 @@ pub async fn generate_specs_stream(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+    super::billing::require_credits(&state).await?;
     info!(%project_id, "Streaming spec generation requested");
 
     let _ = state.event_tx.send(EngineEvent::SpecGenStarted { project_id });
