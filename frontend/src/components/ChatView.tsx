@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
 import { setLastAgent } from "../utils/storage";
-import { MessageBubble, StreamingBubble } from "./MessageBubble";
+import { MessageBubble, StreamingBubble, CookingIndicator } from "./MessageBubble";
 import { ChatInputBar } from "./ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
 import type { Message } from "../types";
@@ -109,7 +109,7 @@ export function ChatView() {
     return null;
   }
 
-  const hasMessages = messages.length > 0 || streamingText || thinkingText;
+  const hasMessages = messages.length > 0 || isStreaming || streamingText || thinkingText;
 
   return (
     <div className={styles.container}>
@@ -132,6 +132,9 @@ export function ChatView() {
                 {messages.map((msg) => (
                   <MessageBubble key={msg.id} message={msg} />
                 ))}
+                {isStreaming && !streamingText && !thinkingText && activeToolCalls.length === 0 && (
+                  <CookingIndicator />
+                )}
                 {(streamingText || thinkingText || activeToolCalls.length > 0) && (
                   <StreamingBubble
                     text={streamingText}
