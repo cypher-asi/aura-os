@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
@@ -17,6 +18,7 @@ interface AutomationBarProps {
 export function AutomationBar({ projectId }: AutomationBarProps) {
   const { subscribe, connected } = useEventContext();
   const { setActiveTab } = useSidekick();
+  const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -113,7 +115,7 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     try {
       setStarting(true);
       setActiveTab("tasks");
-      const res = await api.startLoop(projectId);
+      const res = await api.startLoop(projectId, agentInstanceId);
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
       setPaused(false);
       setStarting(false);
