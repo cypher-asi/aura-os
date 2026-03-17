@@ -186,6 +186,7 @@
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;
+  color: var(--color-text-secondary);
 }
 .markdown pre {
   border: 1px solid var(--color-border);
@@ -206,17 +207,20 @@
   font-size: 12px;
   line-height: var(--control-height-sm, 32px);
   vertical-align: middle;
+  color: var(--color-text-secondary);
 }
 .markdown table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 10px;
   font-size: 12px;
+  color: var(--color-text-secondary);
 }
 .markdown th, .markdown td {
   border: 1px solid var(--color-border);
   padding: 5px 8px;
   text-align: left;
+  color: var(--color-text-secondary);
 }
 .markdown th {
   background: var(--color-bg-secondary);
@@ -225,8 +229,9 @@
 .markdown ul, .markdown ol {
   padding-left: 18px;
   margin-bottom: 8px;
+  color: var(--color-text-secondary);
 }
-.markdown li { margin-bottom: 2px; }
+.markdown li { margin-bottom: 2px; color: var(--color-text-secondary); }
 .markdown hr {
   border: none;
   height: 16px;
@@ -234,7 +239,7 @@
 .markdown blockquote {
   border-left: 2px solid var(--color-accent);
   padding-left: 10px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
   font-size: 12.5px;
 }
@@ -378,7 +383,7 @@
   padding: 0 12px 10px;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 280px;
@@ -557,7 +562,6 @@
 
 .textarea::placeholder {
   color: var(--color-text-muted);
-  opacity: 0.5;
 }
 
 .textarea:disabled {
@@ -576,15 +580,13 @@
 }
 
 .infoDot {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 11px;
-  opacity: 0.4;
 }
 
 .infoText {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: 11px;
-  opacity: 0.5;
 }
 
 .attachButton {
@@ -629,13 +631,12 @@
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 11px;
   cursor: pointer;
   transition: color 0.15s ease;
   white-space: nowrap;
-  opacity: 0.6;
 }
 
 .modelButton:hover {
@@ -695,11 +696,6 @@
   padding: var(--space-2) 0;
 }
 
-.cookingIcon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
 
 .cookingText {
   font-size: 14px;

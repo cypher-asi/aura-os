@@ -359,7 +359,6 @@ function StreamingIndicator({
 export function CookingIndicator() {
   return (
     <div className={styles.cookingIndicator}>
-      <img src="/aura-icon.png" alt="" className={styles.cookingIcon} />
       <span className={styles.cookingText}>Cooking...</span>
     </div>
   );
