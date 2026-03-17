@@ -116,6 +116,8 @@ pub struct Task {
     pub parent_task_id: Option<TaskId>,
     pub assigned_agent_instance_id: Option<AgentInstanceId>,
     #[serde(default)]
+    pub completed_by_agent_instance_id: Option<AgentInstanceId>,
+    #[serde(default)]
     pub session_id: Option<SessionId>,
     pub execution_notes: String,
     #[serde(default)]
