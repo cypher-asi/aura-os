@@ -85,8 +85,8 @@ impl DevLoopEngine {
             session_service,
             event_tx,
             write_coordinator: ProjectWriteCoordinator::new(),
-            engine_config: EngineConfig::default(),
-            llm_config: LlmConfig::default(),
+            engine_config: EngineConfig::from_env(),
+            llm_config: LlmConfig::from_env(),
         }
     }
 

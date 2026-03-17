@@ -470,7 +470,7 @@ impl ChatService {
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
     ) -> Self {
-        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, LlmConfig::default())
+        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, LlmConfig::from_env())
     }
 
     pub fn with_config(
