@@ -82,7 +82,7 @@ fn normalize_line_col_refs(line: &str) -> String {
 /// When a build command times out, it's usually because the command starts a
 /// long-running process. This function maps common run commands to their
 /// compile-only counterparts.
-fn auto_correct_build_command(cmd: &str) -> Option<String> {
+pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
     let trimmed = cmd.trim();
     if trimmed == "cargo run" || trimmed.starts_with("cargo run ") {
         return Some(trimmed.replacen("cargo run", "cargo build", 1));
@@ -390,6 +390,21 @@ impl DevLoopEngine {
                 return Ok((vec![], true, 0, 0, 0, 0));
             }
         };
+
+        if let Some(corrected) = auto_correct_build_command(&build_command) {
+            warn!(
+                old = %build_command, new = %corrected,
+                "eagerly rewriting server-starting build command"
+            );
+            let _ = self.project_service.update_project(
+                &project.project_id,
+                aura_projects::UpdateProjectInput {
+                    build_command: Some(corrected.clone()),
+                    ..Default::default()
+                },
+            );
+            build_command = corrected;
+        }
 
         let test_command = project.test_command.as_ref()
             .filter(|cmd| !cmd.trim().is_empty())

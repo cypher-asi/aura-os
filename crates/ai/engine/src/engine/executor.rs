@@ -13,7 +13,7 @@ use aura_claude::{
 use aura_chat::ChatToolExecutor;
 use aura_tools::engine_tool_definitions;
 
-use super::build_fix::{normalize_error_signature, BuildFixAttemptRecord};
+use super::build_fix::{auto_correct_build_command, normalize_error_signature, BuildFixAttemptRecord};
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
 use super::prompts::*;
@@ -401,6 +401,17 @@ impl DevLoopEngine {
         command: &str,
         agent_instance_id: AgentInstanceId,
     ) -> Result<TaskExecution, EngineError> {
+        let command = if let Some(corrected) = auto_correct_build_command(command) {
+            warn!(
+                old = %command, new = %corrected,
+                "eagerly rewriting server-starting shell command"
+            );
+            corrected
+        } else {
+            command.to_string()
+        };
+        let command = command.as_str();
+
         let base_path = Path::new(&project.linked_folder_path);
         let max_attempts: u32 = MAX_SHELL_TASK_RETRIES;
         let mut prior_attempts_shell: Vec<BuildFixAttemptRecord> = Vec::new();
