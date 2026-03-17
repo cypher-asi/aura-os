@@ -145,7 +145,7 @@ Workflow:
 1. Use get_task_context if you need to review the task details
 2. Explore relevant files using read_file, search_code, find_files, list_files
 3. Make changes using write_file (new files) or edit_file (targeted edits)
-4. Verify your changes compile: run_command with the build command
+4. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
 5. Fix any errors iteratively
 6. When done, call task_done with your notes
 
@@ -159,7 +159,7 @@ Rules:
 - Never use non-ASCII characters (em dashes, smart quotes, ellipsis) in source code
 - For Rust: use raw string literals for multi-line strings, prefer serde_json::json!() for JSON in tests
 - For TypeScript: use forward slashes in import paths
-- If a build fails, read the errors carefully and fix them before calling task_done
+- If a build or test compilation fails, read the errors carefully and fix them before calling task_done
 - Do NOT call task_done until the build passes
 - Do NOT use emojis in notes or any text output
 
