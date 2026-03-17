@@ -18,6 +18,10 @@ import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
+  const workspaceLabel = project.workspace_source === "imported"
+    ? project.workspace_display_path ?? "Imported workspace snapshot"
+    : project.linked_folder_path || "—";
+
   return (
     <div className={styles.infoArea}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
@@ -27,8 +31,8 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
       <div className={styles.infoGrid}>
         <Text variant="muted" size="sm" as="span">Status</Text>
         <span><StatusBadge status={project.current_status} /></span>
-        <Text variant="muted" size="sm" as="span">Folder</Text>
-        <Text size="sm" as="span">{project.linked_folder_path || "—"}</Text>
+        <Text variant="muted" size="sm" as="span">Workspace</Text>
+        <Text size="sm" as="span">{workspaceLabel}</Text>
         <Text variant="muted" size="sm" as="span">Created</Text>
         <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
       </div>

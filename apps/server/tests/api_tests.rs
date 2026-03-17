@@ -171,6 +171,48 @@ async fn project_create_invalid_name() {
     assert_eq!(body["code"], "bad_request");
 }
 
+#[tokio::test]
+async fn imported_project_create_writes_workspace_snapshot() {
+    let (app, state, _db) = build_test_app();
+
+    let org_id = OrgId::new();
+    let req = json_request(
+        "POST",
+        "/api/projects/import",
+        Some(serde_json::json!({
+            "org_id": org_id,
+            "name": "Imported Project",
+            "description": "Created from uploaded files",
+            "files": [
+                {
+                    "relative_path": "src/main.ts",
+                    "contents_base64": "Y29uc29sZS5sb2coJ2hlbGxvJyk7"
+                },
+                {
+                    "relative_path": "README.md",
+                    "contents_base64": "IyBJbXBvcnRlZAo="
+                }
+            ]
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let body = response_json(resp).await;
+
+    assert_eq!(body["name"], "Imported Project");
+    assert_eq!(body["workspace_source"], "imported");
+    assert_eq!(body["workspace_display_path"], "Imported workspace snapshot");
+
+    let project_id: ProjectId = body["project_id"].as_str().unwrap().parse().unwrap();
+    let project = state.store.get_project(&project_id).unwrap();
+    assert_eq!(project.workspace_source.as_deref(), Some("imported"));
+
+    let imported_main = std::path::Path::new(&project.linked_folder_path).join("src/main.ts");
+    let imported_readme = std::path::Path::new(&project.linked_folder_path).join("README.md");
+    assert_eq!(std::fs::read_to_string(imported_main).unwrap(), "console.log('hello');");
+    assert_eq!(std::fs::read_to_string(imported_readme).unwrap(), "# Imported\n");
+}
+
 // ---------------------------------------------------------------------------
 // Task/Progress Endpoint Tests
 // ---------------------------------------------------------------------------
@@ -189,6 +231,8 @@ async fn task_list_and_progress() {
         name: "Test".into(),
         description: "d".into(),
         linked_folder_path: project_dir.path().to_string_lossy().to_string(),
+        workspace_source: None,
+        workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
         github_integration_id: None,
@@ -275,6 +319,8 @@ async fn agent_list_empty() {
         name: "Test".into(),
         description: "d".into(),
         linked_folder_path: ".".into(),
+        workspace_source: None,
+        workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
         github_integration_id: None,

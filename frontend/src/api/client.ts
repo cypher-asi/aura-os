@@ -108,6 +108,8 @@ export interface CreateProjectRequest {
   name: string;
   description: string;
   linked_folder_path: string;
+  workspace_source?: string;
+  workspace_display_path?: string;
   github_integration_id?: string;
   github_repo_full_name?: string;
 }
@@ -116,8 +118,24 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   linked_folder_path?: string;
+  workspace_source?: string;
+  workspace_display_path?: string;
   github_integration_id?: string;
   github_repo_full_name?: string;
+}
+
+export interface ImportedProjectFile {
+  relative_path: string;
+  contents_base64: string;
+}
+
+export interface CreateImportedProjectRequest {
+  org_id: string;
+  name: string;
+  description: string;
+  files: ImportedProjectFile[];
+  build_command?: string;
+  test_command?: string;
 }
 
 export interface DirEntry {
@@ -247,6 +265,11 @@ export const api = {
     apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
   createProject: (data: CreateProjectRequest) =>
     apiFetch<Project>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  importProject: (data: CreateImportedProjectRequest) =>
+    apiFetch<Project>("/api/projects/import", {
       method: "POST",
       body: JSON.stringify(data),
     }),

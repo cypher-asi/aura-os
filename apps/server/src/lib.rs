@@ -218,6 +218,10 @@ fn seed_default_agents(store: &RocksStore, agent_service: &AgentService) {
 }
 
 pub fn build_app_state(db_path: &Path) -> AppState {
+    let data_dir = db_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let github_service = Arc::new(GitHubService::new(store.clone(), org_service.clone()));
@@ -304,6 +308,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     ));
 
     AppState {
+        data_dir,
         store,
         org_service,
         github_service,

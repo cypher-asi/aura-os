@@ -19,6 +19,8 @@ pub struct CreateProjectRequest {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
+    pub workspace_source: Option<String>,
+    pub workspace_display_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
@@ -30,8 +32,27 @@ pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
+    pub workspace_source: Option<String>,
+    pub workspace_display_path: Option<String>,
     pub github_integration_id: Option<GitHubIntegrationId>,
     pub github_repo_full_name: Option<String>,
+    pub build_command: Option<String>,
+    pub test_command: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImportedProjectFile {
+    pub relative_path: String,
+    pub contents_base64: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateImportedProjectRequest {
+    pub org_id: OrgId,
+    pub name: String,
+    pub description: String,
+    #[serde(default)]
+    pub files: Vec<ImportedProjectFile>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }

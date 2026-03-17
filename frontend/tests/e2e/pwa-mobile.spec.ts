@@ -175,6 +175,22 @@ test("mobile drawer exposes team and app settings", async ({ page }) => {
   await expect(page.getByText("Claude API Key")).toBeVisible();
 });
 
+test("mobile new project modal defaults to imported workspace mode", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+
+  await page.goto("/projects");
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByTitle("New Project").click();
+
+  await expect(page.getByText("Workspace source")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import snapshot" })).toBeVisible();
+  await expect(page.getByText("Uploads files into an Aura-managed workspace on the server.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import folder" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Import files" })).toBeVisible();
+  await expect(page.getByText("Aura uploads a copy of the selected files to a managed workspace on the connected host. This is the recommended web/mobile path.")).toBeVisible();
+});
+
 test("mobile details selection auto-opens preview", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
 

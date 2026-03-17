@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use tokio::sync::{broadcast, mpsc, Mutex};
@@ -26,6 +27,7 @@ pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub data_dir: PathBuf,
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
     pub github_service: Arc<GitHubService>,

@@ -115,6 +115,8 @@ fn sample_project() -> Project {
         name: "Test Project".into(),
         description: "A test project".into(),
         linked_folder_path: "/tmp/code".into(),
+        workspace_source: None,
+        workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
         github_integration_id: None,

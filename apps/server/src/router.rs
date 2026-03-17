@@ -120,6 +120,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             post(projects::create_project).get(projects::list_projects),
         )
         .route(
+            "/api/projects/import",
+            post(projects::create_imported_project),
+        )
+        .route(
             "/api/projects/:project_id",
             get(projects::get_project)
                 .put(projects::update_project)
