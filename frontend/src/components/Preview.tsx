@@ -366,6 +366,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
   const [agentInstance, setAgentInstance] = useState<AgentInstance | null>(null);
+  const [completedByAgent, setCompletedByAgent] = useState<AgentInstance | null>(null);
   const hydratedRef = useRef< string | null >(null);
   const [showRawOutput, setShowRawOutput] = useState(false);
   const rawOutputRef = useRef<HTMLPreElement>(null);
@@ -384,6 +385,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     setLiveSessionId(null);
     setFailReason(null);
     setAgentInstance(null);
+    setCompletedByAgent(null);
   }, [task.task_id]);
 
   useEffect(() => {
@@ -395,6 +397,20 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
       .then(setAgentInstance)
       .catch(() => setAgentInstance(null));
   }, [projectId, task.assigned_agent_instance_id]);
+
+  useEffect(() => {
+    if (!projectId || !task.completed_by_agent_instance_id) {
+      setCompletedByAgent(null);
+      return;
+    }
+    if (task.completed_by_agent_instance_id === task.assigned_agent_instance_id && agentInstance) {
+      setCompletedByAgent(agentInstance);
+      return;
+    }
+    api.getAgentInstance(projectId, task.completed_by_agent_instance_id)
+      .then(setCompletedByAgent)
+      .catch(() => setCompletedByAgent(null));
+  }, [projectId, task.completed_by_agent_instance_id, task.assigned_agent_instance_id, agentInstance]);
 
   useEffect(() => {
     const unsubs = [
@@ -611,12 +627,23 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
         </div>
         {agentInstance && (
           <div className={styles.taskField}>
-            <span className={styles.fieldLabel}>Agent</span>
+            <span className={styles.fieldLabel}>Assigned to</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               {agentInstance.icon && (
                 <img src={agentInstance.icon} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
               )}
               <Text size="sm">{agentInstance.name}</Text>
+            </span>
+          </div>
+        )}
+        {completedByAgent && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel}>Completed by</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              {completedByAgent.icon && (
+                <img src={completedByAgent.icon} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+              )}
+              <Text size="sm">{completedByAgent.name}</Text>
             </span>
           </div>
         )}
