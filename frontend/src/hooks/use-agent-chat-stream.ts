@@ -35,7 +35,7 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
     async (
       content: string,
       action: string | null = null,
-      selectedModel: string,
+      _selectedModel?: string | null,
       attachments?: import("../api/streams").ChatAttachment[],
     ) => {
       if (!agentId || isStreaming) return;
@@ -68,7 +68,7 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
         agentId,
         userMsg.content,
         action,
-        selectedModel,
+        null,
         attachments,
         {
           onThinkingDelta(text) {

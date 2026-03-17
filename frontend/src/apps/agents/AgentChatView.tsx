@@ -31,7 +31,6 @@ export function AgentChatView() {
   } = useAgentChatStream({ agentId });
 
   const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState("opus-4.6");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
@@ -103,10 +102,10 @@ export function AgentChatView() {
             name: a.name,
           }))
         : undefined;
-      sendMessage(content, action ?? null, selectedModel, apiAttachments);
+      sendMessage(content, action ?? null, null, apiAttachments);
       setAttachments([]);
     },
-    [sendMessage, selectedModel, attachments],
+    [sendMessage, attachments],
   );
 
   if (!agentId) {
@@ -160,8 +159,6 @@ export function AgentChatView() {
           onSend={handleSend}
           onStop={stopStreaming}
           isStreaming={isStreaming}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
           agentName={agentName}
           attachments={attachments}
           onAttachmentsChange={setAttachments}

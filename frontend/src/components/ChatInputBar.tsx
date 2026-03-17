@@ -1,8 +1,5 @@
 import { useRef, useState, useImperativeHandle, forwardRef, useCallback, useEffect } from "react";
-import { Menu } from "@cypher-asi/zui";
-import type { MenuItem } from "@cypher-asi/zui";
-import { ArrowUp, ChevronDown, Plus, X, FileText } from "lucide-react";
-import { useClickOutside } from "../hooks/use-click-outside";
+import { ArrowUp, Plus, X, FileText } from "lucide-react";
 import styles from "./ChatView.module.css";
 
 const MAX_ATTACHMENTS = 5;
@@ -12,15 +9,7 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const TEXT_TYPES = ["text/plain", "text/markdown", "text/x-markdown"];
 const TEXT_EXTENSIONS = [".md", ".txt", ".markdown"];
 
-const MODEL_OPTIONS: Record<string, string> = {
-  "opus-4.6": "Opus 4.6",
-  "gpt-5.3-codex": "GPT 5.3 Codex",
-};
-
-const modelMenuItems: MenuItem[] = [
-  { id: "opus-4.6", label: "Opus 4.6" },
-  { id: "gpt-5.3-codex", label: "GPT 5.3 Codex" },
-];
+const ACTIVE_MODEL_LABEL = "Opus 4.6";
 
 export interface ChatInputBarHandle {
   focus: () => void;
@@ -42,8 +31,8 @@ interface Props {
   onSend: (content: string, action?: string, attachments?: AttachmentItem[]) => void;
   onStop: () => void;
   isStreaming: boolean;
-  selectedModel: string;
-  onModelChange: (model: string) => void;
+  selectedModel?: string;
+  onModelChange?: (model: string) => void;
   agentName?: string;
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (items: AttachmentItem[]) => void;
@@ -56,23 +45,17 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   onSend,
   onStop,
   isStreaming,
-  selectedModel,
-  onModelChange,
   attachments = [],
   onAttachmentsChange,
   onRemoveAttachment,
 }, ref) {
-  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => textareaRef.current?.focus(),
   }));
-
-  useClickOutside(modelMenuRef, () => setModelMenuOpen(false), modelMenuOpen);
 
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
@@ -290,32 +273,7 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
         </div>
       </div>
       <div className={styles.inputInfoBar}>
-        <div ref={modelMenuRef} className={styles.modelMenuWrap}>
-          <button
-            type="button"
-            className={styles.modelButton}
-            onClick={() => setModelMenuOpen((v) => !v)}
-          >
-            {MODEL_OPTIONS[selectedModel]} <ChevronDown size={10} />
-          </button>
-          {modelMenuOpen && (
-            <div className={styles.modelMenu}>
-              <Menu
-                items={modelMenuItems}
-                value={selectedModel}
-                onChange={(id) => {
-                  onModelChange(id);
-                  setModelMenuOpen(false);
-                }}
-                background="solid"
-                border="solid"
-                rounded="md"
-                width={180}
-                isOpen
-              />
-            </div>
-          )}
-        </div>
+        <span className={styles.modelButton}>{ACTIVE_MODEL_LABEL}</span>
         <span className={styles.infoDot}>·</span>
         <span className={styles.infoText}>/ for commands</span>
       </div>
