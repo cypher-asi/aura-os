@@ -407,10 +407,10 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
-  border-radius: 24px;
-  background: var(--color-bg-secondary, #1e1e1e);
+  border-radius: 6px;
+  background: transparent;
   padding: 0;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
   max-width: 680px;
   margin-left: auto;
   margin-right: auto;
@@ -510,11 +510,26 @@
 }
 
 .inputContainer:focus-within {
-  border-color: var(--color-border);
-  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+}
+
+.inputArrow {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+  padding: 0 2px;
+  user-select: none;
+  opacity: 0.6;
 }
 
 .textarea {
+  flex: 1;
   width: 100%;
   resize: none;
   border: none;
@@ -523,16 +538,17 @@
   font-family: inherit;
   font-size: 14px;
   line-height: 1.5;
-  padding: 14px 18px 4px;
+  padding: 10px 8px;
   min-height: 24px;
   max-height: 160px;
   outline: none;
   overflow-y: auto;
-  border-radius: 24px 24px 0 0;
+  border-radius: 0;
 }
 
 .textarea::placeholder {
   color: var(--color-text-muted);
+  opacity: 0.5;
 }
 
 .textarea:disabled {
@@ -540,43 +556,44 @@
   cursor: not-allowed;
 }
 
-.inputToolbar {
+.inputInfoBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px 8px;
-  gap: var(--space-2);
+  gap: 6px;
+  padding: 8px 4px 0;
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.toolbarLeft {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.infoDot {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  opacity: 0.4;
 }
 
-.toolbarRight {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.infoText {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  opacity: 0.5;
 }
 
 .attachButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
   flex-shrink: 0;
 }
 
 .attachButton:hover {
-  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
   color: var(--color-text);
 }
 
@@ -599,22 +616,23 @@
 .modelButton {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
   border: none;
   background: transparent;
   color: var(--color-text-muted);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: color 0.15s ease;
   white-space: nowrap;
+  opacity: 0.6;
 }
 
 .modelButton:hover {
-  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
   color: var(--color-text);
+  opacity: 1;
 }
 
 .modelMenu {
@@ -628,35 +646,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
   border: none;
-  background: var(--color-text, #e0e0e0);
-  color: var(--color-bg, #1a1a1a);
+  background: transparent;
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  transition: color 0.15s ease;
   flex-shrink: 0;
 }
 
-.sendButton:hover {
-  opacity: 0.85;
+.sendButton:hover:not(:disabled) {
+  color: var(--color-text);
 }
 
 .sendButton:disabled {
-  opacity: 0.35;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
 .stopButton {
-  background: #2f2f2f !important;
+  color: var(--color-text) !important;
   opacity: 1 !important;
 }
 
 .stopIcon {
   display: block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  background: #fff;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-text-muted);
 }

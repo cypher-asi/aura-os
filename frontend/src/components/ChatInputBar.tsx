@@ -58,7 +58,6 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   isStreaming,
   selectedModel,
   onModelChange,
-  agentName,
   attachments = [],
   onAttachmentsChange,
   onRemoveAttachment,
@@ -248,76 +247,77 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
             ))}
           </div>
         )}
-        <textarea
-          ref={textareaRef}
-          className={styles.textarea}
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={`Message ${agentName ?? "AURA"}...`}
-          rows={1}
-        />
-        <div className={styles.inputToolbar}>
-          <div className={styles.toolbarLeft}>
+        <div className={styles.inputRow}>
+          <button
+            type="button"
+            className={styles.attachButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canAddMore}
+            aria-label="Attach file"
+          >
+            <Plus size={16} />
+          </button>
+          <span className={styles.inputArrow}>→</span>
+          <textarea
+            ref={textareaRef}
+            className={styles.textarea}
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Add a follow-up"
+            rows={1}
+          />
+          {isStreaming ? (
             <button
               type="button"
-              className={styles.attachButton}
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canAddMore}
-              aria-label="Attach file"
+              className={`${styles.sendButton} ${styles.stopButton}`}
+              onClick={onStop}
+              aria-label="Stop"
             >
-              <Plus size={16} />
+              <span className={styles.stopIcon} />
             </button>
-            <div ref={modelMenuRef} className={styles.modelMenuWrap}>
-              <button
-                type="button"
-                className={styles.modelButton}
-                onClick={() => setModelMenuOpen((v) => !v)}
-              >
-                {MODEL_OPTIONS[selectedModel]} <ChevronDown size={12} />
-              </button>
-              {modelMenuOpen && (
-                <div className={styles.modelMenu}>
-                  <Menu
-                    items={modelMenuItems}
-                    value={selectedModel}
-                    onChange={(id) => {
-                      onModelChange(id);
-                      setModelMenuOpen(false);
-                    }}
-                    background="solid"
-                    border="solid"
-                    rounded="md"
-                    width={180}
-                    isOpen
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={styles.toolbarRight}>
-            {isStreaming ? (
-              <button
-                type="button"
-                className={`${styles.sendButton} ${styles.stopButton}`}
-                onClick={onStop}
-                aria-label="Stop"
-              >
-                <span className={styles.stopIcon} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.sendButton}
-                onClick={() => onSend(input)}
-                disabled={!input.trim() && attachments.length === 0}
-                aria-label="Send"
-              >
-                <ArrowUp size={18} />
-              </button>
-            )}
-          </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.sendButton}
+              onClick={() => onSend(input)}
+              disabled={!input.trim() && attachments.length === 0}
+              aria-label="Send"
+            >
+              <ArrowUp size={16} />
+            </button>
+          )}
         </div>
+      </div>
+      <div className={styles.inputInfoBar}>
+        <div ref={modelMenuRef} className={styles.modelMenuWrap}>
+          <button
+            type="button"
+            className={styles.modelButton}
+            onClick={() => setModelMenuOpen((v) => !v)}
+          >
+            {MODEL_OPTIONS[selectedModel]} <ChevronDown size={10} />
+          </button>
+          {modelMenuOpen && (
+            <div className={styles.modelMenu}>
+              <Menu
+                items={modelMenuItems}
+                value={selectedModel}
+                onChange={(id) => {
+                  onModelChange(id);
+                  setModelMenuOpen(false);
+                }}
+                background="solid"
+                border="solid"
+                rounded="md"
+                width={180}
+                isOpen
+              />
+            </div>
+          )}
+        </div>
+        <span className={styles.infoDot}>·</span>
+        <span className={styles.infoText}>/ for commands</span>
       </div>
     </div>
   );

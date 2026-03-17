@@ -64,6 +64,7 @@
   overflow: hidden;
   border-bottom: none;
   box-sizing: border-box;
+  cursor: pointer;
 }
 
 /* Constrain inner content to prevent flex children from forcing overflow */
