@@ -44,6 +44,10 @@ impl MeteredLlm {
         &self.provider
     }
 
+    pub fn provider_arc(&self) -> Arc<ClaudeClient> {
+        self.provider.clone()
+    }
+
     fn access_token(&self) -> Option<String> {
         self.store
             .get_setting("zero_auth_session")

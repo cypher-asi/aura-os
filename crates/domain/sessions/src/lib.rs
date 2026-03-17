@@ -7,7 +7,7 @@ use chrono::Utc;
 
 use aura_core::*;
 use aura_store::RocksStore;
-use aura_claude::ClaudeClient;
+use aura_billing::MeteredLlm;
 
 pub const SUMMARY_SYSTEM_PROMPT: &str = r#"
 You are a context summarizer. Given the conversation history of an AI coding
@@ -202,14 +202,13 @@ impl SessionService {
 
     pub async fn generate_rollover_summary(
         &self,
-        claude_client: &ClaudeClient,
+        llm: &MeteredLlm,
         api_key: &str,
         conversation_history: &str,
     ) -> Result<String, SessionError> {
-        let summary = claude_client
-            .complete(api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048)
-            .await
-            .map_err(SessionError::Claude)?;
-        Ok(summary)
+        let resp = llm
+            .complete(api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048, "aura_session_rollover", None)
+            .await?;
+        Ok(resp.text)
     }
 }

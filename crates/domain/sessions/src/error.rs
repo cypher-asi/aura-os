@@ -1,3 +1,4 @@
+use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_store::StoreError;
 
@@ -9,4 +10,16 @@ pub enum SessionError {
     NotFound,
     #[error("Claude API error: {0}")]
     Claude(ClaudeClientError),
+    #[error("insufficient credits")]
+    InsufficientCredits,
+}
+
+impl From<MeteredLlmError> for SessionError {
+    fn from(e: MeteredLlmError) -> Self {
+        match e {
+            MeteredLlmError::InsufficientCredits => SessionError::InsufficientCredits,
+            MeteredLlmError::Llm(e) => SessionError::Claude(e),
+            MeteredLlmError::Billing(_) => SessionError::InsufficientCredits,
+        }
+    }
 }

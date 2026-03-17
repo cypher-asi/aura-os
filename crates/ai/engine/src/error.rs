@@ -1,4 +1,5 @@
 use aura_agents::AgentError;
+use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_projects::ProjectError;
 use aura_sessions::SessionError;
@@ -38,4 +39,14 @@ pub enum EngineError {
     AlreadyRunning,
     #[error("no loop running")]
     NotRunning,
+}
+
+impl From<MeteredLlmError> for EngineError {
+    fn from(e: MeteredLlmError) -> Self {
+        match e {
+            MeteredLlmError::InsufficientCredits => EngineError::InsufficientCredits,
+            MeteredLlmError::Llm(e) => EngineError::Claude(e),
+            MeteredLlmError::Billing(e) => EngineError::Io(e.to_string()),
+        }
+    }
 }

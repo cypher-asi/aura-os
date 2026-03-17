@@ -7,5 +7,6 @@ edition = "2021"
 aura-core = { path = "../../infra/core" }
 aura-store = { path = "../../infra/store" }
 aura-claude = { path = "../../infra/claude" }
+aura-billing = { path = "../billing" }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"

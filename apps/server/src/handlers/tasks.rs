@@ -38,7 +38,6 @@ pub async fn extract_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
-    super::billing::require_credits(&state).await?;
     let tasks = state
         .task_extraction_service
         .extract_all_tasks(&project_id)

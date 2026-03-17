@@ -599,13 +599,15 @@ impl DevLoopEngine {
             });
 
             let response = self
-                .claude_client
+                .llm
                 .complete_stream(
                     api_key,
                     &build_fix_system_prompt(),
                     &fix_prompt,
                     TASK_EXECUTION_MAX_TOKENS,
                     stream_tx,
+                    "aura_build_fix",
+                    None,
                 )
                 .await?;
             let _ = forwarder.await;
@@ -865,13 +867,15 @@ impl DevLoopEngine {
         });
 
         let response = self
-            .claude_client
+            .llm
             .complete_stream(
                 api_key,
                 &build_fix_system_prompt(),
                 &fix_prompt,
                 TASK_EXECUTION_MAX_TOKENS,
                 stream_tx,
+                "aura_build_fix",
+                None,
             )
             .await?;
         let _ = forwarder.await;

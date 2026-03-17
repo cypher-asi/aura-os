@@ -5,14 +5,14 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use aura_core::*;
-use aura_billing::{BillingClient, BillingError};
+use aura_billing::MeteredLlm;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
 
 use crate::chat_tool_executor::ChatToolExecutor;
 use aura_tools::{agent_tool_definitions, multi_project_tool_definitions};
 use aura_claude::{
-    ClaudeClient, ClaudeStreamEvent, ContentBlock, ImageSource, MessageContent, RichMessage,
+    ClaudeStreamEvent, ContentBlock, ImageSource, MessageContent, RichMessage,
     ThinkingConfig, ToolDefinition,
 };
 use base64::engine::general_purpose::STANDARD as B64;
@@ -254,8 +254,7 @@ pub enum ChatStreamEvent {
 pub struct ChatService {
     store: Arc<RocksStore>,
     settings: Arc<SettingsService>,
-    claude_client: Arc<ClaudeClient>,
-    billing_client: Arc<BillingClient>,
+    llm: Arc<MeteredLlm>,
     spec_gen: Arc<SpecGenerationService>,
     project_service: Arc<ProjectService>,
     task_service: Arc<TaskService>,
@@ -265,8 +264,7 @@ impl ChatService {
     pub fn new(
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
-        claude_client: Arc<ClaudeClient>,
-        billing_client: Arc<BillingClient>,
+        llm: Arc<MeteredLlm>,
         spec_gen: Arc<SpecGenerationService>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
@@ -274,8 +272,7 @@ impl ChatService {
         Self {
             store,
             settings,
-            claude_client,
-            billing_client,
+            llm,
             spec_gen,
             project_service,
             task_service,
@@ -318,12 +315,6 @@ impl ChatService {
         let send = |evt: ChatStreamEvent| {
             let _ = tx.send(evt);
         };
-
-        if let Err(msg) = self.check_credits().await {
-            send(ChatStreamEvent::Error(msg));
-            send(ChatStreamEvent::Done);
-            return;
-        }
 
         let now = Utc::now();
 
@@ -408,12 +399,6 @@ impl ChatService {
         let send = |evt: ChatStreamEvent| {
             let _ = tx.send(evt);
         };
-
-        if let Err(msg) = self.check_credits().await {
-            send(ChatStreamEvent::Error(msg));
-            send(ChatStreamEvent::Done);
-            return;
-        }
 
         let now = Utc::now();
 
@@ -589,14 +574,14 @@ impl ChatService {
         for iteration in 0..max_iters {
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
-            let client = self.claude_client.clone();
+            let llm = self.llm.clone();
             let api_key_owned = api_key.clone();
             let system_owned = system.clone();
             let msgs_owned = api_messages.clone();
             let tools_owned = tools.clone();
 
             let stream_handle = tokio::spawn(async move {
-                client
+                llm
                     .complete_stream_with_tools_thinking(
                         &api_key_owned,
                         &system_owned,
@@ -605,6 +590,8 @@ impl ChatService {
                         CHAT_MAX_TOKENS,
                         ThinkingConfig::enabled(THINKING_BUDGET),
                         claude_tx,
+                        "aura_chat",
+                        None,
                     )
                     .await
             });
@@ -659,7 +646,7 @@ impl ChatService {
                 Ok(Ok(r)) => r,
                 Ok(Err(e)) => {
                     if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Claude API error: {e}")));
+                        send(ChatStreamEvent::Error(format!("LLM error: {e}")));
                     }
                     if !total_text.is_empty() && !iter_text.is_empty() {
                         total_text.push_str("\n\n");
@@ -981,14 +968,14 @@ impl ChatService {
         for iteration in 0..max_iters {
             let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
-            let client = self.claude_client.clone();
+            let llm = self.llm.clone();
             let api_key_owned = api_key.clone();
             let system_owned = system.clone();
             let msgs_owned = api_messages.clone();
             let tools_owned = tools.clone();
 
             let stream_handle = tokio::spawn(async move {
-                client
+                llm
                     .complete_stream_with_tools_thinking(
                         &api_key_owned,
                         &system_owned,
@@ -997,6 +984,8 @@ impl ChatService {
                         CHAT_MAX_TOKENS,
                         ThinkingConfig::enabled(THINKING_BUDGET),
                         claude_tx,
+                        "aura_chat",
+                        None,
                     )
                     .await
             });
@@ -1051,7 +1040,7 @@ impl ChatService {
                 Ok(Ok(r)) => r,
                 Ok(Err(e)) => {
                     if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                        send(ChatStreamEvent::Error(format!("Claude API error: {e}")));
+                        send(ChatStreamEvent::Error(format!("LLM error: {e}")));
                     }
                     if !total_text.is_empty() && !iter_text.is_empty() {
                         total_text.push_str("\n\n");
@@ -1077,15 +1066,6 @@ impl ChatService {
                 input_tokens: accumulated_input_tokens,
                 output_tokens: accumulated_output_tokens,
             });
-
-            self.debit_credits(
-                stream_result.input_tokens + stream_result.output_tokens,
-                "aura_chat",
-                Some(serde_json::json!({
-                    "project_id": project_id.to_string(),
-                    "agent_instance_id": agent_instance_id.to_string(),
-                })),
-            ).await;
 
             // Persist tokens incrementally so they're not lost if a later iteration hangs
             if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
@@ -1489,11 +1469,12 @@ impl ChatService {
         }
 
         match self
-            .claude_client
-            .complete(api_key, "You summarize conversations concisely.", &summary_input, 1024)
+            .llm
+            .complete(api_key, "You summarize conversations concisely.", &summary_input, 1024, "aura_context_summary", None)
             .await
         {
-            Ok(summary) => {
+            Ok(resp) => {
+                let summary = resp.text;
                 let mut result = vec![RichMessage::user(&format!(
                     "Previous conversation summary:\n{summary}"
                 ))];
@@ -1547,11 +1528,12 @@ impl ChatService {
         );
 
         match self
-            .claude_client
-            .complete(api_key, "You generate short chat titles.", &title_prompt, 30)
+            .llm
+            .complete(api_key, "You generate short chat titles.", &title_prompt, 30, "aura_title_gen", None)
             .await
         {
-            Ok(title) => {
+            Ok(resp) => {
+                let title = resp.text;
                 let title = title.trim().trim_matches('"').to_string();
                 if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
                     instance.name = title;
@@ -1568,57 +1550,6 @@ impl ChatService {
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate title");
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Credit checks & debiting
-    // -----------------------------------------------------------------------
-
-    async fn check_credits(&self) -> Result<(), String> {
-        let token = self.store
-            .get_setting("zero_auth_session")
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
-            .map(|s| s.access_token);
-        let Some(token) = token else {
-            return Err("Not authenticated. Please log in to continue.".to_string());
-        };
-        self.billing_client
-            .ensure_has_credits(&token)
-            .await
-            .map(|_| ())
-            .map_err(|_| "Insufficient credits. Please purchase credits to continue.".to_string())
-    }
-
-    async fn debit_credits(
-        &self,
-        amount: u64,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
-    ) {
-        if amount == 0 {
-            return;
-        }
-        let token = self.store
-            .get_setting("zero_auth_session")
-            .ok()
-            .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
-            .map(|s| s.access_token);
-        let Some(token) = token else {
-            warn!("No access token available for credit debit");
-            return;
-        };
-        match self.billing_client.debit_credits(&token, amount, reason, None, metadata).await {
-            Ok(resp) => {
-                info!(amount, reason, balance = resp.balance, tx = %resp.transaction_id, "Credits debited");
-            }
-            Err(BillingError::InsufficientCredits { available, required }) => {
-                warn!(available, required, "Insufficient credits for chat");
-            }
-            Err(e) => {
-                warn!(error = %e, reason, "Failed to debit credits");
             }
         }
     }
@@ -1675,14 +1606,6 @@ impl ChatService {
                         input_tokens: spec_input_tokens,
                         output_tokens: spec_output_tokens,
                     });
-                    self.debit_credits(
-                        input_tokens + output_tokens,
-                        "aura_spec_gen",
-                        Some(serde_json::json!({
-                            "project_id": project_id.to_string(),
-                            "agent_instance_id": agent_instance_id.to_string(),
-                        })),
-                    ).await;
                 }
                 SpecStreamEvent::Error(msg) => {
                     let _ = tx.send(ChatStreamEvent::Error(msg));

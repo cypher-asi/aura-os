@@ -141,7 +141,6 @@ pub async fn generate_sprint(
     State(state): State<AppState>,
     Path((project_id, sprint_id)): Path<(ProjectId, SprintId)>,
 ) -> ApiResult<Json<Sprint>> {
-    super::billing::require_credits(&state).await?;
     let mut sprint = state
         .store
         .get_sprint(&project_id, &sprint_id)
@@ -155,11 +154,12 @@ pub async fn generate_sprint(
         .get_decrypted_api_key()
         .map_err(|e| ApiError::internal(format!("API key error: {e}")))?;
 
-    let expanded = state
-        .claude_client
-        .complete(&api_key, GENERATE_SYSTEM_PROMPT, &sprint.prompt, 8192)
+    let resp = state
+        .llm
+        .complete(&api_key, GENERATE_SYSTEM_PROMPT, &sprint.prompt, 8192, "aura_sprint_gen", None)
         .await
         .map_err(|e| ApiError::internal(format!("LLM generation failed: {e}")))?;
+    let expanded = resp.text;
 
     sprint.prompt = expanded;
     sprint.generated_at = Some(Utc::now());
@@ -178,7 +178,6 @@ pub async fn generate_sprint_stream(
     State(state): State<AppState>,
     Path((project_id, sprint_id)): Path<(ProjectId, SprintId)>,
 ) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
-    super::billing::require_credits(&state).await?;
     let sprint = state
         .store
         .get_sprint(&project_id, &sprint_id)
@@ -199,7 +198,7 @@ pub async fn generate_sprint_stream(
     let sse_tx_fwd = sse_tx.clone();
 
     tokio::spawn(save_sprint_result(
-        state.claude_client.clone(),
+        state.llm.clone(),
         state.store.clone(),
         api_key,
         prompt.clone(),
@@ -219,7 +218,7 @@ pub async fn generate_sprint_stream(
 }
 
 async fn save_sprint_result(
-    claude_client: std::sync::Arc<aura_claude::ClaudeClient>,
+    llm: std::sync::Arc<aura_billing::MeteredLlm>,
     store: std::sync::Arc<aura_store::RocksStore>,
     api_key: String,
     prompt: String,
@@ -229,13 +228,15 @@ async fn save_sprint_result(
     claude_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
     sse_tx: mpsc::UnboundedSender<Event>,
 ) {
-    let result = claude_client
+    let result = llm
         .complete_stream(
             &api_key,
             GENERATE_SYSTEM_PROMPT,
             &prompt,
             8192,
             claude_tx,
+            "aura_sprint_gen",
+            None,
         )
         .await;
 

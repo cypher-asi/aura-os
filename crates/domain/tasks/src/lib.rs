@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use aura_core::*;
 use aura_settings::SettingsService;
 use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
-use aura_claude::ClaudeClient;
+use aura_billing::MeteredLlm;
 
 // ---------------------------------------------------------------------------
 // ProjectProgress
@@ -609,19 +609,19 @@ pub(crate) struct RawTaskOutput {
 pub struct TaskExtractionService {
     store: Arc<RocksStore>,
     settings: Arc<SettingsService>,
-    claude_client: Arc<ClaudeClient>,
+    llm: Arc<MeteredLlm>,
 }
 
 impl TaskExtractionService {
     pub fn new(
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
-        claude_client: Arc<ClaudeClient>,
+        llm: Arc<MeteredLlm>,
     ) -> Self {
         Self {
             store,
             settings,
-            claude_client,
+            llm,
         }
     }
 
@@ -630,17 +630,19 @@ impl TaskExtractionService {
         spec: &Spec,
         api_key: &str,
     ) -> Result<Vec<(RawTaskOutput, u32)>, TaskError> {
-        let response = self
-            .claude_client
+        let resp = self
+            .llm
             .complete(
                 api_key,
                 TASK_EXTRACTION_SYSTEM_PROMPT,
                 &spec.markdown_contents,
                 EXTRACTION_MAX_TOKENS,
+                "aura_task_extraction",
+                None,
             )
             .await?;
 
-        let raw_tasks = Self::parse_extraction_response(&response)?;
+        let raw_tasks = Self::parse_extraction_response(&resp.text)?;
 
         Ok(raw_tasks
             .into_iter()

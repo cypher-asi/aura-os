@@ -11,7 +11,7 @@ use aura_core::*;
 use aura_settings::SettingsService;
 use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
 
-use aura_claude::ClaudeClient;
+use aura_billing::MeteredLlm;
 use crate::error::SpecGenError;
 
 use parser::{RawSpecOutput, parse_claude_response, raw_to_specs};
@@ -90,19 +90,19 @@ pub(crate) const SPEC_SUMMARY_MAX_WORDS: usize = 85;
 pub struct SpecGenerationService {
     pub(crate) store: Arc<RocksStore>,
     pub(crate) settings: Arc<SettingsService>,
-    pub(crate) claude_client: Arc<ClaudeClient>,
+    pub(crate) llm: Arc<MeteredLlm>,
 }
 
 impl SpecGenerationService {
     pub fn new(
         store: Arc<RocksStore>,
         settings: Arc<SettingsService>,
-        claude_client: Arc<ClaudeClient>,
+        llm: Arc<MeteredLlm>,
     ) -> Self {
         Self {
             store,
             settings,
-            claude_client,
+            llm,
         }
     }
 
@@ -164,21 +164,24 @@ impl SpecGenerationService {
         Self::emit(&progress, "Calling Claude to generate specs — this may take a minute");
         info!(%project_id, max_tokens = MAX_TOKENS, "Sending request to Claude API");
 
-        let response = self
-            .claude_client
+        let llm_response = self
+            .llm
             .complete(
                 &api_key,
                 SPEC_GENERATION_SYSTEM_PROMPT,
                 &requirements_content,
                 MAX_TOKENS,
+                "aura_spec_gen",
+                None,
             )
             .await
             .map_err(|e| {
-                error!(%project_id, error = %e, "Claude API call failed");
-                e
+                error!(%project_id, error = %e, "LLM call failed");
+                SpecGenError::from(e)
             })?;
+        let response = llm_response.text;
 
-        info!(%project_id, response_len = response.len(), "Claude API response received");
+        info!(%project_id, response_len = response.len(), "LLM response received");
 
         Self::emit(&progress, "Parsing AI response");
 

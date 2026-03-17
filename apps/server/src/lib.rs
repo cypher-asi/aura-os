@@ -232,12 +232,12 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let spec_gen_service = Arc::new(SpecGenerationService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
+        llm.clone(),
     ));
     let task_extraction_service = Arc::new(TaskExtractionService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
+        llm.clone(),
     ));
     let task_service = Arc::new(TaskService::new(store.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone()));
@@ -246,8 +246,7 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
     let chat_service = Arc::new(ChatService::new(
         store.clone(),
         settings_service.clone(),
-        claude_client.clone(),
-        billing_client.clone(),
+        llm.clone(),
         spec_gen_service.clone(),
         project_service.clone(),
         task_service.clone(),
@@ -306,7 +305,6 @@ pub fn build_app_state(db_path: &Path, data_dir: &Path) -> AppState {
         agent_instance_service,
         session_service,
         chat_service,
-        claude_client,
         llm,
         event_tx,
         event_broadcast,

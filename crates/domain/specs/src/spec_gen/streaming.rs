@@ -80,15 +80,18 @@ impl SpecGenerationService {
         requirements_content: &str,
     ) -> Result<(String, String), SpecGenError> {
         let api_key = self.settings.get_decrypted_api_key()?;
-        let raw_overview = self
-            .claude_client
+        let resp = self
+            .llm
             .complete(
                 &api_key,
                 SPEC_OVERVIEW_SYSTEM_PROMPT,
                 requirements_content,
                 SPEC_OVERVIEW_MAX_TOKENS,
+                "aura_spec_gen",
+                None,
             )
             .await?;
+        let raw_overview = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
         let title = title_opt.ok_or_else(|| {
             SpecGenError::ParseError(format!(
@@ -145,17 +148,19 @@ impl SpecGenerationService {
 
         let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
-        let client = self.claude_client.clone();
+        let llm = self.llm.clone();
         let api_key_owned = api_key;
         let req_owned = requirements_content;
         let stream_handle = tokio::spawn(async move {
-            client
+            llm
                 .complete_stream(
                     &api_key_owned,
                     SPEC_GENERATION_SYSTEM_PROMPT,
                     &req_owned,
                     MAX_TOKENS,
                     claude_tx,
+                    "aura_spec_gen",
+                    None,
                 )
                 .await
         });
@@ -264,11 +269,11 @@ impl SpecGenerationService {
             lines.join("\n"),
             SPEC_SUMMARY_MAX_WORDS
         );
-        let response = self
-            .claude_client
-            .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS)
-            .await
-            .map_err(SpecGenError::Claude)?;
+        let resp = self
+            .llm
+            .complete(&api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS, "aura_spec_gen", None)
+            .await?;
+        let response = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);
         let title = title_opt.ok_or_else(|| {
             SpecGenError::ParseError("LLM did not produce a TITLE line".to_string())

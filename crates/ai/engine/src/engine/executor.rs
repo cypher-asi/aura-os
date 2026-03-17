@@ -645,12 +645,14 @@ impl DevLoopEngine {
                     }
                 });
 
-                let response = self.claude_client.complete_stream(
+                let response = self.llm.complete_stream(
                     &api_key,
                     &build_fix_system_prompt(),
                     &fix_prompt,
                     TASK_EXECUTION_MAX_TOKENS,
                     stream_tx,
+                    "aura_build_fix",
+                    None,
                 ).await?;
                 let _ = forwarder.await;
 
@@ -736,7 +738,7 @@ impl DevLoopEngine {
 
             let thinking = ThinkingConfig::enabled(10_000);
             let stream_result = self
-                .claude_client
+                .llm
                 .complete_stream_with_tools_thinking(
                     api_key,
                     &system_prompt,
@@ -745,6 +747,8 @@ impl DevLoopEngine {
                     TASK_EXECUTION_MAX_TOKENS,
                     thinking,
                     claude_tx,
+                    "aura_task",
+                    None,
                 )
                 .await?;
             let _ = forwarder.await;
@@ -932,13 +936,15 @@ impl DevLoopEngine {
             });
 
             let resp = self
-                .claude_client
+                .llm
                 .complete_stream(
                     api_key,
                     &task_execution_system_prompt(),
                     &user_message,
                     TASK_EXECUTION_MAX_TOKENS,
                     stream_tx,
+                    "aura_task",
+                    None,
                 )
                 .await?;
             let _ = forwarder.await;
@@ -988,13 +994,15 @@ impl DevLoopEngine {
                     });
 
                     let corrected = self
-                        .claude_client
+                        .llm
                         .complete_stream_multi(
                             api_key,
                             &task_execution_system_prompt(),
                             messages,
                             TASK_EXECUTION_MAX_TOKENS,
                             stream_tx2,
+                            "aura_task",
+                            None,
                         )
                         .await?;
                     let _ = forwarder2.await;
@@ -1042,13 +1050,15 @@ impl DevLoopEngine {
                     });
 
                     let retry_resp = self
-                        .claude_client
+                        .llm
                         .complete_stream_multi(
                             api_key,
                             &task_execution_system_prompt(),
                             messages,
                             TASK_EXECUTION_MAX_TOKENS,
                             stream_tx,
+                            "aura_task",
+                            None,
                         )
                         .await?;
                     let _ = forwarder.await;
