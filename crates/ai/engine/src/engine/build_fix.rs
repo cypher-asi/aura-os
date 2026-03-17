@@ -83,7 +83,13 @@ fn normalize_line_col_refs(line: &str) -> String {
 pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
     let trimmed = cmd.trim();
     if trimmed == "cargo run" || trimmed.starts_with("cargo run ") {
-        return Some(trimmed.replacen("cargo run", "cargo build", 1));
+        let mut corrected = trimmed.replacen("cargo run", "cargo build", 1);
+        if let Some(idx) = corrected.find(" -- ") {
+            corrected.truncate(idx);
+        } else if corrected.ends_with(" --") {
+            corrected.truncate(corrected.len() - 3);
+        }
+        return Some(corrected);
     }
     if trimmed == "npm start" {
         return Some("npm run build".to_string());
@@ -869,5 +875,166 @@ impl DevLoopEngine {
         }
 
         Ok((false, test_fix_inp, test_fix_out))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // auto_correct_build_command
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn auto_correct_cargo_run() {
+        assert_eq!(
+            auto_correct_build_command("cargo run"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_with_args() {
+        assert_eq!(
+            auto_correct_build_command("cargo run --release"),
+            Some("cargo build --release".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_strips_binary_args() {
+        assert_eq!(
+            auto_correct_build_command("cargo run -p spectra-app -- --help"),
+            Some("cargo build -p spectra-app".into())
+        );
+        assert_eq!(
+            auto_correct_build_command("cargo run -- --port 8080"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_cargo_run_trailing_double_dash() {
+        assert_eq!(
+            auto_correct_build_command("cargo run --"),
+            Some("cargo build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_npm_start() {
+        assert_eq!(
+            auto_correct_build_command("npm start"),
+            Some("npm run build".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_django_runserver() {
+        assert_eq!(
+            auto_correct_build_command("python manage.py runserver"),
+            Some("python manage.py check".into())
+        );
+    }
+
+    #[test]
+    fn auto_correct_returns_none_for_normal_build() {
+        assert_eq!(auto_correct_build_command("cargo build"), None);
+        assert_eq!(auto_correct_build_command("npm run build"), None);
+        assert_eq!(auto_correct_build_command("make"), None);
+    }
+
+    // -----------------------------------------------------------------------
+    // normalize_error_signature
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn normalize_strips_line_numbers() {
+        let stderr = "error[E0308]: mismatched types\n  --> src/main.rs:52:32\n";
+        let sig = normalize_error_signature(stderr);
+        assert!(sig.contains("error[E0308]: mismatched types"));
+        assert!(sig.contains("-->LOCATION"));
+        assert!(!sig.contains(":52:32"));
+    }
+
+    #[test]
+    fn normalize_deduplicates_same_errors() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+error[E0308]: mismatched types
+  --> src/main.rs:20:5
+";
+        let sig = normalize_error_signature(stderr);
+        let lines: Vec<&str> = sig.lines().collect();
+        let error_count = lines.iter().filter(|l| l.contains("E0308")).count();
+        assert_eq!(error_count, 1, "duplicate errors should be deduped");
+    }
+
+    #[test]
+    fn normalize_skips_help_lines() {
+        let stderr = "\
+error: cannot find value `x`
+help: consider importing this
+For more information about this error, try `rustc --explain E0425`
+";
+        let sig = normalize_error_signature(stderr);
+        assert!(!sig.contains("help:"));
+        assert!(!sig.contains("For more information"));
+    }
+
+    // -----------------------------------------------------------------------
+    // classify_build_errors
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn classify_rust_string_literal() {
+        let errors = classify_build_errors("error: unknown start of token \\u{201c}");
+        assert!(errors.contains(&ErrorCategory::RustStringLiteral));
+    }
+
+    #[test]
+    fn classify_rust_missing_module() {
+        let errors = classify_build_errors("error[E0583]: file not found for module `foo`");
+        assert!(errors.contains(&ErrorCategory::RustMissingModule));
+    }
+
+    #[test]
+    fn classify_rust_borrow_check() {
+        let errors = classify_build_errors("error[E0502]: cannot borrow `x` as mutable");
+        assert!(errors.contains(&ErrorCategory::RustBorrowCheck));
+    }
+
+    #[test]
+    fn classify_npm_dependency() {
+        let errors = classify_build_errors("Error: Cannot find module 'express'");
+        assert!(errors.contains(&ErrorCategory::NpmDependency));
+    }
+
+    #[test]
+    fn classify_npm_typescript() {
+        let errors = classify_build_errors("error TS2304: Cannot find name 'foo'");
+        assert!(errors.contains(&ErrorCategory::NpmTypeScript));
+    }
+
+    #[test]
+    fn classify_generic_syntax() {
+        let errors = classify_build_errors("syntax error near unexpected token");
+        assert!(errors.contains(&ErrorCategory::GenericSyntax));
+    }
+
+    #[test]
+    fn classify_unknown_fallback() {
+        let errors = classify_build_errors("something completely unknown happened");
+        assert!(errors.contains(&ErrorCategory::Unknown));
+    }
+
+    #[test]
+    fn classify_multiple_categories() {
+        let stderr = "error[E0599]: no method named `foo`\nerror[E0502]: cannot borrow `x`";
+        let errors = classify_build_errors(stderr);
+        assert!(errors.contains(&ErrorCategory::RustMissingMethod));
+        assert!(errors.contains(&ErrorCategory::RustBorrowCheck));
     }
 }

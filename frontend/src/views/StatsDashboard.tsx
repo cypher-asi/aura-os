@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { ProjectProgress } from "../types";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
-import { PageEmptyState, Panel, Text } from "@cypher-asi/zui";
+import { PageEmptyState, Text } from "@cypher-asi/zui";
 import styles from "./aura.module.css";
 
 export function StatsDashboard() {
@@ -37,8 +37,8 @@ export function StatsDashboard() {
 
   return (
     <div style={{ padding: "var(--space-3) var(--space-3)" }}>
-      <div style={{ textAlign: "center", marginBottom: "var(--space-3)" }}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-text-secondary)" }}>
+      <div style={{ textAlign: "center", marginBottom: "var(--space-3)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md, 6px)", padding: "var(--space-3)" }}>
+        <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-text-secondary)", paddingTop: "var(--space-2)", paddingBottom: "var(--space-2)" }}>
           {pct}%
         </div>
         <div className={styles.progressBarContainer}>
@@ -103,9 +103,9 @@ function StatCard({ value, label, fmt, fmtFn }: { value: number; label: string; 
   const display = fmtFn ? fmtFn(value) : fmt ? formatCompact(value) : value;
   const title = (fmtFn || fmt) ? value.toLocaleString() : undefined;
   return (
-    <Panel variant="solid" border="solid" style={{ padding: "var(--space-1) var(--space-2)", textAlign: "center", height: 64, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+    <div style={{ padding: "var(--space-1) var(--space-2)", textAlign: "center", height: 64, display: "flex", flexDirection: "column", justifyContent: "center", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md, 6px)" }}>
       <div className={styles.statValue} style={{ color: "var(--color-text-secondary)" }} title={title}>{display}</div>
       <Text size="xs" align="center" style={{ color: "var(--color-text-muted)", fontSize: 10 }}>{label}</Text>
-    </Panel>
+    </div>
   );
 }

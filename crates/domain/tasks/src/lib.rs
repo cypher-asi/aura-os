@@ -792,3 +792,91 @@ impl TaskExtractionService {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // parse_extraction_response
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn parse_valid_task_json() {
+        let input = r#"[
+            {"title": "Setup DB", "description": "Create tables", "depends_on": []},
+            {"title": "Add API", "description": "REST endpoints", "depends_on": ["Setup DB"]}
+        ]"#;
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 2);
+        assert_eq!(tasks[0].title, "Setup DB");
+        assert!(tasks[0].depends_on.is_empty());
+        assert_eq!(tasks[1].title, "Add API");
+        assert_eq!(tasks[1].depends_on, vec!["Setup DB"]);
+    }
+
+    #[test]
+    fn parse_fenced_task_json() {
+        let input = r#"
+Here are the extracted tasks:
+
+```json
+[{"title": "Init project", "description": "Scaffold", "depends_on": []}]
+```
+"#;
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].title, "Init project");
+    }
+
+    #[test]
+    fn parse_empty_task_array_errors() {
+        let input = "[]";
+        let err = TaskExtractionService::parse_extraction_response(input).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("empty"), "expected empty error, got: {msg}");
+    }
+
+    #[test]
+    fn parse_invalid_task_json_errors() {
+        let input = "not json at all";
+        assert!(TaskExtractionService::parse_extraction_response(input).is_err());
+    }
+
+    #[test]
+    fn parse_fenced_without_lang_tag() {
+        let input = "```\n[{\"title\":\"T\",\"description\":\"D\",\"depends_on\":[]}]\n```";
+        let tasks = TaskExtractionService::parse_extraction_response(input).unwrap();
+        assert_eq!(tasks.len(), 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // extract_fenced_json
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn extract_fenced_json_with_lang() {
+        let input = "text\n```json\n{\"key\":\"val\"}\n```\nmore";
+        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        assert_eq!(result, "{\"key\":\"val\"}");
+    }
+
+    #[test]
+    fn extract_fenced_json_without_lang() {
+        let input = "```\n[1,2,3]\n```";
+        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        assert_eq!(result, "[1,2,3]");
+    }
+
+    #[test]
+    fn extract_fenced_json_no_fence_returns_none() {
+        let input = "no fences here";
+        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
+    }
+
+    #[test]
+    fn extract_fenced_json_unclosed_returns_none() {
+        let input = "```json\n{\"key\":\"val\"}";
+        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
+    }
+}

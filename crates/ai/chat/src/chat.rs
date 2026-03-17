@@ -1356,3 +1356,253 @@ impl ChatService {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn make_project(name: &str, folder: &str) -> Project {
+        Project {
+            project_id: ProjectId::new(),
+            org_id: OrgId::new(),
+            name: name.into(),
+            description: "Test project description".into(),
+            linked_folder_path: folder.into(),
+            requirements_doc_path: None,
+            current_status: ProjectStatus::Planning,
+            github_integration_id: None,
+            github_repo_full_name: None,
+            build_command: Some("cargo build".into()),
+            test_command: Some("cargo test".into()),
+            specs_summary: None,
+            specs_title: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn make_agent(system_prompt: &str) -> Agent {
+        Agent {
+            agent_id: AgentId::new(),
+            user_id: "u1".into(),
+            name: "TestAgent".into(),
+            role: "developer".into(),
+            personality: String::new(),
+            system_prompt: system_prompt.into(),
+            skills: vec![],
+            icon: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    fn make_message(role: ChatRole, content: &str) -> Message {
+        Message {
+            message_id: MessageId::new(),
+            agent_instance_id: AgentInstanceId::new(),
+            project_id: ProjectId::new(),
+            role,
+            content: content.into(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: Utc::now(),
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // convert_messages_to_rich
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn convert_empty_messages() {
+        let result = convert_messages_to_rich(&[]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn convert_text_only_messages() {
+        let messages = vec![
+            make_message(ChatRole::User, "Hello"),
+            make_message(ChatRole::Assistant, "Hi there"),
+        ];
+        let rich = convert_messages_to_rich(&messages);
+        assert_eq!(rich.len(), 2);
+        assert_eq!(rich[0].role, "user");
+        assert_eq!(rich[1].role, "assistant");
+        match &rich[0].content {
+            MessageContent::Text(t) => assert_eq!(t, "Hello"),
+            _ => panic!("expected Text content"),
+        }
+    }
+
+    #[test]
+    fn convert_system_message_mapped_to_user() {
+        let messages = vec![make_message(ChatRole::System, "system msg")];
+        let rich = convert_messages_to_rich(&messages);
+        assert!(rich.is_empty(), "System messages should be filtered out");
+    }
+
+    #[test]
+    fn convert_messages_with_content_blocks() {
+        let mut msg = make_message(ChatRole::User, "");
+        msg.content_blocks = Some(vec![
+            ChatContentBlock::Text {
+                text: "check this".into(),
+            },
+            ChatContentBlock::ToolUse {
+                id: "t1".into(),
+                name: "read_file".into(),
+                input: serde_json::json!({"path": "a.rs"}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "file contents".into(),
+                is_error: None,
+            },
+            ChatContentBlock::Image {
+                media_type: "image/png".into(),
+                data: "base64data".into(),
+            },
+        ]);
+
+        let rich = convert_messages_to_rich(&[msg]);
+        assert_eq!(rich.len(), 1);
+        match &rich[0].content {
+            MessageContent::Blocks(blocks) => {
+                assert_eq!(blocks.len(), 4);
+                matches!(&blocks[0], ContentBlock::Text { .. });
+                matches!(&blocks[1], ContentBlock::ToolUse { .. });
+                matches!(&blocks[2], ContentBlock::ToolResult { .. });
+                matches!(&blocks[3], ContentBlock::Image { .. });
+            }
+            _ => panic!("expected Blocks content"),
+        }
+    }
+
+    #[test]
+    fn convert_filters_out_system_keeps_user_and_assistant() {
+        let messages = vec![
+            make_message(ChatRole::System, "sys"),
+            make_message(ChatRole::User, "u1"),
+            make_message(ChatRole::Assistant, "a1"),
+            make_message(ChatRole::User, "u2"),
+        ];
+        let rich = convert_messages_to_rich(&messages);
+        assert_eq!(rich.len(), 3);
+        assert_eq!(rich[0].role, "user");
+        assert_eq!(rich[1].role, "assistant");
+        assert_eq!(rich[2].role, "user");
+    }
+
+    // -----------------------------------------------------------------------
+    // build_chat_system_prompt
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn system_prompt_uses_base_when_custom_empty() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_prepends_custom() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "Custom instructions here.");
+        assert!(prompt.starts_with("Custom instructions here."));
+        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_includes_project_details() {
+        let mut project = make_project("MyApp", "/nonexistent/path");
+        project.description = "A web application".into();
+        project.build_command = Some("npm run build".into());
+        project.test_command = None;
+
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("MyApp"));
+        assert!(prompt.contains("A web application"));
+        assert!(prompt.contains("npm run build"));
+        assert!(prompt.contains("(not set)"));
+    }
+
+    #[test]
+    fn system_prompt_detects_tech_stack() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), "[package]").unwrap();
+        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+
+        let project = make_project("MultiStack", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Rust"));
+        assert!(prompt.contains("Node.js/TypeScript"));
+    }
+
+    #[test]
+    fn system_prompt_lists_project_structure() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("README.md"), "# Hi").unwrap();
+
+        let project = make_project("Structured", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Project Structure"));
+        assert!(prompt.contains("src/"));
+        assert!(prompt.contains("README.md"));
+    }
+
+    // -----------------------------------------------------------------------
+    // build_multi_project_system_prompt
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn multi_project_prompt_uses_base_when_agent_empty() {
+        let agent = make_agent("");
+        let projects = vec![make_project("ProjA", "/a"), make_project("ProjB", "/b")];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("multi-project mode"));
+    }
+
+    #[test]
+    fn multi_project_prompt_uses_custom_agent_prompt() {
+        let agent = make_agent("You are a special agent.");
+        let projects = vec![make_project("P1", "/p1")];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.starts_with("You are a special agent."));
+        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
+    }
+
+    #[test]
+    fn multi_project_prompt_lists_all_projects() {
+        let agent = make_agent("");
+        let projects = vec![
+            make_project("Alpha", "/alpha"),
+            make_project("Beta", "/beta"),
+            make_project("Gamma", "/gamma"),
+        ];
+        let prompt = build_multi_project_system_prompt(&agent, &projects);
+        assert!(prompt.contains("**Alpha**"));
+        assert!(prompt.contains("**Beta**"));
+        assert!(prompt.contains("**Gamma**"));
+        assert!(prompt.contains("/alpha"));
+        assert!(prompt.contains("/beta"));
+        assert!(prompt.contains("/gamma"));
+    }
+
+    #[test]
+    fn multi_project_prompt_includes_project_commands() {
+        let agent = make_agent("");
+        let mut p = make_project("WithCmd", "/cmd");
+        p.build_command = Some("make".into());
+        p.test_command = None;
+        let prompt = build_multi_project_system_prompt(&agent, &[p]);
+        assert!(prompt.contains("make"));
+        assert!(prompt.contains("(not set)"));
+    }
+}

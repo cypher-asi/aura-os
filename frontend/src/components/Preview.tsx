@@ -1063,7 +1063,7 @@ function previewTitle(item: PreviewItem): string {
     case "task": return "Task";
     case "session": return `Session ${item.session.session_id.slice(0, 8)}`;
     case "log": return "Log";
-    default: return item.kind satisfies never;
+    default: { const _exhaustive: never = item; return _exhaustive; }
   }
 }
 

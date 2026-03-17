@@ -481,6 +481,13 @@
   font-family: var(--font-mono);
 }
 
+.testResultItem > svg {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+}
+
 .testResultName {
   word-break: break-word;
 }
