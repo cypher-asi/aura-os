@@ -61,7 +61,9 @@ impl MeteredLlm {
 
     async fn pre_flight_check(&self) -> Result<(), MeteredLlmError> {
         let Some(token) = self.access_token() else {
-            return Ok(());
+            warn!("No access token available — cannot verify credits");
+            self.credits_exhausted.store(true, Ordering::SeqCst);
+            return Err(MeteredLlmError::InsufficientCredits);
         };
         if self.credits_exhausted.load(Ordering::SeqCst) {
             match self.billing.ensure_has_credits(&token).await {
@@ -72,10 +74,10 @@ impl MeteredLlm {
                 Err(_) => return Err(MeteredLlmError::InsufficientCredits),
             }
         } else {
-            self.billing
-                .ensure_has_credits(&token)
-                .await
-                .map_err(|_| MeteredLlmError::InsufficientCredits)?;
+            if let Err(_) = self.billing.ensure_has_credits(&token).await {
+                self.credits_exhausted.store(true, Ordering::SeqCst);
+                return Err(MeteredLlmError::InsufficientCredits);
+            }
         }
         Ok(())
     }
