@@ -200,7 +200,13 @@
   width: 100%;
   box-sizing: border-box;
 }
-.markdown pre code { background: none; padding: 0; font-size: 12px; }
+.markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  line-height: var(--control-height-sm, 32px);
+  vertical-align: middle;
+}
 .markdown table {
   width: 100%;
   border-collapse: collapse;
@@ -221,6 +227,10 @@
   margin-bottom: 8px;
 }
 .markdown li { margin-bottom: 2px; }
+.markdown hr {
+  border: none;
+  height: 16px;
+}
 .markdown blockquote {
   border-left: 2px solid var(--color-accent);
   padding-left: 10px;
@@ -274,10 +284,10 @@
 /* Thinking block */
 .thinkingBlock {
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   margin-bottom: 10px;
-  background: var(--color-bg-secondary, #1a1a1a);
+  background: transparent;
 }
 
 .thinkingHeader {
@@ -285,7 +295,8 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 0 12px;
+  min-height: var(--control-height-sm, 32px);
   border: none;
   background: transparent;
   color: var(--color-text-muted, #999);
@@ -585,9 +596,8 @@
   border-radius: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: #fff;
   cursor: pointer;
-  transition: color 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -675,4 +685,34 @@
   height: 10px;
   border-radius: 2px;
   background: var(--color-text-muted);
+}
+
+/* Cooking indicator — shown immediately after sending, before LLM content arrives */
+.cookingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--space-2) 0;
+}
+
+.cookingIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.cookingText {
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(
+    90deg,
+    var(--color-text-muted, #aaa) 0%,
+    var(--color-text, #fff) 40%,
+    var(--color-text-muted, #aaa) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
 }
