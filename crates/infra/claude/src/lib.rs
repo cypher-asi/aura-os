@@ -650,185 +650,194 @@ impl ClaudeClient {
         event_tx: &mpsc::UnboundedSender<ClaudeStreamEvent>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
         use tokio_stream::StreamExt;
+        let byte_stream = response.bytes_stream().map(|r| r.map_err(ClaudeClientError::Http));
+        parse_sse_events(byte_stream, event_tx).await
+    }
+}
 
-        let start = std::time::Instant::now();
-        let mut byte_stream = response.bytes_stream();
-        let mut line_buf = String::new();
-        let mut accumulated_text = String::new();
-        let mut input_tokens: u64 = 0;
-        let mut output_tokens: u64 = 0;
-        let mut stop_reason = String::from("end_turn");
+/// Standalone SSE frame parser, decoupled from `reqwest::Response` for testability.
+pub(crate) async fn parse_sse_events(
+    mut stream: impl tokio_stream::Stream<Item = Result<bytes::Bytes, ClaudeClientError>> + Unpin,
+    event_tx: &mpsc::UnboundedSender<ClaudeStreamEvent>,
+) -> Result<ToolStreamResponse, ClaudeClientError> {
+    use tokio_stream::StreamExt;
 
-        let mut tool_calls: Vec<ToolCall> = Vec::new();
-        let mut current_tool_id = String::new();
-        let mut current_tool_name = String::new();
-        let mut current_tool_json = String::new();
-        let mut in_tool_block = false;
-        let mut in_thinking_block = false;
+    let start = std::time::Instant::now();
+    let mut line_buf = String::new();
+    let mut accumulated_text = String::new();
+    let mut input_tokens: u64 = 0;
+    let mut output_tokens: u64 = 0;
+    let mut stop_reason = String::from("end_turn");
 
-        while let Some(chunk_result) = byte_stream.next().await {
-            let chunk = chunk_result.map_err(|e| {
-                error!(error = %e, "Error reading streaming chunk");
-                ClaudeClientError::Http(e)
-            })?;
+    let mut tool_calls: Vec<ToolCall> = Vec::new();
+    let mut current_tool_id = String::new();
+    let mut current_tool_name = String::new();
+    let mut current_tool_json = String::new();
+    let mut in_tool_block = false;
+    let mut in_thinking_block = false;
 
-            line_buf.push_str(&String::from_utf8_lossy(&chunk));
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result.map_err(|e| {
+            error!(error = %e, "Error reading streaming chunk");
+            e
+        })?;
 
-            while let Some(double_newline_pos) = line_buf.find("\n\n") {
-                let frame = line_buf[..double_newline_pos].to_string();
-                line_buf = line_buf[double_newline_pos + 2..].to_string();
+        line_buf.push_str(&String::from_utf8_lossy(&chunk));
 
-                let mut event_type = String::new();
-                let mut data_str = String::new();
+        while let Some(double_newline_pos) = line_buf.find("\n\n") {
+            let frame = line_buf[..double_newline_pos].to_string();
+            line_buf = line_buf[double_newline_pos + 2..].to_string();
 
-                for line in frame.lines() {
-                    if let Some(val) = line.strip_prefix("event: ") {
-                        event_type = val.trim().to_string();
-                    } else if let Some(val) = line.strip_prefix("data: ") {
-                        data_str = val.trim().to_string();
-                    }
-                }
+            let mut event_type = String::new();
+            let mut data_str = String::new();
 
-                if event_type.is_empty() || data_str.is_empty() {
-                    continue;
-                }
-
-                match event_type.as_str() {
-                    "message_start" => {
-                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
-                            if let Some(usage) = data.get("message").and_then(|m| m.get("usage")) {
-                                if let Some(it) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
-                                    input_tokens = it;
-                                }
-                            }
-                        }
-                    }
-                    "content_block_start" => {
-                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
-                            if let Some(cb) = data.get("content_block") {
-                                let block_type = cb.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                                match block_type {
-                                    "tool_use" => {
-                                        in_tool_block = true;
-                                        in_thinking_block = false;
-                                        current_tool_id = cb.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                        current_tool_name = cb.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                        current_tool_json.clear();
-                                    }
-                                    "thinking" => {
-                                        in_thinking_block = true;
-                                        in_tool_block = false;
-                                    }
-                                    _ => {
-                                        in_tool_block = false;
-                                        in_thinking_block = false;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    "content_block_delta" => {
-                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
-                            if let Some(delta) = data.get("delta") {
-                                let delta_type = delta.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                                match delta_type {
-                                    "text_delta" => {
-                                        if let Some(text) = delta.get("text").and_then(|t| t.as_str()) {
-                                            accumulated_text.push_str(text);
-                                            let _ = event_tx.send(ClaudeStreamEvent::Delta(text.to_string()));
-                                        }
-                                    }
-                                    "thinking_delta" => {
-                                        if let Some(text) = delta.get("thinking").and_then(|t| t.as_str()) {
-                                            let _ = event_tx.send(ClaudeStreamEvent::ThinkingDelta(text.to_string()));
-                                        }
-                                    }
-                                    "input_json_delta" => {
-                                        if let Some(json) = delta.get("partial_json").and_then(|t| t.as_str()) {
-                                            current_tool_json.push_str(json);
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                        }
-                    }
-                    "content_block_stop" => {
-                        if in_thinking_block {
-                            in_thinking_block = false;
-                        }
-                        if in_tool_block {
-                            let input: serde_json::Value = serde_json::from_str(&current_tool_json)
-                                .unwrap_or(serde_json::Value::Object(Default::default()));
-                            let tool_call = ToolCall {
-                                id: current_tool_id.clone(),
-                                name: current_tool_name.clone(),
-                                input: input.clone(),
-                            };
-                            let _ = event_tx.send(ClaudeStreamEvent::ToolUse {
-                                id: current_tool_id.clone(),
-                                name: current_tool_name.clone(),
-                                input,
-                            });
-                            tool_calls.push(tool_call);
-                            in_tool_block = false;
-                            current_tool_id.clear();
-                            current_tool_name.clear();
-                            current_tool_json.clear();
-                        }
-                    }
-                    "message_delta" => {
-                        if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
-                            if let Some(sr) = data.get("delta").and_then(|d| d.get("stop_reason")).and_then(|v| v.as_str()) {
-                                stop_reason = sr.to_string();
-                            }
-                            if let Some(usage) = data.get("usage") {
-                                if let Some(ot) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
-                                    output_tokens = ot;
-                                }
-                            }
-                        }
-                    }
-                    "message_stop" => {
-                        debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
-                    }
-                    "error" => {
-                        let msg = serde_json::from_str::<serde_json::Value>(&data_str)
-                            .ok()
-                            .and_then(|v| v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(String::from))
-                            .unwrap_or_else(|| data_str.clone());
-                        let _ = event_tx.send(ClaudeStreamEvent::Error(msg.clone()));
-                        return Err(ClaudeClientError::Parse(msg));
-                    }
-                    _ => {}
+            for line in frame.lines() {
+                if let Some(val) = line.strip_prefix("event: ") {
+                    event_type = val.trim().to_string();
+                } else if let Some(val) = line.strip_prefix("data: ") {
+                    data_str = val.trim().to_string();
                 }
             }
+
+            if event_type.is_empty() || data_str.is_empty() {
+                continue;
+            }
+
+            match event_type.as_str() {
+                "message_start" => {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                        if let Some(usage) = data.get("message").and_then(|m| m.get("usage")) {
+                            if let Some(it) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                                input_tokens = it;
+                            }
+                        }
+                    }
+                }
+                "content_block_start" => {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                        if let Some(cb) = data.get("content_block") {
+                            let block_type = cb.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                            match block_type {
+                                "tool_use" => {
+                                    in_tool_block = true;
+                                    in_thinking_block = false;
+                                    current_tool_id = cb.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    current_tool_name = cb.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    current_tool_json.clear();
+                                }
+                                "thinking" => {
+                                    in_thinking_block = true;
+                                    in_tool_block = false;
+                                }
+                                _ => {
+                                    in_tool_block = false;
+                                    in_thinking_block = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                "content_block_delta" => {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                        if let Some(delta) = data.get("delta") {
+                            let delta_type = delta.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                            match delta_type {
+                                "text_delta" => {
+                                    if let Some(text) = delta.get("text").and_then(|t| t.as_str()) {
+                                        accumulated_text.push_str(text);
+                                        let _ = event_tx.send(ClaudeStreamEvent::Delta(text.to_string()));
+                                    }
+                                }
+                                "thinking_delta" => {
+                                    if let Some(text) = delta.get("thinking").and_then(|t| t.as_str()) {
+                                        let _ = event_tx.send(ClaudeStreamEvent::ThinkingDelta(text.to_string()));
+                                    }
+                                }
+                                "input_json_delta" => {
+                                    if let Some(json) = delta.get("partial_json").and_then(|t| t.as_str()) {
+                                        current_tool_json.push_str(json);
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+                "content_block_stop" => {
+                    if in_thinking_block {
+                        in_thinking_block = false;
+                    }
+                    if in_tool_block {
+                        let input: serde_json::Value = serde_json::from_str(&current_tool_json)
+                            .unwrap_or(serde_json::Value::Object(Default::default()));
+                        let tool_call = ToolCall {
+                            id: current_tool_id.clone(),
+                            name: current_tool_name.clone(),
+                            input: input.clone(),
+                        };
+                        let _ = event_tx.send(ClaudeStreamEvent::ToolUse {
+                            id: current_tool_id.clone(),
+                            name: current_tool_name.clone(),
+                            input,
+                        });
+                        tool_calls.push(tool_call);
+                        in_tool_block = false;
+                        current_tool_id.clear();
+                        current_tool_name.clear();
+                        current_tool_json.clear();
+                    }
+                }
+                "message_delta" => {
+                    if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
+                        if let Some(sr) = data.get("delta").and_then(|d| d.get("stop_reason")).and_then(|v| v.as_str()) {
+                            stop_reason = sr.to_string();
+                        }
+                        if let Some(usage) = data.get("usage") {
+                            if let Some(ot) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                                output_tokens = ot;
+                            }
+                        }
+                    }
+                }
+                "message_stop" => {
+                    debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
+                }
+                "error" => {
+                    let msg = serde_json::from_str::<serde_json::Value>(&data_str)
+                        .ok()
+                        .and_then(|v| v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(String::from))
+                        .unwrap_or_else(|| data_str.clone());
+                    let _ = event_tx.send(ClaudeStreamEvent::Error(msg.clone()));
+                    return Err(ClaudeClientError::Parse(msg));
+                }
+                _ => {}
+            }
         }
-
-        let _ = event_tx.send(ClaudeStreamEvent::Done {
-            stop_reason: stop_reason.clone(),
-            input_tokens,
-            output_tokens,
-        });
-
-        info!(
-            stop_reason = %stop_reason,
-            input_tokens,
-            output_tokens,
-            response_len = accumulated_text.len(),
-            tool_call_count = tool_calls.len(),
-            elapsed_ms = start.elapsed().as_millis() as u64,
-            "Claude streaming complete"
-        );
-
-        Ok(ToolStreamResponse {
-            text: accumulated_text,
-            tool_calls,
-            stop_reason,
-            input_tokens,
-            output_tokens,
-        })
     }
+
+    let _ = event_tx.send(ClaudeStreamEvent::Done {
+        stop_reason: stop_reason.clone(),
+        input_tokens,
+        output_tokens,
+    });
+
+    info!(
+        stop_reason = %stop_reason,
+        input_tokens,
+        output_tokens,
+        response_len = accumulated_text.len(),
+        tool_call_count = tool_calls.len(),
+        elapsed_ms = start.elapsed().as_millis() as u64,
+        "Claude streaming complete"
+    );
+
+    Ok(ToolStreamResponse {
+        text: accumulated_text,
+        tool_calls,
+        stop_reason,
+        input_tokens,
+        output_tokens,
+    })
 }
 
 impl Default for ClaudeClient {
@@ -958,5 +967,286 @@ impl LlmProvider for ClaudeClient {
             api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
         )
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    fn sse_stream(
+        raw: &str,
+    ) -> impl tokio_stream::Stream<Item = Result<bytes::Bytes, ClaudeClientError>> + Unpin {
+        let chunks: Vec<Result<bytes::Bytes, ClaudeClientError>> =
+            vec![Ok(bytes::Bytes::from(raw.to_string()))];
+        tokio_stream::iter(chunks)
+    }
+
+    fn sse_stream_chunked(
+        parts: Vec<&str>,
+    ) -> impl tokio_stream::Stream<Item = Result<bytes::Bytes, ClaudeClientError>> + Unpin {
+        let chunks: Vec<Result<bytes::Bytes, ClaudeClientError>> = parts
+            .into_iter()
+            .map(|s| Ok(bytes::Bytes::from(s.to_string())))
+            .collect();
+        tokio_stream::iter(chunks)
+    }
+
+    fn drain_events(rx: &mut mpsc::UnboundedReceiver<ClaudeStreamEvent>) -> Vec<ClaudeStreamEvent> {
+        let mut events = Vec::new();
+        while let Ok(evt) = rx.try_recv() {
+            events.push(evt);
+        }
+        events
+    }
+
+    #[tokio::test]
+    async fn test_parse_simple_text_stream() {
+        let raw = r#"event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":100}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"world"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":50}}
+
+event: message_stop
+data: {"type":"message_stop"}
+
+"#;
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result = parse_sse_events(sse_stream(raw), &tx).await.unwrap();
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert_eq!(result.text, "Hello world");
+        assert_eq!(result.stop_reason, "end_turn");
+        assert_eq!(result.input_tokens, 100);
+        assert_eq!(result.output_tokens, 50);
+
+        let delta_texts: Vec<&str> = events
+            .iter()
+            .filter_map(|e| match e {
+                ClaudeStreamEvent::Delta(s) => Some(s.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(delta_texts, vec!["Hello ", "world"]);
+
+        assert!(
+            events.iter().any(|e| matches!(
+                e,
+                ClaudeStreamEvent::Done {
+                    stop_reason,
+                    input_tokens: 100,
+                    output_tokens: 50,
+                    ..
+                } if stop_reason == "end_turn"
+            ))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_parse_tool_use_stream() {
+        let raw = "event: message_start\n\
+data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":200}}}\n\
+\n\
+event: content_block_start\n\
+data: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_01\",\"name\":\"read_file\"}}\n\
+\n\
+event: content_block_delta\n\
+data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"{\\\"path\\\":\"}}\n\
+\n\
+event: content_block_delta\n\
+data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"input_json_delta\",\"partial_json\":\"\\\"src/main.rs\\\"}\"}}\n\
+\n\
+event: content_block_stop\n\
+data: {\"type\":\"content_block_stop\",\"index\":0}\n\
+\n\
+event: message_delta\n\
+data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\"},\"usage\":{\"output_tokens\":30}}\n\
+\n\
+event: message_stop\n\
+data: {\"type\":\"message_stop\"}\n\
+\n";
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result = parse_sse_events(sse_stream(raw), &tx).await.unwrap();
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert_eq!(result.tool_calls.len(), 1);
+        assert_eq!(result.tool_calls[0].name, "read_file");
+        assert_eq!(
+            result.tool_calls[0].input,
+            serde_json::json!({"path": "src/main.rs"})
+        );
+        assert_eq!(result.stop_reason, "tool_use");
+        assert_eq!(result.input_tokens, 200);
+        assert_eq!(result.output_tokens, 30);
+
+        assert!(events.iter().any(|e| matches!(
+            e,
+            ClaudeStreamEvent::ToolUse { name, .. } if name == "read_file"
+        )));
+
+        assert!(events.iter().any(|e| matches!(
+            e,
+            ClaudeStreamEvent::Done {
+                stop_reason,
+                ..
+            } if stop_reason == "tool_use"
+        )));
+    }
+
+    #[tokio::test]
+    async fn test_parse_thinking_stream() {
+        let raw = r#"event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":50}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"Let me think..."}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Here is the answer."}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":10}}
+
+event: message_stop
+data: {"type":"message_stop"}
+
+"#;
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result = parse_sse_events(sse_stream(raw), &tx).await.unwrap();
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert_eq!(result.text, "Here is the answer.");
+        assert!(!result.text.contains("think"));
+
+        let thinking_texts: Vec<&str> = events
+            .iter()
+            .filter_map(|e| match e {
+                ClaudeStreamEvent::ThinkingDelta(s) => Some(s.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(thinking_texts, vec!["Let me think..."]);
+
+        let delta_texts: Vec<&str> = events
+            .iter()
+            .filter_map(|e| match e {
+                ClaudeStreamEvent::Delta(s) => Some(s.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(delta_texts, vec!["Here is the answer."]);
+    }
+
+    #[tokio::test]
+    async fn test_parse_error_event() {
+        let raw = r#"event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}
+
+event: error
+data: {"type":"error","error":{"type":"overloaded_error","message":"API is overloaded"}}
+
+"#;
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result = parse_sse_events(sse_stream(raw), &tx).await;
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("overloaded"),
+            "Error should contain 'overloaded': {err_msg}"
+        );
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ClaudeStreamEvent::Error(_))));
+    }
+
+    #[tokio::test]
+    async fn test_parse_chunked_delivery() {
+        let full = r#"event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":100}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"world"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":50}}
+
+event: message_stop
+data: {"type":"message_stop"}
+
+"#;
+
+        let split1 = full.len() / 3;
+        let split2 = 2 * full.len() / 3;
+        let chunk1 = &full[..split1];
+        let chunk2 = &full[split1..split2];
+        let chunk3 = &full[split2..];
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result =
+            parse_sse_events(sse_stream_chunked(vec![chunk1, chunk2, chunk3]), &tx)
+                .await
+                .unwrap();
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert_eq!(result.text, "Hello world");
+        assert_eq!(result.stop_reason, "end_turn");
+        assert_eq!(result.input_tokens, 100);
+        assert_eq!(result.output_tokens, 50);
+
+        let delta_texts: Vec<&str> = events
+            .iter()
+            .filter_map(|e| match e {
+                ClaudeStreamEvent::Delta(s) => Some(s.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(delta_texts, vec!["Hello ", "world"]);
     }
 }
