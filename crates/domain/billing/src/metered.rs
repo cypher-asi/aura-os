@@ -225,3 +225,160 @@ impl MeteredLlm {
         Ok(resp)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use aura_claude::mock::{MockLlmProvider, MockResponse};
+
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    async fn start_mock_billing_server() -> String {
+        use axum::{routing::{get, post}, Json, Router};
+        use tokio::net::TcpListener;
+
+        let app = Router::new()
+            .route(
+                "/api/credits/balance",
+                get(|| async {
+                    Json(serde_json::json!({"balance": 10000, "purchases": []}))
+                }),
+            )
+            .route(
+                "/api/credits/debit",
+                post(|| async {
+                    Json(serde_json::json!({
+                        "success": true,
+                        "balance": 9900,
+                        "transactionId": "tx-1"
+                    }))
+                }),
+            );
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+        url
+    }
+
+    fn billing_client_for_url(url: &str) -> BillingClient {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::set_var("BILLING_SERVER_URL", url);
+        BillingClient::new()
+    }
+
+    fn store_zero_auth_session(store: &RocksStore) {
+        let session = serde_json::to_vec(&ZeroAuthSession {
+            user_id: "u1".into(),
+            display_name: "Test".into(),
+            profile_image: String::new(),
+            primary_zid: "zid-1".into(),
+            zero_wallet: "w1".into(),
+            wallets: vec![],
+            access_token: "test-token".into(),
+            created_at: chrono::Utc::now(),
+            validated_at: chrono::Utc::now(),
+        })
+        .unwrap();
+        store.put_setting("zero_auth_session", &session).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_no_access_token_returns_insufficient_credits() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
+        let billing = Arc::new(BillingClient::default());
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![
+            MockResponse::text("unreachable"),
+        ]));
+
+        let metered = MeteredLlm::new(mock, billing, store);
+
+        let err = metered
+            .complete("key", "sys", "hi", 100, "test", None)
+            .await
+            .unwrap_err();
+
+        assert!(err.is_insufficient_credits());
+        assert!(metered.is_credits_exhausted());
+    }
+
+    #[tokio::test]
+    async fn test_complete_calls_provider_and_debits() {
+        let url = start_mock_billing_server().await;
+        let billing = Arc::new(billing_client_for_url(&url));
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
+        store_zero_auth_session(&store);
+
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![
+            MockResponse::text("hello").with_tokens(100, 50),
+        ]));
+        let metered = MeteredLlm::new(mock.clone(), billing, store);
+
+        let resp = metered
+            .complete("key", "sys", "msg", 200, "reason", None)
+            .await
+            .unwrap();
+
+        assert_eq!(resp.text, "hello");
+        assert_eq!(mock.call_count(), 1);
+        assert!(!metered.is_credits_exhausted());
+    }
+
+    #[tokio::test]
+    async fn test_credits_exhausted_flag_persists_across_calls() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
+        let billing = Arc::new(BillingClient::default());
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![
+            MockResponse::text("a"),
+            MockResponse::text("b"),
+        ]));
+
+        let metered = MeteredLlm::new(mock, billing, store);
+
+        let r1 = metered.complete("k", "s", "m", 10, "r", None).await;
+        assert!(r1.unwrap_err().is_insufficient_credits());
+        assert!(metered.is_credits_exhausted());
+
+        let r2 = metered.complete("k", "s", "m", 10, "r", None).await;
+        assert!(r2.unwrap_err().is_insufficient_credits());
+        assert!(metered.is_credits_exhausted());
+    }
+
+    #[tokio::test]
+    async fn test_complete_stream_forwards_events() {
+        let url = start_mock_billing_server().await;
+        let billing = Arc::new(billing_client_for_url(&url));
+
+        let tmp = tempfile::TempDir::new().unwrap();
+        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
+        store_zero_auth_session(&store);
+
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![
+            MockResponse::text("streamed").with_tokens(80, 40),
+        ]));
+        let metered = MeteredLlm::new(mock, billing, store);
+
+        let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+        let text = metered
+            .complete_stream("key", "sys", "msg", 200, event_tx, "stream-test", None)
+            .await
+            .unwrap();
+
+        assert_eq!(text, "streamed");
+
+        let mut events = vec![];
+        while let Ok(evt) = event_rx.try_recv() {
+            events.push(evt);
+        }
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ClaudeStreamEvent::Delta(t) if t == "streamed")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ClaudeStreamEvent::Done { .. })));
+    }
+}
