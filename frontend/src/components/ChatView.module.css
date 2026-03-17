@@ -81,7 +81,7 @@
   min-height: var(--control-height-sm, 32px);
   display: flex;
   align-items: center;
-  padding: 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 
 .userMessageBlocks {
@@ -211,22 +211,6 @@
   font-size: 12.5px;
 }
 
-/* Streaming cursor — smooth glow for writing phase */
-.streamingCursorGlow {
-  display: inline-block;
-  width: 2px;
-  height: 1em;
-  background: var(--color-accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  border-radius: 1px;
-  animation: cursorGlow 1.2s ease-in-out infinite;
-}
-
-@keyframes cursorGlow {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px 1px var(--color-accent); }
-  50% { opacity: 0.3; box-shadow: none; }
-}
 
 /* Thinking block — content-specific styles (structure in ResponseBlock) */
 .thinkingBlock {

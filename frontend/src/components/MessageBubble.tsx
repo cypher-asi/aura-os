@@ -336,8 +336,7 @@ function StreamingIndicator({
     toolCalls: toolCalls ?? [],
   });
 
-  if (label) return <CookingIndicator label={label} />;
-  return <span className={styles.streamingCursorGlow} />;
+  return <CookingIndicator label={label ?? "Cooking..."} />;
 }
 
 export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDurationMs }: StreamingBubbleProps) {
