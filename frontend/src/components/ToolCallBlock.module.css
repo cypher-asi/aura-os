@@ -65,8 +65,8 @@
 
 .taskCheck {
   display: block;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border: 1.5px solid var(--color-text-muted, #666);
   flex-shrink: 0;
   position: relative;
@@ -102,8 +102,8 @@
 .taskDone .taskCheck::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  margin: auto;
   width: 8px;
   height: 1.5px;
   background: var(--color-text-muted, #666);
@@ -111,11 +111,11 @@
 }
 
 .taskDone .taskCheck::before {
-  transform: translate(-50%, -50%) rotate(45deg);
+  transform: rotate(45deg);
 }
 
 .taskDone .taskCheck::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+  transform: rotate(-45deg);
 }
 
 .taskDone .toolName {
@@ -135,8 +135,8 @@
 .taskError .taskCheck::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
+  inset: 0;
+  margin: auto;
   width: 8px;
   height: 1.5px;
   background: #f87171;
@@ -144,11 +144,11 @@
 }
 
 .taskError .taskCheck::before {
-  transform: translate(-50%, -50%) rotate(45deg);
+  transform: rotate(45deg);
 }
 
 .taskError .taskCheck::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+  transform: rotate(-45deg);
 }
 
 .taskError .toolName {
