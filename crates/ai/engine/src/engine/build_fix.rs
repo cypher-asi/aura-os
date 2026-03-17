@@ -77,6 +77,25 @@ fn normalize_line_col_refs(line: &str) -> String {
     result
 }
 
+/// Rewrite known server-starting commands to their build/check equivalents.
+///
+/// When a build command times out, it's usually because the command starts a
+/// long-running process. This function maps common run commands to their
+/// compile-only counterparts.
+fn auto_correct_build_command(cmd: &str) -> Option<String> {
+    let trimmed = cmd.trim();
+    if trimmed == "cargo run" || trimmed.starts_with("cargo run ") {
+        return Some(trimmed.replacen("cargo run", "cargo build", 1));
+    }
+    if trimmed == "npm start" {
+        return Some("npm run build".to_string());
+    }
+    if trimmed.contains("runserver") {
+        return Some(trimmed.replace("runserver", "check"));
+    }
+    None
+}
+
 /// Classify build errors into categories so the fix prompt can include
 /// targeted guidance instead of generic "try a different approach."
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -352,7 +371,7 @@ impl DevLoopEngine {
         initial_execution: &TaskExecution,
         baseline_test_failures: &HashSet<String>,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
-        let build_command = match &project.build_command {
+        let mut build_command = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
                 self.emit(EngineEvent::BuildVerificationSkipped {
@@ -416,6 +435,24 @@ impl DevLoopEngine {
             });
             let build_result = build_verify::run_build_command(base_path, &build_command, Some(line_tx)).await?;
             let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
+
+            if build_result.timed_out {
+                if let Some(corrected) = auto_correct_build_command(&build_command) {
+                    warn!(
+                        old = %build_command, new = %corrected,
+                        "build command timed out, auto-correcting"
+                    );
+                    let _ = self.project_service.update_project(
+                        &project.project_id,
+                        aura_projects::UpdateProjectInput {
+                            build_command: Some(corrected.clone()),
+                            ..Default::default()
+                        },
+                    );
+                    build_command = corrected;
+                    continue;
+                }
+            }
 
             if build_result.success {
                 self.emit(EngineEvent::BuildVerificationPassed {

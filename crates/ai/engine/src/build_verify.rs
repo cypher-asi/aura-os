@@ -16,6 +16,7 @@ pub struct BuildResult {
     pub stdout: String,
     pub stderr: String,
     pub exit_code: Option<i32>,
+    pub timed_out: bool,
 }
 
 /// Maximum bytes of compiler output to capture and send back to the model.
@@ -135,6 +136,7 @@ pub async fn run_build_command(
                 stdout: truncate_output(&stdout_raw, MAX_OUTPUT_BYTES),
                 stderr: truncate_output(&stderr_raw, MAX_OUTPUT_BYTES),
                 exit_code: status.code(),
+                timed_out: false,
             }
         }
         Ok(Err(e)) => {
@@ -166,6 +168,7 @@ pub async fn run_build_command(
                 stdout: stdout_handle.await.unwrap_or_default(),
                 stderr,
                 exit_code: None,
+                timed_out: true,
             }
         }
     };
