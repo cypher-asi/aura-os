@@ -82,6 +82,7 @@ export interface Task {
   dependency_ids: TaskId[];
   parent_task_id: TaskId | null;
   assigned_agent_instance_id: AgentInstanceId | null;
+  completed_by_agent_instance_id: AgentInstanceId | null;
   session_id: SessionId | null;
   execution_notes: string;
   files_changed: { op: string; path: string; lines_added?: number; lines_removed?: number }[];
