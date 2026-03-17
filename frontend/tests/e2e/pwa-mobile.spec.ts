@@ -177,7 +177,7 @@ async function mockAuthenticatedApp(page: import("@playwright/test").Page) {
     if (path === "/api/orgs/org-1/integrations/github") return json(null);
     if (path === "/api/orgs/org-1/integrations/github/app") return json([]);
     if (path === "/api/orgs/org-1/credits/tiers") return json([]);
-    if (path === "/api/projects?org_id=org-1") {
+    if (path === "/api/projects" || path === "/api/projects?org_id=org-1") {
       return json([project]);
     }
     if (path === "/api/projects/proj-1") return json(project);
@@ -254,6 +254,7 @@ test("mobile project header can switch between execution and chat", async ({ pag
   await page.goto("/projects/proj-1/execution");
 
   await expect(page.getByText("Demo Project")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Chat" })).toBeVisible({ timeout: 10000 });
   await page.getByRole("button", { name: "Chat" }).click();
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
   await expect(page.getByText("Send a message or use a quick action to get started")).toBeVisible();
@@ -267,7 +268,8 @@ test("mobile projects route keeps the welcome view and opens project navigation"
 
   await page.goto("/projects");
 
-  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+  await expect(page.getByText("Pick up work without hunting through the app.")).toBeVisible();
+  await expect(page.getByText("Recent projects")).toBeVisible();
   await expect(page.getByRole("button", { name: "Execution" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Open navigation" }).click();
@@ -304,14 +306,16 @@ test("mobile agent header can switch between agents", async ({ page }) => {
 
   await page.goto("/agents/agent-1");
 
-  await expect(page.getByRole("combobox", { name: "Choose agent" })).toBeVisible();
-  await expect(page.getByText("Engineer / Global agent chat")).toBeVisible();
-  await expect(page.getByText("Send a message to chat with Builder Bot across all linked projects")).toBeVisible();
+  const agentSelect = page.getByRole("combobox", { name: "Choose agent" });
+  await expect(agentSelect).toBeVisible();
+  await expect(agentSelect).toHaveValue("agent-1");
+  await expect(page.getByText("Engineer").first()).toBeVisible();
+  await expect(page.getByText("Chat with Builder Bot")).toBeVisible();
 
-  await page.getByRole("combobox", { name: "Choose agent" }).selectOption({ label: "Research Bot" });
+  await agentSelect.selectOption({ label: "Research Bot" });
 
   await expect(page).toHaveURL(/\/agents\/agent-2$/);
-  await expect(page.getByText("Send a message to chat with Research Bot across all linked projects")).toBeVisible();
+  await expect(page.getByText("Chat with Research Bot")).toBeVisible();
 });
 
 test("manifest and service worker assets are reachable", async ({ page }) => {

@@ -46,8 +46,62 @@
   text-align: center;
 }
 
+.emptyStateMobile {
+  justify-content: flex-start;
+  padding-top: 24px;
+}
+
+.mobileEmptyIntro {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+}
+
+.emptyStateCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyStateTitle {
+  color: #fff;
+}
+
 .emptyIcon {
   opacity: 0.3;
+}
+
+.quickPromptGrid {
+  width: 100%;
+  max-width: 420px;
+  display: grid;
+  gap: 10px;
+}
+
+.quickPrompt {
+  appearance: none;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.84);
+  text-align: left;
+  font: inherit;
+  line-height: 1.45;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.quickPrompt:hover {
+  border-color: rgba(76, 166, 255, 0.32);
+  background: rgba(76, 166, 255, 0.1);
+}
+
+.quickPrompt:active {
+  transform: translateY(1px);
 }
 
 /* Messages */
@@ -549,4 +603,3 @@
   border-radius: 2px;
   background: var(--color-text-muted);
 }
-

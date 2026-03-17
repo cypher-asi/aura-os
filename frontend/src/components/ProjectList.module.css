@@ -162,3 +162,105 @@
   object-fit: cover;
   flex-shrink: 0;
 }
+
+.mobileSummaryCard {
+  margin: 0 12px 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(76, 166, 255, 0.14), transparent 34%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.mobileSummaryHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobileSummaryEyebrow {
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mobileSummaryTitle {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.mobileSummaryMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mobileSummaryMetric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mobileSummaryMetricLabel {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mobileSummaryMetricValue {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mobileSummaryCopy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mobileEmptyState {
+  margin: 12px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(76, 166, 255, 0.14), transparent 34%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.mobileEmptyBadge {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mobileEmptyTitle {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.mobileEmptyCopy {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.55;
+}
