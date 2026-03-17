@@ -164,32 +164,21 @@ function formatResult(result: string): string {
 const FILE_PREFIX_RE = /^\[File:\s*(.+?)\]\n\n([\s\S]*)$/;
 
 function FileAttachmentBlock({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
   const match = text.match(FILE_PREFIX_RE);
   if (!match) return <span>{text}</span>;
 
-  const fileName = match[1];
-  const fileContent = match[2];
-
   return (
-    <div className={styles.fileAttachmentBlock}>
-      <button
-        className={styles.fileAttachmentHeader}
-        onClick={() => setExpanded(!expanded)}
-        type="button"
-      >
-        <FileText size={14} className={styles.fileAttachmentIcon} />
-        <span className={styles.fileAttachmentName}>{fileName}</span>
-        <span className={styles.fileAttachmentChevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-      </button>
-      <div className={`${styles.fileAttachmentBodyWrap} ${expanded ? styles.fileAttachmentBodyExpanded : ""}`}>
-        <div className={styles.fileAttachmentContent}>
-          <pre>{fileContent}</pre>
-        </div>
-      </div>
-    </div>
+    <ResponseBlock
+      header={
+        <>
+          <FileText size={14} className={styles.fileAttachmentIcon} />
+          <span className={styles.fileAttachmentName}>{match[1]}</span>
+        </>
+      }
+      contentClassName={styles.fileAttachmentContent}
+    >
+      <pre>{match[2]}</pre>
+    </ResponseBlock>
   );
 }
 
