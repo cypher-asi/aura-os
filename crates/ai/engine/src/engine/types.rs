@@ -43,13 +43,6 @@ pub enum LoopOutcome {
 pub(crate) const RETRY_CORRECTION_PROMPT: &str =
     "Your previous response was not valid JSON. Respond with ONLY a valid JSON object matching the schema above. No prose, no markdown fences.";
 
-pub(crate) const MAX_EXECUTION_RETRIES: u32 = 2;
-pub(crate) const MAX_BUILD_FIX_RETRIES: u32 = 5;
-pub(crate) const MAX_SHELL_TASK_RETRIES: u32 = 20;
-pub(crate) const MAX_LOOP_TASK_RETRIES: u32 = 5;
-pub(crate) const MAX_FOLLOW_UPS_PER_LOOP: usize = 20;
-pub(crate) const TASK_EXECUTION_MAX_TOKENS: u32 = 32_768;
-
 pub(crate) fn track_file_op(tool_name: &str, input: &serde_json::Value, ops: &mut Vec<FileOp>) {
     let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string();
     if path.is_empty() {

@@ -40,6 +40,65 @@ pub struct TaskMetrics {
     pub phase_timings: Vec<PhaseTimingEntry>,
 }
 
+impl TaskMetrics {
+    fn base(task_id: String, title: String, outcome: &str, duration_ms: u64, model: Option<String>) -> Self {
+        Self {
+            task_id, title, outcome: outcome.into(), duration_ms, model,
+            llm_duration_ms: None, build_verify_duration_ms: None, file_ops_duration_ms: None,
+            input_tokens: 0, output_tokens: 0,
+            files_changed: 0, parse_retries: 0, build_fix_attempts: 0,
+            failure_phase: None, failure_reason: None,
+            phase_timings: vec![],
+        }
+    }
+
+    pub fn completed(task_id: String, title: String, duration_ms: u64, model: Option<String>) -> Self {
+        Self::base(task_id, title, "completed", duration_ms, model)
+    }
+
+    pub fn failed(
+        task_id: String, title: String, duration_ms: u64, model: Option<String>,
+        phase: &str, reason: String,
+    ) -> Self {
+        let mut m = Self::base(task_id, title, "failed", duration_ms, model);
+        m.failure_phase = Some(phase.into());
+        m.failure_reason = Some(reason);
+        m
+    }
+
+    pub fn with_tokens(mut self, input: u64, output: u64) -> Self {
+        self.input_tokens = input; self.output_tokens = output; self
+    }
+
+    pub fn with_llm_duration(mut self, ms: u64) -> Self {
+        self.llm_duration_ms = Some(ms); self
+    }
+
+    pub fn with_build_verify_duration(mut self, ms: u64) -> Self {
+        self.build_verify_duration_ms = Some(ms); self
+    }
+
+    pub fn with_file_ops_duration(mut self, ms: u64) -> Self {
+        self.file_ops_duration_ms = Some(ms); self
+    }
+
+    pub fn with_files_changed(mut self, count: u32) -> Self {
+        self.files_changed = count; self
+    }
+
+    pub fn with_parse_retries(mut self, count: u32) -> Self {
+        self.parse_retries = count; self
+    }
+
+    pub fn with_build_fix_attempts(mut self, count: u32) -> Self {
+        self.build_fix_attempts = count; self
+    }
+
+    pub fn with_phase_timings(mut self, timings: Vec<PhaseTimingEntry>) -> Self {
+        self.phase_timings = timings; self
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct LoopRunMetrics {
     pub timestamp: String,

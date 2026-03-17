@@ -1,13 +1,11 @@
 use std::collections::HashSet;
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Instant;
 
-use tokio::sync::{mpsc, Mutex};
 use tracing::{info, warn};
 
 use aura_core::*;
-use aura_claude::ClaudeStreamEvent;
+use aura_claude::StreamTokenCapture;
 
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
@@ -417,7 +415,7 @@ impl DevLoopEngine {
         let mut fix_input_tokens: u64 = 0;
         let mut fix_output_tokens: u64 = 0;
 
-        for attempt in 1..=MAX_BUILD_FIX_RETRIES {
+        for attempt in 1..=self.engine_config.max_build_fix_retries {
             let build_step_start = Instant::now();
             self.emit(EngineEvent::BuildVerificationStarted {
                 project_id: project.project_id,
@@ -532,7 +530,7 @@ impl DevLoopEngine {
                 attempt: Some(attempt),
             });
 
-            if attempt == MAX_BUILD_FIX_RETRIES {
+            if attempt == self.engine_config.max_build_fix_retries {
                 info!(task_id = %task.task_id, "build still failing after max retries");
                 return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
             }
@@ -585,38 +583,22 @@ impl DevLoopEngine {
                 &prior_attempts,
             );
 
-            let fix_tc: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
-            let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-            let fix_tc_clone = fix_tc.clone();
-            let forwarder = tokio::spawn(async move {
-                while let Some(evt) = stream_rx.recv().await {
-                    if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                        let mut g = fix_tc_clone.lock().await;
-                        g.0 += input_tokens;
-                        g.1 += output_tokens;
-                    }
-                }
-            });
-
+            let (tx, handle) = StreamTokenCapture::sink();
             let response = self
                 .llm
                 .complete_stream(
                     api_key,
                     &build_fix_system_prompt(),
                     &fix_prompt,
-                    TASK_EXECUTION_MAX_TOKENS,
-                    stream_tx,
+                    self.llm_config.task_execution_max_tokens,
+                    tx,
                     "aura_build_fix",
                     None,
                 )
                 .await?;
-            let _ = forwarder.await;
-
-            {
-                let g = fix_tc.lock().await;
-                fix_input_tokens += g.0;
-                fix_output_tokens += g.1;
-            }
+            let (cap_inp, cap_out) = handle.finalize().await;
+            fix_input_tokens += cap_inp;
+            fix_output_tokens += cap_out;
 
             let mut attempt_files_changed: Vec<String> = Vec::new();
 
@@ -685,7 +667,7 @@ impl DevLoopEngine {
             }
         }
 
-        Ok((all_fix_ops, false, MAX_BUILD_FIX_RETRIES, duplicate_bailouts, fix_input_tokens, fix_output_tokens))
+        Ok((all_fix_ops, false, self.engine_config.max_build_fix_retries, duplicate_bailouts, fix_input_tokens, fix_output_tokens))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -853,34 +835,20 @@ impl DevLoopEngine {
             &[],
         );
 
-        let test_fix_tc: Arc<Mutex<(u64, u64)>> = Arc::new(Mutex::new((0, 0)));
-        let (stream_tx, mut stream_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-        let test_fix_tc_clone = test_fix_tc.clone();
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = stream_rx.recv().await {
-                if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = evt {
-                    let mut g = test_fix_tc_clone.lock().await;
-                    g.0 += input_tokens;
-                    g.1 += output_tokens;
-                }
-            }
-        });
-
+        let (tx, handle) = StreamTokenCapture::sink();
         let response = self
             .llm
             .complete_stream(
                 api_key,
                 &build_fix_system_prompt(),
                 &fix_prompt,
-                TASK_EXECUTION_MAX_TOKENS,
-                stream_tx,
+                self.llm_config.task_execution_max_tokens,
+                tx,
                 "aura_build_fix",
                 None,
             )
             .await?;
-        let _ = forwarder.await;
-
-        let (test_fix_inp, test_fix_out) = *test_fix_tc.lock().await;
+        let (test_fix_inp, test_fix_out) = handle.finalize().await;
 
         match parse_execution_response(&response) {
             Ok(fix_execution) => {
