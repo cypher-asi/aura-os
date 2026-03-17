@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
-import { ChevronDown, ChevronRight, Sparkles, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText } from "lucide-react";
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
@@ -235,7 +235,6 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <Sparkles size={14} className={`${styles.thinkingIcon} ${isStreaming ? styles.thinkingIconActive : ""}`} />
         <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>
           {durationLabel}
         </span>
