@@ -138,6 +138,7 @@ function RunTaskButton({ task }: { task: import("../types").Task }) {
       subscribe("task_failed", (e) => {
         if (e.task_id !== task.task_id) return;
         setStatus("failed");
+        setRunning(false);
       }),
     ];
     return () => unsubs.forEach((u) => u());
