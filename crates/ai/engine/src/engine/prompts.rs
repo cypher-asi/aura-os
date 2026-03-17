@@ -351,10 +351,12 @@ pub(crate) fn build_fix_prompt_with_history(
         ));
     }
 
-    prompt.push_str(&format!("## stderr\n```\n{}\n```\n\n", stderr));
+    let truncated_stderr = truncate_prompt_output(stderr, 8000);
+    prompt.push_str(&format!("## stderr\n```\n{}\n```\n\n", truncated_stderr));
 
     if !stdout.is_empty() {
-        prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", stdout));
+        let truncated_stdout = truncate_prompt_output(stdout, 4000);
+        prompt.push_str(&format!("## stdout\n```\n{}\n```\n\n", truncated_stdout));
     }
 
     if error_refs.methods_not_found.len() > 5 {
@@ -378,4 +380,14 @@ pub(crate) fn build_fix_prompt_with_history(
     }
 
     prompt
+}
+
+fn truncate_prompt_output(s: &str, max_chars: usize) -> String {
+    if s.len() <= max_chars {
+        return s.to_string();
+    }
+    let half = max_chars / 2;
+    let start = &s[..half];
+    let end = &s[s.len() - half..];
+    format!("{start}\n\n... (truncated {0} bytes) ...\n\n{end}", s.len() - max_chars)
 }
