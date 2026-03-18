@@ -200,6 +200,7 @@ pub(crate) fn build_agentic_task_context(
     task: &Task,
     session: &Session,
     completed_deps: &[Task],
+    work_log_summary: &str,
 ) -> String {
     let mut ctx = String::new();
     ctx.push_str(&format!("# Project: {}\n{}\n\n", project.name, project.description));
@@ -240,6 +241,13 @@ pub(crate) fn build_agentic_task_context(
             ctx.push_str(&section);
         }
         ctx.push('\n');
+    }
+
+    if !work_log_summary.is_empty() {
+        ctx.push_str(&format!(
+            "# Session Progress (tasks completed so far)\n{}\n\n",
+            work_log_summary
+        ));
     }
 
     ctx.push_str("Start by exploring the codebase to understand the current state, then implement the task.\n");

@@ -115,7 +115,7 @@ impl DevLoopEngine {
             let project = self.project_service.get_project(&project_id)?;
             self.execute_shell_task(&project, &task, &cmd, aiid).await
         } else {
-            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent)).await
+            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent), &[]).await
         };
 
         let outcome = self.finalize_task_execution(
@@ -692,6 +692,7 @@ impl DevLoopEngine {
         session: &Session,
         api_key: &str,
         agent: Option<&AgentInstance>,
+        work_log: &[String],
     ) -> Result<TaskExecution, EngineError> {
         let project = self.project_service.get_project(project_id)?;
         let spec = self.store.get_spec(project_id, &task.spec_id)?;
@@ -711,8 +712,20 @@ impl DevLoopEngine {
             })
             .collect();
 
+        const MAX_WORK_LOG_TASK_CONTEXT: usize = 4_000;
+        let work_log_summary = if work_log.is_empty() {
+            String::new()
+        } else {
+            let mut summary = work_log.join("\n---\n");
+            if summary.len() > MAX_WORK_LOG_TASK_CONTEXT {
+                summary.truncate(MAX_WORK_LOG_TASK_CONTEXT);
+                summary.push_str("\n... (truncated) ...");
+            }
+            summary
+        };
+
         let mut task_context = build_agentic_task_context(
-            &project, &spec, task, session, &completed_deps,
+            &project, &spec, task, session, &completed_deps, &work_log_summary,
         );
         if !workspace_map.is_empty() {
             task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
@@ -1110,6 +1123,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
                         &self.task,
                         &self.session,
                         &[],
+                        "",
                     );
                     results.push(ToolCallResult {
                         tool_use_id: tc.id.clone(),

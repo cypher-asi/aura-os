@@ -381,7 +381,7 @@ impl DevLoopEngine {
                 Some(self.execute_shell_task(&project, &task, &cmd, agent_instance_id).await)
             } else {
                 tokio::select! {
-                    res = self.execute_task_agentic(&project_id, &task, &session, &api_key, loop_agent.as_ref()) => {
+                    res = self.execute_task_agentic(&project_id, &task, &session, &api_key, loop_agent.as_ref(), &work_log) => {
                         Some(res)
                     }
                     _ = stop_rx.changed() => {
