@@ -535,6 +535,41 @@ export const api = {
     }>(`/api/profiles/${profileId}`),
   },
 
+  // Feed (proxied to aura-network)
+  feed: {
+    list: (filter?: string) =>
+      apiFetch<{
+        id: string;
+        profile_id: string;
+        event_type: string;
+        metadata: Record<string, unknown> | null;
+        created_at: string | null;
+      }[]>(filter ? `/api/feed?filter=${filter}` : "/api/feed"),
+    getComments: (eventId: string) =>
+      apiFetch<{
+        id: string;
+        activity_event_id: string;
+        profile_id: string;
+        content: string;
+        created_at: string | null;
+      }[]>(`/api/activity/${eventId}/comments`),
+    addComment: (eventId: string, content: string) =>
+      apiFetch<{
+        id: string;
+        activity_event_id: string;
+        profile_id: string;
+        content: string;
+        created_at: string | null;
+      }>(`/api/activity/${eventId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      }),
+    deleteComment: (commentId: string) =>
+      apiFetch<void>(`/api/comments/${commentId}`, {
+        method: "DELETE",
+      }),
+  },
+
   // Activity
   activity: {
     getCommitHistory: (params: {

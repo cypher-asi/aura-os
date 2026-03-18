@@ -1,6 +1,7 @@
-import { createContext, useContext, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useFollow } from "../../context/FollowContext";
+import { api } from "../../api/client";
 
 export interface FeedCommit {
   sha: string;
@@ -294,6 +295,57 @@ function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
   return activity;
 }
 
+interface NetworkFeedEvent {
+  id: string;
+  profile_id: string;
+  event_type: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
+function networkEventToFeedEvent(net: NetworkFeedEvent): FeedEvent {
+  const meta = net.metadata ?? {};
+  const authorName = (meta.author_name as string) || (meta.profileName as string) || "Unknown";
+  const authorAvatar = (meta.author_avatar as string) || (meta.avatarUrl as string) || undefined;
+  const authorType = ((meta.author_type as string) || (meta.profileType as string) || "user") as "user" | "agent";
+  const repo = (meta.repo as string) || (meta.repository as string) || "";
+  const branch = (meta.branch as string) || "main";
+  const rawCommits = (meta.commits as Array<{ sha?: string; message?: string }>) || [];
+  const commits: FeedCommit[] = rawCommits.map((c) => ({
+    sha: c.sha || "",
+    message: c.message || "",
+  }));
+  const summary = (meta.summary as string) || undefined;
+
+  return {
+    id: net.id,
+    author: { name: authorName, avatarUrl: authorAvatar, type: authorType },
+    repo,
+    branch,
+    commits,
+    timestamp: net.created_at || new Date().toISOString(),
+    summary,
+  };
+}
+
+interface NetworkComment {
+  id: string;
+  activity_event_id: string;
+  profile_id: string;
+  content: string;
+  created_at: string | null;
+}
+
+function networkCommentToFeedComment(net: NetworkComment): FeedComment {
+  return {
+    id: net.id,
+    eventId: net.activity_event_id,
+    author: { name: net.profile_id, type: "user" },
+    text: net.content,
+    timestamp: net.created_at || new Date().toISOString(),
+  };
+}
+
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function FeedProvider({ children }: { children: ReactNode }) {
@@ -301,7 +353,24 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   const [selectedProfile, setSelectedProfile] = useState<FeedSelectedProfile | null>(null);
   const [filter, setFilterRaw] = useState<FeedFilter>("my-agents");
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
+  const [liveEvents, setLiveEvents] = useState<FeedEvent[] | null>(null);
   const { follows } = useFollow();
+
+  useEffect(() => {
+    let cancelled = false;
+    api.feed
+      .list()
+      .then((netEvents) => {
+        if (cancelled) return;
+        if (netEvents.length > 0) {
+          setLiveEvents(netEvents.map(networkEventToFeedEvent));
+        }
+      })
+      .catch(() => {
+        // Network unavailable — stay with mock data
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const followedNames = useMemo(
     () => new Set(follows.map((f) => f.target_profile_id)),
@@ -309,8 +378,11 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const events = useMemo(
-    () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [],
+    () => {
+      const source = liveEvents ?? MOCK_EVENTS;
+      return [...source].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    },
+    [liveEvents],
   );
 
   const filteredEvents = useMemo(
@@ -319,9 +391,10 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const commitActivity = useMemo(() => {
+    if (liveEvents) return commitActivityFromEvents(filteredEvents);
     if (filter === "everything" || filter === "organization") return MOCK_COMMIT_ACTIVITY;
     return commitActivityFromEvents(filteredEvents);
-  }, [filter, filteredEvents]);
+  }, [filter, filteredEvents, liveEvents]);
 
   const selectEvent = useCallback((id: string | null) => {
     setSelectedEventId(id);
@@ -344,15 +417,34 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const addComment = useCallback((eventId: string, text: string) => {
-    const comment: FeedComment = {
-      id: `cmt-${nextCommentId++}`,
-      eventId,
-      author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    setComments((prev) => [...prev, comment]);
-  }, []);
+    if (liveEvents) {
+      api.feed
+        .addComment(eventId, text)
+        .then((net) => {
+          setComments((prev) => [...prev, networkCommentToFeedComment(net)]);
+        })
+        .catch(() => {
+          // Fallback to local-only comment
+          const comment: FeedComment = {
+            id: `cmt-${nextCommentId++}`,
+            eventId,
+            author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
+            text,
+            timestamp: new Date().toISOString(),
+          };
+          setComments((prev) => [...prev, comment]);
+        });
+    } else {
+      const comment: FeedComment = {
+        id: `cmt-${nextCommentId++}`,
+        eventId,
+        author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
+        text,
+        timestamp: new Date().toISOString(),
+      };
+      setComments((prev) => [...prev, comment]);
+    }
+  }, [liveEvents]);
 
   const value = useMemo(
     () => ({ events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, selectedProfile, selectProfile, getCommentsForEvent, addComment }),

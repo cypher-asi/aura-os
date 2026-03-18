@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, users, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -265,7 +265,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/sessions",
             get(agents::list_project_sessions),
         )
-        // Follows (profile-based)
+        // Follows (profile-based, proxied to aura-network)
         .route(
             "/api/follows",
             post(follows::follow).get(follows::list_follows),
@@ -277,6 +277,16 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/follows/check/:target_profile_id",
             get(follows::check_follow),
+        )
+        // Feed (proxied to aura-network)
+        .route("/api/feed", get(feed::list_feed))
+        .route(
+            "/api/activity/:event_id/comments",
+            get(feed::list_comments).post(feed::add_comment),
+        )
+        .route(
+            "/api/comments/:comment_id",
+            delete(feed::delete_comment),
         )
         // Log entries
         .route("/api/log-entries", get(log::list_log_entries))

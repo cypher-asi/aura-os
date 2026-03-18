@@ -2,6 +2,7 @@ pub mod agents;
 pub mod auth;
 pub mod billing;
 pub mod dev_loop;
+pub mod feed;
 pub mod follows;
 pub mod github;
 pub mod log;
