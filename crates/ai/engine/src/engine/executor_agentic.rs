@@ -121,7 +121,7 @@ impl DevLoopEngine {
             stream_timeout: std::time::Duration::from_secs(self.llm_config.stream_timeout_secs),
             billing_reason: "aura_task",
             max_context_tokens: Some(self.llm_config.max_context_tokens),
-            credit_budget: None,
+            credit_budget: self.engine_config.max_task_credits,
         };
 
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();

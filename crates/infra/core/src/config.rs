@@ -82,6 +82,9 @@ pub struct EngineConfig {
     pub max_shell_task_retries: u32,
     pub max_loop_task_retries: u32,
     pub max_follow_ups_per_loop: usize,
+    /// Per-task credit cap for agentic tool loops. Prevents runaway tasks
+    /// from burning unlimited credits. `None` means no cap.
+    pub max_task_credits: Option<u64>,
 }
 
 impl Default for EngineConfig {
@@ -94,6 +97,7 @@ impl Default for EngineConfig {
             max_shell_task_retries: 20,
             max_loop_task_retries: 5,
             max_follow_ups_per_loop: 20,
+            max_task_credits: Some(200_000),
         }
     }
 }
@@ -109,6 +113,7 @@ impl EngineConfig {
     /// - `AURA_ENGINE_MAX_SHELL_TASK_RETRIES`
     /// - `AURA_ENGINE_MAX_LOOP_TASK_RETRIES`
     /// - `AURA_ENGINE_MAX_FOLLOW_UPS_PER_LOOP`
+    /// - `AURA_ENGINE_MAX_TASK_CREDITS`
     pub fn from_env() -> Self {
         let defaults = Self::default();
         Self {
@@ -126,6 +131,7 @@ impl EngineConfig {
                 .unwrap_or(defaults.max_loop_task_retries),
             max_follow_ups_per_loop: parse_env("AURA_ENGINE_MAX_FOLLOW_UPS_PER_LOOP")
                 .unwrap_or(defaults.max_follow_ups_per_loop),
+            max_task_credits: parse_env::<u64>("AURA_ENGINE_MAX_TASK_CREDITS").or(defaults.max_task_credits),
         }
     }
 }
