@@ -224,6 +224,14 @@ pub enum ChatContentBlock {
         #[serde(skip_serializing_if = "Option::is_none")]
         is_error: Option<bool>,
     },
+    TaskRef {
+        task_id: String,
+        title: String,
+    },
+    SpecRef {
+        spec_id: String,
+        title: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

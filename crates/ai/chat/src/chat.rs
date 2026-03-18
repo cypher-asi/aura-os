@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use chrono::Utc;
@@ -167,33 +167,34 @@ fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
             if let Some(blocks) = &m.content_blocks {
                 let content_blocks: Vec<ContentBlock> = blocks
                     .iter()
-                    .map(|b| match b {
-                        ChatContentBlock::Text { text } => ContentBlock::Text {
+                    .filter_map(|b| match b {
+                        ChatContentBlock::Text { text } => Some(ContentBlock::Text {
                             text: text.clone(),
-                        },
+                        }),
                         ChatContentBlock::ToolUse { id, name, input } => {
-                            ContentBlock::ToolUse {
+                            Some(ContentBlock::ToolUse {
                                 id: id.clone(),
                                 name: name.clone(),
                                 input: input.clone(),
-                            }
+                            })
                         }
                         ChatContentBlock::ToolResult {
                             tool_use_id,
                             content,
                             is_error,
-                        } => ContentBlock::ToolResult {
+                        } => Some(ContentBlock::ToolResult {
                             tool_use_id: tool_use_id.clone(),
                             content: content.clone(),
                             is_error: *is_error,
-                        },
-                        ChatContentBlock::Image { media_type, data } => ContentBlock::Image {
+                        }),
+                        ChatContentBlock::Image { media_type, data } => Some(ContentBlock::Image {
                             source: ImageSource {
                                 source_type: "base64".to_string(),
                                 media_type: media_type.clone(),
                                 data: data.clone(),
                             },
-                        },
+                        }),
+                        ChatContentBlock::TaskRef { .. } | ChatContentBlock::SpecRef { .. } => None,
                     })
                     .collect();
                 RichMessage {
@@ -211,6 +212,12 @@ fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
 }
 
 // ---------------------------------------------------------------------------
+// Shared accumulator for persisting tool calls and task/spec refs
+// ---------------------------------------------------------------------------
+
+type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
+
+// ---------------------------------------------------------------------------
 // ToolExecutor for single-project chat
 // ---------------------------------------------------------------------------
 
@@ -218,6 +225,7 @@ struct ChatToolLoopExecutor {
     inner: ChatToolExecutor,
     project_id: ProjectId,
     chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
+    blocks: ContentBlockAccumulator,
 }
 
 #[async_trait]
@@ -233,11 +241,23 @@ impl ToolExecutor for ChatToolLoopExecutor {
             .into_iter()
             .zip(tool_calls)
             .map(|(result, tc)| {
-                if let Some(spec) = result.saved_spec {
-                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
+                if let Some(spec) = &result.saved_spec {
+                    if let Ok(mut acc) = self.blocks.lock() {
+                        acc.push(ChatContentBlock::SpecRef {
+                            spec_id: spec.spec_id.to_string(),
+                            title: spec.title.clone(),
+                        });
+                    }
+                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec.clone()));
                 }
-                if let Some(task) = result.saved_task {
-                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
+                if let Some(task) = &result.saved_task {
+                    if let Ok(mut acc) = self.blocks.lock() {
+                        acc.push(ChatContentBlock::TaskRef {
+                            task_id: task.task_id.to_string(),
+                            title: task.title.clone(),
+                        });
+                    }
+                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task.clone()));
                 }
                 ToolCallResult {
                     tool_use_id: tc.id.clone(),
@@ -258,6 +278,7 @@ struct AgentToolLoopExecutor {
     inner: ChatToolExecutor,
     allowed_project_ids: std::collections::HashSet<String>,
     chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
+    blocks: ContentBlockAccumulator,
 }
 
 #[async_trait]
@@ -292,11 +313,23 @@ impl ToolExecutor for AgentToolLoopExecutor {
             .into_iter()
             .zip(tool_calls)
             .map(|(result, tc)| {
-                if let Some(spec) = result.saved_spec {
-                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec));
+                if let Some(spec) = &result.saved_spec {
+                    if let Ok(mut acc) = self.blocks.lock() {
+                        acc.push(ChatContentBlock::SpecRef {
+                            spec_id: spec.spec_id.to_string(),
+                            title: spec.title.clone(),
+                        });
+                    }
+                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec.clone()));
                 }
-                if let Some(task) = result.saved_task {
-                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task));
+                if let Some(task) = &result.saved_task {
+                    if let Ok(mut acc) = self.blocks.lock() {
+                        acc.push(ChatContentBlock::TaskRef {
+                            task_id: task.task_id.to_string(),
+                            title: task.title.clone(),
+                        });
+                    }
+                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task.clone()));
                 }
                 ToolCallResult {
                     tool_use_id: tc.id.clone(),
@@ -313,7 +346,11 @@ impl ToolExecutor for AgentToolLoopExecutor {
 // Forward ToolLoopEvents to ChatStreamEvent channel
 // ---------------------------------------------------------------------------
 
-fn forward_tool_loop_event(evt: ToolLoopEvent, tx: &mpsc::UnboundedSender<ChatStreamEvent>) {
+fn forward_tool_loop_event(
+    evt: ToolLoopEvent,
+    tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+    blocks: &ContentBlockAccumulator,
+) {
     match evt {
         ToolLoopEvent::Delta(text) => {
             let _ = tx.send(ChatStreamEvent::Delta(text));
@@ -322,6 +359,13 @@ fn forward_tool_loop_event(evt: ToolLoopEvent, tx: &mpsc::UnboundedSender<ChatSt
             let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
         }
         ToolLoopEvent::ToolUseDetected { id, name, input } => {
+            if let Ok(mut acc) = blocks.lock() {
+                acc.push(ChatContentBlock::ToolUse {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input: input.clone(),
+                });
+            }
             let _ = tx.send(ChatStreamEvent::ToolCall { id, name, input });
         }
         ToolLoopEvent::ToolResult {
@@ -330,6 +374,13 @@ fn forward_tool_loop_event(evt: ToolLoopEvent, tx: &mpsc::UnboundedSender<ChatSt
             content,
             is_error,
         } => {
+            if let Ok(mut acc) = blocks.lock() {
+                acc.push(ChatContentBlock::ToolResult {
+                    tool_use_id: tool_use_id.clone(),
+                    content: content.clone(),
+                    is_error: if is_error { Some(true) } else { None },
+                });
+            }
             let _ = tx.send(ChatStreamEvent::ToolResult {
                 id: tool_use_id,
                 name: tool_name,
@@ -665,6 +716,8 @@ impl ChatService {
             .map(|p| p.project_id.to_string())
             .collect();
 
+        let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
+
         let executor = AgentToolLoopExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
@@ -673,6 +726,7 @@ impl ChatService {
             ),
             allowed_project_ids,
             chat_tx: tx.clone(),
+            blocks: Arc::clone(&tool_blocks),
         };
 
         let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
@@ -691,9 +745,10 @@ impl ChatService {
 
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
         let tx_clone = tx.clone();
+        let fwd_blocks = Arc::clone(&tool_blocks);
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = loop_rx.recv().await {
-                forward_tool_loop_event(evt, &tx_clone);
+                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
             }
         });
 
@@ -719,10 +774,17 @@ impl ChatService {
             "Agent chat loop finished"
         );
 
+        let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
+            Ok(mutex) => mutex.into_inner().unwrap_or_default(),
+            Err(arc) => arc.lock().unwrap().clone(),
+        };
+        let has_tool_calls = !accumulated_blocks.is_empty();
+        let content_blocks = if has_tool_calls { Some(accumulated_blocks) } else { None };
+
         let dummy_project_id = ProjectId::nil();
         let dummy_agent_instance_id = AgentInstanceId::nil();
 
-        if !result.text.is_empty() {
+        if !result.text.is_empty() || has_tool_calls {
             let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
             let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
             let assistant_msg = Message {
@@ -731,7 +793,7 @@ impl ChatService {
                 project_id: dummy_project_id,
                 role: ChatRole::Assistant,
                 content: result.text,
-                content_blocks: None,
+                content_blocks,
                 thinking,
                 thinking_duration_ms,
                 created_at: Utc::now(),
@@ -834,6 +896,8 @@ impl ChatService {
             }
         }
 
+        let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
+
         let executor = ChatToolLoopExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
@@ -842,6 +906,7 @@ impl ChatService {
             ),
             project_id: *project_id,
             chat_tx: tx.clone(),
+            blocks: Arc::clone(&tool_blocks),
         };
 
         let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
@@ -860,9 +925,10 @@ impl ChatService {
 
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
         let tx_clone = tx.clone();
+        let fwd_blocks = Arc::clone(&tool_blocks);
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = loop_rx.recv().await {
-                forward_tool_loop_event(evt, &tx_clone);
+                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
             }
         });
 
@@ -904,7 +970,14 @@ impl ChatService {
             "Chat loop finished"
         );
 
-        if !result.text.is_empty() {
+        let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
+            Ok(mutex) => mutex.into_inner().unwrap_or_default(),
+            Err(arc) => arc.lock().unwrap().clone(),
+        };
+        let has_tool_calls = !accumulated_blocks.is_empty();
+        let content_blocks = if has_tool_calls { Some(accumulated_blocks) } else { None };
+
+        if !result.text.is_empty() || has_tool_calls {
             let assistant_reply = result.text.clone();
             let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
             let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
@@ -914,7 +987,7 @@ impl ChatService {
                 project_id: *project_id,
                 role: ChatRole::Assistant,
                 content: result.text,
-                content_blocks: None,
+                content_blocks,
                 thinking,
                 thinking_duration_ms,
                 created_at: Utc::now(),
@@ -925,16 +998,18 @@ impl ChatService {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
             }
 
-            self.maybe_generate_title(
-                project_id,
-                agent_instance_id,
-                agent_instance,
-                &api_key,
-                &stored_messages,
-                &assistant_reply,
-                tx,
-            )
-            .await;
+            if !assistant_reply.is_empty() {
+                self.maybe_generate_title(
+                    project_id,
+                    agent_instance_id,
+                    agent_instance,
+                    &api_key,
+                    &stored_messages,
+                    &assistant_reply,
+                    tx,
+                )
+                .await;
+            }
         }
     }
 
