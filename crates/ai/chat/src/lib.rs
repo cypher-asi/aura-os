@@ -1,6 +1,10 @@
 mod error;
 mod chat;
+mod chat_agent;
+mod chat_context;
+mod chat_sanitize;
 mod chat_tool_executor;
+mod chat_tool_handlers;
 pub mod compaction;
 pub mod tool_loop;
 

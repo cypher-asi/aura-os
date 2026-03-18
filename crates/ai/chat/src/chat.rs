@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio::sync::mpsc;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use aura_core::*;
 use aura_billing::MeteredLlm;
@@ -12,7 +12,7 @@ use aura_store::RocksStore;
 
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::tool_loop::{run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent};
-use aura_tools::{agent_tool_definitions, multi_project_tool_definitions};
+use aura_tools::agent_tool_definitions;
 use aura_claude::{
     ContentBlock, ImageSource, MessageContent, RichMessage,
     ThinkingConfig, ToolCall,
@@ -123,38 +123,7 @@ fn build_chat_system_prompt(project: &Project, custom_system_prompt: &str) -> St
     prompt
 }
 
-fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> String {
-    let mut prompt = if agent.system_prompt.is_empty() {
-        CHAT_SYSTEM_PROMPT_BASE.to_string()
-    } else {
-        let mut p = agent.system_prompt.clone();
-        p.push_str("\n\n");
-        p.push_str(CHAT_SYSTEM_PROMPT_BASE);
-        p
-    };
-
-    prompt.push_str("\n\n## Available Projects\n\n");
-    prompt.push_str(
-        "You are operating in multi-project mode. Every tool call MUST include a `project_id` \
-         parameter to specify which project to act on. Here are the projects you can work with:\n\n",
-    );
-
-    for project in projects {
-        prompt.push_str(&format!(
-            "- **{}** (ID: `{}`)\n  - Description: {}\n  - Folder: `{}`\n  - Build: `{}`\n  - Test: `{}`\n\n",
-            project.name,
-            project.project_id,
-            project.description,
-            project.linked_folder_path,
-            project.build_command.as_deref().unwrap_or("(not set)"),
-            project.test_command.as_deref().unwrap_or("(not set)"),
-        ));
-    }
-
-    prompt
-}
-
-fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
+pub(crate) fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
     messages
         .iter()
         .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
@@ -215,7 +184,7 @@ fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
 // Shared accumulator for persisting tool calls and task/spec refs
 // ---------------------------------------------------------------------------
 
-type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
+pub(crate) type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
 
 // ---------------------------------------------------------------------------
 // ToolExecutor for single-project chat
@@ -271,82 +240,10 @@ impl ToolExecutor for ChatToolLoopExecutor {
 }
 
 // ---------------------------------------------------------------------------
-// ToolExecutor for multi-project agent chat
-// ---------------------------------------------------------------------------
-
-struct AgentToolLoopExecutor {
-    inner: ChatToolExecutor,
-    allowed_project_ids: std::collections::HashSet<String>,
-    chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
-    blocks: ContentBlockAccumulator,
-}
-
-#[async_trait]
-impl ToolExecutor for AgentToolLoopExecutor {
-    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
-        let futures: Vec<_> = tool_calls
-            .iter()
-            .map(|tc| {
-                let pid_str = tc
-                    .input
-                    .get("project_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let project_id = if self.allowed_project_ids.contains(pid_str) {
-                    pid_str.parse::<ProjectId>().ok()
-                } else {
-                    None
-                };
-                async move {
-                    match project_id {
-                        Some(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
-                        None => crate::chat_tool_executor::ToolExecResult::err_static(
-                            "Missing or invalid project_id. You must specify a valid project_id from the available projects."
-                        ),
-                    }
-                }
-            })
-            .collect();
-        let exec_results = futures::future::join_all(futures).await;
-
-        exec_results
-            .into_iter()
-            .zip(tool_calls)
-            .map(|(result, tc)| {
-                if let Some(spec) = &result.saved_spec {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::SpecRef {
-                            spec_id: spec.spec_id.to_string(),
-                            title: spec.title.clone(),
-                        });
-                    }
-                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec.clone()));
-                }
-                if let Some(task) = &result.saved_task {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::TaskRef {
-                            task_id: task.task_id.to_string(),
-                            title: task.title.clone(),
-                        });
-                    }
-                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task.clone()));
-                }
-                ToolCallResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content,
-                    is_error: result.is_error,
-                    stop_loop: false,
-                }
-            })
-            .collect()
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Forward ToolLoopEvents to ChatStreamEvent channel
 // ---------------------------------------------------------------------------
 
-fn forward_tool_loop_event(
+pub(crate) fn forward_tool_loop_event(
     evt: ToolLoopEvent,
     tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     blocks: &ContentBlockAccumulator,
@@ -514,13 +411,13 @@ pub enum ChatStreamEvent {
 // ---------------------------------------------------------------------------
 
 pub struct ChatService {
-    store: Arc<RocksStore>,
-    settings: Arc<SettingsService>,
-    llm: Arc<MeteredLlm>,
-    spec_gen: Arc<SpecGenerationService>,
-    project_service: Arc<ProjectService>,
-    task_service: Arc<TaskService>,
-    llm_config: LlmConfig,
+    pub(crate) store: Arc<RocksStore>,
+    pub(crate) settings: Arc<SettingsService>,
+    pub(crate) llm: Arc<MeteredLlm>,
+    pub(crate) spec_gen: Arc<SpecGenerationService>,
+    pub(crate) project_service: Arc<ProjectService>,
+    pub(crate) task_service: Arc<TaskService>,
+    pub(crate) llm_config: LlmConfig,
 }
 
 impl ChatService {
@@ -671,141 +568,6 @@ impl ChatService {
         send(ChatStreamEvent::Done);
     }
 
-    async fn handle_agent_chat_with_tools(
-        &self,
-        agent_id: &AgentId,
-        agent: &Agent,
-        projects: &[Project],
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-    ) {
-        let send = |evt: ChatStreamEvent| {
-            let _ = tx.send(evt);
-        };
-
-        let api_key = match self.settings.get_decrypted_api_key() {
-            Ok(k) => k,
-            Err(e) => {
-                send(ChatStreamEvent::Error(format!("API key error: {e}")));
-                return;
-            }
-        };
-
-        let stored_messages = match self.list_agent_messages(agent_id) {
-            Ok(m) => m,
-            Err(e) => {
-                send(ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
-                return;
-            }
-        };
-
-        let system = build_multi_project_system_prompt(agent, projects);
-
-        let mut api_messages = convert_messages_to_rich(&stored_messages);
-
-        api_messages = self
-            .manage_context_window(&api_key, &system, api_messages)
-            .await;
-
-        api_messages = Self::sanitize_orphan_tool_results(api_messages);
-        api_messages = Self::sanitize_tool_use_results(api_messages);
-
-        let tools = multi_project_tool_definitions();
-
-        let allowed_project_ids: std::collections::HashSet<String> = projects
-            .iter()
-            .map(|p| p.project_id.to_string())
-            .collect();
-
-        let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
-
-        let executor = AgentToolLoopExecutor {
-            inner: ChatToolExecutor::new(
-                self.store.clone(),
-                self.project_service.clone(),
-                self.task_service.clone(),
-            ),
-            allowed_project_ids,
-            chat_tx: tx.clone(),
-            blocks: Arc::clone(&tool_blocks),
-        };
-
-        let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
-
-        let config = ToolLoopConfig {
-            max_iterations: ChatToolExecutor::max_iterations(),
-            max_tokens: self.llm_config.chat_max_tokens,
-            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
-            stream_timeout: std::time::Duration::from_secs(300),
-            billing_reason: "aura_chat",
-            max_context_tokens: Some(self.llm_config.max_context_tokens),
-            credit_budget,
-        };
-
-        let thinking_start = std::time::Instant::now();
-
-        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
-        let tx_clone = tx.clone();
-        let fwd_blocks = Arc::clone(&tool_blocks);
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = loop_rx.recv().await {
-                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
-            }
-        });
-
-        let result = run_tool_loop(
-            self.llm.clone(),
-            &api_key,
-            &system,
-            api_messages,
-            tools,
-            &config,
-            &executor,
-            &loop_tx,
-        )
-        .await;
-        drop(loop_tx);
-        let _ = forwarder.await;
-
-        info!(
-            ?agent_id,
-            result.total_input_tokens,
-            result.total_output_tokens,
-            llm_error = result.llm_error.as_deref().unwrap_or(""),
-            "Agent chat loop finished"
-        );
-
-        let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
-            Ok(mutex) => mutex.into_inner().unwrap_or_default(),
-            Err(arc) => arc.lock().unwrap().clone(),
-        };
-        let has_tool_calls = !accumulated_blocks.is_empty();
-        let content_blocks = if has_tool_calls { Some(accumulated_blocks) } else { None };
-
-        let dummy_project_id = ProjectId::nil();
-        let dummy_agent_instance_id = AgentInstanceId::nil();
-
-        if !result.text.is_empty() || has_tool_calls {
-            let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
-            let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
-            let assistant_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: dummy_agent_instance_id,
-                project_id: dummy_project_id,
-                role: ChatRole::Assistant,
-                content: result.text,
-                content_blocks,
-                thinking,
-                thinking_duration_ms,
-                created_at: Utc::now(),
-            };
-            if let Err(e) = self.store.put_agent_message(agent_id, &assistant_msg) {
-                error!(?agent_id, error = %e, "Failed to save assistant message");
-            } else {
-                send(ChatStreamEvent::MessageSaved(assistant_msg));
-            }
-        }
-    }
-
     // -----------------------------------------------------------------------
     // Agentic chat with tool-use loop
     // -----------------------------------------------------------------------
@@ -946,7 +708,6 @@ impl ChatService {
         drop(loop_tx);
         let _ = forwarder.await;
 
-        // Persist accumulated token usage on the agent instance
         if result.total_input_tokens > 0 || result.total_output_tokens > 0 {
             if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
                 instance.total_input_tokens += result.total_input_tokens;
@@ -1009,341 +770,6 @@ impl ChatService {
                     tx,
                 )
                 .await;
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Tool-use / tool-result sanitization (Anthropic API requirement)
-    // -----------------------------------------------------------------------
-
-    fn is_tool_results_only(msg: &RichMessage) -> bool {
-        msg.role == "user"
-            && matches!(
-                &msg.content,
-                MessageContent::Blocks(blocks)
-                    if !blocks.is_empty()
-                        && blocks
-                            .iter()
-                            .all(|b| matches!(b, ContentBlock::ToolResult { .. }))
-            )
-    }
-
-    fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
-        let mut result = Vec::with_capacity(messages.len());
-        for i in 0..messages.len() {
-            let msg = &messages[i];
-            let MessageContent::Blocks(blocks) = &msg.content else {
-                result.push(msg.clone());
-                continue;
-            };
-            let tool_result_blocks: Vec<_> = blocks
-                .iter()
-                .filter_map(|b| match b {
-                    ContentBlock::ToolResult { .. } => Some(b.clone()),
-                    _ => None,
-                })
-                .collect();
-            if tool_result_blocks.is_empty() || msg.role != "user" {
-                result.push(msg.clone());
-                continue;
-            }
-            let orig_count = tool_result_blocks.len();
-            let valid_ids: std::collections::HashSet<String> = match messages.get(i.wrapping_sub(1)) {
-                Some(prev) if prev.role == "assistant" => match &prev.content {
-                    MessageContent::Blocks(prev_blocks) => prev_blocks
-                        .iter()
-                        .filter_map(|b| match b {
-                            ContentBlock::ToolUse { id, .. } => Some(id.clone()),
-                            _ => None,
-                        })
-                        .collect(),
-                    _ => std::collections::HashSet::new(),
-                },
-                _ => std::collections::HashSet::new(),
-            };
-            let kept: Vec<ContentBlock> = tool_result_blocks
-                .into_iter()
-                .filter_map(|b| match &b {
-                    ContentBlock::ToolResult { tool_use_id, .. } if valid_ids.contains(tool_use_id) => {
-                        Some(b)
-                    }
-                    ContentBlock::ToolResult { tool_use_id, .. } => {
-                        warn!(tool_use_id, "Dropping orphan tool_result");
-                        None
-                    }
-                    _ => None,
-                })
-                .collect();
-            let other_blocks: Vec<ContentBlock> = blocks
-                .iter()
-                .filter(|b| !matches!(b, ContentBlock::ToolResult { .. }))
-                .cloned()
-                .collect();
-            if kept.is_empty() && other_blocks.is_empty() {
-                let preview: String = blocks
-                    .iter()
-                    .filter_map(|b| match b {
-                        ContentBlock::ToolResult { content, .. } => Some(content.as_str()),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ")
-                    .chars()
-                    .take(200)
-                    .collect();
-                warn!(preview = %preview, "Converting orphan tool_result message to text");
-                result.push(RichMessage::user(&format!(
-                    "[Previous tool result was lost due to context: {}]",
-                    preview
-                )));
-            } else if kept.len() != orig_count {
-                let mut new_blocks = other_blocks;
-                new_blocks.extend(kept);
-                result.push(RichMessage {
-                    role: "user".into(),
-                    content: MessageContent::Blocks(new_blocks),
-                });
-            } else {
-                result.push(msg.clone());
-            }
-        }
-        result
-    }
-
-    fn sanitize_tool_use_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
-        let mut result = Vec::with_capacity(messages.len() + 16);
-        let mut i = 0;
-        while i < messages.len() {
-            let msg = &messages[i];
-            let tool_use_ids: Vec<String> = match &msg.content {
-                MessageContent::Blocks(blocks) => blocks
-                    .iter()
-                    .filter_map(|b| match b {
-                        ContentBlock::ToolUse { id, .. } => Some(id.clone()),
-                        _ => None,
-                    })
-                    .collect(),
-                MessageContent::Text(_) => vec![],
-            };
-
-            result.push(msg.clone());
-
-            if tool_use_ids.is_empty() {
-                i += 1;
-                continue;
-            }
-
-            let next = messages.get(i + 1);
-            let existing_ids: std::collections::HashSet<String> = match next {
-                Some(m) if m.role == "user" => match &m.content {
-                    MessageContent::Blocks(blocks) => blocks
-                        .iter()
-                        .filter_map(|b| match b {
-                            ContentBlock::ToolResult { tool_use_id, .. } => Some(tool_use_id.clone()),
-                            _ => None,
-                        })
-                        .collect(),
-                    _ => std::collections::HashSet::new(),
-                },
-                _ => std::collections::HashSet::new(),
-            };
-
-            let missing: Vec<String> = tool_use_ids
-                .into_iter()
-                .filter(|id| !existing_ids.contains(id))
-                .collect();
-
-            if !missing.is_empty() {
-                warn!(
-                    orphaned_count = missing.len(),
-                    ids = ?missing,
-                    "Adding synthetic tool_result for orphaned tool_use"
-                );
-                let synthetic: Vec<ContentBlock> = missing
-                    .into_iter()
-                    .map(|tool_use_id| ContentBlock::ToolResult {
-                        tool_use_id: tool_use_id.clone(),
-                        content: "Tool execution was interrupted or not completed."
-                            .to_string(),
-                        is_error: Some(true),
-                    })
-                    .collect();
-
-                if let Some(m) = next {
-                    if m.role == "user" {
-                        if let MessageContent::Blocks(blocks) = &m.content {
-                            let mut merged = blocks.clone();
-                            for b in &synthetic {
-                                merged.push(b.clone());
-                            }
-                            result.push(RichMessage {
-                                role: "user".into(),
-                                content: MessageContent::Blocks(merged),
-                            });
-                            i += 2;
-                            continue;
-                        }
-                    }
-                }
-                result.push(RichMessage::tool_results(synthetic));
-            }
-            i += 1;
-        }
-        result
-    }
-
-    // Context window management (progressive tiered compaction)
-    // -----------------------------------------------------------------------
-
-    async fn manage_context_window(
-        &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-    ) -> Vec<RichMessage> {
-        use aura_claude::estimate_message_tokens;
-
-        let max_context_tokens = self.llm_config.max_context_tokens;
-        let keep_recent_messages = self.llm_config.keep_recent_messages;
-        let target_chat_tokens = self.llm_config.target_chat_tokens;
-
-        let system_tokens = aura_claude::estimate_tokens(system_prompt);
-        let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
-        let total = system_tokens + total_msg_tokens;
-
-        if total <= target_chat_tokens || messages.len() <= 4 {
-            return messages;
-        }
-
-        let utilization = total as f64 / max_context_tokens as f64;
-
-        // If over the soft target but under 50% utilization, compact tool results
-        // using a tighter keep window.
-        if utilization <= 0.50 {
-            info!(
-                total_tokens = total,
-                target_chat_tokens,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Soft-target compaction: summarizing to stay under target_chat_tokens"
-            );
-            let compaction_keep = keep_recent_messages.min(6);
-            let split_at = Self::find_safe_split(&messages, compaction_keep);
-            return self.summarize_and_keep(api_key, &messages, split_at).await;
-        }
-
-        // Tier 1 (50-75%): if still far above the soft target, summarize
-        // rather than just truncating tool results — truncation alone won't
-        // bring 80K+ tokens down to the 20K target.
-        if utilization <= 0.75 {
-            let compaction_keep = keep_recent_messages.min(6);
-            if total > target_chat_tokens * 2 {
-                info!(
-                    total_tokens = total,
-                    target_chat_tokens,
-                    utilization_pct = (utilization * 100.0) as u32,
-                    "Tier-1 compaction: summarizing (tokens far above soft target)"
-                );
-                let split_at = Self::find_safe_split(&messages, compaction_keep);
-                return self.summarize_and_keep(api_key, &messages, split_at).await;
-            }
-            info!(
-                total_tokens = total,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Tier-1 compaction: truncating large tool results in older messages"
-            );
-            return crate::compaction::compact_tool_results_in_history(messages, compaction_keep);
-        }
-
-        // Tier 2 (75-90%): summarize the oldest half of messages, keep fewer recent ones
-        if utilization <= 0.90 {
-            info!(
-                total_tokens = total,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Tier-2 compaction: summarizing older messages"
-            );
-            let compaction_keep = keep_recent_messages.min(6);
-            let split_at = Self::find_safe_split(&messages, compaction_keep);
-            return self.summarize_and_keep(api_key, &messages, split_at).await;
-        }
-
-        // Tier 3 (>90%): aggressive summarization with minimal kept messages
-        info!(
-            total_tokens = total,
-            utilization_pct = (utilization * 100.0) as u32,
-            "Tier-3 compaction: aggressive summarization"
-        );
-        let aggressive_keep = 4;
-        let split_at = Self::find_safe_split(&messages, aggressive_keep);
-        self.summarize_and_keep(api_key, &messages, split_at).await
-    }
-
-    fn find_safe_split(messages: &[RichMessage], keep_recent: usize) -> usize {
-        let mut split_at = messages.len().saturating_sub(keep_recent);
-        while split_at > 0 && Self::is_tool_results_only(&messages[split_at]) {
-            split_at -= 1;
-        }
-        split_at
-    }
-
-    async fn summarize_and_keep(
-        &self,
-        api_key: &str,
-        messages: &[RichMessage],
-        split_at: usize,
-    ) -> Vec<RichMessage> {
-        let (old_messages, recent_messages) = messages.split_at(split_at);
-
-        let mut summary_input = String::from(
-            "Summarize the following conversation concisely, preserving key decisions, \
-             tool calls made, and their outcomes. Focus on what was discussed, what was decided, \
-             and what actions were taken. Keep it under 500 words.\n\n"
-        );
-        for msg in old_messages {
-            let role = &msg.role;
-            let text = match &msg.content {
-                aura_claude::MessageContent::Text(t) => t.clone(),
-                aura_claude::MessageContent::Blocks(blocks) => {
-                    blocks.iter().map(|b| match b {
-                        ContentBlock::Text { text } => text.clone(),
-                        ContentBlock::Image { .. } => "[Image]".to_string(),
-                        ContentBlock::ToolUse { name, .. } => format!("[Tool call: {name}]"),
-                        ContentBlock::ToolResult { content, .. } => {
-                            let preview: String = content.chars().take(100).collect();
-                            format!("[Tool result: {preview}...]")
-                        }
-                    }).collect::<Vec<_>>().join(" ")
-                }
-            };
-            if !text.is_empty() {
-                summary_input.push_str(&format!("{role}: {}\n", text.chars().take(500).collect::<String>()));
-            }
-        }
-
-        match self
-            .llm
-            .complete_with_model(aura_claude::FAST_MODEL, api_key, CONTEXT_SUMMARY_SYSTEM_PROMPT, &summary_input, 1024, "aura_context_summary", None)
-            .await
-        {
-            Ok(resp) => {
-                let summary = resp.text;
-                let mut result = vec![RichMessage::user(&format!(
-                    "Previous conversation summary:\n{summary}"
-                ))];
-                result.push(RichMessage::assistant_text(
-                    "Understood. I have the context from our previous conversation. How can I help?"
-                ));
-                result.extend(recent_messages.to_vec());
-                info!(
-                    original_count = old_messages.len() + recent_messages.len(),
-                    new_count = result.len(),
-                    "Context window compressed via summarization"
-                );
-                result
-            }
-            Err(e) => {
-                warn!(error = %e, "Failed to summarize context, truncating instead");
-                recent_messages.to_vec()
             }
         }
     }
@@ -1543,23 +969,6 @@ mod tests {
         }
     }
 
-    fn make_agent(system_prompt: &str) -> Agent {
-        Agent {
-            agent_id: AgentId::new(),
-            user_id: "u1".into(),
-            name: "TestAgent".into(),
-            role: "developer".into(),
-            personality: String::new(),
-            system_prompt: system_prompt.into(),
-            skills: vec![],
-            icon: None,
-            network_agent_id: None,
-            profile_id: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        }
-    }
-
     fn make_message(role: ChatRole, content: &str) -> Message {
         Message {
             message_id: MessageId::new(),
@@ -1717,55 +1126,5 @@ mod tests {
         assert!(prompt.contains("Project Structure"));
         assert!(prompt.contains("src/"));
         assert!(prompt.contains("README.md"));
-    }
-
-    // -----------------------------------------------------------------------
-    // build_multi_project_system_prompt
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn multi_project_prompt_uses_base_when_agent_empty() {
-        let agent = make_agent("");
-        let projects = vec![make_project("ProjA", "/a"), make_project("ProjB", "/b")];
-        let prompt = build_multi_project_system_prompt(&agent, &projects);
-        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
-        assert!(prompt.contains("multi-project mode"));
-    }
-
-    #[test]
-    fn multi_project_prompt_uses_custom_agent_prompt() {
-        let agent = make_agent("You are a special agent.");
-        let projects = vec![make_project("P1", "/p1")];
-        let prompt = build_multi_project_system_prompt(&agent, &projects);
-        assert!(prompt.starts_with("You are a special agent."));
-        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
-    }
-
-    #[test]
-    fn multi_project_prompt_lists_all_projects() {
-        let agent = make_agent("");
-        let projects = vec![
-            make_project("Alpha", "/alpha"),
-            make_project("Beta", "/beta"),
-            make_project("Gamma", "/gamma"),
-        ];
-        let prompt = build_multi_project_system_prompt(&agent, &projects);
-        assert!(prompt.contains("**Alpha**"));
-        assert!(prompt.contains("**Beta**"));
-        assert!(prompt.contains("**Gamma**"));
-        assert!(prompt.contains("/alpha"));
-        assert!(prompt.contains("/beta"));
-        assert!(prompt.contains("/gamma"));
-    }
-
-    #[test]
-    fn multi_project_prompt_includes_project_commands() {
-        let agent = make_agent("");
-        let mut p = make_project("WithCmd", "/cmd");
-        p.build_command = Some("make".into());
-        p.test_command = None;
-        let prompt = build_multi_project_system_prompt(&agent, &[p]);
-        assert!(prompt.contains("make"));
-        assert!(prompt.contains("(not set)"));
     }
 }

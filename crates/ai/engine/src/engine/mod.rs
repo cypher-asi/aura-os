@@ -1,4 +1,5 @@
 pub(crate) mod build_fix;
+mod build_fix_types;
 mod executor;
 mod executor_agentic;
 mod executor_shell;
@@ -7,6 +8,7 @@ pub(crate) mod orchestrator;
 pub mod parser;
 pub(crate) mod prompts;
 pub(crate) mod shell;
+mod test_fix;
 pub(crate) mod tool_executor;
 pub mod types;
 pub mod write_coordinator;
