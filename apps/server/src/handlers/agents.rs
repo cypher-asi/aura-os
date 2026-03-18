@@ -90,86 +90,50 @@ pub async fn create_agent(
     State(state): State<AppState>,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
-    if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-        let net_req = aura_network::CreateAgentRequest {
-            name: body.name,
-            role: Some(body.role),
-            personality: Some(body.personality),
-            system_prompt: Some(body.system_prompt),
-            skills: Some(body.skills),
-            icon: body.icon,
-            org_id: None,
-        };
-        let net_agent = client
-            .create_agent(&jwt, &net_req)
-            .await
-            .map_err(map_network_error)?;
-        let agent = agent_from_network(&net_agent);
-        ensure_agent_shadow(&state, &agent);
-        Ok(Json(agent))
-    } else {
-        let user_id = get_user_id(&state)?;
-        let agent = state
-            .agent_service
-            .create_agent(
-                &user_id,
-                body.name,
-                body.role,
-                body.personality,
-                body.system_prompt,
-                body.skills,
-                body.icon,
-            )
-            .map_err(|e| ApiError::internal(e.to_string()))?;
-        Ok(Json(agent))
-    }
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_req = aura_network::CreateAgentRequest {
+        name: body.name,
+        role: Some(body.role),
+        personality: Some(body.personality),
+        system_prompt: Some(body.system_prompt),
+        skills: Some(body.skills),
+        icon: body.icon,
+        org_id: None,
+    };
+    let net_agent = client
+        .create_agent(&jwt, &net_req)
+        .await
+        .map_err(map_network_error)?;
+    let agent = agent_from_network(&net_agent);
+    ensure_agent_shadow(&state, &agent);
+    Ok(Json(agent))
 }
 
 pub async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Agent>>> {
-    if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-        let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
-        let agents: Vec<Agent> = net_agents.iter().map(agent_from_network).collect();
-        for agent in &agents {
-            ensure_agent_shadow(&state, agent);
-        }
-        Ok(Json(agents))
-    } else {
-        let user_id = get_user_id(&state)?;
-        let _ = state.store.migrate_agents_from_default(&user_id);
-        let agents = state
-            .agent_service
-            .list_agents(&user_id)
-            .map_err(|e| ApiError::internal(e.to_string()))?;
-        Ok(Json(agents))
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
+    let agents: Vec<Agent> = net_agents.iter().map(agent_from_network).collect();
+    for agent in &agents {
+        ensure_agent_shadow(&state, agent);
     }
+    Ok(Json(agents))
 }
 
 pub async fn get_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Agent>> {
-    if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-        let net_agent = client
-            .get_agent(&agent_id.to_string(), &jwt)
-            .await
-            .map_err(map_network_error)?;
-        let agent = agent_from_network(&net_agent);
-        ensure_agent_shadow(&state, &agent);
-        Ok(Json(agent))
-    } else {
-        let user_id = get_user_id(&state)?;
-        let agent = state
-            .agent_service
-            .get_agent(&user_id, &agent_id)
-            .map_err(|e| match &e {
-                aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
-                _ => ApiError::internal(e.to_string()),
-            })?;
-        Ok(Json(agent))
-    }
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_agent = client
+        .get_agent(&agent_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+    let agent = agent_from_network(&net_agent);
+    ensure_agent_shadow(&state, &agent);
+    Ok(Json(agent))
 }
 
 pub async fn update_agent(
@@ -177,70 +141,39 @@ pub async fn update_agent(
     Path(agent_id): Path<AgentId>,
     Json(body): Json<UpdateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
-    if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-        let net_req = aura_network::UpdateAgentRequest {
-            name: body.name,
-            role: body.role,
-            personality: body.personality,
-            system_prompt: body.system_prompt,
-            skills: body.skills,
-            icon: body.icon.flatten(),
-        };
-        let net_agent = client
-            .update_agent(&agent_id.to_string(), &jwt, &net_req)
-            .await
-            .map_err(map_network_error)?;
-        let agent = agent_from_network(&net_agent);
-        ensure_agent_shadow(&state, &agent);
-        Ok(Json(agent))
-    } else {
-        let user_id = get_user_id(&state)?;
-        let agent = state
-            .agent_service
-            .update_agent(
-                &user_id,
-                &agent_id,
-                body.name,
-                body.role,
-                body.personality,
-                body.system_prompt,
-                body.skills,
-                body.icon,
-            )
-            .map_err(|e| match &e {
-                aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
-                _ => ApiError::internal(e.to_string()),
-            })?;
-        Ok(Json(agent))
-    }
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_req = aura_network::UpdateAgentRequest {
+        name: body.name,
+        role: body.role,
+        personality: body.personality,
+        system_prompt: body.system_prompt,
+        skills: body.skills,
+        icon: body.icon.flatten(),
+    };
+    let net_agent = client
+        .update_agent(&agent_id.to_string(), &jwt, &net_req)
+        .await
+        .map_err(map_network_error)?;
+    let agent = agent_from_network(&net_agent);
+    ensure_agent_shadow(&state, &agent);
+    Ok(Json(agent))
 }
 
 pub async fn delete_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {
-    if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-        client
-            .delete_agent(&agent_id.to_string(), &jwt)
-            .await
-            .map_err(map_network_error)?;
-        // Remove local shadow
-        let user_id = get_user_id(&state).unwrap_or_default();
-        let _ = state.store.delete_agent(&user_id, &agent_id);
-        Ok(Json(()))
-    } else {
-        let user_id = get_user_id(&state)?;
-        state
-            .agent_service
-            .delete_agent(&user_id, &agent_id)
-            .map_err(|e| match &e {
-                aura_agents::AgentError::NotFound => ApiError::not_found("agent not found"),
-                _ => ApiError::internal(e.to_string()),
-            })?;
-        Ok(Json(()))
-    }
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    client
+        .delete_agent(&agent_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+    // Remove local shadow
+    let user_id = get_user_id(&state).unwrap_or_default();
+    let _ = state.store.delete_agent(&user_id, &agent_id);
+    Ok(Json(()))
 }
 
 // ---------------------------------------------------------------------------
