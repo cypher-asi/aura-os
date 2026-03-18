@@ -3,6 +3,7 @@ pub mod entities;
 pub mod enums;
 pub mod ids;
 pub mod prompts;
+pub mod rust_signatures;
 pub mod settings;
 
 pub use config::*;
