@@ -235,6 +235,7 @@ impl LlmProvider for MockLlmProvider {
             output_tokens: resp.output_tokens,
             cache_creation_input_tokens: resp.cache_creation_input_tokens,
             cache_read_input_tokens: resp.cache_read_input_tokens,
+            model_used: crate::DEFAULT_MODEL.to_string(),
         })
     }
 }

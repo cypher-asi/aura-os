@@ -17,10 +17,16 @@ pub struct HealthResponse {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkUser {
     pub id: String,
-    pub zos_user_id: String,
+    #[serde(default)]
+    pub zos_user_id: Option<String>,
     pub display_name: Option<String>,
+    #[serde(default, rename = "profileImage")]
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
+    #[serde(default)]
+    pub location: Option<String>,
+    #[serde(default)]
+    pub website: Option<String>,
     pub profile_id: Option<String>,
     #[serde(default)]
     pub created_at: Option<String>,
@@ -42,10 +48,14 @@ impl NetworkUser {
 pub struct UpdateUserRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "profileImage")]
     pub avatar_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bio: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub website: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -87,7 +97,8 @@ pub struct NetworkOrg {
     pub avatar_url: Option<String>,
     #[serde(default)]
     pub billing_email: Option<String>,
-    pub owner_id: String,
+    #[serde(alias = "ownerId")]
+    pub owner_user_id: String,
     #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
@@ -199,7 +210,8 @@ pub struct NetworkAgent {
     pub skills: Option<Vec<String>>,
     #[serde(default)]
     pub icon: Option<String>,
-    pub owner_id: String,
+    #[serde(alias = "ownerId")]
+    pub user_id: String,
     #[serde(default)]
     pub org_id: Option<String>,
     #[serde(default)]

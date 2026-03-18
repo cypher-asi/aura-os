@@ -9,12 +9,12 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
-pub const DEFAULT_MODEL: &str = "claude-sonnet-4-5";
+pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
-pub const MID_MODEL: &str = "claude-sonnet-4-5";
+pub const MID_MODEL: &str = "claude-opus-4-6";
 
 /// Ordered fallback chain: when the primary model is overloaded, try these in order.
-const FALLBACK_MODELS: &[&str] = &["claude-sonnet-4-5", "claude-haiku-4-5-20251001"];
+const FALLBACK_MODELS: &[&str] = &["claude-opus-4-6", "claude-sonnet-4-5", "claude-haiku-4-5-20251001"];
 
 /// Resolve the model to use at startup: AURA_LLM_MODEL env var, then DEFAULT_MODEL.
 pub fn resolve_model() -> String {

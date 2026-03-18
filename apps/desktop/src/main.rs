@@ -345,6 +345,8 @@ async fn open_path(Json(req): Json<OpenPathRequest>) -> Json<serde_json::Value> 
 }
 
 fn main() {
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| {

@@ -393,6 +393,7 @@ dependencies = [
  "axum",
  "cargo-packager-updater",
  "dirs 5.0.1",
+ "dotenvy",
  "image",
  "open",
  "reqwest 0.12.28",

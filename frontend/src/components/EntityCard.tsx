@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ReactNode } from "react";
 import styles from "./EntityCard.module.css";
 
@@ -12,6 +13,20 @@ interface EntityCardProps {
   children?: ReactNode;
   stats?: { value: string | number; label: string }[];
   footer?: string;
+}
+
+function ImageBlock({ image, name, fallbackIcon }: { image?: string; name: string; fallbackIcon: ReactNode }) {
+  const [broken, setBroken] = useState(false);
+
+  return (
+    <div className={styles.imageBlock}>
+      {image && !broken ? (
+        <img src={image} alt={name} className={styles.image} onError={() => setBroken(true)} />
+      ) : (
+        fallbackIcon
+      )}
+    </div>
+  );
 }
 
 export function EntityCard({
@@ -36,13 +51,7 @@ export function EntityCard({
           )}
         </div>
 
-        <div className={styles.imageBlock}>
-          {image ? (
-            <img src={image} alt={name} className={styles.image} />
-          ) : (
-            fallbackIcon
-          )}
-        </div>
+        <ImageBlock image={image} name={name} fallbackIcon={fallbackIcon} />
 
         <div className={styles.nameRow}>
           <div className={styles.nameText}>

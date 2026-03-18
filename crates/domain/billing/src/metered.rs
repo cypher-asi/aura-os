@@ -294,7 +294,8 @@ impl MeteredLlm {
         let resp = self.provider.complete_stream_with_tools(
             api_key, system_prompt, messages, tools, max_tokens, None, event_tx,
         ).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
+        let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
+        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
         Ok(resp)
     }
 
@@ -317,7 +318,8 @@ impl MeteredLlm {
         let resp = self.provider.complete_stream_with_tools(
             api_key, system_prompt, messages, tools, max_tokens, Some(thinking), event_tx,
         ).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
+        let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
+        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
         Ok(resp)
     }
 }

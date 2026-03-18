@@ -39,9 +39,22 @@ function ProfileCard() {
       <EntityCard
         headerLabel="PROFILE"
         headerStatus="ACTIVE"
-        image={profile.avatarUrl}
-        fallbackIcon={<User size={48} />}
-        name={profile.name}
+        image={profile.avatarUrl && profile.avatarUrl.startsWith("http") ? profile.avatarUrl : undefined}
+        fallbackIcon={
+          isOwnProfile ? (
+            <button
+              type="button"
+              className={styles.avatarPlaceholder}
+              onClick={() => setEditorOpen(true)}
+            >
+              <User size={32} />
+              <span>Add profile image</span>
+            </button>
+          ) : (
+            <User size={48} />
+          )
+        }
+        name={profile.name || (isOwnProfile ? "Set your name" : "Unknown")}
         subtitle={profile.handle}
         nameAction={
           !isOwnProfile ? (
@@ -59,24 +72,51 @@ function ProfileCard() {
         footer="CYPHER-ASI // AURA"
       >
         <div className={styles.bioSection}>
-          <p className={styles.bioText}>{profile.bio}</p>
+          {profile.bio ? (
+            <p className={styles.bioText}>{profile.bio}</p>
+          ) : isOwnProfile ? (
+            <p
+              className={`${styles.bioText} ${styles.placeholder}`}
+              onClick={() => setEditorOpen(true)}
+            >
+              Add a bio...
+            </p>
+          ) : null}
         </div>
 
         <div className={styles.metaGrid}>
           <div className={styles.metaRow}>
             <MapPin size={13} className={styles.metaIcon} />
-            <span className={styles.metaValue}>{profile.location}</span>
+            {profile.location ? (
+              <span className={styles.metaValue}>{profile.location}</span>
+            ) : isOwnProfile ? (
+              <span
+                className={`${styles.metaValue} ${styles.placeholder}`}
+                onClick={() => setEditorOpen(true)}
+              >
+                Add location
+              </span>
+            ) : null}
           </div>
           <div className={styles.metaRow}>
             <Globe size={13} className={styles.metaIcon} />
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.metaLink}
-            >
-              {profile.website.replace(/^https?:\/\//, "")}
-            </a>
+            {profile.website ? (
+              <a
+                href={profile.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.metaLink}
+              >
+                {profile.website.replace(/^https?:\/\//, "")}
+              </a>
+            ) : isOwnProfile ? (
+              <span
+                className={`${styles.metaValue} ${styles.placeholder}`}
+                onClick={() => setEditorOpen(true)}
+              >
+                Add website
+              </span>
+            ) : null}
           </div>
           <div className={styles.metaRow}>
             <Calendar size={13} className={styles.metaIcon} />

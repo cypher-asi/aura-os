@@ -655,6 +655,7 @@ impl NetworkClient {
         &self,
         resp: reqwest::Response,
     ) -> Result<T, NetworkError> {
+        let url = resp.url().to_string();
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -663,8 +664,10 @@ impl NetworkClient {
                 body,
             });
         }
-        resp.json()
-            .await
-            .map_err(|e| NetworkError::Deserialize(e.to_string()))
+        let body = resp.text().await.map_err(|e| NetworkError::Deserialize(e.to_string()))?;
+        serde_json::from_str::<T>(&body).map_err(|e| {
+            warn!(%url, error = %e, body_preview = &body[..body.len().min(500)], "Deserialization failed");
+            NetworkError::Deserialize(e.to_string())
+        })
     }
 }

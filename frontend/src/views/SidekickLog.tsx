@@ -176,11 +176,13 @@ export function SidekickLog({ searchQuery }: { searchQuery: string }) {
         onScroll={handleScroll}
       >
         {filtered.length === 0 ? (
-          <Text variant="muted" size="sm">
-            {entries.length === 0
-              ? "Listening — events will appear when automation runs or specs are generated."
-              : "No events match the current filters."}
-          </Text>
+          <div className={styles.logEmpty}>
+            <Text variant="muted" size="sm" style={{ textAlign: "center" }}>
+              {entries.length === 0
+                ? "Listening — events will appear when automation runs or specs are generated."
+                : "No events match the current filters."}
+            </Text>
+          </div>
         ) : (
           filtered.map((entry, i) => (
             <LogRow

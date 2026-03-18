@@ -39,7 +39,7 @@ impl OrgResponse {
         Self {
             org_id: net.id.clone(),
             name: net.name.clone(),
-            owner_user_id: net.owner_id.clone(),
+            owner_user_id: net.owner_user_id.clone(),
             slug: net.slug.clone(),
             description: net.description.clone(),
             avatar_url: net.avatar_url.clone(),
@@ -137,7 +137,7 @@ fn ensure_local_shadow(state: &AppState, net: &NetworkOrg) {
     let local = Org {
         org_id,
         name: net.name.clone(),
-        owner_user_id: net.owner_id.clone(),
+        owner_user_id: net.owner_user_id.clone(),
         billing: None,
         created_at: now,
         updated_at: now,
@@ -258,12 +258,51 @@ pub async fn list_members(
     Path(org_id): Path<String>,
 ) -> ApiResult<Json<Vec<MemberResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
+    let session = state.get_session()?;
+    let jwt = session.access_token.clone();
     let members = client
         .list_org_members(&org_id, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(members.into_iter().map(MemberResponse::from).collect()))
+
+    let mut responses: Vec<MemberResponse> = members.into_iter().map(MemberResponse::from).collect();
+
+    let current_network_id = session.network_user_id.map(|id| id.to_string());
+
+    for resp in &mut responses {
+        let looks_like_uuid = resp.display_name.len() == 36
+            && resp.display_name.chars().filter(|c| *c == '-').count() == 4;
+        let name_missing = resp.display_name.is_empty() || looks_like_uuid;
+        if !name_missing {
+            continue;
+        }
+
+        // For the current user, prefer the local auth session's display name
+        let is_current_user = current_network_id.as_deref() == Some(&resp.user_id)
+            || resp.display_name == session.user_id;
+        if is_current_user && !session.display_name.is_empty() {
+            resp.display_name = session.display_name.clone();
+            if resp.avatar_url.is_none() && !session.profile_image.is_empty() {
+                resp.avatar_url = Some(session.profile_image.clone());
+            }
+            continue;
+        }
+
+        // For other members, try to fetch their user profile
+        if let Ok(user) = client.get_user(&resp.user_id, &jwt).await {
+            if let Some(name) = user.display_name.filter(|n| !n.is_empty()) {
+                let name_is_uuid = name.len() == 36 && name.chars().filter(|c| *c == '-').count() == 4;
+                if !name_is_uuid {
+                    resp.display_name = name;
+                }
+            }
+            if resp.avatar_url.is_none() {
+                resp.avatar_url = user.avatar_url;
+            }
+        }
+    }
+
+    Ok(Json(responses))
 }
 
 pub async fn update_member_role(
