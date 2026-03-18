@@ -21,7 +21,7 @@ pub struct LlmConfig {
 impl Default for LlmConfig {
     fn default() -> Self {
         Self {
-            default_model: "claude-sonnet-4-5".into(),
+            default_model: "claude-opus-4-6".into(),
             chat_max_tokens: 24_576,
             task_execution_max_tokens: 32_768,
             thinking_budget: 5_000,
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn llm_config_defaults_are_sane() {
         let c = LlmConfig::default();
-        assert_eq!(c.default_model, "claude-sonnet-4-5");
+        assert_eq!(c.default_model, "claude-opus-4-6");
         assert!(c.chat_max_tokens > 0);
         assert!(c.thinking_budget > 0);
         assert!(c.stream_timeout_secs > 0);
