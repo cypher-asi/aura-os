@@ -157,6 +157,7 @@ export interface ProjectProgress {
   total_messages: number;
   total_agents: number;
   total_sessions: number;
+  total_time_seconds: number;
   total_tests: number;
 }
 
