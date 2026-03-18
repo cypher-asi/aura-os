@@ -737,7 +737,7 @@ impl DevLoopEngine {
         let workspace_map = file_ops::generate_workspace_map(&project.linked_folder_path)
             .unwrap_or_default();
         let workspace_info = if workspace_map.is_empty() { None } else { Some(workspace_map.as_str()) };
-        let system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info);
+        let mut system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info);
 
         let codebase_snapshot = file_ops::retrieve_task_relevant_files(
             &project.linked_folder_path,
@@ -748,6 +748,24 @@ impl DevLoopEngine {
             file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
                 .unwrap_or_default()
         });
+
+        // Append codebase snapshot and dependency API surface to the system
+        // prompt so they benefit from Anthropic prompt caching across tool loop
+        // iterations (~90% input cost reduction on cache hits).
+        if !codebase_snapshot.is_empty() {
+            system_prompt.push_str(&format!("\n\n# Current Codebase Files\n{}\n", codebase_snapshot));
+        }
+        if !workspace_map.is_empty() {
+            let dep_api_context = file_ops::resolve_task_dep_api_context(
+                &project.linked_folder_path,
+                &task.title,
+                &task.description,
+                15_000,
+            ).unwrap_or_default();
+            if !dep_api_context.is_empty() {
+                system_prompt.push_str(&format!("\n\n# Dependency API Surface\n{}\n", dep_api_context));
+            }
+        }
 
         let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
         let completed_deps: Vec<Task> = task.dependency_ids.iter()
@@ -775,21 +793,6 @@ impl DevLoopEngine {
         );
         if !workspace_map.is_empty() {
             task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
-        }
-        if !codebase_snapshot.is_empty() {
-            task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
-        }
-
-        if !workspace_map.is_empty() {
-            let dep_api_context = file_ops::resolve_task_dep_api_context(
-                &project.linked_folder_path,
-                &task.title,
-                &task.description,
-                15_000,
-            ).unwrap_or_default();
-            if !dep_api_context.is_empty() {
-                task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api_context));
-            }
         }
 
         let tools = engine_tool_definitions();
