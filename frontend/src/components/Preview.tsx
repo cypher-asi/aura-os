@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench, MinusCircle, SkipForward, FileText, Terminal } from "lucide-react";
+import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, CheckCheck, Copy, XCircle, Wrench, MinusCircle, SkipForward, FileText, Terminal } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -377,6 +377,16 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const hydratedRef = useRef< string | null >(null);
   const [showRawOutput, setShowRawOutput] = useState(false);
   const rawOutputRef = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const copyRawOutput = useCallback(() => {
+    navigator.clipboard.writeText(taskOutput.text).then(() => {
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 1500);
+    });
+  }, [taskOutput.text]);
 
   const streamBuf = taskOutput.text;
   const liveFileOps = taskOutput.fileOps;
@@ -815,9 +825,19 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
                   <Terminal size={11} />
                   {showRawOutput ? "Hide raw output" : "Show raw output"}
                 </button>
-                <Text variant="muted" size="xs" className={styles.streamProgress}>
-                  {(streamBuf.length / 1024).toFixed(1)} KB
-                </Text>
+                <div className={styles.rawOutputActions}>
+                  <Text variant="muted" size="xs" className={styles.streamProgress}>
+                    {(streamBuf.length / 1024).toFixed(1)} KB
+                  </Text>
+                  <button
+                    className={styles.copyRawBtn}
+                    onClick={copyRawOutput}
+                    aria-label="Copy raw output"
+                  >
+                    {copied ? <CheckCheck size={11} /> : <Copy size={11} />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
               </div>
             )}
             {showRawOutput && streamBuf.length > 0 && (
