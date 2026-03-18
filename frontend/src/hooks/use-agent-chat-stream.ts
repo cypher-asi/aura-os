@@ -151,23 +151,24 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
             if (isInsufficientCreditsError(message)) {
               dispatchInsufficientCredits();
             }
-            if (streamBufferRef.current) {
-              const savedThinking = thinkingBufferRef.current || undefined;
-              const savedThinkingDuration = thinkingStartRef.current != null
-                ? Date.now() - thinkingStartRef.current
-                : null;
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `error-${Date.now()}`,
-                  role: "assistant",
-                  content: streamBufferRef.current + `\n\n*Error: ${message}*`,
-                  toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
-                  thinkingText: savedThinking,
-                  thinkingDurationMs: savedThinkingDuration,
-                },
-              ]);
-            }
+            const savedThinking = thinkingBufferRef.current || undefined;
+            const savedThinkingDuration = thinkingStartRef.current != null
+              ? Date.now() - thinkingStartRef.current
+              : null;
+            const errorContent = streamBufferRef.current
+              ? streamBufferRef.current + `\n\n*Error: ${message}*`
+              : `*Error: ${message}*`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: "assistant",
+                content: errorContent,
+                toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                thinkingText: savedThinking,
+                thinkingDurationMs: savedThinkingDuration,
+              },
+            ]);
             setStreamingText("");
             streamBufferRef.current = "";
             setThinkingText("");

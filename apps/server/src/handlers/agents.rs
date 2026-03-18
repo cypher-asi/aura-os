@@ -61,7 +61,7 @@ fn agent_from_network(net: &NetworkAgent) -> Agent {
 
     Agent {
         agent_id,
-        user_id: net.owner_id.clone(),
+        user_id: net.user_id.clone(),
         name: net.name.clone(),
         role: net.role.clone().unwrap_or_default(),
         personality: net.personality.clone().unwrap_or_default(),
@@ -308,8 +308,39 @@ pub async fn send_agent_message_stream(
     super::billing::require_credits(&state).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
-    let uid = get_user_id(&state).ok();
-    let agent = uid.and_then(|uid| state.agent_service.get_agent(&uid, &agent_id).ok());
+    let agent = match get_user_id(&state) {
+        Ok(uid) => match state.agent_service.get_agent(&uid, &agent_id) {
+            Ok(a) => Some(a),
+            Err(_) if state.network_client.is_some() => {
+                let client = state.network_client.as_ref().unwrap();
+                match state.get_jwt() {
+                    Ok(jwt) => match client
+                        .get_agent(&agent_id.to_string(), &jwt)
+                        .await
+                    {
+                        Ok(net_agent) => {
+                            let a = agent_from_network(&net_agent);
+                            ensure_agent_shadow(&state, &a);
+                            Some(a)
+                        }
+                        Err(e) => {
+                            warn!(%agent_id, error = %e, "Agent not found via network");
+                            None
+                        }
+                    },
+                    Err(_) => None,
+                }
+            }
+            Err(e) => {
+                warn!(%agent_id, error = %e, "Agent not found locally, no network client");
+                None
+            }
+        },
+        Err(_) => {
+            warn!(%agent_id, "No authenticated user, cannot resolve agent");
+            None
+        }
+    };
 
     let instances = state
         .store
