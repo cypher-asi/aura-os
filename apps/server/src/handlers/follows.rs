@@ -7,7 +7,7 @@ use aura_core::*;
 use aura_network::NetworkFollow;
 
 use crate::dto::{FollowCheckResponse, FollowRequest};
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
 
 fn follow_from_network(net: &NetworkFollow) -> Follow {
