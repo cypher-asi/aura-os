@@ -114,6 +114,7 @@ pub async fn run_tool_loop(
     let mut total_output_tokens: u64 = 0;
     let mut cumulative_credits: u64 = 0;
     let mut file_read_cache: HashMap<String, u64> = HashMap::new();
+    let mut consecutive_write_tracker: HashMap<String, usize> = HashMap::new();
 
     for iteration in 0..config.max_iterations {
         let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -318,8 +319,79 @@ pub async fn run_tool_loop(
         }
         api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
+        // -- Consecutive duplicate write/edit detection -------------------------
+        let write_paths_this_iter: Vec<Option<String>> = iter_tool_calls
+            .iter()
+            .map(|tc| {
+                if tc.name == "write_file" || tc.name == "edit_file" {
+                    tc.input.get("path").and_then(|v| v.as_str()).map(String::from)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let has_non_write = write_paths_this_iter.iter().any(|p| p.is_none());
+        if has_non_write {
+            consecutive_write_tracker.clear();
+        }
+        for path in write_paths_this_iter.iter().flatten() {
+            *consecutive_write_tracker.entry(path.clone()).or_insert(0) += 1;
+        }
+
+        let blocked_indices: Vec<usize> = iter_tool_calls
+            .iter()
+            .enumerate()
+            .filter_map(|(i, tc)| {
+                if tc.name == "write_file" || tc.name == "edit_file" {
+                    let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                    if consecutive_write_tracker.get(path).copied().unwrap_or(0) >= 3 {
+                        return Some(i);
+                    }
+                }
+                None
+            })
+            .collect();
+
         // -- Execute tool calls -----------------------------------------------
-        let results = executor.execute(&iter_tool_calls).await;
+        let allowed_calls: Vec<ToolCall> = iter_tool_calls
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| !blocked_indices.contains(i))
+            .map(|(_, tc)| tc.clone())
+            .collect();
+        let allowed_results = executor.execute(&allowed_calls).await;
+
+        let mut allowed_iter = allowed_results.into_iter();
+        let results: Vec<ToolCallResult> = iter_tool_calls
+            .iter()
+            .enumerate()
+            .map(|(i, tc)| {
+                if blocked_indices.contains(&i) {
+                    let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    warn!(
+                        path,
+                        tool = %tc.name,
+                        "Blocked consecutive duplicate write/edit (3+ in a row)"
+                    );
+                    ToolCallResult {
+                        tool_use_id: tc.id.clone(),
+                        content: serde_json::json!({
+                            "error": format!(
+                                "You have called {} on '{}' 3+ times consecutively. \
+                                 The file was already written successfully. Use read_file to \
+                                 verify the contents, or try a different approach.",
+                                tc.name, path
+                            )
+                        }).to_string(),
+                        is_error: true,
+                        stop_loop: false,
+                    }
+                } else {
+                    allowed_iter.next().expect("allowed_results count mismatch")
+                }
+            })
+            .collect();
 
         let mut should_stop = false;
         let mut result_blocks: Vec<ContentBlock> = Vec::new();
