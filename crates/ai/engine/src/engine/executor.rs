@@ -793,10 +793,23 @@ impl DevLoopEngine {
             stub_fix_attempts: Arc::new(Mutex::new(0)),
         };
 
+        let thinking_budget = {
+            let base = self.llm_config.thinking_budget;
+            let member_count = file_ops::count_workspace_members(&project.linked_folder_path)
+                .unwrap_or(1);
+            if member_count >= 15 {
+                base.max(16_000)
+            } else if member_count >= 8 {
+                base.max(10_000)
+            } else {
+                base
+            }
+        };
+
         let config = ToolLoopConfig {
             max_iterations: self.engine_config.max_agentic_iterations,
             max_tokens: self.llm_config.task_execution_max_tokens,
-            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
+            thinking: Some(ThinkingConfig::enabled(thinking_budget)),
             stream_timeout: std::time::Duration::from_secs(self.llm_config.stream_timeout_secs),
             billing_reason: "aura_task",
             max_context_tokens: Some(self.llm_config.max_context_tokens),
