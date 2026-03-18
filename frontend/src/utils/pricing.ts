@@ -10,7 +10,7 @@ export interface FeeScheduleEntry {
 const DEFAULT_SCHEDULE: FeeScheduleEntry[] = [
   { model: "claude-opus-4-6", input_cost_per_million: 5, output_cost_per_million: 25, effective_date: "2026-02-01" },
   { model: "claude-sonnet-4-5", input_cost_per_million: 3, output_cost_per_million: 15, effective_date: "2025-10-01" },
-  { model: "claude-haiku-3-5", input_cost_per_million: 0.25, output_cost_per_million: 1.25, effective_date: "2025-06-01" },
+  { model: "claude-haiku-4-5", input_cost_per_million: 0.80, output_cost_per_million: 4.00, effective_date: "2025-10-01" },
 ];
 
 let _cached: FeeScheduleEntry[] | null = null;
