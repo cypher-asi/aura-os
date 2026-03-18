@@ -47,6 +47,15 @@ impl NetworkClient {
         &self.base_url
     }
 
+    /// Returns the WebSocket URL for the aura-network events stream.
+    pub fn ws_events_url(&self, jwt: &str) -> String {
+        let ws_base = self
+            .base_url
+            .replacen("https://", "wss://", 1)
+            .replacen("http://", "ws://", 1);
+        format!("{}/ws/events?token={}", ws_base, jwt)
+    }
+
     // -----------------------------------------------------------------------
     // Health
     // -----------------------------------------------------------------------

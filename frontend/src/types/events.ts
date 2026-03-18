@@ -27,7 +27,8 @@ export type EngineEventType =
   | "test_verification_started"
   | "test_verification_passed"
   | "test_verification_failed"
-  | "test_fix_attempt";
+  | "test_fix_attempt"
+  | "network_event";
 
 export interface PhaseTimingEntry {
   phase: string;
@@ -100,4 +101,8 @@ export interface EngineEvent {
 
   // Observability: iteration summary
   phase_timings?: PhaseTimingEntry[];
+
+  // Network events (bridged from aura-network WebSocket)
+  network_event_type?: string;
+  payload?: Record<string, unknown>;
 }

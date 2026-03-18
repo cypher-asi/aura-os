@@ -256,4 +256,11 @@ pub enum EngineEvent {
         task_id: TaskId,
         attempt: u32,
     },
+
+    /// Event bridged from aura-network WebSocket (feed activity, follows, usage updates).
+    NetworkEvent {
+        network_event_type: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        payload: Option<serde_json::Value>,
+    },
 }
