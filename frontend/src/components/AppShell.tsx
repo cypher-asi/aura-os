@@ -21,13 +21,9 @@ import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
 import { INSUFFICIENT_CREDITS_EVENT } from "../api/client";
 
-const useAlwaysOpen = () => false;
-
-function SidekickLaneInner() {
+function SidekickLane() {
   const { activeApp } = useAppContext();
   const { SidekickPanel, SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
-  const useCollapsed = activeApp.useSidekickCollapsed ?? useAlwaysOpen;
-  const collapsed = useCollapsed();
 
   if (!SidekickPanel) return null;
 
@@ -38,8 +34,6 @@ function SidekickLaneInner() {
       defaultWidth={320}
       maxWidth={1200}
       storageKey="aura-sidekick"
-      collapsible={!!activeApp.useSidekickCollapsed}
-      collapsed={collapsed}
       header={SidekickTaskbar && <SidekickTaskbar />}
       taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
       style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
@@ -47,11 +41,6 @@ function SidekickLaneInner() {
       <SidekickPanel />
     </Lane>
   );
-}
-
-function SidekickLane() {
-  const { activeApp } = useAppContext();
-  return <SidekickLaneInner key={activeApp.id} />;
 }
 
 function PreviewLane() {
@@ -142,7 +131,7 @@ function AppContent() {
         <UpdateBanner />
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <div ref={leftPanelRef} style={{ display: "flex", flexDirection: "column", flexShrink: 0 }}>
+          <div ref={leftPanelRef} style={{ display: "grid", gridTemplateRows: "1fr auto", gridTemplateColumns: "min-content", flexShrink: 0 }}>
             <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
               <AppNavRail />
               <Lane

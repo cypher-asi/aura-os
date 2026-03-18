@@ -41,3 +41,4 @@ export function useAgentApp() {
   if (!ctx) throw new Error("useAgentApp must be used within AgentAppProvider");
   return ctx;
 }
+

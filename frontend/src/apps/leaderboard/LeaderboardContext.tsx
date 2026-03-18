@@ -77,7 +77,3 @@ export function useLeaderboard() {
   return ctx;
 }
 
-export function useLeaderboardSidekickCollapsed() {
-  const { selectedUserId } = useLeaderboard();
-  return !selectedUserId;
-}
