@@ -164,6 +164,16 @@ pub async fn delete_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {
+    let instances = state
+        .store
+        .list_agent_instances_by_agent_id(&agent_id)
+        .unwrap_or_default();
+    if !instances.is_empty() {
+        return Err(ApiError::conflict(
+            "Cannot delete agent while it is added to projects. Remove it from all projects first.",
+        ));
+    }
+
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     client
