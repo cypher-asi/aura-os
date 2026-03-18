@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -10,6 +10,7 @@ import { ButtonPlus, Explorer, Menu } from "@cypher-asi/zui";
 import { EmptyState } from "./EmptyState";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, Pencil, Trash2, Loader2 } from "lucide-react";
+import { InlineRenameInput } from "./InlineRenameInput";
 import { NewProjectModal } from "./NewProjectModal";
 import { DeleteProjectModal, DeleteAgentInstanceModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
@@ -30,82 +31,6 @@ function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
     }
     return acc;
   }, []);
-}
-
-
-/**
- * Self-contained inline rename input that overlays the label of a tree node.
- * All keystroke state is local so typing never re-renders the parent list.
- */
-function InlineRenameInput({
-  target,
-  onSave,
-  onCancel,
-}: {
-  target: Project;
-  onSave: (name: string) => void;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState(target.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const saved = useRef(false);
-
-  const labelRef = useRef<HTMLElement | null>(null);
-
-  useLayoutEffect(() => {
-    const row = document.getElementById(target.project_id);
-    const label = row?.querySelector<HTMLElement>("[class*='label']");
-    if (label) {
-      labelRef.current = label;
-      setRect(label.getBoundingClientRect());
-      label.style.visibility = "hidden";
-    }
-    return () => {
-      if (labelRef.current) labelRef.current.style.visibility = "";
-    };
-  }, [target.project_id]);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [rect]);
-
-  const commit = useCallback(() => {
-    if (saved.current) return;
-    const trimmed = value.trim();
-    if (trimmed && trimmed !== target.name) {
-      saved.current = true;
-      onSave(trimmed);
-    } else {
-      onCancel();
-    }
-  }, [value, target.name, onSave, onCancel]);
-
-  if (!rect) return null;
-
-  return createPortal(
-    <input
-      ref={inputRef}
-      className={styles.inlineRenameInput}
-      style={{
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      }}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") onCancel();
-      }}
-      onBlur={commit}
-    />,
-    document.body,
-  );
 }
 
 const projectMenuItems: MenuItem[] = [
