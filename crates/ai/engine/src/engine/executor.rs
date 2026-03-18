@@ -812,6 +812,8 @@ impl DevLoopEngine {
             notes: notes.clone(),
             follow_ups: follow_ups.clone(),
             stub_fix_attempts: Arc::new(Mutex::new(0)),
+            completed_deps,
+            work_log_summary,
         };
 
         let thinking_budget = {
@@ -1110,6 +1112,8 @@ struct EngineToolLoopExecutor {
     notes: Arc<Mutex<String>>,
     follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>>,
     stub_fix_attempts: Arc<Mutex<u32>>,
+    completed_deps: Vec<Task>,
+    work_log_summary: String,
 }
 
 #[async_trait]
@@ -1229,8 +1233,8 @@ impl ToolExecutor for EngineToolLoopExecutor {
                         &self.spec,
                         &self.task,
                         &self.session,
-                        &[],
-                        "",
+                        &self.completed_deps,
+                        &self.work_log_summary,
                     );
                     results.push(ToolCallResult {
                         tool_use_id: tc.id.clone(),
