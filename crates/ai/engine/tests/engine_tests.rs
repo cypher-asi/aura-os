@@ -439,6 +439,7 @@ fn engine_event_loop_finished_serialization() {
         tasks_retried: None,
         total_input_tokens: None,
         total_output_tokens: None,
+        total_cost_usd: None,
         sessions_used: None,
         total_parse_retries: None,
         total_build_fix_attempts: None,

@@ -75,7 +75,9 @@ function summarise(e: EngineEvent): string {
       }
       if (e.total_input_tokens != null && e.total_output_tokens != null) {
         const tokens = fmtTokens(e.total_input_tokens + e.total_output_tokens);
-        const cost = formatCost(computeCost(e.total_input_tokens, e.total_output_tokens));
+        const cost = e.total_cost_usd != null
+          ? formatCost(e.total_cost_usd)
+          : formatCost(computeCost(e.total_input_tokens, e.total_output_tokens));
         parts.push(`${tokens} tokens, ${cost}`);
       }
       if (e.tasks_retried) parts.push(`${e.tasks_retried} retries`);
@@ -106,7 +108,10 @@ function summarise(e: EngineEvent): string {
       if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
       if (e.input_tokens != null && e.output_tokens != null) {
         parts.push(`${fmtTokens(e.input_tokens + e.output_tokens)} tokens`);
-        parts.push(formatCost(computeCost(e.input_tokens, e.output_tokens, e.model)));
+        const taskCost = e.cost_usd != null
+          ? formatCost(e.cost_usd)
+          : formatCost(computeCost(e.input_tokens, e.output_tokens, e.model));
+        parts.push(taskCost);
       }
       if (e.parse_retries) parts.push(`${e.parse_retries} retries`);
       if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} build fix${e.build_fix_attempts > 1 ? "es" : ""}`);

@@ -45,6 +45,8 @@ pub enum EngineEvent {
         #[serde(skip_serializing_if = "Option::is_none")]
         output_tokens: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        cost_usd: Option<f64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         llm_duration_ms: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         build_verify_duration_ms: Option<u64>,
@@ -126,6 +128,8 @@ pub enum EngineEvent {
         total_input_tokens: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         total_output_tokens: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        total_cost_usd: Option<f64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         sessions_used: Option<usize>,
         #[serde(skip_serializing_if = "Option::is_none")]

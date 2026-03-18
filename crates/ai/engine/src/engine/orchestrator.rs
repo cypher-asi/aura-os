@@ -176,6 +176,7 @@ impl DevLoopEngine {
                     tasks_retried: None,
                     total_input_tokens: None,
                     total_output_tokens: None,
+                    total_cost_usd: None,
                     sessions_used: None,
                     total_parse_retries: None,
                     total_build_fix_attempts: None,
@@ -316,6 +317,14 @@ impl DevLoopEngine {
                     }
 
                     let progress = self.task_service.get_project_progress(&project_id)?;
+                    let total_cost_usd = {
+                        let pricing = aura_billing::PricingService::new(self.store.clone());
+                        Some(pricing.compute_cost(
+                            self.llm_config.default_model.as_str(),
+                            total_input_tokens,
+                            total_output_tokens,
+                        ))
+                    };
                     let loop_metrics = |outcome: &str| EngineEvent::LoopFinished {
                         project_id,
                         agent_instance_id,
@@ -326,6 +335,7 @@ impl DevLoopEngine {
                         tasks_retried: Some(tasks_retried),
                         total_input_tokens: Some(total_input_tokens),
                         total_output_tokens: Some(total_output_tokens),
+                        total_cost_usd,
                         sessions_used: Some(sessions_used),
                         total_parse_retries: Some(total_parse_retries),
                         total_build_fix_attempts: Some(total_build_fix_attempts),
@@ -534,6 +544,14 @@ impl DevLoopEngine {
                 if let Err(e) = self.session_service.end_session(
                     &project_id, &agent_instance_id, &session.session_id, SessionStatus::Completed,
                 ) { warn!(error = %e, "failed to end session on credits exhausted"); }
+                let credits_exhausted_cost = {
+                    let pricing = aura_billing::PricingService::new(self.store.clone());
+                    Some(pricing.compute_cost(
+                        self.llm_config.default_model.as_str(),
+                        total_input_tokens,
+                        total_output_tokens,
+                    ))
+                };
                 self.emit(EngineEvent::LoopFinished {
                     project_id,
                     agent_instance_id,
@@ -544,6 +562,7 @@ impl DevLoopEngine {
                     tasks_retried: Some(tasks_retried),
                     total_input_tokens: Some(total_input_tokens),
                     total_output_tokens: Some(total_output_tokens),
+                    total_cost_usd: credits_exhausted_cost,
                     sessions_used: Some(sessions_used),
                     total_parse_retries: Some(total_parse_retries),
                     total_build_fix_attempts: Some(total_build_fix_attempts),

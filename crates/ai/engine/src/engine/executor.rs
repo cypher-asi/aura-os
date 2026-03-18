@@ -390,6 +390,14 @@ impl DevLoopEngine {
             &execution.notes, file_changes,
         ) { warn!(task_id = %task.task_id, error = %e, "failed to mark task as completed"); }
 
+        let cost_usd = {
+            let pricing = aura_billing::PricingService::new(self.store.clone());
+            Some(pricing.compute_cost(
+                model.as_deref().unwrap_or(aura_claude::DEFAULT_MODEL),
+                total_input,
+                total_output,
+            ))
+        };
         self.emit(EngineEvent::TaskCompleted {
             project_id,
             agent_instance_id,
@@ -398,6 +406,7 @@ impl DevLoopEngine {
             duration_ms: Some(task_duration_ms),
             input_tokens: Some(total_input),
             output_tokens: Some(total_output),
+            cost_usd,
             llm_duration_ms: Some(llm_duration_ms),
             build_verify_duration_ms: Some(build_verify_duration_ms),
             files_changed_count: Some(execution.file_ops.len() as u32),
