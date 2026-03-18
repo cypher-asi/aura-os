@@ -22,6 +22,10 @@ pub fn looks_like_rust(content: &str) -> bool {
 /// fields/variants), pub trait method signatures, pub fn signatures, and impl
 /// block method signatures.  Bodies are replaced with `{ ... }`.
 ///
+/// Each significant item is prefixed with its line number (1-indexed) so the
+/// caller can use `read_file` with `start_line`/`end_line` to fetch the full
+/// definition.
+///
 /// Typically produces ~25-30% of the original file size while preserving the
 /// full API surface.
 pub fn extract_signatures(content: &str) -> String {
@@ -50,8 +54,7 @@ pub fn extract_signatures(content: &str) -> String {
         }
 
         if trimmed.starts_with("#[") {
-            output.push_str(trimmed);
-            output.push('\n');
+            push_with_line(&mut output, i, trimmed);
             i += 1;
             continue;
         }
@@ -60,16 +63,14 @@ pub fn extract_signatures(content: &str) -> String {
             && !trimmed.ends_with(';')
         {
             let (block, end) = extract_braced_block(&lines, i);
-            output.push_str(&block);
-            output.push('\n');
+            push_with_line(&mut output, i, &block);
             i = end + 1;
             continue;
         }
 
         if trimmed.starts_with("pub trait ") {
             let (block, end) = extract_trait_signatures(&lines, i);
-            output.push_str(&block);
-            output.push('\n');
+            push_with_line(&mut output, i, &block);
             i = end + 1;
             continue;
         }
@@ -77,8 +78,7 @@ pub fn extract_signatures(content: &str) -> String {
         if trimmed.starts_with("impl ") || trimmed.starts_with("impl<") {
             let (block, end) = extract_impl_signatures(&lines, i);
             if !block.is_empty() {
-                output.push_str(&block);
-                output.push('\n');
+                push_with_line(&mut output, i, &block);
             }
             i = end + 1;
             continue;
@@ -90,15 +90,14 @@ pub fn extract_signatures(content: &str) -> String {
             || trimmed.starts_with("pub unsafe fn ")
         {
             let sig = extract_fn_signature(&lines, i);
-            output.push_str(&sig);
-            output.push_str(" { ... }\n");
+            let formatted = format!("{sig} {{ ... }}");
+            push_with_line(&mut output, i, &formatted);
             i = skip_braced_block(&lines, i) + 1;
             continue;
         }
 
         if trimmed.starts_with("pub type ") || trimmed.starts_with("pub const ") {
-            output.push_str(trimmed);
-            output.push('\n');
+            push_with_line(&mut output, i, trimmed);
             i += 1;
             continue;
         }
@@ -107,6 +106,20 @@ pub fn extract_signatures(content: &str) -> String {
     }
 
     output
+}
+
+fn push_with_line(output: &mut String, line_idx: usize, content: &str) {
+    let line_num = line_idx + 1;
+    if content.contains('\n') {
+        let first_line = content.lines().next().unwrap_or("");
+        output.push_str(&format!("L{line_num}: {first_line}\n"));
+        for rest in content.lines().skip(1) {
+            output.push_str(rest);
+            output.push('\n');
+        }
+    } else {
+        output.push_str(&format!("L{line_num}: {content}\n"));
+    }
 }
 
 fn extract_braced_block(lines: &[&str], start: usize) -> (String, usize) {
@@ -396,7 +409,7 @@ mod tests {
     fn test_extract_signatures_fn() {
         let src = "pub fn hello(name: &str) -> String {\n    format!(\"Hello {name}\")\n}\n";
         let sigs = extract_signatures(src);
-        assert!(sigs.contains("pub fn hello(name: &str) -> String { ... }"));
+        assert!(sigs.contains("L1: pub fn hello(name: &str) -> String { ... }"));
         assert!(!sigs.contains("format!"));
     }
 
@@ -404,7 +417,7 @@ mod tests {
     fn test_extract_signatures_struct() {
         let src = "pub struct Foo {\n    pub bar: u32,\n    pub baz: String,\n}\n";
         let sigs = extract_signatures(src);
-        assert!(sigs.contains("pub struct Foo"));
+        assert!(sigs.contains("L1: pub struct Foo"));
         assert!(sigs.contains("pub bar: u32"));
     }
 
@@ -418,6 +431,7 @@ mod tests {
 }
 "#;
         let sigs = extract_signatures(src);
+        assert!(sigs.contains("L1: pub trait MyTrait"));
         assert!(sigs.contains("fn required(&self) -> u32;"));
         assert!(sigs.contains("fn default_impl(&self) -> u32 { ... }"));
         assert!(!sigs.contains("42"));
@@ -433,6 +447,15 @@ mod tests {
 }
 "#;
         let sigs = extract_signatures(src);
+        assert!(sigs.contains("L1: impl Foo"));
         assert!(sigs.contains("pub fn new() -> Self { ... }"));
+    }
+
+    #[test]
+    fn test_extract_signatures_line_numbers() {
+        let src = "use std::io;\n\n\npub struct Bar {\n    pub x: i32,\n}\n\npub fn baz() {\n    todo!()\n}\n";
+        let sigs = extract_signatures(src);
+        assert!(sigs.contains("L4: pub struct Bar"));
+        assert!(sigs.contains("L8: pub fn baz() { ... }"));
     }
 }
