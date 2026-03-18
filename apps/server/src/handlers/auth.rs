@@ -1,8 +1,10 @@
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use serde::Serialize;
 
 use aura_auth::AuthError;
+use aura_core::ZeroAuthSession;
 
 use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
 use crate::error::{ApiError, ApiResult};
@@ -83,4 +85,23 @@ pub async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
         .await
         .map_err(map_auth_error)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct AccessTokenResponse {
+    pub access_token: String,
+}
+
+pub async fn get_access_token(
+    State(state): State<AppState>,
+) -> ApiResult<Json<AccessTokenResponse>> {
+    let bytes = state
+        .store
+        .get_setting("zero_auth_session")
+        .map_err(|_| ApiError::unauthorized("no active session"))?;
+    let session: ZeroAuthSession =
+        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Json(AccessTokenResponse {
+        access_token: session.access_token,
+    }))
 }

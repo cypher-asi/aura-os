@@ -29,6 +29,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))
+        .route("/api/auth/access-token", get(auth::get_access_token))
         // Orgs
         .route("/api/orgs", get(orgs::list_orgs).post(orgs::create_org))
         .route(
