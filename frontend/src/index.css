@@ -19,7 +19,10 @@
 html, body, #root {
   height: 100%;
   width: 100%;
+  min-width: 0;
+  margin: 0;
   background: #000;
+  overflow-x: hidden;
 }
 
 .titlebar-drag {
