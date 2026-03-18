@@ -89,6 +89,11 @@ impl MeteredLlm {
         (usd_cost * self.credits_per_usd).round() as u64
     }
 
+    pub async fn current_balance(&self) -> Option<u64> {
+        let token = self.access_token()?;
+        self.billing.get_balance(&token).await.ok().map(|b| b.total_credits)
+    }
+
     fn access_token(&self) -> Option<String> {
         self.store
             .get_setting("zero_auth_session")

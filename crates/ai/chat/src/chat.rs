@@ -675,6 +675,8 @@ impl ChatService {
             chat_tx: tx.clone(),
         };
 
+        let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
+
         let config = ToolLoopConfig {
             max_iterations: ChatToolExecutor::max_iterations(),
             max_tokens: self.llm_config.chat_max_tokens,
@@ -682,7 +684,7 @@ impl ChatService {
             stream_timeout: std::time::Duration::from_secs(300),
             billing_reason: "aura_chat",
             max_context_tokens: Some(self.llm_config.max_context_tokens),
-            credit_budget: Some(500_000),
+            credit_budget,
         };
 
         let thinking_start = std::time::Instant::now();
@@ -841,6 +843,8 @@ impl ChatService {
             chat_tx: tx.clone(),
         };
 
+        let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
+
         let config = ToolLoopConfig {
             max_iterations: ChatToolExecutor::max_iterations(),
             max_tokens: self.llm_config.chat_max_tokens,
@@ -848,7 +852,7 @@ impl ChatService {
             stream_timeout: std::time::Duration::from_secs(300),
             billing_reason: "aura_chat",
             max_context_tokens: Some(self.llm_config.max_context_tokens),
-            credit_budget: Some(500_000),
+            credit_budget,
         };
 
         let thinking_start = std::time::Instant::now();
