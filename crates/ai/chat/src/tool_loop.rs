@@ -112,6 +112,19 @@ pub async fn run_tool_loop(
         check_context_compaction(config, iter.input_tokens, &mut state.api_messages);
         append_text(&mut state.total_text, &iter.iter_text);
 
+        if iter.stop_reason == "max_tokens" && !iter.iter_tool_calls.is_empty() {
+            warn!(
+                iteration,
+                tool_calls = iter.iter_tool_calls.len(),
+                "Output truncated mid-tool-call (stop_reason=max_tokens), skipping execution"
+            );
+            handle_truncated_tool_calls(&iter, event_tx, &mut state);
+            compaction::compact_older_tool_results_tiered(
+                &mut state.api_messages, 2, &compaction::HISTORY,
+            );
+            continue;
+        }
+
         if iter.stop_reason != "tool_use" || iter.iter_tool_calls.is_empty() {
             return state.build_result(iteration + 1, false, false, None);
         }
@@ -320,6 +333,53 @@ fn check_context_compaction(
             compaction::compact_older_tool_results(api_messages, 4);
         }
     }
+}
+
+fn handle_truncated_tool_calls(
+    iter: &IterationCompleted,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+) {
+    let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
+    if !iter.iter_text.is_empty() {
+        assistant_blocks.push(ContentBlock::Text { text: iter.iter_text.clone() });
+    }
+    for tc in &iter.iter_tool_calls {
+        let input = if tc.name == "write_file" {
+            summarize_write_file_input(&tc.input)
+        } else {
+            tc.input.clone()
+        };
+        assistant_blocks.push(ContentBlock::ToolUse {
+            id: tc.id.clone(),
+            name: tc.name.clone(),
+            input,
+        });
+    }
+    state.api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
+
+    let mut result_blocks: Vec<ContentBlock> = Vec::new();
+    for tc in &iter.iter_tool_calls {
+        let msg = format!(
+            "ERROR: Your output was truncated (stop_reason=max_tokens) so this {} call \
+             was NOT executed — the arguments were likely incomplete. Context is too large. \
+             Break the work into smaller steps: write a skeleton first, then use edit_file \
+             to fill in one section at a time.",
+            tc.name
+        );
+        let _ = event_tx.send(ToolLoopEvent::ToolResult {
+            tool_use_id: tc.id.clone(),
+            tool_name: tc.name.clone(),
+            content: msg.clone(),
+            is_error: true,
+        });
+        result_blocks.push(ContentBlock::ToolResult {
+            tool_use_id: tc.id.clone(),
+            content: msg,
+            is_error: Some(true),
+        });
+    }
+    state.api_messages.push(RichMessage::tool_results(result_blocks));
 }
 
 async fn process_tool_calls(
