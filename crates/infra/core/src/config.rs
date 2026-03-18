@@ -97,7 +97,7 @@ impl Default for EngineConfig {
             max_shell_task_retries: 20,
             max_loop_task_retries: 5,
             max_follow_ups_per_loop: 20,
-            max_task_credits: Some(200_000),
+            max_task_credits: Some(500_000),
         }
     }
 }
