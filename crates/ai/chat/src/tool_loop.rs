@@ -324,10 +324,37 @@ pub async fn run_tool_loop(
                 content: result.content.clone(),
                 is_error: result.is_error,
             });
-            let compacted = compaction::smart_compact(&tc.name, &result.content);
+
+            let content_for_llm = if tc.name == "read_file" && !result.is_error {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let hash = content_hash(&result.content);
+                if let Some(&prev_hash) = file_read_cache.get(path) {
+                    if prev_hash == hash {
+                        format!(
+                            "File already read earlier in this session with identical content ({} chars). \
+                             Use the previously read content.",
+                            result.content.len()
+                        )
+                    } else {
+                        file_read_cache.insert(path.to_string(), hash);
+                        compaction::smart_compact(&tc.name, &result.content)
+                    }
+                } else {
+                    file_read_cache.insert(path.to_string(), hash);
+                    compaction::smart_compact(&tc.name, &result.content)
+                }
+            } else {
+                if tc.name == "write_file" || tc.name == "edit_file" {
+                    if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                        file_read_cache.remove(path);
+                    }
+                }
+                compaction::smart_compact(&tc.name, &result.content)
+            };
+
             result_blocks.push(ContentBlock::ToolResult {
                 tool_use_id: result.tool_use_id.clone(),
-                content: compacted,
+                content: content_for_llm,
                 is_error: if result.is_error { Some(true) } else { None },
             });
             if result.stop_loop {
@@ -397,6 +424,15 @@ pub async fn run_tool_loop(
         insufficient_credits: false,
         llm_error: None,
     }
+}
+
+fn content_hash(content: &str) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for b in content.bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
 }
 
 fn append_text(total: &mut String, new: &str) {
