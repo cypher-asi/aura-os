@@ -1123,16 +1123,31 @@ impl ChatService {
 
         let max_context_tokens = self.llm_config.max_context_tokens;
         let keep_recent_messages = self.llm_config.keep_recent_messages;
+        let target_chat_tokens = self.llm_config.target_chat_tokens;
 
         let system_tokens = aura_claude::estimate_tokens(system_prompt);
         let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
         let total = system_tokens + total_msg_tokens;
 
-        if total <= max_context_tokens / 2 || messages.len() <= keep_recent_messages {
+        if total <= target_chat_tokens || messages.len() <= 4 {
             return messages;
         }
 
         let utilization = total as f64 / max_context_tokens as f64;
+
+        // If over the soft target but under 50% utilization, compact tool results
+        // using a tighter keep window.
+        if utilization <= 0.50 {
+            info!(
+                total_tokens = total,
+                target_chat_tokens,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Soft-target compaction: summarizing to stay under target_chat_tokens"
+            );
+            let compaction_keep = keep_recent_messages.min(6);
+            let split_at = Self::find_safe_split(&messages, compaction_keep);
+            return self.summarize_and_keep(api_key, &messages, split_at).await;
+        }
 
         // Tier 1 (50-75%): compact tool results in older messages only
         if utilization <= 0.75 {
@@ -1141,27 +1156,30 @@ impl ChatService {
                 utilization_pct = (utilization * 100.0) as u32,
                 "Tier-1 compaction: truncating large tool results in older messages"
             );
-            return Self::compact_tool_results_in_history(messages, keep_recent_messages);
+            let compaction_keep = keep_recent_messages.min(6);
+            let compacted = Self::compact_tool_results_in_history(messages, compaction_keep);
+            return compacted;
         }
 
-        // Tier 2 (75-90%): summarize the oldest half of messages, keep more recent ones
+        // Tier 2 (75-90%): summarize the oldest half of messages, keep fewer recent ones
         if utilization <= 0.90 {
             info!(
                 total_tokens = total,
                 utilization_pct = (utilization * 100.0) as u32,
                 "Tier-2 compaction: summarizing older messages"
             );
-            let split_at = Self::find_safe_split(&messages, keep_recent_messages);
+            let compaction_keep = keep_recent_messages.min(6);
+            let split_at = Self::find_safe_split(&messages, compaction_keep);
             return self.summarize_and_keep(api_key, &messages, split_at).await;
         }
 
-        // Tier 3 (>90%): aggressive summarization with fewer kept messages
+        // Tier 3 (>90%): aggressive summarization with minimal kept messages
         info!(
             total_tokens = total,
             utilization_pct = (utilization * 100.0) as u32,
             "Tier-3 compaction: aggressive summarization"
         );
-        let aggressive_keep = keep_recent_messages.max(4) / 2;
+        let aggressive_keep = 4;
         let split_at = Self::find_safe_split(&messages, aggressive_keep);
         self.summarize_and_keep(api_key, &messages, split_at).await
     }

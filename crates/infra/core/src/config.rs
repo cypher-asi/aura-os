@@ -11,6 +11,9 @@ pub struct LlmConfig {
     pub max_context_tokens: u64,
     pub keep_recent_messages: usize,
     pub stream_timeout_secs: u64,
+    /// Soft token target for chat context. When estimated tokens exceed this,
+    /// summarization fires regardless of utilization percentage.
+    pub target_chat_tokens: u64,
 }
 
 impl Default for LlmConfig {
@@ -23,6 +26,7 @@ impl Default for LlmConfig {
             max_context_tokens: 150_000,
             keep_recent_messages: 10,
             stream_timeout_secs: 600,
+            target_chat_tokens: 20_000,
         }
     }
 }
@@ -38,6 +42,7 @@ impl LlmConfig {
     /// - `AURA_LLM_MAX_CONTEXT_TOKENS`
     /// - `AURA_LLM_KEEP_RECENT_MESSAGES`
     /// - `AURA_LLM_STREAM_TIMEOUT_SECS`
+    /// - `AURA_LLM_TARGET_CHAT_TOKENS`
     pub fn from_env() -> Self {
         let defaults = Self::default();
         Self {
@@ -55,6 +60,8 @@ impl LlmConfig {
                 .unwrap_or(defaults.keep_recent_messages),
             stream_timeout_secs: parse_env("AURA_LLM_STREAM_TIMEOUT_SECS")
                 .unwrap_or(defaults.stream_timeout_secs),
+            target_chat_tokens: parse_env("AURA_LLM_TARGET_CHAT_TOKENS")
+                .unwrap_or(defaults.target_chat_tokens),
         }
     }
 }
