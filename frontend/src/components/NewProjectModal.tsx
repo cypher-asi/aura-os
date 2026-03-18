@@ -14,6 +14,12 @@ interface NewProjectModalProps {
 
 type WorkspaceMode = "linked" | "imported";
 
+type WorkspaceModeOption = {
+  id: WorkspaceMode;
+  label: string;
+  description: string;
+};
+
 type ImportCandidate = {
   file: File;
   relativePath: string;
@@ -185,14 +191,16 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setError("");
   }, []);
 
-  const workspaceModeOptions = supportsDesktopWorkspace
+  const workspaceModeOptions: WorkspaceModeOption[] = supportsDesktopWorkspace
     ? [
         { id: "linked" as const, label: "Link folder", description: "Best for the desktop app and live local workspaces." },
-        { id: "imported" as const, label: "Import snapshot", description: "Uploads a copy of files for web and mobile use." },
+        { id: "imported" as const, label: "Use local files", description: "Choose a folder or files from this device for browser-friendly workspaces." },
       ]
     : [
-        { id: "imported" as const, label: "Import snapshot", description: "Uploads files into an Aura-managed workspace on the server." },
+        { id: "imported" as const, label: "Local files", description: "Choose a folder or files from this device to start a project." },
       ];
+  const selectedWorkspaceMode = workspaceModeOptions.find((option) => option.id === workspaceMode) ?? workspaceModeOptions[0];
+  const showWorkspaceModePicker = workspaceModeOptions.length > 1;
 
   return (
     <Modal
@@ -223,29 +231,35 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
           <Text size="sm" style={{ fontWeight: 600 }}>
-            Workspace source
+            {showWorkspaceModePicker ? "Workspace source" : selectedWorkspaceMode.label}
           </Text>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            {workspaceModeOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => setWorkspaceMode(option.id)}
-                style={{
-                  textAlign: "left",
-                  borderRadius: "var(--radius-md)",
-                  border: option.id === workspaceMode ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
-                  background: option.id === workspaceMode ? "rgba(255,255,255,0.06)" : "var(--color-bg-elevated)",
-                  color: "inherit",
-                  padding: "var(--space-3)",
-                  cursor: "pointer",
-                }}
-              >
-                <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 600 }}>{option.label}</div>
-                <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>{option.description}</div>
-              </button>
-            ))}
-          </div>
+          {showWorkspaceModePicker ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+              {workspaceModeOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setWorkspaceMode(option.id)}
+                  style={{
+                    textAlign: "left",
+                    borderRadius: "var(--radius-md)",
+                    border: option.id === workspaceMode ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
+                    background: option.id === workspaceMode ? "rgba(255,255,255,0.06)" : "var(--color-bg-elevated)",
+                    color: "inherit",
+                    padding: "var(--space-3)",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: "var(--font-size-sm)", fontWeight: 600 }}>{option.label}</div>
+                  <div style={{ fontSize: "var(--font-size-xs)", color: "var(--color-text-secondary)" }}>{option.description}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Text variant="muted" size="sm">
+              {selectedWorkspaceMode.description}
+            </Text>
+          )}
         </div>
         <Input
           ref={nameInputRef}
@@ -291,14 +305,14 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             />
             <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
               <Button variant="secondary" onClick={() => importFolderInputRef.current?.click()} disabled={loading}>
-                Import folder
+                Open folder
               </Button>
               <Button variant="ghost" onClick={() => importFilesInputRef.current?.click()} disabled={loading}>
-                Import files
+                Choose files
               </Button>
             </div>
             <Text variant="muted" size="sm">
-              Aura uploads a copy of the selected files to a managed workspace on the connected host. This is the recommended web/mobile path.
+              Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.
             </Text>
             {importSummary.count > 0 && (
               <div
