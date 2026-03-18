@@ -19,6 +19,7 @@ members = [
     "crates/domain/settings",
     "crates/infra/store",
     "crates/infra/terminal",
+    "crates/infra/network",
     "apps/ide",
 ]
 resolver = "2"

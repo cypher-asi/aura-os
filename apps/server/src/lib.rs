@@ -18,6 +18,7 @@ use tracing::{debug, info, warn};
 use crate::state::TaskOutputBuffers;
 
 use aura_engine::EngineEvent;
+use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
@@ -303,6 +304,27 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         store.clone(),
     ));
 
+    let network_client = NetworkClient::from_env().map(Arc::new);
+
+    if let Some(ref client) = network_client {
+        let client = client.clone();
+        tokio::spawn(async move {
+            match client.health_check().await {
+                Ok(h) => info!(
+                    status = %h.status,
+                    version = h.version.as_deref().unwrap_or("unknown"),
+                    "aura-network is reachable"
+                ),
+                Err(e) => warn!(
+                    error = %e,
+                    "aura-network health check failed on startup (will retry on first request)"
+                ),
+            }
+        });
+    } else {
+        info!("aura-network integration disabled (AURA_NETWORK_URL not set)");
+    }
+
     AppState {
         store,
         org_service,
@@ -327,5 +349,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
         terminal_manager: Arc::new(TerminalManager::new()),
+        network_client,
     }
 }

@@ -5,6 +5,7 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 
 use aura_core::{AgentInstanceId, ProjectId, TaskId};
 use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
+use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
@@ -49,6 +50,8 @@ pub struct AppState {
     pub write_coordinator: ProjectWriteCoordinator,
     pub task_output_buffers: TaskOutputBuffers,
     pub terminal_manager: Arc<TerminalManager>,
+    /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
+    pub network_client: Option<Arc<NetworkClient>>,
 }
 
 impl AppState {

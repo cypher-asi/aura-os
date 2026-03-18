@@ -462,6 +462,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-network"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "aura-orgs"
 version = "0.1.0"
 dependencies = [
@@ -494,6 +508,7 @@ dependencies = [
  "aura-core",
  "aura-engine",
  "aura-github",
+ "aura-network",
  "aura-orgs",
  "aura-projects",
  "aura-sessions",
