@@ -7,7 +7,7 @@ use crate::error::EngineError;
 
 use super::workspace_map::{
     extract_signatures_from_content, parse_internal_deps, parse_package_name,
-    parse_workspace_members, read_signatures_only,
+    parse_workspace_members, read_signatures_only, WorkspaceCache,
 };
 use super::{INCLUDE_EXTENSIONS, SKIP_DIRS};
 
@@ -618,6 +618,217 @@ pub fn resolve_task_dep_api_context(
         if !section.is_empty() {
             remaining = remaining.saturating_sub(section.len());
             output.push_str(&section);
+        }
+    }
+
+    Ok(output)
+}
+
+/// Like `retrieve_task_relevant_files` but uses a pre-built `WorkspaceCache`
+/// to avoid re-parsing Cargo.toml files on every task iteration.
+pub fn retrieve_task_relevant_files_cached(
+    project_root: &str,
+    task_title: &str,
+    task_description: &str,
+    max_bytes: usize,
+    cache: &WorkspaceCache,
+) -> Result<String, EngineError> {
+    if cache.members.is_empty() {
+        return super::read_relevant_files(project_root, max_bytes);
+    }
+
+    let root = Path::new(project_root);
+    let target_crates = identify_target_crates(
+        task_title, task_description, &cache.members, &cache.crate_names,
+    );
+    let keywords = extract_task_keywords(task_title, task_description);
+
+    let mut output = String::new();
+    let mut current_size: usize = 0;
+    let mut included_files: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for target in &target_crates {
+        if current_size >= max_bytes { break; }
+        let crate_dir = root.join(target);
+        let core_files = [
+            crate_dir.join("Cargo.toml"),
+            crate_dir.join("src").join("lib.rs"),
+            crate_dir.join("src").join("main.rs"),
+            crate_dir.join("src").join("mod.rs"),
+        ];
+        for file in &core_files {
+            if current_size >= max_bytes { break; }
+            if !file.exists() { continue; }
+            let rel = file.strip_prefix(root).unwrap_or(file).display().to_string();
+            if !included_files.insert(rel.clone()) { continue; }
+            if let Ok(content) = std::fs::read_to_string(file) {
+                let section = format!("--- {} ---\n{}\n\n", rel, content);
+                if current_size + section.len() <= max_bytes {
+                    output.push_str(&section);
+                    current_size += section.len();
+                }
+            }
+        }
+        let src_dir = crate_dir.join("src");
+        if src_dir.is_dir() {
+            collect_rs_files_recursive(
+                root, &src_dir, &mut output, &mut current_size,
+                max_bytes, &mut included_files,
+            )?;
+        }
+    }
+
+    let dep_crate_paths: Vec<String> = target_crates
+        .iter()
+        .flat_map(|tc| cache.crate_deps.get(tc).cloned().unwrap_or_default())
+        .filter_map(|dep_name| cache.name_to_path.get(&dep_name).cloned())
+        .collect();
+
+    for dep_path in &dep_crate_paths {
+        if current_size >= max_bytes { break; }
+        let lib_rs = root.join(dep_path).join("src").join("lib.rs");
+        if !lib_rs.exists() { continue; }
+        let rel = lib_rs.strip_prefix(root).unwrap_or(&lib_rs).display().to_string();
+        if !included_files.insert(rel.clone()) { continue; }
+        match read_signatures_only(&lib_rs) {
+            Ok(sigs) if !sigs.is_empty() => {
+                let section = format!("--- {} [signatures] ---\n{}\n\n", rel, sigs);
+                if current_size + section.len() <= max_bytes {
+                    output.push_str(&section);
+                    current_size += section.len();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if current_size < max_bytes && !keywords.is_empty() {
+        let mut keyword_matches: Vec<(String, std::path::PathBuf)> = Vec::new();
+        collect_keyword_matching_files(root, root, &keywords, &mut keyword_matches, &included_files);
+        keyword_matches.sort_by(|a, b| a.0.cmp(&b.0));
+        for (rel, full) in keyword_matches {
+            if current_size >= max_bytes { break; }
+            if !included_files.insert(rel.clone()) { continue; }
+            if let Ok(content) = std::fs::read_to_string(&full) {
+                let section = if content.len() > 8_000 && rel.ends_with(".rs") {
+                    let sigs = extract_signatures_from_content(&content);
+                    if sigs.len() < content.len() / 2 && !sigs.is_empty() {
+                        format!("--- {} [signatures] ---\n{}\n\n", rel, sigs)
+                    } else {
+                        format!("--- {} ---\n{}\n\n", rel, content)
+                    }
+                } else {
+                    format!("--- {} ---\n{}\n\n", rel, content)
+                };
+                if current_size + section.len() <= max_bytes {
+                    output.push_str(&section);
+                    current_size += section.len();
+                }
+            }
+        }
+    }
+
+    if current_size < max_bytes {
+        walk_and_collect_filtered(
+            root, root, &mut output, &mut current_size, max_bytes, &mut included_files,
+        )?;
+    }
+
+    Ok(output)
+}
+
+/// Like `resolve_task_dep_api_context` but uses a pre-built `WorkspaceCache`.
+pub fn resolve_task_dep_api_context_cached(
+    project_root: &str,
+    task_title: &str,
+    task_description: &str,
+    max_bytes: usize,
+    cache: &WorkspaceCache,
+) -> Result<String, EngineError> {
+    if cache.members.is_empty() {
+        return Ok(String::new());
+    }
+
+    let targets = identify_target_crates(
+        task_title, task_description, &cache.members, &cache.crate_names,
+    );
+    if targets.is_empty() {
+        return Ok(String::new());
+    }
+
+    let root = Path::new(project_root);
+    let mut output = String::new();
+    let mut remaining = max_bytes;
+
+    for target in &targets {
+        if remaining == 0 { break; }
+
+        let target_path = if cache.members.contains(target) {
+            target.clone()
+        } else if let Some(path) = cache.name_to_path.get(target) {
+            path.clone()
+        } else {
+            continue;
+        };
+
+        const MAX_DEPTH: usize = 2;
+        let mut visited: std::collections::HashSet<String> = std::collections::HashSet::new();
+        visited.insert(target_path.clone());
+
+        let mut queue: Vec<(String, usize)> = Vec::new();
+        if let Some(deps) = cache.crate_deps.get(&target_path) {
+            for dep_name in deps {
+                if let Some(dep_path) = cache.name_to_path.get(dep_name) {
+                    if visited.insert(dep_path.clone()) {
+                        queue.push((dep_path.clone(), 1));
+                    }
+                }
+            }
+        }
+
+        let mut idx = 0;
+        while idx < queue.len() {
+            if remaining == 0 { break; }
+            let (member_path, depth) = queue[idx].clone();
+            idx += 1;
+
+            let crate_name = cache.crate_names
+                .get(&member_path)
+                .cloned()
+                .unwrap_or_else(|| member_path.clone());
+            let target_name = cache.crate_names
+                .get(&target_path)
+                .cloned()
+                .unwrap_or_else(|| target_path.clone());
+
+            let lib_rs = root.join(&member_path).join("src").join("lib.rs");
+            if !lib_rs.exists() { continue; }
+
+            let sigs = match read_signatures_only(&lib_rs) {
+                Ok(s) if !s.is_empty() => s,
+                _ => continue,
+            };
+
+            let section = format!(
+                "# API Surface: {} (dependency of {})\n{}\n\n",
+                crate_name, target_name, sigs,
+            );
+
+            if section.len() > remaining { continue; }
+            output.push_str(&section);
+            remaining = remaining.saturating_sub(section.len());
+
+            if depth < MAX_DEPTH {
+                if let Some(transitive_deps) = cache.crate_deps.get(&member_path) {
+                    for dep_name in transitive_deps {
+                        if let Some(dep_path) = cache.name_to_path.get(dep_name) {
+                            if visited.insert(dep_path.clone()) {
+                                queue.push((dep_path.clone(), depth + 1));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

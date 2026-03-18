@@ -19,7 +19,7 @@ use super::types::*;
 use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
-use crate::file_ops::{self, FileOp};
+use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 pub(crate) const BUILD_FIX_SNAPSHOT_BUDGET: usize = 30_000;
 
@@ -285,6 +285,7 @@ impl DevLoopEngine {
         api_key: &str, initial_execution: &TaskExecution,
         build_command: &str, build_stderr: &str, build_stdout: &str,
         prior_attempts: &[BuildFixAttemptRecord], attempt: u32,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(String, u64, u64), EngineError> {
         self.emit(EngineEvent::BuildFixAttempt {
             project_id: project.project_id,
@@ -300,8 +301,13 @@ impl DevLoopEngine {
             attempt: Some(attempt),
         });
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
-        let codebase_snapshot =
-            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
+        let codebase_snapshot = file_ops::retrieve_task_relevant_files_cached(
+            &project.linked_folder_path, &task.title, &task.description,
+            BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
+        ).unwrap_or_else(|_| {
+            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)
+                .unwrap_or_default()
+        });
         let fix_prompt = build_fix_prompt_with_history(
             project, &spec, task, session, &codebase_snapshot,
             build_command, build_stderr, build_stdout,
@@ -363,6 +369,7 @@ impl DevLoopEngine {
         base_path: &Path, all_fix_ops: &mut Vec<FileOp>,
         baseline_test_failures: &HashSet<String>,
         prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(bool, u64, u64), EngineError> {
         self.record_build_passed(project, session, task, build_command, stdout, duration_ms, attempt);
         match test_command.as_deref() {
@@ -370,7 +377,7 @@ impl DevLoopEngine {
                 self.run_and_handle_tests(
                     project, task, session, api_key, initial_execution,
                     test_cmd, base_path, attempt, all_fix_ops,
-                    baseline_test_failures, prior_test_attempts,
+                    baseline_test_failures, prior_test_attempts, workspace_cache,
                 ).await
             }
             None => Ok((true, 0, 0)),
@@ -384,11 +391,12 @@ impl DevLoopEngine {
         build_command: &str, build_result: &build_verify::BuildResult,
         base_path: &Path, prior_attempts: &mut Vec<BuildFixAttemptRecord>,
         all_fix_ops: &mut Vec<FileOp>, attempt: u32,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(u64, u64), EngineError> {
         let (response, inp, out) = self.request_build_fix(
             project, task, session, api_key, initial_execution,
             build_command, &build_result.stderr, &build_result.stdout,
-            prior_attempts, attempt,
+            prior_attempts, attempt, workspace_cache,
         ).await?;
         let (fix_applied, files_changed, ops) = self.apply_fix_response(
             project, session, task, base_path, &response, attempt,
@@ -410,6 +418,7 @@ impl DevLoopEngine {
         &self, project: &Project, task: &Task, session: &Session,
         api_key: &str, initial_execution: &TaskExecution,
         baseline_test_failures: &HashSet<String>,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
         let mut build_cmd = match self.resolve_build_command(project, session, task) {
             Some(cmd) => cmd,
@@ -436,7 +445,7 @@ impl DevLoopEngine {
                 let (tp, i, o) = self.handle_build_success(
                     project, task, session, api_key, initial_execution, &build_cmd,
                     &br.stdout, dur, attempt, &test_cmd, base_path, &mut fix_ops,
-                    baseline_test_failures, &mut test_prior,
+                    baseline_test_failures, &mut test_prior, workspace_cache,
                 ).await?;
                 inp_t += i; out_t += o;
                 if tp { return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t)); }
@@ -456,7 +465,7 @@ impl DevLoopEngine {
             }
             let (i, o) = self.attempt_build_fix(
                 project, task, session, api_key, initial_execution, &build_cmd,
-                &br, base_path, &mut prior, &mut fix_ops, attempt,
+                &br, base_path, &mut prior, &mut fix_ops, attempt, workspace_cache,
             ).await?;
             inp_t += i; out_t += o;
         }

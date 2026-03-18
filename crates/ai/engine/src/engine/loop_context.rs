@@ -12,7 +12,7 @@ use super::orchestrator::DevLoopEngine;
 use super::types::*;
 use crate::error::EngineError;
 use crate::events::{EngineEvent, PhaseTimingEntry};
-use crate::file_ops::FileOp;
+use crate::file_ops::{FileOp, WorkspaceCache};
 use crate::metrics::{self, LoopRunMetrics, TaskMetrics};
 
 pub(crate) struct LoopRunContext {
@@ -38,6 +38,7 @@ pub(crate) struct LoopRunContext {
     duplicate_error_bailouts: u32,
     run_metrics: LoopRunMetrics,
     fee_schedule: Vec<FeeScheduleEntry>,
+    pub workspace_cache: WorkspaceCache,
 }
 
 impl LoopRunContext {
@@ -53,6 +54,7 @@ impl LoopRunContext {
             .get_project(&project_id)?
             .linked_folder_path
             .clone();
+        let workspace_cache = WorkspaceCache::build(&project_root)?;
         let run_metrics = LoopRunMetrics::new(project_id.to_string());
         let fee_schedule = PricingService::new(engine.store.clone()).get_fee_schedule();
         let default_model = engine.llm_config.default_model.clone();
@@ -79,6 +81,7 @@ impl LoopRunContext {
             duplicate_error_bailouts: 0,
             run_metrics,
             fee_schedule,
+            workspace_cache,
         })
     }
 

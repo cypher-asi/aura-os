@@ -15,7 +15,7 @@ use super::types::*;
 use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
-use crate::file_ops::{self, FileOp};
+use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 impl DevLoopEngine {
     pub(crate) async fn execute_shell_task(
@@ -184,11 +184,12 @@ impl DevLoopEngine {
                 let mut test_fix_ops = Vec::new();
                 let no_baseline = HashSet::new();
                 let mut prior_test_attempts = Vec::new();
+                let shell_ws_cache = WorkspaceCache::build(&project.linked_folder_path)?;
                 let (test_passed, _test_inp, _test_out) = self.run_and_handle_tests(
                     project, task, &dummy_session,
                     &self.settings.get_decrypted_api_key()?,
                     &dummy_exec, test_cmd, base_path, attempt, &mut test_fix_ops,
-                    &no_baseline, &mut prior_test_attempts,
+                    &no_baseline, &mut prior_test_attempts, &shell_ws_cache,
                 ).await?;
                 if !test_passed {
                     if attempt < max_attempts {

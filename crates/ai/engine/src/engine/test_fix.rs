@@ -15,7 +15,7 @@ use super::types::*;
 use crate::build_verify;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
-use crate::file_ops::{self, FileOp};
+use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 impl DevLoopEngine {
     pub(crate) fn persist_test_step(&self, task: &Task, step: TestStepRecord) {
@@ -71,6 +71,7 @@ impl DevLoopEngine {
         all_fix_ops: &mut Vec<FileOp>,
         baseline_test_failures: &HashSet<String>,
         prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(bool, u64, u64), EngineError> {
         self.emit(EngineEvent::TestVerificationStarted {
             project_id: project.project_id,
@@ -106,7 +107,7 @@ impl DevLoopEngine {
             project, session, task, test_command, &test_result, &tests, &summary, dur, attempt);
         let (response, inp, out) = self.request_test_fix(
             project, task, session, api_key, initial_execution,
-            test_command, &test_result, prior_test_attempts,
+            test_command, &test_result, prior_test_attempts, workspace_cache,
         ).await?;
         self.apply_test_fix_response(
             task, base_path, project, session, &response,
@@ -235,10 +236,16 @@ impl DevLoopEngine {
         api_key: &str, initial_execution: &TaskExecution,
         test_command: &str, test_result: &build_verify::BuildResult,
         prior_test_attempts: &[BuildFixAttemptRecord],
+        workspace_cache: &WorkspaceCache,
     ) -> Result<(String, u64, u64), EngineError> {
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
-        let codebase_snapshot =
-            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
+        let codebase_snapshot = file_ops::retrieve_task_relevant_files_cached(
+            &project.linked_folder_path, &task.title, &task.description,
+            BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
+        ).unwrap_or_else(|_| {
+            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)
+                .unwrap_or_default()
+        });
         let fix_prompt = build_fix_prompt_with_history(
             project, &spec, task, session, &codebase_snapshot,
             test_command, &test_result.stderr, &test_result.stdout,

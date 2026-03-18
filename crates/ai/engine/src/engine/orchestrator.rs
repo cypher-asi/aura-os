@@ -226,7 +226,7 @@ impl DevLoopEngine {
                 tokio::select! {
                     r = self.execute_task_agentic(
                         &project_id, &task, &ctx.session, &ctx.api_key,
-                        agent.as_ref(), &ctx.work_log,
+                        agent.as_ref(), &ctx.work_log, &ctx.workspace_cache,
                     ) => Some(r),
                     _ = stop_rx.changed() => None,
                 }
@@ -237,6 +237,7 @@ impl DevLoopEngine {
             let outcome = self.finalize_task_execution(
                 project_id, agent_instance_id, &task, &ctx.session, &ctx.api_key,
                 &ctx.session.user_id, &ctx.session.model, task_start, &baseline, result,
+                &ctx.workspace_cache,
             ).await?;
             let failed = ctx.process_outcome(self, &task, outcome)?;
             self.agent_instance_service.finish_working(&project_id, &agent_instance_id)?;

@@ -231,6 +231,100 @@ pub fn extract_signatures_from_content(content: &str) -> String {
     aura_core::rust_signatures::extract_signatures(content)
 }
 
+/// Pre-computed workspace metadata. Built once per loop run and reused across
+/// all task iterations so that Cargo.toml files are parsed only once.
+pub struct WorkspaceCache {
+    pub members: Vec<String>,
+    pub crate_names: HashMap<String, String>,
+    pub crate_deps: HashMap<String, Vec<String>>,
+    pub name_to_path: HashMap<String, String>,
+    pub workspace_map_text: String,
+    pub member_count: usize,
+}
+
+impl WorkspaceCache {
+    pub fn build(project_root: &str) -> Result<Self, EngineError> {
+        let root = Path::new(project_root);
+        let root_cargo = root.join("Cargo.toml");
+        let cargo_content = match std::fs::read_to_string(&root_cargo) {
+            Ok(c) => c,
+            Err(_) => return Ok(Self::empty()),
+        };
+
+        let members = parse_workspace_members(&cargo_content);
+        if members.is_empty() {
+            return Ok(Self::empty());
+        }
+
+        let mut crate_names: HashMap<String, String> = HashMap::new();
+        let mut crate_deps: HashMap<String, Vec<String>> = HashMap::new();
+        let mut crate_docs: HashMap<String, String> = HashMap::new();
+
+        for member in &members {
+            let member_cargo = root.join(member).join("Cargo.toml");
+            let content = match std::fs::read_to_string(&member_cargo) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            let name = parse_package_name(&content).unwrap_or_else(|| member.clone());
+            let internal_deps = parse_internal_deps(&content);
+            let doc = read_crate_doc_comment(root, member);
+            crate_names.insert(member.clone(), name);
+            crate_deps.insert(member.clone(), internal_deps);
+            if !doc.is_empty() {
+                crate_docs.insert(member.clone(), doc);
+            }
+        }
+
+        let name_to_path: HashMap<String, String> = crate_names
+            .iter()
+            .map(|(path, name)| (name.clone(), path.clone()))
+            .collect();
+
+        let mut workspace_map_text = format!("Workspace: {} crates\n", members.len());
+        for member in &members {
+            let name = crate_names.get(member).map(|s| s.as_str()).unwrap_or(member);
+            let doc = crate_docs.get(member).map(|s| s.as_str()).unwrap_or("");
+            let doc_suffix = if doc.is_empty() {
+                String::new()
+            } else {
+                format!(" -- {doc}")
+            };
+            workspace_map_text.push_str(&format!("  {member} ({name}){doc_suffix}\n"));
+
+            if let Some(deps) = crate_deps.get(member) {
+                let resolved: Vec<&str> = deps
+                    .iter()
+                    .filter(|d| name_to_path.contains_key(d.as_str()))
+                    .map(|d| d.as_str())
+                    .collect();
+                if resolved.is_empty() {
+                    workspace_map_text.push_str("    deps: []\n");
+                } else {
+                    workspace_map_text.push_str(&format!(
+                        "    deps: [{}]\n",
+                        resolved.join(", ")
+                    ));
+                }
+            }
+        }
+
+        let member_count = members.len();
+        Ok(Self { members, crate_names, crate_deps, name_to_path, workspace_map_text, member_count })
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            members: Vec::new(),
+            crate_names: HashMap::new(),
+            crate_deps: HashMap::new(),
+            name_to_path: HashMap::new(),
+            workspace_map_text: String::new(),
+            member_count: 1,
+        }
+    }
+}
+
 /// Count the number of workspace member crates by parsing the root Cargo.toml.
 /// Returns 1 (single crate) if no workspace is detected.
 pub fn count_workspace_members(project_root: &str) -> Result<usize, EngineError> {
