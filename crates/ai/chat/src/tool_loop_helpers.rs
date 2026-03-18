@@ -116,9 +116,9 @@ pub(crate) fn build_tool_result_blocks(
                 if let Some(&prev_hash) = file_read_cache.get(path) {
                     if prev_hash == hash {
                         format!(
-                            "File already read earlier in this session with identical content ({} chars). \
-                             Use read_file with start_line/end_line to read specific sections, \
-                             or use the previously read content.",
+                            "STOP: File already read with identical content ({} chars). \
+                             Do NOT re-read the full file. Use read_file with start_line/end_line \
+                             to read specific line ranges, or use the previously read content.",
                             result.content.len()
                         )
                     } else {

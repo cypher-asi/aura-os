@@ -88,7 +88,10 @@ fn smart_compact_inner(tool_name: &str, content: &str, is_error: bool) -> String
         let sigs = aura_core::rust_signatures::extract_signatures(content);
         if !sigs.is_empty() && sigs.len() < content.len() / 2 {
             return format!(
-                "[Compacted to signatures only ({} -> {} chars) -- use read_file with start_line/end_line to read specific sections]\n{}",
+                "[Compacted: {} -> {} chars. Struct/enum definitions are COMPLETE below (all fields included). \
+                 Only function/method bodies are replaced with {{ ... }}. Line numbers (L123:) are exact -- \
+                 use read_file with start_line/end_line to read full implementations. \
+                 Do NOT re-read this file without a line range.]\n{}",
                 content.len(),
                 sigs.len(),
                 sigs,
