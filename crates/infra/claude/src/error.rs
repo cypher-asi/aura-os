@@ -10,6 +10,8 @@ pub enum ClaudeClientError {
     Truncated { max_tokens: u32 },
     #[error("response parse error: {0}")]
     Parse(String),
+    #[error("Insufficient credits — please top up to continue.")]
+    InsufficientCredits,
 }
 
 impl ClaudeClientError {
