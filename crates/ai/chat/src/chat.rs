@@ -15,7 +15,7 @@ use crate::tool_loop::{run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConf
 use aura_tools::{agent_tool_definitions, multi_project_tool_definitions};
 use aura_claude::{
     ContentBlock, ImageSource, MessageContent, RichMessage,
-    ThinkingConfig, ToolCall, ToolDefinition,
+    ThinkingConfig, ToolCall,
 };
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
@@ -709,7 +709,7 @@ impl ChatService {
         api_messages = Self::sanitize_orphan_tool_results(api_messages);
         api_messages = Self::sanitize_tool_use_results(api_messages);
 
-        let tools: Vec<ToolDefinition> = multi_project_tool_definitions();
+        let tools = multi_project_tool_definitions();
 
         let allowed_project_ids: std::collections::HashSet<String> = projects
             .iter()
@@ -858,7 +858,7 @@ impl ChatService {
         api_messages = Self::sanitize_orphan_tool_results(api_messages);
         api_messages = Self::sanitize_tool_use_results(api_messages);
 
-        let tools: Vec<ToolDefinition> = agent_tool_definitions();
+        let tools = agent_tool_definitions();
 
         let has_text_attachments = stored_messages.iter().any(|m| {
             m.role == ChatRole::User

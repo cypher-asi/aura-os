@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -101,7 +102,7 @@ pub async fn run_tool_loop(
     api_key: &str,
     system_prompt: &str,
     initial_messages: Vec<RichMessage>,
-    tools: Vec<ToolDefinition>,
+    tools: Arc<[ToolDefinition]>,
     config: &ToolLoopConfig,
     executor: &dyn ToolExecutor,
     event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
@@ -121,7 +122,7 @@ pub async fn run_tool_loop(
         let api_key_owned = api_key.to_string();
         let system_owned = system_prompt.to_string();
         let msgs_owned = api_messages.clone();
-        let tools_owned = tools.clone();
+        let tools_owned = tools.to_vec();
         let max_tokens = config.max_tokens;
         let thinking = config.thinking.clone();
         let reason = config.billing_reason;
@@ -522,7 +523,7 @@ mod tests {
             "test-key",
             "You are a test assistant.",
             vec![RichMessage::user("Say done")],
-            vec![],
+            Arc::from(Vec::<ToolDefinition>::new()),
             &config,
             &executor,
             &event_tx,
@@ -570,7 +571,7 @@ mod tests {
             "test-key",
             "You are a test assistant.",
             vec![RichMessage::user("Read the file")],
-            vec![],
+            Arc::from(Vec::<ToolDefinition>::new()),
             &config,
             &executor,
             &event_tx,
@@ -621,7 +622,7 @@ mod tests {
             "test-key",
             "You are a test assistant.",
             vec![RichMessage::user("Do many things")],
-            vec![],
+            Arc::from(Vec::<ToolDefinition>::new()),
             &config,
             &executor,
             &event_tx,

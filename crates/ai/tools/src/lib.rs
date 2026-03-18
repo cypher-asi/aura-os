@@ -1,4 +1,21 @@
+use std::sync::{Arc, LazyLock};
 use aura_claude::ToolDefinition;
+
+static AGENT_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    chat_tool_definitions_inner().into()
+});
+
+static ENGINE_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    engine_tool_definitions_inner().into()
+});
+
+static MULTI_PROJECT_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    multi_project_tool_definitions_inner().into()
+});
+
+/// Return type for lazily cached tool definitions. Callers can use this
+/// as `&[ToolDefinition]` (via Deref) or convert to `Vec` cheaply.
+pub type ToolDefs = Arc<[ToolDefinition]>;
 
 fn tool(name: &str, description: &str, schema: serde_json::Value) -> ToolDefinition {
     ToolDefinition {
@@ -142,15 +159,13 @@ pub fn core_tool_definitions() -> Vec<ToolDefinition> {
     ]
 }
 
-/// Chat agent tools: core + project management tools.
-pub fn chat_tool_definitions() -> Vec<ToolDefinition> {
+fn chat_tool_definitions_inner() -> Vec<ToolDefinition> {
     let mut tools = core_tool_definitions();
     tools.extend(chat_management_tools());
     tools
 }
 
-/// Engine tool definitions: core + task_done + get_task_context.
-pub fn engine_tool_definitions() -> Vec<ToolDefinition> {
+fn engine_tool_definitions_inner() -> Vec<ToolDefinition> {
     let mut tools = core_tool_definitions();
     tools.extend(vec![
         tool(
@@ -189,16 +204,23 @@ pub fn engine_tool_definitions() -> Vec<ToolDefinition> {
     tools
 }
 
-/// Returns the full set of tools the chat agent can invoke.
-pub fn agent_tool_definitions() -> Vec<ToolDefinition> {
-    chat_tool_definitions()
+/// Returns the full set of tools the chat agent can invoke (lazily cached).
+pub fn agent_tool_definitions() -> ToolDefs {
+    Arc::clone(&AGENT_TOOLS)
 }
 
-/// Returns tool definitions for multi-project agent chat.
-/// Each tool gains a required `project_id` parameter so the LLM
-/// specifies which project to target.
-pub fn multi_project_tool_definitions() -> Vec<ToolDefinition> {
-    agent_tool_definitions()
+/// Returns engine tool definitions (lazily cached).
+pub fn engine_tool_definitions() -> ToolDefs {
+    Arc::clone(&ENGINE_TOOLS)
+}
+
+/// Returns tool definitions for multi-project agent chat (lazily cached).
+pub fn multi_project_tool_definitions() -> ToolDefs {
+    Arc::clone(&MULTI_PROJECT_TOOLS)
+}
+
+fn multi_project_tool_definitions_inner() -> Vec<ToolDefinition> {
+    chat_tool_definitions_inner()
         .into_iter()
         .map(|mut td| {
             if let Some(props) = td.input_schema.get_mut("properties") {
