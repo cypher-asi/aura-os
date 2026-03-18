@@ -769,6 +769,19 @@ impl DevLoopEngine {
         if !codebase_snapshot.is_empty() {
             task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
         }
+
+        if !workspace_map.is_empty() {
+            let dep_api_context = file_ops::resolve_task_dep_api_context(
+                &project.linked_folder_path,
+                &task.title,
+                &task.description,
+                15_000,
+            ).unwrap_or_default();
+            if !dep_api_context.is_empty() {
+                task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api_context));
+            }
+        }
+
         let tools = engine_tool_definitions();
 
         let api_messages: Vec<RichMessage> = vec![RichMessage::user(&task_context)];

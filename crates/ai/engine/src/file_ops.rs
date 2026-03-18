@@ -1977,6 +1977,163 @@ fn walk_and_collect_filtered(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Crate dependency graph traversal (Phase 5B)
+// ---------------------------------------------------------------------------
+
+/// Resolve the public API surface of a target crate's workspace dependencies
+/// (and their transitive dependencies up to `max_depth`).  For each dependency,
+/// reads `lib.rs` in signature-only mode.  Returns a formatted context block
+/// suitable for prompt injection.
+pub fn resolve_crate_api_context(
+    project_root: &str,
+    target_crate: &str,
+    max_bytes: usize,
+) -> Result<String, EngineError> {
+    let root = Path::new(project_root);
+    let root_cargo = root.join("Cargo.toml");
+    let cargo_content = match std::fs::read_to_string(&root_cargo) {
+        Ok(c) => c,
+        Err(_) => return Ok(String::new()),
+    };
+
+    let members = parse_workspace_members(&cargo_content);
+    if members.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut crate_names: HashMap<String, String> = HashMap::new();
+    let mut crate_deps: HashMap<String, Vec<String>> = HashMap::new();
+    let mut name_to_path: HashMap<String, String> = HashMap::new();
+
+    for member in &members {
+        let member_cargo = root.join(member).join("Cargo.toml");
+        if let Ok(content) = std::fs::read_to_string(&member_cargo) {
+            let name = parse_package_name(&content).unwrap_or_else(|| member.clone());
+            let internal_deps = parse_internal_deps(&content);
+            name_to_path.insert(name.clone(), member.clone());
+            crate_names.insert(member.clone(), name);
+            crate_deps.insert(member.clone(), internal_deps);
+        }
+    }
+
+    let target_path = if members.contains(&target_crate.to_string()) {
+        target_crate.to_string()
+    } else if let Some(path) = name_to_path.get(target_crate) {
+        path.clone()
+    } else {
+        return Ok(String::new());
+    };
+
+    const MAX_DEPTH: usize = 2;
+    let mut visited: std::collections::HashSet<String> = std::collections::HashSet::new();
+    visited.insert(target_path.clone());
+
+    let mut queue: Vec<(String, usize)> = Vec::new();
+    if let Some(deps) = crate_deps.get(&target_path) {
+        for dep_name in deps {
+            if let Some(dep_path) = name_to_path.get(dep_name) {
+                if visited.insert(dep_path.clone()) {
+                    queue.push((dep_path.clone(), 1));
+                }
+            }
+        }
+    }
+
+    let mut output = String::new();
+    let mut remaining = max_bytes;
+    let mut idx = 0;
+
+    while idx < queue.len() {
+        if remaining == 0 { break; }
+        let (member_path, depth) = queue[idx].clone();
+        idx += 1;
+
+        let crate_name = crate_names.get(&member_path).cloned().unwrap_or_else(|| member_path.clone());
+        let target_name = crate_names.get(&target_path).cloned().unwrap_or_else(|| target_path.clone());
+
+        let lib_rs = root.join(&member_path).join("src").join("lib.rs");
+        if !lib_rs.exists() { continue; }
+
+        let sigs = match read_signatures_only(&lib_rs) {
+            Ok(s) if !s.is_empty() => s,
+            _ => continue,
+        };
+
+        let section = format!(
+            "# API Surface: {} (dependency of {})\n{}\n\n",
+            crate_name, target_name, sigs,
+        );
+
+        if section.len() > remaining { continue; }
+        output.push_str(&section);
+        remaining = remaining.saturating_sub(section.len());
+
+        if depth < MAX_DEPTH {
+            if let Some(transitive_deps) = crate_deps.get(&member_path) {
+                for dep_name in transitive_deps {
+                    if let Some(dep_path) = name_to_path.get(dep_name) {
+                        if visited.insert(dep_path.clone()) {
+                            queue.push((dep_path.clone(), depth + 1));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(output)
+}
+
+/// Convenience wrapper: identify target crates from a task's title and
+/// description, then resolve the API surface of their transitive dependencies.
+pub fn resolve_task_dep_api_context(
+    project_root: &str,
+    task_title: &str,
+    task_description: &str,
+    max_bytes: usize,
+) -> Result<String, EngineError> {
+    let root = Path::new(project_root);
+    let root_cargo = root.join("Cargo.toml");
+    let cargo_content = match std::fs::read_to_string(&root_cargo) {
+        Ok(c) => c,
+        Err(_) => return Ok(String::new()),
+    };
+
+    let members = parse_workspace_members(&cargo_content);
+    if members.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut crate_names: HashMap<String, String> = HashMap::new();
+    for member in &members {
+        let member_cargo = root.join(member).join("Cargo.toml");
+        if let Ok(content) = std::fs::read_to_string(&member_cargo) {
+            let name = parse_package_name(&content).unwrap_or_else(|| member.clone());
+            crate_names.insert(member.clone(), name);
+        }
+    }
+
+    let targets = identify_target_crates(task_title, task_description, &members, &crate_names);
+    if targets.is_empty() {
+        return Ok(String::new());
+    }
+
+    let mut output = String::new();
+    let mut remaining = max_bytes;
+
+    for target in &targets {
+        if remaining == 0 { break; }
+        let section = resolve_crate_api_context(project_root, target, remaining)?;
+        if !section.is_empty() {
+            remaining = remaining.saturating_sub(section.len());
+            output.push_str(&section);
+        }
+    }
+
+    Ok(output)
+}
+
 /// Check whether a line is an `impl` block header for the given type name.
 /// Handles `impl Type`, `impl<T> Type<T>`, `impl Trait for Type`, etc.
 fn is_impl_for_type(line: &str, type_name: &str) -> bool {
