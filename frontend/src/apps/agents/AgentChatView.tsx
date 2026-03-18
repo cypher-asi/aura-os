@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Text } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 import { api } from "../../api/client";
 import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
@@ -125,12 +125,9 @@ export function AgentChatView() {
         >
           <div className={styles.messageContent}>
             {!hasMessages ? (
-              <div className={styles.emptyState}>
-                <MessageSquare size={40} className={styles.emptyIcon} />
-                <Text variant="muted" size="sm">
-                  Send a message to chat with {agentName ?? "this agent"} across all linked projects
-                </Text>
-              </div>
+              <EmptyState icon={<MessageSquare size={40} />}>
+                Send a message to chat with {agentName ?? "this agent"} across all linked projects
+              </EmptyState>
             ) : (
               <>
                 {messages.map((msg) => (

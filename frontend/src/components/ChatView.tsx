@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Text } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
@@ -123,12 +123,9 @@ export function ChatView() {
         >
           <div className={styles.messageContent}>
             {!hasMessages ? (
-              <div className={styles.emptyState}>
-                <MessageSquare size={40} className={styles.emptyIcon} />
-                <Text variant="muted" size="sm">
-                  Send a message or use a quick action to get started
-                </Text>
-              </div>
+              <EmptyState icon={<MessageSquare size={40} />}>
+                Send a message or use a quick action to get started
+              </EmptyState>
             ) : (
               <>
                 {messages.map((msg) => (

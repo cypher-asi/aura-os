@@ -1,8 +1,8 @@
-import { Text } from "@cypher-asi/zui";
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../components/Lane";
 import { CommitGrid } from "../../components/CommitGrid";
 import { ActivityCard } from "../../components/ActivityCard";
+import { EmptyState } from "../../components/EmptyState";
 import { useProfile } from "./ProfileProvider";
 import styles from "./ProfileMainPanel.module.css";
 
@@ -18,10 +18,7 @@ export function ProfileMainPanel() {
           </div>
 
           {filteredEvents.length === 0 ? (
-            <div className={styles.empty}>
-              <GitCommitVertical size={32} className={styles.emptyIcon} />
-              <Text variant="muted" size="sm">No activity yet</Text>
-            </div>
+            <EmptyState icon={<GitCommitVertical size={32} />}>No activity yet</EmptyState>
           ) : (
             <div className={styles.feedList}>
               {filteredEvents.map((evt, i) => (

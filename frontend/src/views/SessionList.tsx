@@ -5,11 +5,11 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { MonitorCog } from "lucide-react";
 import { StatusBadge } from "../components/StatusBadge";
 import { formatCostFromTokens } from "../utils/pricing";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./SessionList.module.css";
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
@@ -98,15 +98,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
 
   if (isEmpty) {
     if (!showEmpty) return null;
-    return (
-      <div className={styles.emptyWrap}>
-        <PageEmptyState
-          icon={<MonitorCog size={32} />}
-          title="No sessions yet"
-          description="Sessions will appear here once the agent starts working."
-        />
-      </div>
-    );
+    return <EmptyState>No sessions yet</EmptyState>;
   }
 
   return (

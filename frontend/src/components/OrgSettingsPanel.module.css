@@ -200,9 +200,3 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
 }
-
-.emptyMessage {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}

@@ -1,5 +1,6 @@
 import { Button } from "@cypher-asi/zui";
 import { Copy, Trash2 } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import type { OrgInvite } from "../types";
 import styles from "./OrgSettingsPanel.module.css";
 
@@ -57,7 +58,7 @@ export function OrgSettingsInvites({ invites, isAdminOrOwner, onCreateInvite, on
           </div>
         ))}
         {pendingInvites.length === 0 && (
-          <div className={styles.emptyMessage}>No pending invites</div>
+          <EmptyState>No pending invites</EmptyState>
         )}
       </div>
     </>

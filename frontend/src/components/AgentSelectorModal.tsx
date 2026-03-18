@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Spinner, Text } from "@cypher-asi/zui";
 import { Bot } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import { api } from "../api/client";
 import type { Agent, AgentInstance } from "../types";
 import { AgentEditorModal } from "./AgentEditorModal";
@@ -83,10 +84,7 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
               <Spinner size="sm" />
             </div>
           ) : agents.length === 0 ? (
-            <div className={styles.emptyState}>
-              <Text variant="muted" size="sm">No agents yet.</Text>
-              <Text variant="muted" size="sm">Create one to get started.</Text>
-            </div>
+            <EmptyState>No agents yet. Create one to get started.</EmptyState>
           ) : (
             <div className={styles.grid}>
               {agents.map((agent) => (

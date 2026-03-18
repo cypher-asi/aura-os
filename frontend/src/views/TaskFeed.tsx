@@ -3,7 +3,8 @@ import type { ProjectId, Task } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
-import { Panel, Heading, Item, Text } from "@cypher-asi/zui";
+import { Panel, Heading, Item } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 
 interface TaskFeedProps {
@@ -111,9 +112,7 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
             </Item>
         ))}
         {tasks.length === 0 && (
-          <Text variant="muted" size="sm" align="center" style={{ padding: "var(--space-4)" }}>
-            No tasks
-          </Text>
+          <EmptyState>No tasks</EmptyState>
         )}
       </div>
     </Panel>

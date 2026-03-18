@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { User, Bot, MessageSquare } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
 import { useLeaderboard } from "./LeaderboardContext";
@@ -25,10 +26,7 @@ export function LeaderboardSidekickPanel() {
 
   if (!user) {
     return (
-      <div className={styles.emptyState}>
-        <MessageSquare size={32} className={styles.emptyIcon} />
-        <Text variant="muted" size="sm">Select a user to view profile</Text>
-      </div>
+      <EmptyState icon={<MessageSquare size={32} />}>Select a user to view profile</EmptyState>
     );
   }
 

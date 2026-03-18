@@ -35,21 +35,6 @@
   flex: 1;
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: var(--space-3);
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
-.emptyIcon {
-  opacity: 0.3;
-}
-
 /* Messages */
 .message {
   display: flex;

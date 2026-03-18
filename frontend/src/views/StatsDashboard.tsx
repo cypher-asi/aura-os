@@ -3,7 +3,8 @@ import { api } from "../api/client";
 import type { ProjectProgress } from "../types";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
-import { PageEmptyState, Text } from "@cypher-asi/zui";
+import { Text } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 
 export function StatsDashboard() {
@@ -30,7 +31,7 @@ export function StatsDashboard() {
 
   if (!progress) {
     if (!showEmpty) return null;
-    return <PageEmptyState title="No stats data" />;
+    return <EmptyState>No stats data</EmptyState>;
   }
 
   const pct = Math.round(progress.completion_percentage * 100) / 100;

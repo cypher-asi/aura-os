@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Text } from "@cypher-asi/zui";
-import { User, Send, MapPin, Globe, Calendar, Pencil } from "lucide-react";
+import { User, Send, MapPin, Globe, Calendar, Pencil, LogOut } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
 import { Avatar } from "../../components/Avatar";
@@ -25,7 +25,7 @@ function formatTokenCount(n: number): string {
 
 function ProfileCard() {
   const { profile, updateProfile, events, projects, totalTokenUsage } = useProfile();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [editorOpen, setEditorOpen] = useState(false);
 
   const isOwnProfile = !!user && (
@@ -86,13 +86,23 @@ function ProfileCard() {
       </EntityCard>
 
       {isOwnProfile && (
-        <button
-          type="button"
-          className={styles.floatingEditButton}
-          onClick={() => setEditorOpen(true)}
-        >
-          <Pencil size={14} />
-        </button>
+        <div className={styles.floatingActions}>
+          <button
+            type="button"
+            className={styles.floatingEditButton}
+            onClick={() => setEditorOpen(true)}
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            type="button"
+            className={styles.floatingEditButton}
+            onClick={logout}
+            aria-label="Logout"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
       )}
 
       <ProfileEditorModal
@@ -131,9 +141,7 @@ function CommentsPanel() {
     <div className={styles.commentsPanel}>
       <div className={styles.commentList}>
         {comments.length === 0 ? (
-          <div className={styles.emptyComments}>
-            <Text variant="muted" size="sm">No comments yet</Text>
-          </div>
+          <EmptyState>No comments yet</EmptyState>
         ) : (
           comments.map((c) => (
             <div key={c.id} className={styles.commentItem}>

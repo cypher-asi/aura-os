@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { api, type DirEntry } from "../api/client";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Folder, File, FolderOpen } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 
 interface FileExplorerProps {
   rootPath: string;
@@ -81,23 +82,11 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   if (loading) return null;
 
   if (error) {
-    return (
-      <PageEmptyState
-        icon={<Folder size={32} />}
-        title="Could not load files"
-        description={error}
-      />
-    );
+    return <EmptyState icon={<Folder size={32} />}>Could not load files</EmptyState>;
   }
 
   if (entries.length === 0) {
-    return (
-      <PageEmptyState
-        icon={<FolderOpen size={32} />}
-        title="Empty directory"
-        description="No files found in the project folder."
-      />
-    );
+    return <EmptyState icon={<FolderOpen size={32} />}>No files found in the project folder.</EmptyState>;
   }
 
   return (

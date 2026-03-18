@@ -8,10 +8,10 @@ import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { ListTodo } from "lucide-react";
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
@@ -191,13 +191,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
   if (isEmpty) {
     if (!showEmpty) return null;
-    return (
-      <PageEmptyState
-        icon={<ListTodo size={32} />}
-        title="No tasks yet"
-        description="Tasks are created automatically when specs are generated."
-      />
-    );
+    return <EmptyState>No tasks yet</EmptyState>;
   }
 
   return (
