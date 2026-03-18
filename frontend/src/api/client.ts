@@ -570,6 +570,48 @@ export const api = {
       }),
   },
 
+  // Leaderboard (proxied to aura-network)
+  leaderboard: {
+    get: (period: string, orgId?: string) => {
+      const params = new URLSearchParams({ period });
+      if (orgId) params.set("org_id", orgId);
+      return apiFetch<{
+        profile_id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        tokens_used: number;
+        rank: number;
+        profile_type: string | null;
+      }[]>(`/api/leaderboard?${params}`);
+    },
+  },
+
+  // Usage (proxied to aura-network)
+  usage: {
+    personal: (period: string) =>
+      apiFetch<{
+        total_tokens: number;
+        total_input_tokens: number;
+        total_output_tokens: number;
+        total_cost_usd: number;
+      }>(`/api/users/me/usage?period=${period}`),
+    org: (orgId: string, period: string) =>
+      apiFetch<{
+        total_tokens: number;
+        total_input_tokens: number;
+        total_output_tokens: number;
+        total_cost_usd: number;
+      }>(`/api/orgs/${orgId}/usage?period=${period}`),
+    orgMembers: (orgId: string) =>
+      apiFetch<{
+        user_id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        total_tokens: number;
+        total_cost_usd: number;
+      }[]>(`/api/orgs/${orgId}/usage/members`),
+  },
+
   // Activity
   activity: {
     getCommitHistory: (params: {

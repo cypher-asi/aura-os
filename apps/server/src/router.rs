@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, users, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, github, leaderboard, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -277,6 +277,20 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/follows/check/:target_profile_id",
             get(follows::check_follow),
+        )
+        // Leaderboard + Usage (proxied to aura-network)
+        .route("/api/leaderboard", get(leaderboard::get_leaderboard))
+        .route(
+            "/api/users/me/usage",
+            get(leaderboard::get_personal_usage),
+        )
+        .route(
+            "/api/orgs/:org_id/usage",
+            get(leaderboard::get_org_usage),
+        )
+        .route(
+            "/api/orgs/:org_id/usage/members",
+            get(leaderboard::get_org_usage_members),
         )
         // Feed (proxied to aura-network)
         .route("/api/feed", get(feed::list_feed))

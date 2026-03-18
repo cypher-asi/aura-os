@@ -352,8 +352,12 @@ pub struct LeaderboardEntry {
     pub display_name: Option<String>,
     #[serde(default)]
     pub avatar_url: Option<String>,
+    #[serde(default)]
     pub tokens_used: u64,
+    #[serde(default)]
     pub rank: u32,
+    #[serde(default)]
+    pub profile_type: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -369,6 +373,20 @@ pub struct UsageStats {
     pub total_input_tokens: u64,
     #[serde(default)]
     pub total_output_tokens: u64,
+    #[serde(default)]
+    pub total_cost_usd: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MemberUsageStats {
+    pub user_id: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    #[serde(default)]
+    pub avatar_url: Option<String>,
+    #[serde(default)]
+    pub total_tokens: u64,
     #[serde(default)]
     pub total_cost_usd: f64,
 }

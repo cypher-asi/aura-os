@@ -555,6 +555,21 @@ impl NetworkClient {
         .await
     }
 
+    pub async fn get_org_usage_members(
+        &self,
+        org_id: &str,
+        jwt: &str,
+    ) -> Result<Vec<MemberUsageStats>, NetworkError> {
+        self.get_authed(
+            &format!(
+                "{}/api/orgs/{}/usage/members",
+                self.base_url, org_id
+            ),
+            jwt,
+        )
+        .await
+    }
+
     // -----------------------------------------------------------------------
     // Internal HTTP helpers
     // -----------------------------------------------------------------------
