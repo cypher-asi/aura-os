@@ -70,8 +70,8 @@ export function StatsDashboard() {
       </div>
 
       <div className={styles.statsGrid}>
-        <StatCard value={progress.total_time_seconds} label="Time" fmtFn={formatDuration} />
         <StatCard value={progress.total_cost} label="Cost" fmtFn={formatCurrency} />
+        <StatCard value={progress.total_time_seconds} label="Time" fmtFn={formatDuration} />
         <StatCard value={progress.total_tokens} label="Tokens" fmt />
         <StatCard value={progress.lines_changed} label="Changed" fmt />
         <StatCard value={progress.lines_of_code} label="LoC" fmt />

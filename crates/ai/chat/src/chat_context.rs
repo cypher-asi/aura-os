@@ -5,6 +5,117 @@ use aura_core::*;
 
 use crate::ChatService;
 
+// ---------------------------------------------------------------------------
+// System prompt builder
+// ---------------------------------------------------------------------------
+
+pub(crate) fn build_chat_system_prompt(project: &Project, custom_system_prompt: &str) -> String {
+    let mut prompt = if custom_system_prompt.is_empty() {
+        CHAT_SYSTEM_PROMPT_BASE.to_string()
+    } else {
+        let mut p = custom_system_prompt.to_string();
+        p.push_str("\n\n");
+        p.push_str(CHAT_SYSTEM_PROMPT_BASE);
+        p
+    };
+
+    prompt.push_str(&format!(
+        "\n\n## Current Project\n- **Name**: {}\n- **Description**: {}\n- **Folder**: {}\n- **Build**: {}\n- **Test**: {}\n",
+        project.name,
+        project.description,
+        project.linked_folder_path,
+        project.build_command.as_deref().unwrap_or("(not set)"),
+        project.test_command.as_deref().unwrap_or("(not set)"),
+    ));
+
+    append_tech_stack(&mut prompt, project);
+    prompt
+}
+
+fn append_tech_stack(prompt: &mut String, project: &Project) {
+    let folder = std::path::Path::new(&project.linked_folder_path);
+    if !folder.is_dir() {
+        return;
+    }
+
+    let mut stack: Vec<&str> = Vec::new();
+    let markers: &[(&str, &str)] = &[
+        ("Cargo.toml", "Rust"),
+        ("package.json", "Node.js/TypeScript"),
+        ("pyproject.toml", "Python"),
+        ("requirements.txt", "Python"),
+        ("go.mod", "Go"),
+        ("pom.xml", "Java/Maven"),
+        ("build.gradle", "Java/Gradle"),
+        ("Gemfile", "Ruby"),
+        ("composer.json", "PHP"),
+        ("mix.exs", "Elixir"),
+    ];
+    for (file, tech) in markers {
+        if folder.join(file).exists() && !stack.contains(tech) {
+            stack.push(tech);
+        }
+    }
+    if !stack.is_empty() {
+        prompt.push_str(&format!("- **Tech Stack**: {}\n", stack.join(", ")));
+    }
+
+    append_directory_listing(prompt, folder);
+    append_config_previews(prompt, folder);
+}
+
+fn append_directory_listing(prompt: &mut String, folder: &std::path::Path) {
+    let entries = match std::fs::read_dir(folder) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    let mut items: Vec<String> = Vec::new();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') || name == "node_modules" || name == "target"
+            || name == "__pycache__" || name == "dist" || name == "build"
+        {
+            continue;
+        }
+        let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+        items.push(if is_dir { format!("{name}/") } else { name });
+    }
+    items.sort();
+    if !items.is_empty() {
+        let listing = items.iter().take(30).cloned().collect::<Vec<_>>().join(", ");
+        prompt.push_str(&format!("\n### Project Structure\n{listing}\n"));
+    }
+}
+
+fn append_config_previews(prompt: &mut String, folder: &std::path::Path) {
+    let config_files: &[&str] = &[
+        "Cargo.toml", "package.json", "tsconfig.json", "pyproject.toml",
+    ];
+    let mut config_budget: usize = 2000;
+    let mut config_sections: Vec<String> = Vec::new();
+    for &cf in config_files {
+        if config_budget == 0 {
+            break;
+        }
+        let path = folder.join(cf);
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            let preview: String = content.lines().take(30).collect::<Vec<_>>().join("\n");
+            let preview = if preview.len() > config_budget {
+                preview[..config_budget].to_string()
+            } else {
+                preview
+            };
+            config_budget = config_budget.saturating_sub(preview.len());
+            config_sections.push(format!("**{cf}**:\n```\n{preview}\n```"));
+        }
+    }
+    if !config_sections.is_empty() {
+        prompt.push_str("\n### Key Config Files\n");
+        prompt.push_str(&config_sections.join("\n"));
+        prompt.push('\n');
+    }
+}
+
 impl ChatService {
     fn is_tool_results_only(msg: &RichMessage) -> bool {
         msg.role == "user"
@@ -161,5 +272,85 @@ impl ChatService {
                 recent_messages.to_vec()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn make_project(name: &str, folder: &str) -> Project {
+        Project {
+            project_id: ProjectId::new(),
+            org_id: OrgId::new(),
+            name: name.into(),
+            description: "Test project description".into(),
+            linked_folder_path: folder.into(),
+            requirements_doc_path: None,
+            current_status: ProjectStatus::Planning,
+            build_command: Some("cargo build".into()),
+            test_command: Some("cargo test".into()),
+            specs_summary: None,
+            specs_title: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn system_prompt_uses_base_when_custom_empty() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.starts_with(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_prepends_custom() {
+        let project = make_project("TestProj", "/nonexistent/path");
+        let prompt = build_chat_system_prompt(&project, "Custom instructions here.");
+        assert!(prompt.starts_with("Custom instructions here."));
+        assert!(prompt.contains(CHAT_SYSTEM_PROMPT_BASE));
+        assert!(prompt.contains("TestProj"));
+    }
+
+    #[test]
+    fn system_prompt_includes_project_details() {
+        let mut project = make_project("MyApp", "/nonexistent/path");
+        project.description = "A web application".into();
+        project.build_command = Some("npm run build".into());
+        project.test_command = None;
+
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("MyApp"));
+        assert!(prompt.contains("A web application"));
+        assert!(prompt.contains("npm run build"));
+        assert!(prompt.contains("(not set)"));
+    }
+
+    #[test]
+    fn system_prompt_detects_tech_stack() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), "[package]").unwrap();
+        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+
+        let project = make_project("MultiStack", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Rust"));
+        assert!(prompt.contains("Node.js/TypeScript"));
+    }
+
+    #[test]
+    fn system_prompt_lists_project_structure() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("src")).unwrap();
+        std::fs::write(dir.path().join("README.md"), "# Hi").unwrap();
+
+        let project = make_project("Structured", &dir.path().to_string_lossy());
+        let prompt = build_chat_system_prompt(&project, "");
+        assert!(prompt.contains("Project Structure"));
+        assert!(prompt.contains("src/"));
+        assert!(prompt.contains("README.md"));
     }
 }
