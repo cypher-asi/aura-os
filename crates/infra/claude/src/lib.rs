@@ -809,7 +809,10 @@ impl ClaudeClient {
 
         let status = response.status();
         let elapsed_ms = start.elapsed().as_millis() as u64;
-        info!(status = status.as_u16(), elapsed_ms, "Claude API responded");
+        let content_type = response.headers().get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+        info!(status = status.as_u16(), elapsed_ms, content_type, "Claude API responded");
 
         if !status.is_success() {
             let status_code = status.as_u16();
