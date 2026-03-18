@@ -244,6 +244,8 @@ mod tests {
 
         let session = serde_json::to_vec(&aura_core::ZeroAuthSession {
             user_id: "u1".into(),
+            network_user_id: None,
+            profile_id: None,
             display_name: "Test".into(),
             profile_image: String::new(),
             primary_zid: "zid-1".into(),

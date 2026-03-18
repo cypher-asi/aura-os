@@ -120,6 +120,7 @@ fn sample_project() -> Project {
         build_command: None,
         test_command: None,
         specs_summary: None,
+        specs_title: None,
         created_at: now,
         updated_at: now,
     }
@@ -150,7 +151,8 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
         order_index: 1,
         dependency_ids: vec![],
         parent_task_id: None,
-        assigned_agent_id: None,
+        assigned_agent_instance_id: None,
+        completed_by_agent_instance_id: None,
         session_id: None,
         execution_notes: String::new(),
         files_changed: vec![],
@@ -166,38 +168,26 @@ fn sample_task(project_id: ProjectId, spec_id: SpecId) -> Task {
     }
 }
 
-fn sample_agent(project_id: ProjectId) -> Agent {
+fn sample_agent() -> Agent {
     let now = Utc::now();
     Agent {
         agent_id: AgentId::new(),
-        project_id,
+        user_id: String::new(),
         name: "Agent-1".into(),
-        status: AgentStatus::Idle,
-        current_task_id: None,
-        current_session_id: None,
+        role: "developer".into(),
+        personality: String::new(),
+        system_prompt: String::new(),
+        skills: vec![],
+        icon: None,
+        network_agent_id: None,
+        profile_id: None,
         created_at: now,
         updated_at: now,
     }
 }
 
-fn sample_session(agent_id: AgentId, project_id: ProjectId) -> Session {
-    let now = Utc::now();
-    Session {
-        session_id: SessionId::new(),
-        agent_id,
-        project_id,
-        active_task_id: None,
-        tasks_worked: Vec::new(),
-        context_usage_estimate: 0.0,
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        summary_of_previous_context: String::new(),
-        status: SessionStatus::Active,
-        user_id: None,
-        model: None,
-        started_at: now,
-        ended_at: None,
-    }
+fn sample_session(project_id: ProjectId) -> Session {
+    Session::dummy(project_id)
 }
 
 macro_rules! test_entity_round_trip {
@@ -222,12 +212,8 @@ test_entity_round_trip!(task_round_trip, {
     let s = sample_spec(p.project_id);
     sample_task(p.project_id, s.spec_id)
 });
-test_entity_round_trip!(agent_round_trip, {
-    let p = sample_project();
-    sample_agent(p.project_id)
-});
+test_entity_round_trip!(agent_round_trip, sample_agent());
 test_entity_round_trip!(session_round_trip, {
     let p = sample_project();
-    let a = sample_agent(p.project_id);
-    sample_session(a.agent_id, p.project_id)
+    sample_session(p.project_id)
 });

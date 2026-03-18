@@ -270,43 +270,67 @@ pub async fn list_members(
         .map_err(map_network_error)?;
 
     let mut responses: Vec<MemberResponse> = members.into_iter().map(MemberResponse::from).collect();
+    enrich_member_display_names(&mut responses, &session, client.as_ref(), &jwt).await;
+    Ok(Json(responses))
+}
 
+fn looks_like_uuid(s: &str) -> bool {
+    s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4
+}
+
+async fn enrich_member_display_names(
+    responses: &mut [MemberResponse],
+    session: &ZeroAuthSession,
+    client: &aura_network::NetworkClient,
+    jwt: &str,
+) {
     let current_network_id = session.network_user_id.map(|id| id.to_string());
 
-    for resp in &mut responses {
-        let looks_like_uuid = resp.display_name.len() == 36
-            && resp.display_name.chars().filter(|c| *c == '-').count() == 4;
-        let name_missing = resp.display_name.is_empty() || looks_like_uuid;
+    for resp in responses.iter_mut() {
+        let name_missing = resp.display_name.is_empty() || looks_like_uuid(&resp.display_name);
         if !name_missing {
             continue;
         }
 
-        // For the current user, prefer the local auth session's display name
-        let is_current_user = current_network_id.as_deref() == Some(&resp.user_id)
-            || resp.display_name == session.user_id;
-        if is_current_user && !session.display_name.is_empty() {
-            resp.display_name = session.display_name.clone();
-            if resp.avatar_url.is_none() && !session.profile_image.is_empty() {
-                resp.avatar_url = Some(session.profile_image.clone());
-            }
+        if try_fill_from_session(resp, session, current_network_id.as_deref()) {
             continue;
         }
+        try_fill_from_network(resp, client, jwt).await;
+    }
+}
 
-        // For other members, try to fetch their user profile
-        if let Ok(user) = client.get_user(&resp.user_id, &jwt).await {
-            if let Some(name) = user.display_name.filter(|n| !n.is_empty()) {
-                let name_is_uuid = name.len() == 36 && name.chars().filter(|c| *c == '-').count() == 4;
-                if !name_is_uuid {
-                    resp.display_name = name;
-                }
-            }
-            if resp.avatar_url.is_none() {
-                resp.avatar_url = user.avatar_url;
+fn try_fill_from_session(
+    resp: &mut MemberResponse,
+    session: &ZeroAuthSession,
+    current_network_id: Option<&str>,
+) -> bool {
+    let is_current_user =
+        current_network_id == Some(&resp.user_id) || resp.display_name == session.user_id;
+    if !is_current_user || session.display_name.is_empty() {
+        return false;
+    }
+    resp.display_name = session.display_name.clone();
+    if resp.avatar_url.is_none() && !session.profile_image.is_empty() {
+        resp.avatar_url = Some(session.profile_image.clone());
+    }
+    true
+}
+
+async fn try_fill_from_network(
+    resp: &mut MemberResponse,
+    client: &aura_network::NetworkClient,
+    jwt: &str,
+) {
+    if let Ok(user) = client.get_user(&resp.user_id, jwt).await {
+        if let Some(name) = user.display_name.filter(|n| !n.is_empty()) {
+            if !looks_like_uuid(&name) {
+                resp.display_name = name;
             }
         }
+        if resp.avatar_url.is_none() {
+            resp.avatar_url = user.avatar_url;
+        }
     }
-
-    Ok(Json(responses))
 }
 
 pub async fn update_member_role(

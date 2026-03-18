@@ -8,13 +8,16 @@ use crate::error::TaskError;
 use crate::TaskService;
 
 impl TaskService {
-    pub fn transition_task(
+    fn with_task_mut<F>(
         &self,
         project_id: &ProjectId,
         spec_id: &SpecId,
         task_id: &TaskId,
-        new_status: TaskStatus,
-    ) -> Result<Task, TaskError> {
+        mutate: F,
+    ) -> Result<Task, TaskError>
+    where
+        F: FnOnce(&mut Task) -> Result<(), TaskError>,
+    {
         let _guard = self.store.lock_task_writes();
         let mut task = self
             .store
@@ -23,11 +26,24 @@ impl TaskService {
                 aura_store::StoreError::NotFound(_) => TaskError::NotFound,
                 other => TaskError::Store(other),
             })?;
-        Self::validate_transition(task.status, new_status)?;
-        task.status = new_status;
+        mutate(&mut task)?;
         task.updated_at = Utc::now();
         self.store.put_task(&task)?;
         Ok(task)
+    }
+
+    pub fn transition_task(
+        &self,
+        project_id: &ProjectId,
+        spec_id: &SpecId,
+        task_id: &TaskId,
+        new_status: TaskStatus,
+    ) -> Result<Task, TaskError> {
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            Self::validate_transition(task.status, new_status)?;
+            task.status = new_status;
+            Ok(())
+        })
     }
 
     pub fn validate_transition(current: TaskStatus, target: TaskStatus) -> Result<(), TaskError> {
@@ -58,21 +74,13 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        let _guard = self.store.lock_task_writes();
-        let mut task = self
-            .store
-            .get_task(project_id, spec_id, task_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
-                other => TaskError::Store(other),
-            })?;
-        Self::validate_transition(task.status, TaskStatus::Ready)?;
-        task.status = TaskStatus::Ready;
-        task.assigned_agent_instance_id = None;
-        task.session_id = None;
-        task.updated_at = Utc::now();
-        self.store.put_task(&task)?;
-        Ok(task)
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            Self::validate_transition(task.status, TaskStatus::Ready)?;
+            task.status = TaskStatus::Ready;
+            task.assigned_agent_instance_id = None;
+            task.session_id = None;
+            Ok(())
+        })
     }
 
     /// Reset any orphaned `InProgress` tasks back to `Ready`.
@@ -102,21 +110,13 @@ impl TaskService {
         agent_instance_id: &AgentInstanceId,
         session_id: Option<SessionId>,
     ) -> Result<Task, TaskError> {
-        let _guard = self.store.lock_task_writes();
-        let mut task = self
-            .store
-            .get_task(project_id, spec_id, task_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
-                other => TaskError::Store(other),
-            })?;
-        Self::validate_transition(task.status, TaskStatus::InProgress)?;
-        task.status = TaskStatus::InProgress;
-        task.assigned_agent_instance_id = Some(*agent_instance_id);
-        task.session_id = session_id;
-        task.updated_at = Utc::now();
-        self.store.put_task(&task)?;
-        Ok(task)
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            Self::validate_transition(task.status, TaskStatus::InProgress)?;
+            task.status = TaskStatus::InProgress;
+            task.assigned_agent_instance_id = Some(*agent_instance_id);
+            task.session_id = session_id;
+            Ok(())
+        })
     }
 
     pub fn complete_task(
@@ -127,22 +127,14 @@ impl TaskService {
         notes: &str,
         files_changed: Vec<FileChangeSummary>,
     ) -> Result<Task, TaskError> {
-        let _guard = self.store.lock_task_writes();
-        let mut task = self
-            .store
-            .get_task(project_id, spec_id, task_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
-                other => TaskError::Store(other),
-            })?;
-        Self::validate_transition(task.status, TaskStatus::Done)?;
-        task.status = TaskStatus::Done;
-        task.completed_by_agent_instance_id = task.assigned_agent_instance_id;
-        task.execution_notes = notes.to_string();
-        task.files_changed = files_changed;
-        task.updated_at = Utc::now();
-        self.store.put_task(&task)?;
-        Ok(task)
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            Self::validate_transition(task.status, TaskStatus::Done)?;
+            task.status = TaskStatus::Done;
+            task.completed_by_agent_instance_id = task.assigned_agent_instance_id;
+            task.execution_notes = notes.to_string();
+            task.files_changed = files_changed;
+            Ok(())
+        })
     }
 
     pub fn fail_task(
@@ -152,20 +144,12 @@ impl TaskService {
         task_id: &TaskId,
         reason: &str,
     ) -> Result<Task, TaskError> {
-        let _guard = self.store.lock_task_writes();
-        let mut task = self
-            .store
-            .get_task(project_id, spec_id, task_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
-                other => TaskError::Store(other),
-            })?;
-        Self::validate_transition(task.status, TaskStatus::Failed)?;
-        task.status = TaskStatus::Failed;
-        task.execution_notes = reason.to_string();
-        task.updated_at = Utc::now();
-        self.store.put_task(&task)?;
-        Ok(task)
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            Self::validate_transition(task.status, TaskStatus::Failed)?;
+            task.status = TaskStatus::Failed;
+            task.execution_notes = reason.to_string();
+            Ok(())
+        })
     }
 
     pub fn retry_task(
@@ -174,29 +158,19 @@ impl TaskService {
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        let _guard = self.store.lock_task_writes();
-        let mut task = self
-            .store
-            .get_task(project_id, spec_id, task_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => TaskError::NotFound,
-                other => TaskError::Store(other),
-            })?;
-
-        if task.status == TaskStatus::Ready {
-            return Ok(task);
-        }
-
-        Self::validate_transition(task.status, TaskStatus::Ready)?;
-        task.status = TaskStatus::Ready;
-        task.assigned_agent_instance_id = None;
-        task.session_id = None;
-        task.build_steps.clear();
-        task.test_steps.clear();
-        task.live_output.clear();
-        task.updated_at = Utc::now();
-        self.store.put_task(&task)?;
-        Ok(task)
+        self.with_task_mut(project_id, spec_id, task_id, |task| {
+            if task.status == TaskStatus::Ready {
+                return Ok(());
+            }
+            Self::validate_transition(task.status, TaskStatus::Ready)?;
+            task.status = TaskStatus::Ready;
+            task.assigned_agent_instance_id = None;
+            task.session_id = None;
+            task.build_steps.clear();
+            task.test_steps.clear();
+            task.live_output.clear();
+            Ok(())
+        })
     }
 
     // -- Dependency resolution --
@@ -207,9 +181,19 @@ impl TaskService {
         completed_task_id: &TaskId,
     ) -> Result<Vec<Task>, TaskError> {
         let all_tasks = self.store.list_tasks_by_project(project_id)?;
-        let mut newly_ready = Vec::new();
+        self.resolve_dependencies_with_tasks(project_id, completed_task_id, &all_tasks)
+    }
 
-        for task in &all_tasks {
+    /// Like `resolve_dependencies_after_completion` but uses a pre-fetched task
+    /// list to avoid an extra store scan when the caller already has one.
+    pub fn resolve_dependencies_with_tasks(
+        &self,
+        project_id: &ProjectId,
+        completed_task_id: &TaskId,
+        all_tasks: &[Task],
+    ) -> Result<Vec<Task>, TaskError> {
+        let mut newly_ready = Vec::new();
+        for task in all_tasks {
             if task.status != TaskStatus::Pending {
                 continue;
             }
@@ -316,8 +300,16 @@ impl TaskService {
 
     pub fn select_next_task(&self, project_id: &ProjectId) -> Result<Option<Task>, TaskError> {
         let all_tasks = self.store.list_tasks_by_project(project_id)?;
-        let specs = self.store.list_specs_by_project(project_id)?;
+        self.select_next_task_from(project_id, &all_tasks)
+    }
 
+    /// Like `select_next_task` but uses a pre-fetched task list.
+    pub fn select_next_task_from(
+        &self,
+        project_id: &ProjectId,
+        all_tasks: &[Task],
+    ) -> Result<Option<Task>, TaskError> {
+        let specs = self.store.list_specs_by_project(project_id)?;
         let spec_order: HashMap<SpecId, u32> =
             specs.iter().map(|s| (s.spec_id, s.order_index)).collect();
 
@@ -348,7 +340,8 @@ impl TaskService {
         let lock = self.project_claim_lock(project_id);
         let _guard = lock.lock().unwrap();
 
-        let task = self.select_next_task(project_id)?;
+        let all_tasks = self.store.list_tasks_by_project(project_id)?;
+        let task = self.select_next_task_from(project_id, &all_tasks)?;
         match task {
             Some(t) => {
                 let assigned = self.assign_task(project_id, &t.spec_id, &t.task_id, agent_instance_id, session_id)?;
