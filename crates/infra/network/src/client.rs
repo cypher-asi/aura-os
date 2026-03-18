@@ -205,7 +205,7 @@ impl NetworkClient {
         org_id: &str,
         user_id: &str,
         jwt: &str,
-        req: &serde_json::Value,
+        req: &UpdateMemberRequest,
     ) -> Result<NetworkOrgMember, NetworkError> {
         self.put_authed(
             &format!(
@@ -214,6 +214,22 @@ impl NetworkClient {
             ),
             jwt,
             req,
+        )
+        .await
+    }
+
+    pub async fn remove_org_member(
+        &self,
+        org_id: &str,
+        user_id: &str,
+        jwt: &str,
+    ) -> Result<(), NetworkError> {
+        self.delete_authed(
+            &format!(
+                "{}/api/orgs/{}/members/{}",
+                self.base_url, org_id, user_id
+            ),
+            jwt,
         )
         .await
     }
@@ -265,7 +281,7 @@ impl NetworkClient {
         &self,
         token: &str,
         jwt: &str,
-    ) -> Result<serde_json::Value, NetworkError> {
+    ) -> Result<NetworkOrgMember, NetworkError> {
         self.post_authed(
             &format!("{}/api/invites/{}/accept", self.base_url, token),
             jwt,

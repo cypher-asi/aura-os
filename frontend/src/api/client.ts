@@ -191,7 +191,7 @@ export const api = {
     listInvites: (orgId: string) =>
       apiFetch<OrgInvite[]>(`/api/orgs/${orgId}/invites`),
     revokeInvite: (orgId: string, inviteId: string) =>
-      apiFetch<OrgInvite>(`/api/orgs/${orgId}/invites/${inviteId}`, {
+      apiFetch<void>(`/api/orgs/${orgId}/invites/${inviteId}`, {
         method: "DELETE",
       }),
     acceptInvite: (token: string) =>

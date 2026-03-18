@@ -230,6 +230,10 @@ export interface Org {
   org_id: string;
   name: string;
   owner_user_id: string;
+  slug?: string;
+  description?: string;
+  avatar_url?: string;
+  billing_email?: string;
   billing: OrgBilling | null;
   github: OrgGithub | null;
   created_at: string;
@@ -241,6 +245,8 @@ export interface OrgMember {
   user_id: string;
   display_name: string;
   role: OrgRole;
+  avatar_url?: string;
+  credit_budget?: number;
   joined_at: string;
 }
 
