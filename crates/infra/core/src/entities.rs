@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::enums::{AgentStatus, ChatRole, ProjectStatus, SessionStatus, TaskStatus};
 use crate::ids::{
-    AgentId, AgentInstanceId, GitHubIntegrationId, MessageId, OrgId, ProfileId, ProjectId,
+    AgentId, AgentInstanceId, MessageId, OrgId, ProfileId, ProjectId,
     SessionId, SpecId, SprintId, TaskId, UserId,
 };
 
@@ -17,10 +17,6 @@ pub struct Project {
     #[serde(default)]
     pub requirements_doc_path: Option<String>,
     pub current_status: ProjectStatus,
-    #[serde(default)]
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    #[serde(default)]
-    pub github_repo_full_name: Option<String>,
     #[serde(default)]
     pub build_command: Option<String>,
     #[serde(default)]
@@ -251,7 +247,6 @@ pub struct Org {
     pub name: String,
     pub owner_user_id: String,
     pub billing: Option<OrgBilling>,
-    pub github: Option<OrgGithub>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -260,36 +255,6 @@ pub struct Org {
 pub struct OrgBilling {
     pub billing_email: Option<String>,
     pub plan: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgGithub {
-    pub github_org: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GitHubIntegration {
-    pub integration_id: GitHubIntegrationId,
-    pub org_id: OrgId,
-    pub installation_id: i64,
-    pub github_account_login: String,
-    pub github_account_type: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GitHubRepo {
-    pub github_repo_id: i64,
-    pub integration_id: GitHubIntegrationId,
-    pub full_name: String,
-    pub name: String,
-    pub private: bool,
-    pub default_branch: String,
-    pub html_url: String,
-    pub updated_at: DateTime<Utc>,
 }
 
 /// A single row in the fee schedule: per-model token pricing effective from a given date.

@@ -22,10 +22,7 @@ import type {
   OrgMember,
   OrgInvite,
   OrgBilling,
-  OrgGithub,
   OrgRole,
-  GitHubIntegration,
-  GitHubRepo,
   CreditTier,
   CreditBalance,
   CheckoutSessionResponse,
@@ -107,16 +104,12 @@ export interface CreateProjectRequest {
   name: string;
   description: string;
   linked_folder_path: string;
-  github_integration_id?: string;
-  github_repo_full_name?: string;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   linked_folder_path?: string;
-  github_integration_id?: string;
-  github_repo_full_name?: string;
 }
 
 export interface DirEntry {
@@ -202,33 +195,6 @@ export const api = {
       apiFetch<Org>(`/api/orgs/${orgId}/billing`, {
         method: "PUT",
         body: JSON.stringify({ billing_email, plan }),
-      }),
-    getGithub: (orgId: string) =>
-      apiFetch<OrgGithub | null>(`/api/orgs/${orgId}/integrations/github`),
-    setGithub: (orgId: string, github_org: string) =>
-      apiFetch<Org>(`/api/orgs/${orgId}/integrations/github`, {
-        method: "PUT",
-        body: JSON.stringify({ github_org }),
-      }),
-    removeGithub: (orgId: string) =>
-      apiFetch<void>(`/api/orgs/${orgId}/integrations/github`, {
-        method: "DELETE",
-      }),
-    listGithubIntegrations: (orgId: string) =>
-      apiFetch<GitHubIntegration[]>(`/api/orgs/${orgId}/integrations/github/app`),
-    startGithubInstall: (orgId: string) =>
-      apiFetch<{ install_url: string }>(`/api/orgs/${orgId}/integrations/github/install`, {
-        method: "POST",
-      }),
-    removeGithubIntegration: (orgId: string, integrationId: string) =>
-      apiFetch<void>(`/api/orgs/${orgId}/integrations/github/${integrationId}`, {
-        method: "DELETE",
-      }),
-    listGithubRepos: (orgId: string) =>
-      apiFetch<GitHubRepo[]>(`/api/orgs/${orgId}/integrations/github/repos`),
-    refreshGithubIntegration: (orgId: string, integrationId: string) =>
-      apiFetch<GitHubRepo[]>(`/api/orgs/${orgId}/integrations/github/${integrationId}/refresh`, {
-        method: "POST",
       }),
     getCreditTiers: (orgId: string) =>
       apiFetch<CreditTier[]>(`/api/orgs/${orgId}/credits/tiers`),

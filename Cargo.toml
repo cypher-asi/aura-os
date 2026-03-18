@@ -8,7 +8,6 @@ members = [
     "crates/domain/projects",
     "crates/domain/agents",
     "crates/domain/auth",
-    "crates/domain/github",
     "crates/domain/tasks",
     "crates/domain/sessions",
     "crates/domain/specs",

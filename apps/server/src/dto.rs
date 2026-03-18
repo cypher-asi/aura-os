@@ -19,8 +19,6 @@ pub struct CreateProjectRequest {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -30,8 +28,6 @@ pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -149,77 +145,6 @@ pub struct UpdateMemberRoleRequest {
 pub struct SetBillingRequest {
     pub billing_email: Option<String>,
     pub plan: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetGithubRequest {
-    pub github_org: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubInstallResponse {
-    pub install_url: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubIntegrationResponse {
-    pub integration_id: String,
-    pub org_id: String,
-    pub installation_id: i64,
-    pub github_account_login: String,
-    pub github_account_type: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-    pub repo_count: usize,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubRepoResponse {
-    pub github_repo_id: i64,
-    pub integration_id: String,
-    pub full_name: String,
-    pub name: String,
-    pub private: bool,
-    pub default_branch: String,
-    pub html_url: String,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GitHubCallbackQuery {
-    pub installation_id: i64,
-    pub setup_action: Option<String>,
-    pub state: Option<String>,
-}
-
-impl GitHubIntegrationResponse {
-    pub fn from_integration(int: GitHubIntegration, repo_count: usize) -> Self {
-        Self {
-            integration_id: int.integration_id.to_string(),
-            org_id: int.org_id.to_string(),
-            installation_id: int.installation_id,
-            github_account_login: int.github_account_login,
-            github_account_type: int.github_account_type,
-            connected_by: int.connected_by,
-            connected_at: int.connected_at,
-            repo_count,
-        }
-    }
-}
-
-impl From<GitHubRepo> for GitHubRepoResponse {
-    fn from(repo: GitHubRepo) -> Self {
-        Self {
-            github_repo_id: repo.github_repo_id,
-            integration_id: repo.integration_id.to_string(),
-            full_name: repo.full_name,
-            name: repo.name,
-            private: repo.private,
-            default_branch: repo.default_branch,
-            html_url: repo.html_url,
-            updated_at: repo.updated_at,
-        }
-    }
 }
 
 // -- Follow DTOs --

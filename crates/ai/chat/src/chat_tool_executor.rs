@@ -480,8 +480,6 @@ impl ChatToolExecutor {
             name: str_field(input, "name"),
             description: str_field(input, "description"),
             linked_folder_path: None,
-            github_integration_id: None,
-            github_repo_full_name: None,
             build_command: str_field(input, "build_command"),
             test_command: str_field(input, "test_command"),
         };

@@ -24,7 +24,6 @@ fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) 
     let settings_service = Arc::new(SettingsService::new(store.clone(), data_dir.path()).unwrap());
     let claude_client = Arc::new(ClaudeClient::new());
     let org_service = Arc::new(OrgService::new(store.clone()));
-    let github_service = Arc::new(GitHubService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
     let project_service = Arc::new(ProjectService::new(store.clone()));
     let spec_gen_service = Arc::new(SpecGenerationService::new(
@@ -61,7 +60,6 @@ fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) 
     let state = AppState {
         store,
         org_service,
-        github_service,
         auth_service,
         settings_service,
         pricing_service,
@@ -291,8 +289,6 @@ async fn task_list_and_progress() {
         linked_folder_path: project_dir.path().to_string_lossy().to_string(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
-        github_integration_id: None,
-        github_repo_full_name: None,
         build_command: None,
         test_command: None,
         specs_summary: None,
@@ -376,8 +372,6 @@ async fn agent_list_empty() {
         linked_folder_path: ".".into(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
-        github_integration_id: None,
-        github_repo_full_name: None,
         build_command: None,
         test_command: None,
         specs_summary: None,

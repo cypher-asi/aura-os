@@ -14,7 +14,6 @@ aura-orgs = { path = "../../crates/domain/orgs" }
 aura-projects = { path = "../../crates/domain/projects" }
 aura-agents = { path = "../../crates/domain/agents" }
 aura-auth = { path = "../../crates/domain/auth" }
-aura-github = { path = "../../crates/domain/github" }
 aura-tasks = { path = "../../crates/domain/tasks" }
 aura-sessions = { path = "../../crates/domain/sessions" }
 aura-specs = { path = "../../crates/domain/specs" }

@@ -12,7 +12,6 @@ use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
-use aura_github::GitHubService;
 use aura_orgs::OrgService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
@@ -33,7 +32,6 @@ pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
 pub struct AppState {
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
-    pub github_service: Arc<GitHubService>,
     pub auth_service: Arc<AuthService>,
     pub settings_service: Arc<SettingsService>,
     pub pricing_service: Arc<PricingService>,

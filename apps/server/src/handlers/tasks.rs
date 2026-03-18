@@ -188,10 +188,6 @@ pub async fn get_progress(
             progress.total_tests = count_tests(folder).await;
         }
 
-        // PRs: query GitHub if integration is configured
-        if let Some(ref repo_full_name) = project.github_repo_full_name {
-            progress.total_pull_requests = count_github_prs(&state, repo_full_name).await;
-        }
     }
 
     Ok(Json(progress))
@@ -381,30 +377,3 @@ async fn count_git_commits(folder: &str) -> u64 {
     }
 }
 
-/// Count PRs via `gh pr list` CLI if available, otherwise 0.
-async fn count_github_prs(_state: &AppState, repo_full_name: &str) -> u64 {
-    let output = tokio::process::Command::new("gh")
-        .args([
-            "pr",
-            "list",
-            "--repo",
-            repo_full_name,
-            "--state",
-            "all",
-            "--json",
-            "number",
-            "--limit",
-            "1000",
-        ])
-        .output()
-        .await;
-
-    match output {
-        Ok(o) if o.status.success() => {
-            let json: Result<Vec<serde_json::Value>, _> =
-                serde_json::from_slice(&o.stdout);
-            json.map(|v| v.len() as u64).unwrap_or(0)
-        }
-        _ => 0,
-    }
-}

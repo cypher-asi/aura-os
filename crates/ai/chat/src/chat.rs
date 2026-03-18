@@ -1486,8 +1486,6 @@ mod tests {
             linked_folder_path: folder.into(),
             requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
-            github_integration_id: None,
-            github_repo_full_name: None,
             build_command: Some("cargo build".into()),
             test_command: Some("cargo test".into()),
             specs_summary: None,

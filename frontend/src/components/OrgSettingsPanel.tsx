@@ -4,18 +4,17 @@ import { useAuth } from "../context/AuthContext";
 import { api, ApiClientError } from "../api/client";
 import { Modal, Navigator } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
-import { Settings, Users, Mail, CreditCard, Plug } from "lucide-react";
-import type { OrgInvite, OrgGithub, OrgBilling, OrgRole, GitHubIntegration, CreditTier, CreditBalance } from "../types";
+import { Settings, Users, Mail, CreditCard } from "lucide-react";
+import type { OrgInvite, OrgBilling, OrgRole, CreditTier, CreditBalance } from "../types";
 import { useCheckoutPolling } from "../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "./CreditsBadge";
 import { OrgSettingsGeneral } from "./OrgSettingsGeneral";
 import { OrgSettingsMembers } from "./OrgSettingsMembers";
 import { OrgSettingsInvites } from "./OrgSettingsInvites";
 import { OrgSettingsBilling } from "./OrgSettingsBilling";
-import { OrgSettingsIntegrations } from "./OrgSettingsIntegrations";
 import styles from "./OrgSettingsPanel.module.css";
 
-type Section = "general" | "members" | "invites" | "billing" | "integrations";
+type Section = "general" | "members" | "invites" | "billing";
 
 interface Props {
   isOpen: boolean;
@@ -28,7 +27,6 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "members", label: "Members", icon: <Users size={14} /> },
   { id: "invites", label: "Invites", icon: <Mail size={14} /> },
   { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
-  { id: "integrations", label: "Integrations", icon: <Plug size={14} /> },
 ];
 
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
@@ -47,12 +45,8 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
 
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [billing, setBilling] = useState<OrgBilling | null>(null);
-  const [github, setGithub] = useState<OrgGithub | null>(null);
-  const [githubIntegrations, setGithubIntegrations] = useState<GitHubIntegration[]>([]);
   const [billingEmail, setBillingEmail] = useState("");
-  const [githubOrg, setGithubOrg] = useState("");
   const [saving, setSaving] = useState(false);
-  const [installLoading, setInstallLoading] = useState(false);
   const [creditTiers, setCreditTiers] = useState<CreditTier[]>([]);
   const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
   const [tiersLoading, setTiersLoading] = useState(false);
@@ -102,20 +96,6 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     } catch { /* ignore */ }
   }, [orgId]);
 
-  const loadGithub = useCallback(async () => {
-    if (!orgId) return;
-    try {
-      const g = await api.orgs.getGithub(orgId);
-      setGithub(g);
-      setGithubOrg(g?.github_org ?? "");
-    } catch { /* ignore */ }
-  }, [orgId]);
-
-  const loadGithubIntegrations = useCallback(async () => {
-    if (!orgId) return;
-    try { setGithubIntegrations(await api.orgs.listGithubIntegrations(orgId)); } catch { /* ignore */ }
-  }, [orgId]);
-
   const loadCreditTiers = useCallback(async () => {
     if (!orgId) return;
     setTiersLoading(true);
@@ -155,11 +135,9 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     refreshMembers();
     loadInvites();
     loadBilling();
-    loadGithub();
-    loadGithubIntegrations();
     loadCreditTiers();
     loadCreditBalance();
-  }, [isOpen, orgId, refreshMembers, loadInvites, loadBilling, loadGithub, loadGithubIntegrations, loadCreditTiers, loadCreditBalance]);
+  }, [isOpen, orgId, refreshMembers, loadInvites, loadBilling, loadCreditTiers, loadCreditBalance]);
 
   const handleCreateInvite = async () => {
     if (!orgId) return;
@@ -185,33 +163,6 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     if (!orgId) return;
     setSaving(true);
     try { await api.orgs.setBilling(orgId, billingEmail || null, billing?.plan ?? "free"); loadBilling(); } catch (err) { console.error("Failed to save billing", err); } finally { setSaving(false); }
-  };
-
-  const handleConnectGithub = async () => {
-    if (!orgId || !githubOrg.trim()) return;
-    setSaving(true);
-    try { await api.orgs.setGithub(orgId, githubOrg.trim()); loadGithub(); } catch (err) { console.error("Failed to connect GitHub", err); } finally { setSaving(false); }
-  };
-
-  const handleDisconnectGithub = async () => {
-    if (!orgId) return;
-    try { await api.orgs.removeGithub(orgId); setGithub(null); setGithubOrg(""); } catch (err) { console.error("Failed to disconnect GitHub", err); }
-  };
-
-  const handleStartInstall = async () => {
-    if (!orgId) return;
-    setInstallLoading(true);
-    try { const { install_url } = await api.orgs.startGithubInstall(orgId); window.open(install_url, "_blank"); } catch (err) { console.error("Failed to start GitHub install", err); } finally { setInstallLoading(false); }
-  };
-
-  const handleRemoveIntegration = async (integrationId: string) => {
-    if (!orgId) return;
-    try { await api.orgs.removeGithubIntegration(orgId, integrationId); loadGithubIntegrations(); } catch (err) { console.error("Failed to remove integration", err); }
-  };
-
-  const handleRefreshIntegration = async (integrationId: string) => {
-    if (!orgId) return;
-    try { await api.orgs.refreshGithubIntegration(orgId, integrationId); loadGithubIntegrations(); } catch (err) { console.error("Failed to refresh integration", err); }
   };
 
   const handleBuyTier = async (tierId: string) => {
@@ -327,23 +278,6 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
             />
           )}
 
-          {section === "integrations" && (
-            <OrgSettingsIntegrations
-              github={github}
-              githubOrg={githubOrg}
-              onGithubOrgChange={setGithubOrg}
-              githubIntegrations={githubIntegrations}
-              isAdminOrOwner={isAdminOrOwner}
-              saving={saving}
-              installLoading={installLoading}
-              onStartInstall={handleStartInstall}
-              onRefreshIntegrations={loadGithubIntegrations}
-              onRefreshIntegration={handleRefreshIntegration}
-              onRemoveIntegration={handleRemoveIntegration}
-              onConnectGithub={handleConnectGithub}
-              onDisconnectGithub={handleDisconnectGithub}
-            />
-          )}
         </div>
       </div>
     </Modal>

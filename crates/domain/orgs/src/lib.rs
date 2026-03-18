@@ -37,24 +37,4 @@ impl OrgService {
         Ok(org.billing)
     }
 
-    pub fn set_github(&self, org_id: &OrgId, connected_by: &str, github_org: &str) -> Result<Org, OrgError> {
-        let mut org = self.get_org(org_id)?;
-        org.github = Some(OrgGithub { github_org: github_org.to_string(), connected_by: connected_by.to_string(), connected_at: Utc::now() });
-        org.updated_at = Utc::now();
-        self.store.put_org(&org)?;
-        Ok(org)
-    }
-
-    pub fn remove_github(&self, org_id: &OrgId) -> Result<Org, OrgError> {
-        let mut org = self.get_org(org_id)?;
-        org.github = None;
-        org.updated_at = Utc::now();
-        self.store.put_org(&org)?;
-        Ok(org)
-    }
-
-    pub fn get_github(&self, org_id: &OrgId) -> Result<Option<OrgGithub>, OrgError> {
-        let org = self.get_org(org_id)?;
-        Ok(org.github)
-    }
 }

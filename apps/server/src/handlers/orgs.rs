@@ -8,7 +8,7 @@ use tracing::warn;
 use aura_core::*;
 use aura_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
 
-use crate::dto::{SetBillingRequest, SetGithubRequest};
+use crate::dto::SetBillingRequest;
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
@@ -30,13 +30,12 @@ pub struct OrgResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billing_email: Option<String>,
     pub billing: Option<OrgBilling>,
-    pub github: Option<OrgGithub>,
     pub created_at: String,
     pub updated_at: String,
 }
 
 impl OrgResponse {
-    fn from_network(net: &NetworkOrg, billing: Option<OrgBilling>, github: Option<OrgGithub>) -> Self {
+    fn from_network(net: &NetworkOrg, billing: Option<OrgBilling>) -> Self {
         Self {
             org_id: net.id.clone(),
             name: net.name.clone(),
@@ -46,7 +45,6 @@ impl OrgResponse {
             avatar_url: net.avatar_url.clone(),
             billing_email: net.billing_email.clone(),
             billing,
-            github,
             created_at: net.created_at.clone().unwrap_or_default(),
             updated_at: net.updated_at.clone().unwrap_or_default(),
         }
@@ -121,17 +119,7 @@ fn map_org_err(e: aura_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
     }
 }
 
-fn get_user_id(state: &AppState) -> Result<(String, String), (StatusCode, Json<ApiError>)> {
-    let session_bytes = state
-        .store
-        .get_setting("zero_auth_session")
-        .map_err(|_| ApiError::unauthorized("not authenticated"))?;
-    let session: ZeroAuthSession =
-        serde_json::from_slice(&session_bytes).map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok((session.user_id, session.display_name))
-}
-
-/// Ensure a local shadow org exists in RocksDB so billing/github handlers work.
+/// Ensure a local shadow org exists in RocksDB so billing handlers work.
 fn ensure_local_shadow(state: &AppState, net: &NetworkOrg) {
     let org_id: OrgId = match net.id.parse() {
         Ok(id) => id,
@@ -151,7 +139,6 @@ fn ensure_local_shadow(state: &AppState, net: &NetworkOrg) {
         name: net.name.clone(),
         owner_user_id: net.owner_id.clone(),
         billing: None,
-        github: None,
         created_at: now,
         updated_at: now,
     };
@@ -160,14 +147,13 @@ fn ensure_local_shadow(state: &AppState, net: &NetworkOrg) {
     }
 }
 
-/// Look up local billing/github data for a network org.
-fn local_billing_github(state: &AppState, net_id: &str) -> (Option<OrgBilling>, Option<OrgGithub>) {
+/// Look up local billing data for a network org.
+fn local_billing(state: &AppState, net_id: &str) -> Option<OrgBilling> {
     net_id
         .parse::<OrgId>()
         .ok()
         .and_then(|id| state.store.get_org(&id).ok())
-        .map(|org| (org.billing, org.github))
-        .unwrap_or((None, None))
+        .and_then(|org| org.billing)
 }
 
 // ---------------------------------------------------------------------------
@@ -186,8 +172,8 @@ pub async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgR
     let responses = net_orgs
         .iter()
         .map(|net| {
-            let (billing, github) = local_billing_github(&state, &net.id);
-            OrgResponse::from_network(net, billing, github)
+            let billing = local_billing(&state, &net.id);
+            OrgResponse::from_network(net, billing)
         })
         .collect();
 
@@ -213,7 +199,7 @@ pub async fn create_org(
 
     ensure_local_shadow(&state, &net_org);
 
-    Ok((StatusCode::CREATED, Json(OrgResponse::from_network(&net_org, None, None))))
+    Ok((StatusCode::CREATED, Json(OrgResponse::from_network(&net_org, None))))
 }
 
 pub async fn get_org(
@@ -228,9 +214,9 @@ pub async fn get_org(
         .map_err(map_network_error)?;
 
     ensure_local_shadow(&state, &net_org);
-    let (billing, github) = local_billing_github(&state, &net_org.id);
+    let billing = local_billing(&state, &net_org.id);
 
-    Ok(Json(OrgResponse::from_network(&net_org, billing, github)))
+    Ok(Json(OrgResponse::from_network(&net_org, billing)))
 }
 
 pub async fn update_org(
@@ -259,8 +245,8 @@ pub async fn update_org(
         }
     }
 
-    let (billing, github) = local_billing_github(&state, &net_org.id);
-    Ok(Json(OrgResponse::from_network(&net_org, billing, github)))
+    let billing = local_billing(&state, &net_org.id);
+    Ok(Json(OrgResponse::from_network(&net_org, billing)))
 }
 
 // ---------------------------------------------------------------------------
@@ -400,38 +386,3 @@ pub async fn get_billing(
     Ok(Json(billing))
 }
 
-// ---------------------------------------------------------------------------
-// GitHub — stays local
-// ---------------------------------------------------------------------------
-
-pub async fn set_github(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-    Json(req): Json<SetGithubRequest>,
-) -> ApiResult<Json<Org>> {
-    let (user_id, _) = get_user_id(&state)?;
-    let org = state
-        .org_service
-        .set_github(&org_id, &user_id, &req.github_org)
-        .map_err(map_org_err)?;
-    Ok(Json(org))
-}
-
-pub async fn remove_github(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-) -> ApiResult<StatusCode> {
-    state
-        .org_service
-        .remove_github(&org_id)
-        .map_err(map_org_err)?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-pub async fn get_github(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-) -> ApiResult<Json<Option<OrgGithub>>> {
-    let github = state.org_service.get_github(&org_id).map_err(map_org_err)?;
-    Ok(Json(github))
-}

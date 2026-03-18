@@ -117,8 +117,6 @@ fn sample_project() -> Project {
         linked_folder_path: "/tmp/code".into(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
-        github_integration_id: None,
-        github_repo_full_name: None,
         build_command: None,
         test_command: None,
         specs_summary: None,

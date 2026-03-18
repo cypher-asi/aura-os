@@ -74,8 +74,6 @@ pub struct CreateProjectInput {
     pub name: String,
     pub description: String,
     pub linked_folder_path: String,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -85,8 +83,6 @@ pub struct UpdateProjectInput {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -124,8 +120,6 @@ impl ProjectService {
             linked_folder_path: input.linked_folder_path,
             requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
-            github_integration_id: input.github_integration_id,
-            github_repo_full_name: input.github_repo_full_name,
             build_command: sanitize_command_option(input.build_command),
             test_command: sanitize_command_option(input.test_command),
             specs_summary: None,
@@ -181,10 +175,6 @@ impl ProjectService {
         }
         if let Some(path) = input.linked_folder_path {
             project.linked_folder_path = path;
-        }
-        if input.github_integration_id.is_some() || input.github_repo_full_name.is_some() {
-            project.github_integration_id = input.github_integration_id;
-            project.github_repo_full_name = input.github_repo_full_name;
         }
         if input.build_command.is_some() {
             project.build_command = sanitize_command_option(input.build_command);

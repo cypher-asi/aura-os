@@ -199,11 +199,11 @@ const MOCK_EVENTS: FeedEvent[] = [
     repo: "cypher-asi/the-grid",
     branch: "feat/auth",
     commits: [
-      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE flow for GitHub integration" },
+      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE authentication flow" },
       { sha: "8f3e6a1", message: "feat: store encrypted tokens in user settings" },
     ],
     timestamp: new Date(now - 3.5 * DAY).toISOString(),
-    summary: "Implemented OAuth2 PKCE authentication flow for GitHub integration and added encrypted token storage in user settings so credentials are never persisted in plaintext.",
+    summary: "Implemented OAuth2 PKCE authentication flow and added encrypted token storage in user settings so credentials are never persisted in plaintext.",
   },
 ];
 
