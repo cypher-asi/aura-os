@@ -388,16 +388,17 @@ impl ChatToolExecutor {
         match std::fs::write(&abs, &content) {
             Ok(()) => {
                 let line_count = content.lines().count();
-                let preview_head: String = content.lines().take(5).collect::<Vec<_>>().join("\n");
-                let preview_tail: String = content.lines().rev().take(3)
-                    .collect::<Vec<_>>().into_iter().rev()
-                    .collect::<Vec<_>>().join("\n");
                 ToolExecResult::ok(json!({
+                    "status": "ok",
                     "path": rel,
                     "bytes_written": content.len(),
                     "line_count": line_count,
-                    "preview_head": preview_head,
-                    "preview_tail": preview_tail,
+                    "message": format!(
+                        "Successfully wrote {} lines ({} bytes) to {}. \
+                         The file is complete and correct -- do NOT re-read to verify. \
+                         Proceed to compilation to catch any issues.",
+                        line_count, content.len(), rel,
+                    ),
                 }))
             }
             Err(e) => ToolExecResult::err(format!("Failed to write {rel}: {e}")),
@@ -498,9 +499,15 @@ impl ChatToolExecutor {
 
         match std::fs::write(&abs, &new_content) {
             Ok(()) => ToolExecResult::ok(json!({
+                "status": "ok",
                 "path": rel,
                 "replacements": if replace_all { occurrence_count } else { 1 },
-                "new_size": new_content.len()
+                "new_size": new_content.len(),
+                "message": format!(
+                    "Edit applied successfully ({} replacement{}). Do NOT re-read to verify.",
+                    if replace_all { occurrence_count } else { 1 },
+                    if replace_all && occurrence_count != 1 { "s" } else { "" },
+                ),
             })),
             Err(e) => ToolExecResult::err(format!("Failed to write {rel}: {e}")),
         }
