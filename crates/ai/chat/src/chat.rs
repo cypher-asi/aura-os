@@ -1252,8 +1252,7 @@ impl ChatService {
                 utilization_pct = (utilization * 100.0) as u32,
                 "Tier-1 compaction: truncating large tool results in older messages"
             );
-            let compacted = Self::compact_tool_results_in_history(messages, compaction_keep);
-            return compacted;
+            return crate::compaction::compact_tool_results_in_history(messages, compaction_keep);
         }
 
         // Tier 2 (75-90%): summarize the oldest half of messages, keep fewer recent ones
@@ -1277,34 +1276,6 @@ impl ChatService {
         let aggressive_keep = 4;
         let split_at = Self::find_safe_split(&messages, aggressive_keep);
         self.summarize_and_keep(api_key, &messages, split_at).await
-    }
-
-    fn compact_tool_results_in_history(
-        mut messages: Vec<RichMessage>,
-        keep_recent: usize,
-    ) -> Vec<RichMessage> {
-        let cutoff = messages.len().saturating_sub(keep_recent);
-        for msg in &mut messages[..cutoff] {
-            if msg.role != "user" {
-                continue;
-            }
-            if let MessageContent::Blocks(blocks) = &mut msg.content {
-                for block in blocks.iter_mut() {
-                    if let ContentBlock::ToolResult { content, .. } = block {
-                        if content.len() > 2000 {
-                            let head: String = content.chars().take(500).collect();
-                            let tail: String = content.chars().rev().take(200)
-                                .collect::<Vec<_>>().into_iter().rev().collect();
-                            let omitted = content.len() - 700;
-                            *content = format!(
-                                "{head}\n[...{omitted} chars omitted...]\n{tail}"
-                            );
-                        }
-                    }
-                }
-            }
-        }
-        messages
     }
 
     fn find_safe_split(messages: &[RichMessage], keep_recent: usize) -> usize {
@@ -1582,6 +1553,8 @@ mod tests {
             system_prompt: system_prompt.into(),
             skills: vec![],
             icon: None,
+            network_agent_id: None,
+            profile_id: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

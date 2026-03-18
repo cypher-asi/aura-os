@@ -1,6 +1,7 @@
 mod error;
 mod chat;
 mod chat_tool_executor;
+pub mod compaction;
 pub mod tool_loop;
 
 pub use error::ChatError;

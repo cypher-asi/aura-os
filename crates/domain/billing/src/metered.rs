@@ -49,6 +49,7 @@ pub struct MeteredLlm {
     provider: Arc<dyn LlmProvider>,
     billing: Arc<BillingClient>,
     store: Arc<RocksStore>,
+    pricing: PricingService,
     credits_exhausted: AtomicBool,
     last_preflight_ok: Mutex<Option<Instant>>,
     credits_per_usd: f64,
@@ -66,10 +67,12 @@ impl MeteredLlm {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(DEFAULT_CREDITS_PER_USD);
+        let pricing = PricingService::new(store.clone());
         Self {
             provider,
             billing,
             store,
+            pricing,
             credits_exhausted: AtomicBool::new(false),
             last_preflight_ok: Mutex::new(None),
             credits_per_usd,
@@ -83,8 +86,7 @@ impl MeteredLlm {
     /// Estimate how many credits a call would cost given the estimated token
     /// counts. Uses the same formula as `debit` but doesn't actually charge.
     pub fn estimate_credits(&self, model: &str, estimated_input_tokens: u64, estimated_output_tokens: u64) -> u64 {
-        let pricing = PricingService::new(self.store.clone());
-        let (inp_rate, out_rate) = pricing.lookup_rate(model);
+        let (inp_rate, out_rate) = self.pricing.lookup_rate(model);
         let usd_cost = (estimated_input_tokens as f64 * inp_rate
             + estimated_output_tokens as f64 * out_rate) / 1_000_000.0;
         (usd_cost * self.credits_per_usd).round() as u64
@@ -158,8 +160,7 @@ impl MeteredLlm {
         reason: &str,
         metadata: Option<serde_json::Value>,
     ) -> Result<(), MeteredLlmError> {
-        let pricing = PricingService::new(self.store.clone());
-        let (inp_rate, out_rate) = pricing.lookup_rate(model);
+        let (inp_rate, out_rate) = self.pricing.lookup_rate(model);
         let non_cached = input_tokens.saturating_sub(cache_creation_input_tokens + cache_read_input_tokens);
         let usd_cost = (
             non_cached as f64 * inp_rate
@@ -417,58 +418,7 @@ impl LlmProvider for MeteredLlm {
 mod tests {
     use super::*;
     use aura_claude::mock::{MockLlmProvider, MockResponse};
-
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    async fn start_mock_billing_server() -> String {
-        use axum::{routing::{get, post}, Json, Router};
-        use tokio::net::TcpListener;
-
-        let app = Router::new()
-            .route(
-                "/api/credits/balance",
-                get(|| async {
-                    Json(serde_json::json!({"balance": 10000, "purchases": []}))
-                }),
-            )
-            .route(
-                "/api/credits/debit",
-                post(|| async {
-                    Json(serde_json::json!({
-                        "success": true,
-                        "balance": 9900,
-                        "transactionId": "tx-1"
-                    }))
-                }),
-            );
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("http://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
-        url
-    }
-
-    fn billing_client_for_url(url: &str) -> BillingClient {
-        let _guard = ENV_LOCK.lock().unwrap();
-        std::env::set_var("BILLING_SERVER_URL", url);
-        BillingClient::new()
-    }
-
-    fn store_zero_auth_session(store: &RocksStore) {
-        let session = serde_json::to_vec(&ZeroAuthSession {
-            user_id: "u1".into(),
-            display_name: "Test".into(),
-            profile_image: String::new(),
-            primary_zid: "zid-1".into(),
-            zero_wallet: "w1".into(),
-            wallets: vec![],
-            access_token: "test-token".into(),
-            created_at: chrono::Utc::now(),
-            validated_at: chrono::Utc::now(),
-        })
-        .unwrap();
-        store.put_setting("zero_auth_session", &session).unwrap();
-    }
+    use crate::testutil;
 
     #[tokio::test]
     async fn test_no_access_token_returns_insufficient_credits() {
@@ -492,17 +442,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_complete_calls_provider_and_debits() {
-        let url = start_mock_billing_server().await;
-        let billing = Arc::new(billing_client_for_url(&url));
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        store_zero_auth_session(&store);
-
         let mock = Arc::new(MockLlmProvider::with_responses(vec![
             MockResponse::text("hello").with_tokens(100, 50),
         ]));
-        let metered = MeteredLlm::new(mock.clone(), billing, store);
+        let (metered, _tmp) = testutil::make_test_llm(mock.clone()).await;
 
         let resp = metered
             .complete("key", "sys", "msg", 200, "reason", None)
@@ -537,17 +480,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_complete_stream_forwards_events() {
-        let url = start_mock_billing_server().await;
-        let billing = Arc::new(billing_client_for_url(&url));
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        store_zero_auth_session(&store);
-
         let mock = Arc::new(MockLlmProvider::with_responses(vec![
             MockResponse::text("streamed").with_tokens(80, 40),
         ]));
-        let metered = MeteredLlm::new(mock, billing, store);
+        let (metered, _tmp) = testutil::make_test_llm(mock).await;
 
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
         let text = metered

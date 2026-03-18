@@ -6,9 +6,10 @@ use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
 use aura_claude::{
-    ClaudeStreamEvent, ContentBlock, MessageContent, RichMessage, ThinkingConfig, ToolCall,
+    ClaudeStreamEvent, ContentBlock, RichMessage, ThinkingConfig, ToolCall,
     ToolDefinition,
 };
+use crate::compaction;
 use aura_billing::MeteredLlm;
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,7 @@ pub async fn run_tool_loop(
     let mut total_input_tokens: u64 = 0;
     let mut total_output_tokens: u64 = 0;
     let mut cumulative_credits: u64 = 0;
+    let mut file_read_cache: HashMap<String, u64> = HashMap::new();
 
     for iteration in 0..config.max_iterations {
         let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
@@ -275,7 +277,7 @@ pub async fn run_tool_loop(
                     utilization_pct = (utilization * 100.0) as u32,
                     "Context utilization elevated, compacting older tool results in-flight"
                 );
-                compact_older_tool_results(&mut api_messages);
+                compaction::compact_older_tool_results(&mut api_messages, 4);
             }
         }
 
@@ -322,7 +324,7 @@ pub async fn run_tool_loop(
                 content: result.content.clone(),
                 is_error: result.is_error,
             });
-            let compacted = smart_compact(&tc.name, &result.content);
+            let compacted = compaction::smart_compact(&tc.name, &result.content);
             result_blocks.push(ContentBlock::ToolResult {
                 tool_use_id: result.tool_use_id.clone(),
                 content: compacted,
@@ -406,192 +408,12 @@ fn append_text(total: &mut String, new: &str) {
     }
 }
 
-/// Retroactively compact tool results in older messages when the context
-/// window is under pressure. Skips the last 4 messages (the most recent
-/// assistant turn + tool results pair) to avoid losing fresh context.
-fn compact_older_tool_results(messages: &mut [RichMessage]) {
-    let len = messages.len();
-    let cutoff = len.saturating_sub(4);
-    for msg in &mut messages[..cutoff] {
-        if msg.role != "user" {
-            continue;
-        }
-        if let MessageContent::Blocks(blocks) = &mut msg.content {
-            for block in blocks.iter_mut() {
-                if let ContentBlock::ToolResult { content, .. } = block {
-                    if content.len() > AGGRESSIVE_COMPACT_THRESHOLD {
-                        *content = aggressive_smart_compact(content);
-                    }
-                }
-            }
-        }
-    }
-}
-
-const AGGRESSIVE_COMPACT_THRESHOLD: usize = 4_000;
-const AGGRESSIVE_KEEP_HEAD: usize = 1_600;
-const AGGRESSIVE_KEEP_TAIL: usize = 800;
-
-fn aggressive_compact(content: &str) -> String {
-    if content.len() <= AGGRESSIVE_COMPACT_THRESHOLD {
-        return content.to_string();
-    }
-    let head: String = content.chars().take(AGGRESSIVE_KEEP_HEAD).collect();
-    let tail: String = content
-        .chars()
-        .rev()
-        .take(AGGRESSIVE_KEEP_TAIL)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let omitted = content.len() - AGGRESSIVE_KEEP_HEAD - AGGRESSIVE_KEEP_TAIL;
-    format!(
-        "{head}\n[...{omitted} chars omitted...]\n{tail}"
-    )
-}
-
-/// Try AST-aware signature extraction for Rust content before falling back
-/// to head/tail truncation.  Used during retroactive compaction of older
-/// tool results so that API surface survives context pressure.
-fn aggressive_smart_compact(content: &str) -> String {
-    if content.len() <= AGGRESSIVE_COMPACT_THRESHOLD {
-        return content.to_string();
-    }
-    if aura_core::rust_signatures::looks_like_rust(content) {
-        let sigs = aura_core::rust_signatures::extract_signatures(content);
-        if !sigs.is_empty() && sigs.len() < content.len() / 2 {
-            return format!(
-                "[Compacted to signatures ({} -> {} chars)]\n{}",
-                content.len(),
-                sigs.len(),
-                sigs,
-            );
-        }
-    }
-    aggressive_compact(content)
-}
-
-const MICROCOMPACT_CHAR_THRESHOLD: usize = 16_000;
-const MICROCOMPACT_KEEP_HEAD: usize = 6_000;
-const MICROCOMPACT_KEEP_TAIL: usize = 3_000;
-
-/// Truncate large tool results to keep the conversation history lean.
-/// The full result is still sent to the UI via events; this only affects
-/// what the LLM sees on the next turn.
-fn microcompact(content: &str) -> String {
-    if content.len() <= MICROCOMPACT_CHAR_THRESHOLD {
-        return content.to_string();
-    }
-    let total_chars = content.len();
-    let head: String = content.chars().take(MICROCOMPACT_KEEP_HEAD).collect();
-    let tail: String = content
-        .chars()
-        .rev()
-        .take(MICROCOMPACT_KEEP_TAIL)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let omitted = total_chars - MICROCOMPACT_KEEP_HEAD - MICROCOMPACT_KEEP_TAIL;
-    format!(
-        "{head}\n\n[... {omitted} characters omitted — re-read the file or re-run the command if you need the full output ...]\n\n{tail}"
-    )
-}
-
-/// Smart compaction: for `read_file` results that look like Rust source,
-/// extract public signatures instead of doing head/tail truncation.  This
-/// preserves the API surface (struct fields, fn signatures, trait methods)
-/// that the agent needs for correct implementation.  Falls back to
-/// `microcompact` for non-Rust or when signature extraction doesn't help.
-fn smart_compact(tool_name: &str, content: &str) -> String {
-    if content.len() <= MICROCOMPACT_CHAR_THRESHOLD {
-        return content.to_string();
-    }
-
-    if tool_name == "read_file" && aura_core::rust_signatures::looks_like_rust(content) {
-        let sigs = aura_core::rust_signatures::extract_signatures(content);
-        if !sigs.is_empty() && sigs.len() < content.len() / 2 {
-            return format!(
-                "[Compacted to signatures only ({} -> {} chars) -- re-read for full content]\n{}",
-                content.len(),
-                sigs.len(),
-                sigs,
-            );
-        }
-    }
-
-    microcompact(content)
-}
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use aura_claude::mock::{MockLlmProvider, MockResponse};
-    use aura_billing::{BillingClient, MeteredLlm};
-    use aura_store::RocksStore;
-
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    async fn start_mock_billing_server() -> String {
-        use axum::{routing::{get, post}, Json, Router};
-        use tokio::net::TcpListener;
-
-        let app = Router::new()
-            .route(
-                "/api/credits/balance",
-                get(|| async {
-                    Json(serde_json::json!({"balance": 999999, "purchases": []}))
-                }),
-            )
-            .route(
-                "/api/credits/debit",
-                post(|| async {
-                    Json(serde_json::json!({
-                        "success": true,
-                        "balance": 999998,
-                        "transactionId": "tx-1"
-                    }))
-                }),
-            );
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("http://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
-        url
-    }
-
-    async fn make_test_llm(
-        mock: Arc<MockLlmProvider>,
-    ) -> (Arc<MeteredLlm>, tempfile::TempDir) {
-        let url = start_mock_billing_server().await;
-        let billing = {
-            let _guard = ENV_LOCK.lock().unwrap();
-            std::env::set_var("BILLING_SERVER_URL", &url);
-            Arc::new(BillingClient::new())
-        };
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-
-        let session = serde_json::to_vec(&aura_core::ZeroAuthSession {
-            user_id: "u1".into(),
-            display_name: "Test".into(),
-            profile_image: String::new(),
-            primary_zid: "zid-1".into(),
-            zero_wallet: "w1".into(),
-            wallets: vec![],
-            access_token: "test-token".into(),
-            created_at: chrono::Utc::now(),
-            validated_at: chrono::Utc::now(),
-        })
-        .unwrap();
-        store.put_setting("zero_auth_session", &session).unwrap();
-
-        let llm = Arc::new(MeteredLlm::new(mock, billing, store));
-        (llm, tmp)
-    }
+    use aura_billing::testutil;
 
     fn default_config(max_iterations: usize) -> ToolLoopConfig {
         ToolLoopConfig {
@@ -628,7 +450,7 @@ mod tests {
             MockResponse::text("Done!").with_tokens(100, 50),
         ]));
 
-        let (llm, _tmp) = make_test_llm(mock).await;
+        let (llm, _tmp) = testutil::make_test_llm(mock).await;
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
         let executor = noop_executor();
         let config = default_config(5);
@@ -663,7 +485,7 @@ mod tests {
             MockResponse::text("File contents shown.").with_tokens(80, 40),
         ]));
 
-        let (llm, _tmp) = make_test_llm(mock).await;
+        let (llm, _tmp) = testutil::make_test_llm(mock).await;
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
         let config = default_config(5);
 
@@ -714,7 +536,7 @@ mod tests {
             .collect();
 
         let mock = Arc::new(MockLlmProvider::with_responses(responses));
-        let (llm, _tmp) = make_test_llm(mock).await;
+        let (llm, _tmp) = testutil::make_test_llm(mock).await;
         let (event_tx, _event_rx) = mpsc::unbounded_channel();
         let config = default_config(3);
 
