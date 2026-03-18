@@ -14,6 +14,7 @@ import { formatRelativeTime, toBullets, formatTokens, formatModelName } from "..
 import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity } from "../utils/derive-activity";
+import { FormattedRawOutput } from "./FormattedRawOutput";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Spec, Task, Session, AgentInstance } from "../types";
 import type { EngineEvent } from "../types/events";
@@ -376,7 +377,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [completedByAgent, setCompletedByAgent] = useState<AgentInstance | null>(null);
   const hydratedRef = useRef< string | null >(null);
   const [showRawOutput, setShowRawOutput] = useState(false);
-  const rawOutputRef = useRef<HTMLPreElement>(null);
+  const rawOutputRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -841,9 +842,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
               </div>
             )}
             {showRawOutput && streamBuf.length > 0 && (
-              <pre ref={rawOutputRef} className={styles.rawOutput}>
-                {streamBuf}
-              </pre>
+              <FormattedRawOutput ref={rawOutputRef} buffer={streamBuf} />
             )}
           </div>
         </GroupCollapsible>

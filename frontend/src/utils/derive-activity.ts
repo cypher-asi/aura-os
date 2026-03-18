@@ -71,7 +71,7 @@ function findLastToolMarkerEnd(buffer: string): number {
   return lastEnd;
 }
 
-function agenticToolLabel(toolName: string, arg?: string): string {
+export function agenticToolLabel(toolName: string, arg?: string): string {
   const shortArg = arg ? shortenArg(arg, 60) : "";
   switch (toolName) {
     case "read_file": return shortArg ? `Read \`${shortArg}\`` : "Read file";
