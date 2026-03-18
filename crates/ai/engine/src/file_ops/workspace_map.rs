@@ -233,6 +233,7 @@ pub fn extract_signatures_from_content(content: &str) -> String {
 
 /// Pre-computed workspace metadata. Built once per loop run and reused across
 /// all task iterations so that Cargo.toml files are parsed only once.
+#[derive(Clone)]
 pub struct WorkspaceCache {
     pub members: Vec<String>,
     pub crate_names: HashMap<String, String>,
@@ -311,6 +312,13 @@ impl WorkspaceCache {
 
         let member_count = members.len();
         Ok(Self { members, crate_names, crate_deps, name_to_path, workspace_map_text, member_count })
+    }
+
+    pub async fn build_async(project_root: &str) -> Result<Self, EngineError> {
+        let root = project_root.to_string();
+        tokio::task::spawn_blocking(move || Self::build(&root))
+            .await
+            .map_err(|e| EngineError::Io(format!("spawn_blocking: {e}")))?
     }
 
     pub fn empty() -> Self {

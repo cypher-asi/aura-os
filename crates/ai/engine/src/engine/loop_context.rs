@@ -44,7 +44,7 @@ pub(crate) struct LoopRunContext {
 }
 
 impl LoopRunContext {
-    pub fn new(
+    pub async fn new(
         engine: &DevLoopEngine,
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
@@ -56,7 +56,7 @@ impl LoopRunContext {
             .get_project(&project_id)?
             .linked_folder_path
             .clone();
-        let workspace_cache = WorkspaceCache::build(&project_root)?;
+        let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let run_metrics = LoopRunMetrics::new(project_id.to_string());
         let fee_schedule = PricingService::new(engine.store.clone()).get_fee_schedule();
         let default_model = engine.llm_config.default_model.clone();

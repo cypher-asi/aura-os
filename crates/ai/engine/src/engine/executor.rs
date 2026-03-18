@@ -81,7 +81,7 @@ impl DevLoopEngine {
         let model_name = model.clone();
         let project_root = self.project_service.get_project(&project_id)?
             .linked_folder_path.clone();
-        let workspace_cache = WorkspaceCache::build(&project_root)?;
+        let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let fee_schedule = aura_billing::PricingService::new(self.store.clone())
             .get_fee_schedule();
 

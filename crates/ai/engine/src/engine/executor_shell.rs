@@ -184,7 +184,7 @@ impl DevLoopEngine {
                 let mut test_fix_ops = Vec::new();
                 let no_baseline = HashSet::new();
                 let mut prior_test_attempts = Vec::new();
-                let shell_ws_cache = WorkspaceCache::build(&project.linked_folder_path)?;
+                let shell_ws_cache = WorkspaceCache::build_async(&project.linked_folder_path).await?;
                 let (test_passed, _test_inp, _test_out) = self.run_and_handle_tests(
                     project, task, &dummy_session,
                     &self.settings.get_decrypted_api_key()?,

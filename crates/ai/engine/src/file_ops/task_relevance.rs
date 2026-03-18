@@ -626,7 +626,28 @@ pub fn resolve_task_dep_api_context(
 
 /// Like `retrieve_task_relevant_files` but uses a pre-built `WorkspaceCache`
 /// to avoid re-parsing Cargo.toml files on every task iteration.
-pub fn retrieve_task_relevant_files_cached(
+/// Runs the FS walk on a blocking thread to avoid stalling the tokio runtime.
+pub async fn retrieve_task_relevant_files_cached(
+    project_root: &str,
+    task_title: &str,
+    task_description: &str,
+    max_bytes: usize,
+    cache: &WorkspaceCache,
+) -> Result<String, EngineError> {
+    let project_root = project_root.to_string();
+    let task_title = task_title.to_string();
+    let task_description = task_description.to_string();
+    let cache = cache.clone();
+    tokio::task::spawn_blocking(move || {
+        retrieve_task_relevant_files_cached_sync(
+            &project_root, &task_title, &task_description, max_bytes, &cache,
+        )
+    })
+    .await
+    .map_err(|e| EngineError::Io(format!("spawn_blocking: {e}")))?
+}
+
+fn retrieve_task_relevant_files_cached_sync(
     project_root: &str,
     task_title: &str,
     task_description: &str,
@@ -738,7 +759,28 @@ pub fn retrieve_task_relevant_files_cached(
 }
 
 /// Like `resolve_task_dep_api_context` but uses a pre-built `WorkspaceCache`.
-pub fn resolve_task_dep_api_context_cached(
+/// Runs the FS reads on a blocking thread to avoid stalling the tokio runtime.
+pub async fn resolve_task_dep_api_context_cached(
+    project_root: &str,
+    task_title: &str,
+    task_description: &str,
+    max_bytes: usize,
+    cache: &WorkspaceCache,
+) -> Result<String, EngineError> {
+    let project_root = project_root.to_string();
+    let task_title = task_title.to_string();
+    let task_description = task_description.to_string();
+    let cache = cache.clone();
+    tokio::task::spawn_blocking(move || {
+        resolve_task_dep_api_context_cached_sync(
+            &project_root, &task_title, &task_description, max_bytes, &cache,
+        )
+    })
+    .await
+    .map_err(|e| EngineError::Io(format!("spawn_blocking: {e}")))?
+}
+
+fn resolve_task_dep_api_context_cached_sync(
     project_root: &str,
     task_title: &str,
     task_description: &str,

@@ -301,13 +301,14 @@ impl DevLoopEngine {
             attempt: Some(attempt),
         });
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
-        let codebase_snapshot = file_ops::retrieve_task_relevant_files_cached(
+        let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
             &project.linked_folder_path, &task.title, &task.description,
             BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
-        ).unwrap_or_else(|_| {
-            file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)
-                .unwrap_or_default()
-        });
+        ).await {
+            Ok(s) => s,
+            Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)
+                .unwrap_or_default(),
+        };
         let fix_prompt = build_fix_prompt_with_history(
             project, &spec, task, session, &codebase_snapshot,
             build_command, build_stderr, build_stdout,

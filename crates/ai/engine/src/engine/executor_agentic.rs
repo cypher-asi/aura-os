@@ -33,16 +33,17 @@ impl DevLoopEngine {
         let workspace_info = if workspace_map.is_empty() { None } else { Some(workspace_map.as_str()) };
         let mut system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info);
 
-        let codebase_snapshot = file_ops::retrieve_task_relevant_files_cached(
+        let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
             &project.linked_folder_path,
             &task.title,
             &task.description,
             50_000,
             workspace_cache,
-        ).unwrap_or_else(|_| {
-            file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
-                .unwrap_or_default()
-        });
+        ).await {
+            Ok(s) => s,
+            Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
+                .unwrap_or_default(),
+        };
 
         if !codebase_snapshot.is_empty() {
             system_prompt.push_str(&format!("\n\n# Current Codebase Files\n{}\n", codebase_snapshot));
@@ -54,7 +55,7 @@ impl DevLoopEngine {
                 &task.description,
                 15_000,
                 workspace_cache,
-            ).unwrap_or_default();
+            ).await.unwrap_or_default();
             if !dep_api_context.is_empty() {
                 system_prompt.push_str(&format!("\n\n# Dependency API Surface\n{}\n", dep_api_context));
             }

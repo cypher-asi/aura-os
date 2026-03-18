@@ -201,7 +201,7 @@ impl DevLoopEngine {
         session: Session,
         mut stop_rx: watch::Receiver<LoopCommand>,
     ) -> Result<LoopOutcome, EngineError> {
-        let mut ctx = LoopRunContext::new(self, project_id, agent_instance_id, session)?;
+        let mut ctx = LoopRunContext::new(self, project_id, agent_instance_id, session).await?;
         ctx.reset_and_promote_tasks(self)?;
         loop {
             if let Some(out) = ctx.check_command(self, &stop_rx) { return Ok(out); }
