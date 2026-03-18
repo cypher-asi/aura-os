@@ -696,8 +696,19 @@ impl DevLoopEngine {
         let project = self.project_service.get_project(project_id)?;
         let spec = self.store.get_spec(project_id, &task.spec_id)?;
 
+        let workspace_map = file_ops::generate_workspace_map(&project.linked_folder_path)
+            .unwrap_or_default();
         let system_prompt = agentic_execution_system_prompt(&project, agent);
-        let task_context = build_agentic_task_context(&project, &spec, task, session);
+
+        let codebase_snapshot = file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
+
+        let mut task_context = build_agentic_task_context(&project, &spec, task, session);
+        if !workspace_map.is_empty() {
+            task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
+        }
+        if !codebase_snapshot.is_empty() {
+            task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
+        }
         let tools = engine_tool_definitions();
 
         let api_messages: Vec<RichMessage> = vec![RichMessage::user(&task_context)];
