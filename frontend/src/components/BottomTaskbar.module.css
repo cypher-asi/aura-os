@@ -6,6 +6,7 @@
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
   flex-shrink: 0;
+  contain: inline-size;
 }
 
 .orgWrap {
@@ -17,6 +18,7 @@
 
 .creditsWrap {
   flex: 1 1 50%;
+  min-width: 0;
   display: flex;
   align-items: stretch;
 }
@@ -48,4 +50,5 @@
   border-radius: 0;
   justify-content: center;
   flex: 1;
+  min-width: 0;
 }
