@@ -715,6 +715,7 @@ impl ChatService {
             ?agent_id,
             result.total_input_tokens,
             result.total_output_tokens,
+            llm_error = result.llm_error.as_deref().unwrap_or(""),
             "Agent chat loop finished"
         );
 
@@ -899,6 +900,7 @@ impl ChatService {
         info!(
             %project_id, %agent_instance_id,
             result.total_input_tokens, result.total_output_tokens,
+            llm_error = result.llm_error.as_deref().unwrap_or(""),
             "Chat loop finished"
         );
 
