@@ -1,13 +1,11 @@
 import type {
   ProjectId,
-  SprintId,
   SpecId,
   TaskId,
   AgentId,
   AgentInstanceId,
   TaskStatus,
   Project,
-  Sprint,
   Spec,
   Task,
   Agent,
@@ -22,19 +20,14 @@ import type {
   OrgMember,
   OrgInvite,
   OrgBilling,
-  OrgGithub,
   OrgRole,
-  GitHubIntegration,
-  GitHubRepo,
   CreditTier,
   CreditBalance,
   CheckoutSessionResponse,
   DailyCommitActivity,
   Follow,
-  FollowTargetType,
 } from "../types";
 import {
-  generateSprintStream,
   generateSpecsStream,
   sendMessageStream,
   sendAgentMessageStream,
@@ -43,7 +36,6 @@ import { resolveApiUrl } from "../lib/host-config";
 
 export type {
   SpecGenStreamCallbacks,
-  SprintStreamCallbacks,
   ChatStreamCallbacks,
 } from "./streams";
 
@@ -110,8 +102,6 @@ export interface CreateProjectRequest {
   linked_folder_path: string;
   workspace_source?: string;
   workspace_display_path?: string;
-  github_integration_id?: string;
-  github_repo_full_name?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -120,8 +110,6 @@ export interface UpdateProjectRequest {
   linked_folder_path?: string;
   workspace_source?: string;
   workspace_display_path?: string;
-  github_integration_id?: string;
-  github_repo_full_name?: string;
 }
 
 export interface ImportedProjectFile {
@@ -210,7 +198,7 @@ export const api = {
     listInvites: (orgId: string) =>
       apiFetch<OrgInvite[]>(`/api/orgs/${orgId}/invites`),
     revokeInvite: (orgId: string, inviteId: string) =>
-      apiFetch<OrgInvite>(`/api/orgs/${orgId}/invites/${inviteId}`, {
+      apiFetch<void>(`/api/orgs/${orgId}/invites/${inviteId}`, {
         method: "DELETE",
       }),
     acceptInvite: (token: string) =>
@@ -221,33 +209,6 @@ export const api = {
       apiFetch<Org>(`/api/orgs/${orgId}/billing`, {
         method: "PUT",
         body: JSON.stringify({ billing_email, plan }),
-      }),
-    getGithub: (orgId: string) =>
-      apiFetch<OrgGithub | null>(`/api/orgs/${orgId}/integrations/github`),
-    setGithub: (orgId: string, github_org: string) =>
-      apiFetch<Org>(`/api/orgs/${orgId}/integrations/github`, {
-        method: "PUT",
-        body: JSON.stringify({ github_org }),
-      }),
-    removeGithub: (orgId: string) =>
-      apiFetch<void>(`/api/orgs/${orgId}/integrations/github`, {
-        method: "DELETE",
-      }),
-    listGithubIntegrations: (orgId: string) =>
-      apiFetch<GitHubIntegration[]>(`/api/orgs/${orgId}/integrations/github/app`),
-    startGithubInstall: (orgId: string) =>
-      apiFetch<{ install_url: string }>(`/api/orgs/${orgId}/integrations/github/install`, {
-        method: "POST",
-      }),
-    removeGithubIntegration: (orgId: string, integrationId: string) =>
-      apiFetch<void>(`/api/orgs/${orgId}/integrations/github/${integrationId}`, {
-        method: "DELETE",
-      }),
-    listGithubRepos: (orgId: string) =>
-      apiFetch<GitHubRepo[]>(`/api/orgs/${orgId}/integrations/github/repos`),
-    refreshGithubIntegration: (orgId: string, integrationId: string) =>
-      apiFetch<GitHubRepo[]>(`/api/orgs/${orgId}/integrations/github/${integrationId}/refresh`, {
-        method: "POST",
       }),
     getCreditTiers: (orgId: string) =>
       apiFetch<CreditTier[]>(`/api/orgs/${orgId}/credits/tiers`),
@@ -283,36 +244,6 @@ export const api = {
     apiFetch<void>(`/api/projects/${id}`, { method: "DELETE" }),
   archiveProject: (id: ProjectId) =>
     apiFetch<Project>(`/api/projects/${id}/archive`, { method: "POST" }),
-
-  // Sprints
-  listSprints: (projectId: ProjectId) =>
-    apiFetch<Sprint[]>(`/api/projects/${projectId}/sprints`),
-  createSprint: (projectId: ProjectId, title: string, prompt?: string) =>
-    apiFetch<Sprint>(`/api/projects/${projectId}/sprints`, {
-      method: "POST",
-      body: JSON.stringify({ title, prompt: prompt ?? "" }),
-    }),
-  getSprint: (projectId: ProjectId, sprintId: SprintId) =>
-    apiFetch<Sprint>(`/api/projects/${projectId}/sprints/${sprintId}`),
-  updateSprint: (projectId: ProjectId, sprintId: SprintId, data: { title?: string; prompt?: string }) =>
-    apiFetch<Sprint>(`/api/projects/${projectId}/sprints/${sprintId}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteSprint: (projectId: ProjectId, sprintId: SprintId) =>
-    apiFetch<void>(`/api/projects/${projectId}/sprints/${sprintId}`, {
-      method: "DELETE",
-    }),
-  reorderSprints: (projectId: ProjectId, sprintIds: SprintId[]) =>
-    apiFetch<Sprint[]>(`/api/projects/${projectId}/sprints/reorder`, {
-      method: "PUT",
-      body: JSON.stringify({ sprint_ids: sprintIds }),
-    }),
-  generateSprint: (projectId: ProjectId, sprintId: SprintId) =>
-    apiFetch<Sprint>(`/api/projects/${projectId}/sprints/${sprintId}/generate`, {
-      method: "POST",
-    }),
-  generateSprintStream,
 
   // Specs
   listSpecs: (projectId: ProjectId) =>
@@ -495,18 +426,151 @@ export const api = {
 
   // Follows
   follows: {
-    follow: (targetType: FollowTargetType, targetId: string) =>
+    follow: (targetProfileId: string) =>
       apiFetch<Follow>("/api/follows", {
         method: "POST",
-        body: JSON.stringify({ target_type: targetType, target_id: targetId }),
+        body: JSON.stringify({ target_profile_id: targetProfileId }),
       }),
-    unfollow: (targetType: FollowTargetType, targetId: string) =>
-      apiFetch<void>(`/api/follows/${targetType}/${targetId}`, {
+    unfollow: (targetProfileId: string) =>
+      apiFetch<void>(`/api/follows/${targetProfileId}`, {
         method: "DELETE",
       }),
     list: () => apiFetch<Follow[]>("/api/follows"),
-    check: (targetType: FollowTargetType, targetId: string) =>
-      apiFetch<{ following: boolean }>(`/api/follows/check/${targetType}/${targetId}`),
+    check: (targetProfileId: string) =>
+      apiFetch<{ following: boolean }>(`/api/follows/check/${targetProfileId}`),
+  },
+
+  // Users (proxied to aura-network)
+  users: {
+    me: () => apiFetch<{
+      id: string;
+      zos_user_id: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      location: string | null;
+      website: string | null;
+      profile_id: string | null;
+      created_at: string | null;
+      updated_at: string | null;
+    }>("/api/users/me"),
+    get: (userId: string) => apiFetch<{
+      id: string;
+      zos_user_id: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      location: string | null;
+      website: string | null;
+      profile_id: string | null;
+      created_at: string | null;
+      updated_at: string | null;
+    }>(`/api/users/${userId}`),
+    updateMe: (data: { display_name?: string; avatar_url?: string; bio?: string; location?: string; website?: string }) =>
+      apiFetch<{
+        id: string;
+        zos_user_id: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+        bio: string | null;
+        location: string | null;
+        website: string | null;
+        profile_id: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+      }>("/api/users/me", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Profiles (proxied to aura-network)
+  profiles: {
+    get: (profileId: string) => apiFetch<{
+      id: string;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      profile_type: string | null;
+      entity_id: string | null;
+    }>(`/api/profiles/${profileId}`),
+  },
+
+  // Feed (proxied to aura-network)
+  feed: {
+    list: (filter?: string) =>
+      apiFetch<{
+        id: string;
+        profile_id: string;
+        event_type: string;
+        metadata: Record<string, unknown> | null;
+        created_at: string | null;
+      }[]>(filter ? `/api/feed?filter=${filter}` : "/api/feed"),
+    getComments: (eventId: string) =>
+      apiFetch<{
+        id: string;
+        activity_event_id: string;
+        profile_id: string;
+        content: string;
+        created_at: string | null;
+      }[]>(`/api/activity/${eventId}/comments`),
+    addComment: (eventId: string, content: string) =>
+      apiFetch<{
+        id: string;
+        activity_event_id: string;
+        profile_id: string;
+        content: string;
+        created_at: string | null;
+      }>(`/api/activity/${eventId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      }),
+    deleteComment: (commentId: string) =>
+      apiFetch<void>(`/api/comments/${commentId}`, {
+        method: "DELETE",
+      }),
+  },
+
+  // Leaderboard (proxied to aura-network)
+  leaderboard: {
+    get: (period: string, orgId?: string) => {
+      const params = new URLSearchParams({ period });
+      if (orgId) params.set("org_id", orgId);
+      return apiFetch<{
+        profile_id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        tokens_used: number;
+        rank: number;
+        profile_type: string | null;
+      }[]>(`/api/leaderboard?${params}`);
+    },
+  },
+
+  // Usage (proxied to aura-network)
+  usage: {
+    personal: (period: string) =>
+      apiFetch<{
+        total_tokens: number;
+        total_input_tokens: number;
+        total_output_tokens: number;
+        total_cost_usd: number;
+      }>(`/api/users/me/usage?period=${period}`),
+    org: (orgId: string, period: string) =>
+      apiFetch<{
+        total_tokens: number;
+        total_input_tokens: number;
+        total_output_tokens: number;
+        total_cost_usd: number;
+      }>(`/api/orgs/${orgId}/usage?period=${period}`),
+    orgMembers: (orgId: string) =>
+      apiFetch<{
+        user_id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        total_tokens: number;
+        total_cost_usd: number;
+      }[]>(`/api/orgs/${orgId}/usage/members`),
   },
 
   // Activity

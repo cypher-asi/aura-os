@@ -77,4 +77,44 @@ impl ApiError {
             }),
         )
     }
+
+    pub fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(Self {
+                error: msg.into(),
+                code: "service_unavailable".to_string(),
+                details: None,
+            }),
+        )
+    }
+
+    pub fn bad_gateway(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(Self {
+                error: msg.into(),
+                code: "bad_gateway".to_string(),
+                details: None,
+            }),
+        )
+    }
+}
+
+/// Map a `NetworkError` to an API error response.
+pub fn map_network_error(e: aura_network::NetworkError) -> (StatusCode, Json<ApiError>) {
+    match &e {
+        aura_network::NetworkError::Server { status, body } => {
+            let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
+            (
+                code,
+                Json(ApiError {
+                    error: body.clone(),
+                    code: "network_error".to_string(),
+                    details: None,
+                }),
+            )
+        }
+        _ => ApiError::bad_gateway(e.to_string()),
+    }
 }

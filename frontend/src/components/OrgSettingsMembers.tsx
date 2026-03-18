@@ -1,5 +1,6 @@
 import { Button } from "@cypher-asi/zui";
 import { UserMinus } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import type { OrgMember, OrgRole } from "../types";
 import styles from "./OrgSettingsPanel.module.css";
 
@@ -28,9 +29,12 @@ export function OrgSettingsMembers({
         Team Members ({members.length})
       </div>
       <div className={styles.settingsGroup}>
-        {members.map((m) => (
+        {members.map((m) => {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(m.display_name);
+          const name = (!m.display_name || isUuid) ? "Unknown User" : m.display_name;
+          return (
           <div key={m.user_id} className={styles.memberRow}>
-            <span className={styles.memberName}>{m.display_name}</span>
+            <span className={styles.memberName}>{name}</span>
             {myRole === "owner" && m.user_id !== currentUserId ? (
               <select
                 className={styles.roleSelect}
@@ -55,9 +59,10 @@ export function OrgSettingsMembers({
               />
             )}
           </div>
-        ))}
+          );
+        })}
         {members.length === 0 && (
-          <div className={styles.emptyMessage}>No members yet</div>
+          <EmptyState>No members yet</EmptyState>
         )}
       </div>
     </>

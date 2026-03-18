@@ -34,17 +34,3 @@
   gap: var(--space-1);
 }
 
-/* ── Empty state ── */
-
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: var(--space-3);
-}
-
-.emptyIcon {
-  opacity: 0.3;
-}

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
-import { ImagePlus, X } from "lucide-react";
 import type { UserProfileData } from "./ProfileProvider";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "../../components/AgentEditorModal.module.css";
@@ -21,7 +20,6 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
   const [avatarUrl, setAvatarUrl] = useState("");
   const [nameError, setNameError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -42,26 +40,6 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     onClose();
   }, [onClose]);
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 128;
-      canvas.height = 128;
-      const ctx = canvas.getContext("2d")!;
-      const scale = Math.max(128 / img.width, 128 / img.height);
-      const w = img.width * scale;
-      const h = img.height * scale;
-      ctx.drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
-      setAvatarUrl(canvas.toDataURL("image/webp", 0.85));
-      URL.revokeObjectURL(img.src);
-    };
-    img.src = URL.createObjectURL(file);
-    e.target.value = "";
-  }, []);
-
   const handleSave = () => {
     if (!name.trim()) {
       setNameError("Name is required");
@@ -73,7 +51,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
       bio: bio.trim(),
       website: website.trim(),
       location: location.trim(),
-      avatarUrl: avatarUrl || undefined,
+      avatarUrl: avatarUrl.trim() || undefined,
     });
     onClose();
   };
@@ -96,32 +74,12 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
       }
     >
       <div className={styles.form}>
-        <div className={styles.avatarRow}>
-          <button
-            type="button"
-            className={styles.avatarUpload}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile avatar" className={styles.avatarImg} />
-            ) : (
-              <ImagePlus size={24} className={styles.avatarPlaceholder} />
-            )}
-            {avatarUrl && (
-              <span
-                className={styles.avatarRemove}
-                onClick={(e) => { e.stopPropagation(); setAvatarUrl(""); }}
-              >
-                <X size={12} />
-              </span>
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className={styles.hiddenInput}
-            onChange={handleImageSelect}
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Avatar URL</label>
+          <Input
+            value={avatarUrl}
+            onChange={(e) => setAvatarUrl(e.target.value)}
+            placeholder="https://example.com/avatar.png"
           />
         </div>
 

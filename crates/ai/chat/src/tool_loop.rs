@@ -1,216 +1,247 @@
+use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 
-use async_trait::async_trait;
 use tokio::sync::mpsc;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 use aura_claude::{
-    ClaudeStreamEvent, ContentBlock, MessageContent, RichMessage, ThinkingConfig, ToolCall,
-    ToolDefinition,
+    ClaudeStreamEvent, ContentBlock, RichMessage, ToolCall,
+    ToolDefinition, ToolStreamResponse,
 };
-use aura_billing::MeteredLlm;
+use aura_billing::{MeteredLlm, MeteredLlmError};
+use crate::compaction;
 
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
+pub use crate::tool_loop_types::*;
+use crate::tool_loop_helpers::{
+    detect_blocked_writes, detect_blocked_commands, apply_cmd_failure_tracking,
+    build_tool_result_blocks, summarize_write_file_input,
+};
 
-pub struct ToolLoopConfig {
-    pub max_iterations: usize,
-    pub max_tokens: u32,
-    pub thinking: Option<ThinkingConfig>,
-    pub stream_timeout: Duration,
-    pub billing_reason: &'static str,
-    /// When set, the loop uses API-reported input_tokens (not the chars/4
-    /// heuristic) to detect context window pressure and retroactively compact
-    /// older tool results before the next iteration.
-    pub max_context_tokens: Option<u64>,
+struct LoopState {
+    api_messages: Vec<RichMessage>,
+    total_text: String,
+    total_thinking: String,
+    total_input_tokens: u64,
+    total_output_tokens: u64,
+    cumulative_credits: u64,
+    file_read_cache: HashMap<String, u64>,
+    consecutive_write_tracker: HashMap<String, usize>,
+    consecutive_cmd_failures: usize,
 }
 
-// ---------------------------------------------------------------------------
-// Tool execution trait -- callers implement this
-// ---------------------------------------------------------------------------
-
-pub struct ToolCallResult {
-    pub tool_use_id: String,
-    pub content: String,
-    pub is_error: bool,
-    /// When true the loop will break after processing all results in this batch.
-    pub stop_loop: bool,
+impl LoopState {
+    fn build_result(
+        &self,
+        iterations_run: usize,
+        timed_out: bool,
+        insufficient_credits: bool,
+        llm_error: Option<String>,
+    ) -> ToolLoopResult {
+        ToolLoopResult {
+            text: self.total_text.clone(),
+            thinking: self.total_thinking.clone(),
+            total_input_tokens: self.total_input_tokens,
+            total_output_tokens: self.total_output_tokens,
+            iterations_run,
+            timed_out,
+            insufficient_credits,
+            llm_error,
+        }
+    }
 }
 
-#[async_trait]
-pub trait ToolExecutor: Send + Sync {
-    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult>;
+enum IterationOutcome {
+    EarlyReturn(ToolLoopResult),
+    Completed(IterationCompleted),
 }
 
-// ---------------------------------------------------------------------------
-// Stream events emitted by the loop
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone)]
-pub enum ToolLoopEvent {
-    Delta(String),
-    ThinkingDelta(String),
-    ToolUseDetected {
-        id: String,
-        name: String,
-        input: serde_json::Value,
-    },
-    ToolResult {
-        tool_use_id: String,
-        tool_name: String,
-        content: String,
-        is_error: bool,
-    },
-    IterationTokenUsage {
-        input_tokens: u64,
-        output_tokens: u64,
-    },
-    Error(String),
+struct IterationCompleted {
+    iter_text: String,
+    iter_tool_calls: Vec<ToolCall>,
+    input_tokens: u64,
+    output_tokens: u64,
+    stop_reason: String,
+    model_used: String,
 }
-
-// ---------------------------------------------------------------------------
-// Result
-// ---------------------------------------------------------------------------
-
-pub struct ToolLoopResult {
-    pub text: String,
-    pub thinking: String,
-    pub total_input_tokens: u64,
-    pub total_output_tokens: u64,
-    pub iterations_run: usize,
-    pub timed_out: bool,
-    pub insufficient_credits: bool,
-    /// Set when the LLM returned a non-billing API error (e.g. provider
-    /// credit exhaustion, rate limit, auth failure). Callers should treat
-    /// this as a hard failure rather than a successful completion.
-    pub llm_error: Option<String>,
-}
-
-// ---------------------------------------------------------------------------
-// The loop itself
-// ---------------------------------------------------------------------------
 
 pub async fn run_tool_loop(
     llm: Arc<MeteredLlm>,
     api_key: &str,
     system_prompt: &str,
     initial_messages: Vec<RichMessage>,
-    tools: Vec<ToolDefinition>,
+    tools: Arc<[ToolDefinition]>,
     config: &ToolLoopConfig,
     executor: &dyn ToolExecutor,
     event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
 ) -> ToolLoopResult {
-    let mut api_messages = initial_messages;
-    let mut total_text = String::new();
-    let mut total_thinking = String::new();
-    let mut total_input_tokens: u64 = 0;
-    let mut total_output_tokens: u64 = 0;
+    let mut state = LoopState {
+        api_messages: initial_messages,
+        total_text: String::new(),
+        total_thinking: String::new(),
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        cumulative_credits: 0,
+        file_read_cache: HashMap::new(),
+        consecutive_write_tracker: HashMap::new(),
+        consecutive_cmd_failures: 0,
+    };
 
     for iteration in 0..config.max_iterations {
-        let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-
-        let llm_clone = llm.clone();
-        let api_key_owned = api_key.to_string();
-        let system_owned = system_prompt.to_string();
-        let msgs_owned = api_messages.clone();
-        let tools_owned = tools.clone();
-        let max_tokens = config.max_tokens;
-        let thinking = config.thinking.clone();
-        let reason = config.billing_reason;
-
-        let stream_handle = tokio::spawn(async move {
-            if let Some(thinking) = thinking {
-                llm_clone
-                    .complete_stream_with_tools_thinking(
-                        &api_key_owned,
-                        &system_owned,
-                        msgs_owned,
-                        tools_owned,
-                        max_tokens,
-                        thinking,
-                        claude_tx,
-                        reason,
-                        None,
-                    )
-                    .await
-            } else {
-                llm_clone
-                    .complete_stream_with_tools(
-                        &api_key_owned,
-                        &system_owned,
-                        msgs_owned,
-                        tools_owned,
-                        max_tokens,
-                        claude_tx,
-                        reason,
-                        None,
-                    )
-                    .await
-            }
-        });
-
-        let mut iter_text = String::new();
-        let mut iter_tool_calls: Vec<ToolCall> = Vec::new();
-
-        let iter_timed_out = loop {
-            match tokio::time::timeout(config.stream_timeout, claude_rx.recv()).await {
-                Ok(Some(evt)) => match evt {
-                    ClaudeStreamEvent::Delta(text) => {
-                        iter_text.push_str(&text);
-                        let _ = event_tx.send(ToolLoopEvent::Delta(text));
-                    }
-                    ClaudeStreamEvent::ToolUse { id, name, input } => {
-                        let _ = event_tx.send(ToolLoopEvent::ToolUseDetected {
-                            id: id.clone(),
-                            name: name.clone(),
-                            input: input.clone(),
-                        });
-                        iter_tool_calls.push(ToolCall { id, name, input });
-                    }
-                    ClaudeStreamEvent::ThinkingDelta(text) => {
-                        total_thinking.push_str(&text);
-                        let _ = event_tx.send(ToolLoopEvent::ThinkingDelta(text));
-                    }
-                    ClaudeStreamEvent::Done { stop_reason, .. } => {
-                        info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Tool loop iteration done");
-                    }
-                    ClaudeStreamEvent::Error(msg) => {
-                        let _ = event_tx.send(ToolLoopEvent::Error(msg));
-                    }
-                },
-                Ok(None) => break false,
-                Err(_) => {
-                    warn!(iteration, "Tool loop streaming timed out after {}s", config.stream_timeout.as_secs());
-                    stream_handle.abort();
-                    break true;
-                }
-            }
+        let iter = match run_single_iteration(
+            &llm, api_key, system_prompt, &tools, config, event_tx, &mut state, iteration,
+        ).await {
+            IterationOutcome::EarlyReturn(r) => return r,
+            IterationOutcome::Completed(c) => c,
         };
 
-        if iter_timed_out {
-            let _ = event_tx.send(ToolLoopEvent::Error(
-                "LLM streaming timed out".to_string(),
-            ));
-            append_text(&mut total_text, &iter_text);
-            return ToolLoopResult {
-                text: total_text,
-                thinking: total_thinking,
-                total_input_tokens,
-                total_output_tokens,
-                iterations_run: iteration + 1,
-                timed_out: true,
-                insufficient_credits: false,
-                llm_error: None,
-            };
+        state.total_input_tokens += iter.input_tokens;
+        state.total_output_tokens += iter.output_tokens;
+        let _ = event_tx.send(ToolLoopEvent::IterationTokenUsage {
+            input_tokens: state.total_input_tokens,
+            output_tokens: state.total_output_tokens,
+        });
+
+        let billing_model = if iter.model_used.is_empty() {
+            aura_claude::DEFAULT_MODEL
+        } else {
+            &iter.model_used
+        };
+        let iter_credits = llm.estimate_credits(billing_model, iter.input_tokens, iter.output_tokens);
+        state.cumulative_credits += iter_credits;
+
+        check_context_compaction(config, iter.input_tokens, &mut state.api_messages);
+        append_text(&mut state.total_text, &iter.iter_text);
+
+        if iter.stop_reason != "tool_use" || iter.iter_tool_calls.is_empty() {
+            return state.build_result(iteration + 1, false, false, None);
         }
 
-        let stream_result = match stream_handle.await {
-            Ok(Ok(r)) => r,
-            Ok(Err(e)) => {
-                let is_billing = e.is_billing_error();
-                let error_msg = format!("{e}");
+        let should_stop = process_tool_calls(&iter, executor, event_tx, &mut state).await;
+        if should_stop {
+            return state.build_result(iteration + 1, false, false, None);
+        }
+
+        if let Some(budget) = config.credit_budget {
+            let next_estimate = llm.estimate_credits(billing_model, iter.input_tokens, 0);
+            if state.cumulative_credits + next_estimate > budget {
+                warn!(
+                    state.cumulative_credits, next_estimate, budget,
+                    "Credit budget would be exceeded, stopping tool loop"
+                );
+                let _ = event_tx.send(ToolLoopEvent::Error(
+                    "Stopping: credit budget for this session would be exceeded.".to_string(),
+                ));
+                return state.build_result(iteration + 1, false, true, None);
+            }
+        }
+
+        if iteration + 1 >= config.max_iterations {
+            warn!(config.max_iterations, "Tool-use loop hit max iterations, stopping");
+        }
+    }
+
+    state.build_result(config.max_iterations, false, false, None)
+}
+
+async fn run_single_iteration(
+    llm: &Arc<MeteredLlm>,
+    api_key: &str,
+    system_prompt: &str,
+    tools: &Arc<[ToolDefinition]>,
+    config: &ToolLoopConfig,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+    iteration: usize,
+) -> IterationOutcome {
+    let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
+
+    let llm_clone = llm.clone();
+    let api_key_owned = api_key.to_string();
+    let system_owned = system_prompt.to_string();
+    let msgs_owned = state.api_messages.clone();
+    let tools_owned = tools.to_vec();
+    let max_tokens = config.max_tokens;
+    let thinking = config.thinking.clone();
+    let reason = config.billing_reason;
+
+    let stream_handle = tokio::spawn(async move {
+        llm_clone
+            .complete_stream_with_tools(
+                &api_key_owned, &system_owned, msgs_owned, tools_owned,
+                max_tokens, thinking, claude_tx, reason, None,
+            )
+            .await
+    });
+
+    let mut iter_text = String::new();
+    let mut iter_tool_calls: Vec<ToolCall> = Vec::new();
+    let mut stream_error_forwarded = false;
+
+    let iter_timed_out = loop {
+        match tokio::time::timeout(config.stream_timeout, claude_rx.recv()).await {
+            Ok(Some(evt)) => match evt {
+                ClaudeStreamEvent::Delta(text) => {
+                    iter_text.push_str(&text);
+                    let _ = event_tx.send(ToolLoopEvent::Delta(text));
+                }
+                ClaudeStreamEvent::ToolUse { id, name, input } => {
+                    let _ = event_tx.send(ToolLoopEvent::ToolUseDetected {
+                        id: id.clone(),
+                        name: name.clone(),
+                        input: input.clone(),
+                    });
+                    iter_tool_calls.push(ToolCall { id, name, input });
+                }
+                ClaudeStreamEvent::ThinkingDelta(text) => {
+                    state.total_thinking.push_str(&text);
+                    let _ = event_tx.send(ToolLoopEvent::ThinkingDelta(text));
+                }
+                ClaudeStreamEvent::Done { stop_reason, .. } => {
+                    info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Tool loop iteration done");
+                }
+                ClaudeStreamEvent::Error(msg) => {
+                    let _ = event_tx.send(ToolLoopEvent::Error(msg));
+                    stream_error_forwarded = true;
+                }
+            },
+            Ok(None) => break false,
+            Err(_) => {
+                warn!(iteration, "Tool loop streaming timed out after {}s", config.stream_timeout.as_secs());
+                stream_handle.abort();
+                break true;
+            }
+        }
+    };
+
+    if iter_timed_out {
+        let _ = event_tx.send(ToolLoopEvent::Error("LLM streaming timed out".to_string()));
+        append_text(&mut state.total_text, &iter_text);
+        return IterationOutcome::EarlyReturn(state.build_result(iteration + 1, true, false, None));
+    }
+
+    handle_stream_result(
+        stream_handle, iter_text, iter_tool_calls,
+        stream_error_forwarded, event_tx, state, iteration,
+    )
+    .await
+}
+
+async fn handle_stream_result(
+    stream_handle: tokio::task::JoinHandle<Result<ToolStreamResponse, MeteredLlmError>>,
+    iter_text: String,
+    iter_tool_calls: Vec<ToolCall>,
+    stream_error_forwarded: bool,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+    iteration: usize,
+) -> IterationOutcome {
+    let stream_result = match stream_handle.await {
+        Ok(Ok(r)) => r,
+        Ok(Err(e)) => {
+            error!(iteration, error = %e, "LLM streaming failed");
+            let is_billing = e.is_billing_error();
+            let error_msg = format!("{e}");
+            if !stream_error_forwarded {
                 if e.is_insufficient_credits() {
                     let _ = event_tx.send(ToolLoopEvent::Error(
                         "Insufficient credits — please top up to continue.".to_string(),
@@ -220,148 +251,152 @@ pub async fn run_tool_loop(
                         format!("Billing error — stopping to prevent unbilled usage: {e}"),
                     ));
                 } else if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                    let _ = event_tx.send(ToolLoopEvent::Error(format!("LLM error: {e}")));
-                }
-                append_text(&mut total_text, &iter_text);
-                let llm_error = if is_billing { None } else { Some(error_msg) };
-                return ToolLoopResult {
-                    text: total_text,
-                    thinking: total_thinking,
-                    total_input_tokens,
-                    total_output_tokens,
-                    iterations_run: iteration + 1,
-                    timed_out: false,
-                    insufficient_credits: is_billing,
-                    llm_error,
-                };
-            }
-            Err(e) => {
-                let error_msg = format!("Stream task error: {e}");
-                if iter_text.is_empty() && iter_tool_calls.is_empty() {
                     let _ = event_tx.send(ToolLoopEvent::Error(error_msg.clone()));
                 }
-                append_text(&mut total_text, &iter_text);
-                return ToolLoopResult {
-                    text: total_text,
-                    thinking: total_thinking,
-                    total_input_tokens,
-                    total_output_tokens,
-                    iterations_run: iteration + 1,
-                    timed_out: false,
-                    insufficient_credits: false,
-                    llm_error: Some(error_msg),
-                };
             }
-        };
-
-        total_input_tokens += stream_result.input_tokens;
-        total_output_tokens += stream_result.output_tokens;
-        let _ = event_tx.send(ToolLoopEvent::IterationTokenUsage {
-            input_tokens: total_input_tokens,
-            output_tokens: total_output_tokens,
-        });
-
-        // Use API-reported input_tokens to detect context window pressure.
-        // stream_result.input_tokens is the exact count for this call.
-        if let Some(max_ctx) = config.max_context_tokens {
-            let utilization = stream_result.input_tokens as f64 / max_ctx as f64;
-            if utilization > 0.80 {
-                info!(
-                    input_tokens = stream_result.input_tokens,
-                    max_context = max_ctx,
-                    utilization_pct = (utilization * 100.0) as u32,
-                    "Context utilization high, compacting older tool results in-flight"
-                );
-                compact_older_tool_results(&mut api_messages);
-            }
-        }
-
-        append_text(&mut total_text, &iter_text);
-
-        if stream_result.stop_reason != "tool_use" || iter_tool_calls.is_empty() {
-            return ToolLoopResult {
-                text: total_text,
-                thinking: total_thinking,
-                total_input_tokens,
-                total_output_tokens,
-                iterations_run: iteration + 1,
-                timed_out: false,
-                insufficient_credits: false,
-                llm_error: None,
-            };
-        }
-
-        // -- Build assistant blocks for the conversation ----------------------
-        let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-        if !iter_text.is_empty() {
-            assistant_blocks.push(ContentBlock::Text {
-                text: iter_text.clone(),
-            });
-        }
-        for tc in &iter_tool_calls {
-            assistant_blocks.push(ContentBlock::ToolUse {
-                id: tc.id.clone(),
-                name: tc.name.clone(),
-                input: tc.input.clone(),
-            });
-        }
-        api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
-
-        // -- Execute tool calls -----------------------------------------------
-        let results = executor.execute(&iter_tool_calls).await;
-
-        let mut should_stop = false;
-        let mut result_blocks: Vec<ContentBlock> = Vec::new();
-        for (tc, result) in iter_tool_calls.iter().zip(&results) {
-            let _ = event_tx.send(ToolLoopEvent::ToolResult {
-                tool_use_id: result.tool_use_id.clone(),
-                tool_name: tc.name.clone(),
-                content: result.content.clone(),
-                is_error: result.is_error,
-            });
-            let compacted = microcompact(&result.content);
-            result_blocks.push(ContentBlock::ToolResult {
-                tool_use_id: result.tool_use_id.clone(),
-                content: compacted,
-                is_error: if result.is_error { Some(true) } else { None },
-            });
-            if result.stop_loop {
-                should_stop = true;
-            }
-        }
-        api_messages.push(RichMessage::tool_results(result_blocks));
-
-        if should_stop {
-            return ToolLoopResult {
-                text: total_text,
-                thinking: total_thinking,
-                total_input_tokens,
-                total_output_tokens,
-                iterations_run: iteration + 1,
-                timed_out: false,
-                insufficient_credits: false,
-                llm_error: None,
-            };
-        }
-
-        if iteration + 1 >= config.max_iterations {
-            warn!(
-                config.max_iterations,
-                "Tool-use loop hit max iterations, stopping"
+            append_text(&mut state.total_text, &iter_text);
+            let llm_error = if is_billing { None } else { Some(error_msg) };
+            return IterationOutcome::EarlyReturn(
+                state.build_result(iteration + 1, false, is_billing, llm_error),
             );
         }
-    }
+        Err(e) => {
+            error!(iteration, error = %e, "Stream task panicked or was cancelled");
+            let error_msg = format!("Stream task error: {e}");
+            if iter_text.is_empty() && iter_tool_calls.is_empty() {
+                let _ = event_tx.send(ToolLoopEvent::Error(error_msg.clone()));
+            }
+            append_text(&mut state.total_text, &iter_text);
+            return IterationOutcome::EarlyReturn(
+                state.build_result(iteration + 1, false, false, Some(error_msg)),
+            );
+        }
+    };
 
-    ToolLoopResult {
-        text: total_text,
-        thinking: total_thinking,
-        total_input_tokens,
-        total_output_tokens,
-        iterations_run: config.max_iterations,
-        timed_out: false,
-        insufficient_credits: false,
-        llm_error: None,
+    IterationOutcome::Completed(IterationCompleted {
+        iter_text,
+        iter_tool_calls,
+        input_tokens: stream_result.input_tokens,
+        output_tokens: stream_result.output_tokens,
+        stop_reason: stream_result.stop_reason,
+        model_used: stream_result.model_used,
+    })
+}
+
+fn check_context_compaction(
+    config: &ToolLoopConfig,
+    iteration_input_tokens: u64,
+    api_messages: &mut Vec<RichMessage>,
+) {
+    if let Some(max_ctx) = config.max_context_tokens {
+        let utilization = iteration_input_tokens as f64 / max_ctx as f64;
+        if utilization > 0.60 {
+            info!(
+                input_tokens = iteration_input_tokens,
+                max_context = max_ctx,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Context utilization elevated, compacting older tool results in-flight"
+            );
+            compaction::compact_older_tool_results(api_messages, 4);
+        }
     }
+}
+
+async fn process_tool_calls(
+    iter: &IterationCompleted,
+    executor: &dyn ToolExecutor,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+) -> bool {
+    let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
+    if !iter.iter_text.is_empty() {
+        assistant_blocks.push(ContentBlock::Text { text: iter.iter_text.clone() });
+    }
+    for tc in &iter.iter_tool_calls {
+        let input = if tc.name == "write_file" {
+            summarize_write_file_input(&tc.input)
+        } else {
+            tc.input.clone()
+        };
+        assistant_blocks.push(ContentBlock::ToolUse {
+            id: tc.id.clone(),
+            name: tc.name.clone(),
+            input,
+        });
+    }
+    state.api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
+
+    let blocked_indices = detect_blocked_writes(&iter.iter_tool_calls, &mut state.consecutive_write_tracker);
+    let cmd_blocked_indices = detect_blocked_commands(&iter.iter_tool_calls, state.consecutive_cmd_failures);
+
+    let all_blocked: Vec<usize> = {
+        let mut v = blocked_indices.clone();
+        for i in &cmd_blocked_indices {
+            if !v.contains(i) {
+                v.push(*i);
+            }
+        }
+        v
+    };
+
+    let allowed_calls: Vec<ToolCall> = iter.iter_tool_calls
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !all_blocked.contains(i))
+        .map(|(_, tc)| tc.clone())
+        .collect();
+    let allowed_results = executor.execute(&allowed_calls).await;
+
+    let mut allowed_iter = allowed_results.into_iter();
+    let results: Vec<ToolCallResult> = iter.iter_tool_calls
+        .iter()
+        .enumerate()
+        .map(|(i, tc)| {
+            if blocked_indices.contains(&i) {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
+                warn!(path, tool = %tc.name, "Blocked consecutive duplicate write/edit (3+ in a row)");
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: serde_json::json!({
+                        "error": format!(
+                            "You have called {} on '{}' 3+ times consecutively. \
+                             The file was already written successfully. Use read_file to \
+                             verify the contents, or try a different approach.",
+                            tc.name, path
+                        )
+                    }).to_string(),
+                    is_error: true,
+                    stop_loop: false,
+                }
+            } else if cmd_blocked_indices.contains(&i) {
+                warn!(tool = %tc.name, consecutive_failures = state.consecutive_cmd_failures,
+                    "Blocked run_command after 5+ consecutive failures");
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: "run_command is temporarily blocked after 5+ consecutive failures. \
+                              Use search_code, read_file, find_files, or list_files instead. \
+                              run_command will be unblocked after you successfully use another tool."
+                        .to_string(),
+                    is_error: true,
+                    stop_loop: false,
+                }
+            } else {
+                allowed_iter.next().expect("allowed_results count mismatch")
+            }
+        })
+        .collect();
+
+    let results = apply_cmd_failure_tracking(
+        &iter.iter_tool_calls,
+        results,
+        &mut state.consecutive_cmd_failures,
+    );
+
+    let (result_blocks, should_stop) = build_tool_result_blocks(
+        &iter.iter_tool_calls, &results, &mut state.file_read_cache, event_tx,
+    );
+    state.api_messages.push(RichMessage::tool_results(result_blocks));
+    should_stop
 }
 
 fn append_text(total: &mut String, new: &str) {
@@ -373,297 +408,6 @@ fn append_text(total: &mut String, new: &str) {
     }
 }
 
-/// Retroactively compact tool results in older messages when the context
-/// window is under pressure. Skips the last 4 messages (the most recent
-/// assistant turn + tool results pair) to avoid losing fresh context.
-fn compact_older_tool_results(messages: &mut [RichMessage]) {
-    let len = messages.len();
-    let cutoff = len.saturating_sub(4);
-    for msg in &mut messages[..cutoff] {
-        if msg.role != "user" {
-            continue;
-        }
-        if let MessageContent::Blocks(blocks) = &mut msg.content {
-            for block in blocks.iter_mut() {
-                if let ContentBlock::ToolResult { content, .. } = block {
-                    if content.len() > AGGRESSIVE_COMPACT_THRESHOLD {
-                        *content = aggressive_compact(content);
-                    }
-                }
-            }
-        }
-    }
-}
-
-const AGGRESSIVE_COMPACT_THRESHOLD: usize = 2_000;
-const AGGRESSIVE_KEEP_HEAD: usize = 800;
-const AGGRESSIVE_KEEP_TAIL: usize = 400;
-
-fn aggressive_compact(content: &str) -> String {
-    if content.len() <= AGGRESSIVE_COMPACT_THRESHOLD {
-        return content.to_string();
-    }
-    let head: String = content.chars().take(AGGRESSIVE_KEEP_HEAD).collect();
-    let tail: String = content
-        .chars()
-        .rev()
-        .take(AGGRESSIVE_KEEP_TAIL)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let omitted = content.len() - AGGRESSIVE_KEEP_HEAD - AGGRESSIVE_KEEP_TAIL;
-    format!(
-        "{head}\n[...{omitted} chars omitted...]\n{tail}"
-    )
-}
-
-const MICROCOMPACT_CHAR_THRESHOLD: usize = 8_000;
-const MICROCOMPACT_KEEP_HEAD: usize = 3_000;
-const MICROCOMPACT_KEEP_TAIL: usize = 1_500;
-
-/// Truncate large tool results to keep the conversation history lean.
-/// The full result is still sent to the UI via events; this only affects
-/// what the LLM sees on the next turn.
-fn microcompact(content: &str) -> String {
-    if content.len() <= MICROCOMPACT_CHAR_THRESHOLD {
-        return content.to_string();
-    }
-    let total_chars = content.len();
-    let head: String = content.chars().take(MICROCOMPACT_KEEP_HEAD).collect();
-    let tail: String = content
-        .chars()
-        .rev()
-        .take(MICROCOMPACT_KEEP_TAIL)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let omitted = total_chars - MICROCOMPACT_KEEP_HEAD - MICROCOMPACT_KEEP_TAIL;
-    format!(
-        "{head}\n\n[... {omitted} characters omitted — re-read the file or re-run the command if you need the full output ...]\n\n{tail}"
-    )
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use aura_claude::mock::{MockLlmProvider, MockResponse};
-    use aura_billing::{BillingClient, MeteredLlm};
-    use aura_store::RocksStore;
-
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    async fn start_mock_billing_server() -> String {
-        use axum::{routing::{get, post}, Json, Router};
-        use tokio::net::TcpListener;
-
-        let app = Router::new()
-            .route(
-                "/api/credits/balance",
-                get(|| async {
-                    Json(serde_json::json!({"balance": 999999, "purchases": []}))
-                }),
-            )
-            .route(
-                "/api/credits/debit",
-                post(|| async {
-                    Json(serde_json::json!({
-                        "success": true,
-                        "balance": 999998,
-                        "transactionId": "tx-1"
-                    }))
-                }),
-            );
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("http://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
-        url
-    }
-
-    async fn make_test_llm(
-        mock: Arc<MockLlmProvider>,
-    ) -> (Arc<MeteredLlm>, tempfile::TempDir) {
-        let url = start_mock_billing_server().await;
-        let billing = {
-            let _guard = ENV_LOCK.lock().unwrap();
-            std::env::set_var("BILLING_SERVER_URL", &url);
-            Arc::new(BillingClient::new())
-        };
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-
-        let session = serde_json::to_vec(&aura_core::ZeroAuthSession {
-            user_id: "u1".into(),
-            display_name: "Test".into(),
-            profile_image: String::new(),
-            primary_zid: "zid-1".into(),
-            zero_wallet: "w1".into(),
-            wallets: vec![],
-            access_token: "test-token".into(),
-            created_at: chrono::Utc::now(),
-            validated_at: chrono::Utc::now(),
-        })
-        .unwrap();
-        store.put_setting("zero_auth_session", &session).unwrap();
-
-        let llm = Arc::new(MeteredLlm::new(mock, billing, store));
-        (llm, tmp)
-    }
-
-    fn default_config(max_iterations: usize) -> ToolLoopConfig {
-        ToolLoopConfig {
-            max_iterations,
-            max_tokens: 4096,
-            thinking: None,
-            stream_timeout: Duration::from_secs(30),
-            billing_reason: "test",
-            max_context_tokens: None,
-        }
-    }
-
-    struct SimpleExecutor {
-        handler: Box<dyn Fn(&[ToolCall]) -> Vec<ToolCallResult> + Send + Sync>,
-    }
-
-    #[async_trait]
-    impl ToolExecutor for SimpleExecutor {
-        async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
-            (self.handler)(tool_calls)
-        }
-    }
-
-    fn noop_executor() -> SimpleExecutor {
-        SimpleExecutor {
-            handler: Box::new(|_| vec![]),
-        }
-    }
-
-    #[tokio::test]
-    async fn test_tool_loop_simple_end_turn() {
-        let mock = Arc::new(MockLlmProvider::with_responses(vec![
-            MockResponse::text("Done!").with_tokens(100, 50),
-        ]));
-
-        let (llm, _tmp) = make_test_llm(mock).await;
-        let (event_tx, _event_rx) = mpsc::unbounded_channel();
-        let executor = noop_executor();
-        let config = default_config(5);
-
-        let result = run_tool_loop(
-            llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Say done")],
-            vec![],
-            &config,
-            &executor,
-            &event_tx,
-        )
-        .await;
-
-        assert_eq!(result.text, "Done!");
-        assert_eq!(result.iterations_run, 1);
-        assert!(!result.timed_out);
-        assert!(!result.insufficient_credits);
-    }
-
-    #[tokio::test]
-    async fn test_tool_loop_tool_use_then_end_turn() {
-        let mock = Arc::new(MockLlmProvider::with_responses(vec![
-            MockResponse::tool_use(vec![ToolCall {
-                id: "t1".into(),
-                name: "read_file".into(),
-                input: serde_json::json!({"path": "src/main.rs"}),
-            }])
-            .with_tokens(100, 50),
-            MockResponse::text("File contents shown.").with_tokens(80, 40),
-        ]));
-
-        let (llm, _tmp) = make_test_llm(mock).await;
-        let (event_tx, _event_rx) = mpsc::unbounded_channel();
-        let config = default_config(5);
-
-        let executor = SimpleExecutor {
-            handler: Box::new(|calls| {
-                calls
-                    .iter()
-                    .map(|tc| ToolCallResult {
-                        tool_use_id: tc.id.clone(),
-                        content: "fn main() {}".into(),
-                        is_error: false,
-                        stop_loop: false,
-                    })
-                    .collect()
-            }),
-        };
-
-        let result = run_tool_loop(
-            llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Read the file")],
-            vec![],
-            &config,
-            &executor,
-            &event_tx,
-        )
-        .await;
-
-        assert_eq!(result.iterations_run, 2);
-        assert!(result.text.contains("File contents shown."));
-        assert_eq!(result.total_input_tokens, 180);
-        assert_eq!(result.total_output_tokens, 90);
-        assert!(!result.timed_out);
-    }
-
-    #[tokio::test]
-    async fn test_tool_loop_hits_max_iterations() {
-        let responses: Vec<MockResponse> = (0..10)
-            .map(|i| {
-                MockResponse::tool_use(vec![ToolCall {
-                    id: format!("t{}", i),
-                    name: "do_thing".into(),
-                    input: serde_json::json!({"step": i}),
-                }])
-                .with_tokens(50, 30)
-            })
-            .collect();
-
-        let mock = Arc::new(MockLlmProvider::with_responses(responses));
-        let (llm, _tmp) = make_test_llm(mock).await;
-        let (event_tx, _event_rx) = mpsc::unbounded_channel();
-        let config = default_config(3);
-
-        let executor = SimpleExecutor {
-            handler: Box::new(|calls| {
-                calls
-                    .iter()
-                    .map(|tc| ToolCallResult {
-                        tool_use_id: tc.id.clone(),
-                        content: "ok".into(),
-                        is_error: false,
-                        stop_loop: false,
-                    })
-                    .collect()
-            }),
-        };
-
-        let result = run_tool_loop(
-            llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Do many things")],
-            vec![],
-            &config,
-            &executor,
-            &event_tx,
-        )
-        .await;
-
-        assert_eq!(result.iterations_run, 3);
-        assert!(!result.timed_out);
-    }
-}
+#[path = "tool_loop_tests.rs"]
+mod tests;

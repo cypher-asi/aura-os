@@ -1,13 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::enums::{
-    AgentStatus, ChatRole, FollowTargetType, InviteStatus, OrgRole, ProjectStatus, SessionStatus,
-    TaskStatus,
-};
+use crate::enums::{AgentStatus, ChatRole, ProjectStatus, SessionStatus, TaskStatus};
 use crate::ids::{
-    AgentId, AgentInstanceId, GitHubIntegrationId, InviteId, MessageId, OrgId, ProjectId,
-    SessionId, SpecId, SprintId, TaskId,
+    AgentId, AgentInstanceId, MessageId, OrgId, ProfileId, ProjectId,
+    SessionId, SpecId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,10 +22,6 @@ pub struct Project {
     pub requirements_doc_path: Option<String>,
     pub current_status: ProjectStatus,
     #[serde(default)]
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    #[serde(default)]
-    pub github_repo_full_name: Option<String>,
-    #[serde(default)]
     pub build_command: Option<String>,
     #[serde(default)]
     pub test_command: Option<String>,
@@ -41,27 +34,12 @@ pub struct Project {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Sprint {
-    pub sprint_id: SprintId,
-    pub project_id: ProjectId,
-    pub title: String,
-    pub prompt: String,
-    pub order_index: u32,
-    #[serde(default)]
-    pub generated_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spec {
     pub spec_id: SpecId,
     pub project_id: ProjectId,
     pub title: String,
     pub order_index: u32,
     pub markdown_contents: String,
-    #[serde(default)]
-    pub sprint_id: Option<SprintId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -156,6 +134,10 @@ pub struct Agent {
     pub skills: Vec<String>,
     #[serde(default)]
     pub icon: Option<String>,
+    #[serde(default)]
+    pub network_agent_id: Option<String>,
+    #[serde(default)]
+    pub profile_id: Option<ProfileId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -209,6 +191,27 @@ pub struct Session {
     pub ended_at: Option<DateTime<Utc>>,
 }
 
+impl Session {
+    pub fn dummy(project_id: ProjectId) -> Self {
+        Self {
+            session_id: SessionId::new(),
+            agent_instance_id: AgentInstanceId::new(),
+            project_id,
+            active_task_id: None,
+            tasks_worked: vec![],
+            context_usage_estimate: 0.0,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            summary_of_previous_context: String::new(),
+            status: SessionStatus::Active,
+            user_id: None,
+            model: None,
+            started_at: chrono::Utc::now(),
+            ended_at: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Message {
     pub message_id: MessageId,
@@ -246,6 +249,14 @@ pub enum ChatContentBlock {
         #[serde(skip_serializing_if = "Option::is_none")]
         is_error: Option<bool>,
     },
+    TaskRef {
+        task_id: String,
+        title: String,
+    },
+    SpecRef {
+        spec_id: String,
+        title: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -254,67 +265,14 @@ pub struct Org {
     pub name: String,
     pub owner_user_id: String,
     pub billing: Option<OrgBilling>,
-    pub github: Option<OrgGithub>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgMember {
-    pub org_id: OrgId,
-    pub user_id: String,
-    pub display_name: String,
-    pub role: OrgRole,
-    pub joined_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgInvite {
-    pub invite_id: InviteId,
-    pub org_id: OrgId,
-    pub token: String,
-    pub created_by: String,
-    pub status: InviteStatus,
-    pub accepted_by: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
-    pub accepted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OrgBilling {
     pub billing_email: Option<String>,
     pub plan: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgGithub {
-    pub github_org: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GitHubIntegration {
-    pub integration_id: GitHubIntegrationId,
-    pub org_id: OrgId,
-    pub installation_id: i64,
-    pub github_account_login: String,
-    pub github_account_type: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GitHubRepo {
-    pub github_repo_id: i64,
-    pub integration_id: GitHubIntegrationId,
-    pub full_name: String,
-    pub name: String,
-    pub private: bool,
-    pub default_branch: String,
-    pub html_url: String,
-    pub updated_at: DateTime<Utc>,
 }
 
 /// A single row in the fee schedule: per-model token pricing effective from a given date.
@@ -367,15 +325,19 @@ pub struct DebitResponse {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Follow {
-    pub follower_user_id: String,
-    pub target_type: FollowTargetType,
-    pub target_id: String,
+    pub id: String,
+    pub follower_profile_id: ProfileId,
+    pub target_profile_id: ProfileId,
     pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ZeroAuthSession {
     pub user_id: String,
+    #[serde(default)]
+    pub network_user_id: Option<UserId>,
+    #[serde(default)]
+    pub profile_id: Option<ProfileId>,
     pub display_name: String,
     pub profile_image: String,
     pub primary_zid: String,

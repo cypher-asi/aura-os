@@ -17,11 +17,18 @@ export interface DisplayImageBlock {
 
 export type DisplayContentBlockUnion = DisplayContentBlock | DisplayImageBlock;
 
+export interface ArtifactRef {
+  kind: "task" | "spec";
+  id: string;
+  title: string;
+}
+
 export interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   toolCalls?: ToolCallEntry[];
+  artifactRefs?: ArtifactRef[];
   contentBlocks?: DisplayContentBlockUnion[];
   thinkingText?: string;
   thinkingDurationMs?: number | null;
@@ -74,6 +81,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const toolCallsRef = useRef<ToolCallEntry[]>([]);
   const needsSeparatorRef = useRef(false);
   const pendingSpecIdsRef = useRef<string[]>([]);
+  const pendingTaskIdsRef = useRef<string[]>([]);
 
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
     setMessages(msgs);
@@ -133,6 +141,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       setActiveToolCalls([]);
       needsSeparatorRef.current = false;
       pendingSpecIdsRef.current = [];
+      pendingTaskIdsRef.current = [];
 
       if (action === "generate_specs") {
         sidekick.clearGeneratedArtifacts();
@@ -202,6 +211,33 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
               });
               pendingSpecIdsRef.current.push(pendingId);
             }
+
+            if (info.name === "create_task" && projectId) {
+              const pendingId = `pending-${info.id}`;
+              const now = new Date().toISOString();
+              sidekick.pushTask({
+                task_id: pendingId,
+                project_id: projectId,
+                spec_id: (info.input.spec_id as string) || "",
+                title: (info.input.title as string) || "Creating…",
+                description: (info.input.description as string) || "",
+                status: "pending",
+                order_index: Date.now(),
+                dependency_ids: [],
+                parent_task_id: null,
+                assigned_agent_instance_id: null,
+                completed_by_agent_instance_id: null,
+                session_id: null,
+                execution_notes: "",
+                files_changed: [],
+                live_output: "",
+                total_input_tokens: 0,
+                total_output_tokens: 0,
+                created_at: now,
+                updated_at: now,
+              });
+              pendingTaskIdsRef.current.push(pendingId);
+            }
           },
           onToolResult(info: ToolResultInfo) {
             toolCallsRef.current = toolCallsRef.current.map((tc) =>
@@ -218,6 +254,15 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
               if (idx !== -1) {
                 pendingSpecIdsRef.current.splice(idx, 1);
                 sidekick.removeSpec(pendingId);
+              }
+            }
+
+            if (info.name === "create_task" && info.is_error) {
+              const pendingId = `pending-${info.id}`;
+              const idx = pendingTaskIdsRef.current.indexOf(pendingId);
+              if (idx !== -1) {
+                pendingTaskIdsRef.current.splice(idx, 1);
+                sidekick.removeTask(pendingId);
               }
             }
           },
@@ -241,6 +286,10 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
             }
           },
           onTaskSaved(task) {
+            const pendingId = pendingTaskIdsRef.current.shift();
+            if (pendingId) {
+              sidekick.removeTask(pendingId);
+            }
             sidekick.pushTask(task);
           },
           onMessageSaved(msg) {

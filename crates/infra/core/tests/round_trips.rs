@@ -119,8 +119,6 @@ fn sample_project() -> Project {
         workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
-        github_integration_id: None,
-        github_repo_full_name: None,
         build_command: None,
         test_command: None,
         specs_summary: None,
@@ -138,7 +136,6 @@ fn sample_spec(project_id: ProjectId) -> Spec {
         title: "Core Domain Types".into(),
         order_index: 0,
         markdown_contents: "# Spec 01\nDetails...".into(),
-        sprint_id: None,
         created_at: now,
         updated_at: now,
     }

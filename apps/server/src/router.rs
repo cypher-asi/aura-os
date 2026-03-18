@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, leaderboard, log, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -29,6 +29,13 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))
+        .route("/api/auth/access-token", get(auth::get_access_token))
+        // Users (proxied to aura-network)
+        .route("/api/users/me", get(users::get_me).put(users::update_me))
+        .route("/api/users/:user_id", get(users::get_user))
+        .route("/api/users/:user_id/profile", get(users::get_user_profile))
+        // Profiles (proxied to aura-network)
+        .route("/api/profiles/:profile_id", get(users::get_profile))
         // Orgs
         .route("/api/orgs", get(orgs::list_orgs).post(orgs::create_org))
         .route(
@@ -53,12 +60,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/orgs/:org_id/billing",
             put(orgs::set_billing).get(orgs::get_billing),
         )
-        .route(
-            "/api/orgs/:org_id/integrations/github",
-            put(orgs::set_github)
-                .delete(orgs::remove_github)
-                .get(orgs::get_github),
-        )
         // Credits / Billing
         .route(
             "/api/orgs/:org_id/credits/tiers",
@@ -75,31 +76,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/webhooks/billing/fulfill",
             post(billing::handle_fulfillment),
-        )
-        // GitHub App integrations
-        .route(
-            "/api/orgs/:org_id/integrations/github/app",
-            get(github::list_integrations),
-        )
-        .route(
-            "/api/orgs/:org_id/integrations/github/install",
-            post(github::start_install),
-        )
-        .route(
-            "/api/github/callback",
-            get(github::github_callback),
-        )
-        .route(
-            "/api/orgs/:org_id/integrations/github/:integration_id",
-            delete(github::remove_integration),
-        )
-        .route(
-            "/api/orgs/:org_id/integrations/github/repos",
-            get(github::list_repos),
-        )
-        .route(
-            "/api/orgs/:org_id/integrations/github/:integration_id/refresh",
-            post(github::refresh_integration),
         )
         // Settings
         .route(
@@ -132,29 +108,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/projects/:project_id/archive",
             post(projects::archive_project),
-        )
-        // Sprints
-        .route(
-            "/api/projects/:project_id/sprints",
-            get(sprints::list_sprints).post(sprints::create_sprint),
-        )
-        .route(
-            "/api/projects/:project_id/sprints/reorder",
-            put(sprints::reorder_sprints),
-        )
-        .route(
-            "/api/projects/:project_id/sprints/:sprint_id",
-            get(sprints::get_sprint)
-                .put(sprints::update_sprint)
-                .delete(sprints::delete_sprint),
-        )
-        .route(
-            "/api/projects/:project_id/sprints/:sprint_id/generate",
-            post(sprints::generate_sprint),
-        )
-        .route(
-            "/api/projects/:project_id/sprints/:sprint_id/generate/stream",
-            post(sprints::generate_sprint_stream),
         )
         // Specs
         .route("/api/projects/:project_id/specs", get(specs::list_specs))
@@ -262,18 +215,42 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/sessions",
             get(agents::list_project_sessions),
         )
-        // Follows
+        // Follows (profile-based, proxied to aura-network)
         .route(
             "/api/follows",
             post(follows::follow).get(follows::list_follows),
         )
         .route(
-            "/api/follows/:target_type/:target_id",
+            "/api/follows/:target_profile_id",
             delete(follows::unfollow),
         )
         .route(
-            "/api/follows/check/:target_type/:target_id",
+            "/api/follows/check/:target_profile_id",
             get(follows::check_follow),
+        )
+        // Leaderboard + Usage (proxied to aura-network)
+        .route("/api/leaderboard", get(leaderboard::get_leaderboard))
+        .route(
+            "/api/users/me/usage",
+            get(leaderboard::get_personal_usage),
+        )
+        .route(
+            "/api/orgs/:org_id/usage",
+            get(leaderboard::get_org_usage),
+        )
+        .route(
+            "/api/orgs/:org_id/usage/members",
+            get(leaderboard::get_org_usage_members),
+        )
+        // Feed (proxied to aura-network)
+        .route("/api/feed", get(feed::list_feed))
+        .route(
+            "/api/activity/:event_id/comments",
+            get(feed::list_comments).post(feed::add_comment),
+        )
+        .route(
+            "/api/comments/:comment_id",
+            delete(feed::delete_comment),
         )
         // Log entries
         .route("/api/log-entries", get(log::list_log_entries))

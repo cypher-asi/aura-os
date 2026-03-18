@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button, Text, Menu } from "@cypher-asi/zui";
 import { Archive, Info, ArrowLeft, Ellipsis, File, Check, Logs, Gauge, Rows3, Code } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import { PanelSearch } from "./PanelSearch";
 import { AutomationBar } from "./AutomationBar";
 import { useSidekick, type SidekickTab } from "../context/SidekickContext";
@@ -173,11 +174,7 @@ export function SidekickContent() {
   }, [activeTab]);
 
   if (!ctx) {
-    return (
-      <div className={styles.emptyState}>
-        <Text variant="muted" size="sm">Select a project to get started</Text>
-      </div>
-    );
+    return <EmptyState>Select a project to get started</EmptyState>;
   }
 
   const { project } = ctx;

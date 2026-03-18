@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Text } from "@cypher-asi/zui";
-import { User, Send, MapPin, Globe, Calendar, Pencil } from "lucide-react";
+import { User, Send, MapPin, Globe, Calendar, Pencil, LogOut } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
 import { Avatar } from "../../components/Avatar";
@@ -25,7 +25,7 @@ function formatTokenCount(n: number): string {
 
 function ProfileCard() {
   const { profile, updateProfile, events, projects, totalTokenUsage } = useProfile();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [editorOpen, setEditorOpen] = useState(false);
 
   const isOwnProfile = !!user && (
@@ -39,16 +39,28 @@ function ProfileCard() {
       <EntityCard
         headerLabel="PROFILE"
         headerStatus="ACTIVE"
-        image={profile.avatarUrl}
-        fallbackIcon={<User size={48} />}
-        name={profile.name}
+        image={profile.avatarUrl && profile.avatarUrl.startsWith("http") ? profile.avatarUrl : undefined}
+        fallbackIcon={
+          isOwnProfile ? (
+            <button
+              type="button"
+              className={styles.avatarPlaceholder}
+              onClick={() => setEditorOpen(true)}
+            >
+              <User size={32} />
+              <span>Add profile image</span>
+            </button>
+          ) : (
+            <User size={48} />
+          )
+        }
+        name={profile.name || (isOwnProfile ? "Set your name" : "Unknown")}
         subtitle={profile.handle}
         nameAction={
           !isOwnProfile ? (
             <FollowEditButton
               isOwner={false}
-              targetType="user"
-              targetName={profile.name}
+              targetProfileId={profile.id}
             />
           ) : undefined
         }
@@ -60,24 +72,51 @@ function ProfileCard() {
         footer="CYPHER-ASI // AURA"
       >
         <div className={styles.bioSection}>
-          <p className={styles.bioText}>{profile.bio}</p>
+          {profile.bio ? (
+            <p className={styles.bioText}>{profile.bio}</p>
+          ) : isOwnProfile ? (
+            <p
+              className={`${styles.bioText} ${styles.placeholder}`}
+              onClick={() => setEditorOpen(true)}
+            >
+              Add a bio...
+            </p>
+          ) : null}
         </div>
 
         <div className={styles.metaGrid}>
           <div className={styles.metaRow}>
             <MapPin size={13} className={styles.metaIcon} />
-            <span className={styles.metaValue}>{profile.location}</span>
+            {profile.location ? (
+              <span className={styles.metaValue}>{profile.location}</span>
+            ) : isOwnProfile ? (
+              <span
+                className={`${styles.metaValue} ${styles.placeholder}`}
+                onClick={() => setEditorOpen(true)}
+              >
+                Add location
+              </span>
+            ) : null}
           </div>
           <div className={styles.metaRow}>
             <Globe size={13} className={styles.metaIcon} />
-            <a
-              href={profile.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.metaLink}
-            >
-              {profile.website.replace(/^https?:\/\//, "")}
-            </a>
+            {profile.website ? (
+              <a
+                href={profile.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.metaLink}
+              >
+                {profile.website.replace(/^https?:\/\//, "")}
+              </a>
+            ) : isOwnProfile ? (
+              <span
+                className={`${styles.metaValue} ${styles.placeholder}`}
+                onClick={() => setEditorOpen(true)}
+              >
+                Add website
+              </span>
+            ) : null}
           </div>
           <div className={styles.metaRow}>
             <Calendar size={13} className={styles.metaIcon} />
@@ -87,13 +126,23 @@ function ProfileCard() {
       </EntityCard>
 
       {isOwnProfile && (
-        <button
-          type="button"
-          className={styles.floatingEditButton}
-          onClick={() => setEditorOpen(true)}
-        >
-          <Pencil size={14} />
-        </button>
+        <div className={styles.floatingActions}>
+          <button
+            type="button"
+            className={styles.floatingEditButton}
+            onClick={() => setEditorOpen(true)}
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            type="button"
+            className={styles.floatingEditButton}
+            onClick={logout}
+            aria-label="Logout"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
       )}
 
       <ProfileEditorModal
@@ -132,9 +181,7 @@ function CommentsPanel() {
     <div className={styles.commentsPanel}>
       <div className={styles.commentList}>
         {comments.length === 0 ? (
-          <div className={styles.emptyComments}>
-            <Text variant="muted" size="sm">No comments yet</Text>
-          </div>
+          <EmptyState>No comments yet</EmptyState>
         ) : (
           comments.map((c) => (
             <div key={c.id} className={styles.commentItem}>

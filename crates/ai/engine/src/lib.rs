@@ -11,4 +11,4 @@ pub use engine::{
 };
 pub use error::EngineError;
 pub use events::EngineEvent;
-pub use file_ops::{FileOp, Replacement};
+pub use file_ops::{FileOp, Replacement, StubPattern, StubReport};

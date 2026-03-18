@@ -142,22 +142,6 @@
   cursor: default;
 }
 
-/* -- Empty state -- */
-
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: var(--space-3);
-  color: var(--color-text-secondary);
-}
-
-.emptyIcon {
-  opacity: 0.3;
-}
-
 /* -- Profile recent activity -- */
 
 .recentSection {

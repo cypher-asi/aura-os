@@ -3,7 +3,8 @@ import { api } from "../api/client";
 import type { ProjectProgress } from "../types";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
-import { PageEmptyState, Text } from "@cypher-asi/zui";
+import { Text } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 
 export function StatsDashboard() {
@@ -30,7 +31,7 @@ export function StatsDashboard() {
 
   if (!progress) {
     if (!showEmpty) return null;
-    return <PageEmptyState title="No stats data" />;
+    return <EmptyState>No stats data</EmptyState>;
   }
 
   const pct = Math.round(progress.completion_percentage * 100) / 100;
@@ -70,6 +71,7 @@ export function StatsDashboard() {
 
       <div className={styles.statsGrid}>
         <StatCard value={progress.total_cost} label="Cost" fmtFn={formatCurrency} />
+        <StatCard value={progress.total_time_seconds} label="Time" fmtFn={formatDuration} />
         <StatCard value={progress.total_tokens} label="Tokens" fmt />
         <StatCard value={progress.lines_changed} label="Changed" fmt />
         <StatCard value={progress.lines_of_code} label="LoC" fmt />
@@ -89,6 +91,16 @@ function formatCompact(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
   if (n >= 10_000) return (n / 1_000).toFixed(n >= 100_000 ? 0 : 1).replace(/\.0$/, "") + "K";
   return n.toLocaleString();
+}
+
+function formatDuration(totalSec: number): string {
+  if (totalSec < 60) return `${totalSec}s`;
+  const m = Math.floor(totalSec / 60) % 60;
+  const h = Math.floor(totalSec / 3600) % 24;
+  const d = Math.floor(totalSec / 86400);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 function formatCurrency(n: number): string {

@@ -8,10 +8,10 @@ import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { ListTodo } from "lucide-react";
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
@@ -38,6 +38,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       setLocalTasks((prev) =>
         prev.map((t) => (t.task_id === taskId ? { ...t, ...extra, status: newStatus } : t)),
       );
+      sidekick.patchTask(taskId, { ...extra, status: newStatus });
       sidekick.updatePreviewTask({ task_id: taskId, ...extra, status: newStatus });
     },
     [sidekick],
@@ -87,12 +88,12 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   }, [subscribe, updateTaskStatus, refetchTasks]);
 
   const specs = useMemo(
-    () => mergeById(localSpecs, sidekick.specs, "spec_id"),
+    () => mergeById(sidekick.specs, localSpecs, "spec_id"),
     [localSpecs, sidekick.specs],
   );
 
   const tasks = useMemo(
-    () => mergeById(localTasks, sidekick.tasks, "task_id"),
+    () => mergeById(sidekick.tasks, localTasks, "task_id"),
     [localTasks, sidekick.tasks],
   );
 
@@ -191,13 +192,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
   if (isEmpty) {
     if (!showEmpty) return null;
-    return (
-      <PageEmptyState
-        icon={<ListTodo size={32} />}
-        title="No tasks yet"
-        description="Tasks are created automatically when specs are generated."
-      />
-    );
+    return <EmptyState>No tasks yet</EmptyState>;
   }
 
   return (

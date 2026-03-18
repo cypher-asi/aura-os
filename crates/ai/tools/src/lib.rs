@@ -1,4 +1,21 @@
+use std::sync::{Arc, LazyLock};
 use aura_claude::ToolDefinition;
+
+static AGENT_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    chat_tool_definitions_inner().into()
+});
+
+static ENGINE_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    engine_tool_definitions_inner().into()
+});
+
+static MULTI_PROJECT_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
+    multi_project_tool_definitions_inner().into()
+});
+
+/// Return type for lazily cached tool definitions. Callers can use this
+/// as `&[ToolDefinition]` (via Deref) or convert to `Vec` cheaply.
+pub type ToolDefs = Arc<[ToolDefinition]>;
 
 fn tool(name: &str, description: &str, schema: serde_json::Value) -> ToolDefinition {
     ToolDefinition {
@@ -40,11 +57,13 @@ pub fn core_tool_definitions() -> Vec<ToolDefinition> {
         // ── Filesystem ─────────────────────────────────────────────────
         tool(
             "read_file",
-            "Read the contents of a file relative to the project folder.",
+            "Read the contents of a file relative to the project folder. Optionally read a specific line range (1-indexed) to avoid truncation in large files.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "path": { "type": "string", "description": "Relative path from project root" }
+                    "path": { "type": "string", "description": "Relative path from project root" },
+                    "start_line": { "type": "integer", "description": "First line to read (1-indexed, inclusive). Omit to read from the beginning." },
+                    "end_line": { "type": "integer", "description": "Last line to read (1-indexed, inclusive). Omit to read to the end." }
                 },
                 "required": ["path"]
             }),
@@ -101,7 +120,7 @@ pub fn core_tool_definitions() -> Vec<ToolDefinition> {
         // ── Shell ──────────────────────────────────────────────────────
         tool(
             "run_command",
-            "Execute a shell command in the project directory and return stdout/stderr. Use for build, test, git, package manager commands, etc. Commands time out after 60 seconds by default.",
+            "Execute a shell command in the project directory. Use ONLY for build, test, git, and package manager commands. Do NOT use for searching code (use search_code), reading files (use read_file), or finding files (use find_files). Commands time out after 60 seconds by default.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -115,14 +134,15 @@ pub fn core_tool_definitions() -> Vec<ToolDefinition> {
         // ── Search ─────────────────────────────────────────────────────
         tool(
             "search_code",
-            "Search for a regex pattern across files in the project. Returns matching lines with file paths and line numbers. Useful for finding usages, definitions, and references.",
+            "Search for a regex pattern across files in the project. Returns matching lines with file paths and line numbers. Use context_lines to include surrounding code (e.g. to see a full struct or function body around a match).",
             serde_json::json!({
                 "type": "object",
                 "properties": {
                     "pattern": { "type": "string", "description": "Regex pattern to search for" },
                     "path": { "type": "string", "description": "Optional relative directory or file path to scope the search (default: project root)" },
                     "include": { "type": "string", "description": "Optional glob to filter files, e.g. '*.rs' or '*.ts'" },
-                    "max_results": { "type": "integer", "description": "Maximum number of matching lines to return (default: 50)" }
+                    "max_results": { "type": "integer", "description": "Maximum number of matching lines to return (default: 50)" },
+                    "context_lines": { "type": "integer", "description": "Number of lines to include before and after each match (default: 0, max: 10)" }
                 },
                 "required": ["pattern"]
             }),
@@ -142,15 +162,13 @@ pub fn core_tool_definitions() -> Vec<ToolDefinition> {
     ]
 }
 
-/// Chat agent tools: core + project management tools.
-pub fn chat_tool_definitions() -> Vec<ToolDefinition> {
+fn chat_tool_definitions_inner() -> Vec<ToolDefinition> {
     let mut tools = core_tool_definitions();
     tools.extend(chat_management_tools());
     tools
 }
 
-/// Engine tool definitions: core + task_done + get_task_context.
-pub fn engine_tool_definitions() -> Vec<ToolDefinition> {
+fn engine_tool_definitions_inner() -> Vec<ToolDefinition> {
     let mut tools = core_tool_definitions();
     tools.extend(vec![
         tool(
@@ -189,16 +207,23 @@ pub fn engine_tool_definitions() -> Vec<ToolDefinition> {
     tools
 }
 
-/// Returns the full set of tools the chat agent can invoke.
-pub fn agent_tool_definitions() -> Vec<ToolDefinition> {
-    chat_tool_definitions()
+/// Returns the full set of tools the chat agent can invoke (lazily cached).
+pub fn agent_tool_definitions() -> ToolDefs {
+    Arc::clone(&AGENT_TOOLS)
 }
 
-/// Returns tool definitions for multi-project agent chat.
-/// Each tool gains a required `project_id` parameter so the LLM
-/// specifies which project to target.
-pub fn multi_project_tool_definitions() -> Vec<ToolDefinition> {
-    agent_tool_definitions()
+/// Returns engine tool definitions (lazily cached).
+pub fn engine_tool_definitions() -> ToolDefs {
+    Arc::clone(&ENGINE_TOOLS)
+}
+
+/// Returns tool definitions for multi-project agent chat (lazily cached).
+pub fn multi_project_tool_definitions() -> ToolDefs {
+    Arc::clone(&MULTI_PROJECT_TOOLS)
+}
+
+fn multi_project_tool_definitions_inner() -> Vec<ToolDefinition> {
+    chat_tool_definitions_inner()
         .into_iter()
         .map(|mut td| {
             if let Some(props) = td.input_schema.get_mut("properties") {
@@ -234,7 +259,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "get_spec",
-            "Get a single spec by ID.",
+            "Get a single spec by its UUID spec_id (from list_specs or create_spec output, NOT the title number).",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -250,15 +275,14 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                 "type": "object",
                 "properties": {
                     "title": { "type": "string" },
-                    "markdown_contents": { "type": "string" },
-                    "sprint_id": { "type": "string" }
+                    "markdown_contents": { "type": "string" }
                 },
                 "required": ["title", "markdown_contents"]
             }),
         ),
         compact_tool(
             "update_spec",
-            "Update an existing spec's title or contents.",
+            "Update an existing spec's title or contents. Use the UUID spec_id from list_specs.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -271,7 +295,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "delete_spec",
-            "Delete a spec and its tasks from the project.",
+            "Delete a spec and its tasks from the project. Use the UUID spec_id from list_specs.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -283,7 +307,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         // ── Tasks ──────────────────────────────────────────────────────
         compact_tool(
             "list_tasks",
-            "List all tasks in the project, optionally filtered by spec_id.",
+            "List all tasks in the project, optionally filtered by UUID spec_id from list_specs.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -294,7 +318,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "create_task",
-            "Create a new task under a spec.",
+            "Create a new task under a spec. Use the UUID spec_id from list_specs.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -324,7 +348,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "delete_task",
-            "Delete a task from the project. Requires task_id and parent spec_id.",
+            "Delete a task from the project. Requires UUID task_id and parent UUID spec_id from list_tasks.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -358,52 +382,6 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
                     "task_id": { "type": "string" }
                 },
                 "required": ["task_id"]
-            }),
-        ),
-        // ── Sprints ────────────────────────────────────────────────────
-        compact_tool(
-            "list_sprints",
-            "List all sprints in the current project.",
-            serde_json::json!({
-                "type": "object",
-                "properties": {},
-                "required": []
-            }),
-        ),
-        compact_tool(
-            "create_sprint",
-            "Create a new sprint with a title and prompt describing what it should accomplish.",
-            serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "title": { "type": "string" },
-                    "prompt": { "type": "string" }
-                },
-                "required": ["title", "prompt"]
-            }),
-        ),
-        compact_tool(
-            "update_sprint",
-            "Update a sprint's title or prompt.",
-            serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "sprint_id": { "type": "string" },
-                    "title": { "type": "string" },
-                    "prompt": { "type": "string" }
-                },
-                "required": ["sprint_id"]
-            }),
-        ),
-        compact_tool(
-            "delete_sprint",
-            "Delete a sprint from the project.",
-            serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "sprint_id": { "type": "string" }
-                },
-                "required": ["sprint_id"]
             }),
         ),
         // ── Project ────────────────────────────────────────────────────

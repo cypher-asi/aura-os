@@ -164,9 +164,10 @@ export function ProjectList() {
 
   useEffect(() => {
     setAction(
+      "projects",
       <ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />,
     );
-    return () => setAction(null);
+    return () => setAction("projects", null);
   }, [openNewProjectModal, setAction]);
 
   const prevProjectIdRef = useRef(projectId);

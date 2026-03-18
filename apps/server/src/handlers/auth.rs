@@ -1,11 +1,14 @@
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
+use serde::Serialize;
 
 use aura_auth::AuthError;
+use aura_core::ZeroAuthSession;
 
 use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::users::sync_user_to_network;
 use crate::state::AppState;
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
@@ -32,11 +35,14 @@ pub async fn login(
     State(state): State<AppState>,
     Json(req): Json<AuthLoginRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let session = state
+    let mut session = state
         .auth_service
         .login(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
+
+    sync_user_to_network(&state, &mut session).await;
+
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
@@ -44,11 +50,14 @@ pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<AuthRegisterRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let session = state
+    let mut session = state
         .auth_service
         .register(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
+
+    sync_user_to_network(&state, &mut session).await;
+
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
@@ -67,12 +76,15 @@ pub async fn get_session(
 pub async fn validate(
     State(state): State<AppState>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let session = state
+    let mut session = state
         .auth_service
         .validate()
         .await
         .map_err(map_auth_error)?
         .ok_or_else(|| ApiError::unauthorized("session expired or invalid"))?;
+
+    sync_user_to_network(&state, &mut session).await;
+
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
@@ -83,4 +95,23 @@ pub async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
         .await
         .map_err(map_auth_error)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+pub struct AccessTokenResponse {
+    pub access_token: String,
+}
+
+pub async fn get_access_token(
+    State(state): State<AppState>,
+) -> ApiResult<Json<AccessTokenResponse>> {
+    let bytes = state
+        .store
+        .get_setting("zero_auth_session")
+        .map_err(|_| ApiError::unauthorized("no active session"))?;
+    let session: ZeroAuthSession =
+        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Json(AccessTokenResponse {
+        access_token: session.access_token,
+    }))
 }

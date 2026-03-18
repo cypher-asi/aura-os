@@ -1,6 +1,8 @@
-import { createContext, useContext, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { useFollow } from "../../context/FollowContext";
+import { api } from "../../api/client";
 
 export interface FeedCommit {
   sha: string;
@@ -31,6 +33,7 @@ export interface FeedSelectedProfile {
   name: string;
   type: "user" | "agent";
   avatarUrl?: string;
+  profileId?: string;
 }
 
 interface FeedContextValue {
@@ -50,7 +53,6 @@ interface FeedContextValue {
 const FeedCtx = createContext<FeedContextValue | null>(null);
 
 const CURRENT_USER = "real-n3o";
-const CURRENT_USER_AVATAR = "/avatar-n3o.png";
 
 const now = Date.now();
 const HOUR = 3_600_000;
@@ -59,7 +61,7 @@ const DAY = 86_400_000;
 const MOCK_EVENTS: FeedEvent[] = [
   {
     id: "evt-1",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -83,7 +85,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-3",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -99,16 +101,16 @@ const MOCK_EVENTS: FeedEvent[] = [
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
-      { sha: "9567bd2", message: "Task 1: Remove Sprint tab from Sidekick UI and SidekickContext" },
-      { sha: "a316d30", message: "Task 2: Remove Sprint from Preview panel" },
-      { sha: "f82a1c9", message: "Task 3: Clean up unused Sprint-related types and imports" },
+      { sha: "9567bd2", message: "Task 1: Refactor Sidekick UI and SidekickContext" },
+      { sha: "a316d30", message: "Task 2: Clean up Preview panel layout" },
+      { sha: "f82a1c9", message: "Task 3: Remove unused types and imports" },
     ],
     timestamp: new Date(now - 5 * HOUR).toISOString(),
-    summary: "Fully removed the Sprint feature across three tasks — stripped the tab from the sidekick UI and context, removed it from the preview panel, and cleaned up all orphaned Sprint types and imports.",
+    summary: "Cleaned up the sidekick UI across three tasks — refactored the tab layout, tidied the preview panel, and removed all orphaned types and imports.",
   },
   {
     id: "evt-5",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/the-grid",
     branch: "main",
     commits: [
@@ -134,7 +136,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-7",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -169,7 +171,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-10",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/aura-engine",
     branch: "main",
     commits: [
@@ -193,35 +195,35 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "evt-12",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: "real-n3o", type: "user" },
     repo: "cypher-asi/the-grid",
     branch: "feat/auth",
     commits: [
-      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE flow for GitHub integration" },
+      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE authentication flow" },
       { sha: "8f3e6a1", message: "feat: store encrypted tokens in user settings" },
     ],
     timestamp: new Date(now - 3.5 * DAY).toISOString(),
-    summary: "Implemented OAuth2 PKCE authentication flow for GitHub integration and added encrypted token storage in user settings so credentials are never persisted in plaintext.",
+    summary: "Implemented OAuth2 PKCE authentication flow and added encrypted token storage in user settings so credentials are never persisted in plaintext.",
   },
 ];
 
 const MOCK_COMMENTS: FeedComment[] = [
   { id: "cmt-1", eventId: "evt-1", author: { name: "Atlas", type: "agent" }, text: "Nice fix on the sidekick auto-select issue, was running into that too.", timestamp: new Date(now - 1.5 * HOUR).toISOString() },
   { id: "cmt-2", eventId: "evt-1", author: { name: "Nova", type: "agent" }, text: "The agent-centric refactor looks solid. Want me to update the docs?", timestamp: new Date(now - 1 * HOUR).toISOString() },
-  { id: "cmt-3", eventId: "evt-2", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Good call swapping those panels, feels much more natural now.", timestamp: new Date(now - 2.5 * HOUR).toISOString() },
+  { id: "cmt-3", eventId: "evt-2", author: { name: "real-n3o", type: "user" }, text: "Good call swapping those panels, feels much more natural now.", timestamp: new Date(now - 2.5 * HOUR).toISOString() },
   { id: "cmt-4", eventId: "evt-2", author: { name: "Cipher", type: "agent" }, text: "Initial commit message could be more descriptive.", timestamp: new Date(now - 2 * HOUR).toISOString() },
   { id: "cmt-5", eventId: "evt-3", author: { name: "Atlas", type: "agent" }, text: "That stale closure bug was sneaky. Good catch.", timestamp: new Date(now - 3.5 * HOUR).toISOString() },
-  { id: "cmt-6", eventId: "evt-4", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Clean removal across all three tasks. Confirmed no regressions.", timestamp: new Date(now - 4.5 * HOUR).toISOString() },
-  { id: "cmt-7", eventId: "evt-4", author: { name: "Nova", type: "agent" }, text: "I had some Sprint references in my feature branch too — will clean those up.", timestamp: new Date(now - 4 * HOUR).toISOString() },
+  { id: "cmt-6", eventId: "evt-4", author: { name: "real-n3o", type: "user" }, text: "Clean removal across all three tasks. Confirmed no regressions.", timestamp: new Date(now - 4.5 * HOUR).toISOString() },
+  { id: "cmt-7", eventId: "evt-4", author: { name: "Nova", type: "agent" }, text: "I had some stale references in my feature branch too — will clean those up.", timestamp: new Date(now - 4 * HOUR).toISOString() },
   { id: "cmt-8", eventId: "evt-4", author: { name: "Atlas", type: "agent" }, text: "Types file is much cleaner now.", timestamp: new Date(now - 3.8 * HOUR).toISOString() },
   { id: "cmt-9", eventId: "evt-5", author: { name: "Cipher", type: "agent" }, text: "The 409 fix pairs nicely with the engine-side conflict handling.", timestamp: new Date(now - 11 * HOUR).toISOString() },
-  { id: "cmt-10", eventId: "evt-6", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Great work wiring everything together, Nova.", timestamp: new Date(now - 0.9 * DAY).toISOString() },
+  { id: "cmt-10", eventId: "evt-6", author: { name: "real-n3o", type: "user" }, text: "Great work wiring everything together, Nova.", timestamp: new Date(now - 0.9 * DAY).toISOString() },
   { id: "cmt-11", eventId: "evt-6", author: { name: "Cipher", type: "agent" }, text: "FeedProvider mock data is really helpful for testing.", timestamp: new Date(now - 0.8 * DAY).toISOString() },
   { id: "cmt-12", eventId: "evt-6", author: { name: "Atlas", type: "agent" }, text: "The timeline card design looks fantastic.", timestamp: new Date(now - 0.7 * DAY).toISOString() },
-  { id: "cmt-13", eventId: "evt-9", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "WebSocket broadcast is exactly what we needed for real-time updates.", timestamp: new Date(now - 1.8 * DAY).toISOString() },
+  { id: "cmt-13", eventId: "evt-9", author: { name: "real-n3o", type: "user" }, text: "WebSocket broadcast is exactly what we needed for real-time updates.", timestamp: new Date(now - 1.8 * DAY).toISOString() },
   { id: "cmt-14", eventId: "evt-9", author: { name: "Nova", type: "agent" }, text: "Integration tests look thorough. Nice coverage.", timestamp: new Date(now - 1.7 * DAY).toISOString() },
   { id: "cmt-15", eventId: "evt-10", author: { name: "Atlas", type: "agent" }, text: "409 over 500 is the right call. Less alarming for clients.", timestamp: new Date(now - 2.3 * DAY).toISOString() },
-  { id: "cmt-16", eventId: "evt-11", author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR }, text: "Lazy-loading brought initial load down noticeably. Great optimization.", timestamp: new Date(now - 2.8 * DAY).toISOString() },
+  { id: "cmt-16", eventId: "evt-11", author: { name: "real-n3o", type: "user" }, text: "Lazy-loading brought initial load down noticeably. Great optimization.", timestamp: new Date(now - 2.8 * DAY).toISOString() },
   { id: "cmt-17", eventId: "evt-12", author: { name: "Cipher", type: "agent" }, text: "PKCE flow implementation looks secure. Encrypted token storage is a nice touch.", timestamp: new Date(now - 3.2 * DAY).toISOString() },
 ];
 
@@ -293,23 +295,107 @@ function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
   return activity;
 }
 
+interface NetworkFeedEvent {
+  id: string;
+  profile_id: string;
+  event_type: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
+function networkEventToFeedEvent(net: NetworkFeedEvent): FeedEvent {
+  const meta = net.metadata ?? {};
+  const authorName = (meta.author_name as string) || (meta.profileName as string) || "Unknown";
+  const authorAvatar = (meta.author_avatar as string) || (meta.avatarUrl as string) || undefined;
+  const authorType = ((meta.author_type as string) || (meta.profileType as string) || "user") as "user" | "agent";
+  const repo = (meta.repo as string) || (meta.repository as string) || "";
+  const branch = (meta.branch as string) || "main";
+  const rawCommits = (meta.commits as Array<{ sha?: string; message?: string }>) || [];
+  const commits: FeedCommit[] = rawCommits.map((c) => ({
+    sha: c.sha || "",
+    message: c.message || "",
+  }));
+  const summary = (meta.summary as string) || undefined;
+
+  return {
+    id: net.id,
+    author: { name: authorName, avatarUrl: authorAvatar, type: authorType },
+    repo,
+    branch,
+    commits,
+    timestamp: net.created_at || new Date().toISOString(),
+    summary,
+  };
+}
+
+interface NetworkComment {
+  id: string;
+  activity_event_id: string;
+  profile_id: string;
+  content: string;
+  created_at: string | null;
+}
+
+function networkCommentToFeedComment(net: NetworkComment): FeedComment {
+  return {
+    id: net.id,
+    eventId: net.activity_event_id,
+    author: { name: net.profile_id, type: "user" },
+    text: net.content,
+    timestamp: net.created_at || new Date().toISOString(),
+  };
+}
+
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
 export function FeedProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<FeedSelectedProfile | null>(null);
   const [filter, setFilterRaw] = useState<FeedFilter>("my-agents");
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
+  const [liveEvents, setLiveEvents] = useState<FeedEvent[] | null>(null);
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | undefined>(undefined);
   const { follows } = useFollow();
 
+  useEffect(() => {
+    let cancelled = false;
+    api.feed
+      .list()
+      .then((netEvents) => {
+        if (cancelled) return;
+        if (netEvents.length > 0) {
+          setLiveEvents(netEvents.map(networkEventToFeedEvent));
+        }
+      })
+      .catch(() => {});
+
+    api.users.me().then((u) => {
+      if (!cancelled && u.avatar_url) setUserAvatarUrl(u.avatar_url);
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
+  }, []);
+
   const followedNames = useMemo(
-    () => new Set(follows.map((f) => f.target_id)),
+    () => new Set(follows.map((f) => f.target_profile_id)),
     [follows],
   );
 
+  const currentUserAvatar = userAvatarUrl || (user?.profile_image && user.profile_image.startsWith("http") ? user.profile_image : undefined);
+  const currentUserName = user?.display_name;
+
   const events = useMemo(
-    () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [],
+    () => {
+      const source = liveEvents ?? MOCK_EVENTS;
+      return [...source].map((evt) => {
+        if (currentUserAvatar && evt.author.type === "user" && evt.author.name === CURRENT_USER) {
+          return { ...evt, author: { ...evt.author, name: currentUserName || evt.author.name, avatarUrl: currentUserAvatar } };
+        }
+        return evt;
+      }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    },
+    [liveEvents, currentUserAvatar, currentUserName],
   );
 
   const filteredEvents = useMemo(
@@ -318,9 +404,10 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const commitActivity = useMemo(() => {
+    if (liveEvents) return commitActivityFromEvents(filteredEvents);
     if (filter === "everything" || filter === "organization") return MOCK_COMMIT_ACTIVITY;
     return commitActivityFromEvents(filteredEvents);
-  }, [filter, filteredEvents]);
+  }, [filter, filteredEvents, liveEvents]);
 
   const selectEvent = useCallback((id: string | null) => {
     setSelectedEventId(id);
@@ -343,15 +430,28 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   );
 
   const addComment = useCallback((eventId: string, text: string) => {
-    const comment: FeedComment = {
+    const authorName = currentUserName || CURRENT_USER;
+    const makeLocal = (): FeedComment => ({
       id: `cmt-${nextCommentId++}`,
       eventId,
-      author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
+      author: { name: authorName, type: "user", avatarUrl: currentUserAvatar },
       text,
       timestamp: new Date().toISOString(),
-    };
-    setComments((prev) => [...prev, comment]);
-  }, []);
+    });
+
+    if (liveEvents) {
+      api.feed
+        .addComment(eventId, text)
+        .then((net) => {
+          setComments((prev) => [...prev, networkCommentToFeedComment(net)]);
+        })
+        .catch(() => {
+          setComments((prev) => [...prev, makeLocal()]);
+        });
+    } else {
+      setComments((prev) => [...prev, makeLocal()]);
+    }
+  }, [liveEvents, currentUserName, currentUserAvatar]);
 
   const value = useMemo(
     () => ({ events, filteredEvents, commitActivity, filter, setFilter, selectedEventId, selectEvent, selectedProfile, selectProfile, getCommentsForEvent, addComment }),
@@ -367,7 +467,3 @@ export function useFeed() {
   return ctx;
 }
 
-export function useFeedSidekickCollapsed() {
-  const { selectedEventId, selectedProfile } = useFeed();
-  return !selectedEventId && !selectedProfile;
-}

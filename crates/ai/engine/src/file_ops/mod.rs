@@ -1,9 +1,21 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use tracing::{info, error};
+use tracing::{error, info};
 
 use crate::error::EngineError;
+
+pub mod stub_detection;
+pub mod task_relevance;
+pub mod validation;
+pub mod workspace_map;
+
+pub use stub_detection::*;
+pub use task_relevance::*;
+pub use validation::*;
+pub use workspace_map::*;
+
+use task_relevance::is_impl_for_type;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Replacement {
@@ -40,7 +52,9 @@ fn lexical_normalize(path: &Path) -> std::path::PathBuf {
     let mut out = std::path::PathBuf::new();
     for comp in path.components() {
         match comp {
-            Component::ParentDir => { out.pop(); }
+            Component::ParentDir => {
+                out.pop();
+            }
             Component::CurDir => {}
             other => out.push(other),
         }
@@ -197,138 +211,7 @@ pub fn compute_file_changes(
         .collect()
 }
 
-/// Pre-write validation: scan generated file content for patterns known to cause
-/// build failures. Returns a list of warnings; empty means no issues detected.
-/// This catches problems *before* a full build cycle, saving significant time.
-pub fn validate_file_content(path: &str, content: &str) -> Vec<String> {
-    let mut warnings = Vec::new();
-    let ext = Path::new(path)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or_default();
-
-    match ext {
-        "rs" => validate_rust_content(path, content, &mut warnings),
-        "ts" | "tsx" | "js" | "jsx" => validate_js_content(path, content, &mut warnings),
-        _ => {}
-    }
-    warnings
-}
-
-fn validate_rust_content(path: &str, content: &str, warnings: &mut Vec<String>) {
-    for (line_num, line) in content.lines().enumerate() {
-        let ln = line_num + 1;
-
-        // Detect non-ASCII characters that commonly cause "unknown start of token"
-        for (col, ch) in line.char_indices() {
-            if !ch.is_ascii() && !is_in_rust_comment(line, col) {
-                let desc = match ch {
-                    '\u{2014}' => "em dash (use '-' instead)",
-                    '\u{2013}' => "en dash (use '-' instead)",
-                    '\u{201C}' | '\u{201D}' => "smart quotes (use '\"' instead)",
-                    '\u{2018}' | '\u{2019}' => "smart single quotes (use '\\'' instead)",
-                    '\u{2026}' => "ellipsis (use '...' instead)",
-                    _ if ch as u32 > 127 => "non-ASCII character",
-                    _ => continue,
-                };
-                warnings.push(format!(
-                    "{path}:{ln}:{col}: {desc} '{}' (U+{:04X})",
-                    ch, ch as u32
-                ));
-            }
-        }
-
-        // Detect JSON-like string literals that should use raw strings
-        if (line.contains(r#""markdown_contents":"#) || line.contains(r#""content":"#))
-            && line.contains("\\n")
-            && !line.trim_start().starts_with("//")
-            && !line.trim_start().starts_with("r#")
-            && !line.trim_start().starts_with("r\"")
-        {
-            warnings.push(format!(
-                "{path}:{ln}: string literal contains \\n escape sequences — \
-                 consider using raw string r#\"...\"# or serde_json::json!()"
-            ));
-        }
-    }
-
-    // Detect unbalanced braces in non-string, non-comment context (simple heuristic)
-    let mut brace_depth: i32 = 0;
-    for line in content.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("//") {
-            continue;
-        }
-        for ch in trimmed.chars() {
-            match ch {
-                '{' => brace_depth += 1,
-                '}' => brace_depth -= 1,
-                _ => {}
-            }
-        }
-    }
-    if brace_depth != 0 {
-        warnings.push(format!(
-            "{path}: unbalanced braces (depth delta: {brace_depth})"
-        ));
-    }
-}
-
-fn validate_js_content(path: &str, content: &str, warnings: &mut Vec<String>) {
-    for (line_num, line) in content.lines().enumerate() {
-        let ln = line_num + 1;
-        if (line.contains("from '") || line.contains("from \""))
-            && line.contains("from './")
-            && !line.contains("..")
-        {
-            let import_path = line.split("from ").nth(1).unwrap_or_default();
-            if import_path.contains('\\') {
-                warnings.push(format!(
-                    "{path}:{ln}: import path uses backslashes -- use forward slashes"
-                ));
-            }
-        }
-    }
-}
-
-/// Very rough heuristic: check if a character position is inside a `//` comment.
-fn is_in_rust_comment(line: &str, col: usize) -> bool {
-    if let Some(comment_start) = line.find("//") {
-        col > comment_start
-    } else {
-        false
-    }
-}
-
-/// Validate all file ops before writing. Returns a combined report of all
-/// warnings, or empty string if everything looks fine.
-pub fn validate_all_file_ops(ops: &[FileOp]) -> String {
-    let mut all_warnings = Vec::new();
-    for op in ops {
-        match op {
-            FileOp::Create { path, content } | FileOp::Modify { path, content } => {
-                all_warnings.extend(validate_file_content(path, content));
-            }
-            FileOp::SearchReplace { path, replacements } => {
-                for rep in replacements {
-                    all_warnings.extend(validate_file_content(path, &rep.replace));
-                }
-            }
-            FileOp::Delete { .. } => {}
-        }
-    }
-    if all_warnings.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "Pre-write validation found {} issue(s):\n{}",
-            all_warnings.len(),
-            all_warnings.join("\n")
-        )
-    }
-}
-
-const SKIP_DIRS: &[&str] = &[
+pub(crate) const SKIP_DIRS: &[&str] = &[
     ".git",
     "target",
     "node_modules",
@@ -347,9 +230,9 @@ pub struct ErrorReferences {
     pub wrong_arg_counts: Vec<String>,
 }
 
-const INCLUDE_EXTENSIONS: &[&str] = &[
-    "rs", "ts", "tsx", "js", "jsx", "json", "toml", "md", "css", "html", "yaml", "yml", "py", "sh",
-    "sql", "graphql",
+pub(crate) const INCLUDE_EXTENSIONS: &[&str] = &[
+    "rs", "ts", "tsx", "js", "jsx", "json", "toml", "md", "css", "html", "yaml", "yml", "py",
+    "sh", "sql", "graphql",
 ];
 
 pub fn read_relevant_files(linked_folder: &str, max_bytes: usize) -> Result<String, EngineError> {
@@ -588,7 +471,11 @@ fn walk_for_type_sources(
             }
             walk_for_type_sources(base, &path, type_name, results, seen);
         } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
-            let rel = path.strip_prefix(base).unwrap_or(&path).display().to_string();
+            let rel = path
+                .strip_prefix(base)
+                .unwrap_or(&path)
+                .display()
+                .to_string();
             if seen.contains(&rel) {
                 continue;
             }
@@ -708,37 +595,4 @@ fn extract_pub_signatures(content: &str, type_name: &str) -> Vec<String> {
     }
 
     signatures
-}
-
-/// Check whether a line is an `impl` block header for the given type name.
-/// Handles `impl Type`, `impl<T> Type<T>`, `impl Trait for Type`, etc.
-fn is_impl_for_type(line: &str, type_name: &str) -> bool {
-    if !line.starts_with("impl") {
-        return false;
-    }
-    if line.len() > 4 {
-        let fifth = line.as_bytes()[4];
-        if fifth.is_ascii_alphanumeric() || fifth == b'_' {
-            return false;
-        }
-    }
-
-    let bytes = line.as_bytes();
-    let tn_bytes = type_name.as_bytes();
-    let tn_len = tn_bytes.len();
-
-    let mut i = 4;
-    while i + tn_len <= bytes.len() {
-        if &bytes[i..i + tn_len] == tn_bytes {
-            let before_ok =
-                i == 0 || !(bytes[i - 1].is_ascii_alphanumeric() || bytes[i - 1] == b'_');
-            let after_ok = i + tn_len >= bytes.len()
-                || !(bytes[i + tn_len].is_ascii_alphanumeric() || bytes[i + tn_len] == b'_');
-            if before_ok && after_ok {
-                return true;
-            }
-        }
-        i += 1;
-    }
-    false
 }

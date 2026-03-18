@@ -1,14 +1,13 @@
 import type {
   ProjectId,
-  SprintId,
-  Sprint,
   Spec,
   Task,
   AgentInstance,
   Message,
 } from "../types";
 import { streamSSE } from "./sse";
-import { resolveApiUrl } from "../lib/host-config";
+
+const BASE_URL = "";
 
 export interface SpecGenStreamCallbacks {
   onProgress: (stage: string) => void;
@@ -19,13 +18,6 @@ export interface SpecGenStreamCallbacks {
   onSpecSaved: (spec: Spec) => void;
   onTaskSaved: (task: Task) => void;
   onComplete: (specs: Spec[]) => void;
-  onError: (message: string) => void;
-}
-
-export interface SprintStreamCallbacks {
-  onDelta: (text: string) => void;
-  onGenerating: (inputTokens: number, outputTokens: number) => void;
-  onDone: (sprint: Sprint) => void;
   onError: (message: string) => void;
 }
 
@@ -81,35 +73,13 @@ function createSSEHandler<E extends string>(
   };
 }
 
-export function generateSprintStream(
-  projectId: ProjectId,
-  sprintId: SprintId,
-  cb: SprintStreamCallbacks,
-  signal?: AbortSignal,
-) {
-  return streamSSE<"delta" | "generating" | "done" | "error">(
-    resolveApiUrl(`/api/projects/${projectId}/sprints/${sprintId}/generate/stream`),
-    { method: "POST" },
-    createSSEHandler(
-      {
-        delta: (d) => cb.onDelta(d.text as string),
-        generating: (d) => cb.onGenerating(d.input_tokens as number, d.output_tokens as number),
-        done: (d) => cb.onDone(d.sprint as Sprint),
-        error: (d) => cb.onError(d.message as string),
-      },
-      cb.onError,
-    ),
-    signal,
-  );
-}
-
 export function generateSpecsStream(
   projectId: ProjectId,
   cb: SpecGenStreamCallbacks,
   signal?: AbortSignal,
 ) {
   return streamSSE<"progress" | "specs_title" | "specs_summary" | "delta" | "generating" | "spec_saved" | "task_saved" | "complete" | "error">(
-    resolveApiUrl(`/api/projects/${projectId}/specs/generate/stream`),
+    `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
     { method: "POST" },
     createSSEHandler(
       {
@@ -143,7 +113,7 @@ export function sendAgentMessageStream(
     body.attachments = attachments;
   }
   return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "specs_summary" | "task_saved" | "message_saved" | "agent_instance_updated" | "token_usage" | "error" | "done">(
-    resolveApiUrl(`/api/agents/${agentId}/messages/stream`),
+    `${BASE_URL}/api/agents/${agentId}/messages/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -229,7 +199,7 @@ export function sendMessageStream(
     body.attachments = attachments;
   }
   return streamSSE<"delta" | "thinking_delta" | "tool_call" | "tool_result" | "spec_saved" | "specs_title" | "specs_summary" | "task_saved" | "message_saved" | "agent_instance_updated" | "token_usage" | "error" | "done">(
-    resolveApiUrl(`/api/projects/${projectId}/agents/${agentInstanceId}/messages/stream`),
+    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/messages/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

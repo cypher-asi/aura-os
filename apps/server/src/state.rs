@@ -2,23 +2,27 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use axum::http::StatusCode;
+use axum::Json;
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use aura_core::{AgentInstanceId, ProjectId, TaskId};
+use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
 use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
+use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
-use aura_github::GitHubService;
 use aura_orgs::OrgService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
-use aura_specs::{SpecGenerationService, SprintGenerationService};
+use aura_specs::SpecGenerationService;
 use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
+
+use crate::error::ApiError;
 
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
 
@@ -30,7 +34,6 @@ pub struct AppState {
     pub data_dir: PathBuf,
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
-    pub github_service: Arc<GitHubService>,
     pub auth_service: Arc<AuthService>,
     pub settings_service: Arc<SettingsService>,
     pub pricing_service: Arc<PricingService>,
@@ -43,7 +46,6 @@ pub struct AppState {
     pub agent_instance_service: Arc<AgentInstanceService>,
     pub session_service: Arc<SessionService>,
     pub chat_service: Arc<ChatService>,
-    pub sprint_gen: Arc<SprintGenerationService>,
     pub llm: Arc<MeteredLlm>,
     pub event_tx: mpsc::UnboundedSender<EngineEvent>,
     pub event_broadcast: broadcast::Sender<EngineEvent>,
@@ -51,9 +53,32 @@ pub struct AppState {
     pub write_coordinator: ProjectWriteCoordinator,
     pub task_output_buffers: TaskOutputBuffers,
     pub terminal_manager: Arc<TerminalManager>,
+    /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
+    pub network_client: Option<Arc<NetworkClient>>,
 }
 
 impl AppState {
+    /// Load the full zOS auth session from storage.
+    pub fn get_session(&self) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| ApiError::unauthorized("no active session"))?;
+        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))
+    }
+
+    /// Extract the JWT access token from the stored zOS session.
+    pub fn get_jwt(&self) -> Result<String, (StatusCode, Json<ApiError>)> {
+        self.get_session().map(|s| s.access_token)
+    }
+
+    /// Get the network client, returning 503 if not configured.
+    pub fn require_network_client(&self) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
+        self.network_client
+            .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
+    }
+
     /// Remove finished loops from the registry.
     pub async fn gc_finished_loops(&self) {
         let mut reg = self.loop_registry.lock().await;

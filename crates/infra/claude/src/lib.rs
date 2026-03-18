@@ -6,17 +6,22 @@ pub use error::ClaudeClientError;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
-pub const FAST_MODEL: &str = "claude-haiku-3-5";
-pub const MID_MODEL: &str = "claude-sonnet-4-5";
+pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
+pub const MID_MODEL: &str = "claude-opus-4-6";
 
-/// Deprecated: use `aura_billing::PricingService::compute_cost` or the pure
-/// functions in `aura_billing` instead. Kept temporarily for backward compat.
-pub fn compute_cost(input_tokens: u64, output_tokens: u64) -> f64 {
-    input_tokens as f64 * 5.0 / 1_000_000.0 + output_tokens as f64 * 25.0 / 1_000_000.0
+/// Ordered fallback chain: when the primary model is overloaded, try these in order.
+const FALLBACK_MODELS: &[&str] = &["claude-opus-4-6", "claude-sonnet-4-5", "claude-haiku-4-5-20251001"];
+
+/// Resolve the model to use at startup: AURA_LLM_MODEL env var, then DEFAULT_MODEL.
+pub fn resolve_model() -> String {
+    std::env::var("AURA_LLM_MODEL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| DEFAULT_MODEL.to_string())
 }
 
 /// Approximate token count for a text string.
@@ -95,6 +100,11 @@ pub struct ToolStreamResponse {
     pub stop_reason: String,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub cache_creation_input_tokens: u64,
+    pub cache_read_input_tokens: u64,
+    /// The model that actually served this request (may differ from the
+    /// requested model after overload fallback).
+    pub model_used: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -265,6 +275,8 @@ pub enum ClaudeStreamEvent {
         stop_reason: String,
         input_tokens: u64,
         output_tokens: u64,
+        cache_creation_input_tokens: u64,
+        cache_read_input_tokens: u64,
     },
     Error(String),
 }
@@ -352,13 +364,25 @@ struct ResponseContentBlock {
 pub struct ClaudeClient {
     http: reqwest::Client,
     base_url: String,
+    model: String,
 }
 
 impl ClaudeClient {
     pub fn new() -> Self {
+        let model = resolve_model();
+        info!(model = %model, "ClaudeClient initialized");
         Self {
             http: reqwest::Client::new(),
             base_url: "https://api.anthropic.com".to_string(),
+            model,
+        }
+    }
+
+    pub fn with_model(model: &str) -> Self {
+        Self {
+            http: reqwest::Client::new(),
+            base_url: "https://api.anthropic.com".to_string(),
+            model: model.to_string(),
         }
     }
 
@@ -367,7 +391,12 @@ impl ClaudeClient {
         Self {
             http: reqwest::Client::new(),
             base_url: base_url.to_string(),
+            model: DEFAULT_MODEL.to_string(),
         }
+    }
+
+    pub fn model(&self) -> &str {
+        &self.model
     }
 
     pub async fn complete(
@@ -389,7 +418,7 @@ impl ClaudeClient {
         user_message: &str,
         max_tokens: u32,
     ) -> Result<LlmResponse, ClaudeClientError> {
-        self.complete_with_usage_model(DEFAULT_MODEL, api_key, system_prompt, user_message, max_tokens).await
+        self.complete_with_usage_model(&self.model, api_key, system_prompt, user_message, max_tokens).await
     }
 
     pub async fn complete_with_usage_model(
@@ -419,34 +448,8 @@ impl ClaudeClient {
             url = %url,
             "Sending Claude API request"
         );
-        let start = std::time::Instant::now();
 
-        let response = self
-            .http
-            .post(&url)
-            .header("x-api-key", api_key)
-            .header("anthropic-version", ANTHROPIC_API_VERSION)
-            .header("content-type", "application/json")
-            .json(&request)
-            .send()
-            .await
-            .map_err(|e| {
-                error!(elapsed_ms = start.elapsed().as_millis() as u64, error = %e, "Claude HTTP request failed");
-                e
-            })?;
-
-        let status = response.status();
-        let elapsed_ms = start.elapsed().as_millis() as u64;
-        info!(status = status.as_u16(), elapsed_ms, "Claude API responded");
-
-        if !status.is_success() {
-            let body = response.text().await.unwrap_or_default();
-            error!(status = status.as_u16(), body = %body, "Claude API error response");
-            return Err(ClaudeClientError::Api {
-                status: status.as_u16(),
-                message: body,
-            });
-        }
+        let response = self.complete_non_stream_with_retry(api_key, &url, &request).await?;
 
         let body: MessagesResponse = response
             .json()
@@ -543,7 +546,7 @@ impl ClaudeClient {
 
         let msg_count = api_messages.len();
         let request = SimpleMessagesRequest {
-            model: DEFAULT_MODEL.to_string(),
+            model: self.model.clone(),
             max_tokens,
             system: serde_json::Value::String(system_prompt.to_string()),
             messages: api_messages,
@@ -552,7 +555,7 @@ impl ClaudeClient {
 
         let url = format!("{}/v1/messages", self.base_url);
         info!(
-            model = DEFAULT_MODEL,
+            model = %self.model,
             max_tokens,
             msg_count,
             url = %url,
@@ -562,8 +565,7 @@ impl ClaudeClient {
         let body = serde_json::to_value(&request).map_err(|e| {
             ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
         })?;
-        let response = self.send_request(api_key, &url, &body).await?;
-        let result = self.parse_sse_stream(response, &event_tx).await?;
+        let result = self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await?;
 
         if result.stop_reason == "max_tokens" {
             error!(max_tokens, "Claude multi-turn streaming response truncated");
@@ -576,38 +578,6 @@ impl ClaudeClient {
         }
 
         Ok(result.text)
-    }
-
-    /// Multi-turn streaming with tool definitions. Returns a `ToolStreamResponse` that
-    /// includes both accumulated text and any tool_use blocks the model requested.
-    pub async fn complete_stream_with_tools(
-        &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        self.complete_stream_with_tools_inner(
-            api_key, system_prompt, messages, tools, max_tokens, None, event_tx,
-        ).await
-    }
-
-    /// Multi-turn streaming with tool definitions and optional extended thinking.
-    pub async fn complete_stream_with_tools_thinking(
-        &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: ThinkingConfig,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        self.complete_stream_with_tools_inner(
-            api_key, system_prompt, messages, tools, max_tokens, Some(thinking), event_tx,
-        ).await
     }
 
     async fn complete_stream_with_tools_inner(
@@ -630,7 +600,7 @@ impl ClaudeClient {
         }
 
         let request = ToolMessagesRequest {
-            model: DEFAULT_MODEL.to_string(),
+            model: self.model.clone(),
             max_tokens,
             system: cached_system_blocks(system_prompt),
             messages,
@@ -641,7 +611,7 @@ impl ClaudeClient {
 
         let url = format!("{}/v1/messages", self.base_url);
         info!(
-            model = DEFAULT_MODEL,
+            model = %self.model,
             max_tokens,
             msg_count,
             tool_count,
@@ -652,13 +622,129 @@ impl ClaudeClient {
         let body = serde_json::to_value(&request).map_err(|e| {
             ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
         })?;
-        let response = self.send_request(api_key, &url, &body).await?;
-        self.parse_sse_stream(response, &event_tx).await
+        self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await
     }
 
     // -----------------------------------------------------------------------
     // Shared helpers
     // -----------------------------------------------------------------------
+
+    const MAX_RETRIES: u32 = 2;
+    const INITIAL_BACKOFF_MS: u64 = 1000;
+
+    /// Send + parse SSE stream with retry on overloaded errors and automatic
+    /// model fallback. Tries the primary model first, then falls back through
+    /// `FALLBACK_MODELS` if the primary is persistently overloaded.
+    async fn stream_with_retry_and_fallback(
+        &self,
+        api_key: &str,
+        url: &str,
+        mut body: serde_json::Value,
+        event_tx: &mpsc::UnboundedSender<ClaudeStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        // Build the model chain: primary model + fallbacks (deduplicated).
+        let mut models: Vec<&str> = vec![&self.model];
+        for fb in FALLBACK_MODELS {
+            if !models.contains(fb) {
+                models.push(fb);
+            }
+        }
+
+        let mut last_err = None;
+        for (model_idx, model) in models.iter().enumerate() {
+            body["model"] = serde_json::Value::String(model.to_string());
+
+            for attempt in 0..=Self::MAX_RETRIES {
+                if attempt > 0 {
+                    let backoff = Self::INITIAL_BACKOFF_MS * 2u64.pow(attempt - 1);
+                    warn!(attempt, model = %model, backoff_ms = backoff, "Retrying after overloaded error");
+                    tokio::time::sleep(std::time::Duration::from_millis(backoff)).await;
+                }
+                let result = async {
+                    let response = self.send_request(api_key, url, &body).await?;
+                    self.parse_sse_stream(response, event_tx).await
+                }.await;
+                match result {
+                    Ok(mut resp) => {
+                        resp.model_used = model.to_string();
+                        if model_idx > 0 {
+                            info!(primary = %self.model, fallback = %model, "Completed with fallback model");
+                        }
+                        return Ok(resp);
+                    }
+                    Err(e) if e.is_overloaded() && attempt < Self::MAX_RETRIES => {
+                        warn!(attempt, model = %model, "Claude API overloaded, will retry");
+                        last_err = Some(e);
+                    }
+                    Err(e) if e.is_overloaded() && model_idx < models.len() - 1 => {
+                        warn!(model = %model, "Model exhausted retries, falling back to next model");
+                        last_err = Some(e);
+                        break;
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+        Err(last_err.unwrap_or(ClaudeClientError::Overloaded))
+    }
+
+    /// Non-streaming request with retry on overloaded errors.
+    async fn complete_non_stream_with_retry(
+        &self,
+        api_key: &str,
+        url: &str,
+        request: &SimpleMessagesRequest,
+    ) -> Result<reqwest::Response, ClaudeClientError> {
+        let mut last_err = None;
+        for attempt in 0..=Self::MAX_RETRIES {
+            if attempt > 0 {
+                let backoff = Self::INITIAL_BACKOFF_MS * 2u64.pow(attempt - 1);
+                warn!(attempt, backoff_ms = backoff, "Retrying non-streaming request after overloaded error");
+                tokio::time::sleep(std::time::Duration::from_millis(backoff)).await;
+            }
+
+            let start = std::time::Instant::now();
+            let response = self
+                .http
+                .post(url)
+                .header("x-api-key", api_key)
+                .header("anthropic-version", ANTHROPIC_API_VERSION)
+                .header("content-type", "application/json")
+                .json(request)
+                .send()
+                .await
+                .map_err(|e| {
+                    error!(elapsed_ms = start.elapsed().as_millis() as u64, error = %e, "Claude HTTP request failed");
+                    ClaudeClientError::Http(e)
+                })?;
+
+            let status = response.status();
+            let elapsed_ms = start.elapsed().as_millis() as u64;
+            info!(status = status.as_u16(), elapsed_ms, "Claude API responded");
+
+            if status.is_success() {
+                return Ok(response);
+            }
+
+            let status_code = status.as_u16();
+            let body_text = response.text().await.unwrap_or_default();
+            error!(status = status_code, body = %body_text, "Claude API error response");
+
+            if (status_code == 429 || status_code == 529) && attempt < Self::MAX_RETRIES {
+                last_err = Some(ClaudeClientError::Overloaded);
+                continue;
+            }
+
+            if status_code == 429 || status_code == 529 {
+                return Err(ClaudeClientError::Overloaded);
+            }
+            return Err(ClaudeClientError::Api {
+                status: status_code,
+                message: body_text,
+            });
+        }
+        Err(last_err.unwrap_or(ClaudeClientError::Overloaded))
+    }
 
     async fn send_request(
         &self,
@@ -685,13 +771,20 @@ impl ClaudeClient {
 
         let status = response.status();
         let elapsed_ms = start.elapsed().as_millis() as u64;
-        info!(status = status.as_u16(), elapsed_ms, "Claude API responded");
+        let content_type = response.headers().get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown");
+        info!(status = status.as_u16(), elapsed_ms, content_type, "Claude API responded");
 
         if !status.is_success() {
+            let status_code = status.as_u16();
             let body = response.text().await.unwrap_or_default();
-            error!(status = status.as_u16(), body = %body, "Claude API error response");
+            error!(status = status_code, body = %body, "Claude API error response");
+            if status_code == 429 || status_code == 529 {
+                return Err(ClaudeClientError::Overloaded);
+            }
             return Err(ClaudeClientError::Api {
-                status: status.as_u16(),
+                status: status_code,
                 message: body,
             });
         }
@@ -734,6 +827,8 @@ pub(crate) async fn parse_sse_events(
     let mut accumulated_text = String::new();
     let mut input_tokens: u64 = 0;
     let mut output_tokens: u64 = 0;
+    let mut cache_creation_input_tokens: u64 = 0;
+    let mut cache_read_input_tokens: u64 = 0;
     let mut stop_reason = String::from("end_turn");
 
     let mut tool_calls: Vec<ToolCall> = Vec::new();
@@ -742,14 +837,18 @@ pub(crate) async fn parse_sse_events(
     let mut current_tool_json = String::new();
     let mut in_tool_block = false;
     let mut in_thinking_block = false;
+    let mut chunks_received: u64 = 0;
+    let mut frames_parsed: u64 = 0;
 
     while let Some(chunk_result) = stream.next().await {
         let chunk = chunk_result.map_err(|e| {
             error!(error = %e, "Error reading streaming chunk");
             e
         })?;
+        chunks_received += 1;
 
-        line_buf.push_str(&String::from_utf8_lossy(&chunk));
+        let chunk_str = String::from_utf8_lossy(&chunk);
+        line_buf.push_str(&chunk_str.replace('\r', ""));
 
         while let Some(double_newline_pos) = line_buf.find("\n\n") {
             let frame = line_buf[..double_newline_pos].to_string();
@@ -770,6 +869,7 @@ pub(crate) async fn parse_sse_events(
                 continue;
             }
 
+            frames_parsed += 1;
             match event_type.as_str() {
                 "message_start" => {
                     if let Ok(data) = serde_json::from_str::<serde_json::Value>(&data_str) {
@@ -777,10 +877,10 @@ pub(crate) async fn parse_sse_events(
                             if let Some(it) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
                                 input_tokens = it;
                             }
-                            let cache_created = usage.get("cache_creation_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                            let cache_read = usage.get("cache_read_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
-                            if cache_created > 0 || cache_read > 0 {
-                                info!(cache_created, cache_read, "Prompt cache metrics");
+                            cache_creation_input_tokens = usage.get("cache_creation_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                            cache_read_input_tokens = usage.get("cache_read_input_tokens").and_then(|v| v.as_u64()).unwrap_or(0);
+                            if cache_creation_input_tokens > 0 || cache_read_input_tokens > 0 {
+                                info!(cache_creation_input_tokens, cache_read_input_tokens, "Prompt cache metrics");
                             }
                         }
                     }
@@ -875,10 +975,20 @@ pub(crate) async fn parse_sse_events(
                     debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
                 }
                 "error" => {
-                    let msg = serde_json::from_str::<serde_json::Value>(&data_str)
-                        .ok()
+                    let parsed = serde_json::from_str::<serde_json::Value>(&data_str).ok();
+                    let error_type = parsed.as_ref()
+                        .and_then(|v| v.get("error").and_then(|e| e.get("type")).and_then(|t| t.as_str()));
+                    let msg = parsed.as_ref()
                         .and_then(|v| v.get("error").and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(String::from))
                         .unwrap_or_else(|| data_str.clone());
+
+                    if error_type == Some("overloaded_error") {
+                        let _ = event_tx.send(ClaudeStreamEvent::Error(
+                            "The AI model is temporarily overloaded.".to_string(),
+                        ));
+                        return Err(ClaudeClientError::Overloaded);
+                    }
+
                     let _ = event_tx.send(ClaudeStreamEvent::Error(msg.clone()));
                     return Err(ClaudeClientError::Parse(msg));
                 }
@@ -887,18 +997,33 @@ pub(crate) async fn parse_sse_events(
         }
     }
 
+    if !line_buf.is_empty() {
+        let preview: String = line_buf.chars().take(200).collect();
+        warn!(
+            leftover_bytes = line_buf.len(),
+            preview = %preview,
+            "SSE stream ended with unparsed data in buffer"
+        );
+    }
+
     let _ = event_tx.send(ClaudeStreamEvent::Done {
         stop_reason: stop_reason.clone(),
         input_tokens,
         output_tokens,
+        cache_creation_input_tokens,
+        cache_read_input_tokens,
     });
 
     info!(
         stop_reason = %stop_reason,
         input_tokens,
         output_tokens,
+        cache_creation_input_tokens,
+        cache_read_input_tokens,
         response_len = accumulated_text.len(),
         tool_call_count = tool_calls.len(),
+        chunks_received,
+        frames_parsed,
         elapsed_ms = start.elapsed().as_millis() as u64,
         "Claude streaming complete"
     );
@@ -909,12 +1034,22 @@ pub(crate) async fn parse_sse_events(
         stop_reason,
         input_tokens,
         output_tokens,
+        cache_creation_input_tokens,
+        cache_read_input_tokens,
+        model_used: String::new(),
     })
 }
 
 impl Default for ClaudeClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl ClaudeClient {
+    /// Expose the resolved model name for callers that need it (e.g. billing).
+    pub fn default_model_name(&self) -> &str {
+        &self.model
     }
 }
 
@@ -931,13 +1066,13 @@ impl Default for ClaudeClient {
 /// the captured `(input_tokens, output_tokens)` once the sender is dropped.
 pub struct TokenCaptureHandle {
     forwarder: tokio::task::JoinHandle<()>,
-    tokens: std::sync::Arc<tokio::sync::Mutex<(u64, u64)>>,
+    tokens: std::sync::Arc<tokio::sync::Mutex<(u64, u64, u64, u64)>>,
 }
 
 impl TokenCaptureHandle {
     /// Wait for the forwarder task to complete, then return accumulated
-    /// `(input_tokens, output_tokens)`.
-    pub async fn finalize(self) -> (u64, u64) {
+    /// `(input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens)`.
+    pub async fn finalize(self) -> (u64, u64, u64, u64) {
         let _ = self.forwarder.await;
         *self.tokens.lock().await
     }
@@ -954,14 +1089,19 @@ impl StreamTokenCapture {
         outer: mpsc::UnboundedSender<ClaudeStreamEvent>,
     ) -> (mpsc::UnboundedSender<ClaudeStreamEvent>, TokenCaptureHandle) {
         let (tx, mut rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-        let tokens = std::sync::Arc::new(tokio::sync::Mutex::new((0u64, 0u64)));
+        let tokens = std::sync::Arc::new(tokio::sync::Mutex::new((0u64, 0u64, 0u64, 0u64)));
         let tc = tokens.clone();
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = rx.recv().await {
-                if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = &evt {
+                if let ClaudeStreamEvent::Done {
+                    input_tokens, output_tokens,
+                    cache_creation_input_tokens, cache_read_input_tokens, ..
+                } = &evt {
                     let mut g = tc.lock().await;
                     g.0 = *input_tokens;
                     g.1 = *output_tokens;
+                    g.2 = *cache_creation_input_tokens;
+                    g.3 = *cache_read_input_tokens;
                 }
                 let _ = outer.send(evt);
             }
@@ -973,14 +1113,19 @@ impl StreamTokenCapture {
     /// token counts across multiple `Done` events (useful for build-fix loops).
     pub fn sink() -> (mpsc::UnboundedSender<ClaudeStreamEvent>, TokenCaptureHandle) {
         let (tx, mut rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-        let tokens = std::sync::Arc::new(tokio::sync::Mutex::new((0u64, 0u64)));
+        let tokens = std::sync::Arc::new(tokio::sync::Mutex::new((0u64, 0u64, 0u64, 0u64)));
         let tc = tokens.clone();
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = rx.recv().await {
-                if let ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } = &evt {
+                if let ClaudeStreamEvent::Done {
+                    input_tokens, output_tokens,
+                    cache_creation_input_tokens, cache_read_input_tokens, ..
+                } = &evt {
                     let mut g = tc.lock().await;
                     g.0 += *input_tokens;
                     g.1 += *output_tokens;
+                    g.2 += *cache_creation_input_tokens;
+                    g.3 += *cache_read_input_tokens;
                 }
             }
         });
@@ -1254,7 +1399,7 @@ data: {"type":"message_stop"}
     }
 
     #[tokio::test]
-    async fn test_parse_error_event() {
+    async fn test_parse_overloaded_error_event() {
         let raw = r#"event: message_start
 data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}
 
@@ -1269,15 +1414,38 @@ data: {"type":"error","error":{"type":"overloaded_error","message":"API is overl
         let events = drain_events(&mut rx);
 
         assert!(result.is_err());
-        let err_msg = result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("overloaded"),
-            "Error should contain 'overloaded': {err_msg}"
-        );
+        let err = result.unwrap_err();
+        assert!(err.is_overloaded(), "Should be classified as overloaded: {err}");
+        assert!(err.to_string().contains("overloaded"));
 
         assert!(events
             .iter()
             .any(|e| matches!(e, ClaudeStreamEvent::Error(_))));
+    }
+
+    #[tokio::test]
+    async fn test_parse_non_overloaded_error_event() {
+        let raw = r#"event: message_start
+data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}
+
+event: error
+data: {"type":"error","error":{"type":"invalid_request_error","message":"Bad request"}}
+
+"#;
+
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let result = parse_sse_events(sse_stream(raw), &tx).await;
+        drop(tx);
+        let events = drain_events(&mut rx);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(!err.is_overloaded(), "Should NOT be classified as overloaded: {err}");
+        assert!(err.to_string().contains("Bad request"));
+
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ClaudeStreamEvent::Error(msg) if msg == "Bad request")));
     }
 
     #[tokio::test]

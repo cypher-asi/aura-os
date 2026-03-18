@@ -21,73 +21,6 @@ impl AgentService {
         Self { store }
     }
 
-    pub fn create_agent(
-        &self,
-        user_id: &str,
-        name: String,
-        role: String,
-        personality: String,
-        system_prompt: String,
-        skills: Vec<String>,
-        icon: Option<String>,
-    ) -> Result<Agent, AgentError> {
-        let now = Utc::now();
-        let agent = Agent {
-            agent_id: AgentId::new(),
-            user_id: user_id.to_string(),
-            name,
-            role,
-            personality,
-            system_prompt,
-            skills,
-            icon,
-            created_at: now,
-            updated_at: now,
-        };
-        self.store.put_agent(&agent)?;
-        Ok(agent)
-    }
-
-    pub fn update_agent(
-        &self,
-        user_id: &str,
-        agent_id: &AgentId,
-        name: Option<String>,
-        role: Option<String>,
-        personality: Option<String>,
-        system_prompt: Option<String>,
-        skills: Option<Vec<String>>,
-        icon: Option<Option<String>>,
-    ) -> Result<Agent, AgentError> {
-        let mut agent = self.get_agent(user_id, agent_id)?;
-        if let Some(v) = name {
-            agent.name = v;
-        }
-        if let Some(v) = role {
-            agent.role = v;
-        }
-        if let Some(v) = personality {
-            agent.personality = v;
-        }
-        if let Some(v) = system_prompt {
-            agent.system_prompt = v;
-        }
-        if let Some(v) = skills {
-            agent.skills = v;
-        }
-        if let Some(v) = icon {
-            agent.icon = v;
-        }
-        agent.updated_at = Utc::now();
-        self.store.put_agent(&agent)?;
-        Ok(agent)
-    }
-
-    pub fn delete_agent(&self, user_id: &str, agent_id: &AgentId) -> Result<(), AgentError> {
-        self.store.delete_agent(user_id, agent_id)?;
-        Ok(())
-    }
-
     pub fn get_agent(&self, user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
         self.store
             .get_agent(user_id, agent_id)
@@ -95,10 +28,6 @@ impl AgentService {
                 aura_store::StoreError::NotFound(_) => AgentError::NotFound,
                 other => AgentError::Store(other),
             })
-    }
-
-    pub fn list_agents(&self, user_id: &str) -> Result<Vec<Agent>, AgentError> {
-        Ok(self.store.list_agents_by_user(user_id)?)
     }
 }
 

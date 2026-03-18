@@ -31,8 +31,6 @@ import { windowCommand } from "../lib/windowCommand";
 import { INSUFFICIENT_CREDITS_EVENT } from "../api/client";
 import styles from "./AppShell.module.css";
 
-const useAlwaysOpen = () => false;
-
 function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): string | null {
   if (!item) return null;
   switch (item.kind) {
@@ -52,8 +50,6 @@ function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): st
 function SidekickLaneInner() {
   const { activeApp } = useAppContext();
   const { SidekickPanel, SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
-  const useCollapsed = activeApp.useSidekickCollapsed ?? useAlwaysOpen;
-  const collapsed = useCollapsed();
 
   if (!SidekickPanel) return null;
 
@@ -64,8 +60,6 @@ function SidekickLaneInner() {
       defaultWidth={320}
       maxWidth={1200}
       storageKey="aura-sidekick"
-      collapsible={!!activeApp.useSidekickCollapsed}
-      collapsed={collapsed}
       header={SidekickTaskbar && <SidekickTaskbar />}
       taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
       style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}

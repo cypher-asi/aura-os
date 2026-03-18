@@ -1,4 +1,4 @@
-import type { ProjectId, SprintId, SpecId, TaskId, AgentId, AgentInstanceId, SessionId, MessageId } from "./ids";
+import type { ProjectId, SpecId, TaskId, AgentId, AgentInstanceId, SessionId, MessageId } from "./ids";
 import type {
   ProjectStatus,
   TaskStatus,
@@ -16,23 +16,10 @@ export interface Project {
   workspace_display_path?: string;
   requirements_doc_path?: string;
   current_status: ProjectStatus;
-  github_integration_id?: string;
-  github_repo_full_name?: string;
   build_command?: string;
   test_command?: string;
   specs_summary?: string;
   specs_title?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Sprint {
-  sprint_id: SprintId;
-  project_id: ProjectId;
-  title: string;
-  prompt: string;
-  order_index: number;
-  generated_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +30,6 @@ export interface Spec {
   title: string;
   order_index: number;
   markdown_contents: string;
-  sprint_id?: SprintId;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +93,8 @@ export interface Agent {
   system_prompt: string;
   skills: string[];
   icon: string | null;
+  network_agent_id?: string;
+  profile_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -171,11 +159,12 @@ export interface ProjectProgress {
   total_messages: number;
   total_agents: number;
   total_sessions: number;
+  total_time_seconds: number;
   total_tests: number;
 }
 
 export interface ChatContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "image";
+  type: "text" | "tool_use" | "tool_result" | "image" | "task_ref" | "spec_ref";
   text?: string;
   id?: string;
   name?: string;
@@ -185,6 +174,9 @@ export interface ChatContentBlock {
   is_error?: boolean;
   media_type?: string;
   data?: string;
+  task_id?: string;
+  spec_id?: string;
+  title?: string;
 }
 
 export interface Message {
@@ -201,6 +193,8 @@ export interface Message {
 
 export interface ZeroUser {
   user_id: string;
+  network_user_id?: string;
+  profile_id?: string;
   display_name: string;
   profile_image: string;
   primary_zid: string;
@@ -210,6 +204,8 @@ export interface ZeroUser {
 
 export interface AuthSession {
   user_id: string;
+  network_user_id?: string;
+  profile_id?: string;
   display_name: string;
   profile_image: string;
   primary_zid: string;
@@ -226,8 +222,11 @@ export interface Org {
   org_id: string;
   name: string;
   owner_user_id: string;
+  slug?: string;
+  description?: string;
+  avatar_url?: string;
+  billing_email?: string;
   billing: OrgBilling | null;
-  github: OrgGithub | null;
   created_at: string;
   updated_at: string;
 }
@@ -237,6 +236,8 @@ export interface OrgMember {
   user_id: string;
   display_name: string;
   role: OrgRole;
+  avatar_url?: string;
+  credit_budget?: number;
   joined_at: string;
 }
 
@@ -255,34 +256,6 @@ export interface OrgInvite {
 export interface OrgBilling {
   billing_email: string | null;
   plan: string;
-}
-
-export interface OrgGithub {
-  github_org: string;
-  connected_by: string;
-  connected_at: string;
-}
-
-export interface GitHubIntegration {
-  integration_id: string;
-  org_id: string;
-  installation_id: number;
-  github_account_login: string;
-  github_account_type: string;
-  connected_by: string;
-  connected_at: string;
-  repo_count: number;
-}
-
-export interface GitHubRepo {
-  github_repo_id: number;
-  integration_id: string;
-  full_name: string;
-  name: string;
-  private: boolean;
-  default_branch: string;
-  html_url: string;
-  updated_at: string;
 }
 
 export interface CreditTier {
@@ -316,12 +289,10 @@ export interface DailyCommitActivity {
   count: number;
 }
 
-export type FollowTargetType = "user" | "agent";
-
 export interface Follow {
-  follower_user_id: string;
-  target_type: FollowTargetType;
-  target_id: string;
+  id: string;
+  follower_profile_id: string;
+  target_profile_id: string;
   created_at: string;
 }
 

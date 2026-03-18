@@ -11,6 +11,7 @@ wry = "0.54"
 tao = "0.34"
 tokio = { version = "1", features = ["full"] }
 dirs = "5"
+dotenvy = "0.15"
 image = "0.25.10"
 rfd = "0.15.1"
 open = "5"

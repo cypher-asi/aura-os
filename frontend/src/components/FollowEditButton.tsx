@@ -1,17 +1,15 @@
 import { useState } from "react";
 import { Pencil, UserPlus, UserCheck, UserMinus } from "lucide-react";
 import { useFollow } from "../context/FollowContext";
-import type { FollowTargetType } from "../types";
 import styles from "./FollowEditButton.module.css";
 
 interface FollowEditButtonProps {
   isOwner: boolean;
-  targetType: FollowTargetType;
-  targetName: string;
+  targetProfileId?: string;
   onEdit?: () => void;
 }
 
-export function FollowEditButton({ isOwner, targetType, targetName, onEdit }: FollowEditButtonProps) {
+export function FollowEditButton({ isOwner, targetProfileId, onEdit }: FollowEditButtonProps) {
   const { isFollowing, toggleFollow } = useFollow();
   const [hover, setHover] = useState(false);
 
@@ -25,7 +23,9 @@ export function FollowEditButton({ isOwner, targetType, targetName, onEdit }: Fo
     );
   }
 
-  const following = isFollowing(targetType, targetName);
+  if (!targetProfileId) return null;
+
+  const following = isFollowing(targetProfileId);
 
   const icon = following
     ? hover ? <UserMinus size={12} /> : <UserCheck size={12} />
@@ -39,7 +39,7 @@ export function FollowEditButton({ isOwner, targetType, targetName, onEdit }: Fo
     <button
       type="button"
       className={`${styles.button} ${following ? styles.following : ""}`}
-      onClick={() => toggleFollow(targetType, targetName)}
+      onClick={() => toggleFollow(targetProfileId)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

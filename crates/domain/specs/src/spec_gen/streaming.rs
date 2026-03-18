@@ -118,21 +118,17 @@ impl SpecGenerationService {
         project_id: &ProjectId,
         tx: mpsc::UnboundedSender<SpecStreamEvent>,
     ) {
-        let send = |evt: SpecStreamEvent| {
-            let _ = tx.send(evt);
-        };
+        let send = |evt: SpecStreamEvent| { let _ = tx.send(evt); };
 
         let (requirements_content, api_key) =
             match self.load_project_and_key(project_id, &send) {
                 Some(v) => v,
                 None => return,
             };
-
         if let Err(e) = self.clear_project_specs(project_id) {
             send(SpecStreamEvent::Error(format!("Failed to clear existing specs: {e}")));
             return;
         }
-
         send(SpecStreamEvent::Progress("Generating spec overview".into()));
         match self.generate_project_overview(project_id, &requirements_content).await {
             Ok((title, summary)) => {
@@ -144,33 +140,31 @@ impl SpecGenerationService {
                 return;
             }
         }
-
         send(SpecStreamEvent::Progress("Calling Claude to generate specs".into()));
-
-        let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
-
+        let (claude_tx, claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
         let llm = self.llm.clone();
         let api_key_owned = api_key;
         let req_owned = requirements_content;
         let stream_handle = tokio::spawn(async move {
-            llm
-                .complete_stream(
-                    &api_key_owned,
-                    SPEC_GENERATION_SYSTEM_PROMPT,
-                    &req_owned,
-                    MAX_TOKENS,
-                    claude_tx,
-                    "aura_spec_gen",
-                    None,
-                )
-                .await
+            llm.complete_stream(
+                &api_key_owned, SPEC_GENERATION_SYSTEM_PROMPT, &req_owned,
+                MAX_TOKENS, claude_tx, "aura_spec_gen", None,
+            ).await
         });
-
-        let mut parser = IncrementalSpecParser::new();
-        let mut token_count: usize = 0;
-        let mut delta_count: usize = 0;
-        let mut spec_index: u32 = 0;
         let mut saved_specs: Vec<Spec> = Vec::new();
+        self.process_spec_stream(project_id, &tx, claude_rx, &mut saved_specs).await;
+        self.finalize_spec_stream(project_id, &tx, stream_handle, &mut saved_specs).await;
+    }
+
+    async fn process_spec_stream(
+        &self,
+        project_id: &ProjectId,
+        tx: &mpsc::UnboundedSender<SpecStreamEvent>,
+        mut claude_rx: mpsc::UnboundedReceiver<ClaudeStreamEvent>,
+        saved_specs: &mut Vec<Spec>,
+    ) {
+        let mut parser = IncrementalSpecParser::new();
+        let (mut token_count, mut delta_count, mut spec_index) = (0usize, 0usize, 0u32);
         let now = Utc::now();
 
         while let Some(evt) = claude_rx.recv().await {
@@ -182,7 +176,6 @@ impl SpecGenerationService {
                     if delta_count.is_multiple_of(20) {
                         let _ = tx.send(SpecStreamEvent::Generating { tokens: token_count });
                     }
-
                     for json_obj in parser.feed(&text) {
                         if let Ok(raw) = serde_json::from_str::<RawSpecOutput>(&json_obj) {
                             let spec = Spec {
@@ -191,15 +184,13 @@ impl SpecGenerationService {
                                 title: raw.title,
                                 order_index: spec_index,
                                 markdown_contents: format!(
-                                    "## Purpose\n\n{}\n\n{}",
-                                    raw.purpose, raw.markdown
+                                    "## Purpose\n\n{}\n\n{}", raw.purpose, raw.markdown
                                 ),
-                                sprint_id: None,
                                 created_at: now,
                                 updated_at: now,
                             };
                             self.save_and_emit_spec(
-                                project_id, &spec, &tx, &mut spec_index, &mut saved_specs,
+                                project_id, &spec, tx, &mut spec_index, saved_specs,
                             );
                         }
                     }
@@ -211,11 +202,19 @@ impl SpecGenerationService {
                 ClaudeStreamEvent::Error(msg) => {
                     let _ = tx.send(SpecStreamEvent::Error(msg));
                 }
-                ClaudeStreamEvent::ToolUse { .. } => {}
-                ClaudeStreamEvent::ThinkingDelta(_) => {}
+                _ => {}
             }
         }
+    }
 
+    async fn finalize_spec_stream<E: std::fmt::Display>(
+        &self,
+        project_id: &ProjectId,
+        tx: &mpsc::UnboundedSender<SpecStreamEvent>,
+        stream_handle: tokio::task::JoinHandle<Result<String, E>>,
+        saved_specs: &mut Vec<Spec>,
+    ) {
+        let send = |evt: SpecStreamEvent| { let _ = tx.send(evt); };
         let response_text = match stream_handle.await {
             Ok(Ok(text)) => Some(text),
             Ok(Err(e)) => {
@@ -233,18 +232,14 @@ impl SpecGenerationService {
                 None
             }
         };
-
         if saved_specs.is_empty() {
             if let Some(text) = response_text {
-                self.try_fallback_parse(project_id, &text, &tx, &mut saved_specs);
-                if saved_specs.is_empty() {
-                    return;
-                }
+                self.try_fallback_parse(project_id, &text, tx, saved_specs);
+                if saved_specs.is_empty() { return; }
             }
         }
-
         info!(%project_id, count = saved_specs.len(), "Streaming spec generation complete");
-        send(SpecStreamEvent::Complete(saved_specs));
+        send(SpecStreamEvent::Complete(std::mem::take(saved_specs)));
     }
 
     /// Regenerate project overview (title + summary) from the current specs.
@@ -315,7 +310,7 @@ impl SpecGenerationService {
         let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
         if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
             let msg = if req_path.is_empty() {
-                "No requirements document configured — use Sprints instead".to_string()
+                "No requirements document configured".to_string()
             } else {
                 format!("Requirements file not found: {req_path}")
             };

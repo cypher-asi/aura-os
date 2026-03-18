@@ -299,11 +299,23 @@ impl BillingClient {
         &self,
         access_token: &str,
     ) -> Result<u64, BillingError> {
+        self.ensure_has_credits_for(access_token, 1).await
+    }
+
+    /// Like `ensure_has_credits`, but checks that the balance can cover at
+    /// least `estimated_credits`. Avoids wasting an API call when the debit
+    /// will certainly fail.
+    pub async fn ensure_has_credits_for(
+        &self,
+        access_token: &str,
+        estimated_credits: u64,
+    ) -> Result<u64, BillingError> {
         let balance = self.get_balance(access_token).await?;
-        if balance.total_credits == 0 {
+        let required = estimated_credits.max(1);
+        if balance.total_credits < required {
             return Err(BillingError::InsufficientCredits {
-                available: 0,
-                required: 1,
+                available: balance.total_credits,
+                required,
             });
         }
         Ok(balance.total_credits)

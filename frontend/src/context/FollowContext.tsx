@@ -7,24 +7,20 @@ import {
   useMemo,
 } from "react";
 import type { ReactNode } from "react";
-import type { Follow, FollowTargetType } from "../types";
+import type { Follow } from "../types";
 import { api } from "../api/client";
 import { useAuth } from "./AuthContext";
 
 interface FollowContextValue {
   follows: Follow[];
-  followedIds: Set<string>;
-  isFollowing: (targetType: FollowTargetType, targetId: string) => boolean;
-  follow: (targetType: FollowTargetType, targetId: string) => Promise<void>;
-  unfollow: (targetType: FollowTargetType, targetId: string) => Promise<void>;
-  toggleFollow: (targetType: FollowTargetType, targetId: string) => Promise<void>;
+  followedProfileIds: Set<string>;
+  isFollowing: (targetProfileId: string) => boolean;
+  follow: (targetProfileId: string) => Promise<void>;
+  unfollow: (targetProfileId: string) => Promise<void>;
+  toggleFollow: (targetProfileId: string) => Promise<void>;
 }
 
 const FollowCtx = createContext<FollowContextValue | null>(null);
-
-function makeKey(targetType: FollowTargetType, targetId: string) {
-  return `${targetType}:${targetId}`;
-}
 
 export function FollowProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -38,58 +34,55 @@ export function FollowProvider({ children }: { children: ReactNode }) {
     api.follows.list().then(setFollows).catch(() => setFollows([]));
   }, [user]);
 
-  const followedIds = useMemo(
-    () => new Set(follows.map((f) => makeKey(f.target_type, f.target_id))),
+  const followedProfileIds = useMemo(
+    () => new Set(follows.map((f) => f.target_profile_id)),
     [follows],
   );
 
   const isFollowing = useCallback(
-    (targetType: FollowTargetType, targetId: string) =>
-      followedIds.has(makeKey(targetType, targetId)),
-    [followedIds],
+    (targetProfileId: string) => followedProfileIds.has(targetProfileId),
+    [followedProfileIds],
   );
 
   const doFollow = useCallback(
-    async (targetType: FollowTargetType, targetId: string) => {
-      const created = await api.follows.follow(targetType, targetId);
+    async (targetProfileId: string) => {
+      const created = await api.follows.follow(targetProfileId);
       setFollows((prev) => [...prev, created]);
     },
     [],
   );
 
   const doUnfollow = useCallback(
-    async (targetType: FollowTargetType, targetId: string) => {
-      await api.follows.unfollow(targetType, targetId);
+    async (targetProfileId: string) => {
+      await api.follows.unfollow(targetProfileId);
       setFollows((prev) =>
-        prev.filter(
-          (f) => !(f.target_type === targetType && f.target_id === targetId),
-        ),
+        prev.filter((f) => f.target_profile_id !== targetProfileId),
       );
     },
     [],
   );
 
   const toggleFollow = useCallback(
-    async (targetType: FollowTargetType, targetId: string) => {
-      if (followedIds.has(makeKey(targetType, targetId))) {
-        await doUnfollow(targetType, targetId);
+    async (targetProfileId: string) => {
+      if (followedProfileIds.has(targetProfileId)) {
+        await doUnfollow(targetProfileId);
       } else {
-        await doFollow(targetType, targetId);
+        await doFollow(targetProfileId);
       }
     },
-    [followedIds, doFollow, doUnfollow],
+    [followedProfileIds, doFollow, doUnfollow],
   );
 
   const value = useMemo(
     () => ({
       follows,
-      followedIds,
+      followedProfileIds,
       isFollowing,
       follow: doFollow,
       unfollow: doUnfollow,
       toggleFollow,
     }),
-    [follows, followedIds, isFollowing, doFollow, doUnfollow, toggleFollow],
+    [follows, followedProfileIds, isFollowing, doFollow, doUnfollow, toggleFollow],
   );
 
   return <FollowCtx.Provider value={value}>{children}</FollowCtx.Provider>;

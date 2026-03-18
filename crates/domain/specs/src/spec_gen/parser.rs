@@ -149,7 +149,6 @@ pub(crate) fn raw_to_specs(project_id: &ProjectId, raw: Vec<RawSpecOutput>) -> V
             title: r.title,
             order_index: i as u32,
             markdown_contents: format!("## Purpose\n\n{}\n\n{}", r.purpose, r.markdown),
-            sprint_id: None,
             created_at: now,
             updated_at: now,
         })

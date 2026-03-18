@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, XCircle, Wrench, MinusCircle, SkipForward, FileText, Terminal } from "lucide-react";
+import { X, ArrowLeft, Loader2, FilePlus, FilePen, FileX, RotateCcw, Play, Check, CheckCheck, Copy, XCircle, Wrench, MinusCircle, SkipForward, FileText, Terminal } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
@@ -13,7 +13,9 @@ import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime, toBullets, formatTokens, formatModelName } from "../utils/format";
 import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
-import { deriveActivity } from "../utils/derive-activity";
+import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
+import { FormattedRawOutput } from "./FormattedRawOutput";
+import { IterationBar } from "./IterationBar";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Spec, Task, Session, AgentInstance } from "../types";
 import type { EngineEvent } from "../types/events";
@@ -378,7 +380,17 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const [completedByAgent, setCompletedByAgent] = useState<AgentInstance | null>(null);
   const hydratedRef = useRef< string | null >(null);
   const [showRawOutput, setShowRawOutput] = useState(false);
-  const rawOutputRef = useRef<HTMLPreElement>(null);
+  const rawOutputRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const copyRawOutput = useCallback(() => {
+    navigator.clipboard.writeText(taskOutput.text).then(() => {
+      setCopied(true);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 1500);
+    });
+  }, [taskOutput.text]);
 
   const streamBuf = taskOutput.text;
   const liveFileOps = taskOutput.fileOps;
@@ -545,6 +557,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     return items;
   }, [hasOutput, isActive, isTerminal, streamBuf, taskOutput.buildSteps, taskOutput.testSteps]);
   const showOutput = activity.length > 0;
+  const iterStats = useMemo(() => computeIterationStats(streamBuf), [streamBuf]);
 
   useEffect(() => {
     if (showRawOutput && rawOutputRef.current) {
@@ -795,6 +808,9 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
       {showOutput && (
         <GroupCollapsible label={isActive ? "Live Output" : "Output"} defaultOpen className={styles.section}>
+          {iterStats.total > 0 && (
+            <IterationBar stats={iterStats} dots={iterStats.dots} isActive={isActive} />
+          )}
           <div className={styles.liveOutputSection}>
             <div className={styles.activityList}>
               {activity.map((item) => (
@@ -822,15 +838,23 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
                   <Terminal size={11} />
                   {showRawOutput ? "Hide raw output" : "Show raw output"}
                 </button>
-                <Text variant="muted" size="xs" className={styles.streamProgress}>
-                  {(streamBuf.length / 1024).toFixed(1)} KB
-                </Text>
+                <div className={styles.rawOutputActions}>
+                  <Text variant="muted" size="xs" className={styles.streamProgress}>
+                    {(streamBuf.length / 1024).toFixed(1)} KB
+                  </Text>
+                  <button
+                    className={styles.copyRawBtn}
+                    onClick={copyRawOutput}
+                    aria-label="Copy raw output"
+                  >
+                    {copied ? <CheckCheck size={11} /> : <Copy size={11} />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
               </div>
             )}
             {showRawOutput && streamBuf.length > 0 && (
-              <pre ref={rawOutputRef} className={styles.rawOutput}>
-                {streamBuf}
-              </pre>
+              <FormattedRawOutput ref={rawOutputRef} buffer={streamBuf} />
             )}
           </div>
         </GroupCollapsible>

@@ -2,14 +2,15 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
+use async_trait::async_trait;
 use tokio::sync::{mpsc, Mutex};
 use tracing::{info, warn};
 
 const PRE_FLIGHT_CACHE_TTL_SECS: u64 = 30;
 
 use aura_claude::{
-    ClaudeStreamEvent, LlmProvider, LlmResponse, RichMessage,
-    StreamTokenCapture, ThinkingConfig, ToolDefinition, ToolStreamResponse,
+    ClaudeClientError, ClaudeStreamEvent, LlmProvider, LlmResponse, LlmStreamEvent,
+    RichMessage, StreamTokenCapture, ThinkingConfig, ToolDefinition, ToolStreamResponse,
 };
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
@@ -48,9 +49,13 @@ pub struct MeteredLlm {
     provider: Arc<dyn LlmProvider>,
     billing: Arc<BillingClient>,
     store: Arc<RocksStore>,
+    pricing: PricingService,
     credits_exhausted: AtomicBool,
     last_preflight_ok: Mutex<Option<Instant>>,
+    credits_per_usd: f64,
 }
+
+const DEFAULT_CREDITS_PER_USD: f64 = 114_286.0;
 
 impl MeteredLlm {
     pub fn new(
@@ -58,17 +63,43 @@ impl MeteredLlm {
         billing: Arc<BillingClient>,
         store: Arc<RocksStore>,
     ) -> Self {
+        let credits_per_usd: f64 = std::env::var("BILLING_CREDITS_PER_USD")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_CREDITS_PER_USD);
+        let pricing = PricingService::new(store.clone());
         Self {
             provider,
             billing,
             store,
+            pricing,
             credits_exhausted: AtomicBool::new(false),
             last_preflight_ok: Mutex::new(None),
+            credits_per_usd,
         }
     }
 
     pub fn is_credits_exhausted(&self) -> bool {
         self.credits_exhausted.load(Ordering::SeqCst)
+    }
+
+    /// Estimate how many credits a call would cost given the estimated token
+    /// counts. Applies a conservative cache discount (assumes 50% of input
+    /// tokens are cache reads at 0.1x cost) to avoid stopping the tool loop
+    /// prematurely when prompt caching is active.
+    pub fn estimate_credits(&self, model: &str, estimated_input_tokens: u64, estimated_output_tokens: u64) -> u64 {
+        let (inp_rate, out_rate) = self.pricing.lookup_rate(model);
+        let cache_read_fraction = 0.5;
+        let non_cached = estimated_input_tokens as f64 * (1.0 - cache_read_fraction);
+        let cached = estimated_input_tokens as f64 * cache_read_fraction;
+        let usd_cost = (non_cached * inp_rate + cached * inp_rate * 0.1
+            + estimated_output_tokens as f64 * out_rate) / 1_000_000.0;
+        (usd_cost * self.credits_per_usd).round() as u64
+    }
+
+    pub async fn current_balance(&self) -> Option<u64> {
+        let token = self.access_token()?;
+        self.billing.get_balance(&token).await.ok().map(|b| b.total_credits)
     }
 
     fn access_token(&self) -> Option<String> {
@@ -80,13 +111,20 @@ impl MeteredLlm {
     }
 
     async fn pre_flight_check(&self) -> Result<(), MeteredLlmError> {
+        self.pre_flight_check_for(0).await
+    }
+
+    /// Pre-flight check with cost awareness. When `estimated_credits > 0`,
+    /// verifies that the user's balance can cover at least that amount before
+    /// making the API call.
+    async fn pre_flight_check_for(&self, estimated_credits: u64) -> Result<(), MeteredLlmError> {
         let Some(token) = self.access_token() else {
             warn!("No access token available — cannot verify credits");
             self.credits_exhausted.store(true, Ordering::SeqCst);
             return Err(MeteredLlmError::InsufficientCredits);
         };
 
-        if !self.credits_exhausted.load(Ordering::SeqCst) {
+        if !self.credits_exhausted.load(Ordering::SeqCst) && estimated_credits == 0 {
             let cache = self.last_preflight_ok.lock().await;
             if let Some(ts) = *cache {
                 if ts.elapsed().as_secs() < PRE_FLIGHT_CACHE_TTL_SECS {
@@ -96,8 +134,10 @@ impl MeteredLlm {
             drop(cache);
         }
 
+        let required = estimated_credits.max(1);
+
         if self.credits_exhausted.load(Ordering::SeqCst) {
-            match self.billing.ensure_has_credits(&token).await {
+            match self.billing.ensure_has_credits_for(&token, required).await {
                 Ok(_) => {
                     info!("Credits topped up, resetting exhausted flag");
                     self.credits_exhausted.store(false, Ordering::SeqCst);
@@ -105,7 +145,7 @@ impl MeteredLlm {
                 Err(_) => return Err(MeteredLlmError::InsufficientCredits),
             }
         } else {
-            if let Err(_) = self.billing.ensure_has_credits(&token).await {
+            if let Err(_) = self.billing.ensure_has_credits_for(&token, required).await {
                 self.credits_exhausted.store(true, Ordering::SeqCst);
                 return Err(MeteredLlmError::InsufficientCredits);
             }
@@ -120,12 +160,20 @@ impl MeteredLlm {
         model: &str,
         input_tokens: u64,
         output_tokens: u64,
+        cache_creation_input_tokens: u64,
+        cache_read_input_tokens: u64,
         reason: &str,
         metadata: Option<serde_json::Value>,
     ) -> Result<(), MeteredLlmError> {
-        let pricing = PricingService::new(self.store.clone());
-        let (inp_rate, out_rate) = pricing.lookup_rate(model);
-        let amount = (input_tokens as f64 * inp_rate + output_tokens as f64 * out_rate).round() as u64;
+        let (inp_rate, out_rate) = self.pricing.lookup_rate(model);
+        let non_cached = input_tokens.saturating_sub(cache_creation_input_tokens + cache_read_input_tokens);
+        let usd_cost = (
+            non_cached as f64 * inp_rate
+            + cache_creation_input_tokens as f64 * inp_rate * 1.25
+            + cache_read_input_tokens as f64 * inp_rate * 0.1
+            + output_tokens as f64 * out_rate
+        ) / 1_000_000.0;
+        let amount = (usd_cost * self.credits_per_usd).round() as u64;
         if amount == 0 {
             return Ok(());
         }
@@ -173,7 +221,7 @@ impl MeteredLlm {
     ) -> Result<LlmResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
         let resp = self.provider.complete(api_key, system_prompt, user_message, max_tokens).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, reason, metadata).await?;
+        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, 0, 0, reason, metadata).await?;
         Ok(resp)
     }
 
@@ -191,7 +239,7 @@ impl MeteredLlm {
     ) -> Result<LlmResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
         let resp = self.provider.complete_with_model(model, api_key, system_prompt, user_message, max_tokens).await?;
-        self.debit(model, resp.input_tokens, resp.output_tokens, reason, metadata).await?;
+        self.debit(model, resp.input_tokens, resp.output_tokens, 0, 0, reason, metadata).await?;
         Ok(resp)
     }
 
@@ -210,8 +258,8 @@ impl MeteredLlm {
         let result = self.provider.complete_stream(
             api_key, system_prompt, user_message, max_tokens, tx,
         ).await?;
-        let (inp, out) = handle.finalize().await;
-        self.debit(aura_claude::DEFAULT_MODEL, inp, out, reason, metadata).await?;
+        let (inp, out, cache_create, cache_read) = handle.finalize().await;
+        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, reason, metadata).await?;
         Ok(result)
     }
 
@@ -230,8 +278,8 @@ impl MeteredLlm {
         let result = self.provider.complete_stream_multi(
             api_key, system_prompt, messages, max_tokens, tx,
         ).await?;
-        let (inp, out) = handle.finalize().await;
-        self.debit(aura_claude::DEFAULT_MODEL, inp, out, reason, metadata).await?;
+        let (inp, out, cache_create, cache_read) = handle.finalize().await;
+        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, reason, metadata).await?;
         Ok(result)
     }
 
@@ -242,35 +290,131 @@ impl MeteredLlm {
         messages: Vec<RichMessage>,
         tools: Vec<ToolDefinition>,
         max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
         event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
         reason: &str,
         metadata: Option<serde_json::Value>,
     ) -> Result<ToolStreamResponse, MeteredLlmError> {
-        self.pre_flight_check().await?;
+        let estimated_input: u64 = aura_claude::estimate_tokens(system_prompt)
+            + messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
+        let estimated_credits = self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
+        self.pre_flight_check_for(estimated_credits).await?;
         let resp = self.provider.complete_stream_with_tools(
-            api_key, system_prompt, messages, tools, max_tokens, None, event_tx,
+            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
         ).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, reason, metadata).await?;
+        let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
+        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
+        Ok(resp)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// LlmProvider impl — enables MeteredLlm as a transparent billing decorator.
+//
+// Callers that hold `Arc<dyn LlmProvider>` get automatic preflight/debit.
+// A generic billing reason is used; callers needing custom reasons should
+// use the inherent methods above instead.
+// ---------------------------------------------------------------------------
+
+const TRAIT_BILLING_REASON: &str = "llm_provider";
+
+impl MeteredLlm {
+    fn map_billing_err(e: MeteredLlmError) -> ClaudeClientError {
+        match e {
+            MeteredLlmError::InsufficientCredits => ClaudeClientError::InsufficientCredits,
+            MeteredLlmError::Llm(inner) => inner,
+            MeteredLlmError::Billing(be) => {
+                ClaudeClientError::Api { status: 500, message: format!("billing: {be}") }
+            }
+        }
+    }
+}
+
+#[async_trait]
+impl LlmProvider for MeteredLlm {
+    async fn complete(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
+        self.pre_flight_check().await.map_err(Self::map_billing_err)?;
+        let resp = self.provider.complete(api_key, system_prompt, user_message, max_tokens).await?;
+        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, 0, 0, TRAIT_BILLING_REASON, None)
+            .await.map_err(Self::map_billing_err)?;
         Ok(resp)
     }
 
-    pub async fn complete_stream_with_tools_thinking(
+    async fn complete_stream(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError> {
+        self.pre_flight_check().await.map_err(Self::map_billing_err)?;
+        let (tx, handle) = StreamTokenCapture::forwarding(event_tx);
+        let result = self.provider.complete_stream(api_key, system_prompt, user_message, max_tokens, tx).await?;
+        let (inp, out, cache_create, cache_read) = handle.finalize().await;
+        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, TRAIT_BILLING_REASON, None)
+            .await.map_err(Self::map_billing_err)?;
+        Ok(result)
+    }
+
+    async fn complete_stream_multi(
+        &self,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<(String, String)>,
+        max_tokens: u32,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<String, ClaudeClientError> {
+        self.pre_flight_check().await.map_err(Self::map_billing_err)?;
+        let (tx, handle) = StreamTokenCapture::forwarding(event_tx);
+        let result = self.provider.complete_stream_multi(api_key, system_prompt, messages, max_tokens, tx).await?;
+        let (inp, out, cache_create, cache_read) = handle.finalize().await;
+        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, TRAIT_BILLING_REASON, None)
+            .await.map_err(Self::map_billing_err)?;
+        Ok(result)
+    }
+
+    async fn complete_stream_with_tools(
         &self,
         api_key: &str,
         system_prompt: &str,
         messages: Vec<RichMessage>,
         tools: Vec<ToolDefinition>,
         max_tokens: u32,
-        thinking: ThinkingConfig,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
-    ) -> Result<ToolStreamResponse, MeteredLlmError> {
-        self.pre_flight_check().await?;
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        let estimated_input: u64 = aura_claude::estimate_tokens(system_prompt)
+            + messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
+        let estimated_credits = self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
+        self.pre_flight_check_for(estimated_credits).await.map_err(Self::map_billing_err)?;
         let resp = self.provider.complete_stream_with_tools(
-            api_key, system_prompt, messages, tools, max_tokens, Some(thinking), event_tx,
+            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
         ).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, reason, metadata).await?;
+        let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
+        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, TRAIT_BILLING_REASON, None)
+            .await.map_err(Self::map_billing_err)?;
+        Ok(resp)
+    }
+
+    async fn complete_with_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        user_message: &str,
+        max_tokens: u32,
+    ) -> Result<LlmResponse, ClaudeClientError> {
+        self.pre_flight_check().await.map_err(Self::map_billing_err)?;
+        let resp = self.provider.complete_with_model(model, api_key, system_prompt, user_message, max_tokens).await?;
+        self.debit(model, resp.input_tokens, resp.output_tokens, 0, 0, TRAIT_BILLING_REASON, None)
+            .await.map_err(Self::map_billing_err)?;
         Ok(resp)
     }
 }
@@ -279,58 +423,7 @@ impl MeteredLlm {
 mod tests {
     use super::*;
     use aura_claude::mock::{MockLlmProvider, MockResponse};
-
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
-    async fn start_mock_billing_server() -> String {
-        use axum::{routing::{get, post}, Json, Router};
-        use tokio::net::TcpListener;
-
-        let app = Router::new()
-            .route(
-                "/api/credits/balance",
-                get(|| async {
-                    Json(serde_json::json!({"balance": 10000, "purchases": []}))
-                }),
-            )
-            .route(
-                "/api/credits/debit",
-                post(|| async {
-                    Json(serde_json::json!({
-                        "success": true,
-                        "balance": 9900,
-                        "transactionId": "tx-1"
-                    }))
-                }),
-            );
-
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let url = format!("http://{}", listener.local_addr().unwrap());
-        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
-        url
-    }
-
-    fn billing_client_for_url(url: &str) -> BillingClient {
-        let _guard = ENV_LOCK.lock().unwrap();
-        std::env::set_var("BILLING_SERVER_URL", url);
-        BillingClient::new()
-    }
-
-    fn store_zero_auth_session(store: &RocksStore) {
-        let session = serde_json::to_vec(&ZeroAuthSession {
-            user_id: "u1".into(),
-            display_name: "Test".into(),
-            profile_image: String::new(),
-            primary_zid: "zid-1".into(),
-            zero_wallet: "w1".into(),
-            wallets: vec![],
-            access_token: "test-token".into(),
-            created_at: chrono::Utc::now(),
-            validated_at: chrono::Utc::now(),
-        })
-        .unwrap();
-        store.put_setting("zero_auth_session", &session).unwrap();
-    }
+    use crate::testutil;
 
     #[tokio::test]
     async fn test_no_access_token_returns_insufficient_credits() {
@@ -354,17 +447,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_complete_calls_provider_and_debits() {
-        let url = start_mock_billing_server().await;
-        let billing = Arc::new(billing_client_for_url(&url));
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        store_zero_auth_session(&store);
-
         let mock = Arc::new(MockLlmProvider::with_responses(vec![
             MockResponse::text("hello").with_tokens(100, 50),
         ]));
-        let metered = MeteredLlm::new(mock.clone(), billing, store);
+        let (metered, _tmp) = testutil::make_test_llm(mock.clone()).await;
 
         let resp = metered
             .complete("key", "sys", "msg", 200, "reason", None)
@@ -399,17 +485,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_complete_stream_forwards_events() {
-        let url = start_mock_billing_server().await;
-        let billing = Arc::new(billing_client_for_url(&url));
-
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        store_zero_auth_session(&store);
-
         let mock = Arc::new(MockLlmProvider::with_responses(vec![
             MockResponse::text("streamed").with_tokens(80, 40),
         ]));
-        let metered = MeteredLlm::new(mock, billing, store);
+        let (metered, _tmp) = testutil::make_test_llm(mock).await;
 
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
         let text = metered

@@ -24,6 +24,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function sessionToUser(session: AuthSession): ZeroUser {
   return {
     user_id: session.user_id,
+    network_user_id: session.network_user_id,
+    profile_id: session.profile_id,
     display_name: session.display_name,
     profile_image: session.profile_image,
     primary_zid: session.primary_zid,

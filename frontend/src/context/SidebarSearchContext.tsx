@@ -1,11 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useAppContext } from "./AppContext";
 
 interface SidebarSearchContextValue {
   query: string;
   setQuery: (q: string) => void;
   action: ReactNode;
-  setAction: (node: ReactNode) => void;
+  setAction: (appId: string, node: ReactNode | null) => void;
 }
 
 const SidebarSearchCtx = createContext<SidebarSearchContextValue>({
@@ -17,7 +17,7 @@ const SidebarSearchCtx = createContext<SidebarSearchContextValue>({
 
 export function SidebarSearchProvider({ children }: { children: ReactNode }) {
   const [query, setQueryRaw] = useState("");
-  const [action, setActionRaw] = useState<ReactNode>(null);
+  const [actionsMap, setActionsMap] = useState<Record<string, ReactNode>>({});
   const { activeApp } = useAppContext();
 
   useEffect(() => {
@@ -25,7 +25,17 @@ export function SidebarSearchProvider({ children }: { children: ReactNode }) {
   }, [activeApp.id]);
 
   const setQuery = useCallback((q: string) => setQueryRaw(q), []);
-  const setAction = useCallback((node: ReactNode) => setActionRaw(node), []);
+  const setAction = useCallback((appId: string, node: ReactNode | null) => {
+    setActionsMap((prev) => {
+      if (node === null) {
+        const { [appId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [appId]: node };
+    });
+  }, []);
+
+  const action = useMemo(() => actionsMap[activeApp.id] ?? null, [actionsMap, activeApp.id]);
 
   return (
     <SidebarSearchCtx.Provider value={{ query, setQuery, action, setAction }}>

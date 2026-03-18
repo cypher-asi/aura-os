@@ -12,6 +12,7 @@ import { CookingIndicator } from "../../components/CookingIndicator";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import type { Message } from "../../types";
+import { extractArtifactRefs, extractToolCalls } from "../../utils/chat-history";
 import styles from "../../components/ChatView.module.css";
 
 export function AgentChatView() {
@@ -71,7 +72,8 @@ export function AgentChatView() {
               m.thinking,
             )
             .map((m: Message) => {
-              const blocks = (m.content_blocks ?? [])
+              const allBlocks = m.content_blocks ?? [];
+              const blocks = allBlocks
                 .filter((b) => b.type === "text" || b.type === "image")
                 .map((b) =>
                   b.type === "text"
@@ -83,6 +85,8 @@ export function AgentChatView() {
                 role: m.role,
                 content: m.content,
                 contentBlocks: blocks.length > 0 ? blocks : undefined,
+                toolCalls: extractToolCalls(allBlocks),
+                artifactRefs: extractArtifactRefs(allBlocks),
                 thinkingText: m.thinking || undefined,
                 thinkingDurationMs: m.thinking_duration_ms ?? null,
               };

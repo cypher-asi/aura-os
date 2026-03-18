@@ -17,13 +17,14 @@ use tracing::{debug, info, warn};
 
 use crate::state::TaskOutputBuffers;
 
+use aura_core::ZeroAuthSession;
 use aura_engine::EngineEvent;
+use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
-use aura_github::GitHubService;
 use aura_orgs::OrgService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
@@ -32,6 +33,9 @@ use aura_specs::SpecGenerationService;
 use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
+
+use futures_util::StreamExt;
+use tokio_tungstenite::tungstenite;
 
 const LIVE_OUTPUT_FLUSH_INTERVAL: u64 = 50;
 const DELTA_BROADCAST_INTERVAL_MS: u64 = 100;
@@ -170,51 +174,90 @@ fn finalize_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers
     }
 }
 
-fn seed_default_agents(store: &RocksStore, agent_service: &AgentService) {
-    if store.get_setting("default_agents_seeded").is_ok() {
-        return;
-    }
+/// Reads the stored JWT from RocksDB, returning `None` if unavailable.
+fn get_jwt_from_store(store: &RocksStore) -> Option<String> {
+    let bytes = store.get_setting("zero_auth_session").ok()?;
+    let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
+    Some(session.access_token)
+}
 
-    let user_id = "default";
-    if let Ok(existing) = agent_service.list_agents(user_id) {
-        if !existing.is_empty() {
-            let _ = store.put_setting("default_agents_seeded", b"1");
-            return;
+/// Connects to the aura-network WebSocket and rebroadcasts social events
+/// (feed activity, follows, usage updates) on the local event_broadcast channel.
+fn spawn_network_ws_bridge(
+    client: Arc<NetworkClient>,
+    store: Arc<RocksStore>,
+    broadcast_tx: broadcast::Sender<EngineEvent>,
+) {
+    tokio::spawn(async move {
+        let mut backoff = Duration::from_secs(2);
+        let max_backoff = Duration::from_secs(60);
+
+        loop {
+            let jwt = match get_jwt_from_store(&store) {
+                Some(jwt) => jwt,
+                None => {
+                    debug!("No session available for network WS bridge, retrying...");
+                    tokio::time::sleep(Duration::from_secs(10)).await;
+                    continue;
+                }
+            };
+
+            let url = client.ws_events_url(&jwt);
+            debug!("Connecting to aura-network WS...");
+
+            match tokio_tungstenite::connect_async(&url).await {
+                Ok((ws_stream, _)) => {
+                    info!("Connected to aura-network WebSocket");
+                    backoff = Duration::from_secs(2);
+
+                    let (_, mut read) = ws_stream.split();
+                    loop {
+                        match read.next().await {
+                            Some(Ok(tungstenite::Message::Text(text))) => {
+                                match serde_json::from_str::<serde_json::Value>(&text) {
+                                    Ok(value) => {
+                                        let event_type = value
+                                            .get("type")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("unknown")
+                                            .to_string();
+
+                                        let event = EngineEvent::NetworkEvent {
+                                            network_event_type: event_type,
+                                            payload: Some(value),
+                                        };
+
+                                        if broadcast_tx.send(event).is_err() {
+                                            debug!("No local WS subscribers for network event");
+                                        }
+                                    }
+                                    Err(e) => {
+                                        debug!("Non-JSON message from network WS: {e}");
+                                    }
+                                }
+                            }
+                            Some(Ok(tungstenite::Message::Close(_))) | None => {
+                                info!("aura-network WebSocket closed");
+                                break;
+                            }
+                            Some(Ok(_)) => {}
+                            Some(Err(e)) => {
+                                warn!("aura-network WebSocket error: {e}");
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!(error = %e, "Failed to connect to aura-network WebSocket");
+                }
+            }
+
+            info!(backoff_secs = backoff.as_secs(), "Reconnecting to aura-network WS...");
+            tokio::time::sleep(backoff).await;
+            backoff = (backoff * 2).min(max_backoff);
         }
-    }
-
-    let defaults = vec![
-        ("Atlas", "Senior Developer", "Thorough, opinionated, loves clean code and well-structured architecture",
-         "You are Atlas, a senior software developer. You are thorough, opinionated, and love clean code. You focus on architecture, maintainability, and best practices. When implementing features, you think carefully about edge cases, error handling, and code organization. You write clean, well-documented code and prefer simple solutions over clever ones.",
-         vec!["architecture", "code-review", "refactoring", "rust", "typescript"],
-         Some("🏛️")),
-        ("Sage", "QA Engineer", "Meticulous, detail-oriented, finds edge cases others miss",
-         "You are Sage, a QA engineer. You are meticulous and detail-oriented, always thinking about what could go wrong. You focus on testing, edge cases, quality assurance, and reliability. When reviewing code, you look for potential bugs, race conditions, and missing error handling. You write comprehensive tests and think about both happy paths and failure modes.",
-         vec!["testing", "qa", "edge-cases", "debugging", "security"],
-         Some("🔍")),
-        ("Nova", "Designer", "Creative, user-focused, values simplicity and accessibility",
-         "You are Nova, a UI/UX designer who also codes. You are creative and user-focused, valuing simplicity and accessibility above all. You focus on user experience, visual consistency, and making interfaces intuitive. When implementing UI, you think about responsive design, accessibility (WCAG), and delightful interactions.",
-         vec!["ui-ux", "css", "accessibility", "design-systems", "frontend"],
-         Some("🎨")),
-    ];
-
-    for (name, role, personality, system_prompt, skills, icon) in defaults {
-        if let Err(e) = agent_service.create_agent(
-            user_id,
-            name.to_string(),
-            role.to_string(),
-            personality.to_string(),
-            system_prompt.to_string(),
-            skills.into_iter().map(String::from).collect(),
-            icon.map(String::from),
-        ) {
-            warn!(name, error = %e, "Failed to seed default agent");
-        } else {
-            info!(name, "Seeded default agent");
-        }
-    }
-
-    let _ = store.put_setting("default_agents_seeded", b"1");
+    });
 }
 
 pub fn build_app_state(db_path: &Path) -> AppState {
@@ -224,10 +267,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         .unwrap_or_else(|| Path::new(".").to_path_buf());
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let org_service = Arc::new(OrgService::new(store.clone()));
-    let github_service = Arc::new(GitHubService::new(store.clone(), org_service.clone()));
-    let mut auth_service = AuthService::new(store.clone());
-    auth_service.set_org_service(org_service.clone());
-    let auth_service = Arc::new(auth_service);
+    let auth_service = Arc::new(AuthService::new(store.clone()));
     let settings_service = Arc::new(SettingsService::new(store.clone()));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
@@ -252,7 +292,8 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     let task_service = Arc::new(TaskService::new(store.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone()));
     let agent_instance_service = Arc::new(AgentInstanceService::new(store.clone()));
-    let session_service = Arc::new(SessionService::new(store.clone()));
+    let llm_config = aura_core::LlmConfig::from_env();
+    let session_service = Arc::new(SessionService::new(store.clone(), llm_config.context_rollover_threshold, llm_config.max_context_tokens));
     let chat_service = Arc::new(ChatService::new(
         store.clone(),
         settings_service.clone(),
@@ -285,11 +326,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         }
     }
 
-    seed_default_agents(&store, &agent_service);
-    if let Err(e) = store.dedup_agents_by_user() {
-        warn!(error = %e, "Failed to deduplicate agents");
-    }
-
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(4096);
     let task_output_buffers: TaskOutputBuffers =
@@ -302,16 +338,37 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         task_output_buffers.clone(),
     );
 
-    let sprint_gen = Arc::new(aura_specs::SprintGenerationService::new(
-        llm.clone(),
-        store.clone(),
-    ));
+    let network_client = NetworkClient::from_env().map(Arc::new);
+
+    if let Some(ref client) = network_client {
+        let health_client = client.clone();
+        tokio::spawn(async move {
+            match health_client.health_check().await {
+                Ok(h) => info!(
+                    status = %h.status,
+                    version = h.version.as_deref().unwrap_or("unknown"),
+                    "aura-network is reachable"
+                ),
+                Err(e) => warn!(
+                    error = %e,
+                    "aura-network health check failed on startup (will retry on first request)"
+                ),
+            }
+        });
+
+        spawn_network_ws_bridge(
+            client.clone(),
+            store.clone(),
+            event_broadcast.clone(),
+        );
+    } else {
+        info!("aura-network integration disabled (AURA_NETWORK_URL not set)");
+    }
 
     AppState {
         data_dir,
         store,
         org_service,
-        github_service,
         auth_service,
         settings_service,
         pricing_service,
@@ -324,7 +381,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         agent_instance_service,
         session_service,
         chat_service,
-        sprint_gen,
         llm,
         event_tx,
         event_broadcast,
@@ -332,5 +388,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
         terminal_manager: Arc::new(TerminalManager::new()),
+        network_client,
     }
 }

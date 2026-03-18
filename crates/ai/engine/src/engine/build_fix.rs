@@ -7,6 +7,11 @@ use tracing::{info, warn};
 use aura_core::*;
 use aura_claude::StreamTokenCapture;
 
+pub(crate) use super::build_fix_types::{
+    BuildFixAttemptRecord, ErrorCategory,
+    classify_build_errors, error_category_guidance, parse_error_references,
+};
+
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
 use super::prompts::{build_fix_system_prompt, build_fix_prompt_with_history};
@@ -16,14 +21,7 @@ use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp};
 
-const BUILD_FIX_SNAPSHOT_BUDGET: usize = 30_000;
-
-/// Tracks a single build-fix attempt for the retry history prompt.
-pub(crate) struct BuildFixAttemptRecord {
-    pub stderr: String,
-    pub error_signature: String,
-    pub files_changed: Vec<String>,
-}
+pub(crate) const BUILD_FIX_SNAPSHOT_BUDGET: usize = 30_000;
 
 /// Produce a normalized "signature" from compiler stderr by stripping line
 /// numbers, column numbers, and file paths so that the same class of error
@@ -102,232 +100,6 @@ pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
     None
 }
 
-/// Classify build errors into categories so the fix prompt can include
-/// targeted guidance instead of generic "try a different approach."
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum ErrorCategory {
-    RustStringLiteral,
-    RustMissingModule,
-    RustMissingMethod,
-    RustTypeError,
-    RustBorrowCheck,
-    RustStructFieldMismatch,
-    RustApiHallucination,
-    NpmDependency,
-    NpmTypeScript,
-    GenericSyntax,
-    Unknown,
-}
-
-pub(crate) fn classify_build_errors(stderr: &str) -> Vec<ErrorCategory> {
-    let mut categories = Vec::new();
-
-    let rust_string_patterns = [
-        "unknown start of token",
-        "prefix `",
-        "unknown prefix",
-        "Unicode character",
-        "looks like",
-        "but it is not",
-    ];
-    if rust_string_patterns.iter().any(|p| stderr.contains(p)) {
-        categories.push(ErrorCategory::RustStringLiteral);
-    }
-
-    if stderr.contains("file not found for module") || stderr.contains("E0583") {
-        categories.push(ErrorCategory::RustMissingModule);
-    }
-
-    if stderr.contains("no method named") || stderr.contains("E0599") {
-        categories.push(ErrorCategory::RustMissingMethod);
-    }
-
-    if stderr.contains("missing field") || stderr.contains("E0063")
-        || stderr.contains("has no field named") || stderr.contains("E0560")
-    {
-        categories.push(ErrorCategory::RustStructFieldMismatch);
-    }
-
-    if stderr.contains("the trait") && stderr.contains("is not implemented")
-        || stderr.contains("E0277")
-        || stderr.contains("type annotations needed")
-        || stderr.contains("E0283")
-    {
-        categories.push(ErrorCategory::RustTypeError);
-    }
-
-    if stderr.contains("cannot borrow") || stderr.contains("E0502") || stderr.contains("E0505") {
-        categories.push(ErrorCategory::RustBorrowCheck);
-    }
-
-    if stderr.contains("Cannot find module") || stderr.contains("ENOENT") {
-        categories.push(ErrorCategory::NpmDependency);
-    }
-
-    if stderr.contains("TS2304") || stderr.contains("TS2345") || stderr.contains("TS2322") {
-        categories.push(ErrorCategory::NpmTypeScript);
-    }
-
-    if categories.is_empty()
-        && (stderr.contains("expected") || stderr.contains("syntax error") || stderr.contains("parse error"))
-    {
-        categories.push(ErrorCategory::GenericSyntax);
-    }
-
-    if categories.is_empty() {
-        categories.push(ErrorCategory::Unknown);
-    }
-    categories
-}
-
-pub(crate) fn error_category_guidance(categories: &[ErrorCategory]) -> String {
-    let mut guidance = String::new();
-    for cat in categories {
-        let advice: &str = match cat {
-            ErrorCategory::RustStringLiteral => concat!(
-                "DIAGNOSIS: Rust string literal / token errors detected.\n",
-                "ROOT CAUSE: This almost always means JSON or text with special characters ",
-                "was placed directly in Rust source code without proper string escaping.\n",
-                "MANDATORY FIX:\n",
-                "- For test fixtures or multi-line strings containing JSON, quotes, backslashes, ",
-                "or special chars: use Rust RAW STRING LITERALS (r followed by # then quote to open, ",
-                "quote then # to close; add more # symbols if the content itself contains that pattern).\n",
-                "- For programmatic JSON construction: use serde_json::json!() macro instead of string literals.\n",
-                "- NEVER put literal backslash-n (two characters) inside a Rust string to represent a newline; ",
-                "use actual newlines inside raw strings, or proper escape sequences inside regular strings.\n",
-                "- NEVER use non-ASCII characters (em dashes, smart quotes, etc.) in Rust string literals; ",
-                "replace with ASCII equivalents.\n",
-                "- Check ALL string literals in the file, not just the ones the compiler flagged -- ",
-                "the same mistake is likely repeated.",
-            ),
-            ErrorCategory::RustMissingModule => concat!(
-                "DIAGNOSIS: Missing Rust module file.\n",
-                "FIX: If mod.rs or lib.rs declares `pub mod foo;`, the file `foo.rs` ",
-                "(or `foo/mod.rs`) MUST exist. Either create the file or remove the module declaration.",
-            ),
-            ErrorCategory::RustMissingMethod => concat!(
-                "DIAGNOSIS: Method not found on type.\n",
-                "FIX: Check the actual public API of the type (read its source file). ",
-                "Do not invent methods. If the method does not exist, either implement it ",
-                "or use an existing method that provides the same functionality.",
-            ),
-            ErrorCategory::RustTypeError => concat!(
-                "DIAGNOSIS: Type mismatch or missing trait implementation.\n",
-                "FIX: Read the function signatures carefully. Check generic type parameters. ",
-                "Provide explicit type annotations where the compiler asks for them. ",
-                "Do not use `[u8]` where `Vec<u8>` or `&[u8]` is needed.",
-            ),
-            ErrorCategory::RustBorrowCheck => concat!(
-                "DIAGNOSIS: Borrow checker violation.\n",
-                "FIX: Check ownership and lifetimes. Consider cloning, using references, ",
-                "or restructuring to avoid simultaneous mutable/immutable borrows.",
-            ),
-            ErrorCategory::RustStructFieldMismatch => concat!(
-                "DIAGNOSIS: Struct field mismatch -- fields were added, removed, or renamed.\n",
-                "FIX: Read the actual struct definition in the 'Actual API Reference' section below. ",
-                "Update every initializer and field access to match the current struct fields exactly. ",
-                "Add any new required fields (use Default/None for Option types), remove fields that ",
-                "no longer exist, and rename fields that were renamed.\n",
-            ),
-            ErrorCategory::RustApiHallucination => concat!(
-                "DIAGNOSIS: Systematic API hallucination detected -- your code assumes an API ",
-                "that does not exist.\n",
-                "ROOT CAUSE: You are calling multiple methods or using fields that are not part ",
-                "of the actual type's public API.\n",
-                "MANDATORY FIX:\n",
-                "- The actual API is shown in the \"Actual API Reference\" section below.\n",
-                "- Rewrite ALL calls to use ONLY the methods and fields listed there.\n",
-                "- Do NOT invent, guess, or assume method names -- use exactly what exists.\n",
-                "- If the functionality you need does not exist in the current API, implement it ",
-                "or find an alternative approach.",
-            ),
-            ErrorCategory::NpmDependency => concat!(
-                "DIAGNOSIS: Missing npm package or module.\n",
-                "FIX: Ensure the dependency exists in package.json and has been installed. ",
-                "Check import paths for typos.",
-            ),
-            ErrorCategory::NpmTypeScript => concat!(
-                "DIAGNOSIS: TypeScript type errors.\n",
-                "FIX: Check that types align with the library's actual API. ",
-                "Read type definitions if needed.",
-            ),
-            ErrorCategory::GenericSyntax => concat!(
-                "DIAGNOSIS: Syntax error.\n",
-                "FIX: Look at the exact line/column the compiler indicates. ",
-                "Check for missing semicolons, unbalanced braces, or misplaced tokens.",
-            ),
-            ErrorCategory::Unknown => "",
-        };
-        if !advice.is_empty() {
-            guidance.push_str(advice);
-            guidance.push_str("\n\n");
-        }
-    }
-    guidance
-}
-
-pub(crate) fn parse_error_references(stderr: &str) -> file_ops::ErrorReferences {
-    use regex::Regex;
-
-    let mut refs = file_ops::ErrorReferences::default();
-
-    let type_re = Regex::new(r"found for (?:struct|enum|trait|union) `(\w+)").unwrap();
-    for cap in type_re.captures_iter(stderr) {
-        let name = cap[1].to_string();
-        if !refs.types_referenced.contains(&name) {
-            refs.types_referenced.push(name);
-        }
-    }
-
-    let init_type_re = Regex::new(r"in initializer of `(?:\w+::)*(\w+)`").unwrap();
-    for cap in init_type_re.captures_iter(stderr) {
-        let name = cap[1].to_string();
-        if !refs.types_referenced.contains(&name) {
-            refs.types_referenced.push(name);
-        }
-    }
-
-    let method_re =
-        Regex::new(r"no method named `(\w+)` found for (?:\w+ )?`(?:&(?:mut )?)?(\w+)").unwrap();
-    for cap in method_re.captures_iter(stderr) {
-        let method = cap[1].to_string();
-        let type_name = cap[2].to_string();
-        refs.methods_not_found
-            .push((type_name.clone(), method));
-        if !refs.types_referenced.contains(&type_name) {
-            refs.types_referenced.push(type_name);
-        }
-    }
-
-    let field_re =
-        Regex::new(r"missing field `(\w+)` in initializer of `(?:\w+::)*(\w+)`").unwrap();
-    for cap in field_re.captures_iter(stderr) {
-        let field = cap[1].to_string();
-        let type_name = cap[2].to_string();
-        refs.missing_fields.push((type_name.clone(), field));
-        if !refs.types_referenced.contains(&type_name) {
-            refs.types_referenced.push(type_name);
-        }
-    }
-
-    let loc_re = Regex::new(r"-->\s*([\w\\/._-]+):(\d+):\d+").unwrap();
-    for cap in loc_re.captures_iter(stderr) {
-        let file = cap[1].to_string();
-        let line: u32 = cap[2].parse().unwrap_or(0);
-        if !refs.source_locations.iter().any(|(f, l)| f == &file && *l == line) {
-            refs.source_locations.push((file, line));
-        }
-    }
-
-    let arg_re = Regex::new(r"takes (\d+) arguments? but (\d+)").unwrap();
-    for cap in arg_re.captures_iter(stderr) {
-        refs.wrong_arg_counts
-            .push(format!("expected {} got {}", &cap[1], &cap[2]));
-    }
-
-    refs
-}
-
 impl DevLoopEngine {
     pub(crate) fn persist_build_step(&self, task: &Task, step: BuildStepRecord) {
         let _ = self.store.atomic_update_task(
@@ -336,62 +108,10 @@ impl DevLoopEngine {
         );
     }
 
-    pub(crate) fn persist_test_step(&self, task: &Task, step: TestStepRecord) {
-        let _ = self.store.atomic_update_task(
-            &task.project_id, &task.spec_id, &task.task_id,
-            |t| { t.test_steps.push(step); },
-        );
-    }
-
-    /// Run the test suite and return the names of currently-failing tests.
-    ///
-    /// Used before task execution to establish a baseline so that
-    /// `verify_and_fix_build` can distinguish pre-existing failures from
-    /// regressions introduced by the current task.
-    pub(crate) async fn capture_test_baseline(&self, project: &Project) -> HashSet<String> {
-        let test_command = match project.test_command.as_ref().filter(|c| !c.trim().is_empty()) {
-            Some(cmd) => cmd,
-            None => return HashSet::new(),
-        };
-        let base_path = Path::new(&project.linked_folder_path);
-        match build_verify::run_build_command(base_path, test_command, None).await {
-            Ok(result) => {
-                let (tests, _) = build_verify::parse_test_output(
-                    &result.stdout, &result.stderr, result.success,
-                );
-                let failures: HashSet<String> = tests
-                    .into_iter()
-                    .filter(|t| t.status == "failed")
-                    .map(|t| t.name)
-                    .collect();
-                if !failures.is_empty() {
-                    info!(
-                        count = failures.len(),
-                        tests = ?failures,
-                        "captured {} pre-existing test failure(s) as baseline",
-                        failures.len(),
-                    );
-                }
-                failures
-            }
-            Err(e) => {
-                warn!(error = %e, "baseline test capture failed, assuming no baseline");
-                HashSet::new()
-            }
-        }
-    }
-
-    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens).
-    pub(crate) async fn verify_and_fix_build(
-        &self,
-        project: &Project,
-        task: &Task,
-        session: &Session,
-        api_key: &str,
-        initial_execution: &TaskExecution,
-        baseline_test_failures: &HashSet<String>,
-    ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
-        let mut build_command = match &project.build_command {
+    fn resolve_build_command(
+        &self, project: &Project, session: &Session, task: &Task,
+    ) -> Option<String> {
+        let cmd = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
                 self.emit(EngineEvent::BuildVerificationSkipped {
@@ -407,10 +127,10 @@ impl DevLoopEngine {
                     stdout: Some("no build_command configured on project".into()),
                     attempt: None,
                 });
-                return Ok((vec![], true, 0, 0, 0, 0));
+                return None;
             }
         };
-
+        let mut build_command = cmd;
         if let Some(corrected) = auto_correct_build_command(&build_command) {
             warn!(
                 old = %build_command, new = %corrected,
@@ -425,463 +145,189 @@ impl DevLoopEngine {
             );
             build_command = corrected;
         }
-
-        let test_command = project.test_command.as_ref()
-            .filter(|cmd| !cmd.trim().is_empty())
-            .cloned();
-
-        let base_path = Path::new(&project.linked_folder_path);
-        let mut all_fix_ops: Vec<FileOp> = Vec::new();
-        let mut prior_attempts: Vec<BuildFixAttemptRecord> = Vec::new();
-        let mut prior_test_attempts: Vec<BuildFixAttemptRecord> = Vec::new();
-        let mut duplicate_bailouts: u32 = 0;
-        let mut fix_input_tokens: u64 = 0;
-        let mut fix_output_tokens: u64 = 0;
-
-        for attempt in 1..=self.engine_config.max_build_fix_retries {
-            let build_step_start = Instant::now();
-            self.emit(EngineEvent::BuildVerificationStarted {
-                project_id: project.project_id,
-                agent_instance_id: session.agent_instance_id,
-                task_id: task.task_id,
-                command: build_command.clone(),
-            });
-            self.persist_build_step(task, BuildStepRecord {
-                kind: "started".into(),
-                command: Some(build_command.clone()),
-                stderr: None,
-                stdout: None,
-                attempt: Some(attempt),
-            });
-
-            let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
-            let fwd_event_tx = self.event_tx.clone();
-            let fwd_pid = project.project_id;
-            let fwd_aiid = session.agent_instance_id;
-            let fwd_tid = task.task_id;
-            tokio::spawn(async move {
-                while let Some(line) = line_rx.recv().await {
-                    let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
-                        project_id: fwd_pid,
-                        agent_instance_id: fwd_aiid,
-                        task_id: fwd_tid,
-                        delta: line,
-                    });
-                }
-            });
-            let build_result = build_verify::run_build_command(base_path, &build_command, Some(line_tx)).await?;
-            let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
-
-            if build_result.timed_out {
-                if let Some(corrected) = auto_correct_build_command(&build_command) {
-                    warn!(
-                        old = %build_command, new = %corrected,
-                        "build command timed out, auto-correcting"
-                    );
-                    let _ = self.project_service.update_project(
-                        &project.project_id,
-                        aura_projects::UpdateProjectInput {
-                            build_command: Some(corrected.clone()),
-                            ..Default::default()
-                        },
-                    );
-                    build_command = corrected;
-                    continue;
-                }
-            }
-
-            if build_result.success {
-                self.emit(EngineEvent::BuildVerificationPassed {
-                    project_id: project.project_id,
-                    agent_instance_id: session.agent_instance_id,
-                    task_id: task.task_id,
-                    command: build_command.clone(),
-                    stdout: build_result.stdout.clone(),
-                    duration_ms: Some(step_duration_ms),
-                });
-                self.persist_build_step(task, BuildStepRecord {
-                    kind: "passed".into(),
-                    command: Some(build_command.clone()),
-                    stderr: None,
-                    stdout: Some(build_result.stdout),
-                    attempt: Some(attempt),
-                });
-
-                let test_passed = if let Some(ref test_cmd) = test_command {
-                    let (test_result, test_inp, test_out) = self.run_and_handle_tests(
-                        project, task, session, api_key, initial_execution,
-                        test_cmd, base_path, attempt, &mut all_fix_ops,
-                        baseline_test_failures, &mut prior_test_attempts,
-                    ).await?;
-                    fix_input_tokens += test_inp;
-                    fix_output_tokens += test_out;
-                    test_result
-                } else {
-                    true
-                };
-
-                if test_passed {
-                    return Ok((all_fix_ops, true, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
-                }
-                continue;
-            }
-
-            let error_hash = Some(format!("{:x}", {
-                let mut h = 0u64;
-                for b in build_result.stderr.bytes() {
-                    h = h.wrapping_mul(31).wrapping_add(b as u64);
-                }
-                h
-            }));
-
-            self.emit(EngineEvent::BuildVerificationFailed {
-                project_id: project.project_id,
-                agent_instance_id: session.agent_instance_id,
-                task_id: task.task_id,
-                command: build_command.clone(),
-                stdout: build_result.stdout.clone(),
-                stderr: build_result.stderr.clone(),
-                attempt,
-                duration_ms: Some(step_duration_ms),
-                error_hash,
-            });
-            self.persist_build_step(task, BuildStepRecord {
-                kind: "failed".into(),
-                command: Some(build_command.clone()),
-                stderr: Some(build_result.stderr.clone()),
-                stdout: Some(build_result.stdout.clone()),
-                attempt: Some(attempt),
-            });
-
-            if attempt == self.engine_config.max_build_fix_retries {
-                info!(task_id = %task.task_id, "build still failing after max retries");
-                return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
-            }
-
-            let current_signature = normalize_error_signature(&build_result.stderr);
-            let consecutive_dupes = prior_attempts
-                .iter()
-                .rev()
-                .take_while(|a| a.error_signature == current_signature)
-                .count();
-            if consecutive_dupes >= 2 {
-                info!(
-                    task_id = %task.task_id,
-                    attempt,
-                    "same error pattern repeated {} times (after normalizing line numbers), aborting fix loop",
-                    consecutive_dupes + 1
-                );
-                duplicate_bailouts += 1;
-                return Ok((all_fix_ops, false, attempt, duplicate_bailouts, fix_input_tokens, fix_output_tokens));
-            }
-
-            self.emit(EngineEvent::BuildFixAttempt {
-                project_id: project.project_id,
-                agent_instance_id: session.agent_instance_id,
-                task_id: task.task_id,
-                attempt,
-            });
-            self.persist_build_step(task, BuildStepRecord {
-                kind: "fix_attempt".into(),
-                command: None,
-                stderr: None,
-                stdout: None,
-                attempt: Some(attempt),
-            });
-
-            let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
-            let codebase_snapshot =
-                file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
-
-            let fix_prompt = build_fix_prompt_with_history(
-                project,
-                &spec,
-                task,
-                session,
-                &codebase_snapshot,
-                &build_command,
-                &build_result.stderr,
-                &build_result.stdout,
-                &initial_execution.notes,
-                &prior_attempts,
-            );
-
-            let (tx, handle) = StreamTokenCapture::sink();
-            let response = self
-                .llm
-                .complete_stream(
-                    api_key,
-                    &build_fix_system_prompt(),
-                    &fix_prompt,
-                    self.llm_config.task_execution_max_tokens,
-                    tx,
-                    "aura_build_fix",
-                    None,
-                )
-                .await?;
-            let (cap_inp, cap_out) = handle.finalize().await;
-            fix_input_tokens += cap_inp;
-            fix_output_tokens += cap_out;
-
-            let mut attempt_files_changed: Vec<String> = Vec::new();
-
-            let fix_applied = match parse_execution_response(&response) {
-                Ok(fix_execution) => {
-                    file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await?;
-
-                    let files: Vec<crate::events::FileOpSummary> = fix_execution
-                        .file_ops
-                        .iter()
-                        .map(|op| {
-                            let (op_name, path) = match op {
-                                FileOp::Create { path, .. } => ("create", path.as_str()),
-                                FileOp::Modify { path, .. } => ("modify", path.as_str()),
-                                FileOp::Delete { path } => ("delete", path.as_str()),
-                                FileOp::SearchReplace { path, .. } => ("search_replace", path.as_str()),
-                            };
-                            attempt_files_changed.push(format!("{op_name} {path}"));
-                            crate::events::FileOpSummary {
-                                op: op_name.to_string(),
-                                path: path.to_string(),
-                            }
-                        })
-                        .collect();
-
-                    if !fix_execution.file_ops.is_empty() {
-                        self.emit(EngineEvent::FileOpsApplied {
-                            project_id: project.project_id,
-                            agent_instance_id: session.agent_instance_id,
-                            task_id: task.task_id,
-                            files_written: fix_execution
-                                .file_ops
-                                .iter()
-                                .filter(|op| matches!(op, FileOp::Create { .. } | FileOp::Modify { .. } | FileOp::SearchReplace { .. }))
-                                .count(),
-                            files_deleted: fix_execution
-                                .file_ops
-                                .iter()
-                                .filter(|op| matches!(op, FileOp::Delete { .. }))
-                                .count(),
-                            files,
-                        });
-                    }
-
-                    all_fix_ops.extend(fix_execution.file_ops);
-                    true
-                }
-                Err(e) => {
-                    warn!(
-                        task_id = %task.task_id,
-                        attempt,
-                        error = %e,
-                        "failed to parse build-fix response, fix not applied"
-                    );
-                    false
-                }
-            };
-
-            if fix_applied {
-                let sig = normalize_error_signature(&build_result.stderr);
-                prior_attempts.push(BuildFixAttemptRecord {
-                    stderr: build_result.stderr,
-                    error_signature: sig,
-                    files_changed: attempt_files_changed,
-                });
-            }
-        }
-
-        Ok((all_fix_ops, false, self.engine_config.max_build_fix_retries, duplicate_bailouts, fix_input_tokens, fix_output_tokens))
+        Some(build_command)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) async fn run_and_handle_tests(
-        &self,
-        project: &Project,
-        task: &Task,
-        session: &Session,
-        api_key: &str,
-        initial_execution: &TaskExecution,
-        test_command: &str,
-        base_path: &Path,
-        attempt: u32,
-        all_fix_ops: &mut Vec<FileOp>,
-        baseline_test_failures: &HashSet<String>,
-        prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
-    ) -> Result<(bool, u64, u64), EngineError> {
-        self.emit(EngineEvent::TestVerificationStarted {
+    async fn run_build_with_streaming(
+        &self, project: &Project, session: &Session, task: &Task,
+        base_path: &Path, build_command: &str, attempt: u32,
+    ) -> Result<(build_verify::BuildResult, u64), EngineError> {
+        let build_step_start = Instant::now();
+        self.emit(EngineEvent::BuildVerificationStarted {
             project_id: project.project_id,
             agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
-            command: test_command.to_string(),
+            command: build_command.to_string(),
         });
-        self.persist_test_step(task, TestStepRecord {
+        self.persist_build_step(task, BuildStepRecord {
             kind: "started".into(),
-            command: Some(test_command.to_string()),
+            command: Some(build_command.to_string()),
             stderr: None,
             stdout: None,
             attempt: Some(attempt),
-            tests: vec![],
-            summary: None,
         });
-
-        let test_start = Instant::now();
-        let test_result = build_verify::run_build_command(base_path, test_command, None).await?;
-        let test_duration_ms = test_start.elapsed().as_millis() as u64;
-        let (tests, summary) = build_verify::parse_test_output(
-            &test_result.stdout, &test_result.stderr, test_result.success,
-        );
-
-        if test_result.success {
-            self.emit(EngineEvent::TestVerificationPassed {
-                project_id: project.project_id,
-                agent_instance_id: session.agent_instance_id,
-                task_id: task.task_id,
-                command: test_command.to_string(),
-                stdout: test_result.stdout.clone(),
-                tests: tests.clone(),
-                summary: summary.clone(),
-                duration_ms: Some(test_duration_ms),
-            });
-            self.persist_test_step(task, TestStepRecord {
-                kind: "passed".into(),
-                command: Some(test_command.to_string()),
-                stderr: None,
-                stdout: Some(test_result.stdout),
-                attempt: Some(attempt),
-                tests,
-                summary: Some(summary),
-            });
-            return Ok((true, 0, 0));
-        }
-
-        if !baseline_test_failures.is_empty() {
-            let current_failures: HashSet<String> = tests
-                .iter()
-                .filter(|t| t.status == "failed")
-                .map(|t| t.name.clone())
-                .collect();
-            let new_failures: Vec<&String> = current_failures
-                .iter()
-                .filter(|name| !baseline_test_failures.contains(*name))
-                .collect();
-            if new_failures.is_empty() {
-                info!(
-                    task_id = %task.task_id,
-                    pre_existing = current_failures.len(),
-                    "all test failures are pre-existing (baseline), treating as passed"
-                );
-                let adjusted_summary = format!(
-                    "{summary} ({} pre-existing, ignored)",
-                    current_failures.len()
-                );
-                self.emit(EngineEvent::TestVerificationPassed {
-                    project_id: project.project_id,
-                    agent_instance_id: session.agent_instance_id,
-                    task_id: task.task_id,
-                    command: test_command.to_string(),
-                    stdout: test_result.stdout.clone(),
-                    tests: tests.clone(),
-                    summary: adjusted_summary.clone(),
-                    duration_ms: Some(test_duration_ms),
+        let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
+        let fwd_event_tx = self.event_tx.clone();
+        let fwd_pid = project.project_id;
+        let fwd_aiid = session.agent_instance_id;
+        let fwd_tid = task.task_id;
+        tokio::spawn(async move {
+            while let Some(line) = line_rx.recv().await {
+                let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                    project_id: fwd_pid,
+                    agent_instance_id: fwd_aiid,
+                    task_id: fwd_tid,
+                    delta: line,
                 });
-                self.persist_test_step(task, TestStepRecord {
-                    kind: "passed_with_baseline_failures".into(),
-                    command: Some(test_command.to_string()),
-                    stderr: Some(test_result.stderr),
-                    stdout: Some(test_result.stdout),
-                    attempt: Some(attempt),
-                    tests,
-                    summary: Some(adjusted_summary),
-                });
-                return Ok((true, 0, 0));
             }
-            info!(
-                task_id = %task.task_id,
-                new_failures = ?new_failures,
-                pre_existing = current_failures.len() - new_failures.len(),
-                "found {} new test failure(s) beyond baseline",
-                new_failures.len()
-            );
-        }
+        });
+        let build_result = build_verify::run_build_command(
+            base_path, build_command, Some(line_tx),
+        ).await?;
+        let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
+        Ok((build_result, step_duration_ms))
+    }
 
-        self.emit(EngineEvent::TestVerificationFailed {
+    fn try_auto_correct_timeout(
+        &self, project: &Project, build_command: &str,
+    ) -> Option<String> {
+        let corrected = auto_correct_build_command(build_command)?;
+        warn!(
+            old = %build_command, new = %corrected,
+            "build command timed out, auto-correcting"
+        );
+        let _ = self.project_service.update_project(
+            &project.project_id,
+            aura_projects::UpdateProjectInput {
+                build_command: Some(corrected.clone()),
+                ..Default::default()
+            },
+        );
+        Some(corrected)
+    }
+
+    fn record_build_passed(
+        &self, project: &Project, session: &Session, task: &Task,
+        build_command: &str, stdout: &str, duration_ms: u64, attempt: u32,
+    ) {
+        self.emit(EngineEvent::BuildVerificationPassed {
             project_id: project.project_id,
             agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
-            command: test_command.to_string(),
-            stdout: test_result.stdout.clone(),
-            stderr: test_result.stderr.clone(),
-            attempt,
-            tests: tests.clone(),
-            summary: summary.clone(),
-            duration_ms: Some(test_duration_ms),
+            command: build_command.to_string(),
+            stdout: stdout.to_string(),
+            duration_ms: Some(duration_ms),
         });
-        self.persist_test_step(task, TestStepRecord {
-            kind: "failed".into(),
-            command: Some(test_command.to_string()),
-            stderr: Some(test_result.stderr.clone()),
-            stdout: Some(test_result.stdout.clone()),
+        self.persist_build_step(task, BuildStepRecord {
+            kind: "passed".into(),
+            command: Some(build_command.to_string()),
+            stderr: None,
+            stdout: Some(stdout.to_string()),
             attempt: Some(attempt),
-            tests,
-            summary: Some(summary),
         });
+    }
 
-        self.emit(EngineEvent::TestFixAttempt {
+    #[allow(clippy::too_many_arguments)]
+    fn record_build_failed(
+        &self, project: &Project, session: &Session, task: &Task,
+        build_command: &str, stdout: &str, stderr: &str,
+        duration_ms: u64, attempt: u32,
+    ) {
+        let error_hash = Some(format!("{:x}", {
+            let mut h = 0u64;
+            for b in stderr.bytes() { h = h.wrapping_mul(31).wrapping_add(b as u64); }
+            h
+        }));
+        self.emit(EngineEvent::BuildVerificationFailed {
+            project_id: project.project_id,
+            agent_instance_id: session.agent_instance_id,
+            task_id: task.task_id,
+            command: build_command.to_string(),
+            stdout: stdout.to_string(),
+            stderr: stderr.to_string(),
+            attempt,
+            duration_ms: Some(duration_ms),
+            error_hash,
+        });
+        self.persist_build_step(task, BuildStepRecord {
+            kind: "failed".into(),
+            command: Some(build_command.to_string()),
+            stderr: Some(stderr.to_string()),
+            stdout: Some(stdout.to_string()),
+            attempt: Some(attempt),
+        });
+    }
+
+    fn check_error_stagnation(
+        &self, task: &Task, stderr: &str,
+        prior_attempts: &[BuildFixAttemptRecord], attempt: u32,
+    ) -> bool {
+        let current_signature = normalize_error_signature(stderr);
+        let consecutive_dupes = prior_attempts
+            .iter()
+            .rev()
+            .take_while(|a| a.error_signature == current_signature)
+            .count();
+        if consecutive_dupes >= 2 {
+            info!(
+                task_id = %task.task_id, attempt,
+                "same error pattern repeated {} times (after normalizing line numbers), aborting fix loop",
+                consecutive_dupes + 1
+            );
+            return true;
+        }
+        false
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn request_build_fix(
+        &self, project: &Project, task: &Task, session: &Session,
+        api_key: &str, initial_execution: &TaskExecution,
+        build_command: &str, build_stderr: &str, build_stdout: &str,
+        prior_attempts: &[BuildFixAttemptRecord], attempt: u32,
+    ) -> Result<(String, u64, u64), EngineError> {
+        self.emit(EngineEvent::BuildFixAttempt {
             project_id: project.project_id,
             agent_instance_id: session.agent_instance_id,
             task_id: task.task_id,
             attempt,
         });
-        self.persist_test_step(task, TestStepRecord {
+        self.persist_build_step(task, BuildStepRecord {
             kind: "fix_attempt".into(),
             command: None,
             stderr: None,
             stdout: None,
             attempt: Some(attempt),
-            tests: vec![],
-            summary: None,
         });
-
         let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
         let codebase_snapshot =
             file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)?;
-
         let fix_prompt = build_fix_prompt_with_history(
-            project,
-            &spec,
-            task,
-            session,
-            &codebase_snapshot,
-            test_command,
-            &test_result.stderr,
-            &test_result.stdout,
-            &initial_execution.notes,
-            prior_test_attempts,
+            project, &spec, task, session, &codebase_snapshot,
+            build_command, build_stderr, build_stdout,
+            &initial_execution.notes, prior_attempts,
         );
-
         let (tx, handle) = StreamTokenCapture::sink();
         let response = self
             .llm
             .complete_stream(
-                api_key,
-                &build_fix_system_prompt(),
-                &fix_prompt,
+                api_key, &build_fix_system_prompt(), &fix_prompt,
                 self.llm_config.task_execution_max_tokens,
-                tx,
-                "aura_build_fix",
-                None,
+                tx, "aura_build_fix", None,
             )
             .await?;
-        let (test_fix_inp, test_fix_out) = handle.finalize().await;
+        let (cap_inp, cap_out, _, _) = handle.finalize().await;
+        Ok((response, cap_inp, cap_out))
+    }
 
-        match parse_execution_response(&response) {
+    async fn apply_fix_response(
+        &self, project: &Project, session: &Session, task: &Task,
+        base_path: &Path, response: &str, attempt: u32,
+    ) -> Result<(bool, Vec<String>, Vec<FileOp>), EngineError> {
+        match parse_execution_response(response) {
             Ok(fix_execution) => {
                 file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await?;
-                if !fix_execution.file_ops.is_empty() {
-                    self.emit_file_ops_applied(project.project_id, session.agent_instance_id, task, &fix_execution.file_ops);
-                }
-
-                let attempt_files: Vec<String> = fix_execution.file_ops.iter().map(|op| {
+                let files_changed: Vec<String> = fix_execution.file_ops.iter().map(|op| {
                     let (op_name, path) = match op {
                         FileOp::Create { path, .. } => ("create", path.as_str()),
                         FileOp::Modify { path, .. } => ("modify", path.as_str()),
@@ -890,26 +336,131 @@ impl DevLoopEngine {
                     };
                     format!("{op_name} {path}")
                 }).collect();
-                let sig = normalize_error_signature(&test_result.stderr);
-                prior_test_attempts.push(BuildFixAttemptRecord {
-                    stderr: test_result.stderr.clone(),
-                    error_signature: sig,
-                    files_changed: attempt_files,
-                });
-
-                all_fix_ops.extend(fix_execution.file_ops);
+                if !fix_execution.file_ops.is_empty() {
+                    self.emit_file_ops_applied(
+                        project.project_id, session.agent_instance_id,
+                        task, &fix_execution.file_ops,
+                    );
+                }
+                Ok((true, files_changed, fix_execution.file_ops))
             }
             Err(e) => {
                 warn!(
-                    task_id = %task.task_id,
-                    attempt,
-                    error = %e,
-                    "failed to parse test-fix response"
+                    task_id = %task.task_id, attempt, error = %e,
+                    "failed to parse build-fix response, fix not applied"
                 );
+                Ok((false, vec![], vec![]))
             }
         }
+    }
 
-        Ok((false, test_fix_inp, test_fix_out))
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_build_success(
+        &self, project: &Project, task: &Task, session: &Session,
+        api_key: &str, initial_execution: &TaskExecution,
+        build_command: &str, stdout: &str, duration_ms: u64,
+        attempt: u32, test_command: &Option<String>,
+        base_path: &Path, all_fix_ops: &mut Vec<FileOp>,
+        baseline_test_failures: &HashSet<String>,
+        prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
+    ) -> Result<(bool, u64, u64), EngineError> {
+        self.record_build_passed(project, session, task, build_command, stdout, duration_ms, attempt);
+        match test_command.as_deref() {
+            Some(test_cmd) => {
+                self.run_and_handle_tests(
+                    project, task, session, api_key, initial_execution,
+                    test_cmd, base_path, attempt, all_fix_ops,
+                    baseline_test_failures, prior_test_attempts,
+                ).await
+            }
+            None => Ok((true, 0, 0)),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn attempt_build_fix(
+        &self, project: &Project, task: &Task, session: &Session,
+        api_key: &str, initial_execution: &TaskExecution,
+        build_command: &str, build_result: &build_verify::BuildResult,
+        base_path: &Path, prior_attempts: &mut Vec<BuildFixAttemptRecord>,
+        all_fix_ops: &mut Vec<FileOp>, attempt: u32,
+    ) -> Result<(u64, u64), EngineError> {
+        let (response, inp, out) = self.request_build_fix(
+            project, task, session, api_key, initial_execution,
+            build_command, &build_result.stderr, &build_result.stdout,
+            prior_attempts, attempt,
+        ).await?;
+        let (fix_applied, files_changed, ops) = self.apply_fix_response(
+            project, session, task, base_path, &response, attempt,
+        ).await?;
+        all_fix_ops.extend(ops);
+        if fix_applied {
+            let sig = normalize_error_signature(&build_result.stderr);
+            prior_attempts.push(BuildFixAttemptRecord {
+                stderr: build_result.stderr.clone(),
+                error_signature: sig,
+                files_changed,
+            });
+        }
+        Ok((inp, out))
+    }
+
+    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens).
+    pub(crate) async fn verify_and_fix_build(
+        &self, project: &Project, task: &Task, session: &Session,
+        api_key: &str, initial_execution: &TaskExecution,
+        baseline_test_failures: &HashSet<String>,
+    ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
+        let mut build_cmd = match self.resolve_build_command(project, session, task) {
+            Some(cmd) => cmd,
+            None => return Ok((vec![], true, 0, 0, 0, 0)),
+        };
+        let test_cmd = project.test_command.as_ref().filter(|c| !c.trim().is_empty()).cloned();
+        let base_path = Path::new(&project.linked_folder_path);
+        let mut fix_ops: Vec<FileOp> = Vec::new();
+        let mut prior: Vec<BuildFixAttemptRecord> = Vec::new();
+        let mut test_prior: Vec<BuildFixAttemptRecord> = Vec::new();
+        let (mut dup_bail, mut inp_t, mut out_t) = (0u32, 0u64, 0u64);
+
+        for attempt in 1..=self.engine_config.max_build_fix_retries {
+            let (br, dur) = self.run_build_with_streaming(
+                project, session, task, base_path, &build_cmd, attempt,
+            ).await?;
+            if br.timed_out {
+                if let Some(c) = self.try_auto_correct_timeout(project, &build_cmd) {
+                    build_cmd = c;
+                    continue;
+                }
+            }
+            if br.success {
+                let (tp, i, o) = self.handle_build_success(
+                    project, task, session, api_key, initial_execution, &build_cmd,
+                    &br.stdout, dur, attempt, &test_cmd, base_path, &mut fix_ops,
+                    baseline_test_failures, &mut test_prior,
+                ).await?;
+                inp_t += i; out_t += o;
+                if tp { return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t)); }
+                continue;
+            }
+            self.record_build_failed(
+                project, session, task, &build_cmd,
+                &br.stdout, &br.stderr, dur, attempt,
+            );
+            if attempt == self.engine_config.max_build_fix_retries {
+                info!(task_id = %task.task_id, "build still failing after max retries");
+                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t));
+            }
+            if self.check_error_stagnation(task, &br.stderr, &prior, attempt) {
+                dup_bail += 1;
+                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t));
+            }
+            let (i, o) = self.attempt_build_fix(
+                project, task, session, api_key, initial_execution, &build_cmd,
+                &br, base_path, &mut prior, &mut fix_ops, attempt,
+            ).await?;
+            inp_t += i; out_t += o;
+        }
+        Ok((fix_ops, false, self.engine_config.max_build_fix_retries, dup_bail, inp_t, out_t))
     }
 }
 

@@ -20,10 +20,10 @@ fn default_fee_schedule() -> Vec<FeeScheduleEntry> {
             effective_date: "2025-10-01".into(),
         },
         FeeScheduleEntry {
-            model: "claude-haiku-3-5".into(),
-            input_cost_per_million: 0.25,
-            output_cost_per_million: 1.25,
-            effective_date: "2025-06-01".into(),
+            model: "claude-haiku-4-5".into(),
+            input_cost_per_million: 0.80,
+            output_cost_per_million: 4.00,
+            effective_date: "2025-10-01".into(),
         },
     ]
 }
@@ -153,6 +153,14 @@ mod tests {
         let (inp, out) = lookup_rate_in(&sched, "claude-opus-4-6");
         assert!((inp - 5.0).abs() < f64::EPSILON);
         assert!((out - 25.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn fast_model_matches_haiku_entry() {
+        let sched = default_fee_schedule();
+        let (inp, out) = lookup_rate_in(&sched, aura_claude::FAST_MODEL);
+        assert!((inp - 0.80).abs() < f64::EPSILON, "FAST_MODEL input rate should be haiku, got {inp}");
+        assert!((out - 4.00).abs() < f64::EPSILON, "FAST_MODEL output rate should be haiku, got {out}");
     }
 
     #[test]

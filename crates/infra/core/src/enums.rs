@@ -56,18 +56,3 @@ pub enum OrgRole {
     Member,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum InviteStatus {
-    Pending,
-    Accepted,
-    Expired,
-    Revoked,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FollowTargetType {
-    User,
-    Agent,
-}

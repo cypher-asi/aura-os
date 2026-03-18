@@ -65,9 +65,9 @@
 
 .taskCheck {
   display: block;
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid var(--color-text-muted, #666);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-text-muted, #666);
   flex-shrink: 0;
   position: relative;
   box-sizing: border-box;
@@ -81,10 +81,10 @@
 .taskActive .taskCheck::before {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
   background: var(--color-text, #ddd);
 }
 
@@ -224,4 +224,34 @@
 
 .errorText {
   color: #f87171;
+}
+
+/* ── Artifact refs (created tasks/specs) ── */
+
+.artifactRefs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.artifactRef {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.artifactRefIcon {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--color-text-muted, #777);
+  min-width: 32px;
+}
+
+.artifactRefTitle {
+  font-size: 13px;
+  color: var(--color-text, #ddd);
 }

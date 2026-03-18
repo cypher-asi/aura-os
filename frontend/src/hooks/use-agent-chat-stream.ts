@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import type { ToolCallInfo, ToolResultInfo } from "../api/streams";
+import type { Spec, Task } from "../types";
 import type {
   DisplayMessage,
   ToolCallEntry,
@@ -8,9 +9,11 @@ import type {
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
+  onTaskSaved?: (task: Task) => void;
+  onSpecSaved?: (spec: Spec) => void;
 }
 
-export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
+export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions) {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState("");
@@ -118,6 +121,12 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
             setActiveToolCalls([...toolCallsRef.current]);
             needsSeparatorRef.current = true;
           },
+          onSpecSaved(spec) {
+            onSpecSaved?.(spec);
+          },
+          onTaskSaved(task) {
+            onTaskSaved?.(task);
+          },
           onMessageSaved(msg) {
             const finalToolCalls = toolCallsRef.current.length > 0
               ? [...toolCallsRef.current]
@@ -151,23 +160,24 @@ export function useAgentChatStream({ agentId }: UseAgentChatStreamOptions) {
             if (isInsufficientCreditsError(message)) {
               dispatchInsufficientCredits();
             }
-            if (streamBufferRef.current) {
-              const savedThinking = thinkingBufferRef.current || undefined;
-              const savedThinkingDuration = thinkingStartRef.current != null
-                ? Date.now() - thinkingStartRef.current
-                : null;
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `error-${Date.now()}`,
-                  role: "assistant",
-                  content: streamBufferRef.current + `\n\n*Error: ${message}*`,
-                  toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
-                  thinkingText: savedThinking,
-                  thinkingDurationMs: savedThinkingDuration,
-                },
-              ]);
-            }
+            const savedThinking = thinkingBufferRef.current || undefined;
+            const savedThinkingDuration = thinkingStartRef.current != null
+              ? Date.now() - thinkingStartRef.current
+              : null;
+            const errorContent = streamBufferRef.current
+              ? streamBufferRef.current + `\n\n*Error: ${message}*`
+              : `*Error: ${message}*`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `error-${Date.now()}`,
+                role: "assistant",
+                content: errorContent,
+                toolCalls: toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined,
+                thinkingText: savedThinking,
+                thinkingDurationMs: savedThinkingDuration,
+              },
+            ]);
             setStreamingText("");
             streamBufferRef.current = "";
             setThinkingText("");

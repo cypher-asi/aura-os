@@ -8,7 +8,6 @@ members = [
     "crates/domain/projects",
     "crates/domain/agents",
     "crates/domain/auth",
-    "crates/domain/github",
     "crates/domain/tasks",
     "crates/domain/sessions",
     "crates/domain/specs",
@@ -19,6 +18,7 @@ members = [
     "crates/domain/settings",
     "crates/infra/store",
     "crates/infra/terminal",
+    "crates/infra/network",
     "apps/ide",
 ]
 resolver = "2"

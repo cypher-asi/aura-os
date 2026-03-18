@@ -235,7 +235,7 @@ export function LoginView() {
               variant="primary"
               className={styles.submit}
               disabled={loading}
-              icon={loading ? <Spinner size="sm" /> : undefined}
+              icon={loading ? <Spinner size="sm" className={styles.spinnerWhite} /> : undefined}
             >
               {loading
                 ? "Please wait..."

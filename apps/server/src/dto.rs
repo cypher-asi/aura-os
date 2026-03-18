@@ -21,8 +21,6 @@ pub struct CreateProjectRequest {
     pub linked_folder_path: String,
     pub workspace_source: Option<String>,
     pub workspace_display_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -34,8 +32,6 @@ pub struct UpdateProjectRequest {
     pub linked_folder_path: Option<String>,
     pub workspace_source: Option<String>,
     pub workspace_display_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -136,6 +132,10 @@ pub struct AuthRegisterRequest {
 #[derive(Debug, Serialize)]
 pub struct AuthSessionResponse {
     pub user_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub network_user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
     pub display_name: String,
     pub profile_image: String,
     pub primary_zid: String,
@@ -168,83 +168,11 @@ pub struct SetBillingRequest {
     pub plan: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SetGithubRequest {
-    pub github_org: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubInstallResponse {
-    pub install_url: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubIntegrationResponse {
-    pub integration_id: String,
-    pub org_id: String,
-    pub installation_id: i64,
-    pub github_account_login: String,
-    pub github_account_type: String,
-    pub connected_by: String,
-    pub connected_at: DateTime<Utc>,
-    pub repo_count: usize,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GitHubRepoResponse {
-    pub github_repo_id: i64,
-    pub integration_id: String,
-    pub full_name: String,
-    pub name: String,
-    pub private: bool,
-    pub default_branch: String,
-    pub html_url: String,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GitHubCallbackQuery {
-    pub installation_id: i64,
-    pub setup_action: Option<String>,
-    pub state: Option<String>,
-}
-
-impl GitHubIntegrationResponse {
-    pub fn from_integration(int: GitHubIntegration, repo_count: usize) -> Self {
-        Self {
-            integration_id: int.integration_id.to_string(),
-            org_id: int.org_id.to_string(),
-            installation_id: int.installation_id,
-            github_account_login: int.github_account_login,
-            github_account_type: int.github_account_type,
-            connected_by: int.connected_by,
-            connected_at: int.connected_at,
-            repo_count,
-        }
-    }
-}
-
-impl From<GitHubRepo> for GitHubRepoResponse {
-    fn from(repo: GitHubRepo) -> Self {
-        Self {
-            github_repo_id: repo.github_repo_id,
-            integration_id: repo.integration_id.to_string(),
-            full_name: repo.full_name,
-            name: repo.name,
-            private: repo.private,
-            default_branch: repo.default_branch,
-            html_url: repo.html_url,
-            updated_at: repo.updated_at,
-        }
-    }
-}
-
 // -- Follow DTOs --
 
 #[derive(Debug, Deserialize)]
 pub struct FollowRequest {
-    pub target_type: FollowTargetType,
-    pub target_id: String,
+    pub target_profile_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -280,6 +208,8 @@ impl From<ZeroAuthSession> for AuthSessionResponse {
     fn from(s: ZeroAuthSession) -> Self {
         Self {
             user_id: s.user_id,
+            network_user_id: s.network_user_id.map(|id| id.to_string()),
+            profile_id: s.profile_id.map(|id| id.to_string()),
             display_name: s.display_name,
             profile_image: s.profile_image,
             primary_zid: s.primary_zid,

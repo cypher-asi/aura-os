@@ -12,6 +12,7 @@ export interface LeaderboardUser {
   id: string;
   name: string;
   avatarUrl?: string;
+  profileId?: string;
   type: "user" | "agent";
   tokens: number;
   commits: number;

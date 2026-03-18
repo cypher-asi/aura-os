@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -9,7 +10,6 @@ use crate::error::StoreResult;
 
 pub(crate) const CF_NAMES: &[&str] = &[
     "projects",
-    "sprints",
     "specs",
     "tasks",
     "agents",
@@ -18,13 +18,7 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "settings",
     "messages",
     "orgs",
-    "org_members",
-    "user_orgs",
-    "org_invites",
-    "github_integrations",
-    "github_repos",
     "log_entries",
-    "follows",
 ];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
@@ -43,8 +37,25 @@ impl RocksStore {
         opts.create_if_missing(true);
         opts.create_missing_column_families(true);
 
-        let cf_descriptors: Vec<ColumnFamilyDescriptor> = CF_NAMES
+        let desired: HashSet<&str> = CF_NAMES.iter().copied().collect();
+
+        // Discover CFs already on disk so we can open them (RocksDB requires it)
+        // and then drop any that are no longer in our schema.
+        let on_disk: Vec<String> = RocksDB::list_cf(&opts, path).unwrap_or_default();
+        let stale: Vec<String> = on_disk
             .iter()
+            .filter(|name| name.as_str() != "default" && !desired.contains(name.as_str()))
+            .cloned()
+            .collect();
+
+        let mut all_names: HashSet<&str> = desired;
+        for name in &on_disk {
+            all_names.insert(name.as_str());
+        }
+
+        let cf_descriptors: Vec<ColumnFamilyDescriptor> = all_names
+            .iter()
+            .filter(|name| **name != "default")
             .map(|name| {
                 let mut cf_opts = Options::default();
                 cf_opts.set_prefix_extractor(rocksdb::SliceTransform::create_fixed_prefix(36));
@@ -53,6 +64,12 @@ impl RocksStore {
             .collect();
 
         let db = RocksDB::open_cf_descriptors(&opts, path, cf_descriptors)?;
+
+        for name in &stale {
+            tracing::info!(cf = %name, "dropping stale column family");
+            db.drop_cf(name)?;
+        }
+
         Ok(Self {
             db: Arc::new(db),
             task_write_lock: Mutex::new(()),

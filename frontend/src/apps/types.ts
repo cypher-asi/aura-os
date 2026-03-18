@@ -13,8 +13,6 @@ export interface AuraApp {
   SidekickTaskbar?: ComponentType;
   /** Rendered in the sidekick Lane's `taskbar` slot (e.g. automation bar). */
   SidekickHeader?: ComponentType;
-  /** Hook returning true when the sidekick lane should collapse to zero width. */
-  useSidekickCollapsed?: () => boolean;
   PreviewPanel?: ComponentType;
   PreviewHeader?: ComponentType;
   Provider?: ComponentType<{ children: ReactNode }>;

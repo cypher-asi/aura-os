@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
+import { EmptyState } from "./EmptyState";
 import type { OrgBilling, CreditTier, CreditBalance } from "../types";
 import type { CheckoutPollingStatus } from "../hooks/use-checkout-polling";
 import styles from "./OrgSettingsPanel.module.css";
@@ -160,7 +161,7 @@ export function OrgSettingsBilling({
           <button className={billingStyles.retryButton} onClick={onRetryTiers}>Retry</button>
         </div>
       ) : tiers.length === 0 ? (
-        <div className={billingStyles.emptyState}>No credit tiers available</div>
+        <EmptyState>No credit tiers available</EmptyState>
       ) : (
         <div className={billingStyles.tierGrid}>
           {tiers.map((tier) => (

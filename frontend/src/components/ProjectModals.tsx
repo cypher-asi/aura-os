@@ -44,13 +44,13 @@ export function DeleteAgentInstanceModal({ target, loading, onClose, onDelete }:
     <Modal
       isOpen={!!target}
       onClose={onClose}
-      title="Delete Agent"
+      title="Remove Agent"
       size="sm"
       footer={
         <div className={styles.confirmFooter}>
           <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button variant="primary" size="sm" onClick={onDelete} disabled={loading} className={styles.dangerButton}>
-            {loading ? "Deleting..." : "Delete"}
+            {loading ? "Removing..." : "Remove"}
           </Button>
         </div>
       }

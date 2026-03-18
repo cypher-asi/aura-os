@@ -3,7 +3,7 @@ use std::path::Path;
 use aura_core::*;
 
 use super::build_fix::{classify_build_errors, error_category_guidance, parse_error_references, BuildFixAttemptRecord};
-use crate::file_ops;
+use crate::file_ops::{self, StubReport};
 
 pub(crate) fn task_execution_system_prompt() -> String {
     format!(r#"
@@ -104,6 +104,7 @@ Response schema:
 pub(crate) fn agentic_execution_system_prompt(
     project: &Project,
     agent: Option<&AgentInstance>,
+    workspace_info: Option<&str>,
 ) -> String {
     let build_cmd = project.build_command.as_deref().unwrap_or("(not configured)");
     let test_cmd = project.test_command.as_deref().unwrap_or("(not configured)");
@@ -137,9 +138,22 @@ pub(crate) fn agentic_execution_system_prompt(
         }
     }
 
-    format!(
+    let platform_info = if cfg!(windows) {
+        "Platform: Windows. Shell commands run via `cmd /C`. Use PowerShell or \
+         Windows-compatible syntax. Avoid Unix-only tools (grep, sed, awk, head, \
+         tail, wc, cat). Prefer the built-in tools (search_code, read_file, \
+         find_files, list_files) over shell commands for file exploration."
+    } else if cfg!(target_os = "macos") {
+        "Platform: macOS. Shell commands run via `sh -c`."
+    } else {
+        "Platform: Linux. Shell commands run via `sh -c`."
+    };
+
+    let mut prompt = format!(
         r#"{preamble}You are an expert software engineer executing a single implementation task.
 You have tools to explore the codebase, make changes, and verify your work.
+
+{platform_info}
 
 Workflow:
 1. Use get_task_context if you need to review the task details
@@ -163,6 +177,9 @@ Rules:
 - Do NOT call task_done until the build passes
 - Do NOT use emojis in notes or any text output
 
+TOOL USAGE:
+- Do NOT use run_command for searching code, reading files, or finding files. Always use the dedicated tools: search_code, read_file, find_files, list_files. Reserve run_command for build, test, git, and package manager commands only.
+
 SCOPE: Stay strictly on-task.
 - ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
 - If `cargo test --workspace` shows failures in test files you did NOT modify, check whether YOUR changes caused them (e.g., you changed a struct and tests that use it now fail). If so, fix them. If they are pre-existing and unrelated to your changes, IGNORE them.
@@ -170,7 +187,27 @@ SCOPE: Stay strictly on-task.
 - When verifying, prefer scoped commands (e.g. `cargo test -p <crate> --lib <module>`) over workspace-wide commands to avoid noise from pre-existing failures.
 - NEVER output raw JSON with file_ops in your text response. Always use the provided tools (write_file, edit_file, task_done, etc.) to make changes and signal completion.
 "#
-    )
+    );
+
+    if let Some(ws_info) = workspace_info {
+        let crate_count = ws_info.lines()
+            .next()
+            .and_then(|l| l.split_whitespace().nth(1))
+            .unwrap_or("multiple");
+        prompt.push_str(&format!(
+            r#"
+## Workspace Context
+This is a Rust workspace with {crate_count} crate members. Before implementing:
+1. Check the Workspace Structure section in the task context to understand crate dependencies
+2. Read the lib.rs of each dependency crate to understand its public API
+3. NEVER guess type signatures, method names, or struct fields -- verify by reading source
+4. If you declare `pub mod foo;`, create foo.rs in the same set of file operations
+5. Use the codebase snapshot to understand existing patterns before writing new code
+"#
+        ));
+    }
+
+    prompt
 }
 
 pub(crate) fn build_agentic_task_context(
@@ -178,6 +215,8 @@ pub(crate) fn build_agentic_task_context(
     spec: &Spec,
     task: &Task,
     session: &Session,
+    completed_deps: &[Task],
+    work_log_summary: &str,
 ) -> String {
     let mut ctx = String::new();
     ctx.push_str(&format!("# Project: {}\n{}\n\n", project.name, project.description));
@@ -196,6 +235,37 @@ pub(crate) fn build_agentic_task_context(
             task.execution_notes
         ));
     }
+
+    if !completed_deps.is_empty() {
+        ctx.push_str("# Completed Predecessor Tasks\n");
+        let mut dep_budget = 5_000usize;
+        for dep in completed_deps {
+            let files_list = dep.files_changed.iter()
+                .map(|fc| format!("{} ({})", fc.path, fc.op))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let section = format!(
+                "## {}\n{}\nFiles: {}\n\n",
+                dep.title,
+                dep.execution_notes,
+                files_list,
+            );
+            if section.len() > dep_budget {
+                break;
+            }
+            dep_budget -= section.len();
+            ctx.push_str(&section);
+        }
+        ctx.push('\n');
+    }
+
+    if !work_log_summary.is_empty() {
+        ctx.push_str(&format!(
+            "# Session Progress (tasks completed so far)\n{}\n\n",
+            work_log_summary
+        ));
+    }
+
     ctx.push_str("Start by exploring the codebase to understand the current state, then implement the task.\n");
     ctx
 }
@@ -400,4 +470,31 @@ fn truncate_prompt_output(s: &str, max_chars: usize) -> String {
     let start = &s[..half];
     let end = &s[s.len() - half..];
     format!("{start}\n\n... (truncated {0} bytes) ...\n\n{end}", s.len() - max_chars)
+}
+
+/// Build a prompt that tells the agent to replace stub/placeholder code with
+/// real implementations. Used as a follow-up when stub detection fires after
+/// an otherwise-successful build.
+pub(crate) fn build_stub_fix_prompt(stub_reports: &[StubReport]) -> String {
+    let mut prompt = String::from(
+        "STOP: Your implementation compiles but contains stub/placeholder code that must be \
+         filled in. The following locations have incomplete implementations:\n\n"
+    );
+
+    for report in stub_reports {
+        prompt.push_str(&format!(
+            "- {}:{} -- {}\n  ```\n  {}\n  ```\n\n",
+            report.path, report.line, report.pattern, report.context,
+        ));
+    }
+
+    prompt.push_str(
+        "Replace ALL stubs with real, working implementations. Read the spec and codebase \
+         to understand what each function should do, then implement it fully.\n\
+         Do NOT use todo!(), unimplemented!(), Default::default() as a placeholder, or \
+         ignore function parameters with _ prefixes.\n\
+         After fixing, verify the build still passes, then call task_done.\n"
+    );
+
+    prompt
 }

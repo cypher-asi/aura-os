@@ -30,7 +30,7 @@ Specification for what **aura-runtime** needs to support so **aura-app** can ful
 | —                  | `fs_stat`               | Exists     | Runtime-only tool (file metadata). No aura-app equivalent; keep available for LLM use                                                                          |
 | `task_done`        | —                       | **Via R1** | External tool, callback to aura-app                                                                                                                            |
 | `get_task_context` | —                       | **Via R1** | External tool, callback to aura-app                                                                                                                            |
-| 20 domain tools    | —                       | **Via R1** | External tools, callback to aura-app (5 spec + 5 task + 1 run_task + 4 sprint + 2 project + 3 dev loop)                                                       |
+| 16 domain tools    | —                       | **Via R1** | External tools, callback to aura-app (5 spec + 5 task + 1 run_task + 2 project + 3 dev loop)                                                                  |
 
 ---
 
@@ -38,7 +38,7 @@ Specification for what **aura-runtime** needs to support so **aura-app** can ful
 
 ### R1. Tool Extension API `[CRITICAL]`
 
-**Problem:** aura-app has 30 tools. aura-runtime has 7 built-in tools (`fs_read`, `fs_write`, `fs_ls`, `fs_edit`, `fs_stat`, `cmd_run`, `search_code`). The remaining 22 are domain-specific: 20 chat management tools (spec/task/sprint/project/dev-loop management) plus 2 engine-only tools (`task_done`, `get_task_context`). Without an extension mechanism, aura-app would need to intercept tool calls outside the runtime — breaking the "no weird communication" goal.
+**Problem:** aura-app has 26 tools. aura-runtime has 7 built-in tools (`fs_read`, `fs_write`, `fs_ls`, `fs_edit`, `fs_stat`, `cmd_run`, `search_code`). The remaining 18 are domain-specific: 16 chat management tools (spec/task/project/dev-loop management) plus 2 engine-only tools (`task_done`, `get_task_context`). Without an extension mechanism, aura-app would need to intercept tool calls outside the runtime — breaking the "no weird communication" goal.
 
 **What aura-app does today:** In `crates/ai/chat/src/chat_tool_executor.rs`, tools like `create_spec`, `list_tasks`, `start_dev_loop` call directly into `ProjectService`, `TaskService`, `SpecGenerationService` etc. In `crates/ai/engine/src/engine/executor.rs`, `task_done` extracts `notes` and `follow_ups` from the tool input and signals the loop to stop.
 

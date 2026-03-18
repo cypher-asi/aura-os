@@ -10,20 +10,27 @@ export interface FeeScheduleEntry {
 const DEFAULT_SCHEDULE: FeeScheduleEntry[] = [
   { model: "claude-opus-4-6", input_cost_per_million: 5, output_cost_per_million: 25, effective_date: "2026-02-01" },
   { model: "claude-sonnet-4-5", input_cost_per_million: 3, output_cost_per_million: 15, effective_date: "2025-10-01" },
-  { model: "claude-haiku-3-5", input_cost_per_million: 0.25, output_cost_per_million: 1.25, effective_date: "2025-06-01" },
+  { model: "claude-haiku-4-5", input_cost_per_million: 0.80, output_cost_per_million: 4.00, effective_date: "2025-10-01" },
 ];
 
 let _cached: FeeScheduleEntry[] | null = null;
+let _pending: Promise<FeeScheduleEntry[]> | null = null;
 
 function getSchedule(): FeeScheduleEntry[] {
   if (_cached) return _cached;
-  api.getFeeSchedule().then((s) => { _cached = s; }).catch(() => {});
+  if (!_pending) {
+    _pending = api.getFeeSchedule()
+      .then((s) => { _cached = s; return s; })
+      .catch(() => DEFAULT_SCHEDULE)
+      .finally(() => { _pending = null; });
+  }
   return DEFAULT_SCHEDULE;
 }
 
 /** Force a fresh load (call after PUT to update the schedule). */
 export function invalidateFeeSchedule(): void {
   _cached = null;
+  _pending = null;
 }
 
 export function lookupRate(

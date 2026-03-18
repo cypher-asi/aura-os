@@ -3,7 +3,6 @@ import { api } from "../api/client";
 import { useOrg } from "../context/OrgContext";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { PathInput } from "./PathInput";
-import type { GitHubRepo } from "../types";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import {
   clearNewProjectDraftFiles,
@@ -47,7 +46,6 @@ type NewProjectDraft = {
   name: string;
   description: string;
   folderPath: string;
-  selectedRepo: string;
 };
 
 function readDraft(): NewProjectDraft | null {
@@ -62,7 +60,6 @@ function readDraft(): NewProjectDraft | null {
       name: typeof parsed.name === "string" ? parsed.name : "",
       description: typeof parsed.description === "string" ? parsed.description : "",
       folderPath: typeof parsed.folderPath === "string" ? parsed.folderPath : "",
-      selectedRepo: typeof parsed.selectedRepo === "string" ? parsed.selectedRepo : "",
     };
   } catch {
     return null;
@@ -127,8 +124,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState(storedDraft?.selectedRepo ?? "");
   const nameInputRef = useRef<HTMLInputElement>(null);
   const importFolderInputRef = useRef<DirectoryInput>(null);
   const importFilesInputRef = useRef<HTMLInputElement>(null);
@@ -143,11 +138,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       importFolderInputRef.current.setAttribute("directory", "");
     }
   }, []);
-
-  useEffect(() => {
-    if (!isOpen || !activeOrg) return;
-    api.orgs.listGithubRepos(activeOrg.org_id).then(setRepos).catch(() => setRepos([]));
-  }, [isOpen, activeOrg]);
 
   useEffect(() => {
     if (!isOpen || workspaceMode !== "imported") return;
@@ -173,9 +163,8 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       name,
       description,
       folderPath,
-      selectedRepo,
     });
-  }, [description, folderPath, isOpen, name, selectedRepo, workspaceMode]);
+  }, [description, folderPath, isOpen, name, workspaceMode]);
 
   useEffect(() => {
     if (workspaceMode !== "imported") {
@@ -198,7 +187,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setDescription("");
     setFolderPath("");
     setImportCandidates([]);
-    setSelectedRepo("");
     setLoading(false);
     setError("");
     setNameError("");
@@ -233,14 +221,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       if (!activeOrg) return;
       let project;
       if (workspaceMode === "linked") {
-        const repoObj = repos.find((r) => r.full_name === selectedRepo);
         project = await api.createProject({
           org_id: activeOrg.org_id,
           name: name.trim(),
           description: description.trim(),
           linked_folder_path: folderPath.trim(),
-          github_integration_id: repoObj?.integration_id,
-          github_repo_full_name: repoObj?.full_name,
         });
       } else {
         const importedFiles = await toImportedFiles(importCandidates);
@@ -432,27 +417,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
               </div>
             )}
           </div>
-        )}
-        {workspaceMode === "linked" && repos.length > 0 && (
-          <select
-            value={selectedRepo}
-            onChange={(e) => setSelectedRepo(e.target.value)}
-            style={{
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--color-border)",
-              background: "var(--color-bg-elevated)",
-              color: "var(--color-text)",
-              fontSize: "var(--font-size-sm)",
-            }}
-          >
-            <option value="">No GitHub repository</option>
-            {repos.map((r) => (
-              <option key={r.github_repo_id} value={r.full_name}>
-                {r.full_name}{r.private ? " (private)" : ""}
-              </option>
-            ))}
-          </select>
         )}
         {!orgLoading && !activeOrg && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>

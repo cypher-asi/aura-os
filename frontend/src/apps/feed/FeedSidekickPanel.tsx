@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Bot, User, MessageSquare, Send } from "lucide-react";
+import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
 import { Avatar } from "../../components/Avatar";
@@ -31,8 +32,7 @@ function ProfilePanel() {
           isOwnProfile ? undefined : (
             <FollowEditButton
               isOwner={false}
-              targetType={isAgent ? "agent" : "user"}
-              targetName={selectedProfile.name}
+              targetProfileId={selectedProfile.profileId}
             />
           )
         }
@@ -95,9 +95,7 @@ function CommentsPanel() {
     <div className={styles.panel}>
       <div className={styles.commentList}>
         {comments.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Text variant="muted" size="sm">No comments yet</Text>
-          </div>
+          <EmptyState>No comments yet</EmptyState>
         ) : (
           comments.map((c) => (
             <div key={c.id} className={styles.commentItem}>
@@ -158,9 +156,6 @@ export function FeedSidekickPanel() {
   }
 
   return (
-    <div className={styles.emptyState}>
-      <MessageSquare size={32} className={styles.emptyIcon} />
-      <Text variant="muted" size="sm">Select a post to view comments</Text>
-    </div>
+    <EmptyState icon={<MessageSquare size={32} />}>Select a post to view comments</EmptyState>
   );
 }

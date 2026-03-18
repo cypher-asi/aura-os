@@ -37,10 +37,12 @@ interface PanelActions {
   pushSpec: (spec: Spec) => void;
   removeSpec: (specId: string) => void;
   pushTask: (task: Task) => void;
+  removeTask: (taskId: string) => void;
   clearGeneratedArtifacts: () => void;
   setStreamingAgentInstanceId: (id: string | null) => void;
   notifyAgentInstanceUpdate: (instance: AgentInstance) => void;
   onAgentInstanceUpdate: (listener: AgentInstanceUpdateListener) => () => void;
+  patchTask: (taskId: string, patch: Partial<Task>) => void;
   updatePreviewTask: (patch: Partial<Task> & { task_id: string }) => void;
   updatePreviewSpecs: (specs: Spec[]) => void;
 }
@@ -141,6 +143,13 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const removeTask = useCallback((taskId: string) => {
+    setPanel((prev) => ({
+      ...prev,
+      tasks: prev.tasks.filter((t) => t.task_id !== taskId),
+    }));
+  }, []);
+
   const clearGeneratedArtifacts = useCallback(() => {
     setPanel((prev) => ({ ...prev, specs: [], tasks: [] }));
   }, []);
@@ -156,6 +165,17 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
   const onAgentInstanceUpdate = useCallback((listener: AgentInstanceUpdateListener) => {
     titleListeners.current.add(listener);
     return () => { titleListeners.current.delete(listener); };
+  }, []);
+
+  const patchTask = useCallback((taskId: string, patch: Partial<Task>) => {
+    setPanel((prev) => {
+      const found = prev.tasks.some((t) => t.task_id === taskId);
+      if (!found) return prev;
+      const tasks = prev.tasks.map((t) =>
+        t.task_id === taskId ? { ...t, ...patch } : t,
+      );
+      return { ...prev, tasks };
+    });
   }, []);
 
   const updatePreviewTask = useCallback((patch: Partial<Task> & { task_id: string }) => {
@@ -195,6 +215,8 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         pushSpec,
         removeSpec,
         pushTask,
+        removeTask,
+        patchTask,
         updatePreviewTask,
         updatePreviewSpecs,
         clearGeneratedArtifacts,

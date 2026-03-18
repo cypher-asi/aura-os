@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Text } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
+import { EmptyState } from "./EmptyState";
 import { api } from "../api/client";
 import { useChatStream } from "../hooks/use-chat-stream";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
@@ -11,6 +11,7 @@ import { CookingIndicator } from "./CookingIndicator";
 import { ChatInputBar } from "./ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
 import type { Message } from "../types";
+import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
 import styles from "./ChatView.module.css";
 
 export function ChatView() {
@@ -64,7 +65,8 @@ export function ChatView() {
           msgs
             .filter((m: Message) => (m.content && m.content.trim().length > 0) || (m.content_blocks && m.content_blocks.length > 0) || m.thinking)
             .map((m: Message) => {
-              const blocks = (m.content_blocks ?? [])
+              const allBlocks = m.content_blocks ?? [];
+              const displayBlocks = allBlocks
                 .filter((b) => b.type === "text" || b.type === "image")
                 .map((b) =>
                   b.type === "text" ? { type: "text" as const, text: b.text ?? "" } : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" }
@@ -73,7 +75,9 @@ export function ChatView() {
                 id: m.message_id,
                 role: m.role,
                 content: m.content,
-                contentBlocks: blocks.length > 0 ? blocks : undefined,
+                contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
+                toolCalls: extractToolCalls(allBlocks),
+                artifactRefs: extractArtifactRefs(allBlocks),
                 thinkingText: m.thinking || undefined,
                 thinkingDurationMs: m.thinking_duration_ms ?? null,
               };
@@ -123,12 +127,9 @@ export function ChatView() {
         >
           <div className={styles.messageContent}>
             {!hasMessages ? (
-              <div className={styles.emptyState}>
-                <MessageSquare size={40} className={styles.emptyIcon} />
-                <Text variant="muted" size="sm">
-                  Send a message or use a quick action to get started
-                </Text>
-              </div>
+              <EmptyState icon={<MessageSquare size={40} />}>
+                Send a message or use a quick action to get started
+              </EmptyState>
             ) : (
               <>
                 {messages.map((msg) => (

@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
 import { FileText } from "lucide-react";
-import type { ToolCallEntry } from "../hooks/use-chat-stream";
+import type { ToolCallEntry, ArtifactRef } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 import { ResponseBlock } from "./ResponseBlock";
@@ -23,6 +23,7 @@ interface DisplayMessage {
   role: "user" | "assistant" | "system";
   content: string;
   toolCalls?: ToolCallEntry[];
+  artifactRefs?: ArtifactRef[];
   contentBlocks?: DisplayContentBlockUnion[];
   thinkingText?: string;
   thinkingDurationMs?: number | null;
@@ -44,10 +45,6 @@ const TOOL_LABELS: Record<string, string> = {
   delete_task: "Delete task",
   transition_task: "Transition task",
   run_task: "Run task",
-  list_sprints: "List sprints",
-  create_sprint: "Create sprint",
-  update_sprint: "Update sprint",
-  delete_sprint: "Delete sprint",
   get_project: "Get project",
   update_project: "Update project",
   start_dev_loop: "Start dev loop",
@@ -132,6 +129,27 @@ function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
   );
 }
 
+function ArtifactRefsList({ refs }: { refs: ArtifactRef[] }) {
+  const tasks = refs.filter((r) => r.kind === "task");
+  const specs = refs.filter((r) => r.kind === "spec");
+  return (
+    <div className={toolStyles.artifactRefs}>
+      {specs.map((ref) => (
+        <div key={ref.id} className={toolStyles.artifactRef}>
+          <span className={toolStyles.artifactRefIcon}>spec</span>
+          <span className={toolStyles.artifactRefTitle}>{ref.title}</span>
+        </div>
+      ))}
+      {tasks.map((ref) => (
+        <div key={ref.id} className={toolStyles.artifactRef}>
+          <span className={toolStyles.artifactRefIcon}>task</span>
+          <span className={toolStyles.artifactRefTitle}>{ref.title}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function summarizeInput(name: string, input: Record<string, unknown>): string {
   switch (name) {
     case "read_file":
@@ -142,7 +160,6 @@ function summarizeInput(name: string, input: Record<string, unknown>): string {
       return (input.path as string) || ".";
     case "create_spec":
     case "create_task":
-    case "create_sprint":
       return (input.title as string) || "";
     case "get_spec":
       return (input.spec_id as string)?.slice(0, 8) || "";
@@ -243,10 +260,11 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
 export function MessageBubble({ message }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+  const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
   const hasContentBlocks = message.contentBlocks && message.contentBlocks.length > 0;
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
 
-  if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking) return null;
+  if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking && !hasArtifactRefs) return null;
 
   const renderUserContent = () => {
     if (hasContentBlocks) {
@@ -298,6 +316,9 @@ export function MessageBubble({ message }: Props) {
             )}
             {hasToolCalls && (
               <ToolCallsList entries={message.toolCalls!} />
+            )}
+            {hasArtifactRefs && (
+              <ArtifactRefsList refs={message.artifactRefs!} />
             )}
             {hasContent && (
               <ReactMarkdown

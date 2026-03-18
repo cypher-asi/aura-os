@@ -8,9 +8,9 @@ import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
-import { Explorer, PageEmptyState } from "@cypher-asi/zui";
+import { Explorer } from "@cypher-asi/zui";
+import { EmptyState } from "../components/EmptyState";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { FileText } from "lucide-react";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
@@ -141,13 +141,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
 
   if (isEmpty) {
     if (!showEmpty) return null;
-    return (
-      <PageEmptyState
-        icon={<FileText size={32} />}
-        title="No specs generated"
-        description="Use the chat to generate specs for this project."
-      />
-    );
+    return <EmptyState>No specs yet</EmptyState>;
   }
 
   return (

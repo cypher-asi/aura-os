@@ -21,8 +21,6 @@ fn make_project() -> Project {
         workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
-        github_integration_id: None,
-        github_repo_full_name: None,
         build_command: None,
         test_command: None,
         specs_summary: None,
@@ -40,7 +38,6 @@ fn make_spec(project_id: ProjectId) -> Spec {
         title: "Test Spec".into(),
         order_index: 0,
         markdown_contents: "# Spec\nTest contents".into(),
-        sprint_id: None,
         created_at: now,
         updated_at: now,
     }
@@ -75,17 +72,21 @@ fn make_task(project_id: ProjectId, spec_id: SpecId) -> Task {
     }
 }
 
-fn make_agent(user_id: &str) -> Agent {
+const TEST_USER_ID: &str = "test-user-001";
+
+fn make_agent() -> Agent {
     let now = Utc::now();
     Agent {
         agent_id: AgentId::new(),
-        user_id: user_id.into(),
+        user_id: TEST_USER_ID.into(),
         name: "Agent-1".into(),
-        role: "Engineer".into(),
-        personality: "Helpful".into(),
-        system_prompt: "You are a helpful engineer.".into(),
+        role: "developer".into(),
+        personality: "helpful".into(),
+        system_prompt: "You are a test agent.".into(),
         skills: vec![],
         icon: None,
+        network_agent_id: None,
+        profile_id: None,
         created_at: now,
         updated_at: now,
     }
@@ -98,9 +99,9 @@ fn make_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInstanc
         project_id,
         agent_id,
         name: "Agent-1".into(),
-        role: "Engineer".into(),
-        personality: "Helpful".into(),
-        system_prompt: "You are a helpful engineer.".into(),
+        role: "developer".into(),
+        personality: "helpful".into(),
+        system_prompt: "You are a test agent instance.".into(),
         skills: vec![],
         icon: None,
         status: AgentStatus::Idle,
@@ -295,35 +296,68 @@ fn list_tasks_by_project_returns_all_tasks() {
 }
 
 // ---------------------------------------------------------------------------
-// Agent CRUD
+// Agent CRUD (user-scoped)
 // ---------------------------------------------------------------------------
 
 #[test]
 fn agent_crud_round_trip() {
     let (store, _dir) = open_temp_store();
-    let user_id = "user-1";
-    let agent = make_agent(user_id);
+
+    let agent = make_agent();
     store.put_agent(&agent).unwrap();
 
-    let fetched = store.get_agent(user_id, &agent.agent_id).unwrap();
+    let fetched = store
+        .get_agent(&agent.user_id, &agent.agent_id)
+        .unwrap();
     assert_eq!(agent, fetched);
 
-    store.delete_agent(user_id, &agent.agent_id).unwrap();
-    let result = store.get_agent(user_id, &agent.agent_id);
+    store
+        .delete_agent(&agent.user_id, &agent.agent_id)
+        .unwrap();
+    let result = store.get_agent(&agent.user_id, &agent.agent_id);
     assert!(matches!(result, Err(StoreError::NotFound(_))));
 }
 
 #[test]
 fn list_agents_by_user_filters_correctly() {
     let (store, _dir) = open_temp_store();
-    let a1 = make_agent("user-1");
-    let a2 = make_agent("user-2");
+
+    let a1 = make_agent();
+    let mut a2 = make_agent();
+    a2.user_id = "other-user".into();
     store.put_agent(&a1).unwrap();
     store.put_agent(&a2).unwrap();
 
-    let agents = store.list_agents_by_user("user-1").unwrap();
+    let agents = store.list_agents_by_user(TEST_USER_ID).unwrap();
     assert_eq!(agents.len(), 1);
-    assert_eq!(agents[0].user_id, "user-1");
+    assert_eq!(agents[0].user_id, TEST_USER_ID);
+}
+
+// ---------------------------------------------------------------------------
+// AgentInstance CRUD (project-scoped)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn agent_instance_crud_round_trip() {
+    let (store, _dir) = open_temp_store();
+    let project = make_project();
+    let agent = make_agent();
+    store.put_project(&project).unwrap();
+    store.put_agent(&agent).unwrap();
+
+    let instance = make_agent_instance(project.project_id, agent.agent_id);
+    store.put_agent_instance(&instance).unwrap();
+
+    let fetched = store
+        .get_agent_instance(&project.project_id, &instance.agent_instance_id)
+        .unwrap();
+    assert_eq!(instance, fetched);
+
+    store
+        .delete_agent_instance(&project.project_id, &instance.agent_instance_id)
+        .unwrap();
+    let result = store.get_agent_instance(&project.project_id, &instance.agent_instance_id);
+    assert!(matches!(result, Err(StoreError::NotFound(_))));
 }
 
 #[test]
@@ -331,20 +365,19 @@ fn list_agent_instances_by_project_filters_correctly() {
     let (store, _dir) = open_temp_store();
     let p1 = make_project();
     let p2 = make_project();
+    let agent = make_agent();
     store.put_project(&p1).unwrap();
     store.put_project(&p2).unwrap();
-
-    let agent = make_agent("user-1");
     store.put_agent(&agent).unwrap();
 
-    let a1 = make_agent_instance(p1.project_id, agent.agent_id);
-    let a2 = make_agent_instance(p2.project_id, agent.agent_id);
-    store.put_agent_instance(&a1).unwrap();
-    store.put_agent_instance(&a2).unwrap();
+    let i1 = make_agent_instance(p1.project_id, agent.agent_id);
+    let i2 = make_agent_instance(p2.project_id, agent.agent_id);
+    store.put_agent_instance(&i1).unwrap();
+    store.put_agent_instance(&i2).unwrap();
 
-    let agents = store.list_agent_instances_by_project(&p1.project_id).unwrap();
-    assert_eq!(agents.len(), 1);
-    assert_eq!(agents[0].project_id, p1.project_id);
+    let instances = store.list_agent_instances_by_project(&p1.project_id).unwrap();
+    assert_eq!(instances.len(), 1);
+    assert_eq!(instances[0].project_id, p1.project_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -355,9 +388,10 @@ fn list_agent_instances_by_project_filters_correctly() {
 fn session_crud_round_trip() {
     let (store, _dir) = open_temp_store();
     let project = make_project();
-    let agent = make_agent("user-1");
+    let agent = make_agent();
     store.put_project(&project).unwrap();
     store.put_agent(&agent).unwrap();
+
     let instance = make_agent_instance(project.project_id, agent.agent_id);
     store.put_agent_instance(&instance).unwrap();
 
@@ -380,23 +414,24 @@ fn session_crud_round_trip() {
 fn list_sessions_by_agent_filters_correctly() {
     let (store, _dir) = open_temp_store();
     let project = make_project();
-    let agent = make_agent("user-1");
+    let agent = make_agent();
     store.put_project(&project).unwrap();
     store.put_agent(&agent).unwrap();
-    let a1 = make_agent_instance(project.project_id, agent.agent_id);
-    let a2 = make_agent_instance(project.project_id, agent.agent_id);
-    store.put_agent_instance(&a1).unwrap();
-    store.put_agent_instance(&a2).unwrap();
 
-    let s1 = make_session(a1.agent_instance_id, project.project_id);
-    let s2 = make_session(a1.agent_instance_id, project.project_id);
-    let s3 = make_session(a2.agent_instance_id, project.project_id);
+    let i1 = make_agent_instance(project.project_id, agent.agent_id);
+    let i2 = make_agent_instance(project.project_id, agent.agent_id);
+    store.put_agent_instance(&i1).unwrap();
+    store.put_agent_instance(&i2).unwrap();
+
+    let s1 = make_session(i1.agent_instance_id, project.project_id);
+    let s2 = make_session(i1.agent_instance_id, project.project_id);
+    let s3 = make_session(i2.agent_instance_id, project.project_id);
     store.put_session(&s1).unwrap();
     store.put_session(&s2).unwrap();
     store.put_session(&s3).unwrap();
 
     let sessions = store
-        .list_sessions_by_agent(&project.project_id, &a1.agent_instance_id)
+        .list_sessions_by_agent(&project.project_id, &i1.agent_instance_id)
         .unwrap();
     assert_eq!(sessions.len(), 2);
 }

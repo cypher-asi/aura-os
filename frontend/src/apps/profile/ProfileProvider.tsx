@@ -1,9 +1,12 @@
-import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { FeedEvent, FeedComment } from "../feed/FeedProvider";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../api/client";
 
 export interface UserProfileData {
+  id?: string;
+  networkUserId?: string;
   name: string;
   handle: string;
   bio: string;
@@ -37,14 +40,13 @@ interface ProfileContextValue {
 
 const ProfileCtx = createContext<ProfileContextValue | null>(null);
 
-const MOCK_PROFILE: Omit<UserProfileData, "handle"> = {
-  name: "real-n3o",
-  bio: "Building autonomous swarms of agentic intelligence. Sovereign. Private. Decentralized.",
-  website: "https://cypher.net",
-  location: "San Francisco, CA",
-  joinedDate: "2026-03-01T00:00:00Z",
-  avatarUrl: "/avatar-n3o.png",
-};
+function isUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
+// ---------------------------------------------------------------------------
+// Mock feed data (events, comments, projects, activity)
+// ---------------------------------------------------------------------------
 
 const MOCK_PROJECTS: ProfileProject[] = [
   { id: "proj-1", name: "aura-code", repo: "cypher-asi/aura-code" },
@@ -53,7 +55,6 @@ const MOCK_PROJECTS: ProfileProject[] = [
 ];
 
 const CURRENT_USER = "real-n3o";
-const CURRENT_USER_AVATAR = "/avatar-n3o.png";
 
 const now = Date.now();
 const HOUR = 3_600_000;
@@ -62,7 +63,7 @@ const DAY = 86_400_000;
 const MOCK_EVENTS: FeedEvent[] = [
   {
     id: "p-evt-1",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -73,7 +74,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-2",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -84,7 +85,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-3",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/the-grid",
     branch: "main",
     commits: [
@@ -95,7 +96,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-4",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "main",
     commits: [
@@ -106,18 +107,18 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-5",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/the-grid",
     branch: "feat/auth",
     commits: [
-      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE flow for GitHub integration" },
+      { sha: "2cb19d7", message: "feat: add OAuth2 PKCE authentication flow" },
       { sha: "8f3e6a1", message: "feat: store encrypted tokens in user settings" },
     ],
     timestamp: new Date(now - 3.5 * DAY).toISOString(),
   },
   {
     id: "p-evt-6",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-engine",
     branch: "main",
     commits: [
@@ -129,7 +130,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-7",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-engine",
     branch: "dev",
     commits: [
@@ -139,7 +140,7 @@ const MOCK_EVENTS: FeedEvent[] = [
   },
   {
     id: "p-evt-8",
-    author: { name: "real-n3o", type: "user", avatarUrl: CURRENT_USER_AVATAR },
+    author: { name: CURRENT_USER, type: "user" },
     repo: "cypher-asi/aura-code",
     branch: "feat/profile",
     commits: [
@@ -217,12 +218,24 @@ const MOCK_TOTAL_TOKEN_USAGE = 3_996_254;
 
 let nextCommentId = MOCK_COMMENTS.length + 1;
 
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const zid = user?.primary_zid || "";
+  const fetchedRef = useRef(false);
 
   const [profile, setProfile] = useState<UserProfileData>(() => ({
-    ...MOCK_PROFILE,
+    name: user?.display_name || "",
+    bio: "",
+    website: "",
+    location: "",
+    joinedDate: new Date().toISOString(),
+    id: user?.profile_id,
+    networkUserId: user?.network_user_id,
+    avatarUrl: user?.profile_image || undefined,
     handle: zid ? `@${zid}` : "",
   }));
 
@@ -230,17 +243,59 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (zid) setProfile((prev) => ({ ...prev, handle: `@${zid}` }));
   }, [zid]);
 
+  // Fetch real profile data from aura-network
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    api.users.me().then((networkUser) => {
+      const networkName = networkUser.display_name && !isUuid(networkUser.display_name)
+        ? networkUser.display_name
+        : undefined;
+
+      setProfile((prev) => ({
+        ...prev,
+        id: networkUser.profile_id ?? prev.id,
+        networkUserId: networkUser.id ?? prev.networkUserId,
+        name: networkName ?? user?.display_name ?? prev.name,
+        bio: networkUser.bio ?? prev.bio,
+        location: networkUser.location ?? prev.location,
+        website: networkUser.website ?? prev.website,
+        avatarUrl: networkUser.avatar_url ?? prev.avatarUrl,
+        joinedDate: networkUser.created_at ?? prev.joinedDate,
+      }));
+    }).catch(() => {});
+  }, []);
+
   const [selectedProject, setSelectedProjectRaw] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
 
   const updateProfile = useCallback((data: Partial<UserProfileData>) => {
     setProfile((prev) => ({ ...prev, ...data }));
+
+    const networkFields: Record<string, string | undefined> = {};
+    if (data.name !== undefined) networkFields.display_name = data.name;
+    if (data.bio !== undefined) networkFields.bio = data.bio;
+    if (data.avatarUrl !== undefined) networkFields.avatar_url = data.avatarUrl;
+    if (data.location !== undefined) networkFields.location = data.location;
+    if (data.website !== undefined) networkFields.website = data.website;
+    if (Object.keys(networkFields).length > 0) {
+      api.users.updateMe(networkFields).catch(() => {});
+    }
   }, []);
 
   const events = useMemo(
-    () => [...MOCK_EVENTS].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [],
+    () =>
+      [...MOCK_EVENTS]
+        .map((evt) => {
+          if (profile.avatarUrl && evt.author.name === CURRENT_USER) {
+            return { ...evt, author: { ...evt.author, name: profile.name || evt.author.name, avatarUrl: profile.avatarUrl } };
+          }
+          return evt;
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    [profile.avatarUrl, profile.name],
   );
 
   const filteredEvents = useMemo(() => {
@@ -276,12 +331,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const comment: FeedComment = {
       id: `p-cmt-${nextCommentId++}`,
       eventId,
-      author: { name: CURRENT_USER, type: "user", avatarUrl: CURRENT_USER_AVATAR },
+      author: {
+        name: user?.display_name || CURRENT_USER,
+        type: "user",
+        avatarUrl: user?.profile_image || undefined,
+      },
       text,
       timestamp: new Date().toISOString(),
     };
     setComments((prev) => [...prev, comment]);
-  }, []);
+  }, [user]);
 
   const value = useMemo(
     () => ({

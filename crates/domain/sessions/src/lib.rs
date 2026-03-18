@@ -18,20 +18,11 @@ pub struct SessionService {
 }
 
 impl SessionService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
+    pub fn new(store: Arc<RocksStore>, rollover_threshold: f64, model_context_window: u64) -> Self {
         Self {
             store,
-            rollover_threshold: 0.5,
-            model_context_window: 200_000,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn with_threshold(store: Arc<RocksStore>, threshold: f64) -> Self {
-        Self {
-            store,
-            rollover_threshold: threshold,
-            model_context_window: 200_000,
+            rollover_threshold,
+            model_context_window,
         }
     }
 
@@ -277,7 +268,7 @@ mod tests {
     fn should_rollover_at_threshold() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
-        let svc = SessionService::with_threshold(store, 0.5);
+        let svc = SessionService::new(store, 0.8, 150_000);
 
         let below = Session {
             session_id: SessionId::new(),
@@ -285,7 +276,7 @@ mod tests {
             project_id: ProjectId::new(),
             active_task_id: None,
             tasks_worked: vec![],
-            context_usage_estimate: 0.49,
+            context_usage_estimate: 0.79,
             total_input_tokens: 0,
             total_output_tokens: 0,
             summary_of_previous_context: String::new(),
@@ -298,13 +289,13 @@ mod tests {
         assert!(!svc.should_rollover(&below));
 
         let at = Session {
-            context_usage_estimate: 0.5,
+            context_usage_estimate: 0.8,
             ..below.clone()
         };
         assert!(svc.should_rollover(&at));
 
         let above = Session {
-            context_usage_estimate: 0.8,
+            context_usage_estimate: 0.95,
             ..below
         };
         assert!(svc.should_rollover(&above));
@@ -314,7 +305,7 @@ mod tests {
     fn create_and_get_session() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
-        let svc = SessionService::new(store);
+        let svc = SessionService::new(store, 0.8, 150_000);
 
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
@@ -335,7 +326,7 @@ mod tests {
     fn rollover_session_ends_old_creates_new() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
-        let svc = SessionService::new(store);
+        let svc = SessionService::new(store, 0.8, 150_000);
 
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
@@ -371,7 +362,7 @@ mod tests {
 
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
-        let svc = SessionService::new(store);
+        let svc = SessionService::new(store, 0.8, 150_000);
 
         let summary = svc
             .generate_rollover_summary(

@@ -16,6 +16,8 @@ pub struct MockResponse {
     pub stop_reason: String,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub cache_creation_input_tokens: u64,
+    pub cache_read_input_tokens: u64,
 }
 
 impl MockResponse {
@@ -27,6 +29,8 @@ impl MockResponse {
             stop_reason: "end_turn".into(),
             input_tokens: 100,
             output_tokens: 50,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
         }
     }
 
@@ -38,6 +42,8 @@ impl MockResponse {
             stop_reason: "tool_use".into(),
             input_tokens: 100,
             output_tokens: 80,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
         }
     }
 
@@ -141,6 +147,8 @@ impl MockLlmProvider {
             stop_reason: resp.stop_reason.clone(),
             input_tokens: resp.input_tokens,
             output_tokens: resp.output_tokens,
+            cache_creation_input_tokens: resp.cache_creation_input_tokens,
+            cache_read_input_tokens: resp.cache_read_input_tokens,
         });
     }
 }
@@ -225,6 +233,9 @@ impl LlmProvider for MockLlmProvider {
             stop_reason: resp.stop_reason,
             input_tokens: resp.input_tokens,
             output_tokens: resp.output_tokens,
+            cache_creation_input_tokens: resp.cache_creation_input_tokens,
+            cache_read_input_tokens: resp.cache_read_input_tokens,
+            model_used: crate::DEFAULT_MODEL.to_string(),
         })
     }
 }

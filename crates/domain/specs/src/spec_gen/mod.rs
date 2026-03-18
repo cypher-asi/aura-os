@@ -93,7 +93,7 @@ impl SpecGenerationService {
         let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
         if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
             let msg = if req_path.is_empty() {
-                "No requirements document configured — use Sprints instead".to_string()
+                "No requirements document configured".to_string()
             } else {
                 format!("Requirements file not found: {req_path}")
             };

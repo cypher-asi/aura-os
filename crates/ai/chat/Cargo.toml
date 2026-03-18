@@ -28,3 +28,4 @@ regex = "1"
 [dev-dependencies]
 tempfile = "3"
 axum = "0.7"
+aura-billing = { path = "../../domain/billing", features = ["test-utils"] }

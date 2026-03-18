@@ -2,7 +2,7 @@ use std::path::Path as FsPath;
 
 use axum::extract::{Path, State};
 use axum::Json;
-
+use chrono::Utc;
 use serde::Serialize;
 
 use aura_core::{ProjectId, SpecId, Task, TaskId};
@@ -110,91 +110,114 @@ pub async fn get_progress(
         .get_project_progress(&project_id)
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
-    // Sessions + tokens + cost: aggregate across all sessions for this project
-    if let Ok(sessions) = state.store.list_sessions_by_project(&project_id) {
-        let fee_schedule = state.pricing_service.get_fee_schedule();
-        progress.total_sessions = sessions.len() as u64;
-        progress.total_tokens += sessions
-            .iter()
-            .map(|s| s.total_input_tokens + s.total_output_tokens)
-            .sum::<u64>();
-        progress.total_cost += sessions
-            .iter()
-            .map(|s| {
-                let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
-                let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
-                aura_billing::compute_cost_with_rates(
-                    s.total_input_tokens, s.total_output_tokens, inp, out,
-                )
-            })
-            .sum::<f64>();
-    }
+    aggregate_session_metrics(&state, &project_id, &mut progress);
+    aggregate_agent_instance_metrics(&state, &project_id, &mut progress);
 
-    // Agent instances: include token usage from agent instances
-    match state.agent_instance_service.list_instances(&project_id) {
-        Ok(instances) => {
-            let fee_schedule = state.pricing_service.get_fee_schedule();
-            for ai in &instances {
-                tracing::debug!(
-                    %project_id,
-                    agent_instance_id = %ai.agent_instance_id,
-                    input = ai.total_input_tokens,
-                    output = ai.total_output_tokens,
-                    "Progress: agent instance token counts"
-                );
-            }
-            let instance_tokens: u64 = instances
-                .iter()
-                .map(|ai| ai.total_input_tokens + ai.total_output_tokens)
-                .sum();
-            let instance_cost: f64 = instances
-                .iter()
-                .map(|ai| {
-                    let model = ai.model.as_deref().unwrap_or("claude-opus-4-6");
-                    let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
-                    aura_billing::compute_cost_with_rates(
-                        ai.total_input_tokens, ai.total_output_tokens, inp, out,
-                    )
-                })
-                .sum();
-            progress.total_tokens += instance_tokens;
-            progress.total_cost += instance_cost;
-            progress.total_agents = instances.len() as u32;
-            tracing::info!(
-                %project_id,
-                instance_count = instances.len(),
-                instance_tokens,
-                total_tokens = progress.total_tokens,
-                total_cost = progress.total_cost,
-                "Progress: aggregated agent instance metrics"
-            );
-        }
-        Err(e) => {
-            tracing::error!(%project_id, error = %e, "Progress: failed to list agent instances");
-        }
-    }
-
-    // Messages: count from chat store
     if let Ok(count) = state.store.count_messages_by_project(&project_id) {
         progress.total_messages = count as u64;
     }
 
-    // LOC + commits need the project's linked folder
-    if let Ok(project) = state.project_service.get_project(&project_id) {
-        let folder = &project.linked_folder_path;
-        if FsPath::new(folder).is_dir() {
-            progress.lines_of_code = count_lines_of_code(folder).await;
-            progress.total_commits = count_git_commits(folder).await;
-            progress.total_tests = count_tests(folder).await;
-        }
-
-        // PRs: query GitHub if integration is configured
-        if let Some(ref repo_full_name) = project.github_repo_full_name {
-            progress.total_pull_requests = count_github_prs(&state, repo_full_name).await;
-        }
-    }
+    aggregate_repo_metrics(&state, &project_id, &mut progress).await;
 
     Ok(Json(progress))
+}
+
+fn aggregate_session_metrics(
+    state: &AppState,
+    project_id: &ProjectId,
+    progress: &mut ProjectProgress,
+) {
+    let Ok(sessions) = state.store.list_sessions_by_project(project_id) else {
+        return;
+    };
+    let fee_schedule = state.pricing_service.get_fee_schedule();
+    progress.total_sessions = sessions.len() as u64;
+    progress.total_tokens += sessions
+        .iter()
+        .map(|s| s.total_input_tokens + s.total_output_tokens)
+        .sum::<u64>();
+    progress.total_cost += sessions
+        .iter()
+        .map(|s| {
+            let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
+            let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
+            aura_billing::compute_cost_with_rates(
+                s.total_input_tokens, s.total_output_tokens, inp, out,
+            )
+        })
+        .sum::<f64>();
+    progress.total_time_seconds = sessions
+        .iter()
+        .map(|s| {
+            let end = s.ended_at.unwrap_or_else(Utc::now);
+            (end - s.started_at).num_seconds().max(0) as u64
+        })
+        .sum();
+}
+
+fn aggregate_agent_instance_metrics(
+    state: &AppState,
+    project_id: &ProjectId,
+    progress: &mut ProjectProgress,
+) {
+    let instances = match state.agent_instance_service.list_instances(project_id) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(%project_id, error = %e, "Progress: failed to list agent instances");
+            return;
+        }
+    };
+    let fee_schedule = state.pricing_service.get_fee_schedule();
+    for ai in &instances {
+        tracing::debug!(
+            %project_id,
+            agent_instance_id = %ai.agent_instance_id,
+            input = ai.total_input_tokens,
+            output = ai.total_output_tokens,
+            "Progress: agent instance token counts"
+        );
+    }
+    let instance_tokens: u64 = instances
+        .iter()
+        .map(|ai| ai.total_input_tokens + ai.total_output_tokens)
+        .sum();
+    let instance_cost: f64 = instances
+        .iter()
+        .map(|ai| {
+            let model = ai.model.as_deref().unwrap_or("claude-opus-4-6");
+            let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
+            aura_billing::compute_cost_with_rates(
+                ai.total_input_tokens, ai.total_output_tokens, inp, out,
+            )
+        })
+        .sum();
+    progress.total_tokens += instance_tokens;
+    progress.total_cost += instance_cost;
+    progress.total_agents = instances.len() as u32;
+    tracing::info!(
+        %project_id,
+        instance_count = instances.len(),
+        instance_tokens,
+        total_tokens = progress.total_tokens,
+        total_cost = progress.total_cost,
+        "Progress: aggregated agent instance metrics"
+    );
+}
+
+async fn aggregate_repo_metrics(
+    state: &AppState,
+    project_id: &ProjectId,
+    progress: &mut ProjectProgress,
+) {
+    let Ok(project) = state.project_service.get_project(project_id) else {
+        return;
+    };
+    let folder = &project.linked_folder_path;
+    if FsPath::new(folder).is_dir() {
+        progress.lines_of_code = count_lines_of_code(folder).await;
+        progress.total_commits = count_git_commits(folder).await;
+        progress.total_tests = count_tests(folder).await;
+    }
 }
 
 #[derive(Serialize)]
@@ -298,13 +321,7 @@ fn count_tests_sync(folder: &str) -> u64 {
     use std::fs;
 
     const SKIP: &[&str] = &[
-        ".git",
-        "target",
-        "node_modules",
-        "__pycache__",
-        ".venv",
-        "dist",
-        "build",
+        ".git", "target", "node_modules", "__pycache__", ".venv", "dist", "build",
     ];
 
     fn walk(dir: &FsPath, total: &mut u64) {
@@ -319,42 +336,9 @@ fn count_tests_sync(folder: &str) -> u64 {
                     walk(&path, total);
                 }
             } else if path.is_file() {
-                let ext = path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or_default();
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or_default();
                 if let Ok(content) = fs::read_to_string(&path) {
-                    match ext {
-                        "rs" => {
-                            *total += content.matches("#[test]").count() as u64;
-                            *total += content.matches("#[tokio::test]").count() as u64;
-                        }
-                        "ts" | "tsx" | "js" | "jsx" => {
-                            if name.contains(".test.") || name.contains(".spec.") {
-                                for line in content.lines() {
-                                    let trimmed = line.trim_start();
-                                    if trimmed.starts_with("it(")
-                                        || trimmed.starts_with("it.only(")
-                                        || trimmed.starts_with("test(")
-                                        || trimmed.starts_with("test.only(")
-                                    {
-                                        *total += 1;
-                                    }
-                                }
-                            }
-                        }
-                        "py" => {
-                            for line in content.lines() {
-                                let trimmed = line.trim_start();
-                                if trimmed.starts_with("def test_")
-                                    || trimmed.starts_with("async def test_")
-                                {
-                                    *total += 1;
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
+                    *total += count_tests_in_file(ext, &name, &content);
                 }
             }
         }
@@ -363,6 +347,34 @@ fn count_tests_sync(folder: &str) -> u64 {
     let mut total = 0u64;
     walk(FsPath::new(folder), &mut total);
     total
+}
+
+fn count_tests_in_file(ext: &str, name: &str, content: &str) -> u64 {
+    match ext {
+        "rs" => {
+            (content.matches("#[test]").count() + content.matches("#[tokio::test]").count()) as u64
+        }
+        "ts" | "tsx" | "js" | "jsx" if name.contains(".test.") || name.contains(".spec.") => {
+            content
+                .lines()
+                .filter(|line| {
+                    let t = line.trim_start();
+                    t.starts_with("it(")
+                        || t.starts_with("it.only(")
+                        || t.starts_with("test(")
+                        || t.starts_with("test.only(")
+                })
+                .count() as u64
+        }
+        "py" => content
+            .lines()
+            .filter(|line| {
+                let t = line.trim_start();
+                t.starts_with("def test_") || t.starts_with("async def test_")
+            })
+            .count() as u64,
+        _ => 0,
+    }
 }
 
 async fn count_git_commits(folder: &str) -> u64 {
@@ -381,30 +393,3 @@ async fn count_git_commits(folder: &str) -> u64 {
     }
 }
 
-/// Count PRs via `gh pr list` CLI if available, otherwise 0.
-async fn count_github_prs(_state: &AppState, repo_full_name: &str) -> u64 {
-    let output = tokio::process::Command::new("gh")
-        .args([
-            "pr",
-            "list",
-            "--repo",
-            repo_full_name,
-            "--state",
-            "all",
-            "--json",
-            "number",
-            "--limit",
-            "1000",
-        ])
-        .output()
-        .await;
-
-    match output {
-        Ok(o) if o.status.success() => {
-            let json: Result<Vec<serde_json::Value>, _> =
-                serde_json::from_slice(&o.stdout);
-            json.map(|v| v.len() as u64).unwrap_or(0)
-        }
-        _ => 0,
-    }
-}

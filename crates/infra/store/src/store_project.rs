@@ -10,10 +10,6 @@ impl RocksStore {
         self.cf_handle("projects")
     }
 
-    fn cf_sprints(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
-        self.cf_handle("sprints")
-    }
-
     fn cf_specs(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
         self.cf_handle("specs")
     }
@@ -49,44 +45,6 @@ impl RocksStore {
 
     pub fn list_projects(&self) -> StoreResult<Vec<Project>> {
         self.scan_cf::<Project>(&self.cf_projects(), None)
-    }
-
-    // -- Sprint CRUD --
-
-    pub fn put_sprint(&self, sprint: &Sprint) -> StoreResult<()> {
-        let key = format!("{}:{}", sprint.project_id, sprint.sprint_id);
-        let value = serde_json::to_vec(sprint)?;
-        self.db
-            .put_cf(&self.cf_sprints(), key.as_bytes(), &value)?;
-        Ok(())
-    }
-
-    pub fn get_sprint(
-        &self,
-        project_id: &ProjectId,
-        sprint_id: &SprintId,
-    ) -> StoreResult<Sprint> {
-        let key = format!("{project_id}:{sprint_id}");
-        let bytes = self
-            .db
-            .get_cf(&self.cf_sprints(), key.as_bytes())?
-            .ok_or_else(|| StoreError::NotFound(format!("sprint:{key}")))?;
-        Ok(serde_json::from_slice(&bytes)?)
-    }
-
-    pub fn delete_sprint(
-        &self,
-        project_id: &ProjectId,
-        sprint_id: &SprintId,
-    ) -> StoreResult<()> {
-        let key = format!("{project_id}:{sprint_id}");
-        self.db.delete_cf(&self.cf_sprints(), key.as_bytes())?;
-        Ok(())
-    }
-
-    pub fn list_sprints_by_project(&self, project_id: &ProjectId) -> StoreResult<Vec<Sprint>> {
-        let prefix = format!("{project_id}:");
-        self.scan_cf::<Sprint>(&self.cf_sprints(), Some(&prefix))
     }
 
     // -- Spec CRUD --

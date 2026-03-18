@@ -76,8 +76,6 @@ pub struct CreateProjectInput {
     pub linked_folder_path: String,
     pub workspace_source: Option<String>,
     pub workspace_display_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -89,8 +87,6 @@ pub struct UpdateProjectInput {
     pub linked_folder_path: Option<String>,
     pub workspace_source: Option<String>,
     pub workspace_display_path: Option<String>,
-    pub github_integration_id: Option<GitHubIntegrationId>,
-    pub github_repo_full_name: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -130,8 +126,6 @@ impl ProjectService {
             workspace_display_path: input.workspace_display_path,
             requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
-            github_integration_id: input.github_integration_id,
-            github_repo_full_name: input.github_repo_full_name,
             build_command: sanitize_command_option(input.build_command),
             test_command: sanitize_command_option(input.test_command),
             specs_summary: None,
@@ -167,20 +161,6 @@ impl ProjectService {
             .collect())
     }
 
-    pub fn verify_org_access(
-        &self,
-        project: &Project,
-        user_id: &str,
-        store: &RocksStore,
-    ) -> Result<(), ProjectError> {
-        store
-            .get_org_member(&project.org_id, user_id)
-            .map_err(|_| {
-                ProjectError::InvalidInput("user is not a member of the project's org".into())
-            })?;
-        Ok(())
-    }
-
     pub fn update_project(
         &self,
         id: &ProjectId,
@@ -207,10 +187,6 @@ impl ProjectService {
         }
         if let Some(display_path) = input.workspace_display_path {
             project.workspace_display_path = Some(display_path);
-        }
-        if input.github_integration_id.is_some() || input.github_repo_full_name.is_some() {
-            project.github_integration_id = input.github_integration_id;
-            project.github_repo_full_name = input.github_repo_full_name;
         }
         if input.build_command.is_some() {
             project.build_command = sanitize_command_option(input.build_command);
