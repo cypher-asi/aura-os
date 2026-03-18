@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, follows, github, log, orgs, pricing, projects, settings, specs, sprints, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -30,6 +30,12 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/access-token", get(auth::get_access_token))
+        // Users (proxied to aura-network)
+        .route("/api/users/me", get(users::get_me).put(users::update_me))
+        .route("/api/users/:user_id", get(users::get_user))
+        .route("/api/users/:user_id/profile", get(users::get_user_profile))
+        // Profiles (proxied to aura-network)
+        .route("/api/profiles/:profile_id", get(users::get_profile))
         // Orgs
         .route("/api/orgs", get(orgs::list_orgs).post(orgs::create_org))
         .route(

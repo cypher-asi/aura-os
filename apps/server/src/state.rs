@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use axum::http::StatusCode;
+use axum::Json;
 use tokio::sync::{broadcast, mpsc, Mutex};
 
-use aura_core::{AgentInstanceId, ProjectId, TaskId};
+use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
 use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
@@ -19,6 +21,8 @@ use aura_specs::{SpecGenerationService, SprintGenerationService};
 use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
+
+use crate::error::ApiError;
 
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
 
@@ -55,6 +59,24 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// Extract the JWT access token from the stored zOS session.
+    pub fn get_jwt(&self) -> Result<String, (StatusCode, Json<ApiError>)> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| ApiError::unauthorized("no active session"))?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        Ok(session.access_token)
+    }
+
+    /// Get the network client, returning 503 if not configured.
+    pub fn require_network_client(&self) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
+        self.network_client
+            .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
+    }
+
     /// Remove finished loops from the registry.
     pub async fn gc_finished_loops(&self) {
         let mut reg = self.loop_registry.lock().await;

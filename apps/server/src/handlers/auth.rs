@@ -8,6 +8,7 @@ use aura_core::ZeroAuthSession;
 
 use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::users::sync_user_to_network;
 use crate::state::AppState;
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
@@ -39,7 +40,16 @@ pub async fn login(
         .login(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
-    Ok(Json(AuthSessionResponse::from(session)))
+
+    let token = session.access_token.clone();
+    let resp = AuthSessionResponse::from(session);
+
+    tokio::spawn({
+        let state = state.clone();
+        async move { sync_user_to_network(&state, &token).await }
+    });
+
+    Ok(Json(resp))
 }
 
 pub async fn register(
@@ -51,7 +61,16 @@ pub async fn register(
         .register(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
-    Ok(Json(AuthSessionResponse::from(session)))
+
+    let token = session.access_token.clone();
+    let resp = AuthSessionResponse::from(session);
+
+    tokio::spawn({
+        let state = state.clone();
+        async move { sync_user_to_network(&state, &token).await }
+    });
+
+    Ok(Json(resp))
 }
 
 pub async fn get_session(
@@ -75,7 +94,16 @@ pub async fn validate(
         .await
         .map_err(map_auth_error)?
         .ok_or_else(|| ApiError::unauthorized("session expired or invalid"))?;
-    Ok(Json(AuthSessionResponse::from(session)))
+
+    let token = session.access_token.clone();
+    let resp = AuthSessionResponse::from(session);
+
+    tokio::spawn({
+        let state = state.clone();
+        async move { sync_user_to_network(&state, &token).await }
+    });
+
+    Ok(Json(resp))
 }
 
 pub async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {

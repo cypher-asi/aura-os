@@ -486,6 +486,56 @@ export const api = {
       apiFetch<{ following: boolean }>(`/api/follows/check/${targetType}/${targetId}`),
   },
 
+  // Users (proxied to aura-network)
+  users: {
+    me: () => apiFetch<{
+      id: string;
+      zos_user_id: string;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      profile_id: string | null;
+      created_at: string | null;
+      updated_at: string | null;
+    }>("/api/users/me"),
+    get: (userId: string) => apiFetch<{
+      id: string;
+      zos_user_id: string;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      profile_id: string | null;
+      created_at: string | null;
+      updated_at: string | null;
+    }>(`/api/users/${userId}`),
+    updateMe: (data: { display_name?: string; avatar_url?: string; bio?: string }) =>
+      apiFetch<{
+        id: string;
+        zos_user_id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+        bio: string | null;
+        profile_id: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+      }>("/api/users/me", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Profiles (proxied to aura-network)
+  profiles: {
+    get: (profileId: string) => apiFetch<{
+      id: string;
+      display_name: string | null;
+      avatar_url: string | null;
+      bio: string | null;
+      profile_type: string | null;
+      entity_id: string | null;
+    }>(`/api/profiles/${profileId}`),
+  },
+
   // Activity
   activity: {
     getCommitHistory: (params: {

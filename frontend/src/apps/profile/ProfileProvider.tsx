@@ -1,7 +1,8 @@
-import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { FeedEvent, FeedComment } from "../feed/FeedProvider";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../api/client";
 
 export interface UserProfileData {
   name: string;
@@ -220,6 +221,7 @@ let nextCommentId = MOCK_COMMENTS.length + 1;
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const zid = user?.primary_zid || "";
+  const fetchedRef = useRef(false);
 
   const [profile, setProfile] = useState<UserProfileData>(() => ({
     ...MOCK_PROFILE,
@@ -230,12 +232,39 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (zid) setProfile((prev) => ({ ...prev, handle: `@${zid}` }));
   }, [zid]);
 
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
+    api.users.me().then((networkUser) => {
+      setProfile((prev) => ({
+        ...prev,
+        name: networkUser.display_name ?? prev.name,
+        bio: networkUser.bio ?? prev.bio,
+        avatarUrl: networkUser.avatar_url ?? prev.avatarUrl,
+        joinedDate: networkUser.created_at ?? prev.joinedDate,
+      }));
+    }).catch(() => {
+      // aura-network unavailable — keep mock/local profile data
+    });
+  }, []);
+
   const [selectedProject, setSelectedProjectRaw] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [comments, setComments] = useState<FeedComment[]>(MOCK_COMMENTS);
 
   const updateProfile = useCallback((data: Partial<UserProfileData>) => {
     setProfile((prev) => ({ ...prev, ...data }));
+
+    const networkFields: Record<string, string | undefined> = {};
+    if (data.name !== undefined) networkFields.display_name = data.name;
+    if (data.bio !== undefined) networkFields.bio = data.bio;
+    if (data.avatarUrl !== undefined) networkFields.avatar_url = data.avatarUrl;
+    if (Object.keys(networkFields).length > 0) {
+      api.users.updateMe(networkFields).catch(() => {
+        // best-effort sync
+      });
+    }
   }, []);
 
   const events = useMemo(
