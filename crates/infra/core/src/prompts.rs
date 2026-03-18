@@ -28,6 +28,8 @@ When creating specs with create_spec:
 - Number specs sequentially based on existing specs (check with list_specs first)
 - Do NOT use em dashes (—) in the title
 
+When using get_spec, update_spec, delete_spec, or task tools that require a spec_id or task_id, always use the UUID returned by list_specs, list_tasks, or create_spec/create_task. Never use the title number (e.g. "01") as the ID.
+
 For conversational questions about architecture, debugging, or best practices, respond with helpful text.
 
 Use markdown formatting for code blocks and structured responses. Be concise. Do NOT use emojis in your responses."#;
