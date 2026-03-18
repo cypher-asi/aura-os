@@ -9,7 +9,7 @@ use aura_core::*;
 use super::orchestrator::DevLoopEngine;
 use super::types::*;
 use crate::error::EngineError;
-use crate::events::{EngineEvent, PhaseTimingEntry};
+use crate::events::EngineEvent;
 use crate::file_ops::{FileOp, WorkspaceCache};
 use crate::metrics::{self, LoopRunMetrics, TaskMetrics};
 
@@ -326,13 +326,17 @@ impl LoopRunContext {
             self.total_build_fix_attempts += t.build_fix_attempts;
             self.duplicate_error_bailouts += t.duplicate_error_bailouts;
         }
+        let task_metrics = TaskMetrics::from_outcome(
+            task.task_id.to_string(), task.title.clone(),
+            self.session.model.clone(), &outcome,
+        );
         match outcome {
-            TaskOutcome::Completed { notes, follow_up_tasks, file_ops, timings } => {
-                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, &timings)?;
+            TaskOutcome::Completed { notes, follow_up_tasks, file_ops, .. } => {
+                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, task_metrics)?;
                 Ok(false)
             }
-            TaskOutcome::Failed { reason, phase, credit_failure, timings } => {
-                self.process_failed(task, &reason, &phase, credit_failure, &timings);
+            TaskOutcome::Failed { reason, credit_failure, .. } => {
+                self.process_failed(task, &reason, credit_failure, task_metrics);
                 Ok(true)
             }
         }
@@ -345,36 +349,16 @@ impl LoopRunContext {
         notes: &str,
         follow_up_tasks: &[FollowUpSuggestion],
         file_ops: &[FileOp],
-        timings: &TaskTimings,
+        task_metrics: TaskMetrics,
     ) -> Result<(), EngineError> {
         self.completed_count += 1;
-        let phase_timings = vec![
-            PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-            PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-            PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-        ];
         engine.emit(EngineEvent::LoopIterationSummary {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
             task_id: task.task_id,
-            phase_timings: phase_timings.clone(),
+            phase_timings: task_metrics.phase_timings.clone(),
         });
-        self.record_task(
-            TaskMetrics::completed(
-                task.task_id.to_string(),
-                task.title.clone(),
-                timings.task_duration_ms,
-                self.session.model.clone(),
-            )
-            .with_tokens(timings.total_input(), timings.total_output())
-            .with_llm_duration(timings.llm_duration_ms)
-            .with_file_ops_duration(timings.file_ops_duration_ms)
-            .with_build_verify_duration(timings.build_verify_duration_ms)
-            .with_files_changed(timings.files_changed)
-            .with_parse_retries(timings.parse_retries)
-            .with_build_fix_attempts(timings.build_fix_attempts)
-            .with_phase_timings(phase_timings),
-        );
+        self.record_task(task_metrics);
         for follow_up in follow_up_tasks {
             if self.follow_up_count >= engine.engine_config.max_follow_ups_per_loop {
                 warn!(
@@ -439,36 +423,14 @@ impl LoopRunContext {
         &mut self,
         task: &Task,
         reason: &str,
-        phase: &str,
         credit_failure: bool,
-        timings: &TaskTimings,
+        task_metrics: TaskMetrics,
     ) {
         self.failed_count += 1;
         if credit_failure {
             self.credit_failed_tasks.insert(task.task_id);
         }
-        self.record_task(
-            TaskMetrics::failed(
-                task.task_id.to_string(),
-                task.title.clone(),
-                timings.task_duration_ms,
-                self.session.model.clone(),
-                phase,
-                reason.to_string(),
-            )
-            .with_tokens(timings.total_input(), timings.total_output())
-            .with_llm_duration(timings.llm_duration_ms)
-            .with_file_ops_duration(timings.file_ops_duration_ms)
-            .with_build_verify_duration(timings.build_verify_duration_ms)
-            .with_files_changed(timings.files_changed)
-            .with_parse_retries(timings.parse_retries)
-            .with_build_fix_attempts(timings.build_fix_attempts)
-            .with_phase_timings(vec![
-                PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-            ]),
-        );
+        self.record_task(task_metrics);
         self.work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
     }
 

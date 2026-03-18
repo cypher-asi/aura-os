@@ -6,6 +6,7 @@ use tracing::warn;
 
 use aura_core::FeeScheduleEntry;
 use aura_billing::{compute_cost_with_rates, lookup_rate_in};
+use crate::engine::types::{TaskOutcome, TaskTimings};
 use crate::events::PhaseTimingEntry;
 
 const METRICS_DIR: &str = ".aura";
@@ -96,6 +97,37 @@ impl TaskMetrics {
 
     pub fn with_phase_timings(mut self, timings: Vec<PhaseTimingEntry>) -> Self {
         self.phase_timings = timings; self
+    }
+
+    fn from_timings(task_id: String, title: String, model: Option<String>, t: &TaskTimings) -> Self {
+        Self::base(task_id, title, "completed", t.task_duration_ms, model)
+            .with_tokens(t.total_input(), t.total_output())
+            .with_llm_duration(t.llm_duration_ms)
+            .with_file_ops_duration(t.file_ops_duration_ms)
+            .with_build_verify_duration(t.build_verify_duration_ms)
+            .with_files_changed(t.files_changed)
+            .with_parse_retries(t.parse_retries)
+            .with_build_fix_attempts(t.build_fix_attempts)
+            .with_phase_timings(vec![
+                PhaseTimingEntry { phase: "llm_call".into(), duration_ms: t.llm_duration_ms },
+                PhaseTimingEntry { phase: "file_ops".into(), duration_ms: t.file_ops_duration_ms },
+                PhaseTimingEntry { phase: "build_verify".into(), duration_ms: t.build_verify_duration_ms },
+            ])
+    }
+
+    pub(crate) fn from_outcome(task_id: String, title: String, model: Option<String>, outcome: &TaskOutcome) -> Self {
+        match outcome {
+            TaskOutcome::Completed { timings, .. } => {
+                Self::from_timings(task_id, title, model, timings)
+            }
+            TaskOutcome::Failed { reason, phase, timings, .. } => {
+                let mut m = Self::from_timings(task_id, title, model, timings);
+                m.outcome = "failed".into();
+                m.failure_phase = Some(phase.clone());
+                m.failure_reason = Some(reason.clone());
+                m
+            }
+        }
     }
 }
 

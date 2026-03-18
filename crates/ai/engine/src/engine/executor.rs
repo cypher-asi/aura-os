@@ -11,7 +11,7 @@ use super::orchestrator::DevLoopEngine;
 use super::shell;
 use super::types::*;
 use crate::error::EngineError;
-use crate::events::{EngineEvent, PhaseTimingEntry};
+use crate::events::EngineEvent;
 use crate::file_ops::{self, WorkspaceCache};
 use crate::metrics;
 
@@ -412,44 +412,9 @@ impl DevLoopEngine {
         fee_schedule: &[aura_core::FeeScheduleEntry],
     ) {
         if project_root.is_empty() { return; }
-        let task_metrics = match outcome {
-            TaskOutcome::Completed { timings, .. } => {
-                metrics::TaskMetrics::completed(
-                    task.task_id.to_string(), task.title.clone(),
-                    timings.task_duration_ms, model_name.clone(),
-                )
-                .with_tokens(timings.total_input(), timings.total_output())
-                .with_llm_duration(timings.llm_duration_ms)
-                .with_file_ops_duration(timings.file_ops_duration_ms)
-                .with_build_verify_duration(timings.build_verify_duration_ms)
-                .with_files_changed(timings.files_changed)
-                .with_parse_retries(timings.parse_retries)
-                .with_build_fix_attempts(timings.build_fix_attempts)
-                .with_phase_timings(vec![
-                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-                ])
-            }
-            TaskOutcome::Failed { reason, phase, timings, .. } => {
-                metrics::TaskMetrics::failed(
-                    task.task_id.to_string(), task.title.clone(),
-                    timings.task_duration_ms, model_name.clone(), phase, reason.clone(),
-                )
-                .with_tokens(timings.total_input(), timings.total_output())
-                .with_llm_duration(timings.llm_duration_ms)
-                .with_file_ops_duration(timings.file_ops_duration_ms)
-                .with_build_verify_duration(timings.build_verify_duration_ms)
-                .with_files_changed(timings.files_changed)
-                .with_parse_retries(timings.parse_retries)
-                .with_build_fix_attempts(timings.build_fix_attempts)
-                .with_phase_timings(vec![
-                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-                ])
-            }
-        };
+        let task_metrics = metrics::TaskMetrics::from_outcome(
+            task.task_id.to_string(), task.title.clone(), model_name.clone(), outcome,
+        );
         metrics::write_single_task_metrics(
             Path::new(project_root), &project_id.to_string(), task_metrics, fee_schedule,
         );
