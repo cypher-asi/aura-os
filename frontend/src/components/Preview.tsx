@@ -13,8 +13,9 @@ import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime, toBullets, formatTokens, formatModelName } from "../utils/format";
 import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
-import { deriveActivity } from "../utils/derive-activity";
+import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
 import { FormattedRawOutput } from "./FormattedRawOutput";
+import { IterationBar } from "./IterationBar";
 import type { PreviewItem } from "../context/SidekickContext";
 import type { Spec, Task, Session, AgentInstance } from "../types";
 import type { EngineEvent } from "../types/events";
@@ -554,6 +555,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
     return items;
   }, [hasOutput, isActive, isTerminal, streamBuf, taskOutput.buildSteps, taskOutput.testSteps]);
   const showOutput = activity.length > 0;
+  const iterStats = useMemo(() => computeIterationStats(streamBuf), [streamBuf]);
 
   useEffect(() => {
     if (showRawOutput && rawOutputRef.current) {
@@ -799,6 +801,9 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
       {showOutput && (
         <GroupCollapsible label={isActive ? "Live Output" : "Output"} defaultOpen className={styles.section}>
+          {iterStats.total > 0 && (
+            <IterationBar stats={iterStats} dots={iterStats.dots} isActive={isActive} />
+          )}
           <div className={styles.liveOutputSection}>
             <div className={styles.activityList}>
               {activity.map((item) => (

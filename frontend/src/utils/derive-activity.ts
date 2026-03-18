@@ -381,3 +381,55 @@ function extractFieldStr(buf: string, searchFrom: number, fieldName: string): st
   }
   return chars.join("");
 }
+
+/* ── Iteration stats for complexity visualization ── */
+
+export type ToolCategory = "read" | "write" | "command" | "other";
+
+export interface IterationDot {
+  category: ToolCategory;
+  isError: boolean;
+}
+
+export interface IterationStats {
+  total: number;
+  reads: number;
+  writes: number;
+  commands: number;
+  errors: number;
+  dots: IterationDot[];
+}
+
+const READ_TOOLS = new Set(["read_file", "list_files", "search_code", "get_task_context"]);
+const WRITE_TOOLS = new Set(["write_file", "edit_file", "delete_file"]);
+const COMMAND_TOOLS = new Set(["run_command"]);
+
+function categorize(toolName: string): ToolCategory {
+  if (READ_TOOLS.has(toolName)) return "read";
+  if (WRITE_TOOLS.has(toolName)) return "write";
+  if (COMMAND_TOOLS.has(toolName)) return "command";
+  return "other";
+}
+
+export function computeIterationStats(buffer: string): IterationStats {
+  const stats: IterationStats = { total: 0, reads: 0, writes: 0, commands: 0, errors: 0, dots: [] };
+  if (!buffer) return stats;
+
+  TOOL_MARKER_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TOOL_MARKER_RE.exec(buffer)) !== null) {
+    const toolName = match[1];
+    const isError = match[3] === "error";
+    const cat = categorize(toolName);
+
+    stats.total++;
+    if (isError) stats.errors++;
+    if (cat === "read") stats.reads++;
+    else if (cat === "write") stats.writes++;
+    else if (cat === "command") stats.commands++;
+
+    stats.dots.push({ category: cat, isError });
+  }
+
+  return stats;
+}
