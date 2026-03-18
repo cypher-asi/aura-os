@@ -70,10 +70,21 @@ pub fn microcompact(content: &str) -> String {
 /// extract public signatures instead of doing head/tail truncation. Falls
 /// back to `microcompact` for non-Rust or when extraction doesn't help.
 pub fn smart_compact(tool_name: &str, content: &str) -> String {
-    if content.len() <= MICRO.threshold {
+    smart_compact_inner(tool_name, content, false)
+}
+
+/// Like `smart_compact` but uses aggressive thresholds for error output,
+/// since failed command stderr is mostly noise (shell errors, not code).
+pub fn smart_compact_error(tool_name: &str, content: &str) -> String {
+    smart_compact_inner(tool_name, content, true)
+}
+
+fn smart_compact_inner(tool_name: &str, content: &str, is_error: bool) -> String {
+    let cfg = if is_error { &AGGRESSIVE } else { &MICRO };
+    if content.len() <= cfg.threshold {
         return content.to_string();
     }
-    if tool_name == "read_file" && aura_core::rust_signatures::looks_like_rust(content) {
+    if !is_error && tool_name == "read_file" && aura_core::rust_signatures::looks_like_rust(content) {
         let sigs = aura_core::rust_signatures::extract_signatures(content);
         if !sigs.is_empty() && sigs.len() < content.len() / 2 {
             return format!(
@@ -84,7 +95,11 @@ pub fn smart_compact(tool_name: &str, content: &str) -> String {
             );
         }
     }
-    microcompact(content)
+    if is_error {
+        truncate(content, &AGGRESSIVE)
+    } else {
+        microcompact(content)
+    }
 }
 
 /// Aggressive smart compaction: tries signature extraction, falls back to

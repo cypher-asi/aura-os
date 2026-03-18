@@ -139,10 +139,6 @@ pub async fn run_tool_loop(
     state.build_result(config.max_iterations, false, false, None)
 }
 
-// ---------------------------------------------------------------------------
-// Run a single LLM streaming iteration
-// ---------------------------------------------------------------------------
-
 async fn run_single_iteration(
     llm: &Arc<MeteredLlm>,
     api_key: &str,
@@ -226,10 +222,6 @@ async fn run_single_iteration(
     .await
 }
 
-// ---------------------------------------------------------------------------
-// Process the stream JoinHandle result
-// ---------------------------------------------------------------------------
-
 async fn handle_stream_result(
     stream_handle: tokio::task::JoinHandle<Result<ToolStreamResponse, MeteredLlmError>>,
     iter_text: String,
@@ -287,10 +279,6 @@ async fn handle_stream_result(
     })
 }
 
-// ---------------------------------------------------------------------------
-// Check context compaction
-// ---------------------------------------------------------------------------
-
 fn check_context_compaction(
     config: &ToolLoopConfig,
     iteration_input_tokens: u64,
@@ -309,10 +297,6 @@ fn check_context_compaction(
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Execute tool calls and build result blocks
-// ---------------------------------------------------------------------------
 
 async fn process_tool_calls(
     iter: &IterationCompleted,
@@ -411,10 +395,6 @@ async fn process_tool_calls(
     should_stop
 }
 
-// ---------------------------------------------------------------------------
-// Detect consecutive duplicate write/edit attempts
-// ---------------------------------------------------------------------------
-
 fn detect_blocked_writes(
     tool_calls: &[ToolCall],
     tracker: &mut HashMap<String, usize>,
@@ -451,10 +431,6 @@ fn detect_blocked_writes(
         })
         .collect()
 }
-
-// ---------------------------------------------------------------------------
-// Build tool result blocks for the conversation
-// ---------------------------------------------------------------------------
 
 fn build_tool_result_blocks(
     tool_calls: &[ToolCall],
@@ -497,7 +473,11 @@ fn build_tool_result_blocks(
                     file_read_cache.remove(path);
                 }
             }
-            compaction::smart_compact(&tc.name, &result.content)
+            if result.is_error && tc.name == "run_command" {
+                compaction::smart_compact_error(&tc.name, &result.content)
+            } else {
+                compaction::smart_compact(&tc.name, &result.content)
+            }
         };
 
         result_blocks.push(ContentBlock::ToolResult {
@@ -512,10 +492,6 @@ fn build_tool_result_blocks(
 
     (result_blocks, should_stop)
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 fn summarize_write_file_input(input: &serde_json::Value) -> serde_json::Value {
     let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
