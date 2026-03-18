@@ -22,6 +22,7 @@ import type { EngineEvent } from "../types/events";
 import { EVENT_LABELS, type LogEntry } from "../hooks/use-log-stream";
 import { StatusBadge } from "./StatusBadge";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
 import styles from "./Preview.module.css";
 
 function extractErrorMessage(raw: string): string {
@@ -737,28 +738,36 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
 
       {fileOps.length > 0 && (
         <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen className={styles.section}>
-          <div className={styles.fileOpsList}>
-            {fileOps.map((f) => {
-              const fullPath = ctx?.project.linked_folder_path
-                ? `${ctx.project.linked_folder_path}/${f.path}`.replace(/\//g, "\\")
-                : f.path;
-              return (
-                <Item
-                  key={f.path}
-                  onClick={supportsDesktopWorkspace ? () => api.openIde(fullPath) : undefined}
-                  className={styles.fileOpItem}
-                >
-                  <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
-                  <Item.Label>{f.path}</Item.Label>
-                </Item>
-              );
-            })}
-          </div>
-          {!supportsDesktopWorkspace && (
-            <Text variant="muted" size="sm" style={{ padding: "var(--space-2) var(--space-3) 0" }}>
-              Open changed files from the desktop app.
-            </Text>
-          )}
+          {(() => {
+            const linkedWorkspaceRoot = getLinkedWorkspaceRoot(ctx?.project);
+            const canOpenChangedFiles = supportsDesktopWorkspace && Boolean(linkedWorkspaceRoot);
+            return (
+              <>
+                <div className={styles.fileOpsList}>
+                  {fileOps.map((f) => {
+                    const fullPath = linkedWorkspaceRoot
+                      ? `${linkedWorkspaceRoot}/${f.path}`
+                      : null;
+                    return (
+                      <Item
+                        key={f.path}
+                        onClick={canOpenChangedFiles && fullPath ? () => api.openIde(fullPath) : undefined}
+                        className={styles.fileOpItem}
+                      >
+                        <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
+                        <Item.Label>{f.path}</Item.Label>
+                      </Item>
+                    );
+                  })}
+                </div>
+                {!canOpenChangedFiles && (
+                  <Text variant="muted" size="sm" style={{ padding: "var(--space-2) var(--space-3) 0" }}>
+                    Open changed files from a linked desktop workspace.
+                  </Text>
+                )}
+              </>
+            );
+          })()}
         </GroupCollapsible>
       )}
 

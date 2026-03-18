@@ -72,7 +72,7 @@ function formatAuthError(err: unknown, hostLabel: string): string {
 export function LoginView() {
   const { login, register } = useAuth();
   const { hostLabel, status, refreshStatus } = useHost();
-  const { isMobileLayout } = useAuraCapabilities();
+  const { supportsHostRetargeting } = useAuraCapabilities();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
@@ -159,7 +159,7 @@ export function LoginView() {
             </Text>
           </div>
 
-          {isMobileLayout && (
+          {supportsHostRetargeting && (
             <div className={`${styles.hostCard} ${showHostWarning ? styles.hostCardWarning : ""}`}>
               <div className={styles.hostCardTop}>
                 <div className={styles.hostCardText}>
@@ -246,7 +246,7 @@ export function LoginView() {
           </form>
         </Panel>
       </div>
-      {isMobileLayout && (
+      {supportsHostRetargeting && (
         <HostSettingsModal isOpen={hostSettingsOpen} onClose={() => setHostSettingsOpen(false)} />
       )}
     </div>

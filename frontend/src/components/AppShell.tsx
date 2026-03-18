@@ -134,10 +134,12 @@ function ProjectCreationModalHost() {
 interface ShellChromeProps {
   onOpenOrgSettings: () => void;
   onBuyCredits: () => void;
+  onOpenHostSettings: () => void;
 }
 
-function DesktopShell({ onOpenOrgSettings, onBuyCredits }: ShellChromeProps) {
+function DesktopShell({ onOpenOrgSettings, onBuyCredits, onOpenHostSettings }: ShellChromeProps) {
   const { activeApp } = useAppContext();
+  const { supportsHostRetargeting } = useAuraCapabilities();
   const { MainPanel } = activeApp;
   const leftPanelRef = useRef<HTMLDivElement>(null);
 
@@ -159,7 +161,21 @@ function DesktopShell({ onOpenOrgSettings, onBuyCredits }: ShellChromeProps) {
         onDoubleClick={() => windowCommand("maximize")}
         icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
         title={<span className="titlebar-center"><Link to="/projects" style={{ color: "inherit", textDecoration: "none" }}>AURA</Link></span>}
-        actions={<WindowControls />}
+        actions={(
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            {supportsHostRetargeting && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon={<Server size={16} />}
+                aria-label="Open host settings"
+                onClick={onOpenHostSettings}
+              />
+            )}
+            <WindowControls />
+          </div>
+        )}
       />
 
       <UpdateBanner />
@@ -204,7 +220,7 @@ function MobileShell({
   onOpenOrgSettings,
   onOpenSettings,
   onBuyCredits,
-}: ShellChromeProps & { onOpenSettings: () => void }) {
+}: Omit<ShellChromeProps, "onOpenHostSettings"> & { onOpenSettings: () => void }) {
   const { apps: registeredApps, activeApp } = useAppContext();
   const { status: hostStatus } = useHost();
   const { previewItem, setActiveTab } = useSidekick();
@@ -482,6 +498,7 @@ function AppContent() {
   const [orgSettingsOpen, setOrgSettingsOpen] = useState(false);
   const [orgInitialSection, setOrgInitialSection] = useState<"billing" | undefined>(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
   const { isMobileLayout } = useAuraCapabilities();
 
   const openOrgBilling = useCallback(() => {
@@ -507,6 +524,7 @@ function AppContent() {
         <DesktopShell
           onOpenOrgSettings={() => setOrgSettingsOpen(true)}
           onBuyCredits={openOrgBilling}
+          onOpenHostSettings={() => setHostSettingsOpen(true)}
         />
       )}
 
@@ -516,6 +534,9 @@ function AppContent() {
         initialSection={orgInitialSection}
       />
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {!isMobileLayout && (
+        <HostSettingsModal isOpen={hostSettingsOpen} onClose={() => setHostSettingsOpen(false)} />
+      )}
       <ProjectCreationModalHost />
     </>
   );

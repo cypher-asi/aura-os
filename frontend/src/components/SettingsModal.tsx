@@ -3,6 +3,7 @@ import { Modal, Heading, Button, Spinner, Text } from "@cypher-asi/zui";
 import { LogOut } from "lucide-react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import type { ApiKeyInfo } from "../types";
 import styles from "./SettingsModal.module.css";
 
@@ -14,6 +15,7 @@ export function SettingsModal({
   onClose: () => void;
 }) {
   const { logout } = useAuth();
+  const { supportsNativeUpdates } = useAuraCapabilities();
   const [info, setInfo] = useState<ApiKeyInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,16 +25,21 @@ export function SettingsModal({
   useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
-    Promise.all([
-      api.getApiKeyInfo().then(setInfo),
-      api.getUpdateStatus().then((s) => {
-        setUpdateChannel(s.channel as "stable" | "nightly");
-        setCurrentVersion(s.current_version);
-      }),
-    ])
+    const requests = [api.getApiKeyInfo().then(setInfo)];
+    if (supportsNativeUpdates) {
+      requests.push(
+        api.getUpdateStatus().then((s) => {
+          setUpdateChannel(s.channel as "stable" | "nightly");
+          setCurrentVersion(s.current_version);
+        }),
+      );
+    } else {
+      setCurrentVersion("");
+    }
+    Promise.all(requests)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [isOpen]);
+  }, [isOpen, supportsNativeUpdates]);
 
   const handleChannelChange = useCallback(
     async (ch: "stable" | "nightly") => {
@@ -68,31 +75,35 @@ export function SettingsModal({
               </Text>
             )}
 
-            <div className={styles.divider} />
+            {supportsNativeUpdates && (
+              <>
+                <div className={styles.divider} />
 
-            <Heading level={4}>Updates</Heading>
+                <Heading level={4}>Updates</Heading>
 
-            <div className={styles.infoGrid}>
-              <Text variant="muted" size="sm" as="span">Version</Text>
-              <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>
-                {currentVersion || "—"}
-              </Text>
-              <Text variant="muted" size="sm" as="span">Channel</Text>
-              <select
-                className={styles.channelSelect}
-                value={updateChannel}
-                onChange={(e) => handleChannelChange(e.target.value as "stable" | "nightly")}
-              >
-                <option value="stable">Stable</option>
-                <option value="nightly">Nightly</option>
-              </select>
-            </div>
+                <div className={styles.infoGrid}>
+                  <Text variant="muted" size="sm" as="span">Version</Text>
+                  <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>
+                    {currentVersion || "—"}
+                  </Text>
+                  <Text variant="muted" size="sm" as="span">Channel</Text>
+                  <select
+                    className={styles.channelSelect}
+                    value={updateChannel}
+                    onChange={(e) => handleChannelChange(e.target.value as "stable" | "nightly")}
+                  >
+                    <option value="stable">Stable</option>
+                    <option value="nightly">Nightly</option>
+                  </select>
+                </div>
 
-            <Text variant="muted" size="sm">
-              {updateChannel === "nightly"
-                ? "You'll receive builds from every push to main."
-                : "You'll only receive tagged releases."}
-            </Text>
+                <Text variant="muted" size="sm">
+                  {updateChannel === "nightly"
+                    ? "You'll receive builds from every push to main."
+                    : "You'll only receive tagged releases."}
+                </Text>
+              </>
+            )}
 
             <div className={styles.divider} />
 

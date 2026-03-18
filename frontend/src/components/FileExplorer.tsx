@@ -7,7 +7,7 @@ import { Folder, File, FolderOpen } from "lucide-react";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 
 interface FileExplorerProps {
-  rootPath: string;
+  rootPath?: string;
   searchQuery?: string;
   onFileSelect?: (path: string) => void;
 }
@@ -29,8 +29,16 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   const { supportsDesktopWorkspace } = useAuraCapabilities();
 
   useEffect(() => {
-    if (!supportsDesktopWorkspace) return;
-    if (!rootPath) return;
+    if (!supportsDesktopWorkspace) {
+      setLoading(false);
+      return;
+    }
+    if (!rootPath) {
+      setEntries([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     api
@@ -47,6 +55,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   }, [rootPath, supportsDesktopWorkspace]);
 
   const explorerData: ExplorerNode[] = useMemo(() => {
+    if (!rootPath) return [];
     const rootName = rootPath.split(/[\\/]/).pop() ?? rootPath;
     return [
       {
@@ -88,6 +97,16 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
         icon={<FolderOpen size={32} />}
         title="Files stay on desktop"
         description="Aura Mobile Companion does not expose the host filesystem or IDE."
+      />
+    );
+  }
+
+  if (!rootPath) {
+    return (
+      <PageEmptyState
+        icon={<FolderOpen size={32} />}
+        title="No linked workspace"
+        description="This project does not expose a live host folder to browse."
       />
     );
   }

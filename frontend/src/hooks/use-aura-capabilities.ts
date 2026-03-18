@@ -6,6 +6,8 @@ export interface AuraCapabilities {
   isStandalone: boolean;
   supportsWindowControls: boolean;
   supportsDesktopWorkspace: boolean;
+  supportsNativeUpdates: boolean;
+  supportsHostRetargeting: boolean;
 }
 
 function readCapabilities(): AuraCapabilities {
@@ -16,6 +18,8 @@ function readCapabilities(): AuraCapabilities {
       isStandalone: false,
       supportsWindowControls: false,
       supportsDesktopWorkspace: false,
+      supportsNativeUpdates: false,
+      supportsHostRetargeting: false,
     };
   }
 
@@ -33,6 +37,8 @@ function readCapabilities(): AuraCapabilities {
     isStandalone,
     supportsWindowControls: hasDesktopBridge,
     supportsDesktopWorkspace: hasDesktopBridge && !isMobileLayout,
+    supportsNativeUpdates: hasDesktopBridge,
+    supportsHostRetargeting: !hasDesktopBridge,
   };
 }
 

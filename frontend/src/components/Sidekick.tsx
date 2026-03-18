@@ -16,6 +16,7 @@ import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
 import { FileExplorer } from "./FileExplorer";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { hasLinkedWorkspace, getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
@@ -65,13 +66,13 @@ export function SidekickTaskbar() {
   const moreBtnRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const { supportsDesktopWorkspace } = useAuraCapabilities();
-  const visibleTabs = supportsDesktopWorkspace ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
+  const canBrowseFiles = supportsDesktopWorkspace && hasLinkedWorkspace(ctx?.project);
 
   useEffect(() => {
-    if (!supportsDesktopWorkspace && activeTab === "files") {
+    if (!canBrowseFiles && activeTab === "files") {
       setActiveTab("tasks");
     }
-  }, [activeTab, setActiveTab, supportsDesktopWorkspace]);
+  }, [activeTab, canBrowseFiles, setActiveTab]);
 
   useLayoutEffect(() => {
     if (moreOpen && moreBtnRef.current) {
@@ -87,6 +88,7 @@ export function SidekickTaskbar() {
   if (!ctx || showInfo) return null;
 
   const { project, handleArchive } = ctx;
+  const visibleTabs = canBrowseFiles ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
 
   return (
     <div className={styles.sidekickTaskbar}>
@@ -178,6 +180,8 @@ export function SidekickContent() {
   }
 
   const { project } = ctx;
+  const linkedWorkspaceRoot = getLinkedWorkspaceRoot(project);
+  const canBrowseFiles = supportsDesktopWorkspace && Boolean(linkedWorkspaceRoot);
 
   if (showInfo) {
     return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
@@ -190,11 +194,15 @@ export function SidekickContent() {
     tasks: <TaskList searchQuery={searchQuery} />,
     stats: <StatsDashboard />,
     sessions: <SessionList searchQuery={searchQuery} />,
-    files: supportsDesktopWorkspace
-      ? <FileExplorer rootPath={project.linked_folder_path} searchQuery={searchQuery} />
+    files: canBrowseFiles
+      ? <FileExplorer rootPath={linkedWorkspaceRoot ?? undefined} searchQuery={searchQuery} />
       : (
         <div className={styles.emptyState}>
-          <Text variant="muted" size="sm">File browsing stays in the desktop app for now.</Text>
+          <Text variant="muted" size="sm">
+            {supportsDesktopWorkspace
+              ? "Imported workspaces do not expose live host files."
+              : "File browsing stays in the desktop app for now."}
+          </Text>
         </div>
       ),
   };

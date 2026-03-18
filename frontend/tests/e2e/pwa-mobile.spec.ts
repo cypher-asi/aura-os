@@ -174,6 +174,7 @@ test("mobile drawer exposes team and app settings", async ({ page }) => {
   await page.getByRole("button", { name: "App settings" }).dispatchEvent("click");
   await expect(page.getByRole("dialog").filter({ hasText: "Claude API Key" })).toBeVisible();
   await expect(page.getByText("Claude API Key")).toBeVisible();
+  await expect(page.getByText("Updates")).toHaveCount(0);
 });
 
 test("mobile new project modal presents local file actions", async ({ page, browserName }) => {
@@ -249,7 +250,7 @@ test("mobile details selection auto-opens preview", async ({ page }) => {
   await expect(page.getByRole("treeitem", { name: "Patch auth flow" })).toBeVisible();
   await page.getByRole("treeitem", { name: "Patch auth flow" }).dispatchEvent("click");
 
-  await expect(page.getByText("Open changed files from the desktop app.")).toBeVisible();
+  await expect(page.getByText("Open changed files from a linked desktop workspace.")).toBeVisible();
 });
 
 test("mobile team settings opens above the closed navigation drawer", async ({ page }) => {
