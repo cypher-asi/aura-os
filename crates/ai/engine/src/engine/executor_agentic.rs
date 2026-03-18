@@ -61,14 +61,18 @@ impl DevLoopEngine {
             }
         }
 
-        let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
-        let completed_deps: Vec<Task> = task.dependency_ids.iter()
-            .filter_map(|dep_id| {
-                all_project_tasks.iter()
-                    .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
-                    .cloned()
-            })
-            .collect();
+        let completed_deps: Vec<Task> = if task.dependency_ids.is_empty() {
+            Vec::new()
+        } else {
+            let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
+            task.dependency_ids.iter()
+                .filter_map(|dep_id| {
+                    all_project_tasks.iter()
+                        .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
+                        .cloned()
+                })
+                .collect()
+        };
 
         let work_log_summary = build_work_log_summary(work_log);
 

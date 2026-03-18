@@ -6,8 +6,6 @@ use tokio::sync::watch;
 use tracing::{info, warn};
 
 use aura_core::*;
-use aura_billing::PricingService;
-
 use super::orchestrator::DevLoopEngine;
 use super::types::*;
 use crate::error::EngineError;
@@ -58,7 +56,7 @@ impl LoopRunContext {
             .clone();
         let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let run_metrics = LoopRunMetrics::new(project_id.to_string());
-        let fee_schedule = PricingService::new(engine.store.clone()).get_fee_schedule();
+        let fee_schedule = engine.pricing_service.get_fee_schedule();
         let default_model = engine.llm_config.default_model.clone();
         Ok(Self {
             project_id,
@@ -261,8 +259,7 @@ impl LoopRunContext {
     }
 
     fn build_finished_event(&self, engine: &DevLoopEngine, outcome: &str) -> EngineEvent {
-        let pricing = PricingService::new(engine.store.clone());
-        let total_cost_usd = Some(pricing.compute_cost(
+        let total_cost_usd = Some(engine.pricing_service.compute_cost(
             self.default_model.as_str(),
             self.total_input_tokens,
             self.total_output_tokens,

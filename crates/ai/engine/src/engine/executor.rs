@@ -82,8 +82,7 @@ impl DevLoopEngine {
         let project_root = self.project_service.get_project(&project_id)?
             .linked_folder_path.clone();
         let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
-        let fee_schedule = aura_billing::PricingService::new(self.store.clone())
-            .get_fee_schedule();
+        let fee_schedule = self.pricing_service.get_fee_schedule();
 
         let baseline_test_failures = {
             let project = self.project_service.get_project(&project_id)?;
@@ -371,8 +370,7 @@ impl DevLoopEngine {
         ) { warn!(task_id = %task.task_id, error = %e, "failed to mark task as completed"); }
 
         let cost_usd = {
-            let pricing = aura_billing::PricingService::new(self.store.clone());
-            Some(pricing.compute_cost(
+            Some(self.pricing_service.compute_cost(
                 model.as_deref().unwrap_or(aura_claude::DEFAULT_MODEL),
                 total_input, total_output,
             ))

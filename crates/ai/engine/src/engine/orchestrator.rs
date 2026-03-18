@@ -6,7 +6,7 @@ use tracing::{error, info, warn};
 
 use aura_core::*;
 use aura_agents::AgentInstanceService;
-use aura_billing::MeteredLlm;
+use aura_billing::{MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
 use aura_tasks::TaskService;
@@ -60,6 +60,7 @@ pub struct DevLoopEngine {
     pub(crate) write_coordinator: ProjectWriteCoordinator,
     pub(crate) engine_config: EngineConfig,
     pub(crate) llm_config: LlmConfig,
+    pub(crate) pricing_service: PricingService,
 }
 
 impl DevLoopEngine {
@@ -74,6 +75,7 @@ impl DevLoopEngine {
         session_service: Arc<SessionService>,
         event_tx: mpsc::UnboundedSender<EngineEvent>,
     ) -> Self {
+        let pricing_service = PricingService::new(store.clone());
         Self {
             store,
             settings,
@@ -86,6 +88,7 @@ impl DevLoopEngine {
             write_coordinator: ProjectWriteCoordinator::new(),
             engine_config: EngineConfig::from_env(),
             llm_config: LlmConfig::from_env(),
+            pricing_service,
         }
     }
 
