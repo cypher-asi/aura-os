@@ -106,21 +106,29 @@ pub(crate) fn build_tool_result_blocks(
 
         let content_for_llm = if tc.name == "read_file" && !result.is_error {
             let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
-            let hash = content_hash(&result.content);
-            if let Some(&prev_hash) = file_read_cache.get(path) {
-                if prev_hash == hash {
-                    format!(
-                        "File already read earlier in this session with identical content ({} chars). \
-                         Use the previously read content.",
-                        result.content.len()
-                    )
+            let has_line_range = tc.input.get("start_line").is_some()
+                || tc.input.get("end_line").is_some();
+
+            if has_line_range {
+                compaction::smart_compact(&tc.name, &result.content)
+            } else {
+                let hash = content_hash(&result.content);
+                if let Some(&prev_hash) = file_read_cache.get(path) {
+                    if prev_hash == hash {
+                        format!(
+                            "File already read earlier in this session with identical content ({} chars). \
+                             Use read_file with start_line/end_line to read specific sections, \
+                             or use the previously read content.",
+                            result.content.len()
+                        )
+                    } else {
+                        file_read_cache.insert(path.to_string(), hash);
+                        compaction::smart_compact(&tc.name, &result.content)
+                    }
                 } else {
                     file_read_cache.insert(path.to_string(), hash);
                     compaction::smart_compact(&tc.name, &result.content)
                 }
-            } else {
-                file_read_cache.insert(path.to_string(), hash);
-                compaction::smart_compact(&tc.name, &result.content)
             }
         } else {
             if tc.name == "write_file" || tc.name == "edit_file" {
