@@ -10,7 +10,6 @@ use tracing::info;
 
 use aura_core::*;
 use aura_store::RocksStore;
-use aura_orgs::OrgService;
 
 #[derive(Debug, Serialize)]
 struct JwtClaims {
@@ -55,15 +54,13 @@ struct GitHubApiRepo {
 
 pub struct GitHubService {
     store: Arc<RocksStore>,
-    org_service: Arc<OrgService>,
     http: reqwest::Client,
 }
 
 impl GitHubService {
-    pub fn new(store: Arc<RocksStore>, org_service: Arc<OrgService>) -> Self {
+    pub fn new(store: Arc<RocksStore>) -> Self {
         Self {
             store,
-            org_service,
             http: reqwest::Client::new(),
         }
     }
@@ -312,12 +309,8 @@ impl GitHubService {
     pub fn disconnect_integration(
         &self,
         org_id: &OrgId,
-        actor_user_id: &str,
         integration_id: &GitHubIntegrationId,
     ) -> Result<(), GitHubError> {
-        self.org_service
-            .require_admin_or_owner_pub(org_id, actor_user_id)?;
-
         self.store
             .get_github_integration(org_id, integration_id)
             .map_err(|_| GitHubError::IntegrationNotFound)?;

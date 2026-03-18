@@ -1,12 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::enums::{
-    AgentStatus, ChatRole, InviteStatus, OrgRole, ProjectStatus, SessionStatus, TaskStatus,
-};
+use crate::enums::{AgentStatus, ChatRole, ProjectStatus, SessionStatus, TaskStatus};
 use crate::ids::{
-    AgentId, AgentInstanceId, GitHubIntegrationId, InviteId, MessageId, OrgId, ProfileId,
-    ProjectId, SessionId, SpecId, SprintId, TaskId, UserId,
+    AgentId, AgentInstanceId, GitHubIntegrationId, MessageId, OrgId, ProfileId, ProjectId,
+    SessionId, SpecId, SprintId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -256,28 +254,6 @@ pub struct Org {
     pub github: Option<OrgGithub>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgMember {
-    pub org_id: OrgId,
-    pub user_id: String,
-    pub display_name: String,
-    pub role: OrgRole,
-    pub joined_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OrgInvite {
-    pub invite_id: InviteId,
-    pub org_id: OrgId,
-    pub token: String,
-    pub created_by: String,
-    pub status: InviteStatus,
-    pub accepted_by: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub expires_at: DateTime<Utc>,
-    pub accepted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

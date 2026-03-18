@@ -1,4 +1,3 @@
-use aura_orgs::OrgError;
 use aura_store::StoreError;
 
 #[derive(Debug, thiserror::Error)]
@@ -13,8 +12,6 @@ pub enum GitHubError {
     Jwt(#[from] jsonwebtoken::errors::Error),
     #[error("not configured: {0}")]
     NotConfigured(String),
-    #[error("org error: {0}")]
-    Org(#[from] OrgError),
     #[error("integration not found")]
     IntegrationNotFound,
 }

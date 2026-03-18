@@ -24,7 +24,7 @@ fn build_test_app() -> (Router, AppState, tempfile::TempDir, tempfile::TempDir) 
     let settings_service = Arc::new(SettingsService::new(store.clone(), data_dir.path()).unwrap());
     let claude_client = Arc::new(ClaudeClient::new());
     let org_service = Arc::new(OrgService::new(store.clone()));
-    let github_service = Arc::new(GitHubService::new(store.clone(), org_service.clone()));
+    let github_service = Arc::new(GitHubService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
     let project_service = Arc::new(ProjectService::new(store.clone()));
     let spec_gen_service = Arc::new(SpecGenerationService::new(

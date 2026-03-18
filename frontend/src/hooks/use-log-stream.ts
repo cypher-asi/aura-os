@@ -43,6 +43,7 @@ const EVENT_LABELS: Record<EngineEventType, string> = {
   test_verification_passed: "Test",
   test_verification_failed: "Test",
   test_fix_attempt: "Test",
+  network_event: "Network",
 };
 
 function fmtDuration(ms: number): string {
@@ -183,6 +184,8 @@ function summarise(e: EngineEvent): string {
     }
     case "test_fix_attempt":
       return `Test fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    case "network_event":
+      return `Network: ${e.network_event_type ?? "event"}`;
     default:
       return e.type;
   }
@@ -264,6 +267,7 @@ export function useLogStream() {
       "test_verification_passed",
       "test_verification_failed",
       "test_fix_attempt",
+      "network_event",
     ];
     const unsubs = allTypes.map((type) =>
       subscribe(type, (e) => addEntry(e)),

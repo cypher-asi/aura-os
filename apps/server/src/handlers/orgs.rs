@@ -117,11 +117,6 @@ impl From<NetworkOrgInvite> for InviteResponse {
 fn map_org_err(e: aura_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
     match &e {
         aura_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
-        aura_orgs::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
-        aura_orgs::OrgError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
-        aura_orgs::OrgError::InviteNotFound => ApiError::not_found("invite not found"),
-        aura_orgs::OrgError::InviteInvalid => ApiError::bad_request("invite expired or revoked"),
-        aura_orgs::OrgError::AlreadyMember => ApiError::conflict("already a member"),
         _ => ApiError::internal(e.to_string()),
     }
 }
@@ -205,7 +200,6 @@ pub async fn create_org(
 ) -> ApiResult<(StatusCode, Json<OrgResponse>)> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
-    let (user_id, display_name) = get_user_id(&state)?;
 
     let net_req = aura_network::CreateOrgRequest {
         name: req.name,
@@ -218,18 +212,6 @@ pub async fn create_org(
         .map_err(map_network_error)?;
 
     ensure_local_shadow(&state, &net_org);
-
-    // Create a local OrgMember so permission checks (billing/github) work.
-    if let Ok(org_id) = net_org.id.parse::<OrgId>() {
-        let member = OrgMember {
-            org_id,
-            user_id,
-            display_name,
-            role: OrgRole::Owner,
-            joined_at: Utc::now(),
-        };
-        let _ = state.store.put_org_member(&member);
-    }
 
     Ok((StatusCode::CREATED, Json(OrgResponse::from_network(&net_org, None, None))))
 }
@@ -387,23 +369,6 @@ pub async fn accept_invite(
         .await
         .map_err(map_network_error)?;
 
-    // Write a local OrgMember so permission checks (billing/github) work.
-    if let Ok(org_id) = member.org_id.parse::<OrgId>() {
-        let role = match member.role.as_str() {
-            "owner" => OrgRole::Owner,
-            "admin" => OrgRole::Admin,
-            _ => OrgRole::Member,
-        };
-        let local_member = OrgMember {
-            org_id,
-            user_id: member.user_id.clone(),
-            display_name: member.display_name.clone().unwrap_or_default(),
-            role,
-            joined_at: Utc::now(),
-        };
-        let _ = state.store.put_org_member(&local_member);
-    }
-
     Ok(Json(MemberResponse::from(member)))
 }
 
@@ -416,14 +381,13 @@ pub async fn set_billing(
     Path(org_id): Path<OrgId>,
     Json(req): Json<SetBillingRequest>,
 ) -> ApiResult<Json<Org>> {
-    let (user_id, _) = get_user_id(&state)?;
     let billing = OrgBilling {
         billing_email: req.billing_email,
         plan: req.plan,
     };
     let org = state
         .org_service
-        .set_billing(&org_id, &user_id, billing)
+        .set_billing(&org_id, billing)
         .map_err(map_org_err)?;
     Ok(Json(org))
 }
@@ -457,10 +421,9 @@ pub async fn remove_github(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<StatusCode> {
-    let (user_id, _) = get_user_id(&state)?;
     state
         .org_service
-        .remove_github(&org_id, &user_id)
+        .remove_github(&org_id)
         .map_err(map_org_err)?;
     Ok(StatusCode::NO_CONTENT)
 }

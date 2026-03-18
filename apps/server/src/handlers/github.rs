@@ -17,11 +17,6 @@ fn map_gh_err(e: aura_github::GitHubError) -> (StatusCode, Json<ApiError>) {
         aura_github::GitHubError::IntegrationNotFound => {
             ApiError::not_found("integration not found")
         }
-        aura_github::GitHubError::Org(org_err) => match org_err {
-            aura_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
-            aura_orgs::OrgError::Forbidden(msg) => ApiError::unauthorized(msg.clone()),
-            _ => ApiError::internal(e.to_string()),
-        },
         _ => ApiError::internal(e.to_string()),
     }
 }
@@ -62,12 +57,6 @@ pub async fn start_install(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<GitHubInstallResponse>> {
-    let (user_id, _) = get_user_id(&state)?;
-    state
-        .store
-        .get_org_member(&org_id, &user_id)
-        .map_err(|_| ApiError::unauthorized("not a member of this org"))?;
-
     let install_url = state
         .github_service
         .generate_install_url(&org_id)
@@ -105,10 +94,9 @@ pub async fn remove_integration(
     State(state): State<AppState>,
     Path((org_id, integration_id)): Path<(OrgId, GitHubIntegrationId)>,
 ) -> ApiResult<StatusCode> {
-    let (user_id, _) = get_user_id(&state)?;
     state
         .github_service
-        .disconnect_integration(&org_id, &user_id, &integration_id)
+        .disconnect_integration(&org_id, &integration_id)
         .map_err(map_gh_err)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -130,12 +118,6 @@ pub async fn refresh_integration(
     State(state): State<AppState>,
     Path((org_id, integration_id)): Path<(OrgId, GitHubIntegrationId)>,
 ) -> ApiResult<Json<Vec<GitHubRepoResponse>>> {
-    let (user_id, _) = get_user_id(&state)?;
-    state
-        .store
-        .get_org_member(&org_id, &user_id)
-        .map_err(|_| ApiError::unauthorized("not a member of this org"))?;
-
     let repos = state
         .github_service
         .refresh_integration(&org_id, &integration_id)

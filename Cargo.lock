@@ -301,7 +301,6 @@ name = "aura-auth"
 version = "0.1.0"
 dependencies = [
  "aura-core",
- "aura-orgs",
  "aura-store",
  "chrono",
  "reqwest 0.11.27",
