@@ -703,7 +703,17 @@ impl DevLoopEngine {
 
         let codebase_snapshot = file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
 
-        let mut task_context = build_agentic_task_context(&project, &spec, task, session);
+        let completed_deps: Vec<Task> = task.dependency_ids.iter()
+            .filter_map(|dep_id| {
+                self.store.list_tasks_by_project(project_id).ok()
+                    .and_then(|tasks| tasks.into_iter()
+                        .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done))
+            })
+            .collect();
+
+        let mut task_context = build_agentic_task_context(
+            &project, &spec, task, session, &completed_deps,
+        );
         if !workspace_map.is_empty() {
             task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
         }
@@ -1099,6 +1109,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
                         &self.spec,
                         &self.task,
                         &self.session,
+                        &[],
                     );
                     results.push(ToolCallResult {
                         tool_use_id: tc.id.clone(),

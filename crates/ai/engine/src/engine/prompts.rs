@@ -199,6 +199,7 @@ pub(crate) fn build_agentic_task_context(
     spec: &Spec,
     task: &Task,
     session: &Session,
+    completed_deps: &[Task],
 ) -> String {
     let mut ctx = String::new();
     ctx.push_str(&format!("# Project: {}\n{}\n\n", project.name, project.description));
@@ -217,6 +218,30 @@ pub(crate) fn build_agentic_task_context(
             task.execution_notes
         ));
     }
+
+    if !completed_deps.is_empty() {
+        ctx.push_str("# Completed Predecessor Tasks\n");
+        let mut dep_budget = 5_000usize;
+        for dep in completed_deps {
+            let files_list = dep.files_changed.iter()
+                .map(|fc| format!("{} ({})", fc.path, fc.op))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let section = format!(
+                "## {}\n{}\nFiles: {}\n\n",
+                dep.title,
+                dep.execution_notes,
+                files_list,
+            );
+            if section.len() > dep_budget {
+                break;
+            }
+            dep_budget -= section.len();
+            ctx.push_str(&section);
+        }
+        ctx.push('\n');
+    }
+
     ctx.push_str("Start by exploring the codebase to understand the current state, then implement the task.\n");
     ctx
 }
