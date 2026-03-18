@@ -8,7 +8,6 @@ import type { Project, AgentInstance } from "../types";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Pencil, Trash2, Loader2 } from "lucide-react";
-import { NewProjectModal } from "./NewProjectModal";
 import { DeleteProjectModal, DeleteAgentInstanceModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
 import { useEventContext } from "../context/EventContext";
@@ -135,9 +134,9 @@ export function ProjectList() {
   const {
     projects,
     loadingProjects,
-    setProjects,
     refreshProjects,
     mostRecentProject,
+    openNewProjectModal,
   } = useProjectsList();
 
   const { query: searchQuery, setAction } = useSidebarSearch();
@@ -152,7 +151,6 @@ export function ProjectList() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteAgentTarget, setDeleteAgentTarget] = useState<AgentInstance | null>(null);
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
-  const [showNewProject, setShowNewProject] = useState(false);
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
   const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
 
@@ -166,10 +164,10 @@ export function ProjectList() {
 
   useEffect(() => {
     setAction(
-      <ButtonPlus onClick={() => setShowNewProject(true)} size="sm" title="New Project" />,
+      <ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />,
     );
     return () => setAction(null);
-  }, [setAction]);
+  }, [openNewProjectModal, setAction]);
 
   const prevProjectIdRef = useRef(projectId);
   useEffect(() => {
@@ -463,18 +461,6 @@ export function ProjectList() {
     [refreshProjects, renameTarget],
   );
 
-  const handleNewProjectClose = useCallback(() => setShowNewProject(false), []);
-
-  const handleNewProjectCreated = useCallback(
-    async (project: Project) => {
-      setShowNewProject(false);
-      sidekick.closePreview();
-      setProjects((prev) => [...prev, project]);
-      navigate(`/projects/${project.project_id}`);
-    },
-    [navigate, sidekick],
-  );
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
@@ -632,12 +618,6 @@ export function ProjectList() {
         loading={deleteAgentLoading}
         onClose={() => setDeleteAgentTarget(null)}
         onDelete={handleDeleteAgent}
-      />
-
-      <NewProjectModal
-        isOpen={showNewProject}
-        onClose={handleNewProjectClose}
-        onCreated={handleNewProjectCreated}
       />
 
       <AgentSelectorModal

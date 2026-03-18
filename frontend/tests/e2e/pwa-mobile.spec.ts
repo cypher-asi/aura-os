@@ -193,6 +193,28 @@ test("mobile new project modal presents local file actions", async ({ page, brow
   await expect(page.getByText("Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.")).toBeVisible();
 });
 
+test("mobile file selection keeps the new project modal open", async ({ page, browserName }) => {
+  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
+  await mockAuthenticatedMobileApp(page);
+
+  await page.goto("/projects");
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByTitle("New Project").click({ force: true });
+
+  await expect(page.getByPlaceholder("Project name")).toBeVisible();
+
+  await page.locator('input[type="file"]').nth(1).setInputFiles({
+    name: "notes.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("hello aura"),
+  });
+
+  await expect(page.getByPlaceholder("Project name")).toBeVisible();
+  await expect(page.getByText("1 file selected")).toBeVisible();
+  await expect(page.getByText("notes.txt")).toBeVisible();
+});
+
 test("mobile details selection auto-opens preview", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
 

@@ -20,6 +20,9 @@ interface ProjectsListContextValue {
   refreshProjects: () => Promise<void>;
   recentProjects: Project[];
   mostRecentProject: Project | null;
+  newProjectModalOpen: boolean;
+  openNewProjectModal: () => void;
+  closeNewProjectModal: () => void;
 }
 
 const ProjectsListContext = createContext<ProjectsListContextValue | null>(null);
@@ -28,6 +31,7 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
   const { activeOrg } = useOrg();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const [newProjectModalOpen, setNewProjectModalOpen] = useState(false);
 
   const refreshProjects = useCallback(async () => {
     setLoadingProjects(true);
@@ -66,8 +70,11 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
       refreshProjects,
       recentProjects,
       mostRecentProject,
+      newProjectModalOpen,
+      openNewProjectModal: () => setNewProjectModalOpen(true),
+      closeNewProjectModal: () => setNewProjectModalOpen(false),
     }),
-    [projects, loadingProjects, refreshProjects, recentProjects, mostRecentProject],
+    [projects, loadingProjects, refreshProjects, recentProjects, mostRecentProject, newProjectModalOpen],
   );
 
   return (

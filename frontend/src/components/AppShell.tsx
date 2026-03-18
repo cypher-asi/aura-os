@@ -20,11 +20,13 @@ import { useSidekick } from "../context/SidekickContext";
 import { useHost, type HostConnectionStatus } from "../context/HostContext";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
+import { useProjectsList } from "../apps/projects/ProjectsListContext";
 import { AgentAppProvider } from "../apps/agents/AgentAppProvider";
 import { FeedProvider } from "../apps/feed/FeedProvider";
 import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
 import { ProfileProvider } from "../apps/profile/ProfileProvider";
 import { apps } from "../apps/registry";
+import { NewProjectModal } from "./NewProjectModal";
 import { windowCommand } from "../lib/windowCommand";
 import { INSUFFICIENT_CREDITS_EVENT } from "../api/client";
 import styles from "./AppShell.module.css";
@@ -110,6 +112,27 @@ function SidebarSearchInput() {
       value={query}
       onChange={setQuery}
       action={action}
+    />
+  );
+}
+
+function ProjectCreationModalHost() {
+  const navigate = useNavigate();
+  const sidekick = useSidekick();
+  const { setProjects, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
+
+  const handleProjectCreated = useCallback((project: import("../types").Project) => {
+    closeNewProjectModal();
+    sidekick.closePreview();
+    setProjects((prev) => [...prev, project]);
+    navigate(`/projects/${project.project_id}`);
+  }, [closeNewProjectModal, navigate, setProjects, sidekick]);
+
+  return (
+    <NewProjectModal
+      isOpen={newProjectModalOpen}
+      onClose={closeNewProjectModal}
+      onCreated={handleProjectCreated}
     />
   );
 }
@@ -499,6 +522,7 @@ function AppContent() {
         initialSection={orgInitialSection}
       />
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ProjectCreationModalHost />
     </>
   );
 }
