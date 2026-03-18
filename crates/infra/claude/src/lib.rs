@@ -10,7 +10,7 @@ use tracing::{debug, error, info};
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
-pub const FAST_MODEL: &str = "claude-haiku-3-5";
+pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
 pub const MID_MODEL: &str = "claude-sonnet-4-5";
 
 /// Deprecated: use `aura_billing::PricingService::compute_cost` or the pure

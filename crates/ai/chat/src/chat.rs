@@ -1151,14 +1151,26 @@ impl ChatService {
             return self.summarize_and_keep(api_key, &messages, split_at).await;
         }
 
-        // Tier 1 (50-75%): compact tool results in older messages only
+        // Tier 1 (50-75%): if still far above the soft target, summarize
+        // rather than just truncating tool results — truncation alone won't
+        // bring 80K+ tokens down to the 20K target.
         if utilization <= 0.75 {
+            let compaction_keep = keep_recent_messages.min(6);
+            if total > target_chat_tokens * 2 {
+                info!(
+                    total_tokens = total,
+                    target_chat_tokens,
+                    utilization_pct = (utilization * 100.0) as u32,
+                    "Tier-1 compaction: summarizing (tokens far above soft target)"
+                );
+                let split_at = Self::find_safe_split(&messages, compaction_keep);
+                return self.summarize_and_keep(api_key, &messages, split_at).await;
+            }
             info!(
                 total_tokens = total,
                 utilization_pct = (utilization * 100.0) as u32,
                 "Tier-1 compaction: truncating large tool results in older messages"
             );
-            let compaction_keep = keep_recent_messages.min(6);
             let compacted = Self::compact_tool_results_in_history(messages, compaction_keep);
             return compacted;
         }
