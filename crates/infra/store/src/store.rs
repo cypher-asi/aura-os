@@ -19,8 +19,6 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "messages",
     "orgs",
     "org_members",
-    "user_orgs",
-    "org_invites",
     "github_integrations",
     "github_repos",
     "log_entries",
