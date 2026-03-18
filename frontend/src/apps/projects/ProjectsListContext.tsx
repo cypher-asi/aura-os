@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -33,20 +34,24 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
   const { activeOrg } = useOrg();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const refreshRequestId = useRef(0);
   const [newProjectModalOpen, setNewProjectModalOpen] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem(NEW_PROJECT_MODAL_STORAGE_KEY) === "1";
   });
 
   const refreshProjects = useCallback(async () => {
+    const requestId = ++refreshRequestId.current;
     setLoadingProjects(true);
     try {
       const nextProjects = await api.listProjects(activeOrg?.org_id);
+      if (refreshRequestId.current !== requestId) return;
       setProjects(nextProjects);
     } catch (error) {
+      if (refreshRequestId.current !== requestId) return;
       console.error("Failed to load projects", error);
-      setProjects([]);
     } finally {
+      if (refreshRequestId.current !== requestId) return;
       setLoadingProjects(false);
     }
   }, [activeOrg?.org_id]);
