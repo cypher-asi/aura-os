@@ -10,8 +10,34 @@ import { MessageBubble, StreamingBubble } from "../../components/MessageBubble";
 import { CookingIndicator } from "../../components/CookingIndicator";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
-import type { Message } from "../../types";
+import type { Message, ChatContentBlock } from "../../types";
+import type { ToolCallEntry } from "../../hooks/use-chat-stream";
 import styles from "../../components/ChatView.module.css";
+
+function extractToolCalls(blocks: ChatContentBlock[]): ToolCallEntry[] | undefined {
+  const toolUseBlocks = blocks.filter((b) => b.type === "tool_use");
+  if (toolUseBlocks.length === 0) return undefined;
+  const resultMap = new Map<string, { result: string; isError: boolean }>();
+  for (const b of blocks) {
+    if (b.type === "tool_result" && b.tool_use_id) {
+      resultMap.set(b.tool_use_id, {
+        result: b.content ?? "",
+        isError: b.is_error === true,
+      });
+    }
+  }
+  return toolUseBlocks.map((b) => {
+    const res = resultMap.get(b.id ?? "");
+    return {
+      id: b.id ?? "",
+      name: b.name ?? "",
+      input: (b.input as Record<string, unknown>) ?? {},
+      result: res?.result,
+      isError: res?.isError,
+      pending: false,
+    };
+  });
+}
 
 export function AgentChatView() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -63,7 +89,8 @@ export function AgentChatView() {
               m.thinking,
             )
             .map((m: Message) => {
-              const blocks = (m.content_blocks ?? [])
+              const allBlocks = m.content_blocks ?? [];
+              const displayBlocks = allBlocks
                 .filter((b) => b.type === "text" || b.type === "image")
                 .map((b) =>
                   b.type === "text"
@@ -74,7 +101,8 @@ export function AgentChatView() {
                 id: m.message_id,
                 role: m.role,
                 content: m.content,
-                contentBlocks: blocks.length > 0 ? blocks : undefined,
+                contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
+                toolCalls: extractToolCalls(allBlocks),
                 thinkingText: m.thinking || undefined,
                 thinkingDurationMs: m.thinking_duration_ms ?? null,
               };

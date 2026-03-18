@@ -161,7 +161,7 @@ export interface ProjectProgress {
 }
 
 export interface ChatContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "image";
+  type: "text" | "tool_use" | "tool_result" | "image" | "task_ref" | "spec_ref";
   text?: string;
   id?: string;
   name?: string;
@@ -171,6 +171,9 @@ export interface ChatContentBlock {
   is_error?: boolean;
   media_type?: string;
   data?: string;
+  task_id?: string;
+  spec_id?: string;
+  title?: string;
 }
 
 export interface Message {
