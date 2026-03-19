@@ -28,6 +28,7 @@ struct LoopState {
     consecutive_write_tracker: HashMap<String, usize>,
     consecutive_cmd_failures: usize,
     total_read_results: usize,
+    consecutive_readonly_iterations: usize,
     budget_warning_50_sent: bool,
     budget_warning_75_sent: bool,
 }
@@ -88,6 +89,7 @@ pub async fn run_tool_loop(
         consecutive_write_tracker: HashMap::new(),
         consecutive_cmd_failures: 0,
         total_read_results: 0,
+        consecutive_readonly_iterations: 0,
         budget_warning_50_sent: false,
         budget_warning_75_sent: false,
     };
@@ -138,6 +140,25 @@ pub async fn run_tool_loop(
         let should_stop = process_tool_calls(&iter, executor, event_tx, &mut state).await;
         if should_stop {
             return state.build_result(iteration + 1, false, false, None);
+        }
+
+        let all_readonly = !iter.iter_tool_calls.is_empty() && iter.iter_tool_calls.iter().all(|tc| {
+            matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files" | "get_task_context")
+        });
+        if all_readonly {
+            state.consecutive_readonly_iterations += 1;
+            if state.consecutive_readonly_iterations == 6 {
+                let nudge = format!(
+                    "[EXPLORATION NUDGE] You have done {} consecutive read-only iterations \
+                     without making any changes. Consider starting implementation now. \
+                     You can always read more files later if needed during editing.",
+                    state.consecutive_readonly_iterations,
+                );
+                info!(consecutive_readonly = state.consecutive_readonly_iterations, "Injecting read-only nudge");
+                state.api_messages.push(RichMessage::user(&nudge));
+            }
+        } else {
+            state.consecutive_readonly_iterations = 0;
         }
 
         if let Some(budget) = config.credit_budget {
