@@ -35,11 +35,11 @@ pub struct ProjectProgress {
 }
 
 impl TaskService {
-    pub fn get_project_progress(
+    pub async fn get_project_progress(
         &self,
         project_id: &ProjectId,
     ) -> Result<ProjectProgress, TaskError> {
-        let tasks = self.store.list_tasks_by_project(project_id)?;
+        let tasks = self.list_tasks(project_id).await?;
         let total = tasks.len();
         let done = tasks
             .iter()

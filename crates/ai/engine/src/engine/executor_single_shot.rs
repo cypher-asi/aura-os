@@ -21,8 +21,8 @@ impl DevLoopEngine {
         session: &Session,
         api_key: &str,
     ) -> Result<TaskExecution, EngineError> {
-        let project = self.project_service.get_project(project_id)?;
-        let spec = self.store.get_spec(project_id, &task.spec_id)?;
+        let project = self.project_service.get_project_async(project_id).await?;
+        let spec = self.load_spec(project_id, &task.spec_id).await?;
         let codebase_snapshot = file_ops::read_relevant_files(&project.linked_folder_path, 50_000)?;
         let user_message = build_execution_prompt(&project, &spec, task, session, &codebase_snapshot);
 

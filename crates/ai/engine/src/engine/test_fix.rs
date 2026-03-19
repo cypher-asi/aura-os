@@ -18,11 +18,8 @@ use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 impl DevLoopEngine {
-    pub(crate) fn persist_test_step(&self, task: &Task, step: TestStepRecord) {
-        let _ = self.store.atomic_update_task(
-            &task.project_id, &task.spec_id, &task.task_id,
-            |t| { t.test_steps.push(step); },
-        );
+    pub(crate) fn persist_test_step(&self, _task: &Task, _step: TestStepRecord) {
+        // test_steps are not stored in aura-storage
     }
 
     /// Run the test suite and return the names of currently-failing tests.
@@ -238,7 +235,7 @@ impl DevLoopEngine {
         prior_test_attempts: &[BuildFixAttemptRecord],
         workspace_cache: &WorkspaceCache,
     ) -> Result<(String, u64, u64), EngineError> {
-        let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
+        let spec = self.load_spec(&task.project_id, &task.spec_id).await?;
         let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
             &project.linked_folder_path, &task.title, &task.description,
             BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,

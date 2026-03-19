@@ -1,178 +1,289 @@
 mod error;
 pub use error::AgentError;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use tokio::sync::Mutex;
 
 use aura_core::*;
+use aura_network::NetworkAgent;
+use aura_storage::StorageClient;
 use aura_store::RocksStore;
 
+pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentState>>>;
+
+/// Convert NetworkAgent to core Agent (no local store).
+fn network_agent_to_core(net: &NetworkAgent) -> Agent {
+    let agent_id = net
+        .id
+        .parse::<AgentId>()
+        .unwrap_or_else(|_| AgentId::new());
+    let profile_id: Option<ProfileId> = net.profile_id.as_ref().and_then(|s| s.parse().ok());
+    let created_at = net
+        .created_at
+        .as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now);
+    let updated_at = net
+        .updated_at
+        .as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now);
+
+    Agent {
+        agent_id,
+        user_id: net.user_id.clone(),
+        name: net.name.clone(),
+        role: net.role.clone().unwrap_or_default(),
+        personality: net.personality.clone().unwrap_or_default(),
+        system_prompt: net.system_prompt.clone().unwrap_or_default(),
+        skills: net.skills.clone().unwrap_or_default(),
+        icon: net.icon.clone(),
+        network_agent_id: net.id.parse().ok(),
+        profile_id,
+        created_at,
+        updated_at,
+    }
+}
+
 // ---------------------------------------------------------------------------
-// AgentService – user-level agent templates
+// AgentService – user-level agent templates (aura-network only)
 // ---------------------------------------------------------------------------
 
 pub struct AgentService {
     store: Arc<RocksStore>,
+    network_client: Option<Arc<aura_network::NetworkClient>>,
 }
 
 impl AgentService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
-        Self { store }
+    pub fn new(
+        store: Arc<RocksStore>,
+        network_client: Option<Arc<aura_network::NetworkClient>>,
+    ) -> Self {
+        Self { store, network_client }
     }
 
-    pub fn get_agent(&self, user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
-        self.store
-            .get_agent(user_id, agent_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => AgentError::NotFound,
-                other => AgentError::Store(other),
-            })
+    fn get_jwt(&self) -> Result<String, AgentError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| AgentError::NoSession)?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
+        Ok(session.access_token)
+    }
+
+    /// Get agent from aura-network only. Returns error if network is not configured or agent not found.
+    pub async fn get_agent_async(&self, _user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
+        let client = self
+            .network_client
+            .as_ref()
+            .ok_or_else(|| AgentError::Parse("aura-network is not configured".into()))?;
+        let jwt = self.get_jwt()?;
+        let net = client
+            .get_agent(&agent_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Network(e),
+            })?;
+        Ok(network_agent_to_core(&net))
     }
 }
 
 // ---------------------------------------------------------------------------
-// AgentInstanceService – project-level agent instances
+// AgentInstanceService – project-level agent instances (aura-storage)
+//
+// Merges three data sources when returning AgentInstance:
+//   1. Execution state from aura-storage (status, model, tokens, timestamps)
+//   2. Config from aura-network (agent template; name, role, personality, etc.) when available
+//   3. Volatile runtime state from in-memory map (current_task_id, current_session_id)
 // ---------------------------------------------------------------------------
 
 pub struct AgentInstanceService {
     store: Arc<RocksStore>,
+    storage_client: Option<Arc<StorageClient>>,
+    network_client: Option<Arc<aura_network::NetworkClient>>,
+    runtime_state: RuntimeAgentStateMap,
 }
 
 impl AgentInstanceService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
-        Self { store }
+    pub fn new(
+        store: Arc<RocksStore>,
+        storage_client: Option<Arc<StorageClient>>,
+        runtime_state: RuntimeAgentStateMap,
+        network_client: Option<Arc<aura_network::NetworkClient>>,
+    ) -> Self {
+        Self {
+            store,
+            storage_client,
+            network_client,
+            runtime_state,
+        }
     }
 
-    pub fn create_instance(
-        &self,
-        project_id: &ProjectId,
-        name: String,
-    ) -> Result<AgentInstance, AgentError> {
-        let now = Utc::now();
-        let instance = AgentInstance {
-            agent_instance_id: AgentInstanceId::new(),
-            project_id: *project_id,
-            agent_id: AgentId::new(),
-            name,
-            role: String::new(),
-            personality: String::new(),
-            system_prompt: String::new(),
-            skills: Vec::new(),
-            icon: None,
-            status: AgentStatus::Idle,
-            current_task_id: None,
-            current_session_id: None,
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            model: None,
-            created_at: now,
-            updated_at: now,
-        };
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
+    fn require_storage(&self) -> Result<&Arc<StorageClient>, AgentError> {
+        self.storage_client
+            .as_ref()
+            .ok_or_else(|| AgentError::Parse("aura-storage is not configured".into()))
     }
 
-    pub fn create_instance_from_agent(
+    fn get_jwt(&self) -> Result<String, AgentError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| AgentError::NoSession)?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
+        Ok(session.access_token)
+    }
+
+    /// Resolve agent config from aura-network only. Returns None if network is unavailable or agent not found.
+    async fn resolve_agent_async(&self, agent_id_str: &str) -> Option<Agent> {
+        let client = self.network_client.as_ref()?;
+        let jwt = self.get_jwt().ok()?;
+        let net = client.get_agent(agent_id_str, &jwt).await.ok()?;
+        Some(network_agent_to_core(&net))
+    }
+
+    pub async fn create_instance_from_agent(
         &self,
         project_id: &ProjectId,
         agent: &Agent,
     ) -> Result<AgentInstance, AgentError> {
-        let now = Utc::now();
-        let instance = AgentInstance {
-            agent_instance_id: AgentInstanceId::new(),
-            project_id: *project_id,
-            agent_id: agent.agent_id,
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let req = aura_storage::CreateProjectAgentRequest {
+            agent_id: agent.agent_id.to_string(),
             name: agent.name.clone(),
-            role: agent.role.clone(),
-            personality: agent.personality.clone(),
-            system_prompt: agent.system_prompt.clone(),
-            skills: agent.skills.clone(),
+            role: Some(agent.role.clone()),
+            personality: Some(agent.personality.clone()),
+            system_prompt: Some(agent.system_prompt.clone()),
+            skills: Some(agent.skills.clone()),
             icon: agent.icon.clone(),
-            status: AgentStatus::Idle,
-            current_task_id: None,
-            current_session_id: None,
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            model: None,
-            created_at: now,
-            updated_at: now,
         };
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
+        let spa = storage
+            .create_project_agent(&project_id.to_string(), &jwt, &req)
+            .await?;
+        Ok(merge_agent_instance(&spa, Some(agent), None))
     }
 
-    pub fn get_instance(
+    pub async fn get_instance(
         &self,
-        project_id: &ProjectId,
+        _project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<AgentInstance, AgentError> {
-        self.store
-            .get_agent_instance(project_id, agent_instance_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => AgentError::NotFound,
-                other => AgentError::Store(other),
-            })
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let spa = storage
+            .get_project_agent(&agent_instance_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Storage(e),
+            })?;
+        let agent = match spa.agent_id.as_deref() {
+            Some(aid) => self.resolve_agent_async(aid).await,
+            None => None,
+        };
+        let runtime_map = self.runtime_state.lock().await;
+        let runtime = runtime_map.get(agent_instance_id);
+        Ok(merge_agent_instance(&spa, agent.as_ref(), runtime))
     }
 
-    pub fn list_instances(
+    pub async fn list_instances(
         &self,
         project_id: &ProjectId,
     ) -> Result<Vec<AgentInstance>, AgentError> {
-        Ok(self.store.list_agent_instances_by_project(project_id)?)
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let spas = storage
+            .list_project_agents(&project_id.to_string(), &jwt)
+            .await?;
+        let runtime_map = self.runtime_state.lock().await;
+        let mut instances = Vec::with_capacity(spas.len());
+        for spa in &spas {
+            let agent = match spa.agent_id.as_deref() {
+                Some(aid) => self.resolve_agent_async(aid).await,
+                None => None,
+            };
+            let aiid = spa.id.parse::<AgentInstanceId>().ok();
+            let runtime = aiid.and_then(|id| runtime_map.get(&id));
+            instances.push(merge_agent_instance(spa, agent.as_ref(), runtime));
+        }
+        Ok(instances)
     }
 
-    pub fn update_instance(
+    pub async fn update_status(
         &self,
-        project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
-        name: Option<String>,
-        role: Option<String>,
-        personality: Option<String>,
-        system_prompt: Option<String>,
-    ) -> Result<AgentInstance, AgentError> {
-        let mut instance = self.get_instance(project_id, agent_instance_id)?;
-        if let Some(v) = name {
-            instance.name = v;
-        }
-        if let Some(v) = role {
-            instance.role = v;
-        }
-        if let Some(v) = personality {
-            instance.personality = v;
-        }
-        if let Some(v) = system_prompt {
-            instance.system_prompt = v;
-        }
-        instance.updated_at = Utc::now();
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
-    }
-
-    pub fn delete_instance(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
+        new_status: AgentStatus,
     ) -> Result<(), AgentError> {
-        self.store
-            .delete_messages_by_agent_instance(project_id, agent_instance_id)?;
-        self.store
-            .delete_agent_instance(project_id, agent_instance_id)?;
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let status_str = match new_status {
+            AgentStatus::Idle => "idle",
+            AgentStatus::Working => "working",
+            AgentStatus::Blocked => "blocked",
+            AgentStatus::Stopped => "stopped",
+            AgentStatus::Error => "error",
+        };
+        let req = aura_storage::UpdateProjectAgentRequest {
+            status: status_str.to_string(),
+        };
+        storage
+            .update_project_agent_status(&agent_instance_id.to_string(), &jwt, &req)
+            .await?;
         Ok(())
     }
 
-    pub fn transition_instance(
+    pub async fn delete_instance(
         &self,
-        project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
-        new_status: AgentStatus,
-    ) -> Result<AgentInstance, AgentError> {
-        let mut instance = self.get_instance(project_id, agent_instance_id)?;
-        Self::validate_transition(instance.status, new_status)?;
-        instance.status = new_status;
-        instance.updated_at = Utc::now();
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
+    ) -> Result<(), AgentError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        storage
+            .delete_project_agent(&agent_instance_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Storage(e),
+            })?;
+        self.runtime_state.lock().await.remove(agent_instance_id);
+        Ok(())
+    }
+
+    pub async fn start_working(
+        &self,
+        _project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        task_id: &TaskId,
+        session_id: &SessionId,
+    ) -> Result<(), AgentError> {
+        self.update_status(agent_instance_id, AgentStatus::Working).await?;
+        self.runtime_state.lock().await.insert(
+            *agent_instance_id,
+            RuntimeAgentState {
+                current_task_id: Some(*task_id),
+                current_session_id: Some(*session_id),
+            },
+        );
+        Ok(())
+    }
+
+    pub async fn finish_working(
+        &self,
+        _project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+    ) -> Result<(), AgentError> {
+        self.update_status(agent_instance_id, AgentStatus::Idle).await?;
+        self.runtime_state.lock().await.remove(agent_instance_id);
+        Ok(())
     }
 
     pub fn validate_transition(
@@ -197,35 +308,85 @@ impl AgentInstanceService {
             Err(AgentError::IllegalTransition { current, target })
         }
     }
+}
 
-    pub fn start_working(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        task_id: &TaskId,
-        session_id: &SessionId,
-    ) -> Result<AgentInstance, AgentError> {
-        let mut instance = self.get_instance(project_id, agent_instance_id)?;
-        Self::validate_transition(instance.status, AgentStatus::Working)?;
-        instance.status = AgentStatus::Working;
-        instance.current_task_id = Some(*task_id);
-        instance.current_session_id = Some(*session_id);
-        instance.updated_at = Utc::now();
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
+// ---------------------------------------------------------------------------
+// StorageProjectAgent -> AgentInstance merge (three-source)
+// ---------------------------------------------------------------------------
+
+fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+pub fn parse_agent_status(s: &str) -> AgentStatus {
+    match s {
+        "idle" => AgentStatus::Idle,
+        "working" => AgentStatus::Working,
+        "blocked" => AgentStatus::Blocked,
+        "stopped" => AgentStatus::Stopped,
+        "error" => AgentStatus::Error,
+        _ => AgentStatus::Idle,
     }
+}
 
-    pub fn finish_working(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-    ) -> Result<AgentInstance, AgentError> {
-        let mut instance = self.get_instance(project_id, agent_instance_id)?;
-        Self::validate_transition(instance.status, AgentStatus::Idle)?;
-        instance.status = AgentStatus::Idle;
-        instance.current_task_id = None;
-        instance.updated_at = Utc::now();
-        self.store.put_agent_instance(&instance)?;
-        Ok(instance)
+/// Merge three sources into a single `AgentInstance`:
+/// - `spa`: execution state from aura-storage (status, model, tokens, timestamps)
+/// - `agent`: config from aura-network (agent template; name, role, personality, etc.) when available;
+///   otherwise falls back to storage project-agent fields.
+/// - `runtime`: volatile in-memory state (current_task_id, current_session_id)
+pub fn merge_agent_instance(
+    spa: &aura_storage::StorageProjectAgent,
+    agent: Option<&Agent>,
+    runtime: Option<&RuntimeAgentState>,
+) -> AgentInstance {
+    AgentInstance {
+        agent_instance_id: spa.id.parse().unwrap_or_else(|_| AgentInstanceId::new()),
+        project_id: spa
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .unwrap_or_else(|_| ProjectId::new()),
+        agent_id: agent
+            .map(|a| a.agent_id)
+            .or_else(|| {
+                spa.agent_id
+                    .as_deref()
+                    .and_then(|s| s.parse().ok())
+            })
+            .unwrap_or_else(AgentId::new),
+        name: agent
+            .map(|a| a.name.clone())
+            .unwrap_or_else(|| spa.name.clone().unwrap_or_default()),
+        role: agent
+            .map(|a| a.role.clone())
+            .unwrap_or_else(|| spa.role.clone().unwrap_or_default()),
+        personality: agent
+            .map(|a| a.personality.clone())
+            .unwrap_or_else(|| spa.personality.clone().unwrap_or_default()),
+        system_prompt: agent
+            .map(|a| a.system_prompt.clone())
+            .unwrap_or_else(|| spa.system_prompt.clone().unwrap_or_default()),
+        skills: agent
+            .map(|a| a.skills.clone())
+            .unwrap_or_else(|| spa.skills.clone().unwrap_or_default()),
+        icon: agent
+            .and_then(|a| a.icon.clone())
+            .or_else(|| spa.icon.clone()),
+        status: spa
+            .status
+            .as_deref()
+            .map(parse_agent_status)
+            .unwrap_or(AgentStatus::Idle),
+        current_task_id: runtime.and_then(|r| r.current_task_id),
+        current_session_id: runtime.and_then(|r| r.current_session_id),
+        total_input_tokens: spa.total_input_tokens.unwrap_or(0),
+        total_output_tokens: spa.total_output_tokens.unwrap_or(0),
+        model: spa.model.clone(),
+        created_at: parse_dt(&spa.created_at),
+        updated_at: parse_dt(&spa.updated_at),
     }
 }

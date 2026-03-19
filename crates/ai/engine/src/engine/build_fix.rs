@@ -100,20 +100,45 @@ pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
     None
 }
 
+pub(crate) fn infer_default_build_command(project_root: &Path) -> Option<String> {
+    if project_root.join("Cargo.toml").is_file() {
+        return Some("cargo check --workspace --tests".to_string());
+    }
+    if project_root.join("package.json").is_file() {
+        return Some("npm run build --if-present".to_string());
+    }
+    if project_root.join("pyproject.toml").is_file() || project_root.join("requirements.txt").is_file() {
+        return Some("python -m compileall .".to_string());
+    }
+    None
+}
+
 impl DevLoopEngine {
-    pub(crate) fn persist_build_step(&self, task: &Task, step: BuildStepRecord) {
-        let _ = self.store.atomic_update_task(
-            &task.project_id, &task.spec_id, &task.task_id,
-            |t| { t.build_steps.push(step); },
-        );
+    pub(crate) fn persist_build_step(&self, _task: &Task, _step: BuildStepRecord) {
+        // build_steps are not stored in aura-storage
     }
 
-    fn resolve_build_command(
+    async fn resolve_build_command(
         &self, project: &Project, session: &Session, task: &Task,
     ) -> Option<String> {
+        let project_root = Path::new(&project.linked_folder_path);
         let cmd = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
+                if let Some(fallback) = infer_default_build_command(project_root) {
+                    info!(
+                        command = %fallback,
+                        "build_command missing; using inferred safe default for verification"
+                    );
+                    self.persist_build_step(task, BuildStepRecord {
+                        kind: "fallback_command".into(),
+                        command: Some(fallback.clone()),
+                        stderr: None,
+                        stdout: Some("build_command missing; inferred fallback command".into()),
+                        attempt: None,
+                    });
+                    return Some(fallback);
+                }
                 self.emit(EngineEvent::BuildVerificationSkipped {
                     project_id: project.project_id,
                     agent_instance_id: session.agent_instance_id,
@@ -136,13 +161,13 @@ impl DevLoopEngine {
                 old = %build_command, new = %corrected,
                 "eagerly rewriting server-starting build command"
             );
-            let _ = self.project_service.update_project(
+            let _ = self.project_service.update_project_async(
                 &project.project_id,
                 aura_projects::UpdateProjectInput {
                     build_command: Some(corrected.clone()),
                     ..Default::default()
                 },
-            );
+            ).await;
             build_command = corrected;
         }
         Some(build_command)
@@ -188,7 +213,7 @@ impl DevLoopEngine {
         Ok((build_result, step_duration_ms))
     }
 
-    fn try_auto_correct_timeout(
+    async fn try_auto_correct_timeout(
         &self, project: &Project, build_command: &str,
     ) -> Option<String> {
         let corrected = auto_correct_build_command(build_command)?;
@@ -196,13 +221,13 @@ impl DevLoopEngine {
             old = %build_command, new = %corrected,
             "build command timed out, auto-correcting"
         );
-        let _ = self.project_service.update_project(
+        let _ = self.project_service.update_project_async(
             &project.project_id,
             aura_projects::UpdateProjectInput {
                 build_command: Some(corrected.clone()),
                 ..Default::default()
             },
-        );
+        ).await;
         Some(corrected)
     }
 
@@ -300,15 +325,52 @@ impl DevLoopEngine {
             stdout: None,
             attempt: Some(attempt),
         });
-        let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
-        let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
-            &project.linked_folder_path, &task.title, &task.description,
-            BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
-        ).await {
-            Ok(s) => s,
-            Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET)
-                .unwrap_or_default(),
+        let spec = self.load_spec(&task.project_id, &task.spec_id).await?;
+
+        // Read error source files fresh from disk instead of relying on a
+        // cached snapshot that may be stale after the initial execution
+        // modified files.  This ensures the LLM sees the actual current
+        // content of files it needs to fix, preventing hallucinated search
+        // strings in search_replace operations.
+        let error_refs = parse_error_references(build_stderr);
+        let fresh_error_files = file_ops::resolve_error_source_files(
+            Path::new(&project.linked_folder_path),
+            &error_refs,
+            BUILD_FIX_SNAPSHOT_BUDGET,
+        );
+
+        let codebase_snapshot = if !fresh_error_files.is_empty() {
+            // Use fresh error files as the primary snapshot; fall back to
+            // cached files only for remaining budget.
+            let remaining_budget = BUILD_FIX_SNAPSHOT_BUDGET.saturating_sub(fresh_error_files.len());
+            let supplemental = if remaining_budget > 2_000 {
+                match file_ops::retrieve_task_relevant_files_cached(
+                    &project.linked_folder_path, &task.title, &task.description,
+                    remaining_budget, workspace_cache,
+                ).await {
+                    Ok(s) => s,
+                    Err(_) => String::new(),
+                }
+            } else {
+                String::new()
+            };
+            if supplemental.is_empty() {
+                fresh_error_files
+            } else {
+                format!("{fresh_error_files}\n{supplemental}")
+            }
+        } else {
+            match file_ops::retrieve_task_relevant_files_cached(
+                &project.linked_folder_path, &task.title, &task.description,
+                BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
+            ).await {
+                Ok(s) => s,
+                Err(_) => file_ops::read_relevant_files(
+                    &project.linked_folder_path, BUILD_FIX_SNAPSHOT_BUDGET,
+                ).unwrap_or_default(),
+            }
         };
+
         let fix_prompt = build_fix_prompt_with_history(
             project, &spec, task, session, &codebase_snapshot,
             build_command, build_stderr, build_stdout,
@@ -414,16 +476,16 @@ impl DevLoopEngine {
         Ok((inp, out))
     }
 
-    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens).
+    /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens, last_stderr).
     pub(crate) async fn verify_and_fix_build(
         &self, project: &Project, task: &Task, session: &Session,
         api_key: &str, initial_execution: &TaskExecution,
         baseline_test_failures: &HashSet<String>,
         workspace_cache: &WorkspaceCache,
-    ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64), EngineError> {
-        let mut build_cmd = match self.resolve_build_command(project, session, task) {
+    ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64, String), EngineError> {
+        let mut build_cmd = match self.resolve_build_command(project, session, task).await {
             Some(cmd) => cmd,
-            None => return Ok((vec![], true, 0, 0, 0, 0)),
+            None => return Ok((vec![], true, 0, 0, 0, 0, String::new())),
         };
         let test_cmd = project.test_command.as_ref().filter(|c| !c.trim().is_empty()).cloned();
         let base_path = Path::new(&project.linked_folder_path);
@@ -431,13 +493,14 @@ impl DevLoopEngine {
         let mut prior: Vec<BuildFixAttemptRecord> = Vec::new();
         let mut test_prior: Vec<BuildFixAttemptRecord> = Vec::new();
         let (mut dup_bail, mut inp_t, mut out_t) = (0u32, 0u64, 0u64);
+        let mut last_stderr = String::new();
 
         for attempt in 1..=self.engine_config.max_build_fix_retries {
             let (br, dur) = self.run_build_with_streaming(
                 project, session, task, base_path, &build_cmd, attempt,
             ).await?;
             if br.timed_out {
-                if let Some(c) = self.try_auto_correct_timeout(project, &build_cmd) {
+                if let Some(c) = self.try_auto_correct_timeout(project, &build_cmd).await {
                     build_cmd = c;
                     continue;
                 }
@@ -449,20 +512,21 @@ impl DevLoopEngine {
                     baseline_test_failures, &mut test_prior, workspace_cache,
                 ).await?;
                 inp_t += i; out_t += o;
-                if tp { return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t)); }
+                if tp { return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t, String::new())); }
                 continue;
             }
+            last_stderr = br.stderr.clone();
             self.record_build_failed(
                 project, session, task, &build_cmd,
                 &br.stdout, &br.stderr, dur, attempt,
             );
             if attempt == self.engine_config.max_build_fix_retries {
                 info!(task_id = %task.task_id, "build still failing after max retries");
-                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t));
+                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t, last_stderr));
             }
             if self.check_error_stagnation(task, &br.stderr, &prior, attempt) {
                 dup_bail += 1;
-                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t));
+                return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t, last_stderr));
             }
             let (i, o) = self.attempt_build_fix(
                 project, task, session, api_key, initial_execution, &build_cmd,
@@ -470,7 +534,7 @@ impl DevLoopEngine {
             ).await?;
             inp_t += i; out_t += o;
         }
-        Ok((fix_ops, false, self.engine_config.max_build_fix_retries, dup_bail, inp_t, out_t))
+        Ok((fix_ops, false, self.engine_config.max_build_fix_retries, dup_bail, inp_t, out_t, last_stderr))
     }
 }
 
@@ -539,6 +603,36 @@ mod tests {
         assert_eq!(auto_correct_build_command("cargo build"), None);
         assert_eq!(auto_correct_build_command("npm run build"), None);
         assert_eq!(auto_correct_build_command("make"), None);
+    }
+
+    // -----------------------------------------------------------------------
+    // infer_default_build_command
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn infer_default_build_command_rust_workspace() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]").unwrap();
+        assert_eq!(
+            infer_default_build_command(dir.path()),
+            Some("cargo check --workspace --tests".into())
+        );
+    }
+
+    #[test]
+    fn infer_default_build_command_node_project() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+        assert_eq!(
+            infer_default_build_command(dir.path()),
+            Some("npm run build --if-present".into())
+        );
+    }
+
+    #[test]
+    fn infer_default_build_command_none_when_unknown() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(infer_default_build_command(dir.path()), None);
     }
 
     // -----------------------------------------------------------------------

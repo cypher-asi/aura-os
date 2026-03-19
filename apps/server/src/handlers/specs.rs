@@ -3,6 +3,7 @@ use std::convert::Infallible;
 use axum::extract::{Path, State};
 use axum::response::sse::{Event, Sse};
 use axum::Json;
+use chrono::{DateTime, Utc};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
@@ -11,18 +12,50 @@ use tracing::{error, info};
 use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
 use aura_specs::SpecStreamEvent;
+use aura_storage::StorageSpec;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
+
+fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn storage_spec_to_spec(s: StorageSpec) -> Result<Spec, String> {
+    Ok(Spec {
+        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project id: {e}"))?,
+        title: s.title.unwrap_or_default(),
+        order_index: s.order_index.unwrap_or(0) as u32,
+        markdown_contents: s.markdown_contents.unwrap_or_default(),
+        created_at: parse_dt(&s.created_at),
+        updated_at: parse_dt(&s.updated_at),
+    })
+}
 
 pub async fn list_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
-    let specs = state
-        .spec_gen_service
-        .list_specs(&project_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let storage_specs = storage
+        .list_specs(&project_id.to_string(), &jwt)
+        .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+    let mut specs: Vec<Spec> = storage_specs
+        .into_iter()
+        .filter_map(|s| storage_spec_to_spec(s).ok())
+        .collect();
+    specs.sort_by_key(|s| s.order_index);
     Ok(Json(specs))
 }
 
@@ -38,24 +71,29 @@ pub async fn generate_specs_summary(
         .map_err(|e| ApiError::internal(e.to_string()))?;
     let project = state
         .project_service
-        .get_project(&project_id)
+        .get_project_async(&project_id)
+        .await
         .map_err(|_e| ApiError::not_found("project not found"))?;
     Ok(Json(project))
 }
 
 pub async fn get_spec(
     State(state): State<AppState>,
-    Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
+    Path((_project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Spec>> {
-    let spec = state
-        .spec_gen_service
-        .get_spec(&project_id, &spec_id)
-        .map_err(|e| match e {
-            aura_specs::SpecGenError::Store(aura_store::StoreError::NotFound(_)) => {
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let storage_spec = storage
+        .get_spec(&spec_id.to_string(), &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_storage::StorageError::Server { status: 404, .. } => {
                 ApiError::not_found("spec not found")
             }
             _ => ApiError::internal(e.to_string()),
         })?;
+    let spec = storage_spec_to_spec(storage_spec)
+        .map_err(|e| ApiError::internal(e))?;
     Ok(Json(spec))
 }
 

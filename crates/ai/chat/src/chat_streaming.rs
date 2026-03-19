@@ -98,6 +98,7 @@ impl ChatService {
         agent_instance_id: &AgentInstanceId,
         agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let (api_key, system, api_messages, stored_messages) =
             match self.prepare_chat_context(project_id, agent_instance_id, agent_instance, tx).await {
@@ -111,6 +112,7 @@ impl ChatService {
         let executor = ChatToolLoopExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
+                self.storage_client.clone(),
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),
@@ -151,7 +153,7 @@ impl ChatService {
         self.save_assistant_message(
             project_id, agent_instance_id, agent_instance,
             &api_key, &stored_messages, result, tool_blocks,
-            thinking_start, tx,
+            thinking_start, tx, active_session_id,
         )
         .await;
     }
@@ -171,7 +173,7 @@ impl ChatService {
             }
         };
 
-        let stored_messages = match self.list_messages(project_id, agent_instance_id) {
+        let stored_messages = match self.list_messages_async(project_id, agent_instance_id).await {
             Ok(m) => m,
             Err(e) => {
                 let _ = tx.send(ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
@@ -180,7 +182,7 @@ impl ChatService {
         };
 
         let custom_prompt = &agent_instance.system_prompt;
-        let system = match self.store.get_project(project_id) {
+        let system = match self.project_service.get_project_async(project_id).await {
             Ok(p) => build_chat_system_prompt(&p, custom_prompt),
             Err(_) => {
                 if custom_prompt.is_empty() {
@@ -193,8 +195,8 @@ impl ChatService {
 
         let mut api_messages = crate::chat::convert_messages_to_rich(&stored_messages);
         api_messages = self.manage_context_window(&api_key, &system, api_messages).await;
-        api_messages = Self::sanitize_orphan_tool_results(api_messages);
-        api_messages = Self::sanitize_tool_use_results(api_messages);
+        api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
+        api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
 
         Some((api_key, system, api_messages, stored_messages))
     }
@@ -274,28 +276,14 @@ impl ChatService {
 
     fn update_instance_token_usage(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        input_tokens: u64,
-        output_tokens: u64,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        _project_id: &ProjectId,
+        _agent_instance_id: &AgentInstanceId,
+        _input_tokens: u64,
+        _output_tokens: u64,
+        _tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
-        if input_tokens == 0 && output_tokens == 0 {
-            return;
-        }
-        if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
-            instance.total_input_tokens += input_tokens;
-            instance.total_output_tokens += output_tokens;
-            if instance.model.is_none() {
-                instance.model = Some(self.llm_config.default_model.clone());
-            }
-            instance.updated_at = Utc::now();
-            if let Err(e) = self.store.put_agent_instance(&instance) {
-                error!(%project_id, %agent_instance_id, error = %e, "Failed to persist token usage");
-            } else {
-                let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
-            }
-        }
+        // Token usage on agent instances is tracked at the task/session level.
+        // aura-storage project agents only support status updates, not token writes.
     }
 
     async fn save_assistant_message(
@@ -309,6 +297,7 @@ impl ChatService {
         tool_blocks: ContentBlockAccumulator,
         thinking_start: std::time::Instant,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
             Ok(mutex) => mutex.into_inner().unwrap_or_default(),
@@ -326,17 +315,26 @@ impl ChatService {
                 agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
-                content: result.text,
-                content_blocks,
-                thinking,
+                content: result.text.clone(),
+                content_blocks: content_blocks.clone(),
+                thinking: thinking.clone(),
                 thinking_duration_ms,
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_message(&assistant_msg) {
-                error!(%project_id, error = %e, "Failed to save assistant message");
-            } else {
-                let _ = tx.send(ChatStreamEvent::MessageSaved(assistant_msg));
-            }
+            let _ = tx.send(ChatStreamEvent::MessageSaved(assistant_msg));
+            self.save_message_to_storage(
+                project_id,
+                agent_instance_id,
+                "assistant",
+                &assistant_reply,
+                content_blocks.as_deref(),
+                thinking.as_deref(),
+                thinking_duration_ms,
+                Some(result.total_input_tokens),
+                Some(result.total_output_tokens),
+                active_session_id,
+            )
+            .await;
 
             if !assistant_reply.is_empty() {
                 self.maybe_generate_title(
@@ -351,7 +349,7 @@ impl ChatService {
     async fn maybe_generate_title(
         &self,
         project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
+        _agent_instance_id: &AgentInstanceId,
         agent_instance: &AgentInstance,
         api_key: &str,
         messages: &[Message],
@@ -383,18 +381,10 @@ impl ChatService {
             Ok(resp) => {
                 let title = resp.text;
                 let title = title.trim().trim_matches('"').to_string();
-                if let Ok(mut instance) = self.store.get_agent_instance(project_id, agent_instance_id) {
-                    instance.name = title;
-                    instance.updated_at = Utc::now();
-                    match self.store.put_agent_instance(&instance) {
-                        Ok(()) => {
-                            let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
-                        }
-                        Err(e) => {
-                            error!(%project_id, error = %e, "Failed to update agent instance name");
-                        }
-                    }
-                }
+                let mut instance = agent_instance.clone();
+                instance.name = title;
+                instance.updated_at = Utc::now();
+                let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate title");
@@ -408,6 +398,7 @@ impl ChatService {
         agent_instance_id: &AgentInstanceId,
         _agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let send = |evt: ChatStreamEvent| {
             let _ = tx.send(evt);
@@ -475,17 +466,26 @@ impl ChatService {
                 agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
-                content: accumulated,
+                content: accumulated.clone(),
                 content_blocks: None,
                 thinking: None,
                 thinking_duration_ms: None,
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_message(&assistant_msg) {
-                error!(%project_id, error = %e, "Failed to save spec gen assistant message");
-            } else {
-                send(ChatStreamEvent::MessageSaved(assistant_msg));
-            }
+            send(ChatStreamEvent::MessageSaved(assistant_msg));
+            self.save_message_to_storage(
+                project_id,
+                agent_instance_id,
+                "assistant",
+                &accumulated,
+                None,
+                None,
+                None,
+                Some(spec_input_tokens),
+                Some(spec_output_tokens),
+                active_session_id,
+            )
+            .await;
         }
     }
 }

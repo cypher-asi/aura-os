@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, leaderboard, log, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, leaderboard, log, orbit, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -30,6 +30,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/access-token", get(auth::get_access_token))
+        .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
         // Users (proxied to aura-network)
         .route("/api/users/me", get(users::get_me).put(users::update_me))
         .route("/api/users/:user_id", get(users::get_user))
@@ -86,10 +87,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/settings/fee-schedule",
             get(pricing::get_fee_schedule).put(pricing::set_fee_schedule),
         )
-        .route(
-            "/api/settings/:key",
-            get(settings::get_setting).put(settings::set_setting),
-        )
         // Projects
         .route(
             "/api/projects",
@@ -108,6 +105,12 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/projects/:project_id/archive",
             post(projects::archive_project),
+        )
+        // Orbit (repos list/search; JWT auth)
+        .route("/api/orbit/repos", get(orbit::list_orbit_repos))
+        .route(
+            "/api/projects/:project_id/orbit-collaborators",
+            get(orbit::get_project_orbit_collaborators),
         )
         // Specs
         .route("/api/projects/:project_id/specs", get(specs::list_specs))
@@ -209,6 +212,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/tasks",
             get(agents::list_session_tasks),
+        )
+        .route(
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/messages",
+            get(agents::list_session_messages),
         )
         // Project-wide sessions
         .route(

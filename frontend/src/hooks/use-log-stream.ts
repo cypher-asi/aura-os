@@ -78,7 +78,7 @@ function summariseLoopEvent(e: EngineEvent): string {
         const cost = e.total_cost_usd != null
           ? formatCost(e.total_cost_usd)
           : formatCost(computeCost(e.total_input_tokens, e.total_output_tokens));
-        parts.push(`${tokens} tokens, ${cost}`);
+        parts.push(`${tokens} tokens, ${cost} (est.)`);
       }
       if (e.tasks_retried) parts.push(`${e.tasks_retried} retries`);
       if (e.sessions_used && e.sessions_used > 1) parts.push(`${e.sessions_used} sessions`);
@@ -117,7 +117,7 @@ function summariseTaskEvent(e: EngineEvent): string {
         const taskCost = e.cost_usd != null
           ? formatCost(e.cost_usd)
           : formatCost(computeCost(e.input_tokens, e.output_tokens, e.model));
-        parts.push(taskCost);
+        parts.push(`${taskCost} (est.)`);
       }
       if (e.parse_retries) parts.push(`${e.parse_retries} retries`);
       if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} build fix${e.build_fix_attempts > 1 ? "es" : ""}`);

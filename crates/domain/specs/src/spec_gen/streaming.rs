@@ -7,7 +7,7 @@ use aura_core::*;
 use aura_claude::ClaudeStreamEvent;
 
 use crate::SpecGenError;
-use super::parser::{IncrementalSpecParser, RawSpecOutput, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
+use super::parser::{IncrementalSpecParser, RawSpecOutput, order_index_from_spec_title, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
 use super::{SpecGenerationService, SpecStreamEvent, SPEC_OVERVIEW_MAX_TOKENS, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, MAX_TOKENS};
 
 /// Parses "TITLE: ...\n\nsummary" format. Returns (title, summary).
@@ -106,10 +106,8 @@ impl SpecGenerationService {
                 raw_overview.chars().take(200).collect::<String>()
             )));
         }
-        let mut project = self.store.get_project(project_id).map_err(SpecGenError::Store)?;
-        project.specs_title = Some(title.clone());
-        project.specs_summary = Some(summary.clone());
-        self.store.put_project(&project).map_err(SpecGenError::Store)?;
+        // Project from network; specs_title/specs_summary not persisted locally
+        let _project = self.project_service.get_project_async(project_id).await?;
         Ok((title, summary))
     }
 
@@ -121,11 +119,11 @@ impl SpecGenerationService {
         let send = |evt: SpecStreamEvent| { let _ = tx.send(evt); };
 
         let (requirements_content, api_key) =
-            match self.load_project_and_key(project_id, &send) {
+            match self.load_project_and_key(project_id, &tx).await {
                 Some(v) => v,
                 None => return,
             };
-        if let Err(e) = self.clear_project_specs(project_id) {
+        if let Err(e) = self.clear_project_specs(project_id).await {
             send(SpecStreamEvent::Error(format!("Failed to clear existing specs: {e}")));
             return;
         }
@@ -178,11 +176,13 @@ impl SpecGenerationService {
                     }
                     for json_obj in parser.feed(&text) {
                         if let Ok(raw) = serde_json::from_str::<RawSpecOutput>(&json_obj) {
+                            let order_index =
+                                order_index_from_spec_title(&raw.title).unwrap_or(spec_index);
                             let spec = Spec {
                                 spec_id: SpecId::new(),
                                 project_id: *project_id,
                                 title: raw.title,
-                                order_index: spec_index,
+                                order_index,
                                 markdown_contents: format!(
                                     "## Purpose\n\n{}\n\n{}", raw.purpose, raw.markdown
                                 ),
@@ -191,7 +191,7 @@ impl SpecGenerationService {
                             };
                             self.save_and_emit_spec(
                                 project_id, &spec, tx, &mut spec_index, saved_specs,
-                            );
+                            ).await;
                         }
                     }
                 }
@@ -234,7 +234,7 @@ impl SpecGenerationService {
         };
         if saved_specs.is_empty() {
             if let Some(text) = response_text {
-                self.try_fallback_parse(project_id, &text, tx, saved_specs);
+                self.try_fallback_parse(project_id, &text, tx, saved_specs).await;
                 if saved_specs.is_empty() { return; }
             }
         }
@@ -245,7 +245,7 @@ impl SpecGenerationService {
     /// Regenerate project overview (title + summary) from the current specs.
     /// Used only as a manual refresh from the API endpoint.
     pub async fn regenerate_specs_summary(&self, project_id: &ProjectId) -> Result<(String, String), SpecGenError> {
-        let specs = self.list_specs(project_id)?;
+        let specs = self.list_specs(project_id).await?;
         if specs.is_empty() {
             return Err(SpecGenError::ParseError("No specs found".to_string()));
         }
@@ -277,35 +277,28 @@ impl SpecGenerationService {
         if summary.is_empty() {
             return Err(SpecGenError::ParseError("LLM produced empty summary".to_string()));
         }
-        let mut project = self.store.get_project(project_id).map_err(SpecGenError::Store)?;
-        project.specs_title = Some(title.clone());
-        project.specs_summary = Some(summary.clone());
-        self.store.put_project(&project).map_err(SpecGenError::Store)?;
+        let _project = self.project_service.get_project_async(project_id).await?;
         info!(%project_id, %title, "Specs summary regenerated");
         Ok((title, summary))
     }
 
-    fn load_project_and_key(
+    async fn load_project_and_key(
         &self,
         project_id: &ProjectId,
-        send: &dyn Fn(SpecStreamEvent),
+        tx: &mpsc::UnboundedSender<SpecStreamEvent>,
     ) -> Option<(String, String)> {
-        send(SpecStreamEvent::Progress("Loading project".into()));
+        let _ = tx.send(SpecStreamEvent::Progress("Loading project".into()));
         info!(%project_id, "Loading project for streaming spec generation");
 
-        let project = match self.store.get_project(project_id) {
+        let project = match self.project_service.get_project_async(project_id).await {
             Ok(p) => p,
-            Err(aura_store::StoreError::NotFound(_)) => {
-                send(SpecStreamEvent::Error(format!("Project not found: {project_id}")));
-                return None;
-            }
-            Err(e) => {
-                send(SpecStreamEvent::Error(format!("Store error: {e}")));
+            Err(_) => {
+                let _ = tx.send(SpecStreamEvent::Error(format!("Project not found: {project_id}")));
                 return None;
             }
         };
 
-        send(SpecStreamEvent::Progress("Reading requirements document".into()));
+        let _ = tx.send(SpecStreamEvent::Progress("Reading requirements document".into()));
 
         let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
         if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
@@ -314,23 +307,23 @@ impl SpecGenerationService {
             } else {
                 format!("Requirements file not found: {req_path}")
             };
-            send(SpecStreamEvent::Error(msg));
+            let _ = tx.send(SpecStreamEvent::Error(msg));
             return None;
         }
         let requirements_content = match std::fs::read_to_string(req_path) {
             Ok(c) => c,
             Err(e) => {
-                send(SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
+                let _ = tx.send(SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
                 return None;
             }
         };
 
-        send(SpecStreamEvent::Progress("Decrypting API key".into()));
+        let _ = tx.send(SpecStreamEvent::Progress("Decrypting API key".into()));
 
         let api_key = match self.settings.get_decrypted_api_key() {
             Ok(k) => k,
             Err(e) => {
-                send(SpecStreamEvent::Error(format!("API key error: {e}")));
+                let _ = tx.send(SpecStreamEvent::Error(format!("API key error: {e}")));
                 return None;
             }
         };
@@ -338,7 +331,7 @@ impl SpecGenerationService {
         Some((requirements_content, api_key))
     }
 
-    fn save_and_emit_spec(
+    async fn save_and_emit_spec(
         &self,
         project_id: &ProjectId,
         spec: &Spec,
@@ -346,7 +339,7 @@ impl SpecGenerationService {
         spec_index: &mut u32,
         saved_specs: &mut Vec<Spec>,
     ) {
-        if let Err(e) = self.save_single_spec(spec) {
+        if let Err(e) = self.save_single_spec(spec).await {
             error!(%project_id, error = %e, "Failed to save spec incrementally");
             return;
         }
@@ -360,7 +353,7 @@ impl SpecGenerationService {
             &spec.markdown_contents,
         );
         if !tasks.is_empty() {
-            if let Err(e) = self.save_tasks_for_spec(&tasks) {
+            if let Err(e) = self.save_tasks_for_spec(&tasks).await {
                 error!(%project_id, error = %e, "Failed to save tasks for spec");
             } else {
                 info!(%project_id, spec = %spec.title, count = tasks.len(), "Tasks extracted and saved");
@@ -371,7 +364,7 @@ impl SpecGenerationService {
         }
     }
 
-    fn try_fallback_parse(
+    async fn try_fallback_parse(
         &self,
         project_id: &ProjectId,
         text: &str,
@@ -390,7 +383,7 @@ impl SpecGenerationService {
                     "Saving {} specs to database",
                     new_specs.len()
                 )));
-                if let Err(e) = self.save_specs(project_id, &new_specs) {
+                if let Err(e) = self.save_specs(project_id, &new_specs).await {
                     send(SpecStreamEvent::Error(format!("Failed to save specs: {e}")));
                     return;
                 }
@@ -403,7 +396,7 @@ impl SpecGenerationService {
                         &spec.markdown_contents,
                     );
                     if !tasks.is_empty() {
-                        if let Err(e) = self.save_tasks_for_spec(&tasks) {
+                        if let Err(e) = self.save_tasks_for_spec(&tasks).await {
                             error!(%project_id, error = %e, "Failed to save tasks for spec (fallback)");
                         } else {
                             for task in tasks {

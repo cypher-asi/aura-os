@@ -270,6 +270,14 @@ function handleToolResult(ctx: StreamCtx, info: ToolResultInfo) {
   if (info.name === "create_task" && info.is_error) {
     removePendingArtifact(info.id, ctx.pendingTaskIdsRef, (id) => ctx.sidekick.removeTask(id));
   }
+  if (info.name === "delete_spec" && !info.is_error) {
+    try {
+      const parsed = JSON.parse(info.result) as { deleted?: string };
+      if (typeof parsed?.deleted === "string") ctx.sidekick.removeSpec(parsed.deleted);
+    } catch {
+      /* ignore parse errors */
+    }
+  }
 }
 
 function handleMessageSaved(ctx: StreamCtx, msg: Message) {

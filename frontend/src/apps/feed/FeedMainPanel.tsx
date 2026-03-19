@@ -17,7 +17,7 @@ export function FeedMainPanel() {
       <div className={styles.container}>
         <div className={styles.scrollArea}>
           {filteredEvents.length === 0 ? (
-            <EmptyState icon={<GitCommitVertical size={32} />}>No activity in your feed yet</EmptyState>
+            <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
           ) : (
             <>
               <div className={styles.commitGridWrapper}>

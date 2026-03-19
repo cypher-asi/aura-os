@@ -7,6 +7,7 @@ edition = "2021"
 aura-core = { path = "../../infra/core" }
 aura-billing = { path = "../../domain/billing" }
 aura-store = { path = "../../infra/store" }
+aura-storage = { path = "../../infra/storage" }
 aura-settings = { path = "../../domain/settings" }
 aura-claude = { path = "../../infra/claude" }
 aura-tools = { path = "../tools" }

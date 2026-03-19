@@ -184,6 +184,35 @@ pub fn compact_older_tool_results_tiered(
     }
 }
 
+/// Compact plain text content in older messages (not just tool results).
+/// This is used under severe context pressure and during detected stalls.
+pub fn compact_older_message_text_tiered(
+    messages: &mut [RichMessage],
+    keep_recent: usize,
+    cfg: &CompactConfig,
+) {
+    let len = messages.len();
+    let cutoff = len.saturating_sub(keep_recent);
+    for msg in &mut messages[..cutoff] {
+        match &mut msg.content {
+            MessageContent::Text(text) => {
+                if text.len() > cfg.threshold {
+                    *text = truncate(text, cfg);
+                }
+            }
+            MessageContent::Blocks(blocks) => {
+                for block in blocks.iter_mut() {
+                    if let ContentBlock::Text { text } = block {
+                        if text.len() > cfg.threshold {
+                            *text = truncate(text, cfg);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Compact tool results in conversation history using the HISTORY config.
 /// Used during context window management before summarization.
 pub fn compact_tool_results_in_history(
@@ -206,4 +235,51 @@ pub fn compact_tool_results_in_history(
         }
     }
     messages
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_older_message_text_tiered_truncates_old_text_blocks() {
+        let long_text = "x".repeat(5000);
+        let mut messages = vec![
+            RichMessage::assistant_text(&long_text),
+            RichMessage::assistant_text("recent"),
+        ];
+
+        compact_older_message_text_tiered(&mut messages, 1, &AGGRESSIVE);
+
+        let older_text = match &messages[0].content {
+            MessageContent::Text(t) => t.clone(),
+            _ => String::new(),
+        };
+        assert!(older_text.contains("omitted"), "older text should be truncated");
+        let recent_text = match &messages[1].content {
+            MessageContent::Text(t) => t.clone(),
+            _ => String::new(),
+        };
+        assert_eq!(recent_text, "recent");
+    }
+
+    #[test]
+    fn compact_older_message_text_tiered_skips_tool_result_blocks() {
+        let mut messages = vec![RichMessage::tool_results(vec![ContentBlock::ToolResult {
+            tool_use_id: "t1".into(),
+            content: "x".repeat(5000),
+            is_error: Some(false),
+        }])];
+
+        compact_older_message_text_tiered(&mut messages, 0, &AGGRESSIVE);
+
+        let content = match &messages[0].content {
+            MessageContent::Blocks(blocks) => match &blocks[0] {
+                ContentBlock::ToolResult { content, .. } => content.clone(),
+                _ => String::new(),
+            },
+            _ => String::new(),
+        };
+        assert_eq!(content.len(), 5000, "tool results are compacted by dedicated routines");
+    }
 }

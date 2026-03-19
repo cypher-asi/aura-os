@@ -26,8 +26,8 @@ impl DevLoopEngine {
         work_log: &[String],
         workspace_cache: &WorkspaceCache,
     ) -> Result<TaskExecution, EngineError> {
-        let project = self.project_service.get_project(project_id)?;
-        let spec = self.store.get_spec(project_id, &task.spec_id)?;
+        let project = self.project_service.get_project_async(project_id).await?;
+        let spec = self.load_spec(project_id, &task.spec_id).await?;
 
         let workspace_map = &workspace_cache.workspace_map_text;
         let workspace_info = if workspace_map.is_empty() { None } else { Some(workspace_map.as_str()) };
@@ -60,7 +60,7 @@ impl DevLoopEngine {
         let completed_deps: Vec<Task> = if task.dependency_ids.is_empty() {
             Vec::new()
         } else {
-            let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
+            let all_project_tasks = self.task_service.list_tasks(project_id).await.unwrap_or_default();
             task.dependency_ids.iter()
                 .filter_map(|dep_id| {
                     all_project_tasks.iter()
@@ -99,6 +99,7 @@ impl DevLoopEngine {
         let executor = EngineToolLoopExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
+                self.storage_client.clone(),
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),

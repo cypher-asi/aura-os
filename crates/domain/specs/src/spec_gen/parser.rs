@@ -12,6 +12,19 @@ pub struct RawSpecOutput {
     pub markdown: String,
 }
 
+/// Parses a leading "NN:" or "N:" from a spec title (e.g. "05: Requirements..." or "1: Core Domain").
+/// Returns the logical spec number for use as order_index so display order matches the intended numbering.
+pub(crate) fn order_index_from_spec_title(title: &str) -> Option<u32> {
+    let t = title.trim();
+    let colon = t.find(':')?;
+    let prefix = t.get(..colon)?;
+    let num_str = prefix.trim();
+    if num_str.is_empty() {
+        return None;
+    }
+    num_str.parse::<u32>().ok()
+}
+
 /// Extracts complete JSON objects from a streaming character sequence.
 ///
 /// Designed for Claude responses that are JSON arrays of spec objects (`[{...}, {...}]`).
@@ -143,14 +156,17 @@ pub(crate) fn raw_to_specs(project_id: &ProjectId, raw: Vec<RawSpecOutput>) -> V
     let now = Utc::now();
     raw.into_iter()
         .enumerate()
-        .map(|(i, r)| Spec {
-            spec_id: SpecId::new(),
-            project_id: *project_id,
-            title: r.title,
-            order_index: i as u32,
-            markdown_contents: format!("## Purpose\n\n{}\n\n{}", r.purpose, r.markdown),
-            created_at: now,
-            updated_at: now,
+        .map(|(i, r)| {
+            let order_index = order_index_from_spec_title(&r.title).unwrap_or(i as u32);
+            Spec {
+                spec_id: SpecId::new(),
+                project_id: *project_id,
+                title: r.title,
+                order_index,
+                markdown_contents: format!("## Purpose\n\n{}\n\n{}", r.purpose, r.markdown),
+                created_at: now,
+                updated_at: now,
+            }
         })
         .collect()
 }
@@ -359,6 +375,24 @@ Let me know if you need changes.
     }
 
     // -----------------------------------------------------------------------
+    // order_index_from_spec_title
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn order_index_from_spec_title_parses_nn_prefix() {
+        assert_eq!(order_index_from_spec_title("05: Requirements Ingestion"), Some(5));
+        assert_eq!(order_index_from_spec_title("02: RocksDB Storage Layer"), Some(2));
+        assert_eq!(order_index_from_spec_title("1: Core Domain"), Some(1));
+        assert_eq!(order_index_from_spec_title("01: Core Domain Types"), Some(1));
+    }
+
+    #[test]
+    fn order_index_from_spec_title_no_prefix_returns_none() {
+        assert_eq!(order_index_from_spec_title("Requirements Ingestion"), None);
+        assert_eq!(order_index_from_spec_title("First"), None);
+    }
+
+    // -----------------------------------------------------------------------
     // raw_to_specs
     // -----------------------------------------------------------------------
 
@@ -385,6 +419,32 @@ Let me know if you need changes.
         assert!(specs[0].markdown_contents.contains("## Purpose"));
         assert!(specs[0].markdown_contents.contains("Do X"));
         assert_eq!(specs[1].order_index, 1);
+    }
+
+    #[test]
+    fn raw_to_specs_uses_title_order_index_when_present() {
+        let pid = ProjectId::new();
+        let raw = vec![
+            RawSpecOutput {
+                title: "05: Fifth".into(),
+                purpose: "P".into(),
+                markdown: "M".into(),
+            },
+            RawSpecOutput {
+                title: "02: Second".into(),
+                purpose: "P".into(),
+                markdown: "M".into(),
+            },
+            RawSpecOutput {
+                title: "01: First".into(),
+                purpose: "P".into(),
+                markdown: "M".into(),
+            },
+        ];
+        let specs = raw_to_specs(&pid, raw);
+        assert_eq!(specs[0].order_index, 5);
+        assert_eq!(specs[1].order_index, 2);
+        assert_eq!(specs[2].order_index, 1);
     }
 
     // -----------------------------------------------------------------------

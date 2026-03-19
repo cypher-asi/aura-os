@@ -56,6 +56,17 @@ impl ApiError {
         )
     }
 
+    pub fn forbidden(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::FORBIDDEN,
+            Json(Self {
+                error: msg.into(),
+                code: "forbidden".to_string(),
+                details: None,
+            }),
+        )
+    }
+
     pub fn payment_required(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::PAYMENT_REQUIRED,
@@ -111,6 +122,24 @@ pub fn map_network_error(e: aura_network::NetworkError) -> (StatusCode, Json<Api
                 Json(ApiError {
                     error: body.clone(),
                     code: "network_error".to_string(),
+                    details: None,
+                }),
+            )
+        }
+        _ => ApiError::bad_gateway(e.to_string()),
+    }
+}
+
+/// Map a `StorageError` to an API error response, preserving the upstream HTTP status.
+pub fn map_storage_error(e: aura_storage::StorageError) -> (StatusCode, Json<ApiError>) {
+    match &e {
+        aura_storage::StorageError::Server { status, body } => {
+            let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
+            (
+                code,
+                Json(ApiError {
+                    error: body.clone(),
+                    code: "storage_error".to_string(),
                     details: None,
                 }),
             )

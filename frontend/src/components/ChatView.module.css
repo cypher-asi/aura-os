@@ -441,6 +441,12 @@
   margin-right: auto;
 }
 
+.contextWidget {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
 .infoDot {
   color: var(--color-text-secondary);
   font-size: 11px;

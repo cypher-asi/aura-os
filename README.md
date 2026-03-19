@@ -15,7 +15,7 @@ Aura is a desktop application for continuous agentic coding. It reads a project'
 
 The core workflow follows a strict hierarchy: **Project → Spec → Task**. Agents operate within sessions, rotating context automatically when the window fills, so execution can continue indefinitely without manual intervention.
 
-Everything runs locally. Project state lives in RocksDB on-device. The backend is Rust (Axum), the frontend is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. No cloud sync, no remote servers, no accounts required.
+Core state lives in RocksDB on-device. The backend is Rust (Axum), the frontend is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. Optional remote services (configured via `.env`) include **aura-network** (orgs/project sync), **aura-storage** (execution data), **billing** (credits), and **Orbit** (Git/repo hosting). You can run fully local with only `ANTHROPIC_API_KEY` set.
 
 ---
 
@@ -37,42 +37,78 @@ Everything runs locally. Project state lives in RocksDB on-device. The backend i
 
 - Rust toolchain (1.85.0+)
 - Node.js and npm
-- [ZUI](https://github.com/cypher-asi/zui) cloned as a sibling directory (`../zui`)
+- [ZUI](https://github.com/cypher-asi/zui) cloned as a sibling directory (`../zui`) if you use the ZUI terminal component
 
-### Frontend
+### Environment and `.env`
 
+Copy the example env file and set at least your Claude API key:
+
+```bash
+cp .env.example .env
 ```
+
+Edit `.env` and set:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | **Yes** | Your Anthropic API key for spec generation and agent execution |
+| `BILLING_SERVER_URL` | No | Credits/billing server (default: `https://billing.zero.tech`) |
+| `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://aura-network.onrender.com`). Omit for local-only. |
+| `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
+| `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://aura-storage.onrender.com`). Omit to disable. |
+| `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
+| `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
+
+The server reads `.env` from the current working directory when you run `aura-server` or `aura-desktop`.
+
+### Server URLs (local development)
+
+- **Backend (Axum):** `http://127.0.0.1:3100` — API at `/api`, WebSocket at `/ws`
+- **Frontend (Vite dev):** `http://localhost:5173` — proxies `/api` and `/ws` to the backend
+
+### Run backend
+
+From the repo root (so `.env` is found):
+
+```bash
+cargo run -p aura-server
+```
+
+The Axum server listens on `http://127.0.0.1:3100`.
+
+### Run frontend (dev)
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-The Vite dev server starts on port 5173 and proxies `/api` and `/ws` to the backend.
+Open `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to `http://localhost:3100`, so the backend must be running.
 
-### Backend
+### Run desktop app
 
-```
-cargo run -p aura-server
-```
+Build the frontend once, then run the desktop shell (it embeds the server and frontend):
 
-The Axum server starts on `http://127.0.0.1:3100`.
-
-### Desktop
-
-Build the frontend first, then launch the desktop shell:
-
-```
+```bash
 cd frontend && npm run build && cd ..
 cargo run -p aura-desktop
 ```
 
-The desktop app bundles the server and frontend into a single native window via WebView.
+Run from the repo root so `.env` is loaded. The desktop app bundles the server and frontend into a single native window via WebView.
+
+### Optional services
+
+- **aura-network** — When `AURA_NETWORK_URL` (and optionally `AURA_NETWORK_AUTH_TOKEN`) is set, the app can sync organizations and projects with a shared backend (e.g. `https://aura-network.onrender.com`).
+- **aura-storage** — When `AURA_STORAGE_URL` is set, execution data can be stored in a remote store (e.g. `https://aura-storage.onrender.com`). Omit for local-only execution.
+- **Billing** — `BILLING_SERVER_URL` defaults to `https://billing.zero.tech`; set `BILLING_INTERNAL_TOKEN` if your billing server requires it.
+- **Orbit** — Third-party standalone service for Git/repo hosting. Set `ORBIT_BASE_URL` to the Orbit service URL (e.g. `https://orbit.your-domain.com` or `http://localhost:PORT`). Aura does not run Orbit; it only connects to it as a client.
 
 ---
 
 ## Principles
 
-1. **Local-First:** All data lives in RocksDB on your machine. No cloud dependency, no remote accounts, no sync. Your projects and keys never leave the device.
+1. **Local-First:** Core project and execution state lives in RocksDB on your machine. Remote services (aura-network, aura-storage, billing, Orbit) are optional; you can run with only an API key and no cloud.
 2. **Autonomous:** The dev loop runs continuously. Context rotation happens automatically when sessions fill, so the agent can work through an entire spec without manual intervention.
 3. **Transparent:** Every piece of work traces back through Task → Spec → Project. Execution logs, agent state, and session summaries are all persisted and visible in the UI.
 4. **Extensible:** A modular Rust workspace with clean domain boundaries. Each crate owns a single concern, making it straightforward to add new capabilities or swap components.

@@ -335,13 +335,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       author: {
         name: user?.display_name || CURRENT_USER,
         type: "user",
-        avatarUrl: user?.profile_image || undefined,
+        avatarUrl: profile.avatarUrl ?? undefined,
       },
       text,
       timestamp: new Date().toISOString(),
     };
     setComments((prev) => [...prev, comment]);
-  }, [user]);
+  }, [user, profile.avatarUrl]);
 
   const value = useMemo(
     () => ({

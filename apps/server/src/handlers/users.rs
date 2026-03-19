@@ -121,8 +121,6 @@ pub async fn update_me(
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
 
-    let new_avatar = req.avatar_url.clone();
-
     let network_req = aura_network::UpdateUserRequest {
         display_name: req.display_name,
         avatar_url: req.avatar_url,
@@ -135,15 +133,6 @@ pub async fn update_me(
         .update_current_user(&jwt, &network_req)
         .await
         .map_err(map_network_error)?;
-
-    if let Some(url) = new_avatar {
-        if let Ok(mut session) = state.get_session() {
-            session.profile_image = url;
-            if let Ok(bytes) = serde_json::to_vec(&session) {
-                let _ = state.store.put_setting("zero_auth_session", &bytes);
-            }
-        }
-    }
 
     Ok(Json(UserResponse::from(user)))
 }

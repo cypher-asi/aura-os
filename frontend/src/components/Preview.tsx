@@ -125,8 +125,10 @@ export function PreviewHeader() {
 
   const title =
     displayItem.kind === "specs_overview"
-      ? (ctx?.project?.specs_title ?? "")
-      : previewTitle(displayItem);
+      ? (ctx?.project?.specs_title || "Specs")
+      : displayItem.kind === "spec"
+        ? (displayItem.spec.title || "Spec")
+        : previewTitle(displayItem);
 
   return (
     <div className={styles.previewHeader}>

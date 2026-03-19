@@ -3,17 +3,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub struct SetSettingRequest {
-    pub value: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetSettingResponse {
-    pub key: String,
-    pub value: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CreateProjectRequest {
     pub org_id: OrgId,
     pub name: String,
@@ -23,6 +12,11 @@ pub struct CreateProjectRequest {
     pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +28,11 @@ pub struct UpdateProjectRequest {
     pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -51,6 +50,11 @@ pub struct CreateImportedProjectRequest {
     pub files: Vec<ImportedProjectFile>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -101,6 +105,7 @@ pub struct CreateAgentInstanceRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateAgentInstanceRequest {
+    pub status: Option<String>,
     pub name: Option<String>,
     pub role: Option<String>,
     pub personality: Option<String>,

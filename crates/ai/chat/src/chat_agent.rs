@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use async_trait::async_trait;
 use chrono::Utc;
 use tokio::sync::mpsc;
-use tracing::{error, info};
+use tracing::info;
 
 use aura_core::*;
 use aura_claude::{ThinkingConfig, ToolCall};
@@ -126,6 +126,7 @@ impl ChatService {
         agent_id: &AgentId,
         agent: &Agent,
         projects: &[Project],
+        stored_messages: Vec<Message>,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -140,14 +141,6 @@ impl ChatService {
             }
         };
 
-        let stored_messages = match self.list_agent_messages(agent_id) {
-            Ok(m) => m,
-            Err(e) => {
-                send(ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
-                return;
-            }
-        };
-
         let system = build_multi_project_system_prompt(agent, projects);
 
         let mut api_messages = convert_messages_to_rich(&stored_messages);
@@ -156,8 +149,8 @@ impl ChatService {
             .manage_context_window(&api_key, &system, api_messages)
             .await;
 
-        api_messages = Self::sanitize_orphan_tool_results(api_messages);
-        api_messages = Self::sanitize_tool_use_results(api_messages);
+        api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
+        api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
 
         let tools = multi_project_tool_definitions();
 
@@ -171,6 +164,7 @@ impl ChatService {
         let executor = AgentToolLoopExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
+                self.storage_client.clone(),
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),
@@ -248,11 +242,8 @@ impl ChatService {
                 thinking_duration_ms,
                 created_at: Utc::now(),
             };
-            if let Err(e) = self.store.put_agent_message(agent_id, &assistant_msg) {
-                error!(?agent_id, error = %e, "Failed to save assistant message");
-            } else {
-                send(ChatStreamEvent::MessageSaved(assistant_msg));
-            }
+            // Agent-level messages: no local store; persist via future storage/network API when available.
+            send(ChatStreamEvent::MessageSaved(assistant_msg));
         }
     }
 }
@@ -279,6 +270,11 @@ mod tests {
             specs_title: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            git_repo_url: None,
+            git_branch: None,
+            orbit_base_url: None,
+            orbit_owner: None,
+            orbit_repo: None,
         }
     }
 

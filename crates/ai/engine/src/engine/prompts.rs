@@ -157,7 +157,7 @@ You have tools to explore the codebase, make changes, and verify your work.
 
 Workflow:
 1. Use get_task_context if you need to review the task details
-2. Briefly explore relevant files (aim for 5-8 reads max) using read_file, search_code, find_files, list_files. Use targeted reads with start_line/end_line when possible.
+2. Briefly explore (hard limit: ~12 exploration calls before blocking) using read_file, search_code, find_files, list_files. NEVER re-read a file -- read it once fully or use search_code.
 3. Form a plan, then make changes using write_file (new files) or edit_file (targeted edits)
 4. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
 5. Fix any errors iteratively
@@ -169,6 +169,7 @@ Test command: {test_cmd}
 Rules:
 - Always verify your changes compile before calling task_done
 - Use edit_file for targeted changes to existing files, write_file for new files or full rewrites
+- For new files longer than ~80-100 lines, do NOT write the entire file in one write_file call. Write a short skeleton first (e.g. module doc, imports, one small function or test), then use edit_file repeatedly to add the rest in logical chunks (one test or section at a time). This avoids output truncation.
 - Search before writing to understand existing code patterns
 - Never use non-ASCII characters (em dashes, smart quotes, ellipsis) in source code
 - For Rust: use raw string literals for multi-line strings, prefer serde_json::json!() for JSON in tests
@@ -179,6 +180,12 @@ Rules:
 
 TOOL USAGE:
 - Do NOT use run_command for searching code, reading files, or finding files. Always use the dedicated tools: search_code, read_file, find_files, list_files. Reserve run_command for build, test, git, and package manager commands only.
+
+EXPLORATION LIMITS (ENFORCED):
+- You have a hard limit of ~12 exploration calls (read_file + search_code) before reads are blocked.
+- NEVER read the same file multiple times. Read it once in full, or use search_code to find specific lines.
+- After reading 5 files, you MUST start implementing. You can always read more files later if needed during editing.
+- Reading without writing wastes your budget. Every read costs tokens that could be spent on implementation.
 
 SCOPE: Stay strictly on-task.
 - ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
@@ -199,7 +206,7 @@ SCOPE: Stay strictly on-task.
 ## Workspace Context
 This is a Rust workspace with {crate_count} crate members. Before implementing:
 1. Check the Workspace Structure section in the task context to understand crate dependencies
-2. Read the lib.rs of each dependency crate to understand its public API
+2. The codebase snapshot below contains dependency APIs. Refer to it instead of reading files. Only read files you need to modify
 3. NEVER guess type signatures, method names, or struct fields -- verify by reading source
 4. If you declare `pub mod foo;`, create foo.rs in the same set of file operations
 5. Use the codebase snapshot to understand existing patterns before writing new code
@@ -267,10 +274,10 @@ pub(crate) fn build_agentic_task_context(
     }
 
     ctx.push_str(
-        "Briefly explore the codebase to confirm the current state (aim for 5-8 file reads max), \
-         then form a plan and begin implementing. Do not exhaustively read every file -- focus on \
-         the files directly relevant to this task. Prefer targeted reads (with start_line/end_line) \
-         over full-file reads when you only need a specific section.\n"
+        "Briefly explore the codebase to confirm the current state (hard limit: ~12 exploration calls \
+         before reads are blocked), then form a plan and begin implementing. NEVER read the same file \
+         twice. Do not exhaustively read every file -- focus on files you need to modify. Prefer \
+         targeted reads (with start_line/end_line) over full-file reads when you only need a specific section.\n"
     );
     ctx
 }

@@ -33,6 +33,12 @@ export function invalidateFeeSchedule(): void {
   _pending = null;
 }
 
+/**
+ * Short disclaimer for displayed cost. Actual charges use cache-aware pricing
+ * (prompt cache read/creation) and may differ from this estimate.
+ */
+export const COST_ESTIMATE_DISCLAIMER = "Estimated; actual charges may differ with prompt caching.";
+
 export function lookupRate(
   schedule: FeeScheduleEntry[],
   model: string,
@@ -79,4 +85,18 @@ export function formatCostFromTokens(
   model?: string,
 ): string {
   return formatCost(computeCost(inputTokens, outputTokens, model));
+}
+
+/** Same as formatCostFromTokens but returns label for use with a tooltip or title. */
+export function getCostEstimateLabel(): string {
+  return COST_ESTIMATE_DISCLAIMER;
+}
+
+/** Update fee schedule on the server and invalidate local cache so next display uses new rates. */
+export async function setFeeSchedule(
+  entries: FeeScheduleEntry[],
+): Promise<FeeScheduleEntry[]> {
+  const result = await api.putFeeSchedule(entries);
+  invalidateFeeSchedule();
+  return result;
 }

@@ -8,7 +8,7 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime, formatTokens, formatModelName } from "../utils/format";
-import { formatCostFromTokens } from "../utils/pricing";
+import { formatCostFromTokens, getCostEstimateLabel } from "../utils/pricing";
 import { StatusBadge } from "./StatusBadge";
 import type { Task, Session } from "../types";
 import styles from "./Preview.module.css";
@@ -81,7 +81,7 @@ export function SessionPreview({ session }: { session: Session }) {
             <Text size="sm">{formatModelName(session.model)}</Text>
           </div>
         )}
-        <div className={styles.taskField}>
+        <div className={styles.taskField} title={getCostEstimateLabel()}>
           <Text variant="muted" size="sm">Cost</Text>
           <Text size="sm">{formatCostFromTokens(session.total_input_tokens, session.total_output_tokens, session.model ?? undefined)}</Text>
         </div>

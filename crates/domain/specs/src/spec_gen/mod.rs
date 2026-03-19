@@ -8,8 +8,10 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 
 use aura_core::*;
+use aura_projects::ProjectService;
 use aura_settings::SettingsService;
-use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
+use aura_store::RocksStore;
+use aura_storage::StorageClient;
 
 use aura_billing::MeteredLlm;
 use crate::error::SpecGenError;
@@ -37,26 +39,72 @@ pub(crate) const MAX_TOKENS: u32 = 32768;
 
 pub(crate) const SPEC_OVERVIEW_MAX_TOKENS: u32 = 256;
 
+fn storage_spec_to_core(s: aura_storage::StorageSpec) -> Result<Spec, String> {
+    use chrono::{DateTime, Utc};
+    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
+        v.as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now)
+    };
+    Ok(Spec {
+        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project id: {e}"))?,
+        title: s.title.unwrap_or_default(),
+        order_index: s.order_index.unwrap_or(0) as u32,
+        markdown_contents: s.markdown_contents.unwrap_or_default(),
+        created_at: parse_dt(&s.created_at),
+        updated_at: parse_dt(&s.updated_at),
+    })
+}
+
 pub(crate) const SPEC_SUMMARY_MAX_TOKENS: u32 = 512;
 pub(crate) const SPEC_SUMMARY_MAX_WORDS: usize = 85;
 
 pub struct SpecGenerationService {
     pub(crate) store: Arc<RocksStore>,
+    pub(crate) project_service: Arc<ProjectService>,
     pub(crate) settings: Arc<SettingsService>,
     pub(crate) llm: Arc<MeteredLlm>,
+    pub(crate) storage_client: Option<Arc<StorageClient>>,
 }
 
 impl SpecGenerationService {
     pub fn new(
         store: Arc<RocksStore>,
+        project_service: Arc<ProjectService>,
         settings: Arc<SettingsService>,
         llm: Arc<MeteredLlm>,
+        storage_client: Option<Arc<StorageClient>>,
     ) -> Self {
         Self {
             store,
+            project_service,
             settings,
             llm,
+            storage_client,
         }
+    }
+
+    fn get_jwt(&self) -> Result<String, SpecGenError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| SpecGenError::ParseError("no active session".into()))?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| SpecGenError::ParseError(e.to_string()))?;
+        Ok(session.access_token)
+    }
+
+    fn require_storage(&self) -> Result<&Arc<StorageClient>, SpecGenError> {
+        self.storage_client
+            .as_ref()
+            .ok_or_else(|| SpecGenError::ParseError("aura-storage is not configured".into()))
     }
 
     fn emit(progress: &Option<ProgressTx>, msg: &str) {
@@ -77,15 +125,9 @@ impl SpecGenerationService {
         Self::emit(&progress, "Loading project");
         info!(%project_id, "Loading project for spec generation");
 
-        let project = self.store.get_project(project_id).map_err(|e| match e {
-            aura_store::StoreError::NotFound(_) => {
-                error!(%project_id, "Project not found");
-                SpecGenError::ProjectNotFound(*project_id)
-            }
-            other => {
-                error!(%project_id, error = %other, "Store error loading project");
-                SpecGenError::Store(other)
-            }
+        let project = self.project_service.get_project_async(project_id).await.map_err(|e| {
+            error!(%project_id, error = %e, "Failed to load project from network");
+            e
         })?;
 
         Self::emit(&progress, "Reading requirements document");
@@ -152,109 +194,104 @@ impl SpecGenerationService {
             &format!("Saving {} specs to database", new_specs.len()),
         );
 
-        self.save_specs(project_id, &new_specs)?;
+        self.save_specs(project_id, &new_specs).await?;
         info!(%project_id, count = new_specs.len(), "Specs saved to database");
 
         Ok(new_specs)
     }
 
-    pub(crate) fn clear_project_specs(&self, project_id: &ProjectId) -> Result<(), SpecGenError> {
-        let existing_specs = self.store.list_specs_by_project(project_id)?;
-        let existing_tasks = self.store.list_tasks_by_project(project_id)?;
-        let mut ops: Vec<BatchOp> = Vec::new();
+    pub(crate) async fn clear_project_specs(&self, project_id: &ProjectId) -> Result<(), SpecGenError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let pid = project_id.to_string();
+
+        let existing_specs = storage.list_specs(&pid, &jwt).await?;
         for spec in &existing_specs {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Specs,
-                key: format!("{}:{}", spec.project_id, spec.spec_id),
-            });
+            if let Err(e) = storage.delete_spec(&spec.id, &jwt).await {
+                error!(spec_id = %spec.id, error = %e, "Failed to delete spec from aura-storage");
+            }
         }
-        for task in &existing_tasks {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Tasks,
-                key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-            });
-        }
-        if !ops.is_empty() {
-            self.store.write_batch(ops)?;
-        }
-        if let Ok(mut project) = self.store.get_project(project_id) {
-            project.specs_summary = None;
-            project.specs_title = None;
-            let _ = self.store.put_project(&project);
-        }
+
+        // specs_summary / specs_title no longer persisted locally (network-only projects)
         Ok(())
     }
 
-    pub(crate) fn save_tasks_for_spec(&self, tasks: &[Task]) -> Result<(), SpecGenError> {
+    pub(crate) async fn save_tasks_for_spec(&self, tasks: &[Task]) -> Result<(), SpecGenError> {
         if tasks.is_empty() {
             return Ok(());
         }
-        let ops: Vec<BatchOp> = tasks
-            .iter()
-            .filter_map(|task| {
-                serde_json::to_vec(task)
-                    .ok()
-                    .map(|value| BatchOp::Put {
-                        cf: ColumnFamilyName::Tasks,
-                        key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-                        value,
-                    })
-            })
-            .collect();
-        self.store.write_batch(ops)?;
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        for task in tasks {
+            let req = aura_storage::CreateTaskRequest {
+                spec_id: task.spec_id.to_string(),
+                title: task.title.clone(),
+                description: Some(task.description.clone()),
+                status: Some("ready".to_string()),
+                order_index: Some(task.order_index as i32),
+                dependency_ids: if task.dependency_ids.is_empty() {
+                    None
+                } else {
+                    Some(task.dependency_ids.iter().map(|id| id.to_string()).collect())
+                },
+            };
+            storage.create_task(&task.project_id.to_string(), &jwt, &req).await?;
+        }
         Ok(())
     }
 
-    pub(crate) fn save_single_spec(&self, spec: &Spec) -> Result<(), SpecGenError> {
-        self.store.write_batch(vec![BatchOp::Put {
-            cf: ColumnFamilyName::Specs,
-            key: format!("{}:{}", spec.project_id, spec.spec_id),
-            value: serde_json::to_vec(spec)
-                .map_err(|e| SpecGenError::ParseError(e.to_string()))?,
-        }])?;
+    pub(crate) async fn save_single_spec(&self, spec: &Spec) -> Result<(), SpecGenError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let req = aura_storage::CreateSpecRequest {
+            title: spec.title.clone(),
+            order_index: Some(spec.order_index as i32),
+            markdown_contents: Some(spec.markdown_contents.clone()),
+        };
+        storage
+            .create_spec(&spec.project_id.to_string(), &jwt, &req)
+            .await?;
         Ok(())
     }
 
-    pub(crate) fn save_specs(&self, project_id: &ProjectId, new_specs: &[Spec]) -> Result<(), SpecGenError> {
-        let existing_specs = self.store.list_specs_by_project(project_id)?;
-        let existing_tasks = self.store.list_tasks_by_project(project_id)?;
+    pub(crate) async fn save_specs(&self, project_id: &ProjectId, new_specs: &[Spec]) -> Result<(), SpecGenError> {
+        self.clear_project_specs(project_id).await?;
 
-        let mut ops: Vec<BatchOp> = Vec::new();
-
-        for spec in &existing_specs {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Specs,
-                key: format!("{}:{}", spec.project_id, spec.spec_id),
-            });
-        }
-        for task in &existing_tasks {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Tasks,
-                key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-            });
-        }
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let pid = project_id.to_string();
 
         for spec in new_specs {
-            ops.push(BatchOp::Put {
-                cf: ColumnFamilyName::Specs,
-                key: format!("{}:{}", spec.project_id, spec.spec_id),
-                value: serde_json::to_vec(spec)
-                    .map_err(|e| SpecGenError::ParseError(e.to_string()))?,
-            });
+            let req = aura_storage::CreateSpecRequest {
+                title: spec.title.clone(),
+                order_index: Some(spec.order_index as i32),
+                markdown_contents: Some(spec.markdown_contents.clone()),
+            };
+            storage.create_spec(&pid, &jwt, &req).await?;
         }
-
-        self.store.write_batch(ops)?;
         Ok(())
     }
 
-    pub fn list_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, SpecGenError> {
-        let mut specs = self.store.list_specs_by_project(project_id)?;
+    pub async fn list_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, SpecGenError> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_specs = storage
+            .list_specs(&project_id.to_string(), &jwt)
+            .await?;
+        let mut specs: Vec<Spec> = storage_specs
+            .into_iter()
+            .filter_map(|s| storage_spec_to_core(s).ok())
+            .collect();
         specs.sort_by_key(|s| s.order_index);
         Ok(specs)
     }
 
-    pub fn get_spec(&self, project_id: &ProjectId, spec_id: &SpecId) -> Result<Spec, SpecGenError> {
-        Ok(self.store.get_spec(project_id, spec_id)?)
+    pub async fn get_spec(&self, project_id: &ProjectId, spec_id: &SpecId) -> Result<Spec, SpecGenError> {
+        let _ = project_id;
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_spec = storage.get_spec(&spec_id.to_string(), &jwt).await?;
+        storage_spec_to_core(storage_spec).map_err(|e| SpecGenError::ParseError(e))
     }
 
     /// Test-only wrapper for parse_claude_response.

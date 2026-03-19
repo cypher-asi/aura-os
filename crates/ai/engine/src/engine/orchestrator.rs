@@ -2,13 +2,16 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info, warn};
+use tracing::{error, info};
+
+use chrono::{DateTime, Utc};
 
 use aura_core::*;
 use aura_agents::AgentInstanceService;
 use aura_billing::{MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
+use aura_storage::StorageClient;
 use aura_tasks::TaskService;
 use aura_settings::SettingsService;
 use aura_store::RocksStore;
@@ -20,6 +23,29 @@ use super::write_coordinator::ProjectWriteCoordinator;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::FileOp;
+
+fn storage_spec_to_core(s: aura_storage::StorageSpec) -> Result<Spec, String> {
+    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
+        v.as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now)
+    };
+    Ok(Spec {
+        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project id: {e}"))?,
+        title: s.title.unwrap_or_default(),
+        order_index: s.order_index.unwrap_or(0) as u32,
+        markdown_contents: s.markdown_contents.unwrap_or_default(),
+        created_at: parse_dt(&s.created_at),
+        updated_at: parse_dt(&s.updated_at),
+    })
+}
 
 pub struct LoopHandle {
     pub project_id: ProjectId,
@@ -61,6 +87,7 @@ pub struct DevLoopEngine {
     pub(crate) engine_config: EngineConfig,
     pub(crate) llm_config: LlmConfig,
     pub(crate) pricing_service: PricingService,
+    pub(crate) storage_client: Option<Arc<StorageClient>>,
 }
 
 impl DevLoopEngine {
@@ -89,7 +116,39 @@ impl DevLoopEngine {
             engine_config: EngineConfig::from_env(),
             llm_config: LlmConfig::from_env(),
             pricing_service,
+            storage_client: None,
         }
+    }
+
+    pub fn with_storage_client(mut self, client: Option<Arc<StorageClient>>) -> Self {
+        self.storage_client = client;
+        self
+    }
+
+    /// Load a spec from aura-storage.
+    pub(crate) async fn load_spec(
+        &self,
+        _project_id: &ProjectId,
+        spec_id: &SpecId,
+    ) -> Result<Spec, EngineError> {
+        let storage = self.storage_client.as_ref()
+            .ok_or_else(|| EngineError::Parse("aura-storage not configured".into()))?;
+        let jwt = self.get_jwt_for_storage()?;
+        let ss = storage
+            .get_spec(&spec_id.to_string(), &jwt)
+            .await?;
+        storage_spec_to_core(ss)
+            .map_err(|e| EngineError::Parse(format!("spec conversion: {e}")))
+    }
+
+    fn get_jwt_for_storage(&self) -> Result<String, EngineError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| EngineError::Parse("no active session for aura-storage".into()))?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| EngineError::Parse(e.to_string()))?;
+        Ok(session.access_token)
     }
 
     pub fn with_write_coordinator(mut self, coordinator: ProjectWriteCoordinator) -> Self {
@@ -102,9 +161,9 @@ impl DevLoopEngine {
         project_id: ProjectId,
         agent_instance_id: Option<AgentInstanceId>,
     ) -> Result<LoopHandle, EngineError> {
-        let _project = self.project_service.get_project(&project_id)?;
+        let _project = self.project_service.get_project_async(&project_id).await?;
 
-        let stale = self.session_service.close_stale_sessions(&project_id)?;
+        let stale = self.session_service.close_stale_sessions(&project_id).await?;
         if !stale.is_empty() {
             info!("closed {} stale active session(s) from previous run", stale.len());
         }
@@ -112,10 +171,27 @@ impl DevLoopEngine {
         let agent = if let Some(aiid) = agent_instance_id {
             self.agent_instance_service
                 .get_instance(&project_id, &aiid)
+                .await
                 .map_err(|_| EngineError::Parse(format!("agent instance {aiid} not found")))?
         } else {
+            let now = Utc::now();
+            let default_agent = Agent {
+                agent_id: AgentId::new(),
+                user_id: self.current_user_id().unwrap_or_default(),
+                name: "dev-agent".into(),
+                role: String::new(),
+                personality: String::new(),
+                system_prompt: String::new(),
+                skills: Vec::new(),
+                icon: None,
+                network_agent_id: None,
+                profile_id: None,
+                created_at: now,
+                updated_at: now,
+            };
             self.agent_instance_service
-                .create_instance(&project_id, "dev-agent".into())?
+                .create_instance_from_agent(&project_id, &default_agent)
+                .await?
         };
 
         let agent = if agent.status == AgentStatus::Working {
@@ -124,9 +200,12 @@ impl DevLoopEngine {
                 "resetting stale Working agent to Idle before starting loop"
             );
             self.agent_instance_service
-                .finish_working(&project_id, &agent.agent_instance_id)?;
+                .finish_working(&project_id, &agent.agent_instance_id)
+                .await
+                .ok();
             self.agent_instance_service
                 .get_instance(&project_id, &agent.agent_instance_id)
+                .await
                 .map_err(|_| EngineError::Parse(format!("agent instance {} not found", agent.agent_instance_id)))?
         } else {
             agent
@@ -139,7 +218,7 @@ impl DevLoopEngine {
             String::new(),
             self.current_user_id(),
             Some(self.llm_config.default_model.clone()),
-        )?;
+        ).await?;
 
         let (stop_tx, stop_rx) = watch::channel(LoopCommand::Continue);
 
@@ -158,7 +237,7 @@ impl DevLoopEngine {
                 error!(error = %e, "run_loop exited with error, emitting LoopFinished");
 
                 // Reset any tasks stuck in InProgress so the UI doesn't show stale spinners
-                if let Ok(orphaned) = engine.task_service.reset_in_progress_tasks(&project_id) {
+                if let Ok(orphaned) = engine.task_service.reset_in_progress_tasks(&project_id).await {
                     for t in &orphaned {
                         engine.emit(EngineEvent::TaskBecameReady {
                             project_id,
@@ -184,7 +263,7 @@ impl DevLoopEngine {
                     total_build_fix_attempts: None,
                     duplicate_error_bailouts: None,
                 });
-                let _ = engine.agent_instance_service.finish_working(&project_id, &aiid);
+                let _ = engine.agent_instance_service.finish_working(&project_id, &aiid).await;
             }
             result
         });
@@ -205,24 +284,24 @@ impl DevLoopEngine {
         mut stop_rx: watch::Receiver<LoopCommand>,
     ) -> Result<LoopOutcome, EngineError> {
         let mut ctx = LoopRunContext::new(self, project_id, agent_instance_id, session).await?;
-        ctx.reset_and_promote_tasks(self)?;
+        ctx.reset_and_promote_tasks(self).await?;
         loop {
-            if let Some(out) = ctx.check_command(self, &stop_rx) { return Ok(out); }
+            if let Some(out) = ctx.check_command(self, &stop_rx).await { return Ok(out); }
             let task = match self.task_service.claim_next_task(
                 &project_id, &agent_instance_id, Some(ctx.session.session_id),
-            )? {
+            ).await? {
                 Some(t) => t,
                 None => {
-                    if ctx.try_retry_failed(self)? { continue; }
-                    return ctx.handle_no_more_tasks(self);
+                    if ctx.try_retry_failed(self).await? { continue; }
+                    return ctx.handle_no_more_tasks(self).await;
                 }
             };
-            ctx.begin_task(self, &task)?;
-            let project = self.project_service.get_project(&project_id)?;
+            ctx.begin_task(self, &task).await?;
+            let project = self.project_service.get_project_async(&project_id).await?;
             let baseline = ctx.get_or_capture_test_baseline(self, &project).await;
             let task_start = Instant::now();
             let agent = self.agent_instance_service
-                .get_instance(&project_id, &agent_instance_id).ok();
+                .get_instance(&project_id, &agent_instance_id).await.ok();
             let result = if let Some(cmd) = shell::extract_shell_command(&task) {
                 Some(self.execute_shell_task(&project, &task, &cmd, agent_instance_id).await)
             } else {
@@ -235,16 +314,16 @@ impl DevLoopEngine {
                 }
             };
             let Some(result) = result else {
-                return Ok(ctx.handle_interruption(self, &task, &stop_rx));
+                return Ok(ctx.handle_interruption(self, &task, &stop_rx).await);
             };
             let outcome = self.finalize_task_execution(
                 project_id, agent_instance_id, &task, &ctx.session, &ctx.api_key,
                 &ctx.session.user_id, &ctx.session.model, task_start, &baseline, result,
                 &ctx.workspace_cache,
             ).await?;
-            let failed = ctx.process_outcome(self, &task, outcome)?;
-            self.agent_instance_service.finish_working(&project_id, &agent_instance_id)?;
-            if self.llm.is_credits_exhausted() { return Ok(ctx.handle_credits_exhausted(self)); }
+            let failed = ctx.process_outcome(self, &task, outcome).await?;
+            self.agent_instance_service.finish_working(&project_id, &agent_instance_id).await?;
+            if self.llm.is_credits_exhausted() { return Ok(ctx.handle_credits_exhausted(self).await); }
             if failed { continue; }
             if let Some(out) = ctx.try_session_rollover(self, &mut stop_rx).await? {
                 return Ok(out);
@@ -283,19 +362,9 @@ impl DevLoopEngine {
         input_tokens: u64,
         output_tokens: u64,
     ) {
-        let uid = user_id.clone();
-        let m = model.clone();
-        if let Err(e) = self.store.atomic_update_task(
-            project_id, &task.spec_id, &task.task_id,
-            |t| {
-                t.user_id = uid;
-                t.model = m;
-                t.total_input_tokens += input_tokens;
-                t.total_output_tokens += output_tokens;
-            },
-        ) {
-            warn!(task_id = %task.task_id, error = %e, "failed to update task tracking metadata");
-        }
+        // Token tracking fields are not stored in aura-storage's StorageTask.
+        // They live on agent instances / sessions instead.
+        let _ = (project_id, task, user_id, model, input_tokens, output_tokens);
     }
 
     pub(crate) fn current_user_id(&self) -> Option<String> {

@@ -20,6 +20,8 @@ interface PanelState {
   showInfo: boolean;
   specs: Spec[];
   tasks: Task[];
+  /** Spec IDs deleted this session so the sidebar can hide them until next refetch */
+  deletedSpecIds: string[];
   streamingAgentInstanceId: string | null;
 }
 
@@ -37,6 +39,7 @@ interface PanelActions {
   toggleInfo: (title: string, content: ReactNode) => void;
   pushSpec: (spec: Spec) => void;
   removeSpec: (specId: string) => void;
+  clearDeletedSpecs: () => void;
   pushTask: (task: Task) => void;
   removeTask: (taskId: string) => void;
   clearGeneratedArtifacts: () => void;
@@ -58,8 +61,23 @@ const INITIAL_PANEL: PanelState = {
   showInfo: false,
   specs: [],
   tasks: [],
+  deletedSpecIds: [],
   streamingAgentInstanceId: null,
 };
+
+function patchTaskInHistory(
+  history: PreviewItem[],
+  taskId: string,
+  patch: Partial<Task> | Task,
+): PreviewItem[] {
+  let changed = false;
+  const next = history.map((item) => {
+    if (item.kind !== "task" || item.task.task_id !== taskId) return item;
+    changed = true;
+    return { kind: "task" as const, task: { ...item.task, ...patch } };
+  });
+  return changed ? next : history;
+}
 
 const SidekickContext = createContext<SidekickContextValue | null>(null);
 
@@ -95,7 +113,12 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     setPanel((prev) => {
       if (prev.previewHistory.length === 0) return prev;
       const history = [...prev.previewHistory];
-      const previousItem = history.pop()!;
+      let previousItem = history.pop()!;
+      if (previousItem.kind === "task") {
+        const prevTask = previousItem.task;
+        const fresh = prev.tasks.find((t) => t.task_id === prevTask.task_id);
+        if (fresh) previousItem = { kind: "task", task: { ...prevTask, ...fresh } };
+      }
       return { ...prev, previewItem: previousItem, previewHistory: history };
     });
   }, []);
@@ -127,7 +150,14 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
     setPanel((prev) => ({
       ...prev,
       specs: prev.specs.filter((s) => s.spec_id !== specId),
+      deletedSpecIds: prev.deletedSpecIds.includes(specId)
+        ? prev.deletedSpecIds
+        : [...prev.deletedSpecIds, specId],
     }));
+  }, []);
+
+  const clearDeletedSpecs = useCallback(() => {
+    setPanel((prev) => (prev.deletedSpecIds.length === 0 ? prev : { ...prev, deletedSpecIds: [] }));
   }, []);
 
   const pushTask = useCallback((task: Task) => {
@@ -140,7 +170,8 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       if (previewItem?.kind === "task" && previewItem.task.task_id === task.task_id) {
         previewItem = { kind: "task", task };
       }
-      return { ...prev, tasks: next.sort((a, b) => a.order_index - b.order_index), previewItem };
+      const previewHistory = patchTaskInHistory(prev.previewHistory, task.task_id, task);
+      return { ...prev, tasks: next.sort((a, b) => a.order_index - b.order_index), previewItem, previewHistory };
     });
   }, []);
 
@@ -181,15 +212,13 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
 
   const updatePreviewTask = useCallback((patch: Partial<Task> & { task_id: string }) => {
     setPanel((prev) => {
-      if (prev.previewItem?.kind !== "task") return prev;
-      if (prev.previewItem.task.task_id !== patch.task_id) return prev;
-      return {
-        ...prev,
-        previewItem: {
-          kind: "task",
-          task: { ...prev.previewItem.task, ...patch },
-        },
-      };
+      let previewItem = prev.previewItem;
+      if (previewItem?.kind === "task" && previewItem.task.task_id === patch.task_id) {
+        previewItem = { kind: "task", task: { ...previewItem.task, ...patch } };
+      }
+      const previewHistory = patchTaskInHistory(prev.previewHistory, patch.task_id, patch);
+      if (previewItem === prev.previewItem && previewHistory === prev.previewHistory) return prev;
+      return { ...prev, previewItem, previewHistory };
     });
   }, []);
 
@@ -215,6 +244,7 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
         toggleInfo,
         pushSpec,
         removeSpec,
+        clearDeletedSpecs,
         pushTask,
         removeTask,
         patchTask,

@@ -134,6 +134,13 @@
   line-height: 1.5;
 }
 
+.errorMessage {
+  margin-top: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  line-height: 1.4;
+}
+
 .confirmFooter {
   display: flex;
   gap: var(--space-2);

@@ -2,12 +2,15 @@ use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_core::TaskStatus;
 use aura_settings::SettingsError;
+use aura_storage::StorageError;
 use aura_store::StoreError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TaskError {
     #[error("store error: {0}")]
     Store(#[from] StoreError),
+    #[error("storage error: {0}")]
+    Storage(#[from] StorageError),
     #[error("illegal transition from {current:?} to {target:?}")]
     IllegalTransition {
         current: TaskStatus,

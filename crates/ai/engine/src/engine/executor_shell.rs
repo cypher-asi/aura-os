@@ -286,7 +286,7 @@ impl DevLoopEngine {
             attempt: Some(attempt),
         });
 
-        let spec = self.store.get_spec(&task.project_id, &task.spec_id)?;
+        let spec = self.load_spec(&task.project_id, &task.spec_id).await?;
         let codebase_snapshot = file_ops::read_relevant_files(&project.linked_folder_path, 30_000)?;
         let dummy_session = Session::dummy(project.project_id);
         let fix_prompt = build_fix_prompt_with_history(

@@ -27,10 +27,12 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     sidekickRef.current = sidekick;
     ctxRef.current = ctx;
   }, [ctx, sidekick]);
-  const mergedSpecs = useMemo(
-    () => mergeById(localSpecs, sidekick.specs, "spec_id"),
-    [localSpecs, sidekick.specs],
-  );
+  const mergedSpecs = useMemo(() => {
+    const merged = mergeById(localSpecs, sidekick.specs, "spec_id");
+    if (sidekick.deletedSpecIds.length === 0) return merged;
+    const deleted = new Set(sidekick.deletedSpecIds);
+    return merged.filter((s) => !deleted.has(s.spec_id));
+  }, [localSpecs, sidekick.specs, sidekick.deletedSpecIds]);
 
   const fetchSpecs = useCallback(
     (autoSelect?: boolean) => {
@@ -40,6 +42,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
         .then((s) => {
           const sorted = s.sort((a, b) => a.order_index - b.order_index);
           setLocalSpecs(sorted);
+          sidekickRef.current.clearDeletedSpecs();
           if (autoSelect && sorted.length > 0) {
             setSelectedId(sorted[0].spec_id);
             sidekickRef.current.viewSpec(sorted[0]);
@@ -72,6 +75,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
         if (e.project_id === projectId) {
           setLocalSpecs([]);
           setSelectedId(null);
+          sidekickRef.current.clearDeletedSpecs();
         }
       }),
       subscribe("spec_saved", (e: EngineEvent) => {
@@ -100,10 +104,10 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     () => [
       {
         id: "__specs_root__",
-        label: ctx?.project?.specs_title ?? "",
+        label: ctx?.project?.specs_title || "Spec",
         children: mergedSpecs.map((spec) => ({
           id: spec.spec_id,
-          label: spec.title,
+          label: spec.title || "Spec",
           metadata: { type: "spec" },
         })),
       },

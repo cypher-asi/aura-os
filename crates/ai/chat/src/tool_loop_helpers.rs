@@ -34,11 +34,83 @@ pub(crate) fn detect_blocked_writes(
         .filter_map(|(i, tc)| {
             if tc.name == "write_file" || tc.name == "edit_file" {
                 let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                if tracker.get(path).copied().unwrap_or(0) >= 3 {
+                if tracker.get(path).copied().unwrap_or(0) >= 2 {
                     return Some(i);
                 }
             }
             None
+        })
+        .collect()
+}
+
+/// Block write/edit calls on files that have accumulated 3+ failures across
+/// the session (unlike `detect_blocked_writes` which tracks consecutive batches,
+/// this tracks total error outcomes per file and is only reset on success).
+pub(crate) fn detect_blocked_write_failures(
+    tool_calls: &[ToolCall],
+    file_write_failures: &HashMap<String, usize>,
+) -> Vec<usize> {
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if matches!(tc.name.as_str(), "write_file" | "edit_file") {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if file_write_failures.get(path).copied().unwrap_or(0) >= 3 {
+                    return Some(i);
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+/// Block `read_file` calls when the same file has been read 3+ times total
+/// (any combination of full/partial reads).
+pub(crate) fn detect_blocked_reads(
+    tool_calls: &[ToolCall],
+    file_read_counts: &mut HashMap<String, usize>,
+) -> Vec<usize> {
+    for tc in tool_calls {
+        if tc.name == "read_file" {
+            if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                *file_read_counts.entry(path.to_string()).or_insert(0) += 1;
+            }
+        }
+    }
+
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if tc.name == "read_file" {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if file_read_counts.get(path).copied().unwrap_or(0) >= 3 {
+                    return Some(i);
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+/// Block all exploration tool calls when the hard limit has been reached.
+pub(crate) fn detect_blocked_exploration(
+    tool_calls: &[ToolCall],
+    blocked: bool,
+) -> Vec<usize> {
+    if !blocked {
+        return vec![];
+    }
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files") {
+                Some(i)
+            } else {
+                None
+            }
         })
         .collect()
 }
@@ -199,7 +271,7 @@ pub(crate) fn summarize_write_file_input(input: &serde_json::Value) -> serde_jso
 
 /// Heuristic check for truncated file content: unbalanced braces/brackets
 /// or content that ends mid-line without a newline.
-fn looks_truncated(content: &str) -> bool {
+pub(crate) fn looks_truncated(content: &str) -> bool {
     if content.len() < 200 {
         return false;
     }

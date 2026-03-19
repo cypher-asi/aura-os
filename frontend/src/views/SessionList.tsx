@@ -8,7 +8,7 @@ import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { StatusBadge } from "../components/StatusBadge";
-import { formatCostFromTokens } from "../utils/pricing";
+import { formatCostFromTokens, getCostEstimateLabel } from "../utils/pricing";
 import { EmptyState } from "../components/EmptyState";
 import styles from "./SessionList.module.css";
 
@@ -66,7 +66,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
                 {formatDuration(session.started_at, session.ended_at)}
               </span>
               {totalTokens > 0 && (
-                <span className={styles.sessionCost}>
+                <span className={styles.sessionCost} title={getCostEstimateLabel()}>
                   {formatCostFromTokens(session.total_input_tokens, session.total_output_tokens, session.model ?? undefined)}
                 </span>
               )}

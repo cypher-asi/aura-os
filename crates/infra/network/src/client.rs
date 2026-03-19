@@ -34,8 +34,7 @@ impl NetworkClient {
         })
     }
 
-    /// Create a `NetworkClient` with an explicit base URL (for testing).
-    #[cfg(test)]
+    /// Create a `NetworkClient` with an explicit base URL (e.g. for tests or custom deployment).
     pub fn with_base_url(base_url: &str) -> Self {
         Self {
             http: Client::new(),

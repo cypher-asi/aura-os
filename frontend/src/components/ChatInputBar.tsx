@@ -37,6 +37,8 @@ interface Props {
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (items: AttachmentItem[]) => void;
   onRemoveAttachment?: (id: string) => void;
+  /** 0–100 or null (loading/no session). Omit to hide widget. */
+  contextUsagePercent?: number | null;
 }
 
 export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatInputBar({
@@ -48,6 +50,7 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   attachments = [],
   onAttachmentsChange,
   onRemoveAttachment,
+  contextUsagePercent,
 }, ref) {
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -278,6 +281,13 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
         <span className={styles.modelButton}>{ACTIVE_MODEL_LABEL}</span>
         <span className={styles.infoDot}>·</span>
         <span className={styles.infoText}>/ for commands</span>
+        {contextUsagePercent !== undefined && (
+          <span className={styles.contextWidget}>
+            {typeof contextUsagePercent === "number"
+              ? `Context ${contextUsagePercent}%`
+              : "Context —"}
+          </span>
+        )}
       </div>
     </div>
   );

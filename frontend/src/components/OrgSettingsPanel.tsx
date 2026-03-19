@@ -55,7 +55,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const { status: pollingStatus, currentBalance: polledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
+  const { status: pollingStatus, settledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
 
   const orgId = activeOrg?.org_id;
   const myRole = members.find((m) => m.user_id === user?.user_id)?.role;
@@ -209,14 +209,13 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     }
   };
 
-  // Update balance when polling succeeds
-  if (pollingStatus === "success" && polledBalance !== null) {
-    if (!creditBalance || creditBalance.total_credits !== polledBalance) {
-      loadCreditBalance();
+  useEffect(() => {
+    if (pollingStatus === "success" && settledBalance) {
+      setCreditBalance(settledBalance);
       resetPolling();
       window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
     }
-  }
+  }, [pollingStatus, settledBalance, resetPolling]);
 
   if (!activeOrg) {
     return (
@@ -242,7 +241,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Team Settings" size="full" noPadding fullHeight>
+    <Modal isOpen={isOpen} onClose={onClose} title="Team Settings" size="xl" noPadding fullHeight>
       <div className={styles.settingsLayout}>
         <div className={styles.settingsNav}>
           <div className={styles.navHeader}>

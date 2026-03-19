@@ -6,7 +6,10 @@ use tokio::sync::mpsc;
 use aura_core::*;
 use aura_billing::MeteredLlm;
 use aura_settings::SettingsService;
+use aura_storage::{StorageClient, StorageMessage};
 use aura_store::RocksStore;
+use chrono::DateTime;
+use tracing::warn;
 
 use aura_claude::{
     ContentBlock, ImageSource, MessageContent, RichMessage,
@@ -219,6 +222,7 @@ pub struct ChatService {
     pub(crate) spec_gen: Arc<SpecGenerationService>,
     pub(crate) project_service: Arc<ProjectService>,
     pub(crate) task_service: Arc<TaskService>,
+    pub(crate) storage_client: Option<Arc<StorageClient>>,
     pub(crate) llm_config: LlmConfig,
 }
 
@@ -230,8 +234,9 @@ impl ChatService {
         spec_gen: Arc<SpecGenerationService>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
+        storage_client: Option<Arc<StorageClient>>,
     ) -> Self {
-        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, LlmConfig::from_env())
+        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, storage_client, LlmConfig::from_env())
     }
 
     pub fn with_config(
@@ -241,6 +246,7 @@ impl ChatService {
         spec_gen: Arc<SpecGenerationService>,
         project_service: Arc<ProjectService>,
         task_service: Arc<TaskService>,
+        storage_client: Option<Arc<StorageClient>>,
         llm_config: LlmConfig,
     ) -> Self {
         Self {
@@ -250,27 +256,187 @@ impl ChatService {
             spec_gen,
             project_service,
             task_service,
+            storage_client,
             llm_config,
         }
     }
 
-    pub fn list_messages(
+    pub(crate) fn get_jwt(&self) -> Option<String> {
+        let bytes = self.store.get_setting("zero_auth_session").ok()?;
+        let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
+        Some(session.access_token)
+    }
+
+    /// Resolve the active session ID for a given agent instance.
+    pub(crate) async fn find_active_session_id(
+        &self,
+        agent_instance_id: &AgentInstanceId,
+    ) -> Option<String> {
+        let storage = self.storage_client.as_ref()?;
+        let jwt = self.get_jwt()?;
+        let sessions = storage
+            .list_sessions(&agent_instance_id.to_string(), &jwt)
+            .await
+            .ok()?;
+        sessions
+            .iter()
+            .find(|s| s.status.as_deref() == Some("active"))
+            .map(|s| s.id.clone())
+    }
+
+    /// Ensure an active session exists for this project agent; create one if not.
+    /// Returns the session id to use for saving messages, or None if storage is unavailable.
+    pub(crate) async fn ensure_active_session(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+    ) -> Option<String> {
+        if let Some(sid) = self.find_active_session_id(agent_instance_id).await {
+            return Some(sid);
+        }
+        let storage = self.storage_client.as_ref()?;
+        let jwt = self.get_jwt()?;
+        let req = aura_storage::CreateSessionRequest {
+            project_id: project_id.to_string(),
+            status: Some("active".to_string()),
+            context_usage_estimate: None,
+            summary_of_previous_context: None,
+        };
+        let session = storage
+            .create_session(&agent_instance_id.to_string(), &jwt, &req)
+            .await
+            .ok()?;
+        Some(session.id)
+    }
+
+    /// Save a message to aura-storage.
+    /// Fire-and-forget: logs a warning on failure but does not propagate errors.
+    /// When `session_id` is provided, skips the session lookup HTTP call.
+    pub(crate) async fn save_message_to_storage(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        role: &str,
+        content: &str,
+        content_blocks: Option<&[ChatContentBlock]>,
+        thinking: Option<&str>,
+        thinking_duration_ms: Option<u64>,
+        input_tokens: Option<u64>,
+        output_tokens: Option<u64>,
+        session_id: Option<&str>,
+    ) {
+        let Some(ref storage) = self.storage_client else { return };
+        let Some(jwt) = self.get_jwt() else { return };
+
+        let owned_session_id;
+        let sid = match session_id {
+            Some(id) => id,
+            None => match self.find_active_session_id(agent_instance_id).await {
+                Some(id) => {
+                    owned_session_id = id;
+                    &owned_session_id
+                }
+                None => {
+                    warn!(
+                        %project_id, %agent_instance_id,
+                        "No active session found, cannot save message to aura-storage"
+                    );
+                    return;
+                }
+            },
+        };
+
+        let encoded_content = crate::message_metadata::encode_message_content(
+            content,
+            content_blocks,
+            thinking,
+            thinking_duration_ms,
+        );
+
+        let req = aura_storage::CreateMessageRequest {
+            project_agent_id: agent_instance_id.to_string(),
+            project_id: project_id.to_string(),
+            role: role.to_string(),
+            content: encoded_content,
+            input_tokens,
+            output_tokens,
+        };
+
+        if let Err(e) = storage.create_message(sid, &jwt, &req).await {
+            warn!(
+                %project_id, %agent_instance_id,
+                error = %e,
+                "Failed to save message to aura-storage"
+            );
+        }
+    }
+
+    fn storage_message_to_message(
+        sm: &StorageMessage,
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+    ) -> Message {
+        let message_id = sm
+            .id
+            .parse::<MessageId>()
+            .unwrap_or_else(|_| MessageId::new());
+        let role = match sm.role.as_deref() {
+            Some("user") => ChatRole::User,
+            Some("assistant") => ChatRole::Assistant,
+            _ => ChatRole::User,
+        };
+        let created_at = sm
+            .created_at
+            .as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now);
+        Message {
+            message_id,
+            agent_instance_id,
+            project_id,
+            role,
+            content: sm.content.clone().unwrap_or_default(),
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at,
+        }
+    }
+
+    /// List project-scoped messages from aura-storage only (no local store).
+    /// Returns error if storage is not configured.
+    pub(crate) async fn list_messages_async(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<Vec<Message>, ChatError> {
-        let mut messages = self
-            .store
-            .list_messages(project_id, agent_instance_id)?;
-        messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-        Ok(messages)
-    }
-
-    pub fn list_agent_messages(
-        &self,
-        agent_id: &AgentId,
-    ) -> Result<Vec<Message>, ChatError> {
-        let mut messages = self.store.list_agent_messages(agent_id)?;
+        let storage = self.storage_client.as_ref().ok_or_else(|| {
+            ChatError::Storage(aura_storage::StorageError::NotConfigured)
+        })?;
+        let jwt = self.get_jwt().ok_or_else(|| {
+            ChatError::Storage(aura_storage::StorageError::Deserialize(
+                "not authenticated".to_string(),
+            ))
+        })?;
+        let sessions = storage
+            .list_sessions(&agent_instance_id.to_string(), &jwt)
+            .await
+            .map_err(ChatError::Storage)?;
+        let mut messages = Vec::new();
+        for session in &sessions {
+            let session_msgs = storage
+                .list_messages(&session.id, &jwt, None, None)
+                .await
+                .map_err(ChatError::Storage)?;
+            for sm in &session_msgs {
+                messages.push(Self::storage_message_to_message(
+                    sm,
+                    *project_id,
+                    *agent_instance_id,
+                ));
+            }
+        }
         messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
         Ok(messages)
     }
@@ -291,34 +457,44 @@ impl ChatService {
             let _ = tx.send(evt);
         };
 
-        let now = Utc::now();
-        let content_blocks = build_attachment_blocks(content, attachments);
+        let _content_blocks = build_attachment_blocks(content, attachments);
 
-        let user_msg = Message {
-            message_id: MessageId::new(),
-            agent_instance_id: *agent_instance_id,
-            project_id: *project_id,
-            role: ChatRole::User,
-            content: content.to_string(),
-            content_blocks,
-            thinking: None,
-            thinking_duration_ms: None,
-            created_at: now,
-        };
-        if let Err(e) = self.store.put_message(&user_msg) {
-            send(ChatStreamEvent::Error(format!("Failed to save user message: {e}")));
+        let active_session_id = self
+            .ensure_active_session(project_id, agent_instance_id)
+            .await;
+        let Some(ref session_id) = active_session_id else {
+            send(ChatStreamEvent::Error(
+                "aura-storage is not configured or could not create session".to_string(),
+            ));
             send(ChatStreamEvent::Done);
             return;
-        }
+        };
+        self.save_message_to_storage(
+            project_id,
+            agent_instance_id,
+            "user",
+            content,
+            _content_blocks.as_deref(),
+            None,
+            None,
+            None,
+            None,
+            Some(session_id.as_str()),
+        )
+        .await;
 
         match action {
             Some("generate_specs") => {
-                self.handle_generate_specs(project_id, agent_instance_id, agent_instance, &tx)
-                    .await;
+                self.handle_generate_specs(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
             }
             _ => {
-                self.handle_chat_with_tools(project_id, agent_instance_id, agent_instance, &tx)
-                    .await;
+                self.handle_chat_with_tools(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
             }
         }
 
@@ -326,12 +502,14 @@ impl ChatService {
     }
 
     // -- Agent-level streaming (multi-project) ---------------------------------
+    // Messages are from aura-storage aggregate only; current user message is in-memory for this turn (no agent-level message API yet).
 
     pub async fn send_agent_message_streaming(
         &self,
         agent_id: &AgentId,
         agent: &Agent,
         projects: &[Project],
+        storage_messages: Vec<Message>,
         content: &str,
         _action: Option<&str>,
         attachments: &[ChatAttachment],
@@ -358,13 +536,11 @@ impl ChatService {
             thinking_duration_ms: None,
             created_at: now,
         };
-        if let Err(e) = self.store.put_agent_message(agent_id, &user_msg) {
-            send(ChatStreamEvent::Error(format!("Failed to save user message: {e}")));
-            send(ChatStreamEvent::Done);
-            return;
-        }
 
-        self.handle_agent_chat_with_tools(agent_id, agent, projects, &tx)
+        let mut messages_for_context = storage_messages;
+        messages_for_context.push(user_msg);
+
+        self.handle_agent_chat_with_tools(agent_id, agent, projects, messages_for_context, &tx)
             .await;
 
         send(ChatStreamEvent::Done);

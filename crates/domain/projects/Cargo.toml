@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 aura-core = { path = "../../infra/core" }
+aura-network = { path = "../../infra/network" }
 aura-store = { path = "../../infra/store" }
 chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1"
 thiserror = "1"
+tokio = { version = "1", features = ["sync"] }

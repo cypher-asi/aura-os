@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ProjectId, Task } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
+import { useLoopActive } from "../hooks/use-loop-active";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { Panel, Heading, Item } from "@cypher-asi/zui";
 import { EmptyState } from "../components/EmptyState";
@@ -13,6 +14,7 @@ interface TaskFeedProps {
 
 export function TaskFeed({ projectId }: TaskFeedProps) {
   const { subscribe } = useEventContext();
+  const loopActive = useLoopActive(projectId);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
@@ -99,18 +101,24 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
         <Heading level={5}>Task Feed ({tasks.length})</Heading>
       </div>
       <div className={styles.feedList}>
-        {displayed.map((task) => (
+        {displayed.map((task) => {
+          const displayStatus =
+            task.status === "in_progress" && !loopActive && task.task_id !== activeTaskId
+              ? "ready"
+              : task.status;
+          return (
             <Item
               key={task.task_id}
-              selected={task.task_id === activeTaskId}
+              selected={loopActive && task.task_id === activeTaskId}
               style={task.parent_task_id ? { paddingLeft: "var(--space-6)" } : undefined}
             >
-              <Item.Icon><TaskStatusIcon status={task.status} /></Item.Icon>
+              <Item.Icon><TaskStatusIcon status={displayStatus} /></Item.Icon>
               <Item.Label>
                 {task.parent_task_id ? `↳ ${task.title}` : task.title}
               </Item.Label>
             </Item>
-        ))}
+          );
+        })}
         {tasks.length === 0 && (
           <EmptyState>No tasks</EmptyState>
         )}

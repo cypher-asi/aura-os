@@ -22,6 +22,11 @@ export interface Project {
   specs_title?: string;
   created_at: string;
   updated_at: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface Spec {

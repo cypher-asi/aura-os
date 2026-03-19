@@ -291,9 +291,13 @@ name = "aura-agents"
 version = "0.1.0"
 dependencies = [
  "aura-core",
+ "aura-network",
+ "aura-storage",
  "aura-store",
  "chrono",
+ "serde_json",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -341,6 +345,7 @@ dependencies = [
  "aura-projects",
  "aura-settings",
  "aura-specs",
+ "aura-storage",
  "aura-store",
  "aura-tasks",
  "aura-tools",
@@ -420,6 +425,7 @@ dependencies = [
  "aura-projects",
  "aura-sessions",
  "aura-settings",
+ "aura-storage",
  "aura-store",
  "aura-tasks",
  "aura-tools",
@@ -462,12 +468,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-orbit"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
 name = "aura-orgs"
 version = "0.1.0"
 dependencies = [
  "aura-core",
  "aura-store",
  "chrono",
+ "serde_json",
  "thiserror 1.0.69",
  "uuid",
 ]
@@ -477,9 +496,12 @@ name = "aura-projects"
 version = "0.1.0"
 dependencies = [
  "aura-core",
+ "aura-network",
  "aura-store",
  "chrono",
+ "serde_json",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -494,11 +516,13 @@ dependencies = [
  "aura-core",
  "aura-engine",
  "aura-network",
+ "aura-orbit",
  "aura-orgs",
  "aura-projects",
  "aura-sessions",
  "aura-settings",
  "aura-specs",
+ "aura-storage",
  "aura-store",
  "aura-tasks",
  "aura-terminal",
@@ -531,6 +555,7 @@ dependencies = [
  "aura-billing",
  "aura-claude",
  "aura-core",
+ "aura-storage",
  "aura-store",
  "axum",
  "chrono",
@@ -538,6 +563,7 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -560,13 +586,26 @@ dependencies = [
  "aura-billing",
  "aura-claude",
  "aura-core",
+ "aura-projects",
  "aura-settings",
+ "aura-storage",
  "aura-store",
  "chrono",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "aura-storage"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
  "tracing",
 ]
 
@@ -593,12 +632,15 @@ dependencies = [
  "aura-claude",
  "aura-core",
  "aura-settings",
+ "aura-storage",
  "aura-store",
  "chrono",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

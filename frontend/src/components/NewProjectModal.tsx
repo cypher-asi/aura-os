@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { api } from "../api/client";
+import { api, type OrbitRepo } from "../api/client";
 import { useOrg } from "../context/OrgContext";
+import { useAuth } from "../context/AuthContext";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { PathInput } from "./PathInput";
@@ -13,6 +14,16 @@ import {
 } from "../lib/new-project-draft";
 
 const NEW_PROJECT_DRAFT_STORAGE_KEY = "aura:new-project-draft";
+
+function slugFromName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+type OrbitRepoMode = "default" | "custom" | "existing" | "none";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -109,6 +120,7 @@ async function toImportedFiles(files: ImportCandidate[]) {
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
   const { activeOrg, isLoading: orgLoading } = useOrg();
+  const { user, isAuthenticated } = useAuth();
   const { projects } = useProjectsList();
   const { features } = useAuraCapabilities();
   const { inputRef: nameInputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
@@ -124,6 +136,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const [description, setDescription] = useState(storedDraft?.description ?? "");
   const [folderPath, setFolderPath] = useState(storedDraft?.folderPath ?? "");
   const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
+  const [orbitRepoName, setOrbitRepoName] = useState("");
+  const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("default");
+  const [orbitRepos, setOrbitRepos] = useState<OrbitRepo[]>([]);
+  const [orbitReposLoading, setOrbitReposLoading] = useState(false);
+  const [selectedOrbitRepo, setSelectedOrbitRepo] = useState<OrbitRepo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -131,6 +148,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const importFilesInputRef = useRef<HTMLInputElement>(null);
   const restoringImportDraftRef = useRef(false);
   const userChangedImportSelectionRef = useRef(false);
+
+  const orbitOwner = activeOrg?.org_id ?? user?.user_id ?? null;
+  const proposedRepoSlug = slugFromName(name) || "my-project";
+  const displayRepoName = orbitRepoName.trim() || proposedRepoSlug;
+  const resolvedOrgId = activeOrg?.org_id ?? projects[0]?.org_id ?? null;
 
   useEffect(() => {
     if (importFolderInputRef.current) {
@@ -177,12 +199,32 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     void saveNewProjectDraftFiles(importCandidates);
   }, [importCandidates, workspaceMode]);
 
+  useEffect(() => {
+    if (isOpen && !isAuthenticated) {
+      setOrbitRepoMode("none");
+    }
+  }, [isOpen, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isOpen || orbitRepoMode !== "existing" || !isAuthenticated) return;
+    setOrbitReposLoading(true);
+    api
+      .listOrbitRepos()
+      .then(setOrbitRepos)
+      .catch(() => setOrbitRepos([]))
+      .finally(() => setOrbitReposLoading(false));
+  }, [isOpen, orbitRepoMode, isAuthenticated]);
+
   const reset = useCallback(() => {
     setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
     setName("");
     setDescription("");
     setFolderPath("");
     setImportCandidates([]);
+    setOrbitRepoName("");
+    setOrbitRepoMode(isAuthenticated ? "default" : "none");
+    setOrbitRepos([]);
+    setSelectedOrbitRepo(null);
     setLoading(false);
     setError("");
     setNameError("");
@@ -190,7 +232,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     void clearNewProjectDraftFiles();
     if (importFolderInputRef.current) importFolderInputRef.current.value = "";
     if (importFilesInputRef.current) importFilesInputRef.current.value = "";
-  }, [features.linkedWorkspace]);
+  }, [features.linkedWorkspace, isAuthenticated]);
 
   const handleClose = useCallback(() => {
     reset();
@@ -210,11 +252,43 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       setError("Choose files or a folder to import.");
       return;
     }
+    if (orbitRepoMode === "existing" && !selectedOrbitRepo) {
+      setError("Please select an existing repo.");
+      return;
+    }
+
     setNameError("");
-    setLoading(true);
     setError("");
+    setLoading(true);
+
     try {
       if (!resolvedOrgId) return;
+
+      const repoSlug =
+        orbitRepoMode === "custom"
+          ? orbitRepoName.trim() || proposedRepoSlug
+          : proposedRepoSlug;
+
+      const orbitFields = {
+        git_branch: "main" as const,
+        git_repo_url:
+          orbitRepoMode === "existing" && selectedOrbitRepo
+            ? selectedOrbitRepo.clone_url ?? `${selectedOrbitRepo.owner}/${selectedOrbitRepo.name}`
+            : undefined,
+        orbit_owner:
+          orbitRepoMode === "existing" && selectedOrbitRepo
+            ? selectedOrbitRepo.owner
+            : orbitRepoMode !== "none"
+              ? orbitOwner ?? undefined
+              : undefined,
+        orbit_repo:
+          orbitRepoMode === "existing" && selectedOrbitRepo
+            ? selectedOrbitRepo.name
+            : orbitRepoMode !== "none"
+              ? repoSlug
+              : undefined,
+      };
+
       let project;
       if (workspaceMode === "linked") {
         project = await api.createProject({
@@ -222,6 +296,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           name: name.trim(),
           description: description.trim(),
           linked_folder_path: folderPath.trim(),
+          ...orbitFields,
         });
       } else {
         const importedFiles = await toImportedFiles(importCandidates);
@@ -230,8 +305,10 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           name: name.trim(),
           description: description.trim(),
           files: importedFiles,
+          ...orbitFields,
         });
       }
+
       reset();
       onCreated(project);
     } catch (err) {
@@ -252,7 +329,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       samplePaths: importCandidates.slice(0, 3).map((candidate) => candidate.relativePath),
     };
   }, [importCandidates]);
-  const resolvedOrgId = activeOrg?.org_id ?? projects[0]?.org_id ?? null;
 
   const handleImportSelection = useCallback((files: FileList | null) => {
     userChangedImportSelectionRef.current = true;
@@ -266,11 +342,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
 
   const workspaceModeOptions: WorkspaceModeOption[] = features.linkedWorkspace
     ? [
-        { id: "linked" as const, label: "Link folder", description: "Best for the desktop app and live local workspaces." },
-        { id: "imported" as const, label: "Use local files", description: "Choose a folder or files from this device for browser-friendly workspaces." },
+        { id: "linked", label: "Link folder", description: "Best for the desktop app and live local workspaces." },
+        { id: "imported", label: "Use local files", description: "Choose a folder or files from this device for browser-friendly workspaces." },
       ]
     : [
-        { id: "imported" as const, label: "Local files", description: "Choose a folder or files from this device to start a project." },
+        { id: "imported", label: "Local files", description: "Choose a folder or files from this device to start a project." },
       ];
   const selectedWorkspaceMode = workspaceModeOptions.find((option) => option.id === workspaceMode) ?? workspaceModeOptions[0];
   const showWorkspaceModePicker = workspaceModeOptions.length > 1;
@@ -294,7 +370,8 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
               loading ||
               orgLoading ||
               !resolvedOrgId ||
-              (workspaceMode === "linked" && !features.linkedWorkspace)
+              (workspaceMode === "linked" && !features.linkedWorkspace) ||
+              (orbitRepoMode === "existing" && !selectedOrbitRepo)
             }
           >
             {loading ? <><Spinner size="sm" /> Creating...</> : "Create Project"}
@@ -335,10 +412,14 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             </Text>
           )}
         </div>
+
         <Input
           ref={nameInputRef}
           value={name}
-          onChange={(e) => { setName(e.target.value); setNameError(""); }}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameError("");
+          }}
           placeholder="Project name"
           validationMessage={nameError}
         />
@@ -347,6 +428,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description (optional)"
         />
+
         {workspaceMode === "linked" ? (
           <>
             <PathInput
@@ -415,6 +497,120 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             )}
           </div>
         )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+          <Text variant="muted" size="sm" style={{ marginTop: "var(--space-2)" }}>
+            Orbit repo (optional)
+          </Text>
+          {!isAuthenticated && (
+            <Text variant="muted" size="sm" style={{ color: "var(--color-warning)" }}>
+              Sign in to create a new repo or choose an existing one.
+            </Text>
+          )}
+          {isAuthenticated && orbitOwner && (
+            <>
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  checked={orbitRepoMode === "default"}
+                  onChange={() => setOrbitRepoMode("default")}
+                />
+                <span>Create new repo with default name</span>
+              </label>
+              {orbitRepoMode === "default" && (
+                <div style={{ paddingLeft: "var(--space-6)" }}>
+                  <Text variant="muted" size="sm">
+                    orbit/{orbitOwner}/{proposedRepoSlug}
+                  </Text>
+                  <Text variant="muted" size="xs" style={{ opacity: 0.85, marginTop: "var(--space-1)" }}>
+                    Format: orbit/UUID/name
+                  </Text>
+                </div>
+              )}
+
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  checked={orbitRepoMode === "custom"}
+                  onChange={() => setOrbitRepoMode("custom")}
+                />
+                <span>Create new repo with custom name</span>
+              </label>
+              {orbitRepoMode === "custom" && (
+                <div style={{ paddingLeft: "var(--space-6)" }}>
+                  <Text variant="muted" size="sm">
+                    orbit/{orbitOwner}/{displayRepoName}
+                  </Text>
+                  <Text variant="muted" size="xs" style={{ opacity: 0.85, marginTop: "var(--space-1)" }}>
+                    Format: orbit/UUID/name
+                  </Text>
+                  <Input
+                    value={orbitRepoName}
+                    onChange={(e) => setOrbitRepoName(e.target.value)}
+                    placeholder={`Repo name (default: ${proposedRepoSlug})`}
+                    style={{ marginTop: "var(--space-1)" }}
+                  />
+                </div>
+              )}
+
+              <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+                <input
+                  type="radio"
+                  checked={orbitRepoMode === "existing"}
+                  onChange={() => setOrbitRepoMode("existing")}
+                />
+                <span>Use existing repo</span>
+              </label>
+              {orbitRepoMode === "existing" && (
+                <div style={{ paddingLeft: "var(--space-6)" }}>
+                  {orbitReposLoading ? (
+                    <Spinner size="sm" />
+                  ) : orbitRepos.length === 0 ? (
+                    <Text variant="muted" size="sm">
+                      No repos found. Create a new repo instead or check Orbit configuration.
+                    </Text>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                      <Text variant="muted" size="sm">
+                        Select a repo to link:
+                      </Text>
+                      <select
+                        value={selectedOrbitRepo ? `${selectedOrbitRepo.owner}/${selectedOrbitRepo.name}` : ""}
+                        onChange={(e) => {
+                          const repo = orbitRepos.find(
+                            (candidate) => `${candidate.owner}/${candidate.name}` === e.target.value,
+                          );
+                          setSelectedOrbitRepo(repo ?? null);
+                        }}
+                        style={{
+                          padding: "var(--space-2)",
+                          borderRadius: "var(--radius-md)",
+                          border: "1px solid var(--color-border)",
+                        }}
+                      >
+                        <option value="">— Select repo —</option>
+                        {orbitRepos.map((repo) => (
+                          <option key={`${repo.owner}/${repo.name}`} value={`${repo.owner}/${repo.name}`}>
+                            {repo.owner}/{repo.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
+            <input
+              type="radio"
+              checked={orbitRepoMode === "none"}
+              onChange={() => setOrbitRepoMode("none")}
+            />
+            <span>No Orbit repo</span>
+          </label>
+        </div>
+
         {!orgLoading && !resolvedOrgId && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
             No team found. Log out and back in to create a default team.

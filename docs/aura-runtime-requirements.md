@@ -383,6 +383,8 @@ The runtime responds with:
 
 **Recommendation:** Support `workspace.git_repo_url` and `workspace.git_branch` in `session_init`. On receiving this, the runtime clones the repo into its workspace directory before sending `session_ready`. For local mode, this field is omitted and the workspace is the project's `linked_folder_path` directly.
 
+**Aura-app:** The server builds the payload in `apps/server/src/session_init.rs` via `build_session_init_payload(project, jwt)`. When a runtime WebSocket session is started, the server should send this as the first message. The optional `orbit_jwt` is the user's JWT for Orbit Git HTTP (same token as Aura); the runtime must not log or persist it.
+
 Could also support `POST /workspace/init` as a REST endpoint for cases where workspace setup happens before a WebSocket session.
 
 ---

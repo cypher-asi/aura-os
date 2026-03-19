@@ -18,6 +18,37 @@ function stripEmojis(text: string): string {
     .replace(/ {2,}/g, " ");
 }
 
+/** Collapse accidental paragraph breaks and fix table-breaking blank lines so markdown renders consistently. */
+function normalizeMidSentenceBreaks(text: string): string {
+  return text.replace(/\n\n+/g, (match, offset) => {
+    const before = text.slice(0, offset).split("\n");
+    const after = text.slice(offset + match.length).split("\n");
+
+    const lastLine = before[before.length - 1]?.trim() ?? "";
+    const nextLine = after.find((line) => line.trim().length > 0)?.trim() ?? "";
+
+    // GFM ends a table on a blank line. Between two table rows, keep exactly one newline so the table continues.
+    const looksLikeTableRow = (line: string) => /^\|.+\|\s*$/.test(line);
+    if (looksLikeTableRow(lastLine) && looksLikeTableRow(nextLine)) {
+      return "\n";
+    }
+
+    const looksLikeSentenceEnd = /[.!?]\s*$/.test(lastLine);
+    const looksLikeMarkdownBlock =
+      /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(lastLine) ||
+      /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(nextLine);
+    const looksLikeSpecIndex = /^\d{1,3}:\s+/.test(lastLine);
+    const looksLikeWrappedSentence =
+      /[a-z0-9,]$/i.test(lastLine) && /^[a-z(]/i.test(nextLine);
+
+    if (looksLikeSentenceEnd || looksLikeMarkdownBlock || looksLikeSpecIndex) {
+      return match;
+    }
+
+    return looksLikeWrappedSentence ? " " : match;
+  });
+}
+
 interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -156,8 +187,10 @@ function summarizeInput(name: string, input: Record<string, unknown>): string {
     case "write_file":
     case "delete_file":
       return (input.path as string) || "";
-    case "list_files":
-      return (input.path as string) || ".";
+    case "list_files": {
+      const path = (input.path as string) || "";
+      return path === "." ? "" : path;
+    }
     case "create_spec":
     case "create_task":
       return (input.title as string) || "";
@@ -327,7 +360,7 @@ export function MessageBubble({ message }: Props) {
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeHighlight]}
               >
-                {stripEmojis(message.content)}
+                {normalizeMidSentenceBreaks(stripEmojis(message.content))}
               </ReactMarkdown>
             )}
           </div>
@@ -383,7 +416,7 @@ export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDuratio
               remarkPlugins={[remarkGfm, remarkBreaks]}
               rehypePlugins={[rehypeHighlight]}
             >
-              {stripEmojis(text)}
+              {normalizeMidSentenceBreaks(stripEmojis(text))}
             </ReactMarkdown>
           )}
           <StreamingIndicator text={text} thinkingText={thinkingText} toolCalls={toolCalls} />

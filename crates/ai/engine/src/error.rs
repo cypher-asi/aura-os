@@ -3,6 +3,7 @@ use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_projects::ProjectError;
 use aura_sessions::SessionError;
+use aura_storage::StorageError;
 use aura_tasks::TaskError;
 use aura_settings::SettingsError;
 use aura_store::StoreError;
@@ -11,6 +12,8 @@ use aura_store::StoreError;
 pub enum EngineError {
     #[error("store error: {0}")]
     Store(#[from] StoreError),
+    #[error("storage error: {0}")]
+    Storage(#[from] StorageError),
     #[error("project error: {0}")]
     Project(#[from] ProjectError),
     #[error("task error: {0}")]

@@ -12,10 +12,11 @@ import { useEventContext, useTaskOutput, type BuildStep, type TestStep } from ".
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { toBullets, formatTokens, formatModelName } from "../utils/format";
-import { formatCostFromTokens } from "../utils/pricing";
+import { formatCostFromTokens, getCostEstimateLabel } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
 import { getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
+import { useLoopActive } from "../hooks/use-loop-active";
 import { FormattedRawOutput } from "./FormattedRawOutput";
 import { IterationBar } from "./IterationBar";
 import type { AgentInstance } from "../types";
@@ -39,18 +40,17 @@ function FileOpIcon({ op }: { op: string }) {
 export function RunTaskButton({ task }: { task: import("../types").Task }) {
   const { subscribe } = useEventContext();
   const ctx = useProjectContext();
-  const sidekick = useSidekick();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const loopActive = useLoopActive(projectId);
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState(task.status);
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setStatus(task.status);
-      setRunning(false);
-    });
-    return () => window.cancelAnimationFrame(frame);
+    setStatus(task.status);
+    setRunning(false);
+    setLiveStatus(null);
   }, [task.task_id, task.status]);
 
   useEffect(() => {
@@ -58,15 +58,18 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
       subscribe("task_started", (e) => {
         if (e.task_id !== task.task_id) return;
         setStatus("in_progress");
+        setLiveStatus("in_progress");
         setRunning(false);
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id !== task.task_id) return;
         setStatus("done");
+        setLiveStatus("done");
       }),
       subscribe("task_failed", (e) => {
         if (e.task_id !== task.task_id) return;
         setStatus("failed");
+        setLiveStatus("failed");
         setRunning(false);
       }),
     ];
@@ -78,15 +81,18 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
     setRunning(true);
     try {
       await api.runTask(projectId, task.task_id, agentInstanceId);
-      sidekick.pushTask({ ...task, status: "in_progress" });
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
       setRunning(false);
     }
-  }, [agentInstanceId, projectId, running, sidekick, task]);
+  }, [agentInstanceId, projectId, running, task]);
 
-  const visible = status === "ready";
+  const effectiveStatus =
+    status === "in_progress" && !loopActive && liveStatus === null
+      ? "ready"
+      : status;
+  const visible = effectiveStatus === "ready";
 
   return (
     <Button
@@ -288,6 +294,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
   const { features } = useAuraCapabilities();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const loopActive = useLoopActive(projectId);
   const [retrying, setRetrying] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
@@ -311,7 +318,11 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
   const streamBuf = taskOutput.text;
   const liveFileOps = taskOutput.fileOps;
 
-  const effectiveStatus = liveStatus ?? task.status;
+  const rawStatus = liveStatus ?? task.status;
+  const effectiveStatus =
+    rawStatus === "in_progress" && !loopActive && liveStatus === null
+      ? "ready"
+      : rawStatus;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
@@ -398,6 +409,21 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
       if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
         hydratedRef.current = task.task_id;
         seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
+      } else if (effectiveSessionId) {
+        hydratedRef.current = task.task_id;
+        const loadMessages = async () => {
+          let agentId = task.assigned_agent_instance_id;
+          if (!agentId) {
+            const instances = await api.listAgentInstances(projectId);
+            if (instances.length > 0) agentId = instances[0].agent_instance_id;
+          }
+          if (!agentId) return;
+          const messages = await api.listSessionMessages(projectId, agentId, effectiveSessionId);
+          const assistantMsgs = messages.filter((m) => m.role === "assistant");
+          const content = assistantMsgs.map((m) => m.content).join("\n");
+          if (content) seedTaskOutput(task.task_id, content);
+        };
+        loadMessages().catch(() => {});
       }
       return;
     }
@@ -413,7 +439,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
     api.getTaskOutput(projectId, task.task_id).then((res) => {
       if (res.output) seedTaskOutput(task.task_id, res.output);
     }).catch(() => {});
-  }, [isActive, isTerminal, projectId, seedTaskOutput, streamBuf, task.build_steps, task.live_output, task.task_id, task.test_steps]);
+  }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput, effectiveSessionId, task.assigned_agent_instance_id]);
 
   const hasOutput = isActive || isTerminal;
   const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
@@ -523,18 +549,6 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
     }
   }, [projectId, effectiveSessionId, task.assigned_agent_instance_id, sidekick]);
 
-  const emptyBuildMessage = isActive
-    ? "Build verification pending..."
-    : isTerminal
-      ? "No build verification recorded"
-      : "—";
-
-  const emptyTestMessage = isActive
-    ? "Test verification pending..."
-    : isTerminal
-      ? "No tests recorded"
-      : "—";
-
   return (
     <>
       <div className={styles.taskMeta}>
@@ -642,7 +656,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
                 <Text variant="muted" size="sm" as="span"> ({formatTokens(task.total_input_tokens)} in / {formatTokens(task.total_output_tokens)} out)</Text>
               </Text>
             </div>
-            <div className={styles.taskField}>
+            <div className={styles.taskField} title={getCostEstimateLabel()}>
               <span className={styles.fieldLabel}>Cost</span>
               <Text size="sm">{formatCostFromTokens(task.total_input_tokens, task.total_output_tokens, task.model ?? undefined)}</Text>
             </div>
@@ -686,8 +700,8 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
         </GroupCollapsible>
       )}
 
-      <GroupCollapsible label="Build Verification" count={taskOutput.buildSteps.length || undefined} defaultOpen className={styles.section}>
-        {taskOutput.buildSteps.length > 0 ? (
+      {taskOutput.buildSteps.length > 0 && (
+        <GroupCollapsible label="Build Verification" count={taskOutput.buildSteps.length} defaultOpen className={styles.section}>
           <div className={styles.liveOutputSection}>
             <div className={styles.activityList}>
               {taskOutput.buildSteps.map((step, i) => (
@@ -695,15 +709,11 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
               ))}
             </div>
           </div>
-        ) : (
-          <div className={styles.emptyVerification}>
-            <Text variant="muted" size="sm">{emptyBuildMessage}</Text>
-          </div>
-        )}
-      </GroupCollapsible>
+        </GroupCollapsible>
+      )}
 
-      <GroupCollapsible label="Test Verification" count={taskOutput.testSteps.length || undefined} defaultOpen className={styles.section}>
-        {taskOutput.testSteps.length > 0 ? (
+      {taskOutput.testSteps.length > 0 && (
+        <GroupCollapsible label="Test Verification" count={taskOutput.testSteps.length} defaultOpen className={styles.section}>
           <div className={styles.liveOutputSection}>
             <div className={styles.activityList}>
               {taskOutput.testSteps.map((step, i) => (
@@ -711,12 +721,8 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
               ))}
             </div>
           </div>
-        ) : (
-          <div className={styles.emptyVerification}>
-            <Text variant="muted" size="sm">{emptyTestMessage}</Text>
-          </div>
-        )}
-      </GroupCollapsible>
+        </GroupCollapsible>
+      )}
 
       {showNotes && (
         <GroupCollapsible label="Notes" defaultOpen className={styles.section}>

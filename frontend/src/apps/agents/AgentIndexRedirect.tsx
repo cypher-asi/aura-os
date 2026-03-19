@@ -9,7 +9,7 @@ export function AgentIndexRedirect() {
   if (loading) return null;
 
   if (agents.length === 0) {
-    return <EmptyState icon={<Bot size={32} />}>No agents yet</EmptyState>;
+    return <EmptyState icon={<Bot size={32} />}>Add an agent to get started.</EmptyState>;
   }
 
   const lastId = localStorage.getItem("aura:lastAgentId");

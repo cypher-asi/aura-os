@@ -6,13 +6,15 @@ edition = "2021"
 [dependencies]
 aura-core = { path = "../../infra/core" }
 aura-store = { path = "../../infra/store" }
+aura-storage = { path = "../../infra/storage" }
 aura-claude = { path = "../../infra/claude" }
 aura-billing = { path = "../billing" }
 chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
 thiserror = "1"
+serde_json = "1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
 axum = "0.7"
-serde_json = "1"

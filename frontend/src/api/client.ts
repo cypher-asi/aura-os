@@ -102,6 +102,11 @@ export interface CreateProjectRequest {
   linked_folder_path: string;
   workspace_source?: string;
   workspace_display_path?: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -110,6 +115,27 @@ export interface UpdateProjectRequest {
   linked_folder_path?: string;
   workspace_source?: string;
   workspace_display_path?: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
+}
+
+export interface OrbitRepo {
+  id?: string;
+  name: string;
+  owner: string;
+  full_name?: string;
+  clone_url?: string;
+  git_url?: string;
+}
+
+export interface OrbitCollaborator {
+  user_id?: string;
+  username?: string;
+  role: string;
+  display_name?: string;
 }
 
 export interface ImportedProjectFile {
@@ -124,6 +150,11 @@ export interface CreateImportedProjectRequest {
   files: ImportedProjectFile[];
   build_command?: string;
   test_command?: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface DirEntry {
@@ -166,6 +197,11 @@ export const api = {
   getFeeSchedule: () =>
     apiFetch<{ model: string; input_cost_per_million: number; output_cost_per_million: number; effective_date: string }[]>(
       "/api/settings/fee-schedule",
+    ),
+  putFeeSchedule: (entries: { model: string; input_cost_per_million: number; output_cost_per_million: number; effective_date: string }[]) =>
+    apiFetch<{ model: string; input_cost_per_million: number; output_cost_per_million: number; effective_date: string }[]>(
+      "/api/settings/fee-schedule",
+      { method: "PUT", body: JSON.stringify(entries) },
     ),
 
   // Orgs
@@ -221,9 +257,9 @@ export const api = {
       }),
   },
 
-  // Projects
-  listProjects: (orgId?: string) =>
-    apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
+  // Projects (org-scoped; orgId required)
+  listProjects: (orgId: string) =>
+    apiFetch<Project[]>(`/api/projects?org_id=${orgId}`),
   createProject: (data: CreateProjectRequest) =>
     apiFetch<Project>("/api/projects", {
       method: "POST",
@@ -235,6 +271,10 @@ export const api = {
       body: JSON.stringify(data),
     }),
   getProject: (id: ProjectId) => apiFetch<Project>(`/api/projects/${id}`),
+  listOrbitRepos: (q?: string) =>
+    apiFetch<OrbitRepo[]>(q ? `/api/orbit/repos?q=${encodeURIComponent(q)}` : "/api/orbit/repos"),
+  listProjectOrbitCollaborators: (projectId: ProjectId) =>
+    apiFetch<OrbitCollaborator[]>(`/api/projects/${projectId}/orbit-collaborators`),
   updateProject: (id: ProjectId, data: UpdateProjectRequest) =>
     apiFetch<Project>(`/api/projects/${id}`, {
       method: "PUT",
@@ -345,6 +385,10 @@ export const api = {
   listSessionTasks: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
     apiFetch<Task[]>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/tasks`,
+    ),
+  listSessionMessages: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<Message[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/messages`,
     ),
 
   // Log entries

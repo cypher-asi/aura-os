@@ -38,7 +38,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     onClose();
   }, [onClose]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setNameError("Name is required");
       return;

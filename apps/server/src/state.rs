@@ -9,8 +9,11 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
 use aura_engine::{DevLoopEngine, EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_network::NetworkClient;
+use aura_orbit::OrbitClient;
+use aura_storage::StorageClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
+pub use aura_agents::RuntimeAgentStateMap;
 use aura_auth::AuthService;
 use aura_chat::ChatService;
 use aura_orgs::OrgService;
@@ -55,6 +58,14 @@ pub struct AppState {
     pub terminal_manager: Arc<TerminalManager>,
     /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
     pub network_client: Option<Arc<NetworkClient>>,
+    /// Optional aura-storage client. `None` when `AURA_STORAGE_URL` is not set.
+    pub storage_client: Option<Arc<StorageClient>>,
+    /// Orbit REST client (always present).
+    pub orbit_client: Arc<OrbitClient>,
+    /// URL of the standalone Orbit service; `None` when `ORBIT_BASE_URL` is not set. Aura does not run Orbit; it only connects as a client.
+    pub orbit_base_url: Option<String>,
+    /// In-memory runtime state for agent instances (current_task_id, current_session_id).
+    pub runtime_agent_state: RuntimeAgentStateMap,
 }
 
 impl AppState {
@@ -79,6 +90,13 @@ impl AppState {
             .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
     }
 
+    /// Get the storage client, returning 503 if not configured.
+    pub fn require_storage_client(&self) -> Result<&Arc<StorageClient>, (StatusCode, Json<ApiError>)> {
+        self.storage_client
+            .as_ref()
+            .ok_or_else(|| ApiError::service_unavailable("aura-storage is not configured"))
+    }
+
     /// Build a new `DevLoopEngine` wired to this application's services.
     pub fn build_engine(&self) -> Arc<DevLoopEngine> {
         Arc::new(
@@ -92,7 +110,8 @@ impl AppState {
                 self.session_service.clone(),
                 self.event_tx.clone(),
             )
-            .with_write_coordinator(self.write_coordinator.clone()),
+            .with_write_coordinator(self.write_coordinator.clone())
+            .with_storage_client(self.storage_client.clone()),
         )
     }
 

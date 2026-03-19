@@ -51,7 +51,8 @@ impl LoopRunContext {
         let api_key = engine.settings.get_decrypted_api_key()?;
         let project_root = engine
             .project_service
-            .get_project(&project_id)?
+            .get_project_async(&project_id)
+            .await?
             .linked_folder_path
             .clone();
         let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
@@ -111,15 +112,15 @@ impl LoopRunContext {
     // Bootstrap
     // ------------------------------------------------------------------
 
-    pub fn reset_and_promote_tasks(&self, engine: &DevLoopEngine) -> Result<(), EngineError> {
-        for t in &engine.task_service.reset_in_progress_tasks(&self.project_id)? {
+    pub async fn reset_and_promote_tasks(&self, engine: &DevLoopEngine) -> Result<(), EngineError> {
+        for t in &engine.task_service.reset_in_progress_tasks(&self.project_id).await? {
             engine.emit(EngineEvent::TaskBecameReady {
                 project_id: self.project_id,
                 agent_instance_id: self.agent_instance_id,
                 task_id: t.task_id,
             });
         }
-        for t in &engine.task_service.resolve_initial_readiness(&self.project_id)? {
+        for t in &engine.task_service.resolve_initial_readiness(&self.project_id).await? {
             engine.emit(EngineEvent::TaskBecameReady {
                 project_id: self.project_id,
                 agent_instance_id: self.agent_instance_id,
@@ -133,28 +134,29 @@ impl LoopRunContext {
     // Stop / pause plumbing
     // ------------------------------------------------------------------
 
-    fn end_session(&self, engine: &DevLoopEngine) {
+    async fn end_session(&self, engine: &DevLoopEngine) {
         if let Err(e) = engine.session_service.end_session(
             &self.project_id,
             &self.agent_instance_id,
             &self.session.session_id,
             SessionStatus::Completed,
-        ) {
+        ).await {
             warn!(error = %e, "failed to end session");
         }
     }
 
-    fn finish_working(&self, engine: &DevLoopEngine) {
+    async fn finish_working(&self, engine: &DevLoopEngine) {
         if let Err(e) = engine
             .agent_instance_service
             .finish_working(&self.project_id, &self.agent_instance_id)
+            .await
         {
             warn!(error = %e, "failed to finish_working");
         }
     }
 
-    fn handle_pause(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
-        self.end_session(engine);
+    async fn handle_pause(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
+        self.end_session(engine).await;
         engine.emit(EngineEvent::LoopPaused {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
@@ -164,8 +166,8 @@ impl LoopRunContext {
         LoopOutcome::Paused { completed_count: self.completed_count }
     }
 
-    fn handle_stop(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
-        self.end_session(engine);
+    async fn handle_stop(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
+        self.end_session(engine).await;
         engine.emit(EngineEvent::LoopStopped {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
@@ -175,36 +177,38 @@ impl LoopRunContext {
         LoopOutcome::Stopped { completed_count: self.completed_count }
     }
 
-    fn stop_or_pause(
+    async fn stop_or_pause(
         &mut self,
         engine: &DevLoopEngine,
         stop_rx: &watch::Receiver<LoopCommand>,
     ) -> LoopOutcome {
-        match *stop_rx.borrow() {
-            LoopCommand::Stop => self.handle_stop(engine),
-            _ => self.handle_pause(engine),
+        let cmd = *stop_rx.borrow();
+        match cmd {
+            LoopCommand::Stop => self.handle_stop(engine).await,
+            _ => self.handle_pause(engine).await,
         }
     }
 
-    pub fn check_command(
+    pub async fn check_command(
         &mut self,
         engine: &DevLoopEngine,
         stop_rx: &watch::Receiver<LoopCommand>,
     ) -> Option<LoopOutcome> {
-        match *stop_rx.borrow() {
+        let cmd = *stop_rx.borrow();
+        match cmd {
             LoopCommand::Pause => {
-                self.finish_working(engine);
-                Some(self.handle_pause(engine))
+                self.finish_working(engine).await;
+                Some(self.handle_pause(engine).await)
             }
             LoopCommand::Stop => {
-                self.finish_working(engine);
-                Some(self.handle_stop(engine))
+                self.finish_working(engine).await;
+                Some(self.handle_stop(engine).await)
             }
             LoopCommand::Continue => None,
         }
     }
 
-    pub fn handle_interruption(
+    pub async fn handle_interruption(
         &mut self,
         engine: &DevLoopEngine,
         task: &Task,
@@ -214,6 +218,7 @@ impl LoopRunContext {
             engine
                 .task_service
                 .reset_task_to_ready(&self.project_id, &task.spec_id, &task.task_id)
+                .await
         {
             warn!(error = %e, "failed to reset task to ready after interruption");
         }
@@ -222,8 +227,8 @@ impl LoopRunContext {
             agent_instance_id: self.agent_instance_id,
             task_id: task.task_id,
         });
-        self.finish_working(engine);
-        self.stop_or_pause(engine, stop_rx)
+        self.finish_working(engine).await;
+        self.stop_or_pause(engine, stop_rx).await
     }
 
     // ------------------------------------------------------------------
@@ -286,19 +291,19 @@ impl LoopRunContext {
     // Task lifecycle
     // ------------------------------------------------------------------
 
-    pub fn begin_task(&self, engine: &DevLoopEngine, task: &Task) -> Result<(), EngineError> {
+    pub async fn begin_task(&self, engine: &DevLoopEngine, task: &Task) -> Result<(), EngineError> {
         engine.session_service.record_task_worked(
             &self.project_id,
             &self.agent_instance_id,
             &self.session.session_id,
             task.task_id,
-        )?;
+        ).await?;
         engine.agent_instance_service.start_working(
             &self.project_id,
             &self.agent_instance_id,
             &task.task_id,
             &self.session.session_id,
-        )?;
+        ).await?;
         engine.emit(EngineEvent::TaskStarted {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
@@ -312,7 +317,7 @@ impl LoopRunContext {
         Ok(())
     }
 
-    pub fn process_outcome(
+    pub async fn process_outcome(
         &mut self,
         engine: &DevLoopEngine,
         task: &Task,
@@ -332,7 +337,7 @@ impl LoopRunContext {
         );
         match outcome {
             TaskOutcome::Completed { notes, follow_up_tasks, file_ops, .. } => {
-                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, task_metrics)?;
+                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, task_metrics).await?;
                 Ok(false)
             }
             TaskOutcome::Failed { reason, credit_failure, .. } => {
@@ -342,7 +347,7 @@ impl LoopRunContext {
         }
     }
 
-    fn process_completed(
+    async fn process_completed(
         &mut self,
         engine: &DevLoopEngine,
         task: &Task,
@@ -372,7 +377,7 @@ impl LoopRunContext {
                 follow_up.title.clone(),
                 follow_up.description.clone(),
                 vec![],
-            ) {
+            ).await {
                 Ok(new_task) => {
                     self.follow_up_count += 1;
                     engine.emit(EngineEvent::FollowUpTaskCreated {
@@ -438,8 +443,8 @@ impl LoopRunContext {
     // No-more-tasks / retry / credits-exhausted
     // ------------------------------------------------------------------
 
-    pub fn try_retry_failed(&mut self, engine: &DevLoopEngine) -> Result<bool, EngineError> {
-        let all_tasks = engine.store.list_tasks_by_project(&self.project_id)?;
+    pub async fn try_retry_failed(&mut self, engine: &DevLoopEngine) -> Result<bool, EngineError> {
+        let all_tasks = engine.task_service.list_tasks(&self.project_id).await?;
         let retryable: Vec<&Task> = all_tasks
             .iter()
             .filter(|t| {
@@ -461,6 +466,7 @@ impl LoopRunContext {
                 engine
                     .task_service
                     .retry_task(&self.project_id, &t.spec_id, &t.task_id)
+                    .await
             {
                 warn!(task_id = %t.task_id, error = %e, "retry_task failed, skipping");
                 continue;
@@ -474,17 +480,17 @@ impl LoopRunContext {
         Ok(true)
     }
 
-    pub fn handle_no_more_tasks(
+    pub async fn handle_no_more_tasks(
         &mut self,
         engine: &DevLoopEngine,
     ) -> Result<LoopOutcome, EngineError> {
-        let progress = engine.task_service.get_project_progress(&self.project_id)?;
+        let progress = engine.task_service.get_project_progress(&self.project_id).await?;
         let outcome_str = if progress.blocked_tasks > 0 || progress.failed_tasks > 0 {
             "all_tasks_blocked"
         } else {
             "all_tasks_complete"
         };
-        self.end_session(engine);
+        self.end_session(engine).await;
         engine.emit(self.build_finished_event(engine, outcome_str));
         self.flush_metrics(outcome_str);
         if outcome_str == "all_tasks_blocked" {
@@ -494,9 +500,9 @@ impl LoopRunContext {
         }
     }
 
-    pub fn handle_credits_exhausted(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
+    pub async fn handle_credits_exhausted(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
         warn!("Credits exhausted, stopping engine loop");
-        self.end_session(engine);
+        self.end_session(engine).await;
         engine.emit(self.build_finished_event(engine, "insufficient_credits"));
         self.flush_metrics("insufficient_credits");
         LoopOutcome::AllTasksBlocked
@@ -515,11 +521,11 @@ impl LoopRunContext {
             &self.project_id,
             &self.agent_instance_id,
             &self.session.session_id,
-        )?;
+        ).await?;
         if !engine.session_service.should_rollover(&current_session) {
             return Ok(None);
         }
-        let project = engine.project_service.get_project(&self.project_id)?;
+        let project = engine.project_service.get_project_async(&self.project_id).await?;
         let mut raw_log = self.work_log.join("\n\n---\n\n");
         const MAX_WORK_LOG_CHARS: usize = 20_000;
         if raw_log.len() > MAX_WORK_LOG_CHARS {
@@ -536,8 +542,8 @@ impl LoopRunContext {
                 &engine.llm, &self.api_key, &history,
             ) => { res? }
             _ = stop_rx.changed() => {
-                self.finish_working(engine);
-                return Ok(Some(self.stop_or_pause(engine, stop_rx)));
+                self.finish_working(engine).await;
+                return Ok(Some(self.stop_or_pause(engine, stop_rx).await));
             }
         };
         let summary_duration_ms = summary_start.elapsed().as_millis() as u64;
@@ -548,7 +554,7 @@ impl LoopRunContext {
             &self.session.session_id,
             summary,
             None,
-        )?;
+        ).await?;
         engine.emit(EngineEvent::SessionRolledOver {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,

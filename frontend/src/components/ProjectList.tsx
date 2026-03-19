@@ -1,15 +1,15 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { api } from "../api/client";
+import { api, ApiClientError } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { clearLastAgentIf } from "../utils/storage";
 import type { Project, AgentInstance } from "../types";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { Bot, FolderGit2, Gauge, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Bot, FolderGit2, Gauge, Pencil, Trash2, Loader2, Settings } from "lucide-react";
 import { InlineRenameInput } from "./InlineRenameInput";
-import { DeleteProjectModal, DeleteAgentInstanceModal } from "./ProjectModals";
+import { DeleteProjectModal, DeleteAgentInstanceModal, ProjectSettingsModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
 import { useEventContext } from "../context/EventContext";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
@@ -31,10 +31,10 @@ function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
   }, []);
 }
 
-
 const projectMenuItems: MenuItem[] = [
   { id: "add-agent", label: "Add Agent", icon: <Bot size={14} /> },
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
+  { id: "settings", label: "Settings", icon: <Settings size={14} /> },
   { type: "separator" },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
@@ -67,6 +67,7 @@ export function ProjectList() {
     setAgentsByProject,
     refreshProjectAgents,
     openNewProjectModal,
+    setProjects,
   } = useProjectsList();
 
   const { query: searchQuery, setAction } = useSidebarSearch();
@@ -77,10 +78,12 @@ export function ProjectList() {
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+  const [settingsTarget, setSettingsTarget] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteAgentTarget, setDeleteAgentTarget] = useState<AgentInstance | null>(null);
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
+  const [deleteAgentError, setDeleteAgentError] = useState<string | null>(null);
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
   const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
 
@@ -231,12 +234,14 @@ export function ProjectList() {
                     id: s.agent_instance_id,
                     label: s.name,
                     icon: s.icon && !failedIcons.has(s.agent_instance_id)
-                      ? <img
-                          src={s.icon}
-                          alt=""
-                          className={styles.agentAvatar}
-                          onError={() => setFailedIcons((prev) => new Set(prev).add(s.agent_instance_id))}
-                        />
+                      ? (
+                          <img
+                            src={s.icon}
+                            alt=""
+                            className={styles.agentAvatar}
+                            onError={() => setFailedIcons((prev) => new Set(prev).add(s.agent_instance_id))}
+                          />
+                        )
                       : <Bot size={16} />,
                     suffix: isAutomating
                       ? <span className={styles.sessionIndicator}><Loader2 size={10} className={styles.automationSpinner} /></span>
@@ -383,6 +388,8 @@ export function ProjectList() {
       handleAddAgent(target.project_id);
     } else if (actionId === "rename" && target) {
       setRenameTarget(target);
+    } else if (actionId === "settings" && target) {
+      setSettingsTarget(target);
     } else if (actionId === "delete" && target) {
       setDeleteTarget(target);
     } else if (actionId === "delete-agent" && agentTarget) {
@@ -427,6 +434,7 @@ export function ProjectList() {
     if (!deleteAgentTarget) return;
     const { project_id: pid, agent_instance_id: aid } = deleteAgentTarget;
     setDeleteAgentLoading(true);
+    setDeleteAgentError(null);
 
     const prevAgents = agentsByProject[pid];
     setAgentsByProject((prev) => ({
@@ -438,7 +446,7 @@ export function ProjectList() {
       await api.deleteAgentInstance(pid, aid);
       clearLastAgentIf({ agentInstanceId: aid });
       if (agentInstanceId === aid) {
-        const remaining = (prevAgents ?? []).filter(s => s.agent_instance_id !== aid);
+        const remaining = (prevAgents ?? []).filter((s) => s.agent_instance_id !== aid);
         if (remaining.length > 0) {
           navigate(`/projects/${pid}/agents/${remaining[remaining.length - 1].agent_instance_id}`);
         } else {
@@ -449,6 +457,13 @@ export function ProjectList() {
       void refreshProjectAgents(pid);
     } catch (err) {
       console.error("Failed to delete agent instance", err);
+      const message =
+        err instanceof ApiClientError
+          ? err.body.error
+          : err instanceof Error
+            ? err.message
+            : "Failed to remove agent.";
+      setDeleteAgentError(message);
       if (prevAgents) {
         setAgentsByProject((prev) => ({ ...prev, [pid]: prevAgents }));
       }
@@ -512,6 +527,17 @@ export function ProjectList() {
         />
       )}
 
+      <ProjectSettingsModal
+        target={settingsTarget}
+        onClose={() => setSettingsTarget(null)}
+        onSaved={(project) => {
+          setProjects((prev) => prev.map((existing) => (
+            existing.project_id === project.project_id ? project : existing
+          )));
+          setSettingsTarget(null);
+        }}
+      />
+
       <DeleteProjectModal
         target={deleteTarget}
         loading={deleteLoading}
@@ -522,7 +548,11 @@ export function ProjectList() {
       <DeleteAgentInstanceModal
         target={deleteAgentTarget}
         loading={deleteAgentLoading}
-        onClose={() => setDeleteAgentTarget(null)}
+        error={deleteAgentError}
+        onClose={() => {
+          setDeleteAgentTarget(null);
+          setDeleteAgentError(null);
+        }}
         onDelete={handleDeleteAgent}
       />
 

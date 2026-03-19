@@ -172,7 +172,7 @@ export function AgentList() {
   if (agents.length === 0) {
     return (
       <>
-        <EmptyState>No agents yet</EmptyState>
+        <EmptyState>Add an agent to get started.</EmptyState>
         <AgentEditorModal
           isOpen={showEditor}
           onClose={() => setShowEditor(false)}
