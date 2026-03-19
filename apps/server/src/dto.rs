@@ -158,6 +158,31 @@ pub struct SetBillingRequest {
     pub plan: String,
 }
 
+/// Org-linked Orbit repo (owner = org_id). Stored under key org_orbit_repo:{org_id}.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrgOrbitRepoLink {
+    pub orbit_base_url: String,
+    pub orbit_owner: String,
+    pub orbit_repo: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetOrgOrbitRepoRequest {
+    pub orbit_base_url: String,
+    pub orbit_owner: String,
+    pub orbit_repo: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetOrbitUsernameRequest {
+    pub value: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OrbitUsernameResponse {
+    pub value: Option<String>,
+}
+
 // -- Follow DTOs --
 
 #[derive(Debug, Deserialize)]

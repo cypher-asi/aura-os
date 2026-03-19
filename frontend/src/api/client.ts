@@ -218,6 +218,18 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ billing_email, plan }),
       }),
+    getOrbitRepo: (orgId: string) =>
+      apiFetch<{ orbit_base_url: string; orbit_owner: string; orbit_repo: string } | null>(
+        `/api/orgs/${orgId}/orbit-repo`,
+      ),
+    setOrbitRepo: (orgId: string, orbit_base_url: string, orbit_owner: string, orbit_repo: string) =>
+      apiFetch<{ orbit_base_url: string; orbit_owner: string; orbit_repo: string }>(
+        `/api/orgs/${orgId}/orbit-repo`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ orbit_base_url, orbit_owner, orbit_repo }),
+        },
+      ),
     getCreditTiers: (orgId: string) =>
       apiFetch<CreditTier[]>(`/api/orgs/${orgId}/credits/tiers`),
     getCreditBalance: (orgId: string) =>
@@ -488,6 +500,13 @@ export const api = {
       }>("/api/users/me", {
         method: "PUT",
         body: JSON.stringify(data),
+      }),
+    getOrbitUsername: () =>
+      apiFetch<{ value: string | null }>("/api/users/me/orbit-username"),
+    setOrbitUsername: (value: string) =>
+      apiFetch<{ value: string }>("/api/users/me/orbit-username", {
+        method: "PUT",
+        body: JSON.stringify({ value }),
       }),
   },
 

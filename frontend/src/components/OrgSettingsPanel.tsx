@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useOrg } from "../context/OrgContext";
 import { useAuth } from "../context/AuthContext";
 import { api, ApiClientError } from "../api/client";
-import { Modal, Navigator } from "@cypher-asi/zui";
+import { Modal, Navigator, Input, Button, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
-import { Settings, Users, Mail, CreditCard } from "lucide-react";
+import { Settings, Users, Mail, CreditCard, GitBranch } from "lucide-react";
 import type { OrgInvite, OrgBilling, OrgRole, CreditTier, CreditBalance } from "../types";
 import { useCheckoutPolling } from "../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "./CreditsBadge";
@@ -14,7 +14,7 @@ import { OrgSettingsInvites } from "./OrgSettingsInvites";
 import { OrgSettingsBilling } from "./OrgSettingsBilling";
 import styles from "./OrgSettingsPanel.module.css";
 
-type Section = "general" | "members" | "invites" | "billing";
+type Section = "general" | "members" | "invites" | "billing" | "orbit";
 
 interface Props {
   isOpen: boolean;
@@ -27,6 +27,7 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "members", label: "Members", icon: <Users size={14} /> },
   { id: "invites", label: "Invites", icon: <Mail size={14} /> },
   { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
+  { id: "orbit", label: "Orbit repo", icon: <GitBranch size={14} /> },
 ];
 
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
@@ -55,6 +56,13 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { status: pollingStatus, currentBalance: polledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
+
+  const [orbitRepo, setOrbitRepo] = useState<{ orbit_base_url: string; orbit_owner: string; orbit_repo: string } | null>(null);
+  const [orbitBaseUrl, setOrbitBaseUrl] = useState("");
+  const [orbitOwner, setOrbitOwner] = useState("");
+  const [orbitRepoName, setOrbitRepoName] = useState("");
+  const [orbitSaving, setOrbitSaving] = useState(false);
+  const [orbitMessage, setOrbitMessage] = useState("");
 
   const orgId = activeOrg?.org_id;
   const myRole = members.find((m) => m.user_id === user?.user_id)?.role;
@@ -95,6 +103,21 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
       setBillingEmail(b?.billing_email ?? "");
     } catch { /* ignore */ }
   }, [orgId]);
+
+  const loadOrbitRepo = useCallback(async () => {
+    if (!orgId) return;
+    try {
+      const r = await api.orgs.getOrbitRepo(orgId);
+      setOrbitRepo(r);
+      setOrbitBaseUrl(r?.orbit_base_url ?? "");
+      setOrbitOwner(r?.orbit_owner ?? orgId);
+      setOrbitRepoName(r?.orbit_repo ?? "");
+    } catch { /* ignore */ }
+  }, [orgId]);
+
+  useEffect(() => {
+    if (isOpen && orgId && section === "orbit") loadOrbitRepo();
+  }, [isOpen, orgId, section, loadOrbitRepo]);
 
   const loadCreditTiers = useCallback(async () => {
     if (!orgId) return;
@@ -253,6 +276,87 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
               onCreateInvite={handleCreateInvite}
               onRevokeInvite={handleRevokeInvite}
             />
+          )}
+
+          {section === "orbit" && (
+            <div className={styles.settingsContent}>
+              <h2 className={styles.sectionTitle}>Orbit repo</h2>
+              <p className={styles.rowDescription} style={{ marginBottom: "var(--space-3)" }}>
+                Link this org to an Orbit repo. When members join or leave, they are synced as collaborators (requires Orbit username in profile).
+              </p>
+              <div className={styles.settingsGroup}>
+                <div className={styles.settingsRow}>
+                  <div className={styles.rowInfo}>
+                    <span className={styles.rowLabel}>Base URL</span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <Input
+                      size="sm"
+                      value={orbitBaseUrl}
+                      onChange={(e) => setOrbitBaseUrl(e.target.value)}
+                      placeholder="https://orbit.example.com"
+                      style={{ width: 280 }}
+                    />
+                  </div>
+                </div>
+                <div className={styles.settingsRow}>
+                  <div className={styles.rowInfo}>
+                    <span className={styles.rowLabel}>Owner (org ID)</span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <Input
+                      size="sm"
+                      value={orbitOwner}
+                      onChange={(e) => setOrbitOwner(e.target.value)}
+                      placeholder={orgId ?? ""}
+                      style={{ width: 280 }}
+                    />
+                  </div>
+                </div>
+                <div className={styles.settingsRow}>
+                  <div className={styles.rowInfo}>
+                    <span className={styles.rowLabel}>Repo name</span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <Input
+                      size="sm"
+                      value={orbitRepoName}
+                      onChange={(e) => setOrbitRepoName(e.target.value)}
+                      placeholder="my-repo"
+                      style={{ width: 200 }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: "var(--space-3)" }}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!isAdminOrOwner || orbitSaving || !orbitBaseUrl.trim() || !orbitOwner.trim() || !orbitRepoName.trim()}
+                  onClick={async () => {
+                    if (!orgId || !isAdminOrOwner) return;
+                    setOrbitSaving(true);
+                    setOrbitMessage("");
+                    try {
+                      await api.orgs.setOrbitRepo(orgId, orbitBaseUrl.trim(), orbitOwner.trim(), orbitRepoName.trim());
+                      setOrbitMessage("Saved");
+                      loadOrbitRepo();
+                    } catch (err) {
+                      setOrbitMessage(err instanceof Error ? err.message : "Failed to save");
+                    } finally {
+                      setOrbitSaving(false);
+                    }
+                  }}
+                >
+                  {orbitSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+              {orbitMessage && (
+                <Text variant="muted" size="sm" style={{ marginTop: "var(--space-2)" }}>
+                  {orbitMessage}
+                </Text>
+              )}
+            </div>
           )}
 
           {section === "billing" && (

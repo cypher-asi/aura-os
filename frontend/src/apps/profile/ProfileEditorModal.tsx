@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
+import { Modal, Input, Textarea, Button, Text } from "@cypher-asi/zui";
+import { api } from "../../api/client";
 import type { UserProfileData } from "./ProfileProvider";
 import styles from "../../components/AgentEditorModal.module.css";
 
@@ -16,6 +17,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
   const [website, setWebsite] = useState("");
   const [location, setLocation] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [orbitUsername, setOrbitUsername] = useState("");
   const [nameError, setNameError] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -27,6 +29,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     setLocation(profile.location);
     setAvatarUrl(profile.avatarUrl ?? "");
     setNameError("");
+    api.users.getOrbitUsername().then((r) => setOrbitUsername(r.value ?? "")).catch(() => {});
   }, [isOpen, profile]);
 
   useEffect(() => {
@@ -38,7 +41,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     onClose();
   }, [onClose]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       setNameError("Name is required");
       return;
@@ -51,6 +54,11 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
       location: location.trim(),
       avatarUrl: avatarUrl.trim() || undefined,
     });
+    try {
+      await api.users.setOrbitUsername(orbitUsername.trim());
+    } catch {
+      // non-blocking
+    }
     onClose();
   };
 
@@ -127,6 +135,18 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
             onChange={(e) => setLocation(e.target.value)}
             placeholder="City, Country"
           />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Orbit username</label>
+          <Input
+            value={orbitUsername}
+            onChange={(e) => setOrbitUsername(e.target.value)}
+            placeholder="Username on Orbit (for org repo sync)"
+          />
+          <Text variant="muted" size="xs" style={{ marginTop: "var(--space-1)" }}>
+            Used when your org has an Orbit repo link; members are synced as collaborators.
+          </Text>
         </div>
       </div>
     </Modal>

@@ -467,6 +467,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-orbit"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
 name = "aura-orgs"
 version = "0.1.0"
 dependencies = [
@@ -499,6 +511,7 @@ dependencies = [
  "aura-core",
  "aura-engine",
  "aura-network",
+ "aura-orbit",
  "aura-orgs",
  "aura-projects",
  "aura-sessions",

@@ -56,6 +56,17 @@ impl ApiError {
         )
     }
 
+    pub fn forbidden(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+        (
+            StatusCode::FORBIDDEN,
+            Json(Self {
+                error: msg.into(),
+                code: "forbidden".to_string(),
+                details: None,
+            }),
+        )
+    }
+
     pub fn payment_required(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::PAYMENT_REQUIRED,
