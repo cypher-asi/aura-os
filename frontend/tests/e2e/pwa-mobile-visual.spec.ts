@@ -39,14 +39,14 @@ test("capture mobile projects polish screens", async ({ page, browserName }, tes
   const projectName = testInfo.project.name.replace(/\s+/g, "-");
 
   await page.goto("/projects");
-  await expect(page.getByText("Pick up work without hunting through the app.")).toBeVisible();
+  await expect(page.getByText("Welcome to AURA")).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-projects-root-polished.png`,
     fullPage: true,
   });
 
   await page.getByRole("button", { name: "Open navigation" }).click();
-  await expect(page.getByText(/Jump back into Demo Project|No linked projects yet/)).toBeVisible({ timeout: 10000 });
+  await expect(page.getByPlaceholder("Search Projects...")).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-projects-drawer-polished.png`,
     fullPage: true,

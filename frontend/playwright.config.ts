@@ -18,13 +18,30 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "desktop-chromium",
+      testMatch: ["**/layout-capability.desktop.spec.ts", "**/responsive-unification.spec.ts"],
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+    },
+    {
+      name: "tablet-chromium",
+      testMatch: ["**/responsive-unification.spec.ts"],
+      use: {
+        ...devices["iPad Mini"],
+      },
+    },
+    {
       name: "mobile-chromium",
+      testMatch: ["**/pwa-mobile.spec.ts", "**/pwa-mobile-visual.spec.ts", "**/responsive-unification.spec.ts"],
       use: {
         ...devices["Pixel 7"],
       },
     },
     {
       name: "mobile-webkit",
+      testMatch: ["**/pwa-mobile.spec.ts", "**/pwa-mobile-visual.spec.ts", "**/responsive-unification.spec.ts"],
       use: {
         ...devices["iPhone 13"],
       },

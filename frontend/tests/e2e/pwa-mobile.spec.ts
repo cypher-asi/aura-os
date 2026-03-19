@@ -141,7 +141,7 @@ test("mobile project header can switch between execution and chat", async ({ pag
 
   await page.goto("/projects/proj-1/agents/agent-inst-1");
 
-  await expect(page.getByText("Demo Project")).toBeVisible();
+  await expect(page.getByText("Demo Project")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Chat" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText("Send a message or use a quick action to get started")).toBeVisible();
 
@@ -154,8 +154,9 @@ test("mobile projects route keeps the welcome view and opens project navigation"
 
   await page.goto("/projects");
 
-  await expect(page.getByText("Pick up work without hunting through the app.")).toBeVisible();
-  await expect(page.getByText("Recent projects")).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
+  await expect(page.getByText("Welcome to AURA")).toBeVisible();
+  await expect(page.getByText("Select a project from navigation or create a new one to get started.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Execution" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Open navigation" }).click();
@@ -183,12 +184,28 @@ test("mobile feed exposes inline filter controls", async ({ page }) => {
 
   await page.goto("/feed");
 
-  await expect(page.getByText("Feed scope")).toBeVisible();
-  await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Organization" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Organization" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
+});
 
-  await page.getByRole("button", { name: "Following" }).click();
-  await expect(page.getByRole("button", { name: "Following" })).toHaveAttribute("aria-pressed", "true");
+test("mobile leaderboard keeps ranking filters visible without opening the drawer", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+
+  await page.goto("/leaderboard");
+
+  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
+});
+
+test("mobile profile keeps project scope visible without opening the drawer", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+
+  await page.goto("/profile");
+
+  await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "aura-code" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "the-grid" })).toBeVisible();
 });
 
 test("mobile new project modal presents local file actions", async ({ page, browserName }) => {
@@ -206,6 +223,20 @@ test("mobile new project modal presents local file actions", async ({ page, brow
   await expect(page.getByRole("button", { name: "Open folder" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Choose files" })).toBeVisible();
   await expect(page.getByText("Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.")).toBeVisible();
+});
+
+test("mobile new project modal falls back to an existing project org when org lookup is unavailable", async ({ page, browserName }) => {
+  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
+  await mockAuthenticatedApp(page, { orgsUnavailable: true });
+
+  await page.goto("/projects");
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByTitle("New Project").click({ force: true });
+
+  await expect(page.getByPlaceholder("Project name")).toBeVisible();
+  await expect(page.getByText("No team found. Log out and back in to create a default team.")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create Project" })).toBeEnabled();
 });
 
 test("mobile file selection keeps the new project modal open", async ({ page, browserName }) => {

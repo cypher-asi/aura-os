@@ -6,6 +6,7 @@ interface MockAuthenticatedAppOptions {
   agents?: Record<string, unknown>[];
   tasks?: Record<string, unknown>[];
   specs?: Record<string, unknown>[];
+  orgsUnavailable?: boolean;
 }
 
 export async function mockAuthenticatedApp(page: Page, options: MockAuthenticatedAppOptions = {}) {
@@ -14,7 +15,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
 
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
-    const path = `${url.pathname}${url.search}`;
+    const pathname = url.pathname !== "/" ? url.pathname.replace(/\/+$/, "") : url.pathname;
+    const path = `${pathname}${url.search}`;
 
     const session = {
       user_id: "user-1",
@@ -138,7 +140,16 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/update-status") {
       return json({ update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
     }
+    if (pathname === "/api/settings/api-key") return json({ has_key: false, source: null });
+    if (pathname === "/api/settings/fee-schedule") return json([]);
     if (path === "/api/orgs") {
+      if (options.orgsUnavailable) {
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "aura-network is not configured", code: "service_unavailable", details: null }),
+        });
+      }
       return json([
         {
           org_id: "org-1",
@@ -150,6 +161,17 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
           updated_at: "2026-03-17T01:00:00.000Z",
         },
       ]);
+    }
+    if (pathname === "/api/orgs/org-1") {
+      return json({
+        org_id: "org-1",
+        name: "Test Org",
+        owner_user_id: "user-1",
+        billing: null,
+        github: null,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      });
     }
     if (path === "/api/orgs/org-1/members") {
       return json([
@@ -168,31 +190,31 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/orgs/org-1/integrations/github") return json(null);
     if (path === "/api/orgs/org-1/integrations/github/app") return json([]);
     if (path === "/api/orgs/org-1/credits/tiers") return json([]);
-    if (path === "/api/projects" || path === "/api/projects?org_id=org-1") return json([project]);
-    if (path === `/api/projects/${project.project_id}`) return json(project);
-    if (path === `/api/projects/${project.project_id}/specs`) return json(specs);
-    if (path === `/api/projects/${project.project_id}/tasks`) return json(tasks);
-    if (path === `/api/projects/${project.project_id}/agents`) return json(agentInstances);
+    if (pathname === "/api/projects" && (!url.search || url.search === "?org_id=org-1")) return json([project]);
+    if (pathname === `/api/projects/${project.project_id}`) return json(project);
+    if (pathname === `/api/projects/${project.project_id}/specs`) return json(specs);
+    if (pathname === `/api/projects/${project.project_id}/tasks`) return json(tasks);
+    if (pathname === `/api/projects/${project.project_id}/agents`) return json(agentInstances);
 
     const matchingAgentInstance = agentInstances.find(
-      (instance) => path === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}`,
+      (instance) => pathname === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}`,
     );
     if (matchingAgentInstance) return json(matchingAgentInstance);
 
     const matchingAgentInstanceMessages = agentInstances.find(
-      (instance) => path === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}/messages`,
+      (instance) => pathname === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}/messages`,
     );
     if (matchingAgentInstanceMessages) return json([]);
 
     const matchingAgentInstanceSessions = agentInstances.find(
-      (instance) => path === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}/sessions`,
+      (instance) => pathname === `/api/projects/${project.project_id}/agents/${instance.agent_instance_id}/sessions`,
     );
     if (matchingAgentInstanceSessions) return json([]);
 
-    if (path === `/api/projects/${project.project_id}/loop/status`) {
+    if (pathname === `/api/projects/${project.project_id}/loop/status`) {
       return json({ running: false, paused: false, project_id: "proj-1", active_agent_instances: [] });
     }
-    if (path === `/api/projects/${project.project_id}/progress`) {
+    if (pathname === `/api/projects/${project.project_id}/progress`) {
       return json({
         project_id: project.project_id,
         total_tasks: 0,
@@ -215,12 +237,12 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         total_tests: 0,
       });
     }
-    if (path === "/api/agents") return json(agents);
+    if (pathname === "/api/agents") return json(agents);
 
-    const matchingAgent = agents.find((agent) => path === `/api/agents/${agent.agent_id}`);
+    const matchingAgent = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}`);
     if (matchingAgent) return json(matchingAgent);
 
-    const matchingAgentMessages = agents.find((agent) => path === `/api/agents/${agent.agent_id}/messages`);
+    const matchingAgentMessages = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}/messages`);
     if (matchingAgentMessages) return json([]);
 
     return route.fulfill({
