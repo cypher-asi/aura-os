@@ -270,7 +270,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "create_spec",
-            "Create a new spec. Title format: zero-padded number + colon + space, e.g. '01: Core Domain Types'.",
+            "Create a new spec. When creating from a requirements document, create one spec per logical phase (multiple calls); title format '01: Name', '02: Name'; markdown: Purpose, Interfaces, Tasks table (1.0/1.1), Test criteria. Do not create tasks in the same step — task creation is always a separate step after all specs exist.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -318,7 +318,7 @@ fn chat_management_tools() -> Vec<ToolDefinition> {
         ),
         compact_tool(
             "create_task",
-            "Create a new task under a spec. Use the UUID spec_id from list_specs.",
+            "Create a new task under a spec. Use the UUID spec_id from list_specs. Only use after specs exist; never create tasks in the same turn as creating specs — spec creation and task creation are two distinct steps.",
             serde_json::json!({
                 "type": "object",
                 "properties": {
