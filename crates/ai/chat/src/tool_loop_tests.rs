@@ -533,6 +533,9 @@ fn test_detect_blocked_write_failures_independent_per_file() {
 async fn test_write_failure_tracking_blocks_after_repeated_errors() {
     // Each batch pairs an edit_file with a do_thing so the consecutive-write
     // tracker resets, isolating the per-file failure tracker.
+    // Batch 2 also includes a successful write_file to a different path,
+    // which resets the same-target stall detector (detect_same_target_stall)
+    // and prevents a fail-fast exit after 3 consecutive failed-write rounds.
     let responses = vec![
         MockResponse::tool_use(vec![
             ToolCall { id: "e1".into(), name: "edit_file".into(),
@@ -543,6 +546,8 @@ async fn test_write_failure_tracking_blocks_after_repeated_errors() {
             ToolCall { id: "e2".into(), name: "edit_file".into(),
                 input: serde_json::json!({"path": "f.rs", "old_text": "x", "new_text": "y"}) },
             ToolCall { id: "d2".into(), name: "do_thing".into(), input: serde_json::json!({}) },
+            ToolCall { id: "w2".into(), name: "write_file".into(),
+                input: serde_json::json!({"path": "reset.rs", "content": "ok"}) },
         ]).with_tokens(50, 30),
         MockResponse::tool_use(vec![
             ToolCall { id: "e3".into(), name: "edit_file".into(),

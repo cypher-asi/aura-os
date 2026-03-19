@@ -540,7 +540,8 @@ async fn process_tool_calls(
     };
 
     let duplicate_paths = collect_duplicate_write_paths(&iter.iter_tool_calls, &blocked_indices);
-    for path in duplicate_paths {
+    let mut deferred_recovery_msgs: Vec<String> = Vec::new();
+    for path in &duplicate_paths {
         state.write_file_cooldowns.insert(path.clone(), FULL_REWRITE_BLOCK_ITERS);
         let recovery = format!(
             "[STALL RECOVERY] Repeated write/edit attempts detected for '{path}'. \
@@ -548,8 +549,8 @@ async fn process_tool_calls(
              Use this exact strategy: (1) read_file with a line range, (2) edit_file for one small \
              section/function at a time, (3) verify before the next edit. Do NOT rewrite the full file."
         );
-        info!(path, "Injecting adaptive rewrite recovery instruction");
-        state.api_messages.push(RichMessage::user(&recovery));
+        info!(path = path.as_str(), "Injecting adaptive rewrite recovery instruction");
+        deferred_recovery_msgs.push(recovery);
     }
 
     let allowed_calls: Vec<ToolCall> = iter.iter_tool_calls
@@ -674,6 +675,18 @@ async fn process_tool_calls(
         &mut state.consecutive_cmd_failures,
     );
 
+    // Push tool_result blocks immediately after the assistant tool_use message.
+    // The Claude API requires every tool_use to be followed by a tool_result in
+    // the very next message; any injected user text must come *after* this.
+    let (result_blocks, should_stop) = build_tool_result_blocks(
+        &iter.iter_tool_calls, &results, &mut state.file_read_cache, event_tx,
+    );
+    state.api_messages.push(RichMessage::tool_results(result_blocks));
+
+    for recovery in deferred_recovery_msgs {
+        state.api_messages.push(RichMessage::user(&recovery));
+    }
+
     let fail_fast_stall = detect_same_target_stall(
         &iter.iter_tool_calls,
         &results,
@@ -731,10 +744,6 @@ async fn process_tool_calls(
         }
     }
 
-    let (result_blocks, should_stop) = build_tool_result_blocks(
-        &iter.iter_tool_calls, &results, &mut state.file_read_cache, event_tx,
-    );
-    state.api_messages.push(RichMessage::tool_results(result_blocks));
     should_stop
 }
 
