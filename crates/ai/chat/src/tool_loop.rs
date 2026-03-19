@@ -247,6 +247,18 @@ async fn run_single_iteration(
     state: &mut LoopState,
     iteration: usize,
 ) -> IterationOutcome {
+    // Validate and repair message history before every API call to prevent
+    // 400 errors from orphaned tool blocks or broken alternation.
+    let repaired = chat_sanitize::validate_and_repair_messages(state.api_messages.clone());
+    if repaired.len() != state.api_messages.len() {
+        info!(
+            before = state.api_messages.len(),
+            after = repaired.len(),
+            "Pre-send validation repaired message history"
+        );
+    }
+    state.api_messages = repaired;
+
     let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
     let llm_clone = llm.clone();
