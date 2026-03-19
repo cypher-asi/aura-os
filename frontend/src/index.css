@@ -8,7 +8,6 @@
   color-scheme: dark;
   --font-sans: 'Inter Variable', sans-serif;
   --color-text-muted: #555;
-  --color-backdrop: #000;
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
   --status-in-progress: #9CDCFE;
@@ -76,4 +75,8 @@ html, body, #root {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
+}
+
+[role="dialog"][aria-modal="true"] {
+  background: #000 !important;
 }
