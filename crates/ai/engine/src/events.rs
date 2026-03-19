@@ -38,6 +38,8 @@ pub enum EngineEvent {
         agent_instance_id: AgentInstanceId,
         task_id: TaskId,
         execution_notes: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        file_changes: Vec<FileChangeSummary>,
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_ms: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]

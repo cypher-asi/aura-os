@@ -396,6 +396,7 @@ impl DevLoopEngine {
         self.emit(EngineEvent::TaskCompleted {
             project_id, agent_instance_id, task_id: task.task_id,
             execution_notes: execution.notes.clone(),
+            file_changes: file_changes.to_vec(),
             duration_ms: Some(task_duration_ms),
             input_tokens: Some(total_input), output_tokens: Some(total_output),
             cost_usd, llm_duration_ms: Some(llm_duration_ms),

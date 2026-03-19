@@ -323,6 +323,11 @@ impl ChatToolExecutor {
             description: str_field(input, "description"),
             order_index: None,
             dependency_ids: None,
+            execution_notes: None,
+            files_changed: None,
+            model: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
         };
         if let Err(e) = storage.update_task(&task_id.to_string(), &jwt, &req).await {
             return ToolExecResult::err(format!("aura-storage: {e}"));
