@@ -19,6 +19,7 @@ members = [
     "crates/infra/store",
     "crates/infra/terminal",
     "crates/infra/network",
+    "crates/infra/orbit",
     "crates/infra/storage",
     "apps/ide",
 ]

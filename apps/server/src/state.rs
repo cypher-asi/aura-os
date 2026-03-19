@@ -8,6 +8,7 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
 use aura_engine::{DevLoopEngine, EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_network::NetworkClient;
+use aura_orbit::OrbitClient;
 use aura_storage::StorageClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
@@ -57,6 +58,10 @@ pub struct AppState {
     pub network_client: Option<Arc<NetworkClient>>,
     /// Optional aura-storage client. `None` when `AURA_STORAGE_URL` is not set.
     pub storage_client: Option<Arc<StorageClient>>,
+    /// Orbit REST client (always present).
+    pub orbit_client: Arc<OrbitClient>,
+    /// Orbit base URL. `None` when `ORBIT_BASE_URL` is not set.
+    pub orbit_base_url: Option<String>,
     /// In-memory runtime state for agent instances (current_task_id, current_session_id).
     pub runtime_agent_state: RuntimeAgentStateMap,
 }

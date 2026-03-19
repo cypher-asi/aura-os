@@ -20,6 +20,7 @@ use crate::state::TaskOutputBuffers;
 use aura_core::ZeroAuthSession;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
+use aura_orbit::OrbitClient;
 use aura_storage::StorageClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
@@ -429,6 +430,11 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     );
 
     let network_client = NetworkClient::from_env().map(Arc::new);
+    let orbit_client = Arc::new(OrbitClient::new());
+    let orbit_base_url = std::env::var("ORBIT_BASE_URL")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim_end_matches('/').to_string());
 
     if let Some(ref client) = storage_client {
         let health_client = client.clone();
@@ -494,6 +500,8 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
         storage_client,
+        orbit_client,
+        orbit_base_url,
         runtime_agent_state,
     }
 }

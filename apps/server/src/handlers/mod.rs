@@ -6,6 +6,7 @@ pub mod feed;
 pub mod follows;
 pub mod leaderboard;
 pub mod log;
+pub mod orbit;
 pub mod orgs;
 pub mod pricing;
 pub mod projects;
