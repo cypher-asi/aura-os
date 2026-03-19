@@ -76,7 +76,3 @@ html, body, #root {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
 }
-
-[role="dialog"][aria-modal="true"] {
-  background: #000 !important;
-}
