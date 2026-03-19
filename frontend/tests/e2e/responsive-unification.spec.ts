@@ -1,10 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { mockAuthenticatedApp } from "./helpers/mockAuthenticatedApp";
 
+test.use({ serviceWorkers: "block" });
+
 function formFactor(projectName: string): "desktop" | "tablet" | "phone" {
   if (projectName.startsWith("desktop")) return "desktop";
   if (projectName.startsWith("tablet")) return "tablet";
   return "phone";
+}
+
+async function expectResponsiveNavigation(page: import("@playwright/test").Page, factor: "desktop" | "tablet" | "phone") {
+  if (factor === "desktop") {
+    await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
+  } else {
+    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -42,11 +52,10 @@ test("projects root reuses the same welcome view across form factors", async ({ 
   await expect(page.getByText("Welcome to AURA")).toBeVisible();
   await expect(page.getByText("Select a project from navigation or create a new one to get started.")).toBeVisible();
 
+  await expectResponsiveNavigation(page, factor);
+
   if (factor === "desktop") {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
     await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
-  } else {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
   }
 });
 
@@ -65,14 +74,10 @@ test("projects root does not auto-redirect from remembered agent state", async (
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByText("Welcome to AURA")).toBeVisible();
 
-  if (factor === "desktop") {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
-  } else {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
-  }
+  await expectResponsiveNavigation(page, factor);
 });
 
-test("feed, leaderboard, and profile reuse sidebar selectors across form factors", async ({ page }, testInfo) => {
+test("feed reuses sidebar selectors across form factors", async ({ page }, testInfo) => {
   const factor = formFactor(testInfo.project.name);
 
   await mockAuthenticatedApp(page);
@@ -80,20 +85,29 @@ test("feed, leaderboard, and profile reuse sidebar selectors across form factors
   await page.goto("/feed");
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
   await expect(page.getByRole("treeitem", { name: "Organization" })).toBeVisible();
+  await expectResponsiveNavigation(page, factor);
+});
+
+test("leaderboard reuses sidebar selectors across form factors", async ({ page }, testInfo) => {
+  const factor = formFactor(testInfo.project.name);
+
+  await mockAuthenticatedApp(page);
 
   await page.goto("/leaderboard");
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
   await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
+  await expectResponsiveNavigation(page, factor);
+});
+
+test("profile reuses sidebar selectors across form factors", async ({ page }, testInfo) => {
+  const factor = formFactor(testInfo.project.name);
+
+  await mockAuthenticatedApp(page);
 
   await page.goto("/profile");
   await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
   await expect(page.getByRole("treeitem", { name: "aura-code" })).toBeVisible();
-
-  if (factor === "desktop") {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
-  } else {
-    await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
-  }
+  await expectResponsiveNavigation(page, factor);
 });
 
 test("projects execution uses shared project navigation with capability-driven details access", async ({ page }, testInfo) => {

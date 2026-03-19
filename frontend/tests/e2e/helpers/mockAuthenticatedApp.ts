@@ -9,6 +9,40 @@ interface MockAuthenticatedAppOptions {
   orgsUnavailable?: boolean;
 }
 
+const mockProfile = {
+  id: "profile-1",
+  display_name: "Test User",
+  avatar_url: null,
+  bio: "Testing shared responsive flows.",
+  location: "NYC",
+  website: "https://example.com",
+  profile_type: "user",
+  entity_id: "user-1",
+  created_at: "2026-03-17T01:00:00.000Z",
+  updated_at: "2026-03-17T01:00:00.000Z",
+};
+
+const mockFeedEvents = [
+  {
+    id: "feed-1",
+    profile_id: "profile-1",
+    event_type: "commit_push",
+    metadata: null,
+    created_at: "2026-03-17T01:00:00.000Z",
+  },
+];
+
+const mockLeaderboardEntries = [
+  {
+    profile_id: "profile-1",
+    display_name: "Test User",
+    avatar_url: null,
+    tokens_used: 1200,
+    rank: 1,
+    profile_type: "user",
+  },
+];
+
 export async function mockAuthenticatedApp(page: Page, options: MockAuthenticatedAppOptions = {}) {
   await page.unroute("**/api/auth/session");
   await page.unroute("**/api/auth/validate");
@@ -142,6 +176,20 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     }
     if (pathname === "/api/settings/api-key") return json({ has_key: false, source: null });
     if (pathname === "/api/settings/fee-schedule") return json([]);
+    if (pathname === "/api/users/me") {
+      return json({
+        id: "user-1",
+        zos_user_id: "user-1",
+        display_name: "Test User",
+        avatar_url: null,
+        bio: "Testing shared responsive flows.",
+        location: "NYC",
+        website: "https://example.com",
+        profile_id: "profile-1",
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      });
+    }
     if (path === "/api/orgs") {
       if (options.orgsUnavailable) {
         return route.fulfill({
@@ -238,6 +286,13 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       });
     }
     if (pathname === "/api/agents") return json(agents);
+    if (pathname === "/api/feed") return json(mockFeedEvents);
+    if (pathname.startsWith("/api/feed?")) return json(mockFeedEvents);
+    if (pathname === "/api/follows") return json([]);
+    if (pathname.startsWith("/api/follows/check/")) return json({ following: false });
+    if (pathname === "/api/leaderboard" || pathname === "/api/leaderboard/") return json(mockLeaderboardEntries);
+    if (pathname === "/api/profiles/profile-1") return json(mockProfile);
+    if (pathname.startsWith("/api/activity/") && pathname.endsWith("/comments")) return json([]);
 
     const matchingAgent = agents.find((agent) => pathname === `/api/agents/${agent.agent_id}`);
     if (matchingAgent) return json(matchingAgent);

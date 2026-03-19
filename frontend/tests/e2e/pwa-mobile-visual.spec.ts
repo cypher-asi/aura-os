@@ -2,6 +2,8 @@ import { mkdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { mockAuthenticatedApp } from "./helpers/mockAuthenticatedApp";
 
+test.use({ serviceWorkers: "block" });
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/auth/session", async (route) => {
     await route.fulfill({
