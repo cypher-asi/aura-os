@@ -65,8 +65,8 @@ export function SidekickTaskbar() {
   const [menuRect, setMenuRect] = useState<{ top: number; left: number } | null>(null);
   const moreBtnRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
-  const canBrowseFiles = supportsDesktopWorkspace && hasLinkedWorkspace(ctx?.project);
+  const { features } = useAuraCapabilities();
+  const canBrowseFiles = features.linkedWorkspace && hasLinkedWorkspace(ctx?.project);
 
   useEffect(() => {
     if (!canBrowseFiles && activeTab === "files") {
@@ -169,7 +169,7 @@ export function SidekickContent() {
   const { activeTab, showInfo, toggleInfo } = useSidekick();
   const ctx = useProjectContext();
   const [searchQuery, setSearchQuery] = useState("");
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
 
   useEffect(() => {
     setSearchQuery("");
@@ -181,7 +181,7 @@ export function SidekickContent() {
 
   const { project } = ctx;
   const linkedWorkspaceRoot = getLinkedWorkspaceRoot(project);
-  const canBrowseFiles = supportsDesktopWorkspace && Boolean(linkedWorkspaceRoot);
+  const canBrowseFiles = features.linkedWorkspace && Boolean(linkedWorkspaceRoot);
 
   if (showInfo) {
     return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
@@ -199,7 +199,7 @@ export function SidekickContent() {
       : (
         <div className={styles.emptyState}>
           <Text variant="muted" size="sm">
-            {supportsDesktopWorkspace
+            {features.linkedWorkspace
               ? "Imported workspaces do not expose live host files."
               : "File browsing stays in the desktop app for now."}
           </Text>

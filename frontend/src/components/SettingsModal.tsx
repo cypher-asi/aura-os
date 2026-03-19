@@ -15,7 +15,7 @@ export function SettingsModal({
   onClose: () => void;
 }) {
   const { logout } = useAuth();
-  const { supportsNativeUpdates } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
   const [info, setInfo] = useState<ApiKeyInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +26,7 @@ export function SettingsModal({
     if (!isOpen) return;
     setLoading(true);
     const requests = [api.getApiKeyInfo().then(setInfo)];
-    if (supportsNativeUpdates) {
+    if (features.nativeUpdater) {
       requests.push(
         api.getUpdateStatus().then((s) => {
           setUpdateChannel(s.channel as "stable" | "nightly");
@@ -39,7 +39,7 @@ export function SettingsModal({
     Promise.all(requests)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [isOpen, supportsNativeUpdates]);
+  }, [features.nativeUpdater, isOpen]);
 
   const handleChannelChange = useCallback(
     async (ch: "stable" | "nightly") => {
@@ -75,7 +75,7 @@ export function SettingsModal({
               </Text>
             )}
 
-            {supportsNativeUpdates && (
+            {features.nativeUpdater && (
               <>
                 <div className={styles.divider} />
 

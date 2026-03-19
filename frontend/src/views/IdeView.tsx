@@ -23,7 +23,7 @@ interface TabState {
 }
 
 export function IdeView() {
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
   const [params] = useSearchParams();
   const initialFile = params.get("file") ?? "";
   const rootPath =
@@ -228,11 +228,11 @@ export function IdeView() {
     [openTab],
   );
 
-  if (!supportsDesktopWorkspace) {
+  if (!features.ideIntegration) {
     return (
       <PageEmptyState
         title="IDE stays on desktop"
-        description="Aura Mobile Companion does not expose local file editing or IDE workflows."
+        description="This device does not expose local file editing or IDE workflows."
       />
     );
   }

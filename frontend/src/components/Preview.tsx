@@ -369,7 +369,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
   const { subscribe, seedTaskOutput } = useEventContext();
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectContext();
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
   const sidekick = useSidekick();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
@@ -740,7 +740,7 @@ function TaskPreview({ task }: { task: import("../types").Task }) {
         <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen className={styles.section}>
           {(() => {
             const linkedWorkspaceRoot = getLinkedWorkspaceRoot(ctx?.project);
-            const canOpenChangedFiles = supportsDesktopWorkspace && Boolean(linkedWorkspaceRoot);
+            const canOpenChangedFiles = features.ideIntegration && Boolean(linkedWorkspaceRoot);
             return (
               <>
                 <div className={styles.fileOpsList}>

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { api } from "../api/client";
 import { useOrg } from "../context/OrgContext";
 import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
+import { useProjectsList } from "../apps/projects/useProjectsList";
 import { PathInput } from "./PathInput";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import {
@@ -108,14 +109,15 @@ async function toImportedFiles(files: ImportCandidate[]) {
 
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
   const { activeOrg, isLoading: orgLoading } = useOrg();
-  const { supportsDesktopWorkspace, isMobileLayout } = useAuraCapabilities();
+  const { projects } = useProjectsList();
+  const { features, isMobileLayout } = useAuraCapabilities();
   const storedDraftRef = useRef<NewProjectDraft | null>(null);
   if (storedDraftRef.current === null) {
     storedDraftRef.current = readDraft();
   }
   const storedDraft = storedDraftRef.current;
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(
-    storedDraft?.workspaceMode === "linked" && supportsDesktopWorkspace ? "linked" : "imported",
+    storedDraft?.workspaceMode === "linked" && features.linkedWorkspace ? "linked" : "imported",
   );
   const [name, setName] = useState(storedDraft?.name ?? "");
   const [description, setDescription] = useState(storedDraft?.description ?? "");
@@ -182,7 +184,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   }, [isOpen, isMobileLayout]);
 
   const reset = useCallback(() => {
-    setWorkspaceMode(supportsDesktopWorkspace ? "linked" : "imported");
+    setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
     setName("");
     setDescription("");
     setFolderPath("");
@@ -194,7 +196,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     void clearNewProjectDraftFiles();
     if (importFolderInputRef.current) importFolderInputRef.current.value = "";
     if (importFilesInputRef.current) importFilesInputRef.current.value = "";
-  }, [supportsDesktopWorkspace]);
+  }, [features.linkedWorkspace]);
 
   const handleClose = useCallback(() => {
     reset();
@@ -218,11 +220,11 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setLoading(true);
     setError("");
     try {
-      if (!activeOrg) return;
+      if (!resolvedOrgId) return;
       let project;
       if (workspaceMode === "linked") {
         project = await api.createProject({
-          org_id: activeOrg.org_id,
+          org_id: resolvedOrgId,
           name: name.trim(),
           description: description.trim(),
           linked_folder_path: folderPath.trim(),
@@ -230,7 +232,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       } else {
         const importedFiles = await toImportedFiles(importCandidates);
         project = await api.importProject({
-          org_id: activeOrg.org_id,
+          org_id: resolvedOrgId,
           name: name.trim(),
           description: description.trim(),
           files: importedFiles,
@@ -256,6 +258,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       samplePaths: importCandidates.slice(0, 3).map((candidate) => candidate.relativePath),
     };
   }, [importCandidates]);
+  const resolvedOrgId = activeOrg?.org_id ?? projects[0]?.org_id ?? null;
 
   const handleImportSelection = useCallback((files: FileList | null) => {
     userChangedImportSelectionRef.current = true;
@@ -267,7 +270,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     setError("");
   }, []);
 
-  const workspaceModeOptions: WorkspaceModeOption[] = supportsDesktopWorkspace
+  const workspaceModeOptions: WorkspaceModeOption[] = features.linkedWorkspace
     ? [
         { id: "linked" as const, label: "Link folder", description: "Best for the desktop app and live local workspaces." },
         { id: "imported" as const, label: "Use local files", description: "Choose a folder or files from this device for browser-friendly workspaces." },
@@ -296,8 +299,8 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             disabled={
               loading ||
               orgLoading ||
-              !activeOrg ||
-              (workspaceMode === "linked" && !supportsDesktopWorkspace)
+              !resolvedOrgId ||
+              (workspaceMode === "linked" && !features.linkedWorkspace)
             }
           >
             {loading ? <><Spinner size="sm" /> Creating...</> : "Create Project"}
@@ -358,7 +361,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
               placeholder="Linked folder path"
               mode="folder"
             />
-            {!supportsDesktopWorkspace && (
+            {!features.linkedWorkspace && (
               <Text variant="muted" size="sm">
                 Linking a live local folder stays in the desktop app.
               </Text>
@@ -418,7 +421,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             )}
           </div>
         )}
-        {!orgLoading && !activeOrg && (
+        {!orgLoading && !resolvedOrgId && (
           <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
             No team found. Log out and back in to create a default team.
           </Text>

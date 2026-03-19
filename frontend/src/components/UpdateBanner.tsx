@@ -19,7 +19,7 @@ interface UpdateStatusResponse {
 const POLL_INTERVAL = 60_000;
 
 export function UpdateBanner() {
-  const { supportsNativeUpdates } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
   const [data, setData] = useState<UpdateStatusResponse | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -29,13 +29,13 @@ export function UpdateBanner() {
   }, []);
 
   useEffect(() => {
-    if (!supportsNativeUpdates) return;
+    if (!features.nativeUpdater) return;
     poll();
     const id = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(id);
-  }, [poll, supportsNativeUpdates]);
+  }, [features.nativeUpdater, poll]);
 
-  if (!supportsNativeUpdates) return null;
+  if (!features.nativeUpdater) return null;
 
   if (!data || dismissed) return null;
 

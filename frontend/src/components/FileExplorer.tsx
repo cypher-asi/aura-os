@@ -26,10 +26,10 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { supportsDesktopWorkspace } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
 
   useEffect(() => {
-    if (!supportsDesktopWorkspace) {
+    if (!features.linkedWorkspace) {
       setLoading(false);
       return;
     }
@@ -52,7 +52,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [rootPath, supportsDesktopWorkspace]);
+  }, [features.linkedWorkspace, rootPath]);
 
   const explorerData: ExplorerNode[] = useMemo(() => {
     if (!rootPath) return [];
@@ -76,7 +76,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
 
   const handleSelect = useCallback(
     (ids: string[]) => {
-      if (!supportsDesktopWorkspace) return;
+      if (!features.linkedWorkspace) return;
       const id = ids[0];
       if (!id || id === "__files_root__") return;
       const node = findNode(filteredData, id);
@@ -88,15 +88,15 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
         }
       }
     },
-    [filteredData, onFileSelect, rootPath, supportsDesktopWorkspace],
+    [features.linkedWorkspace, filteredData, onFileSelect, rootPath],
   );
 
-  if (!supportsDesktopWorkspace) {
+  if (!features.linkedWorkspace) {
     return (
       <PageEmptyState
         icon={<FolderOpen size={32} />}
         title="Files stay on desktop"
-        description="Aura Mobile Companion does not expose the host filesystem or IDE."
+        description="This device does not expose the host filesystem or IDE."
       />
     );
   }

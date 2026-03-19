@@ -3,9 +3,9 @@ import { windowCommand } from "../lib/windowCommand";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 
 export function WindowControls() {
-  const { supportsWindowControls } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
 
-  if (!supportsWindowControls) return null;
+  if (!features.windowControls) return null;
 
   return (
     <div className="titlebar-no-drag" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
