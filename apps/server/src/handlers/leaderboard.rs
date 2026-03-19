@@ -2,6 +2,7 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
+use aura_core::OrgId;
 use aura_network::{LeaderboardEntry, MemberUsageStats, UsageStats};
 
 use crate::error::{map_network_error, ApiResult};
@@ -129,14 +130,15 @@ pub async fn get_personal_usage(
 
 pub async fn get_org_usage(
     State(state): State<AppState>,
-    Path(org_id): Path<String>,
+    Path(org_id): Path<OrgId>,
     Query(query): Query<UsageQuery>,
 ) -> ApiResult<Json<UsageResponse>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
+    let org_id_str = org_id.to_string();
     let period = query.period.as_deref().unwrap_or("all");
     let usage = client
-        .get_org_usage(&org_id, period, &jwt)
+        .get_org_usage(&org_id_str, period, &jwt)
         .await
         .map_err(map_network_error)?;
     Ok(Json(UsageResponse::from(usage)))
@@ -144,12 +146,13 @@ pub async fn get_org_usage(
 
 pub async fn get_org_usage_members(
     State(state): State<AppState>,
-    Path(org_id): Path<String>,
+    Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberUsageResponse>>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
+    let org_id_str = org_id.to_string();
     let members = client
-        .get_org_usage_members(&org_id, &jwt)
+        .get_org_usage_members(&org_id_str, &jwt)
         .await
         .map_err(map_network_error)?;
     Ok(Json(

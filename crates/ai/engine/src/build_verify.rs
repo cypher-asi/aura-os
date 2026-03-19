@@ -284,3 +284,85 @@ fn parse_jest_output(output: &str) -> Vec<IndividualTestResult> {
     }
     results
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_cargo_test_output() {
+        let stdout = "\
+running 3 tests
+test utils::tests::test_parse ... ok
+test utils::tests::test_format ... FAILED
+test utils::tests::test_skip ... ignored
+";
+        let (results, summary) = parse_test_output(stdout, "", true);
+        assert_eq!(results.len(), 3);
+        assert_eq!(results[0].status, "passed");
+        assert_eq!(results[1].status, "failed");
+        assert_eq!(results[2].status, "skipped");
+        assert!(summary.contains("1 passed"));
+        assert!(summary.contains("1 failed"));
+        assert!(summary.contains("1 ignored"));
+    }
+
+    #[test]
+    fn parse_jest_pass_fail() {
+        let stdout = "\
+PASS src/utils.test.ts
+FAIL src/api.test.ts
+PASS src/hooks.test.ts
+";
+        let (results, summary) = parse_test_output(stdout, "", true);
+        assert_eq!(results.len(), 3);
+        assert_eq!(results.iter().filter(|r| r.status == "passed").count(), 2);
+        assert_eq!(results.iter().filter(|r| r.status == "failed").count(), 1);
+        assert!(summary.contains("2 passed"));
+    }
+
+    #[test]
+    fn parse_fallback_success() {
+        let (results, summary) = parse_test_output("all ok", "", true);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].status, "passed");
+        assert!(summary.contains("all tests passed"));
+    }
+
+    #[test]
+    fn parse_fallback_failure() {
+        let (results, summary) = parse_test_output("boom", "something went wrong", false);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].status, "failed");
+        assert!(results[0].message.is_some());
+        assert!(summary.contains("tests failed"));
+    }
+
+    #[test]
+    fn truncate_short_output_unchanged() {
+        assert_eq!(truncate_output("hello", 100), "hello");
+    }
+
+    #[test]
+    fn truncate_long_output() {
+        let long = "a".repeat(200);
+        let result = truncate_output(&long, 50);
+        assert!(result.len() < 200);
+        assert!(result.contains("truncated"));
+    }
+
+    #[test]
+    fn needs_shell_with_pipe() {
+        assert!(needs_shell("cargo test | head"));
+    }
+
+    #[test]
+    fn needs_shell_with_and() {
+        assert!(needs_shell("cd foo && npm build"));
+    }
+
+    #[test]
+    fn needs_shell_simple_command() {
+        assert!(!needs_shell("cargo build --release"));
+    }
+}

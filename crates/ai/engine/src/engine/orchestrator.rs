@@ -6,7 +6,7 @@ use tracing::{error, info, warn};
 
 use aura_core::*;
 use aura_agents::AgentInstanceService;
-use aura_billing::MeteredLlm;
+use aura_billing::{MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
 use aura_tasks::TaskService;
@@ -60,6 +60,7 @@ pub struct DevLoopEngine {
     pub(crate) write_coordinator: ProjectWriteCoordinator,
     pub(crate) engine_config: EngineConfig,
     pub(crate) llm_config: LlmConfig,
+    pub(crate) pricing_service: PricingService,
 }
 
 impl DevLoopEngine {
@@ -74,6 +75,7 @@ impl DevLoopEngine {
         session_service: Arc<SessionService>,
         event_tx: mpsc::UnboundedSender<EngineEvent>,
     ) -> Self {
+        let pricing_service = PricingService::new(store.clone());
         Self {
             store,
             settings,
@@ -86,6 +88,7 @@ impl DevLoopEngine {
             write_coordinator: ProjectWriteCoordinator::new(),
             engine_config: EngineConfig::from_env(),
             llm_config: LlmConfig::from_env(),
+            pricing_service,
         }
     }
 
@@ -201,7 +204,7 @@ impl DevLoopEngine {
         session: Session,
         mut stop_rx: watch::Receiver<LoopCommand>,
     ) -> Result<LoopOutcome, EngineError> {
-        let mut ctx = LoopRunContext::new(self, project_id, agent_instance_id, session)?;
+        let mut ctx = LoopRunContext::new(self, project_id, agent_instance_id, session).await?;
         ctx.reset_and_promote_tasks(self)?;
         loop {
             if let Some(out) = ctx.check_command(self, &stop_rx) { return Ok(out); }
@@ -216,7 +219,7 @@ impl DevLoopEngine {
             };
             ctx.begin_task(self, &task)?;
             let project = self.project_service.get_project(&project_id)?;
-            let baseline = self.capture_test_baseline(&project).await;
+            let baseline = ctx.get_or_capture_test_baseline(self, &project).await;
             let task_start = Instant::now();
             let agent = self.agent_instance_service
                 .get_instance(&project_id, &agent_instance_id).ok();
@@ -226,7 +229,7 @@ impl DevLoopEngine {
                 tokio::select! {
                     r = self.execute_task_agentic(
                         &project_id, &task, &ctx.session, &ctx.api_key,
-                        agent.as_ref(), &ctx.work_log,
+                        agent.as_ref(), &ctx.work_log, &ctx.workspace_cache,
                     ) => Some(r),
                     _ = stop_rx.changed() => None,
                 }
@@ -237,6 +240,7 @@ impl DevLoopEngine {
             let outcome = self.finalize_task_execution(
                 project_id, agent_instance_id, &task, &ctx.session, &ctx.api_key,
                 &ctx.session.user_id, &ctx.session.model, task_start, &baseline, result,
+                &ctx.workspace_cache,
             ).await?;
             let failed = ctx.process_outcome(self, &task, outcome)?;
             self.agent_instance_service.finish_working(&project_id, &agent_instance_id)?;

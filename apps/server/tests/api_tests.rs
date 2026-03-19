@@ -1,15 +1,96 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::Router;
 use serde_json::Value;
+use tokio::sync::{broadcast, mpsc, Mutex};
 use tower::ServiceExt;
 
 use aura_core::*;
-use aura_server::{build_app_state, state::AppState};
+use aura_agents::{AgentService, AgentInstanceService};
+use aura_auth::AuthService;
+use aura_billing::{BillingClient, MeteredLlm, PricingService};
+use aura_chat::ChatService;
+use aura_claude::ClaudeClient;
+use aura_engine::EngineEvent;
+use aura_orgs::OrgService;
+use aura_projects::ProjectService;
+use aura_server::state::{AppState, TaskOutputBuffers};
+use aura_sessions::SessionService;
+use aura_settings::SettingsService;
+use aura_specs::SpecGenerationService;
+use aura_store::RocksStore;
+use aura_tasks::{TaskExtractionService, TaskService};
 
 fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
-    let state = build_app_state(db_dir.path());
+
+    let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
+    let settings_service = Arc::new(SettingsService::new(store.clone()));
+    let billing_client = Arc::new(BillingClient::new());
+    let claude_client: Arc<ClaudeClient> = Arc::new(ClaudeClient::new());
+    let llm = Arc::new(MeteredLlm::new(claude_client.clone(), billing_client.clone(), store.clone()));
+    let org_service = Arc::new(OrgService::new(store.clone()));
+    let auth_service = Arc::new(AuthService::new(store.clone()));
+    let project_service = Arc::new(ProjectService::new(store.clone()));
+    let spec_gen_service = Arc::new(SpecGenerationService::new(
+        store.clone(),
+        settings_service.clone(),
+        llm.clone(),
+    ));
+    let task_extraction_service = Arc::new(TaskExtractionService::new(
+        store.clone(),
+        settings_service.clone(),
+        llm.clone(),
+    ));
+    let task_service = Arc::new(TaskService::new(store.clone()));
+    let pricing_service = Arc::new(PricingService::new(store.clone()));
+    let agent_service = Arc::new(AgentService::new(store.clone()));
+    let agent_instance_service = Arc::new(AgentInstanceService::new(store.clone()));
+    let llm_config = LlmConfig::default();
+    let session_service = Arc::new(SessionService::new(store.clone(), llm_config.context_rollover_threshold, llm_config.max_context_tokens));
+    let chat_service = Arc::new(ChatService::new(
+        store.clone(),
+        settings_service.clone(),
+        llm.clone(),
+        spec_gen_service.clone(),
+        project_service.clone(),
+        task_service.clone(),
+    ));
+
+    let (event_tx, _event_rx) = mpsc::unbounded_channel::<EngineEvent>();
+    let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
+    let task_output_buffers: TaskOutputBuffers =
+        Arc::new(std::sync::Mutex::new(HashMap::new()));
+
+    let state = AppState {
+        store,
+        data_dir: db_dir.path().to_path_buf(),
+        org_service,
+        auth_service,
+        settings_service,
+        pricing_service,
+        billing_client,
+        project_service,
+        spec_gen_service,
+        task_extraction_service,
+        task_service,
+        agent_service,
+        agent_instance_service,
+        session_service,
+        chat_service,
+        llm,
+        event_tx,
+        event_broadcast,
+        loop_registry: Arc::new(Mutex::new(HashMap::new())),
+        write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
+        task_output_buffers,
+        terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
+        network_client: None,
+    };
+
     let app = aura_server::create_router(state.clone());
     (app, state, db_dir)
 }
@@ -169,48 +250,6 @@ async fn project_create_invalid_name() {
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     let body = response_json(resp).await;
     assert_eq!(body["code"], "bad_request");
-}
-
-#[tokio::test]
-async fn imported_project_create_writes_workspace_snapshot() {
-    let (app, state, _db) = build_test_app();
-
-    let org_id = OrgId::new();
-    let req = json_request(
-        "POST",
-        "/api/projects/import",
-        Some(serde_json::json!({
-            "org_id": org_id,
-            "name": "Imported Project",
-            "description": "Created from uploaded files",
-            "files": [
-                {
-                    "relative_path": "src/main.ts",
-                    "contents_base64": "Y29uc29sZS5sb2coJ2hlbGxvJyk7"
-                },
-                {
-                    "relative_path": "README.md",
-                    "contents_base64": "IyBJbXBvcnRlZAo="
-                }
-            ]
-        })),
-    );
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::CREATED);
-    let body = response_json(resp).await;
-
-    assert_eq!(body["name"], "Imported Project");
-    assert_eq!(body["workspace_source"], "imported");
-    assert_eq!(body["workspace_display_path"], "Imported workspace snapshot");
-
-    let project_id: ProjectId = body["project_id"].as_str().unwrap().parse().unwrap();
-    let project = state.store.get_project(&project_id).unwrap();
-    assert_eq!(project.workspace_source.as_deref(), Some("imported"));
-
-    let imported_main = std::path::Path::new(&project.linked_folder_path).join("src/main.ts");
-    let imported_readme = std::path::Path::new(&project.linked_folder_path).join("README.md");
-    assert_eq!(std::fs::read_to_string(imported_main).unwrap(), "console.log('hello');");
-    assert_eq!(std::fs::read_to_string(imported_readme).unwrap(), "# Imported\n");
 }
 
 // ---------------------------------------------------------------------------

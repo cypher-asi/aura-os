@@ -6,13 +6,11 @@ use tokio::sync::watch;
 use tracing::{info, warn};
 
 use aura_core::*;
-use aura_billing::PricingService;
-
 use super::orchestrator::DevLoopEngine;
 use super::types::*;
 use crate::error::EngineError;
-use crate::events::{EngineEvent, PhaseTimingEntry};
-use crate::file_ops::FileOp;
+use crate::events::EngineEvent;
+use crate::file_ops::{FileOp, WorkspaceCache};
 use crate::metrics::{self, LoopRunMetrics, TaskMetrics};
 
 pub(crate) struct LoopRunContext {
@@ -38,10 +36,13 @@ pub(crate) struct LoopRunContext {
     duplicate_error_bailouts: u32,
     run_metrics: LoopRunMetrics,
     fee_schedule: Vec<FeeScheduleEntry>,
+    pub workspace_cache: WorkspaceCache,
+    cached_test_baseline: Option<HashSet<String>>,
+    baseline_invalidated: bool,
 }
 
 impl LoopRunContext {
-    pub fn new(
+    pub async fn new(
         engine: &DevLoopEngine,
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
@@ -53,8 +54,9 @@ impl LoopRunContext {
             .get_project(&project_id)?
             .linked_folder_path
             .clone();
+        let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let run_metrics = LoopRunMetrics::new(project_id.to_string());
-        let fee_schedule = PricingService::new(engine.store.clone()).get_fee_schedule();
+        let fee_schedule = engine.pricing_service.get_fee_schedule();
         let default_model = engine.llm_config.default_model.clone();
         Ok(Self {
             project_id,
@@ -79,7 +81,30 @@ impl LoopRunContext {
             duplicate_error_bailouts: 0,
             run_metrics,
             fee_schedule,
+            workspace_cache,
+            cached_test_baseline: None,
+            baseline_invalidated: false,
         })
+    }
+
+    // ------------------------------------------------------------------
+    // Test baseline caching
+    // ------------------------------------------------------------------
+
+    pub async fn get_or_capture_test_baseline(
+        &mut self,
+        engine: &DevLoopEngine,
+        project: &Project,
+    ) -> HashSet<String> {
+        if let Some(ref baseline) = self.cached_test_baseline {
+            if !self.baseline_invalidated {
+                return baseline.clone();
+            }
+        }
+        let baseline = engine.capture_test_baseline(project).await;
+        self.cached_test_baseline = Some(baseline.clone());
+        self.baseline_invalidated = false;
+        baseline
     }
 
     // ------------------------------------------------------------------
@@ -234,8 +259,7 @@ impl LoopRunContext {
     }
 
     fn build_finished_event(&self, engine: &DevLoopEngine, outcome: &str) -> EngineEvent {
-        let pricing = PricingService::new(engine.store.clone());
-        let total_cost_usd = Some(pricing.compute_cost(
+        let total_cost_usd = Some(engine.pricing_service.compute_cost(
             self.default_model.as_str(),
             self.total_input_tokens,
             self.total_output_tokens,
@@ -302,13 +326,17 @@ impl LoopRunContext {
             self.total_build_fix_attempts += t.build_fix_attempts;
             self.duplicate_error_bailouts += t.duplicate_error_bailouts;
         }
+        let task_metrics = TaskMetrics::from_outcome(
+            task.task_id.to_string(), task.title.clone(),
+            self.session.model.clone(), &outcome,
+        );
         match outcome {
-            TaskOutcome::Completed { notes, follow_up_tasks, file_ops, timings } => {
-                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, &timings)?;
+            TaskOutcome::Completed { notes, follow_up_tasks, file_ops, .. } => {
+                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, task_metrics)?;
                 Ok(false)
             }
-            TaskOutcome::Failed { reason, phase, credit_failure, timings } => {
-                self.process_failed(task, &reason, &phase, credit_failure, &timings);
+            TaskOutcome::Failed { reason, credit_failure, .. } => {
+                self.process_failed(task, &reason, credit_failure, task_metrics);
                 Ok(true)
             }
         }
@@ -321,36 +349,16 @@ impl LoopRunContext {
         notes: &str,
         follow_up_tasks: &[FollowUpSuggestion],
         file_ops: &[FileOp],
-        timings: &TaskTimings,
+        task_metrics: TaskMetrics,
     ) -> Result<(), EngineError> {
         self.completed_count += 1;
-        let phase_timings = vec![
-            PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-            PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-            PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-        ];
         engine.emit(EngineEvent::LoopIterationSummary {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
             task_id: task.task_id,
-            phase_timings: phase_timings.clone(),
+            phase_timings: task_metrics.phase_timings.clone(),
         });
-        self.record_task(
-            TaskMetrics::completed(
-                task.task_id.to_string(),
-                task.title.clone(),
-                timings.task_duration_ms,
-                self.session.model.clone(),
-            )
-            .with_tokens(timings.total_input(), timings.total_output())
-            .with_llm_duration(timings.llm_duration_ms)
-            .with_file_ops_duration(timings.file_ops_duration_ms)
-            .with_build_verify_duration(timings.build_verify_duration_ms)
-            .with_files_changed(timings.files_changed)
-            .with_parse_retries(timings.parse_retries)
-            .with_build_fix_attempts(timings.build_fix_attempts)
-            .with_phase_timings(phase_timings),
-        );
+        self.record_task(task_metrics);
         for follow_up in follow_up_tasks {
             if self.follow_up_count >= engine.engine_config.max_follow_ups_per_loop {
                 warn!(
@@ -392,6 +400,16 @@ impl LoopRunContext {
                 | FileOp::SearchReplace { path, .. } => path.as_str(),
             })
             .collect();
+        let touches_tests = changed_files.iter().any(|f| {
+            f.contains("_test.rs")
+                || f.contains("_spec.ts")
+                || f.contains("test_")
+                || f.contains("tests/")
+                || f.contains("tests\\")
+        });
+        if touches_tests {
+            self.baseline_invalidated = true;
+        }
         self.work_log.push(format!(
             "Task (completed): {}\nNotes: {}\nFiles changed: {}",
             task.title,
@@ -405,36 +423,14 @@ impl LoopRunContext {
         &mut self,
         task: &Task,
         reason: &str,
-        phase: &str,
         credit_failure: bool,
-        timings: &TaskTimings,
+        task_metrics: TaskMetrics,
     ) {
         self.failed_count += 1;
         if credit_failure {
             self.credit_failed_tasks.insert(task.task_id);
         }
-        self.record_task(
-            TaskMetrics::failed(
-                task.task_id.to_string(),
-                task.title.clone(),
-                timings.task_duration_ms,
-                self.session.model.clone(),
-                phase,
-                reason.to_string(),
-            )
-            .with_tokens(timings.total_input(), timings.total_output())
-            .with_llm_duration(timings.llm_duration_ms)
-            .with_file_ops_duration(timings.file_ops_duration_ms)
-            .with_build_verify_duration(timings.build_verify_duration_ms)
-            .with_files_changed(timings.files_changed)
-            .with_parse_retries(timings.parse_retries)
-            .with_build_fix_attempts(timings.build_fix_attempts)
-            .with_phase_timings(vec![
-                PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-            ]),
-        );
+        self.record_task(task_metrics);
         self.work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
     }
 

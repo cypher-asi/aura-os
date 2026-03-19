@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -8,6 +8,7 @@ import type { Project, AgentInstance } from "../types";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Gauge, Pencil, Trash2, Loader2 } from "lucide-react";
+import { InlineRenameInput } from "./InlineRenameInput";
 import { DeleteProjectModal, DeleteAgentInstanceModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
 import { useEventContext } from "../context/EventContext";
@@ -30,75 +31,6 @@ function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
   }, []);
 }
 
-
-/**
- * Self-contained inline rename input that overlays the label of a tree node.
- * All keystroke state is local so typing never re-renders the parent list.
- */
-function InlineRenameInput({
-  target,
-  onSave,
-  onCancel,
-}: {
-  target: Project;
-  onSave: (name: string) => void;
-  onCancel: () => void;
-}) {
-  const [value, setValue] = useState(target.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const saved = useRef(false);
-
-  useLayoutEffect(() => {
-    const input = inputRef.current;
-    if (!input) return;
-
-    const row = document.getElementById(target.project_id);
-    const label = row?.querySelector<HTMLElement>("[class*='label']");
-    if (!label) return;
-
-    const rect = label.getBoundingClientRect();
-    input.style.top = `${rect.top}px`;
-    input.style.left = `${rect.left}px`;
-    input.style.width = `${rect.width}px`;
-    input.style.height = `${rect.height}px`;
-    input.style.visibility = "visible";
-    label.style.visibility = "hidden";
-    input.focus();
-    input.select();
-
-    return () => {
-      label.style.visibility = "";
-      input.style.visibility = "";
-    };
-  }, [target.project_id]);
-
-  const commit = useCallback(() => {
-    if (saved.current) return;
-    const trimmed = value.trim();
-    if (trimmed && trimmed !== target.name) {
-      saved.current = true;
-      onSave(trimmed);
-    } else {
-      onCancel();
-    }
-  }, [value, target.name, onSave, onCancel]);
-
-  return createPortal(
-    <input
-      ref={inputRef}
-      className={styles.inlineRenameInput}
-      style={{ visibility: "hidden" }}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") onCancel();
-      }}
-      onBlur={commit}
-    />,
-    document.body,
-  );
-}
 
 const projectMenuItems: MenuItem[] = [
   { id: "add-agent", label: "Add Agent", icon: <Bot size={14} /> },

@@ -7,7 +7,7 @@ use axum::Json;
 use tokio::sync::{broadcast, mpsc, Mutex};
 
 use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
-use aura_engine::{EngineEvent, LoopHandle, ProjectWriteCoordinator};
+use aura_engine::{DevLoopEngine, EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_network::NetworkClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
@@ -77,6 +77,23 @@ impl AppState {
         self.network_client
             .as_ref()
             .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
+    }
+
+    /// Build a new `DevLoopEngine` wired to this application's services.
+    pub fn build_engine(&self) -> Arc<DevLoopEngine> {
+        Arc::new(
+            DevLoopEngine::new(
+                self.store.clone(),
+                self.settings_service.clone(),
+                self.llm.clone(),
+                self.project_service.clone(),
+                self.task_service.clone(),
+                self.agent_instance_service.clone(),
+                self.session_service.clone(),
+                self.event_tx.clone(),
+            )
+            .with_write_coordinator(self.write_coordinator.clone()),
+        )
     }
 
     /// Remove finished loops from the registry.

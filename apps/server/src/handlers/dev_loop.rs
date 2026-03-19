@@ -1,12 +1,9 @@
-use std::sync::Arc;
-
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 
 use aura_core::{AgentInstanceId, ProjectId, TaskId};
-use aura_engine::DevLoopEngine;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
@@ -26,19 +23,7 @@ pub async fn start_loop(
     super::billing::require_credits(&state).await?;
     state.gc_finished_loops().await;
 
-    let engine = Arc::new(
-        DevLoopEngine::new(
-            state.store.clone(),
-            state.settings_service.clone(),
-            state.llm.clone(),
-            state.project_service.clone(),
-            state.task_service.clone(),
-            state.agent_instance_service.clone(),
-            state.session_service.clone(),
-            state.event_tx.clone(),
-        )
-        .with_write_coordinator(state.write_coordinator.clone()),
-    );
+    let engine = state.build_engine();
 
     let loop_handle = engine
         .start(project_id, params.agent_instance_id)
@@ -173,19 +158,7 @@ pub async fn run_single_task(
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
     super::billing::require_credits(&state).await?;
-    let engine = Arc::new(
-        DevLoopEngine::new(
-            state.store.clone(),
-            state.settings_service.clone(),
-            state.llm.clone(),
-            state.project_service.clone(),
-            state.task_service.clone(),
-            state.agent_instance_service.clone(),
-            state.session_service.clone(),
-            state.event_tx.clone(),
-        )
-        .with_write_coordinator(state.write_coordinator.clone()),
-    );
+    let engine = state.build_engine();
 
     let agent_instance_id = params.agent_instance_id;
     let event_tx = state.event_tx.clone();

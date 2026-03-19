@@ -147,6 +147,43 @@ pub fn compact_older_tool_results(messages: &mut [RichMessage], keep_recent: usi
     }
 }
 
+/// Like `compact_older_tool_results` but uses a caller-supplied `CompactConfig`
+/// so the compaction aggressiveness can be tuned based on context pressure.
+pub fn compact_older_tool_results_tiered(
+    messages: &mut [RichMessage],
+    keep_recent: usize,
+    cfg: &CompactConfig,
+) {
+    let len = messages.len();
+    let cutoff = len.saturating_sub(keep_recent);
+    for msg in &mut messages[..cutoff] {
+        if msg.role != "user" {
+            continue;
+        }
+        if let MessageContent::Blocks(blocks) = &mut msg.content {
+            for block in blocks.iter_mut() {
+                if let ContentBlock::ToolResult { content, .. } = block {
+                    if content.len() > cfg.threshold {
+                        if aura_core::rust_signatures::looks_like_rust(content) {
+                            let sigs = aura_core::rust_signatures::extract_signatures(content);
+                            if !sigs.is_empty() && sigs.len() < content.len() / 2 {
+                                *content = format!(
+                                    "[Compacted to signatures ({} -> {} chars)]\n{}",
+                                    content.len(),
+                                    sigs.len(),
+                                    sigs,
+                                );
+                                continue;
+                            }
+                        }
+                        *content = truncate(content, cfg);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Compact tool results in conversation history using the HISTORY config.
 /// Used during context window management before summarization.
 pub fn compact_tool_results_in_history(

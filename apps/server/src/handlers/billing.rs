@@ -2,7 +2,7 @@ use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 
-use aura_core::ZeroAuthSession;
+use aura_core::{OrgId, ZeroAuthSession};
 
 use crate::dto::{CreateCreditCheckoutRequest, FulfillmentWebhookRequest, FulfillmentWebhookResponse};
 use crate::error::{ApiError, ApiResult};
@@ -54,7 +54,7 @@ pub async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<A
 
 pub async fn get_credit_tiers(
     State(state): State<AppState>,
-    Path(_org_id): Path<String>,
+    Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<serde_json::Value>> {
     match state.billing_client.get_tiers().await {
         Ok(tiers) => Ok(Json(serde_json::to_value(tiers).unwrap_or_default())),
@@ -64,7 +64,7 @@ pub async fn get_credit_tiers(
 
 pub async fn get_credit_balance(
     State(state): State<AppState>,
-    Path(_org_id): Path<String>,
+    Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<serde_json::Value>> {
     let session = get_auth_session(&state)?;
     match state
@@ -79,7 +79,7 @@ pub async fn get_credit_balance(
 
 pub async fn create_credit_checkout(
     State(state): State<AppState>,
-    Path(_org_id): Path<String>,
+    Path(_org_id): Path<OrgId>,
     Json(body): Json<CreateCreditCheckoutRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
     let session = get_auth_session(&state)?;

@@ -11,8 +11,8 @@ use super::orchestrator::DevLoopEngine;
 use super::shell;
 use super::types::*;
 use crate::error::EngineError;
-use crate::events::{EngineEvent, PhaseTimingEntry};
-use crate::file_ops;
+use crate::events::EngineEvent;
+use crate::file_ops::{self, WorkspaceCache};
 use crate::metrics;
 
 impl DevLoopEngine {
@@ -81,8 +81,8 @@ impl DevLoopEngine {
         let model_name = model.clone();
         let project_root = self.project_service.get_project(&project_id)?
             .linked_folder_path.clone();
-        let fee_schedule = aura_billing::PricingService::new(self.store.clone())
-            .get_fee_schedule();
+        let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
+        let fee_schedule = self.pricing_service.get_fee_schedule();
 
         let baseline_test_failures = {
             let project = self.project_service.get_project(&project_id)?;
@@ -93,12 +93,13 @@ impl DevLoopEngine {
             let project = self.project_service.get_project(&project_id)?;
             self.execute_shell_task(&project, &task, &cmd, aiid).await
         } else {
-            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent), &[]).await
+            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent), &[], &workspace_cache).await
         };
 
         let outcome = self.finalize_task_execution(
             project_id, aiid, &task, &session, &api_key,
             &user_id, &model, task_start, &baseline_test_failures, execution_result,
+            &workspace_cache,
         ).await?;
 
         self.record_single_task_metrics(
@@ -128,6 +129,7 @@ impl DevLoopEngine {
         task_start: Instant,
         baseline_test_failures: &HashSet<String>,
         execution_result: Result<TaskExecution, EngineError>,
+        workspace_cache: &WorkspaceCache,
     ) -> Result<TaskOutcome, EngineError> {
         let execution = match execution_result {
             Ok(exec) => exec,
@@ -171,6 +173,7 @@ impl DevLoopEngine {
         let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out) = self
             .verify_and_fix_build(
                 &project, task, session, api_key, &execution, baseline_test_failures,
+                workspace_cache,
             ).await?;
         let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
         let task_duration_ms = task_start.elapsed().as_millis() as u64;
@@ -367,8 +370,7 @@ impl DevLoopEngine {
         ) { warn!(task_id = %task.task_id, error = %e, "failed to mark task as completed"); }
 
         let cost_usd = {
-            let pricing = aura_billing::PricingService::new(self.store.clone());
-            Some(pricing.compute_cost(
+            Some(self.pricing_service.compute_cost(
                 model.as_deref().unwrap_or(aura_claude::DEFAULT_MODEL),
                 total_input, total_output,
             ))
@@ -410,44 +412,9 @@ impl DevLoopEngine {
         fee_schedule: &[aura_core::FeeScheduleEntry],
     ) {
         if project_root.is_empty() { return; }
-        let task_metrics = match outcome {
-            TaskOutcome::Completed { timings, .. } => {
-                metrics::TaskMetrics::completed(
-                    task.task_id.to_string(), task.title.clone(),
-                    timings.task_duration_ms, model_name.clone(),
-                )
-                .with_tokens(timings.total_input(), timings.total_output())
-                .with_llm_duration(timings.llm_duration_ms)
-                .with_file_ops_duration(timings.file_ops_duration_ms)
-                .with_build_verify_duration(timings.build_verify_duration_ms)
-                .with_files_changed(timings.files_changed)
-                .with_parse_retries(timings.parse_retries)
-                .with_build_fix_attempts(timings.build_fix_attempts)
-                .with_phase_timings(vec![
-                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-                ])
-            }
-            TaskOutcome::Failed { reason, phase, timings, .. } => {
-                metrics::TaskMetrics::failed(
-                    task.task_id.to_string(), task.title.clone(),
-                    timings.task_duration_ms, model_name.clone(), phase, reason.clone(),
-                )
-                .with_tokens(timings.total_input(), timings.total_output())
-                .with_llm_duration(timings.llm_duration_ms)
-                .with_file_ops_duration(timings.file_ops_duration_ms)
-                .with_build_verify_duration(timings.build_verify_duration_ms)
-                .with_files_changed(timings.files_changed)
-                .with_parse_retries(timings.parse_retries)
-                .with_build_fix_attempts(timings.build_fix_attempts)
-                .with_phase_timings(vec![
-                    PhaseTimingEntry { phase: "llm_call".into(), duration_ms: timings.llm_duration_ms },
-                    PhaseTimingEntry { phase: "file_ops".into(), duration_ms: timings.file_ops_duration_ms },
-                    PhaseTimingEntry { phase: "build_verify".into(), duration_ms: timings.build_verify_duration_ms },
-                ])
-            }
-        };
+        let task_metrics = metrics::TaskMetrics::from_outcome(
+            task.task_id.to_string(), task.title.clone(), model_name.clone(), outcome,
+        );
         metrics::write_single_task_metrics(
             Path::new(project_root), &project_id.to_string(), task_metrics, fee_schedule,
         );

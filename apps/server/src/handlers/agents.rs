@@ -68,7 +68,7 @@ fn agent_from_network(net: &NetworkAgent) -> Agent {
         system_prompt: net.system_prompt.clone().unwrap_or_default(),
         skills: net.skills.clone().unwrap_or_default(),
         icon: net.icon.clone(),
-        network_agent_id: Some(net.id.clone()),
+        network_agent_id: net.id.parse().ok(),
         profile_id,
         created_at,
         updated_at,

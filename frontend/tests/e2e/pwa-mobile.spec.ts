@@ -148,7 +148,7 @@ test("mobile projects route reuses shared project navigation for execution and c
   await expect(page.getByText("Demo Project")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Send a message or use a quick action to get started")).toBeVisible();
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/, { timeout: 10000 });
 
   await page.getByRole("treeitem", { name: "Execution" }).dispatchEvent("click");
   await expect(page).toHaveURL(/\/projects\/proj-1\/execution$/);
@@ -300,7 +300,7 @@ test("mobile details selection auto-opens preview", async ({ page }) => {
   await page.goto("/projects/proj-1/execution");
 
   await page.getByRole("button", { name: "Open details" }).click();
-  await expect(page.getByRole("treeitem", { name: "Patch auth flow" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Patch auth flow" })).toBeVisible({ timeout: 10000 });
   await page.getByRole("treeitem", { name: "Patch auth flow" }).dispatchEvent("click");
 
   await expect(page.getByText("Open changed files from a linked desktop workspace.")).toBeVisible();

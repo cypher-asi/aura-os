@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import type { ProjectId, AgentInstance, Session } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
@@ -8,6 +8,52 @@ import { StatusBadge } from "../components/StatusBadge";
 import { Panel, Badge, Text, Item } from "@cypher-asi/zui";
 import { ChevronDown } from "lucide-react";
 import { formatRelativeTime } from "../utils/format";
+
+interface AgentEventSubscriptionParams {
+  subscribe: ReturnType<typeof useEventContext>["subscribe"];
+  projectId: ProjectId;
+  isForProject: (event: { project_id?: string }) => boolean;
+  selectedAgent: AgentInstance | null;
+  fetchSessions: (agentInstanceId: string) => void;
+  setAgents: Dispatch<SetStateAction<AgentInstance[]>>;
+  setCurrentTaskTitles: Dispatch<SetStateAction<Record<string, string | null>>>;
+}
+
+function useAgentEventSubscriptions({
+  subscribe, projectId, isForProject, selectedAgent,
+  fetchSessions, setAgents, setCurrentTaskTitles,
+}: AgentEventSubscriptionParams): void {
+  useEffect(() => {
+    const clearTaskTitle = (e: { project_id?: string; agent_instance_id?: string }) => {
+      if (!isForProject(e)) return;
+      const agentId = e.agent_instance_id;
+      if (agentId) setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
+    };
+    const unsubs = [
+      subscribe("loop_started", (e) => {
+        if (!isForProject(e)) return;
+        api.listAgentInstances(projectId).then(setAgents).catch(console.error);
+      }),
+      subscribe("task_started", (e) => {
+        if (!isForProject(e)) return;
+        const agentId = e.agent_instance_id;
+        if (agentId && e.task_title) {
+          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: e.task_title ?? null }));
+        }
+      }),
+      subscribe("task_completed", clearTaskTitle),
+      subscribe("task_failed", clearTaskTitle),
+      subscribe("session_rolled_over", (e) => {
+        if (!isForProject(e)) return;
+        if (selectedAgent) fetchSessions(selectedAgent.agent_instance_id);
+      }),
+      subscribe("loop_paused", clearTaskTitle),
+      subscribe("loop_stopped", clearTaskTitle),
+      subscribe("loop_finished", clearTaskTitle),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [subscribe, selectedAgent, fetchSessions, isForProject, projectId, setAgents, setCurrentTaskTitles]);
+}
 
 interface AgentStatusBarProps {
   projectId: ProjectId;
@@ -58,61 +104,10 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
     [projectId],
   );
 
-  useEffect(() => {
-    const unsubs = [
-      subscribe("loop_started", (e) => {
-        if (!isForProject(e)) return;
-        api.listAgentInstances(projectId).then(setAgents).catch(console.error);
-      }),
-      subscribe("task_started", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId && e.task_title) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: e.task_title ?? null }));
-        }
-      }),
-      subscribe("task_completed", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
-        }
-      }),
-      subscribe("task_failed", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
-        }
-      }),
-      subscribe("session_rolled_over", (e) => {
-        if (!isForProject(e)) return;
-        if (selectedAgent) fetchSessions(selectedAgent.agent_instance_id);
-      }),
-      subscribe("loop_paused", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
-        }
-      }),
-      subscribe("loop_stopped", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
-        }
-      }),
-      subscribe("loop_finished", (e) => {
-        if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
-        }
-      }),
-    ];
-    return () => unsubs.forEach((u) => u());
-  }, [subscribe, selectedAgent, fetchSessions, isForProject, projectId]);
+  useAgentEventSubscriptions({
+    subscribe, projectId, isForProject, selectedAgent,
+    fetchSessions, setAgents, setCurrentTaskTitles,
+  });
 
   const sessionCount = sessions.length;
   const currentTaskTitle = selectedAgent

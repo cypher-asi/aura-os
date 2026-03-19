@@ -104,6 +104,23 @@ pub(crate) fn build_tool_result_blocks(
             is_error: result.is_error,
         });
 
+        let write_truncation_warning = if (tc.name == "write_file" || tc.name == "edit_file")
+            && !result.is_error
+        {
+            let written = tc.input.get("content").and_then(|v| v.as_str()).unwrap_or("");
+            if looks_truncated(written) {
+                Some(
+                    "[WARNING: The file content appears to have been truncated during generation. \
+                     Use read_file to check what was actually written. Consider breaking large \
+                     files into smaller writes.]"
+                )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let content_for_llm = if tc.name == "read_file" && !result.is_error {
             let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
             let has_line_range = tc.input.get("start_line").is_some()
@@ -143,9 +160,15 @@ pub(crate) fn build_tool_result_blocks(
             }
         };
 
+        let final_content = if let Some(warning) = write_truncation_warning {
+            format!("{content_for_llm}\n\n{warning}")
+        } else {
+            content_for_llm
+        };
+
         result_blocks.push(ContentBlock::ToolResult {
             tool_use_id: result.tool_use_id.clone(),
-            content: content_for_llm,
+            content: final_content,
             is_error: if result.is_error { Some(true) } else { None },
         });
         if result.stop_loop {
@@ -172,6 +195,39 @@ pub(crate) fn summarize_write_file_input(input: &serde_json::Value) -> serde_jso
         "path": path,
         "content": format!("[wrote {line_count} lines, {content_len} chars to {path}]"),
     })
+}
+
+/// Heuristic check for truncated file content: unbalanced braces/brackets
+/// or content that ends mid-line without a newline.
+fn looks_truncated(content: &str) -> bool {
+    if content.len() < 200 {
+        return false;
+    }
+
+    let mut brace_depth: i64 = 0;
+    let mut bracket_depth: i64 = 0;
+    let mut paren_depth: i64 = 0;
+    for ch in content.chars() {
+        match ch {
+            '{' => brace_depth += 1,
+            '}' => brace_depth -= 1,
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth -= 1,
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            _ => {}
+        }
+    }
+
+    let significantly_unbalanced =
+        brace_depth.abs() > 2 || bracket_depth.abs() > 2 || paren_depth.abs() > 2;
+
+    let ends_abruptly = !content.ends_with('\n')
+        && !content.ends_with('}')
+        && !content.ends_with(';')
+        && !content.ends_with('\r');
+
+    significantly_unbalanced || ends_abruptly
 }
 
 fn content_hash(content: &str) -> u64 {

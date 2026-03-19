@@ -13,7 +13,7 @@ use super::tool_executor::EngineToolLoopExecutor;
 use super::types::*;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
-use crate::file_ops::{self, FileOp};
+use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 impl DevLoopEngine {
     pub(crate) async fn execute_task_agentic(
@@ -24,48 +24,51 @@ impl DevLoopEngine {
         api_key: &str,
         agent: Option<&AgentInstance>,
         work_log: &[String],
+        workspace_cache: &WorkspaceCache,
     ) -> Result<TaskExecution, EngineError> {
         let project = self.project_service.get_project(project_id)?;
         let spec = self.store.get_spec(project_id, &task.spec_id)?;
 
-        let workspace_map = file_ops::generate_workspace_map(&project.linked_folder_path)
-            .unwrap_or_default();
+        let workspace_map = &workspace_cache.workspace_map_text;
         let workspace_info = if workspace_map.is_empty() { None } else { Some(workspace_map.as_str()) };
-        let mut system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info);
+        let system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info);
 
-        let codebase_snapshot = file_ops::retrieve_task_relevant_files(
+        let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
             &project.linked_folder_path,
             &task.title,
             &task.description,
             50_000,
-        ).unwrap_or_else(|_| {
-            file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
-                .unwrap_or_default()
-        });
+            workspace_cache,
+        ).await {
+            Ok(s) => s,
+            Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
+                .unwrap_or_default(),
+        };
 
-        if !codebase_snapshot.is_empty() {
-            system_prompt.push_str(&format!("\n\n# Current Codebase Files\n{}\n", codebase_snapshot));
-        }
-        if !workspace_map.is_empty() {
-            let dep_api_context = file_ops::resolve_task_dep_api_context(
+        let dep_api_context = if !workspace_map.is_empty() {
+            file_ops::resolve_task_dep_api_context_cached(
                 &project.linked_folder_path,
                 &task.title,
                 &task.description,
                 15_000,
-            ).unwrap_or_default();
-            if !dep_api_context.is_empty() {
-                system_prompt.push_str(&format!("\n\n# Dependency API Surface\n{}\n", dep_api_context));
-            }
-        }
+                workspace_cache,
+            ).await.unwrap_or_default()
+        } else {
+            String::new()
+        };
 
-        let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
-        let completed_deps: Vec<Task> = task.dependency_ids.iter()
-            .filter_map(|dep_id| {
-                all_project_tasks.iter()
-                    .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
-                    .cloned()
-            })
-            .collect();
+        let completed_deps: Vec<Task> = if task.dependency_ids.is_empty() {
+            Vec::new()
+        } else {
+            let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
+            task.dependency_ids.iter()
+                .filter_map(|dep_id| {
+                    all_project_tasks.iter()
+                        .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
+                        .cloned()
+                })
+                .collect()
+        };
 
         let work_log_summary = build_work_log_summary(work_log);
 
@@ -74,6 +77,12 @@ impl DevLoopEngine {
         );
         if !workspace_map.is_empty() {
             task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
+        }
+        if !codebase_snapshot.is_empty() {
+            task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
+        }
+        if !dep_api_context.is_empty() {
+            task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api_context));
         }
 
         let tools = engine_tool_definitions();
@@ -111,7 +120,7 @@ impl DevLoopEngine {
 
         let thinking_budget = compute_thinking_budget(
             self.llm_config.thinking_budget,
-            &project.linked_folder_path,
+            workspace_cache.member_count,
         );
 
         let config = ToolLoopConfig {
@@ -212,8 +221,7 @@ fn build_work_log_summary(work_log: &[String]) -> String {
     summary
 }
 
-fn compute_thinking_budget(base: u32, linked_folder_path: &str) -> u32 {
-    let member_count = file_ops::count_workspace_members(linked_folder_path).unwrap_or(1);
+fn compute_thinking_budget(base: u32, member_count: usize) -> u32 {
     if member_count >= 15 {
         base.max(16_000)
     } else if member_count >= 8 {

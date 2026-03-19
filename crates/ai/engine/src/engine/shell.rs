@@ -153,3 +153,148 @@ pub(crate) fn extract_shell_command(task: &Task) -> Option<String> {
 
     if candidate.is_empty() { None } else { Some(trim_prose_suffix(&candidate)) }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn task(title: &str, description: &str) -> Task {
+        use chrono::Utc;
+        let now = Utc::now();
+        Task {
+            task_id: aura_core::TaskId::new(),
+            project_id: aura_core::ProjectId::new(),
+            spec_id: aura_core::SpecId::new(),
+            title: title.into(),
+            description: description.into(),
+            status: aura_core::TaskStatus::Ready,
+            order_index: 0,
+            dependency_ids: vec![],
+            parent_task_id: None,
+            assigned_agent_instance_id: None,
+            completed_by_agent_instance_id: None,
+            session_id: None,
+            execution_notes: String::new(),
+            files_changed: vec![],
+            build_steps: vec![],
+            test_steps: vec![],
+            live_output: String::new(),
+            user_id: None,
+            model: None,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[test]
+    fn trim_prose_no_suffix() {
+        assert_eq!(trim_prose_suffix("cargo build --workspace"), "cargo build --workspace");
+    }
+
+    #[test]
+    fn trim_prose_to_confirm() {
+        assert_eq!(
+            trim_prose_suffix("cargo build --workspace to confirm compilation"),
+            "cargo build --workspace"
+        );
+    }
+
+    #[test]
+    fn trim_prose_in_order_to() {
+        assert_eq!(
+            trim_prose_suffix("npm install in order to set up deps"),
+            "npm install"
+        );
+    }
+
+    #[test]
+    fn extract_backtick_npm() {
+        let indicators = &["npm ", "cargo "];
+        let text = "Please run `npm install` in the project";
+        assert_eq!(extract_backtick_command(text, indicators), Some("npm install".into()));
+    }
+
+    #[test]
+    fn extract_backtick_ignores_non_shell() {
+        let indicators = &["npm ", "cargo "];
+        let text = "The variable `count` should be incremented";
+        assert_eq!(extract_backtick_command(text, indicators), None);
+    }
+
+    #[test]
+    fn extract_backtick_multiple_picks_first_shell() {
+        let indicators = &["npm ", "cargo "];
+        let text = "After setting `DEBUG=true`, run `cargo test` to verify";
+        assert_eq!(extract_backtick_command(text, indicators), Some("cargo test".into()));
+    }
+
+    #[test]
+    fn extract_prose_run_prefix() {
+        let prefixes = &["run ", "execute "];
+        let indicators = &["npm ", "cargo "];
+        let text = "Run npm install in a shell to set up the project";
+        assert_eq!(
+            extract_prose_command(text, prefixes, indicators),
+            Some("npm install".into())
+        );
+    }
+
+    #[test]
+    fn extract_prose_execute_prefix() {
+        let prefixes = &["run ", "execute "];
+        let indicators = &["cargo ", "npm "];
+        let text = "Execute cargo build --release in a shell";
+        assert_eq!(
+            extract_prose_command(text, prefixes, indicators),
+            Some("cargo build --release".into())
+        );
+    }
+
+    #[test]
+    fn extract_prose_no_match() {
+        let prefixes = &["run ", "execute "];
+        let indicators = &["npm ", "cargo "];
+        assert_eq!(extract_prose_command("Implement the feature", prefixes, indicators), None);
+    }
+
+    #[test]
+    fn shell_command_from_title_with_run_prefix() {
+        let t = task("Run cargo build --workspace", "");
+        assert_eq!(extract_shell_command(&t), Some("cargo build --workspace".into()));
+    }
+
+    #[test]
+    fn shell_command_from_title_indicator_start() {
+        let t = task("cargo test --release", "something unrelated");
+        assert_eq!(extract_shell_command(&t), Some("cargo test --release".into()));
+    }
+
+    #[test]
+    fn shell_command_from_description_backtick() {
+        let t = task("Set up dependencies", "Run `npm install` in the project root");
+        assert_eq!(extract_shell_command(&t), Some("npm install".into()));
+    }
+
+    #[test]
+    fn shell_command_from_description_short_line() {
+        let t = task("Install packages", "npm install");
+        assert_eq!(extract_shell_command(&t), Some("npm install".into()));
+    }
+
+    #[test]
+    fn no_shell_command_for_regular_task() {
+        let t = task("Implement user auth", "Add login and signup endpoints with JWT tokens");
+        assert_eq!(extract_shell_command(&t), None);
+    }
+
+    #[test]
+    fn no_shell_command_for_multiline_desc() {
+        let t = task(
+            "Add tests",
+            "Write unit tests for the auth module.\nCover edge cases for token expiry.",
+        );
+        assert_eq!(extract_shell_command(&t).map(|_| ()), None);
+    }
+}

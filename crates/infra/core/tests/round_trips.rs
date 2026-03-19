@@ -174,13 +174,15 @@ fn sample_agent() -> Agent {
     let now = Utc::now();
     Agent {
         agent_id: AgentId::new(),
-        user_id: "user-1".into(),
+        user_id: String::new(),
         name: "Agent-1".into(),
-        role: "Engineer".into(),
-        personality: "Helpful".into(),
-        system_prompt: "You are a helpful engineer.".into(),
+        role: "developer".into(),
+        personality: String::new(),
+        system_prompt: String::new(),
         skills: vec![],
         icon: None,
+        network_agent_id: None,
+        profile_id: None,
         created_at: now,
         updated_at: now,
     }
@@ -209,7 +211,7 @@ fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInsta
     }
 }
 
-fn sample_session(agent_instance_id: AgentInstanceId, project_id: ProjectId) -> Session {
+fn sample_session(project_id: ProjectId, agent_instance_id: AgentInstanceId) -> Session {
     let now = Utc::now();
     Session {
         session_id: SessionId::new(),
@@ -251,9 +253,7 @@ test_entity_round_trip!(task_round_trip, {
     let s = sample_spec(p.project_id);
     sample_task(p.project_id, s.spec_id)
 });
-test_entity_round_trip!(agent_round_trip, {
-    sample_agent()
-});
+test_entity_round_trip!(agent_round_trip, sample_agent());
 test_entity_round_trip!(agent_instance_round_trip, {
     let p = sample_project();
     let a = sample_agent();
@@ -263,5 +263,5 @@ test_entity_round_trip!(session_round_trip, {
     let p = sample_project();
     let a = sample_agent();
     let instance = sample_agent_instance(p.project_id, a.agent_id);
-    sample_session(instance.agent_instance_id, p.project_id)
+    sample_session(p.project_id, instance.agent_instance_id)
 });

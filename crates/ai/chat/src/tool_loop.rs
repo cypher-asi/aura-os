@@ -27,6 +27,10 @@ struct LoopState {
     file_read_cache: HashMap<String, u64>,
     consecutive_write_tracker: HashMap<String, usize>,
     consecutive_cmd_failures: usize,
+    total_read_results: usize,
+    consecutive_readonly_iterations: usize,
+    budget_warning_50_sent: bool,
+    budget_warning_75_sent: bool,
 }
 
 impl LoopState {
@@ -84,6 +88,10 @@ pub async fn run_tool_loop(
         file_read_cache: HashMap::new(),
         consecutive_write_tracker: HashMap::new(),
         consecutive_cmd_failures: 0,
+        total_read_results: 0,
+        consecutive_readonly_iterations: 0,
+        budget_warning_50_sent: false,
+        budget_warning_75_sent: false,
     };
 
     for iteration in 0..config.max_iterations {
@@ -112,6 +120,19 @@ pub async fn run_tool_loop(
         check_context_compaction(config, iter.input_tokens, &mut state.api_messages);
         append_text(&mut state.total_text, &iter.iter_text);
 
+        if iter.stop_reason == "max_tokens" && !iter.iter_tool_calls.is_empty() {
+            warn!(
+                iteration,
+                tool_calls = iter.iter_tool_calls.len(),
+                "Output truncated mid-tool-call (stop_reason=max_tokens), skipping execution"
+            );
+            handle_truncated_tool_calls(&iter, event_tx, &mut state);
+            compaction::compact_older_tool_results_tiered(
+                &mut state.api_messages, 2, &compaction::HISTORY,
+            );
+            continue;
+        }
+
         if iter.stop_reason != "tool_use" || iter.iter_tool_calls.is_empty() {
             return state.build_result(iteration + 1, false, false, None);
         }
@@ -121,7 +142,54 @@ pub async fn run_tool_loop(
             return state.build_result(iteration + 1, false, false, None);
         }
 
+        let all_readonly = !iter.iter_tool_calls.is_empty() && iter.iter_tool_calls.iter().all(|tc| {
+            matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files" | "get_task_context")
+        });
+        if all_readonly {
+            state.consecutive_readonly_iterations += 1;
+            if state.consecutive_readonly_iterations == 6 {
+                let nudge = format!(
+                    "[EXPLORATION NUDGE] You have done {} consecutive read-only iterations \
+                     without making any changes. Consider starting implementation now. \
+                     You can always read more files later if needed during editing.",
+                    state.consecutive_readonly_iterations,
+                );
+                info!(consecutive_readonly = state.consecutive_readonly_iterations, "Injecting read-only nudge");
+                state.api_messages.push(RichMessage::user(&nudge));
+            }
+        } else {
+            state.consecutive_readonly_iterations = 0;
+        }
+
         if let Some(budget) = config.credit_budget {
+            let utilization = if budget > 0 {
+                state.cumulative_credits as f64 / budget as f64
+            } else {
+                0.0
+            };
+
+            if utilization >= 0.75 && !state.budget_warning_75_sent {
+                state.budget_warning_75_sent = true;
+                let warning = format!(
+                    "[BUDGET WARNING] You have used ~{:.0}% of your credit budget. \
+                     Wrap up immediately: finish the current edit, verify it compiles, \
+                     and call task_done. Do NOT start new explorations.",
+                    utilization * 100.0,
+                );
+                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 75% budget warning");
+                state.api_messages.push(RichMessage::user(&warning));
+            } else if utilization >= 0.50 && !state.budget_warning_50_sent {
+                state.budget_warning_50_sent = true;
+                let warning = format!(
+                    "[BUDGET WARNING] You have used ~{:.0}% of your credit budget. \
+                     Prioritize completing the implementation over further exploration. \
+                     Focus on writing and verifying code.",
+                    utilization * 100.0,
+                );
+                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 50% budget warning");
+                state.api_messages.push(RichMessage::user(&warning));
+            }
+
             let next_estimate = llm.estimate_credits(billing_model, iter.input_tokens, 0);
             if state.cumulative_credits + next_estimate > budget {
                 warn!(
@@ -290,16 +358,83 @@ fn check_context_compaction(
 ) {
     if let Some(max_ctx) = config.max_context_tokens {
         let utilization = iteration_input_tokens as f64 / max_ctx as f64;
-        if utilization > 0.60 {
+        if utilization > 0.85 {
             info!(
                 input_tokens = iteration_input_tokens,
                 max_context = max_ctx,
                 utilization_pct = (utilization * 100.0) as u32,
-                "Context utilization elevated, compacting older tool results in-flight"
+                "Context >85% full, emergency compaction (keep last 2)"
+            );
+            compaction::compact_older_tool_results_tiered(
+                api_messages, 2, &compaction::HISTORY,
+            );
+        } else if utilization > 0.70 {
+            info!(
+                input_tokens = iteration_input_tokens,
+                max_context = max_ctx,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Context >70% full, aggressive compaction (keep last 3)"
+            );
+            compaction::compact_older_tool_results_tiered(
+                api_messages, 3, &compaction::AGGRESSIVE,
+            );
+        } else if utilization > 0.50 {
+            info!(
+                input_tokens = iteration_input_tokens,
+                max_context = max_ctx,
+                utilization_pct = (utilization * 100.0) as u32,
+                "Context >50% full, moderate compaction (keep last 4)"
             );
             compaction::compact_older_tool_results(api_messages, 4);
         }
     }
+}
+
+fn handle_truncated_tool_calls(
+    iter: &IterationCompleted,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+) {
+    let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
+    if !iter.iter_text.is_empty() {
+        assistant_blocks.push(ContentBlock::Text { text: iter.iter_text.clone() });
+    }
+    for tc in &iter.iter_tool_calls {
+        let input = if tc.name == "write_file" {
+            summarize_write_file_input(&tc.input)
+        } else {
+            tc.input.clone()
+        };
+        assistant_blocks.push(ContentBlock::ToolUse {
+            id: tc.id.clone(),
+            name: tc.name.clone(),
+            input,
+        });
+    }
+    state.api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
+
+    let mut result_blocks: Vec<ContentBlock> = Vec::new();
+    for tc in &iter.iter_tool_calls {
+        let msg = format!(
+            "ERROR: Your output was truncated (stop_reason=max_tokens) so this {} call \
+             was NOT executed — the arguments were likely incomplete. Context is too large. \
+             Break the work into smaller steps: write a skeleton first, then use edit_file \
+             to fill in one section at a time.",
+            tc.name
+        );
+        let _ = event_tx.send(ToolLoopEvent::ToolResult {
+            tool_use_id: tc.id.clone(),
+            tool_name: tc.name.clone(),
+            content: msg.clone(),
+            is_error: true,
+        });
+        result_blocks.push(ContentBlock::ToolResult {
+            tool_use_id: tc.id.clone(),
+            content: msg,
+            is_error: Some(true),
+        });
+    }
+    state.api_messages.push(RichMessage::tool_results(result_blocks));
 }
 
 async fn process_tool_calls(
@@ -359,9 +494,11 @@ async fn process_tool_calls(
                     tool_use_id: tc.id.clone(),
                     content: serde_json::json!({
                         "error": format!(
-                            "You have called {} on '{}' 3+ times consecutively. \
-                             The file was already written successfully. Use read_file to \
-                             verify the contents, or try a different approach.",
+                            "You have called {} on '{}' 3+ times consecutively without success. \
+                             Your output is likely being truncated due to context pressure. \
+                             Break the file into smaller writes: write a skeleton first with \
+                             function signatures, then use edit_file to fill in one function \
+                             body at a time.",
                             tc.name, path
                         )
                     }).to_string(),
@@ -391,6 +528,21 @@ async fn process_tool_calls(
         results,
         &mut state.consecutive_cmd_failures,
     );
+
+    let read_count = iter.iter_tool_calls
+        .iter()
+        .zip(results.iter())
+        .filter(|(tc, r)| tc.name == "read_file" && !r.is_error)
+        .count();
+    state.total_read_results += read_count;
+
+    if state.total_read_results >= 8 {
+        info!(
+            total_reads = state.total_read_results,
+            "High read accumulation, proactively compacting older tool results"
+        );
+        compaction::compact_older_tool_results(&mut state.api_messages, 4);
+    }
 
     let (result_blocks, should_stop) = build_tool_result_blocks(
         &iter.iter_tool_calls, &results, &mut state.file_read_cache, event_tx,

@@ -59,7 +59,7 @@ function fmtTokens(n: number): string {
   return `${(n / 1000).toFixed(1)}k`;
 }
 
-function summarise(e: EngineEvent): string {
+function summariseLoopEvent(e: EngineEvent): string {
   switch (e.type) {
     case "loop_started":
       return "Dev loop started";
@@ -93,12 +93,18 @@ function summarise(e: EngineEvent): string {
         .join(", ");
       return `Task breakdown: ${breakdown}`;
     }
+    default:
+      return e.type;
+  }
+}
+
+function summariseTaskEvent(e: EngineEvent): string {
+  switch (e.type) {
     case "task_started": {
       const name = e.task_title || e.task_id;
       if (e.codebase_snapshot_bytes != null) {
         const kb = (e.codebase_snapshot_bytes / 1024).toFixed(0);
-        const files = e.codebase_file_count ?? "?";
-        return `Started: ${name} (snapshot: ${kb}KB, ${files} files)`;
+        return `Started: ${name} (snapshot: ${kb}KB, ${e.codebase_file_count ?? "?"} files)`;
       }
       return `Started: ${name}`;
     }
@@ -125,8 +131,7 @@ function summarise(e: EngineEvent): string {
       if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
       if (e.phase) parts.push(`phase: ${e.phase}`);
       if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} fix attempts`);
-      const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
-      return `Failed: ${name}${detail} — ${e.reason || "unknown"}`;
+      return `Failed: ${name}${parts.length > 0 ? ` (${parts.join(", ")})` : ""} — ${e.reason || "unknown"}`;
     }
     case "task_retrying":
       return `Retrying: ${e.task_id} (attempt ${e.attempt ?? "?"})`;
@@ -138,6 +143,13 @@ function summarise(e: EngineEvent): string {
       return `Files: ${e.files_written ?? 0} written, ${e.files_deleted ?? 0} deleted`;
     case "follow_up_task_created":
       return `Follow-up created: ${e.task_id}`;
+    default:
+      return e.type;
+  }
+}
+
+function summariseSessionEvent(e: EngineEvent): string {
+  switch (e.type) {
     case "session_rolled_over": {
       const parts: string[] = [];
       if (e.context_usage_pct != null) parts.push(`usage: ${e.context_usage_pct.toFixed(0)}%`);
@@ -147,6 +159,13 @@ function summarise(e: EngineEvent): string {
     }
     case "log_line":
       return e.message || "";
+    default:
+      return e.type;
+  }
+}
+
+function summariseSpecEvent(e: EngineEvent): string {
+  switch (e.type) {
     case "spec_gen_started":
       return "Spec generation started";
     case "spec_gen_progress":
@@ -157,6 +176,13 @@ function summarise(e: EngineEvent): string {
       return `Spec generation failed: ${e.reason ?? "unknown"}`;
     case "spec_saved":
       return `Spec saved: ${e.spec?.title ?? e.project_id}`;
+    default:
+      return e.type;
+  }
+}
+
+function summariseBuildEvent(e: EngineEvent): string {
+  switch (e.type) {
     case "build_verification_skipped":
       return `Build verification skipped${e.reason ? `: ${e.reason}` : ""}`;
     case "build_verification_started":
@@ -174,6 +200,13 @@ function summarise(e: EngineEvent): string {
     }
     case "build_fix_attempt":
       return `Build fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    default:
+      return e.type;
+  }
+}
+
+function summariseTestEvent(e: EngineEvent): string {
+  switch (e.type) {
     case "test_verification_started":
       return `Test verification started${e.task_id ? `: ${e.task_id}` : ""}`;
     case "test_verification_passed": {
@@ -189,6 +222,48 @@ function summarise(e: EngineEvent): string {
     }
     case "test_fix_attempt":
       return `Test fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    default:
+      return e.type;
+  }
+}
+
+function summarise(e: EngineEvent): string {
+  switch (e.type) {
+    case "loop_started":
+    case "loop_paused":
+    case "loop_stopped":
+    case "loop_finished":
+    case "loop_iteration_summary":
+      return summariseLoopEvent(e);
+    case "task_started":
+    case "task_completed":
+    case "task_failed":
+    case "task_retrying":
+    case "task_became_ready":
+    case "task_output_delta":
+    case "file_ops_applied":
+    case "follow_up_task_created":
+      return summariseTaskEvent(e);
+    case "session_rolled_over":
+    case "log_line":
+      return summariseSessionEvent(e);
+    case "spec_gen_started":
+    case "spec_gen_progress":
+    case "spec_gen_completed":
+    case "spec_gen_failed":
+    case "spec_saved":
+      return summariseSpecEvent(e);
+    case "build_verification_skipped":
+    case "build_verification_started":
+    case "build_verification_passed":
+    case "build_verification_failed":
+    case "build_fix_attempt":
+      return summariseBuildEvent(e);
+    case "test_verification_started":
+    case "test_verification_passed":
+    case "test_verification_failed":
+    case "test_fix_attempt":
+      return summariseTestEvent(e);
     case "network_event":
       return `Network: ${e.network_event_type ?? "event"}`;
     default:
