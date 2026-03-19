@@ -64,8 +64,3 @@
 .submit {
   margin-top: var(--space-2);
 }
-
-.spinnerWhite {
-  border-color: rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-}

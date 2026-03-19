@@ -7,6 +7,7 @@
 :root {
   color-scheme: dark;
   --font-sans: 'Inter Variable', sans-serif;
+  --color-spinner: #fff;
   --color-text-muted: #555;
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
