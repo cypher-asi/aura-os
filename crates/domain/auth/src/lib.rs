@@ -52,6 +52,7 @@ struct ZosProfileSummary {
     #[serde(rename = "lastName")]
     last_name: Option<String>,
     #[serde(rename = "profileImage")]
+    #[allow(dead_code)] // We no longer use ZOS profile image; avatar comes from aura-network only.
     profile_image: Option<String>,
 }
 
@@ -156,12 +157,6 @@ impl AuthService {
         debug!("Validating stored auth token against zOS-api");
         match self.fetch_user_info(&session.access_token).await {
             Ok(user) => {
-                let zos_image = user
-                    .profile_summary
-                    .as_ref()
-                    .and_then(|p| p.profile_image.clone())
-                    .unwrap_or_default();
-
                 let updated = ZeroAuthSession {
                     user_id: user.id,
                     network_user_id: session.network_user_id,
@@ -173,7 +168,7 @@ impl AuthService {
                     profile_image: if session.profile_image.starts_with("http") {
                         session.profile_image.clone()
                     } else {
-                        zos_image
+                        String::new()
                     },
                     primary_zid: user.primary_zid.unwrap_or_default(),
                     zero_wallet: user.primary_wallet_address.unwrap_or_default(),
@@ -243,11 +238,7 @@ impl AuthService {
             network_user_id: None,
             profile_id: None,
             display_name: build_display_name(&user.profile_summary, &user.primary_zid),
-            profile_image: user
-                .profile_summary
-                .as_ref()
-                .and_then(|p| p.profile_image.clone())
-                .unwrap_or_default(),
+            profile_image: String::new(),
             primary_zid: user.primary_zid.unwrap_or_default(),
             zero_wallet: user.primary_wallet_address.unwrap_or_default(),
             wallets: user

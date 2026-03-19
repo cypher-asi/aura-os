@@ -447,9 +447,6 @@ fn try_fill_from_session(
         return false;
     }
     resp.display_name = session.display_name.clone();
-    if resp.avatar_url.is_none() && !session.profile_image.is_empty() {
-        resp.avatar_url = Some(session.profile_image.clone());
-    }
     true
 }
 
