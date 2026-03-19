@@ -16,7 +16,8 @@ pub struct ListProjectsQuery {
     pub org_id: Option<OrgId>,
 }
 
-fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Project {
+/// Build a core Project from aura-network response only (no local merge).
+fn project_from_network(net: &NetworkProject) -> Project {
     let project_id = net
         .id
         .parse::<ProjectId>()
@@ -38,51 +39,25 @@ fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Projec
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
 
-    if let Some(local) = local {
-        Project {
-            project_id,
-            org_id,
-            name: net.name.clone(),
-            description: net
-                .description
-                .clone()
-                .unwrap_or_else(|| local.description.clone()),
-            linked_folder_path: local.linked_folder_path.clone(),
-            requirements_doc_path: local.requirements_doc_path.clone(),
-            current_status: local.current_status,
-            build_command: local.build_command.clone(),
-            test_command: local.test_command.clone(),
-            specs_summary: local.specs_summary.clone(),
-            specs_title: local.specs_title.clone(),
-            created_at,
-            updated_at,
-            git_repo_url: local.git_repo_url.clone(),
-            git_branch: local.git_branch.clone(),
-            orbit_base_url: local.orbit_base_url.clone(),
-            orbit_owner: local.orbit_owner.clone(),
-            orbit_repo: local.orbit_repo.clone(),
-        }
-    } else {
-        Project {
-            project_id,
-            org_id,
-            name: net.name.clone(),
-            description: net.description.clone().unwrap_or_default(),
-            linked_folder_path: net.folder.clone().unwrap_or_default(),
-            requirements_doc_path: None,
-            current_status: ProjectStatus::Active,
-            build_command: None,
-            test_command: None,
-            specs_summary: None,
-            specs_title: None,
-            created_at,
-            updated_at,
-            git_repo_url: net.git_repo_url.clone(),
-            git_branch: net.git_branch.clone(),
-            orbit_base_url: net.orbit_base_url.clone(),
-            orbit_owner: net.orbit_owner.clone(),
-            orbit_repo: net.orbit_repo.clone(),
-        }
+    Project {
+        project_id,
+        org_id,
+        name: net.name.clone(),
+        description: net.description.clone().unwrap_or_default(),
+        linked_folder_path: net.folder.clone().unwrap_or_default(),
+        requirements_doc_path: None,
+        current_status: ProjectStatus::Active,
+        build_command: None,
+        test_command: None,
+        specs_summary: None,
+        specs_title: None,
+        created_at,
+        updated_at,
+        git_repo_url: net.git_repo_url.clone(),
+        git_branch: net.git_branch.clone(),
+        orbit_base_url: net.orbit_base_url.clone(),
+        orbit_owner: net.orbit_owner.clone(),
+        orbit_repo: net.orbit_repo.clone(),
     }
 }
 
@@ -105,7 +80,7 @@ pub(crate) async fn list_all_projects_from_network(state: &AppState) -> ApiResul
             .await
             .map_err(map_network_error)?;
         for net in &net_projects {
-            projects.push(project_from_network(net, None));
+            projects.push(project_from_network(net));
         }
     }
     Ok(projects)
@@ -238,7 +213,7 @@ pub async fn list_projects(
 
         let projects: Vec<Project> = net_projects
             .iter()
-            .map(|net| project_from_network(net, None))
+            .map(project_from_network)
             .collect();
 
         Ok(Json(projects))
@@ -258,7 +233,7 @@ pub async fn get_project(
         .get_project(&project_id.to_string(), &jwt)
         .await
         .map_err(map_network_error)?;
-    let project = project_from_network(&net_project, None);
+    let project = project_from_network(&net_project);
     Ok(Json(project))
 }
 
@@ -287,7 +262,7 @@ pub async fn update_project(
         .update_project(&project_id.to_string(), &jwt, &net_req)
         .await
         .map_err(map_network_error)?;
-    let project = project_from_network(&net_project, None);
+    let project = project_from_network(&net_project);
     Ok(Json(project))
 }
 

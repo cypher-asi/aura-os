@@ -100,7 +100,7 @@ impl AgentService {
 //
 // Merges three data sources when returning AgentInstance:
 //   1. Execution state from aura-storage (status, model, tokens, timestamps)
-//   2. Config from local agent shadow store (name, role, personality, etc.)
+//   2. Config from aura-network (agent template; name, role, personality, etc.) when available
 //   3. Volatile runtime state from in-memory map (current_task_id, current_session_id)
 // ---------------------------------------------------------------------------
 
@@ -334,8 +334,8 @@ pub fn parse_agent_status(s: &str) -> AgentStatus {
 
 /// Merge three sources into a single `AgentInstance`:
 /// - `spa`: execution state from aura-storage (status, model, tokens, timestamps)
-/// - `agent`: config from local agent shadow (name, role, personality, etc.)
-///   Falls back to storage fields when the shadow is unavailable.
+/// - `agent`: config from aura-network (agent template; name, role, personality, etc.) when available;
+///   otherwise falls back to storage project-agent fields.
 /// - `runtime`: volatile in-memory state (current_task_id, current_session_id)
 pub fn merge_agent_instance(
     spa: &aura_storage::StorageProjectAgent,
