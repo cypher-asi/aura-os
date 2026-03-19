@@ -4,6 +4,7 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ApiResult;
+use crate::handlers::projects;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -29,9 +30,8 @@ pub async fn list_log_entries(
         let project_ids: Vec<String> = if let Some(ref pid) = query.project_id {
             vec![pid.clone()]
         } else {
-            state
-                .project_service
-                .list_projects()
+            projects::list_all_projects_from_network(&state)
+                .await
                 .unwrap_or_default()
                 .iter()
                 .map(|p| p.project_id.to_string())
