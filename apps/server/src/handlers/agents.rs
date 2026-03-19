@@ -13,9 +13,10 @@ use tracing::{info, warn};
 use axum::http::StatusCode;
 
 use aura_core::{
-    Agent, AgentId, AgentInstance, AgentInstanceId, Message, ProfileId, ProjectId,
-    RuntimeAgentState, Session, SessionId, Task, ZeroAuthSession,
+    Agent, AgentId, AgentInstance, AgentInstanceId, AgentStatus, Message, ProfileId, ProjectId,
+    Session, SessionId, SessionStatus, Task, ZeroAuthSession,
 };
+use aura_storage::StorageSession;
 use aura_agents::{merge_agent_instance, AgentInstanceService};
 use aura_chat::ChatStreamEvent;
 use aura_engine::EngineEvent;
@@ -236,6 +237,54 @@ fn get_user_id_opt(state: &AppState) -> Result<String, ()> {
     let session_bytes = state.store.get_setting("zero_auth_session").map_err(|_| ())?;
     let session: ZeroAuthSession = serde_json::from_slice(&session_bytes).map_err(|_| ())?;
     Ok(session.user_id)
+}
+
+// ---------------------------------------------------------------------------
+// StorageSession -> Session conversion
+// ---------------------------------------------------------------------------
+
+fn parse_session_status(s: &str) -> SessionStatus {
+    serde_json::from_str(&format!("\"{s}\"")).unwrap_or(SessionStatus::Active)
+}
+
+fn parse_dt(v: &Option<String>) -> DateTime<Utc> {
+    v.as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn storage_session_to_session(s: StorageSession) -> Result<Session, String> {
+    Ok(Session {
+        session_id: s.id.parse().map_err(|e| format!("invalid session id: {e}"))?,
+        agent_instance_id: s
+            .project_agent_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project_agent_id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project_id: {e}"))?,
+        active_task_id: None,
+        tasks_worked: Vec::new(),
+        context_usage_estimate: s.context_usage_estimate.unwrap_or(0.0),
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        summary_of_previous_context: s.summary_of_previous_context.unwrap_or_default(),
+        status: parse_session_status(s.status.as_deref().unwrap_or("active")),
+        user_id: None,
+        model: None,
+        started_at: parse_dt(&s.created_at),
+        ended_at: s
+            .ended_at
+            .as_deref()
+            .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+            .map(|dt| dt.with_timezone(&Utc)),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -741,78 +790,99 @@ pub async fn send_message_stream(
 }
 
 // ---------------------------------------------------------------------------
-// Sessions (scoped to agent instance)
+// Sessions (scoped to agent instance, proxied to aura-storage)
 // ---------------------------------------------------------------------------
 
 pub async fn list_project_sessions(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Session>>> {
-    let mut sessions = state
-        .store
-        .list_sessions_by_project(&project_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+
+    let storage_agents = storage
+        .list_project_agents(&project_id.to_string(), &jwt)
+        .await
+        .map_err(map_storage_error)?;
+
+    let mut sessions = Vec::new();
+    for agent in &storage_agents {
+        if let Ok(agent_sessions) = storage.list_sessions(&agent.id, &jwt).await {
+            for ss in agent_sessions {
+                if let Ok(s) = storage_session_to_session(ss) {
+                    sessions.push(s);
+                }
+            }
+        }
+    }
     sessions.sort_by(|a, b| b.started_at.cmp(&a.started_at));
     Ok(Json(sessions))
 }
 
 pub async fn list_sessions(
     State(state): State<AppState>,
-    Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
+    Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<Session>>> {
-    let sessions = state
-        .session_service
-        .list_sessions(&project_id, &agent_instance_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let storage_sessions = storage
+        .list_sessions(&agent_instance_id.to_string(), &jwt)
+        .await
+        .map_err(map_storage_error)?;
+    let sessions: Vec<Session> = storage_sessions
+        .into_iter()
+        .filter_map(|s| storage_session_to_session(s).ok())
+        .collect();
     Ok(Json(sessions))
 }
 
 pub async fn get_session(
     State(state): State<AppState>,
-    Path((project_id, agent_instance_id, session_id)): Path<(
+    Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
     )>,
 ) -> ApiResult<Json<Session>> {
-    let session = state
-        .session_service
-        .get_session(&project_id, &agent_instance_id, &session_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let ss = storage
+        .get_session(&session_id.to_string(), &jwt)
+        .await
         .map_err(|e| match &e {
-            aura_sessions::SessionError::NotFound => ApiError::not_found("session not found"),
-            _ => ApiError::internal(e.to_string()),
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(e),
         })?;
+    let session = storage_session_to_session(ss).map_err(|e| ApiError::internal(e))?;
     Ok(Json(session))
 }
 
 pub async fn list_session_tasks(
     State(state): State<AppState>,
-    Path((project_id, agent_instance_id, session_id)): Path<(
+    Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
     )>,
 ) -> ApiResult<Json<Vec<Task>>> {
-    let session = state
-        .session_service
-        .get_session(&project_id, &agent_instance_id, &session_id)
-        .map_err(|e| match &e {
-            aura_sessions::SessionError::NotFound => ApiError::not_found("session not found"),
-            _ => ApiError::internal(e.to_string()),
-        })?;
-
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
-    let all_storage_tasks = storage
-        .list_tasks(&project_id.to_string(), &jwt)
+
+    // Verify session exists
+    storage
+        .get_session(&session_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| match &e {
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("session not found")
+            }
+            _ => map_storage_error(e),
+        })?;
 
-    let session_tasks: Vec<Task> = all_storage_tasks
-        .into_iter()
-        .filter_map(|s| super::tasks::storage_task_to_task(s).ok())
-        .filter(|t| session.tasks_worked.contains(&t.task_id))
-        .collect();
-
-    Ok(Json(session_tasks))
+    // aura-storage doesn't track session-task relationships (tasks_worked is
+    // not persisted remotely). Return empty until session_id is added to
+    // StorageTask.
+    Ok(Json(Vec::new()))
 }

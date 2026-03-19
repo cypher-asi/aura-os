@@ -233,7 +233,7 @@ pub async fn get_progress(
         file_ops_failures: 0,
     };
 
-    aggregate_session_metrics(&state, &project_id, &mut progress);
+    aggregate_session_metrics(&state, &project_id, &mut progress).await;
     aggregate_agent_instance_metrics(&state, &project_id, &mut progress).await;
 
     if let Ok(count) = state.store.count_messages_by_project(&project_id) {
@@ -245,37 +245,52 @@ pub async fn get_progress(
     Ok(Json(progress))
 }
 
-fn aggregate_session_metrics(
+async fn aggregate_session_metrics(
     state: &AppState,
     project_id: &ProjectId,
     progress: &mut ProjectProgress,
 ) {
-    let Ok(sessions) = state.store.list_sessions_by_project(project_id) else {
+    let Some(ref storage) = state.storage_client else { return };
+    let Ok(jwt) = state.get_jwt() else { return };
+
+    let Ok(storage_agents) = storage
+        .list_project_agents(&project_id.to_string(), &jwt)
+        .await
+    else {
         return;
     };
-    let fee_schedule = state.pricing_service.get_fee_schedule();
-    progress.total_sessions = sessions.len() as u64;
-    progress.total_tokens += sessions
-        .iter()
-        .map(|s| s.total_input_tokens + s.total_output_tokens)
-        .sum::<u64>();
-    progress.total_cost += sessions
-        .iter()
-        .map(|s| {
-            let model = s.model.as_deref().unwrap_or("claude-opus-4-6");
-            let (inp, out) = aura_billing::lookup_rate_in(&fee_schedule, model);
-            aura_billing::compute_cost_with_rates(
-                s.total_input_tokens, s.total_output_tokens, inp, out,
-            )
-        })
-        .sum::<f64>();
-    progress.total_time_seconds = sessions
-        .iter()
-        .map(|s| {
-            let end = s.ended_at.unwrap_or_else(Utc::now);
-            (end - s.started_at).num_seconds().max(0) as u64
-        })
-        .sum();
+
+    let mut total_sessions = 0u64;
+    let mut total_time_seconds = 0u64;
+    for agent in &storage_agents {
+        if let Ok(sessions) = storage.list_sessions(&agent.id, &jwt).await {
+            total_sessions += sessions.len() as u64;
+            total_time_seconds += sessions
+                .iter()
+                .map(|s| {
+                    let created = s
+                        .created_at
+                        .as_deref()
+                        .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+                        .map(|dt| dt.with_timezone(&Utc));
+                    let ended = s
+                        .ended_at
+                        .as_deref()
+                        .and_then(|t| chrono::DateTime::parse_from_rfc3339(t).ok())
+                        .map(|dt| dt.with_timezone(&Utc))
+                        .or_else(|| Some(Utc::now()));
+                    match (created, ended) {
+                        (Some(c), Some(e)) => (e - c).num_seconds().max(0) as u64,
+                        _ => 0,
+                    }
+                })
+                .sum::<u64>();
+        }
+    }
+    progress.total_sessions = total_sessions;
+    progress.total_time_seconds = total_time_seconds;
+    // Token counts and cost are now tracked via agent instances, not sessions.
+    // StorageSession doesn't carry total_input_tokens / total_output_tokens.
 }
 
 async fn aggregate_agent_instance_metrics(
