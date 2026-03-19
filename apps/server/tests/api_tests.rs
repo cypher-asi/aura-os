@@ -217,13 +217,15 @@ fn build_test_app_from_store(
     ));
     let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
-    let agent_service = Arc::new(AgentService::new(store.clone()));
+    let network_client: Option<Arc<aura_network::NetworkClient>> = None;
+    let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
     let runtime_agent_state: aura_server::state::RuntimeAgentStateMap =
         Arc::new(Mutex::new(HashMap::new()));
     let agent_instance_service = Arc::new(AgentInstanceService::new(
         store.clone(),
         storage_client.clone(),
         runtime_agent_state.clone(),
+        network_client,
     ));
     let llm_config = LlmConfig::default();
     let session_service = Arc::new(SessionService::new(

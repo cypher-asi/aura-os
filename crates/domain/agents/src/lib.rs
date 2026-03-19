@@ -8,31 +8,90 @@ use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
 use aura_core::*;
+use aura_network::NetworkAgent;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
 
 pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentState>>>;
 
+/// Convert NetworkAgent to core Agent (no local store).
+fn network_agent_to_core(net: &NetworkAgent) -> Agent {
+    let agent_id = net
+        .id
+        .parse::<AgentId>()
+        .unwrap_or_else(|_| AgentId::new());
+    let profile_id: Option<ProfileId> = net.profile_id.as_ref().and_then(|s| s.parse().ok());
+    let created_at = net
+        .created_at
+        .as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now);
+    let updated_at = net
+        .updated_at
+        .as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now);
+
+    Agent {
+        agent_id,
+        user_id: net.user_id.clone(),
+        name: net.name.clone(),
+        role: net.role.clone().unwrap_or_default(),
+        personality: net.personality.clone().unwrap_or_default(),
+        system_prompt: net.system_prompt.clone().unwrap_or_default(),
+        skills: net.skills.clone().unwrap_or_default(),
+        icon: net.icon.clone(),
+        network_agent_id: net.id.parse().ok(),
+        profile_id,
+        created_at,
+        updated_at,
+    }
+}
+
 // ---------------------------------------------------------------------------
-// AgentService – user-level agent templates (local shadow store)
+// AgentService – user-level agent templates (aura-network only)
 // ---------------------------------------------------------------------------
 
 pub struct AgentService {
     store: Arc<RocksStore>,
+    network_client: Option<Arc<aura_network::NetworkClient>>,
 }
 
 impl AgentService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
-        Self { store }
+    pub fn new(
+        store: Arc<RocksStore>,
+        network_client: Option<Arc<aura_network::NetworkClient>>,
+    ) -> Self {
+        Self { store, network_client }
     }
 
-    pub fn get_agent(&self, user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
-        self.store
-            .get_agent(user_id, agent_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => AgentError::NotFound,
-                other => AgentError::Store(other),
-            })
+    fn get_jwt(&self) -> Result<String, AgentError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| AgentError::NoSession)?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
+        Ok(session.access_token)
+    }
+
+    /// Get agent from aura-network only. Returns error if network is not configured or agent not found.
+    pub async fn get_agent_async(&self, _user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
+        let client = self
+            .network_client
+            .as_ref()
+            .ok_or_else(|| AgentError::Parse("aura-network is not configured".into()))?;
+        let jwt = self.get_jwt()?;
+        let net = client
+            .get_agent(&agent_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,
+                _ => AgentError::Network(e),
+            })?;
+        Ok(network_agent_to_core(&net))
     }
 }
 
@@ -48,6 +107,7 @@ impl AgentService {
 pub struct AgentInstanceService {
     store: Arc<RocksStore>,
     storage_client: Option<Arc<StorageClient>>,
+    network_client: Option<Arc<aura_network::NetworkClient>>,
     runtime_state: RuntimeAgentStateMap,
 }
 
@@ -56,8 +116,14 @@ impl AgentInstanceService {
         store: Arc<RocksStore>,
         storage_client: Option<Arc<StorageClient>>,
         runtime_state: RuntimeAgentStateMap,
+        network_client: Option<Arc<aura_network::NetworkClient>>,
     ) -> Self {
-        Self { store, storage_client, runtime_state }
+        Self {
+            store,
+            storage_client,
+            network_client,
+            runtime_state,
+        }
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, AgentError> {
@@ -76,20 +142,12 @@ impl AgentInstanceService {
         Ok(session.access_token)
     }
 
-    fn resolve_agent(&self, agent_id_str: &str) -> Option<Agent> {
-        let agent_id: AgentId = agent_id_str.parse().ok()?;
-        let user_id = self.get_user_id().ok()?;
-        self.store.get_agent(&user_id, &agent_id).ok()
-    }
-
-    fn get_user_id(&self) -> Result<String, AgentError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| AgentError::NoSession)?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
-        Ok(session.user_id)
+    /// Resolve agent config from aura-network only. Returns None if network is unavailable or agent not found.
+    async fn resolve_agent_async(&self, agent_id_str: &str) -> Option<Agent> {
+        let client = self.network_client.as_ref()?;
+        let jwt = self.get_jwt().ok()?;
+        let net = client.get_agent(agent_id_str, &jwt).await.ok()?;
+        Some(network_agent_to_core(&net))
     }
 
     pub async fn create_instance_from_agent(
@@ -128,7 +186,10 @@ impl AgentInstanceService {
                 aura_storage::StorageError::Server { status: 404, .. } => AgentError::NotFound,
                 _ => AgentError::Storage(e),
             })?;
-        let agent = spa.agent_id.as_deref().and_then(|aid| self.resolve_agent(aid));
+        let agent = match spa.agent_id.as_deref() {
+            Some(aid) => self.resolve_agent_async(aid).await,
+            None => None,
+        };
         let runtime_map = self.runtime_state.lock().await;
         let runtime = runtime_map.get(agent_instance_id);
         Ok(merge_agent_instance(&spa, agent.as_ref(), runtime))
@@ -144,15 +205,17 @@ impl AgentInstanceService {
             .list_project_agents(&project_id.to_string(), &jwt)
             .await?;
         let runtime_map = self.runtime_state.lock().await;
-        Ok(spas
-            .iter()
-            .map(|spa| {
-                let agent = spa.agent_id.as_deref().and_then(|aid| self.resolve_agent(aid));
-                let aiid = spa.id.parse::<AgentInstanceId>().ok();
-                let runtime = aiid.and_then(|id| runtime_map.get(&id));
-                merge_agent_instance(spa, agent.as_ref(), runtime)
-            })
-            .collect())
+        let mut instances = Vec::with_capacity(spas.len());
+        for spa in &spas {
+            let agent = match spa.agent_id.as_deref() {
+                Some(aid) => self.resolve_agent_async(aid).await,
+                None => None,
+            };
+            let aiid = spa.id.parse::<AgentInstanceId>().ok();
+            let runtime = aiid.and_then(|id| runtime_map.get(&id));
+            instances.push(merge_agent_instance(spa, agent.as_ref(), runtime));
+        }
+        Ok(instances)
     }
 
     pub async fn update_status(

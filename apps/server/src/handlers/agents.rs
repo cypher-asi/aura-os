@@ -81,15 +81,8 @@ fn agent_from_network(net: &NetworkAgent) -> Agent {
     }
 }
 
-/// Save a local shadow of a network agent so agent instances and messaging work.
-fn ensure_agent_shadow(state: &AppState, agent: &Agent) {
-    if let Err(e) = state.store.put_agent(agent) {
-        warn!(agent_id = %agent.agent_id, error = %e, "Failed to save local agent shadow");
-    }
-}
-
 // ---------------------------------------------------------------------------
-// User-level Agent CRUD (proxied to aura-network when available)
+// User-level Agent CRUD (aura-network only; no local store)
 // ---------------------------------------------------------------------------
 
 pub async fn create_agent(
@@ -112,7 +105,6 @@ pub async fn create_agent(
         .await
         .map_err(map_network_error)?;
     let agent = agent_from_network(&net_agent);
-    ensure_agent_shadow(&state, &agent);
     Ok(Json(agent))
 }
 
@@ -121,9 +113,6 @@ pub async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Ag
     let jwt = state.get_jwt()?;
     let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
     let agents: Vec<Agent> = net_agents.iter().map(agent_from_network).collect();
-    for agent in &agents {
-        ensure_agent_shadow(&state, agent);
-    }
     Ok(Json(agents))
 }
 
@@ -138,7 +127,6 @@ pub async fn get_agent(
         .await
         .map_err(map_network_error)?;
     let agent = agent_from_network(&net_agent);
-    ensure_agent_shadow(&state, &agent);
     Ok(Json(agent))
 }
 
@@ -162,7 +150,6 @@ pub async fn update_agent(
         .await
         .map_err(map_network_error)?;
     let agent = agent_from_network(&net_agent);
-    ensure_agent_shadow(&state, &agent);
     Ok(Json(agent))
 }
 
@@ -197,8 +184,6 @@ pub async fn delete_agent(
         .delete_agent(&agent_id.to_string(), &jwt)
         .await
         .map_err(map_network_error)?;
-    let user_id = get_user_id(&state).unwrap_or_default();
-    let _ = state.store.delete_agent(&user_id, &agent_id);
     Ok(Json(()))
 }
 
@@ -207,7 +192,7 @@ pub async fn delete_agent(
 // ---------------------------------------------------------------------------
 
 /// Fetch all agents from the network, returning a map by network agent ID.
-/// Falls back to an empty map if the network is unavailable.
+/// Returns empty map if network is unavailable.
 async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashMap<String, Agent> {
     if let Some(ref client) = state.network_client {
         if let Ok(net_agents) = client.list_agents(jwt).await {
@@ -220,26 +205,11 @@ async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashMap<String, 
     HashMap::new()
 }
 
-/// Fetch a single agent's config from the network (or local shadow).
+/// Fetch a single agent's config from the network only (no local fallback).
 async fn resolve_single_agent(state: &AppState, jwt: &str, agent_id: &str) -> Option<Agent> {
-    if let Some(ref client) = state.network_client {
-        if let Ok(net_agent) = client.get_agent(agent_id, jwt).await {
-            return Some(agent_from_network(&net_agent));
-        }
-    }
-    // Fall back to local shadow
-    if let Ok(aid) = agent_id.parse::<AgentId>() {
-        if let Ok(uid) = get_user_id_opt(state) {
-            return state.agent_service.get_agent(&uid, &aid).ok();
-        }
-    }
-    None
-}
-
-fn get_user_id_opt(state: &AppState) -> Result<String, ()> {
-    let session_bytes = state.store.get_setting("zero_auth_session").map_err(|_| ())?;
-    let session: ZeroAuthSession = serde_json::from_slice(&session_bytes).map_err(|_| ())?;
-    Ok(session.user_id)
+    let client = state.network_client.as_ref()?;
+    let net_agent = client.get_agent(agent_id, jwt).await.ok()?;
+    Some(agent_from_network(&net_agent))
 }
 
 // ---------------------------------------------------------------------------
@@ -289,30 +259,16 @@ pub async fn create_agent_instance(
     Json(body): Json<CreateAgentInstanceRequest>,
 ) -> ApiResult<Json<AgentInstance>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let user_id = get_user_id(&state)?;
 
-    let agent = match state.agent_service.get_agent(&user_id, &body.agent_id) {
-        Ok(a) => a,
-        Err(_) if state.network_client.is_some() => {
-            let client = state.network_client.as_ref().unwrap();
-            let net_agent = client
-                .get_agent(&body.agent_id.to_string(), &jwt)
-                .await
-                .map_err(map_network_error)?;
-            let a = agent_from_network(&net_agent);
-            ensure_agent_shadow(&state, &a);
-            a
-        }
-        Err(e) => {
-            return Err(match &e {
-                aura_agents::AgentError::NotFound => {
-                    ApiError::not_found("agent template not found")
-                }
-                _ => ApiError::internal(e.to_string()),
-            });
-        }
-    };
+    let agent = state
+        .agent_service
+        .get_agent_async(&user_id, &body.agent_id)
+        .await
+        .map_err(|e| match &e {
+            aura_agents::AgentError::NotFound => ApiError::not_found("agent template not found"),
+            _ => ApiError::internal(e.to_string()),
+        })?;
 
     let req = aura_storage::CreateProjectAgentRequest {
         agent_id: body.agent_id.to_string(),
@@ -323,6 +279,7 @@ pub async fn create_agent_instance(
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
     };
+    let jwt = state.get_jwt()?;
     let storage_agent = storage
         .create_project_agent(&project_id.to_string(), &jwt, &req)
         .await
@@ -550,33 +507,11 @@ pub async fn send_agent_message_stream(
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     let agent = match get_user_id(&state) {
-        Ok(uid) => match state.agent_service.get_agent(&uid, &agent_id) {
-            Ok(a) => Some(a),
-            Err(_) if state.network_client.is_some() => {
-                let client = state.network_client.as_ref().unwrap();
-                match state.get_jwt() {
-                    Ok(jwt) => match client
-                        .get_agent(&agent_id.to_string(), &jwt)
-                        .await
-                    {
-                        Ok(net_agent) => {
-                            let a = agent_from_network(&net_agent);
-                            ensure_agent_shadow(&state, &a);
-                            Some(a)
-                        }
-                        Err(e) => {
-                            warn!(%agent_id, error = %e, "Agent not found via network");
-                            None
-                        }
-                    },
-                    Err(_) => None,
-                }
-            }
-            Err(e) => {
-                warn!(%agent_id, error = %e, "Agent not found locally, no network client");
-                None
-            }
-        },
+        Ok(uid) => state
+            .agent_service
+            .get_agent_async(&uid, &agent_id)
+            .await
+            .ok(),
         Err(_) => {
             warn!(%agent_id, "No authenticated user, cannot resolve agent");
             None
