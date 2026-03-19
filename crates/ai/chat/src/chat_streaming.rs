@@ -324,6 +324,15 @@ impl ChatService {
             } else {
                 let _ = tx.send(ChatStreamEvent::MessageSaved(assistant_msg));
             }
+            self.save_message_to_storage(
+                project_id,
+                agent_instance_id,
+                "assistant",
+                &assistant_reply,
+                Some(result.total_input_tokens),
+                Some(result.total_output_tokens),
+            )
+            .await;
 
             if !assistant_reply.is_empty() {
                 self.maybe_generate_title(
@@ -454,7 +463,7 @@ impl ChatService {
                 agent_instance_id: *agent_instance_id,
                 project_id: *project_id,
                 role: ChatRole::Assistant,
-                content: accumulated,
+                content: accumulated.clone(),
                 content_blocks: None,
                 thinking: None,
                 thinking_duration_ms: None,
@@ -465,6 +474,15 @@ impl ChatService {
             } else {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
             }
+            self.save_message_to_storage(
+                project_id,
+                agent_instance_id,
+                "assistant",
+                &accumulated,
+                Some(spec_input_tokens),
+                Some(spec_output_tokens),
+            )
+            .await;
         }
     }
 }

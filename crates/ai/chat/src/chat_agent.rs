@@ -254,6 +254,7 @@ impl ChatService {
             } else {
                 send(ChatStreamEvent::MessageSaved(assistant_msg));
             }
+            // Agent-level messages use dummy IDs; no StorageClient write
         }
     }
 }

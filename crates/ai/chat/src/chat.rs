@@ -260,6 +260,53 @@ impl ChatService {
         }
     }
 
+    pub(crate) fn get_jwt(&self) -> Option<String> {
+        let bytes = self.store.get_setting("zero_auth_session").ok()?;
+        let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
+        Some(session.access_token)
+    }
+
+    /// Save a message to aura-storage via the latest active session.
+    /// Fire-and-forget: logs a warning on failure but does not propagate errors.
+    pub(crate) async fn save_message_to_storage(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        role: &str,
+        content: &str,
+        input_tokens: Option<u64>,
+        output_tokens: Option<u64>,
+    ) {
+        let Some(ref storage) = self.storage_client else { return };
+        let Some(jwt) = self.get_jwt() else { return };
+
+        let sessions = storage
+            .list_sessions(&agent_instance_id.to_string(), &jwt)
+            .await
+            .unwrap_or_default();
+        let active_session = sessions
+            .iter()
+            .find(|s| s.status.as_deref() == Some("active"));
+        let Some(session) = active_session else { return };
+
+        let req = aura_storage::CreateMessageRequest {
+            project_agent_id: agent_instance_id.to_string(),
+            project_id: project_id.to_string(),
+            role: role.to_string(),
+            content: content.to_string(),
+            input_tokens,
+            output_tokens,
+        };
+
+        if let Err(e) = storage.create_message(&session.id, &jwt, &req).await {
+            warn!(
+                %project_id, %agent_instance_id,
+                error = %e,
+                "Failed to save message to aura-storage"
+            );
+        }
+    }
+
     pub fn list_messages(
         &self,
         project_id: &ProjectId,
@@ -316,6 +363,8 @@ impl ChatService {
             send(ChatStreamEvent::Done);
             return;
         }
+        self.save_message_to_storage(project_id, agent_instance_id, "user", content, None, None)
+            .await;
 
         match action {
             Some("generate_specs") => {
@@ -369,6 +418,8 @@ impl ChatService {
             send(ChatStreamEvent::Done);
             return;
         }
+        // Agent-level messages use dummy IDs; no StorageClient write
+        // (aura-storage scopes messages by session, not agent)
 
         self.handle_agent_chat_with_tools(agent_id, agent, projects, &tx)
             .await;
