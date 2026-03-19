@@ -1,7 +1,15 @@
-/* Override ZUI global focus-visible outline — individual components
-   that need focus rings define their own styles. */
-*:focus-visible {
-  outline: none;
+:where(
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  summary,
+  [role="button"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent, #7c3aed) 82%, white 18%);
+  outline-offset: 2px;
 }
 
 :root {
@@ -25,6 +33,11 @@ html, body, #root {
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+html:has([role="dialog"][aria-modal="true"]),
+body:has([role="dialog"][aria-modal="true"]) {
+  overflow: hidden;
 }
 
 @media (pointer: coarse), (max-width: 900px) {

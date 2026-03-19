@@ -5,4 +5,7 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable both-edges;
 }

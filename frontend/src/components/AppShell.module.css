@@ -52,6 +52,7 @@
   max-height: min(25vh, 176px);
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg) 97%, var(--color-bg-elevated) 3%);
 }
@@ -76,6 +77,8 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobileBottomNav {
@@ -136,6 +139,7 @@
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
+  overscroll-behavior: contain;
 }
 
 .mobileDrawerSearch {
@@ -147,13 +151,15 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobileDrawerFooter {
   position: relative;
   z-index: 2;
   border-top: 1px solid var(--color-border);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);

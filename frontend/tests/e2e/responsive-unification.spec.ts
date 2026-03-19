@@ -123,3 +123,21 @@ test("navigation drawer remains settings access on smaller form factors only", a
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
   await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
 });
+
+test("modal flows lock the background document across form factors", async ({ page }, testInfo) => {
+  const factor = formFactor(testInfo.project.name);
+
+  await mockAuthenticatedApp(page);
+  await page.goto("/projects");
+
+  if (factor !== "desktop") {
+    await page.getByRole("button", { name: "Open navigation" }).click();
+  }
+
+  const newProjectButton = page.locator('button[title="New Project"]:visible');
+  await expect(newProjectButton).toBeVisible();
+  await newProjectButton.click();
+
+  await expect(page.getByPlaceholder("Project name")).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => window.getComputedStyle(document.body).overflow)).toBe("hidden");
+});
