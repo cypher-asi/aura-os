@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
 import type { UserProfileData } from "./ProfileProvider";
-import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import styles from "../../components/AgentEditorModal.module.css";
 
 interface ProfileEditorModalProps {
@@ -12,14 +12,13 @@ interface ProfileEditorModalProps {
 }
 
 export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: ProfileEditorModalProps) {
-  const { isMobileLayout } = useAuraCapabilities();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const [location, setLocation] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [nameError, setNameError] = useState("");
-  const nameRef = useRef<HTMLInputElement>(null);
+  const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -30,10 +29,6 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     setAvatarUrl(profile.avatarUrl ?? "");
     setNameError("");
   }, [isOpen, profile]);
-
-  useEffect(() => {
-    if (isOpen && !isMobileLayout) requestAnimationFrame(() => nameRef.current?.focus());
-  }, [isOpen, isMobileLayout]);
 
   const handleClose = useCallback(() => {
     setNameError("");
@@ -62,6 +57,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
       onClose={handleClose}
       title="Edit Profile"
       size="md"
+      initialFocusRef={initialFocusRef}
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={handleClose}>

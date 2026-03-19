@@ -2,8 +2,8 @@ import { useState, useRef } from "react";
 import { useOrg } from "../context/OrgContext";
 import { Building2, ChevronDown, Plus } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
-import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { useClickOutside } from "../hooks/use-click-outside";
+import { useModalInitialFocus } from "../hooks/use-modal-initial-focus";
 import styles from "./OrgSelector.module.css";
 
 export function OrgSelector({
@@ -13,8 +13,8 @@ export function OrgSelector({
   onOpenSettings: () => void;
   variant?: "default" | "drawer";
 }) {
-  const { isMobileLayout } = useAuraCapabilities();
   const { orgs, activeOrg, switchOrg, createOrg } = useOrg();
+  const { inputRef: newNameRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -99,6 +99,7 @@ export function OrgSelector({
         onClose={() => setShowCreate(false)}
         title="Create Team"
         size="sm"
+        initialFocusRef={initialFocusRef}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowCreate(false)}>
@@ -115,13 +116,14 @@ export function OrgSelector({
         }
       >
         <Input
+          ref={newNameRef}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleCreate();
           }}
           placeholder="Team name"
-          autoFocus={!isMobileLayout}
+          autoFocus={autoFocus}
         />
       </Modal>
     </div>

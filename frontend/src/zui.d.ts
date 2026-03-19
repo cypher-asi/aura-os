@@ -8,6 +8,7 @@ declare module "@cypher-asi/zui" {
     ElementType,
     CSSProperties,
     Ref,
+    RefObject,
   } from "react";
 
   // Theme
@@ -336,6 +337,7 @@ declare module "@cypher-asi/zui" {
     noPadding?: boolean;
     className?: string;
     contentClassName?: string;
+    initialFocusRef?: RefObject<HTMLElement>;
   }
   export function Modal(props: ModalProps): JSX.Element;
 

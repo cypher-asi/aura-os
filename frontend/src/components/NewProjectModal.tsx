@@ -5,12 +5,12 @@ import { Modal, Input, Button, Spinner, Text } from "@cypher-asi/zui";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { PathInput } from "./PathInput";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { useModalInitialFocus } from "../hooks/use-modal-initial-focus";
 import {
   clearNewProjectDraftFiles,
   loadNewProjectDraftFiles,
   saveNewProjectDraftFiles,
 } from "../lib/new-project-draft";
-import styles from "./NewProjectModal.module.css";
 
 const NEW_PROJECT_DRAFT_STORAGE_KEY = "aura:new-project-draft";
 
@@ -110,7 +110,8 @@ async function toImportedFiles(files: ImportCandidate[]) {
 export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalProps) {
   const { activeOrg, isLoading: orgLoading } = useOrg();
   const { projects } = useProjectsList();
-  const { features, isMobileLayout } = useAuraCapabilities();
+  const { features } = useAuraCapabilities();
+  const { inputRef: nameInputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const storedDraftRef = useRef<NewProjectDraft | null>(null);
   if (storedDraftRef.current === null) {
     storedDraftRef.current = readDraft();
@@ -126,7 +127,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const importFolderInputRef = useRef<DirectoryInput>(null);
   const importFilesInputRef = useRef<HTMLInputElement>(null);
   const restoringImportDraftRef = useRef(false);
@@ -176,12 +176,6 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
     if (restoringImportDraftRef.current) return;
     void saveNewProjectDraftFiles(importCandidates);
   }, [importCandidates, workspaceMode]);
-
-  useEffect(() => {
-    if (isOpen && !isMobileLayout) {
-      requestAnimationFrame(() => nameInputRef.current?.focus());
-    }
-  }, [isOpen, isMobileLayout]);
 
   const reset = useCallback(() => {
     setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
@@ -287,7 +281,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
       onClose={handleClose}
       title="New Project"
       size="md"
-      contentClassName={isMobileLayout ? styles.mobileContent : undefined}
+      initialFocusRef={initialFocusRef}
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={loading}>
