@@ -60,7 +60,7 @@ impl DevLoopEngine {
         let completed_deps: Vec<Task> = if task.dependency_ids.is_empty() {
             Vec::new()
         } else {
-            let all_project_tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
+            let all_project_tasks = self.task_service.list_tasks(project_id).await.unwrap_or_default();
             task.dependency_ids.iter()
                 .filter_map(|dep_id| {
                     all_project_tasks.iter()

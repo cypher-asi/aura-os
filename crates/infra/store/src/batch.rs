@@ -2,7 +2,6 @@
 pub enum ColumnFamilyName {
     Projects,
     Specs,
-    Tasks,
     Agents,
     Sessions,
     Settings,
@@ -14,7 +13,6 @@ impl ColumnFamilyName {
         match self {
             Self::Projects => "projects",
             Self::Specs => "specs",
-            Self::Tasks => "tasks",
             Self::Agents => "agents",
             Self::Sessions => "sessions",
             Self::Settings => "settings",

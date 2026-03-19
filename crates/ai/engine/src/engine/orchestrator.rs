@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use chrono::{DateTime, Utc};
 
@@ -164,7 +164,7 @@ impl DevLoopEngine {
     ) -> Result<LoopHandle, EngineError> {
         let _project = self.project_service.get_project(&project_id)?;
 
-        let stale = self.session_service.close_stale_sessions(&project_id)?;
+        let stale = self.session_service.close_stale_sessions(&project_id).await?;
         if !stale.is_empty() {
             info!("closed {} stale active session(s) from previous run", stale.len());
         }
@@ -363,24 +363,9 @@ impl DevLoopEngine {
         input_tokens: u64,
         output_tokens: u64,
     ) {
-        // aura-storage's StorageTask doesn't store token tracking fields.
-        // When storage is active, token tracking lives on agent instances / sessions.
-        if self.storage_client.is_some() {
-            return;
-        }
-        let uid = user_id.clone();
-        let m = model.clone();
-        if let Err(e) = self.store.atomic_update_task(
-            project_id, &task.spec_id, &task.task_id,
-            |t| {
-                t.user_id = uid;
-                t.model = m;
-                t.total_input_tokens += input_tokens;
-                t.total_output_tokens += output_tokens;
-            },
-        ) {
-            warn!(task_id = %task.task_id, error = %e, "failed to update task tracking metadata");
-        }
+        // Token tracking fields are not stored in aura-storage's StorageTask.
+        // They live on agent instances / sessions instead.
+        let _ = (project_id, task, user_id, model, input_tokens, output_tokens);
     }
 
     pub(crate) fn current_user_id(&self) -> Option<String> {

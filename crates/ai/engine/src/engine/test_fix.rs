@@ -18,11 +18,8 @@ use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 impl DevLoopEngine {
-    pub(crate) fn persist_test_step(&self, task: &Task, step: TestStepRecord) {
-        let _ = self.store.atomic_update_task(
-            &task.project_id, &task.spec_id, &task.task_id,
-            |t| { t.test_steps.push(step); },
-        );
+    pub(crate) fn persist_test_step(&self, _task: &Task, _step: TestStepRecord) {
+        // test_steps are not stored in aura-storage
     }
 
     /// Run the test suite and return the names of currently-failing tests.

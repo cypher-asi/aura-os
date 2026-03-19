@@ -47,23 +47,23 @@ impl TaskService {
         Ok(session.access_token)
     }
 
-    fn has_storage(&self) -> bool {
-        self.storage_client.is_some()
+    fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
+        self.storage_client.as_ref().ok_or_else(|| {
+            TaskError::ParseError("aura-storage is not configured".into())
+        })
     }
 
     pub async fn list_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let storage_tasks = storage
-                .list_tasks(&project_id.to_string(), &jwt)
-                .await?;
-            let tasks = storage_tasks
-                .into_iter()
-                .filter_map(|s| storage_task_to_task(s).ok())
-                .collect();
-            return Ok(tasks);
-        }
-        Ok(self.store.list_tasks_by_project(project_id)?)
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_tasks = storage
+            .list_tasks(&project_id.to_string(), &jwt)
+            .await?;
+        let tasks = storage_tasks
+            .into_iter()
+            .filter_map(|s| storage_task_to_task(s).ok())
+            .collect();
+        Ok(tasks)
     }
 
     pub async fn list_tasks_by_spec(
@@ -71,33 +71,29 @@ impl TaskService {
         project_id: &ProjectId,
         spec_id: &SpecId,
     ) -> Result<Vec<Task>, TaskError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let storage_tasks = storage
-                .list_tasks(&project_id.to_string(), &jwt)
-                .await?;
-            let tasks = storage_tasks
-                .into_iter()
-                .filter_map(|s| storage_task_to_task(s).ok())
-                .filter(|t| t.spec_id == *spec_id)
-                .collect();
-            return Ok(tasks);
-        }
-        Ok(self.store.list_tasks_by_spec(project_id, spec_id)?)
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_tasks = storage
+            .list_tasks(&project_id.to_string(), &jwt)
+            .await?;
+        let tasks = storage_tasks
+            .into_iter()
+            .filter_map(|s| storage_task_to_task(s).ok())
+            .filter(|t| t.spec_id == *spec_id)
+            .collect();
+        Ok(tasks)
     }
 
     pub async fn get_task(
         &self,
-        project_id: &ProjectId,
-        spec_id: &SpecId,
+        _project_id: &ProjectId,
+        _spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let st = storage.get_task(&task_id.to_string(), &jwt).await?;
-            return storage_task_to_task(st).map_err(|e| TaskError::ParseError(e));
-        }
-        Ok(self.store.get_task(project_id, spec_id, task_id)?)
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let st = storage.get_task(&task_id.to_string(), &jwt).await?;
+        storage_task_to_task(st).map_err(TaskError::ParseError)
     }
 }
 

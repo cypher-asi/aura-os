@@ -7,6 +7,7 @@ use tracing::info;
 use aura_core::*;
 use aura_projects::UpdateProjectInput;
 use aura_storage::StorageSpec;
+use aura_tasks::storage_task_to_task;
 
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 use crate::tool_loop_helpers::looks_truncated;
@@ -218,12 +219,6 @@ impl ChatToolExecutor {
             Ok(id) => id,
             Err(e) => return e,
         };
-        // Tasks still live in local RocksDB until Phase 5
-        if let Ok(tasks) = self.store.list_tasks_by_spec(project_id, &spec_id) {
-            for t in &tasks {
-                let _ = self.store.delete_task(project_id, &spec_id, &t.task_id);
-            }
-        }
         let storage = match self.require_storage() {
             Ok(s) => s,
             Err(e) => return e,
@@ -245,11 +240,11 @@ impl ChatToolExecutor {
     pub(crate) async fn list_tasks(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let tasks = if str_field(input, "spec_id").is_some() {
             match self.resolve_spec_id(project_id, input).await {
-                Ok(spec_id) => self.store.list_tasks_by_spec(project_id, &spec_id),
+                Ok(spec_id) => self.task_service.list_tasks_by_spec(project_id, &spec_id).await,
                 Err(e) => return e,
             }
         } else {
-            self.store.list_tasks_by_project(project_id)
+            self.task_service.list_tasks(project_id).await
         };
         match tasks {
             Ok(tasks) => {
@@ -267,7 +262,7 @@ impl ChatToolExecutor {
                     .collect();
                 ToolExecResult::ok(json!({ "tasks": summaries }))
             }
-            Err(e) => ToolExecResult::err(e),
+            Err(e) => ToolExecResult::err(format!("{e:?}")),
         }
     }
 
@@ -279,91 +274,92 @@ impl ChatToolExecutor {
         let title = str_field(input, "title").unwrap_or_default();
         let description = str_field(input, "description").unwrap_or_default();
 
-        let existing = self.store.list_tasks_by_spec(project_id, &spec_id).unwrap_or_default();
+        let existing = self.task_service.list_tasks_by_spec(project_id, &spec_id).await.unwrap_or_default();
         let order = existing.iter().map(|t| t.order_index).max().unwrap_or(0) + 1;
 
-        let now = Utc::now();
-        let task = Task {
-            task_id: TaskId::new(),
-            project_id: *project_id,
-            spec_id,
-            title,
-            description,
-            status: TaskStatus::Ready,
-            order_index: order,
-            dependency_ids: vec![],
-            parent_task_id: None,
-            assigned_agent_instance_id: None,
-            completed_by_agent_instance_id: None,
-            session_id: None,
-            execution_notes: String::new(),
-            files_changed: vec![],
-            live_output: String::new(),
-            build_steps: vec![],
-            test_steps: vec![],
-            user_id: None,
-            model: None,
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            created_at: now,
-            updated_at: now,
+        let storage = match self.require_storage() {
+            Ok(s) => s,
+            Err(e) => return e,
         };
-        match self.store.put_task(&task) {
-            Ok(()) => ToolExecResult::ok_with_task(json!(task), task),
-            Err(e) => ToolExecResult::err(e),
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+        let req = aura_storage::CreateTaskRequest {
+            spec_id: spec_id.to_string(),
+            title: title.clone(),
+            description: Some(description),
+            status: Some("ready".to_string()),
+            order_index: Some(order as i32),
+            dependency_ids: None,
+        };
+        match storage.create_task(&project_id.to_string(), &jwt, &req).await {
+            Ok(st) => {
+                match storage_task_to_task(st) {
+                    Ok(task) => ToolExecResult::ok_with_task(json!(task), task),
+                    Err(e) => ToolExecResult::err(e),
+                }
+            }
+            Err(e) => ToolExecResult::err(format!("aura-storage: {e}")),
         }
     }
 
-    pub(crate) fn update_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn update_task(&self, _project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
         };
-        let tasks = self.store.list_tasks_by_project(project_id).unwrap_or_default();
-        let mut task = match tasks.into_iter().find(|t| t.task_id == task_id) {
-            Some(t) => t,
-            None => return ToolExecResult::err("Task not found"),
+        let storage = match self.require_storage() {
+            Ok(s) => s,
+            Err(e) => return e,
         };
-        if let Some(t) = str_field(input, "title") {
-            task.title = t;
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+
+        let req = aura_storage::UpdateTaskRequest {
+            title: str_field(input, "title"),
+            description: str_field(input, "description"),
+            order_index: None,
+            dependency_ids: None,
+        };
+        if let Err(e) = storage.update_task(&task_id.to_string(), &jwt, &req).await {
+            return ToolExecResult::err(format!("aura-storage: {e}"));
         }
-        if let Some(d) = str_field(input, "description") {
-            task.description = d;
-        }
+
         if let Some(s) = str_field(input, "status") {
-            if let Ok(new_status) = serde_json::from_value::<TaskStatus>(json!(s)) {
-                task.status = new_status;
+            let transition_req = aura_storage::TransitionTaskRequest { status: s };
+            if let Err(e) = storage.transition_task(&task_id.to_string(), &jwt, &transition_req).await {
+                return ToolExecResult::err(format!("aura-storage transition: {e}"));
             }
         }
-        task.updated_at = Utc::now();
-        match self.store.put_task(&task) {
-            Ok(()) => ToolExecResult::ok_with_task(json!(task), task),
-            Err(e) => ToolExecResult::err(e),
+
+        match storage.get_task(&task_id.to_string(), &jwt).await {
+            Ok(st) => match storage_task_to_task(st) {
+                Ok(task) => ToolExecResult::ok_with_task(json!(task), task),
+                Err(e) => ToolExecResult::err(e),
+            },
+            Err(e) => ToolExecResult::err(format!("aura-storage: {e}")),
         }
     }
 
-    pub(crate) async fn delete_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn delete_task(&self, _project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
         };
-        if let Some(ref storage) = self.storage_client {
-            let jwt = match self.get_jwt() {
-                Ok(j) => j,
-                Err(e) => return e,
-            };
-            match storage.delete_task(&task_id.to_string(), &jwt).await {
-                Ok(()) => return ToolExecResult::ok(json!({ "deleted": task_id.to_string() })),
-                Err(e) => return ToolExecResult::err(format!("{e}")),
-            }
-        }
-        let spec_id = match self.resolve_spec_id(project_id, input).await {
-            Ok(id) => id,
+        let storage = match self.require_storage() {
+            Ok(s) => s,
             Err(e) => return e,
         };
-        match self.store.delete_task(project_id, &spec_id, &task_id) {
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+        match storage.delete_task(&task_id.to_string(), &jwt).await {
             Ok(()) => ToolExecResult::ok(json!({ "deleted": task_id.to_string() })),
-            Err(e) => ToolExecResult::err(e),
+            Err(e) => ToolExecResult::err(format!("aura-storage: {e}")),
         }
     }
 

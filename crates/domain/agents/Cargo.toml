@@ -10,3 +10,4 @@ aura-storage = { path = "../../infra/storage" }
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 thiserror = "1"
+tokio = { version = "1", features = ["sync"] }

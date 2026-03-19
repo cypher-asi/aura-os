@@ -78,20 +78,22 @@ impl TaskExtractionService {
         })
     }
 
+    fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
+        self.storage_client.as_ref().ok_or_else(|| {
+            TaskError::ParseError("aura-storage is not configured".into())
+        })
+    }
+
     async fn load_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, TaskError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let storage_specs = storage
-                .list_specs(&project_id.to_string(), &jwt)
-                .await?;
-            let mut specs: Vec<Spec> = storage_specs
-                .into_iter()
-                .filter_map(|s| Self::storage_spec_to_core(s).ok())
-                .collect();
-            specs.sort_by_key(|s| s.order_index);
-            return Ok(specs);
-        }
-        let mut specs = self.store.list_specs_by_project(project_id)?;
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_specs = storage
+            .list_specs(&project_id.to_string(), &jwt)
+            .await?;
+        let mut specs: Vec<Spec> = storage_specs
+            .into_iter()
+            .filter_map(|s| Self::storage_spec_to_core(s).ok())
+            .collect();
         specs.sort_by_key(|s| s.order_index);
         Ok(specs)
     }
@@ -210,61 +212,36 @@ impl TaskExtractionService {
         project_id: &ProjectId,
         tasks: &[Task],
     ) -> Result<(), TaskError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let pid = project_id.to_string();
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let pid = project_id.to_string();
 
-            let existing = storage.list_tasks(&pid, &jwt).await?;
-            for old in &existing {
-                if let Err(e) = storage.delete_task(&old.id, &jwt).await {
-                    tracing::warn!(task_id = %old.id, error = %e, "failed to delete old task during extraction");
-                }
+        let existing = storage.list_tasks(&pid, &jwt).await?;
+        for old in &existing {
+            if let Err(e) = storage.delete_task(&old.id, &jwt).await {
+                tracing::warn!(task_id = %old.id, error = %e, "failed to delete old task during extraction");
             }
-
-            for task in tasks {
-                let status_str = serde_json::to_value(task.status)
-                    .ok()
-                    .and_then(|v| v.as_str().map(String::from))
-                    .unwrap_or_else(|| "pending".to_string());
-
-                let dep_ids: Vec<String> = task.dependency_ids.iter().map(|d| d.to_string()).collect();
-
-                let req = aura_storage::CreateTaskRequest {
-                    spec_id: task.spec_id.to_string(),
-                    title: task.title.clone(),
-                    description: Some(task.description.clone()),
-                    status: Some(status_str),
-                    order_index: Some(task.order_index as i32),
-                    dependency_ids: if dep_ids.is_empty() { None } else { Some(dep_ids) },
-                };
-                storage.create_task(&pid, &jwt, &req).await?;
-            }
-
-            return Ok(());
         }
 
-        // Fallback: local RocksDB batch write (for tests without storage)
-        use aura_store::{BatchOp, ColumnFamilyName};
-        let existing_tasks = self.store.list_tasks_by_project(project_id)?;
-        let mut ops: Vec<BatchOp> = Vec::new();
-        for old_task in &existing_tasks {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Tasks,
-                key: format!(
-                    "{}:{}:{}",
-                    old_task.project_id, old_task.spec_id, old_task.task_id
-                ),
-            });
-        }
         for task in tasks {
-            ops.push(BatchOp::Put {
-                cf: ColumnFamilyName::Tasks,
-                key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-                value: serde_json::to_vec(task)
-                    .map_err(|e| TaskError::ParseError(e.to_string()))?,
-            });
+            let status_str = serde_json::to_value(task.status)
+                .ok()
+                .and_then(|v| v.as_str().map(String::from))
+                .unwrap_or_else(|| "pending".to_string());
+
+            let dep_ids: Vec<String> = task.dependency_ids.iter().map(|d| d.to_string()).collect();
+
+            let req = aura_storage::CreateTaskRequest {
+                spec_id: task.spec_id.to_string(),
+                title: task.title.clone(),
+                description: Some(task.description.clone()),
+                status: Some(status_str),
+                order_index: Some(task.order_index as i32),
+                dependency_ids: if dep_ids.is_empty() { None } else { Some(dep_ids) },
+            };
+            storage.create_task(&pid, &jwt, &req).await?;
         }
-        self.store.write_batch(ops)?;
+
         Ok(())
     }
 

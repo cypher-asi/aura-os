@@ -41,34 +41,7 @@ fn make_spec(project_id: ProjectId) -> Spec {
     }
 }
 
-fn make_task(project_id: ProjectId, spec_id: SpecId) -> Task {
-    let now = Utc::now();
-    Task {
-        task_id: TaskId::new(),
-        project_id,
-        spec_id,
-        title: "Test Task".into(),
-        description: "A test task".into(),
-        status: TaskStatus::Pending,
-        order_index: 1,
-        dependency_ids: vec![],
-        parent_task_id: None,
-        assigned_agent_instance_id: None,
-        completed_by_agent_instance_id: None,
-        session_id: None,
-        execution_notes: String::new(),
-        files_changed: vec![],
-        live_output: String::new(),
-        build_steps: vec![],
-        test_steps: vec![],
-        user_id: None,
-        model: None,
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        created_at: now,
-        updated_at: now,
-    }
-}
+// Task CRUD has been migrated to aura-storage. Task store tests removed.
 
 const TEST_USER_ID: &str = "test-user-001";
 
@@ -219,79 +192,7 @@ fn list_specs_by_project_filters_correctly() {
     assert_eq!(specs_p2[0].project_id, p2.project_id);
 }
 
-// ---------------------------------------------------------------------------
-// Task CRUD
-// ---------------------------------------------------------------------------
-
-#[test]
-fn task_crud_round_trip() {
-    let (store, _dir) = open_temp_store();
-    let project = make_project();
-    let spec = make_spec(project.project_id);
-    store.put_project(&project).unwrap();
-    store.put_spec(&spec).unwrap();
-
-    let task = make_task(project.project_id, spec.spec_id);
-    store.put_task(&task).unwrap();
-
-    let fetched = store
-        .get_task(&project.project_id, &spec.spec_id, &task.task_id)
-        .unwrap();
-    assert_eq!(task, fetched);
-
-    store
-        .delete_task(&project.project_id, &spec.spec_id, &task.task_id)
-        .unwrap();
-    let result = store.get_task(&project.project_id, &spec.spec_id, &task.task_id);
-    assert!(matches!(result, Err(StoreError::NotFound(_))));
-}
-
-#[test]
-fn list_tasks_by_spec_filters_correctly() {
-    let (store, _dir) = open_temp_store();
-    let project = make_project();
-    let s1 = make_spec(project.project_id);
-    let s2 = make_spec(project.project_id);
-    store.put_project(&project).unwrap();
-    store.put_spec(&s1).unwrap();
-    store.put_spec(&s2).unwrap();
-
-    let t1 = make_task(project.project_id, s1.spec_id);
-    let t2 = make_task(project.project_id, s1.spec_id);
-    let t3 = make_task(project.project_id, s2.spec_id);
-    store.put_task(&t1).unwrap();
-    store.put_task(&t2).unwrap();
-    store.put_task(&t3).unwrap();
-
-    let tasks_s1 = store
-        .list_tasks_by_spec(&project.project_id, &s1.spec_id)
-        .unwrap();
-    assert_eq!(tasks_s1.len(), 2);
-
-    let tasks_s2 = store
-        .list_tasks_by_spec(&project.project_id, &s2.spec_id)
-        .unwrap();
-    assert_eq!(tasks_s2.len(), 1);
-}
-
-#[test]
-fn list_tasks_by_project_returns_all_tasks() {
-    let (store, _dir) = open_temp_store();
-    let project = make_project();
-    let s1 = make_spec(project.project_id);
-    let s2 = make_spec(project.project_id);
-    store.put_project(&project).unwrap();
-    store.put_spec(&s1).unwrap();
-    store.put_spec(&s2).unwrap();
-
-    let t1 = make_task(project.project_id, s1.spec_id);
-    let t2 = make_task(project.project_id, s2.spec_id);
-    store.put_task(&t1).unwrap();
-    store.put_task(&t2).unwrap();
-
-    let all_tasks = store.list_tasks_by_project(&project.project_id).unwrap();
-    assert_eq!(all_tasks.len(), 2);
-}
+// Task CRUD tests removed -- tasks migrated to aura-storage (Phase 5e).
 
 // ---------------------------------------------------------------------------
 // Agent CRUD (user-scoped)
@@ -415,9 +316,8 @@ fn settings_crud_round_trip() {
 fn batch_write_is_atomic() {
     let (store, _dir) = open_temp_store();
     let project = make_project();
-    let spec = make_spec(project.project_id);
-    let t1 = make_task(project.project_id, spec.spec_id);
-    let t2 = make_task(project.project_id, spec.spec_id);
+    let s1 = make_spec(project.project_id);
+    let s2 = make_spec(project.project_id);
 
     let ops = vec![
         BatchOp::Put {
@@ -427,18 +327,13 @@ fn batch_write_is_atomic() {
         },
         BatchOp::Put {
             cf: ColumnFamilyName::Specs,
-            key: format!("{}:{}", spec.project_id, spec.spec_id),
-            value: serde_json::to_vec(&spec).unwrap(),
+            key: format!("{}:{}", s1.project_id, s1.spec_id),
+            value: serde_json::to_vec(&s1).unwrap(),
         },
         BatchOp::Put {
-            cf: ColumnFamilyName::Tasks,
-            key: format!("{}:{}:{}", t1.project_id, t1.spec_id, t1.task_id),
-            value: serde_json::to_vec(&t1).unwrap(),
-        },
-        BatchOp::Put {
-            cf: ColumnFamilyName::Tasks,
-            key: format!("{}:{}:{}", t2.project_id, t2.spec_id, t2.task_id),
-            value: serde_json::to_vec(&t2).unwrap(),
+            cf: ColumnFamilyName::Specs,
+            key: format!("{}:{}", s2.project_id, s2.spec_id),
+            value: serde_json::to_vec(&s2).unwrap(),
         },
     ];
 
@@ -447,13 +342,8 @@ fn batch_write_is_atomic() {
     let fetched_project = store.get_project(&project.project_id).unwrap();
     assert_eq!(fetched_project, project);
 
-    let fetched_spec = store.get_spec(&project.project_id, &spec.spec_id).unwrap();
-    assert_eq!(fetched_spec, spec);
-
-    let tasks = store
-        .list_tasks_by_spec(&project.project_id, &spec.spec_id)
-        .unwrap();
-    assert_eq!(tasks.len(), 2);
+    let specs = store.list_specs_by_project(&project.project_id).unwrap();
+    assert_eq!(specs.len(), 2);
 }
 
 // ---------------------------------------------------------------------------

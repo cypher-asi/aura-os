@@ -101,11 +101,8 @@ pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
 }
 
 impl DevLoopEngine {
-    pub(crate) fn persist_build_step(&self, task: &Task, step: BuildStepRecord) {
-        let _ = self.store.atomic_update_task(
-            &task.project_id, &task.spec_id, &task.task_id,
-            |t| { t.build_steps.push(step); },
-        );
+    pub(crate) fn persist_build_step(&self, _task: &Task, _step: BuildStepRecord) {
+        // build_steps are not stored in aura-storage
     }
 
     fn resolve_build_command(

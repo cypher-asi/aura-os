@@ -360,7 +360,7 @@ impl SpecGenerationService {
             &spec.markdown_contents,
         );
         if !tasks.is_empty() {
-            if let Err(e) = self.save_tasks_for_spec(&tasks) {
+            if let Err(e) = self.save_tasks_for_spec(&tasks).await {
                 error!(%project_id, error = %e, "Failed to save tasks for spec");
             } else {
                 info!(%project_id, spec = %spec.title, count = tasks.len(), "Tasks extracted and saved");
@@ -403,7 +403,7 @@ impl SpecGenerationService {
                         &spec.markdown_contents,
                     );
                     if !tasks.is_empty() {
-                        if let Err(e) = self.save_tasks_for_spec(&tasks) {
+                        if let Err(e) = self.save_tasks_for_spec(&tasks).await {
                             error!(%project_id, error = %e, "Failed to save tasks for spec (fallback)");
                         } else {
                             for task in tasks {

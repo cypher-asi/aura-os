@@ -9,7 +9,7 @@ use tracing::{debug, error, info};
 
 use aura_core::*;
 use aura_settings::SettingsService;
-use aura_store::{BatchOp, ColumnFamilyName, RocksStore};
+use aura_store::RocksStore;
 use aura_storage::StorageClient;
 
 use aura_billing::MeteredLlm;
@@ -214,19 +214,6 @@ impl SpecGenerationService {
             }
         }
 
-        // Tasks still live in local RocksDB until Phase 5
-        let existing_tasks = self.store.list_tasks_by_project(project_id)?;
-        let mut ops: Vec<BatchOp> = Vec::new();
-        for task in &existing_tasks {
-            ops.push(BatchOp::Delete {
-                cf: ColumnFamilyName::Tasks,
-                key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-            });
-        }
-        if !ops.is_empty() {
-            self.store.write_batch(ops)?;
-        }
-
         if let Ok(mut project) = self.store.get_project(project_id) {
             project.specs_summary = None;
             project.specs_title = None;
@@ -235,23 +222,27 @@ impl SpecGenerationService {
         Ok(())
     }
 
-    pub(crate) fn save_tasks_for_spec(&self, tasks: &[Task]) -> Result<(), SpecGenError> {
+    pub(crate) async fn save_tasks_for_spec(&self, tasks: &[Task]) -> Result<(), SpecGenError> {
         if tasks.is_empty() {
             return Ok(());
         }
-        let ops: Vec<BatchOp> = tasks
-            .iter()
-            .filter_map(|task| {
-                serde_json::to_vec(task)
-                    .ok()
-                    .map(|value| BatchOp::Put {
-                        cf: ColumnFamilyName::Tasks,
-                        key: format!("{}:{}:{}", task.project_id, task.spec_id, task.task_id),
-                        value,
-                    })
-            })
-            .collect();
-        self.store.write_batch(ops)?;
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        for task in tasks {
+            let req = aura_storage::CreateTaskRequest {
+                spec_id: task.spec_id.to_string(),
+                title: task.title.clone(),
+                description: Some(task.description.clone()),
+                status: Some("ready".to_string()),
+                order_index: Some(task.order_index as i32),
+                dependency_ids: if task.dependency_ids.is_empty() {
+                    None
+                } else {
+                    Some(task.dependency_ids.iter().map(|id| id.to_string()).collect())
+                },
+            };
+            storage.create_task(&task.project_id.to_string(), &jwt, &req).await?;
+        }
         Ok(())
     }
 

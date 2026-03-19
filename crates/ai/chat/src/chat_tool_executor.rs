@@ -107,7 +107,7 @@ impl ChatToolExecutor {
             // ── Tasks ──────────────────────────────────────────────
             "list_tasks" => self.list_tasks(project_id, &input).await,
             "create_task" => self.create_task(project_id, &input).await,
-            "update_task" => self.update_task(project_id, &input),
+            "update_task" => self.update_task(project_id, &input).await,
             "delete_task" => self.delete_task(project_id, &input).await,
             "transition_task" => self.transition_task(project_id, &input).await,
             "run_task" => ToolExecResult::ok(json!({

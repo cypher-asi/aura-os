@@ -297,7 +297,6 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -538,6 +537,7 @@ dependencies = [
  "aura-billing",
  "aura-claude",
  "aura-core",
+ "aura-storage",
  "aura-store",
  "axum",
  "chrono",
@@ -545,6 +545,7 @@ dependencies = [
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

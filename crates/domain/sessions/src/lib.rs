@@ -3,30 +3,98 @@ pub use error::SessionError;
 
 use std::sync::Arc;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
+use tracing::warn;
 
 use aura_core::*;
 use aura_store::RocksStore;
+use aura_storage::StorageClient;
 use aura_billing::MeteredLlm;
 
 pub use aura_core::SESSION_SUMMARY_SYSTEM_PROMPT as SUMMARY_SYSTEM_PROMPT;
 
 pub struct SessionService {
     store: Arc<RocksStore>,
+    storage_client: Option<Arc<StorageClient>>,
     rollover_threshold: f64,
     model_context_window: u64,
+}
+
+fn parse_dt(v: &Option<String>) -> DateTime<Utc> {
+    v.as_deref()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn parse_session_status(s: &str) -> SessionStatus {
+    serde_json::from_str(&format!("\"{s}\"")).unwrap_or(SessionStatus::Active)
+}
+
+fn storage_session_to_session(
+    s: aura_storage::StorageSession,
+    local_overrides: Option<&Session>,
+) -> Result<Session, String> {
+    Ok(Session {
+        session_id: s.id.parse().map_err(|e| format!("invalid session id: {e}"))?,
+        agent_instance_id: s
+            .project_agent_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project_agent_id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project_id: {e}"))?,
+        active_task_id: local_overrides.and_then(|o| o.active_task_id),
+        tasks_worked: local_overrides
+            .map(|o| o.tasks_worked.clone())
+            .unwrap_or_default(),
+        context_usage_estimate: s.context_usage_estimate.unwrap_or(0.0),
+        total_input_tokens: local_overrides.map(|o| o.total_input_tokens).unwrap_or(0),
+        total_output_tokens: local_overrides.map(|o| o.total_output_tokens).unwrap_or(0),
+        summary_of_previous_context: s.summary_of_previous_context.unwrap_or_default(),
+        status: parse_session_status(s.status.as_deref().unwrap_or("active")),
+        user_id: local_overrides.and_then(|o| o.user_id.clone()),
+        model: local_overrides.and_then(|o| o.model.clone()),
+        started_at: parse_dt(&s.created_at),
+        ended_at: s
+            .ended_at
+            .as_deref()
+            .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+            .map(|dt| dt.with_timezone(&Utc)),
+    })
 }
 
 impl SessionService {
     pub fn new(store: Arc<RocksStore>, rollover_threshold: f64, model_context_window: u64) -> Self {
         Self {
             store,
+            storage_client: None,
             rollover_threshold,
             model_context_window,
         }
     }
 
-    pub fn create_session(
+    pub fn with_storage_client(mut self, client: Option<Arc<StorageClient>>) -> Self {
+        self.storage_client = client;
+        self
+    }
+
+    fn get_jwt(&self) -> Result<String, SessionError> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| SessionError::Parse("no active session for JWT".into()))?;
+        let session: ZeroAuthSession = serde_json::from_slice(&bytes)
+            .map_err(|e| SessionError::Parse(format!("invalid session JSON: {e}")))?;
+        Ok(session.access_token)
+    }
+
+    pub async fn create_session(
         &self,
         agent_instance_id: &AgentInstanceId,
         project_id: &ProjectId,
@@ -35,6 +103,32 @@ impl SessionService {
         user_id: Option<String>,
         model: Option<String>,
     ) -> Result<Session, SessionError> {
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let req = aura_storage::CreateSessionRequest {
+                project_id: project_id.to_string(),
+                status: Some("active".to_string()),
+                context_usage_estimate: Some(0.0),
+                summary_of_previous_context: if summary.is_empty() {
+                    None
+                } else {
+                    Some(summary.clone())
+                },
+            };
+            let ss = storage
+                .create_session(&agent_instance_id.to_string(), &jwt, &req)
+                .await?;
+            let mut session = storage_session_to_session(ss, None)
+                .map_err(|e| SessionError::Parse(e))?;
+            session.active_task_id = active_task_id;
+            session.user_id = user_id;
+            session.model = model;
+            session.summary_of_previous_context = summary;
+            // Also write locally for test fallback and stale-session cleanup
+            let _ = self.store.put_session(&session);
+            return Ok(session);
+        }
+
         let now = Utc::now();
         let session = Session {
             session_id: SessionId::new(),
@@ -56,7 +150,7 @@ impl SessionService {
         Ok(session)
     }
 
-    pub fn update_context_usage(
+    pub async fn update_context_usage(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
@@ -64,14 +158,29 @@ impl SessionService {
         input_tokens: u64,
         output_tokens: u64,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
+        let mut session = self
+            .get_session(project_id, agent_instance_id, session_id)
+            .await?;
         let turn_usage =
             (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
         session.context_usage_estimate =
             (session.context_usage_estimate + turn_usage).min(1.0);
         session.total_input_tokens += input_tokens;
         session.total_output_tokens += output_tokens;
-        self.store.put_session(&session)?;
+
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let req = aura_storage::UpdateSessionRequest {
+                status: None,
+                context_usage_estimate: Some(session.context_usage_estimate),
+                ended_at: None,
+            };
+            storage
+                .update_session(&session_id.to_string(), &jwt, &req)
+                .await?;
+        }
+        // Keep local store in sync for get_session fallback
+        let _ = self.store.put_session(&session);
         Ok(session)
     }
 
@@ -79,7 +188,7 @@ impl SessionService {
         session.context_usage_estimate >= self.rollover_threshold
     }
 
-    pub fn rollover_session(
+    pub async fn rollover_session(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
@@ -87,36 +196,96 @@ impl SessionService {
         summary: String,
         next_task_id: Option<TaskId>,
     ) -> Result<Session, SessionError> {
-        let mut old_session = self.get_session(project_id, agent_instance_id, session_id)?;
+        let old_session = self
+            .get_session(project_id, agent_instance_id, session_id)
+            .await?;
         let user_id = old_session.user_id.clone();
         let model = old_session.model.clone();
-        old_session.status = SessionStatus::RolledOver;
-        old_session.ended_at = Some(Utc::now());
-        self.store.put_session(&old_session)?;
 
-        self.create_session(agent_instance_id, project_id, next_task_id, summary, user_id, model)
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let req = aura_storage::UpdateSessionRequest {
+                status: Some("rolled_over".to_string()),
+                context_usage_estimate: None,
+                ended_at: Some(Utc::now().to_rfc3339()),
+            };
+            storage
+                .update_session(&session_id.to_string(), &jwt, &req)
+                .await?;
+        }
+        // Update local copy
+        {
+            let mut old = old_session.clone();
+            old.status = SessionStatus::RolledOver;
+            old.ended_at = Some(Utc::now());
+            let _ = self.store.put_session(&old);
+        }
+
+        self.create_session(
+            agent_instance_id,
+            project_id,
+            next_task_id,
+            summary,
+            user_id,
+            model,
+        )
+        .await
     }
 
-    pub fn end_session(
+    pub async fn end_session(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         status: SessionStatus,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
+        let mut session = self
+            .get_session(project_id, agent_instance_id, session_id)
+            .await?;
         session.status = status;
         session.ended_at = Some(Utc::now());
-        self.store.put_session(&session)?;
+
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let status_str =
+                serde_json::to_value(status).unwrap().as_str().unwrap_or("completed").to_string();
+            let req = aura_storage::UpdateSessionRequest {
+                status: Some(status_str),
+                context_usage_estimate: None,
+                ended_at: Some(session.ended_at.unwrap().to_rfc3339()),
+            };
+            storage
+                .update_session(&session_id.to_string(), &jwt, &req)
+                .await?;
+        }
+        let _ = self.store.put_session(&session);
         Ok(session)
     }
 
-    pub fn get_session(
+    pub async fn get_session(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
     ) -> Result<Session, SessionError> {
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            match storage.get_session(&session_id.to_string(), &jwt).await {
+                Ok(ss) => {
+                    // Merge with local data for fields not in StorageSession
+                    let local = self
+                        .store
+                        .get_session(project_id, agent_instance_id, session_id)
+                        .ok();
+                    return storage_session_to_session(ss, local.as_ref())
+                        .map_err(|e| SessionError::Parse(e));
+                }
+                Err(aura_storage::StorageError::Server { status: 404, .. }) => {
+                    return Err(SessionError::NotFound);
+                }
+                Err(e) => return Err(SessionError::Storage(e)),
+            }
+        }
         self.store
             .get_session(project_id, agent_instance_id, session_id)
             .map_err(|e| match e {
@@ -125,36 +294,89 @@ impl SessionService {
             })
     }
 
-    pub fn list_sessions(
+    pub async fn list_sessions(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<Vec<Session>, SessionError> {
-        Ok(self.store.list_sessions_by_agent(project_id, agent_instance_id)?)
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let storage_sessions = storage
+                .list_sessions(&agent_instance_id.to_string(), &jwt)
+                .await?;
+            return Ok(storage_sessions
+                .into_iter()
+                .filter_map(|s| storage_session_to_session(s, None).ok())
+                .collect());
+        }
+        Ok(self
+            .store
+            .list_sessions_by_agent(project_id, agent_instance_id)?)
     }
 
-    pub fn record_task_worked(
+    pub async fn record_task_worked(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
         task_id: TaskId,
     ) -> Result<Session, SessionError> {
-        let mut session = self.get_session(project_id, agent_instance_id, session_id)?;
+        // tasks_worked is local-only (not in StorageSession), keep in local store
+        let mut session = self
+            .store
+            .get_session(project_id, agent_instance_id, session_id)
+            .unwrap_or_else(|_| Session::dummy(*project_id));
         if !session.tasks_worked.contains(&task_id) {
             session.tasks_worked.push(task_id);
-            self.store.put_session(&session)?;
+            let _ = self.store.put_session(&session);
         }
         Ok(session)
     }
 
-    /// Mark any leftover `Active` sessions for this project as `Completed`.
-    /// Called on engine startup to clean up sessions orphaned by crashes or
-    /// restarts.
-    pub fn close_stale_sessions(
+    pub async fn close_stale_sessions(
         &self,
         project_id: &ProjectId,
     ) -> Result<Vec<Session>, SessionError> {
+        if let Some(ref storage) = self.storage_client {
+            let jwt = self.get_jwt()?;
+            let agents = storage
+                .list_project_agents(&project_id.to_string(), &jwt)
+                .await?;
+            let mut closed = Vec::new();
+            for agent in &agents {
+                let sessions = storage.list_sessions(&agent.id, &jwt).await?;
+                for ss in sessions {
+                    if ss.status.as_deref() == Some("active") {
+                        let req = aura_storage::UpdateSessionRequest {
+                            status: Some("completed".to_string()),
+                            context_usage_estimate: None,
+                            ended_at: Some(Utc::now().to_rfc3339()),
+                        };
+                        if let Err(e) =
+                            storage.update_session(&ss.id, &jwt, &req).await
+                        {
+                            warn!(session_id = %ss.id, error = %e, "failed to close stale session");
+                            continue;
+                        }
+                        if let Ok(s) = storage_session_to_session(ss, None) {
+                            closed.push(s);
+                        }
+                    }
+                }
+            }
+            // Also clean up local store
+            if let Ok(local_sessions) = self.store.list_sessions_by_project(project_id) {
+                for mut s in local_sessions {
+                    if s.status == SessionStatus::Active {
+                        s.status = SessionStatus::Completed;
+                        s.ended_at = Some(Utc::now());
+                        let _ = self.store.put_session(&s);
+                    }
+                }
+            }
+            return Ok(closed);
+        }
+
         let all = self.store.list_sessions_by_project(project_id)?;
         let mut closed = Vec::new();
         for mut session in all {
@@ -168,15 +390,12 @@ impl SessionService {
         Ok(closed)
     }
 
-    pub fn session_count(
+    pub async fn session_count(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<usize, SessionError> {
-        Ok(self
-            .store
-            .list_sessions_by_agent(project_id, agent_instance_id)?
-            .len())
+        Ok(self.list_sessions(project_id, agent_instance_id).await?.len())
     }
 
     pub async fn generate_rollover_summary(
@@ -186,7 +405,15 @@ impl SessionService {
         conversation_history: &str,
     ) -> Result<String, SessionError> {
         let resp = llm
-            .complete_with_model(aura_claude::FAST_MODEL, api_key, SUMMARY_SYSTEM_PROMPT, conversation_history, 2048, "aura_session_rollover", None)
+            .complete_with_model(
+                aura_claude::FAST_MODEL,
+                api_key,
+                SUMMARY_SYSTEM_PROMPT,
+                conversation_history,
+                2048,
+                "aura_session_rollover",
+                None,
+            )
             .await?;
         Ok(resp.text)
     }
@@ -263,11 +490,11 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // SessionService basic operations
+    // SessionService basic operations (local store fallback, no StorageClient)
     // -----------------------------------------------------------------------
 
-    #[test]
-    fn should_rollover_at_threshold() {
+    #[tokio::test]
+    async fn should_rollover_at_threshold() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
         let svc = SessionService::new(store, 0.8, 150_000);
@@ -303,8 +530,8 @@ mod tests {
         assert!(svc.should_rollover(&above));
     }
 
-    #[test]
-    fn create_and_get_session() {
+    #[tokio::test]
+    async fn create_and_get_session() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
         let svc = SessionService::new(store, 0.8, 150_000);
@@ -313,6 +540,7 @@ mod tests {
         let aid = AgentInstanceId::new();
         let session = svc
             .create_session(&aid, &pid, None, "initial context".into(), None, None)
+            .await
             .unwrap();
 
         assert_eq!(session.status, SessionStatus::Active);
@@ -320,12 +548,13 @@ mod tests {
 
         let fetched = svc
             .get_session(&pid, &aid, &session.session_id)
+            .await
             .unwrap();
         assert_eq!(fetched.session_id, session.session_id);
     }
 
-    #[test]
-    fn rollover_session_ends_old_creates_new() {
+    #[tokio::test]
+    async fn rollover_session_ends_old_creates_new() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
         let svc = SessionService::new(store, 0.8, 150_000);
@@ -334,13 +563,15 @@ mod tests {
         let aid = AgentInstanceId::new();
         let old = svc
             .create_session(&aid, &pid, None, String::new(), None, None)
+            .await
             .unwrap();
 
         let new_session = svc
             .rollover_session(&pid, &aid, &old.session_id, "summary".into(), None)
+            .await
             .unwrap();
 
-        let old_fetched = svc.get_session(&pid, &aid, &old.session_id).unwrap();
+        let old_fetched = svc.get_session(&pid, &aid, &old.session_id).await.unwrap();
         assert_eq!(old_fetched.status, SessionStatus::RolledOver);
         assert!(old_fetched.ended_at.is_some());
 
