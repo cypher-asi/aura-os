@@ -21,6 +21,11 @@ pub struct CreateProjectRequest {
     pub linked_folder_path: String,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,6 +35,11 @@ pub struct UpdateProjectRequest {
     pub linked_folder_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

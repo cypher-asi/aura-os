@@ -123,6 +123,11 @@ fn sample_project() -> Project {
         specs_title: None,
         created_at: now,
         updated_at: now,
+        git_repo_url: None,
+        git_branch: None,
+        orbit_base_url: None,
+        orbit_owner: None,
+        orbit_repo: None,
     }
 }
 

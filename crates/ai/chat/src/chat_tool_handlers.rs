@@ -407,6 +407,7 @@ impl ChatToolExecutor {
             linked_folder_path: None,
             build_command: str_field(input, "build_command"),
             test_command: str_field(input, "test_command"),
+            ..Default::default()
         };
         match self.project_service.update_project(project_id, update) {
             Ok(p) => ToolExecResult::ok(json!(p)),
@@ -472,7 +473,14 @@ impl ChatToolExecutor {
                     ToolExecResult::ok(json!({ "path": rel, "content": content }))
                 }
             }
-            Err(e) => ToolExecResult::err(format!("Failed to read {rel}: {e}")),
+            Err(e) => {
+                let hint = if e.kind() == std::io::ErrorKind::NotFound {
+                    " Path does not exist. Use list_files to see the current project structure."
+                } else {
+                    ""
+                };
+                ToolExecResult::err(format!("Failed to read {rel}: {e}.{hint}"))
+            }
         }
     }
 

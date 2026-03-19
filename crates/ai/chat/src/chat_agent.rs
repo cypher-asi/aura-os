@@ -279,6 +279,11 @@ mod tests {
             specs_title: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            git_repo_url: None,
+            git_branch: None,
+            orbit_base_url: None,
+            orbit_owner: None,
+            orbit_repo: None,
         }
     }
 

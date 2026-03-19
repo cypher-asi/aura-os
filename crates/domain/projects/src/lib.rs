@@ -76,6 +76,11 @@ pub struct CreateProjectInput {
     pub linked_folder_path: String,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -85,6 +90,11 @@ pub struct UpdateProjectInput {
     pub linked_folder_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
+    pub git_repo_url: Option<String>,
+    pub git_branch: Option<String>,
+    pub orbit_base_url: Option<String>,
+    pub orbit_owner: Option<String>,
+    pub orbit_repo: Option<String>,
 }
 
 pub struct ProjectService {
@@ -126,6 +136,11 @@ impl ProjectService {
             specs_title: None,
             created_at: now,
             updated_at: now,
+            git_repo_url: input.git_repo_url,
+            git_branch: input.git_branch,
+            orbit_base_url: input.orbit_base_url,
+            orbit_owner: input.orbit_owner,
+            orbit_repo: input.orbit_repo,
         };
 
         self.store.put_project(&project)?;
@@ -181,6 +196,21 @@ impl ProjectService {
         }
         if input.test_command.is_some() {
             project.test_command = sanitize_command_option(input.test_command);
+        }
+        if let Some(v) = input.git_repo_url {
+            project.git_repo_url = Some(v);
+        }
+        if let Some(v) = input.git_branch {
+            project.git_branch = Some(v);
+        }
+        if let Some(v) = input.orbit_base_url {
+            project.orbit_base_url = Some(v);
+        }
+        if let Some(v) = input.orbit_owner {
+            project.orbit_owner = Some(v);
+        }
+        if let Some(v) = input.orbit_repo {
+            project.orbit_repo = Some(v);
         }
 
         project.updated_at = Utc::now();

@@ -281,6 +281,16 @@ pub struct NetworkProject {
     pub created_at: Option<String>,
     #[serde(default)]
     pub updated_at: Option<String>,
+    #[serde(default)]
+    pub git_repo_url: Option<String>,
+    #[serde(default)]
+    pub git_branch: Option<String>,
+    #[serde(default)]
+    pub orbit_base_url: Option<String>,
+    #[serde(default)]
+    pub orbit_owner: Option<String>,
+    #[serde(default)]
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +302,16 @@ pub struct CreateProjectRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_repo_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -303,6 +323,16 @@ pub struct UpdateProjectRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub folder: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_repo_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_owner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orbit_repo: Option<String>,
 }
 
 // ---------------------------------------------------------------------------

@@ -27,6 +27,17 @@ pub struct Project {
     pub specs_title: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    // Git / Orbit link (owner is org_id or user_id from aura-storage)
+    #[serde(default)]
+    pub git_repo_url: Option<String>,
+    #[serde(default)]
+    pub git_branch: Option<String>,
+    #[serde(default)]
+    pub orbit_base_url: Option<String>,
+    #[serde(default)]
+    pub orbit_owner: Option<String>,
+    #[serde(default)]
+    pub orbit_repo: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -58,6 +58,11 @@ fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Projec
             specs_title: local.specs_title.clone(),
             created_at,
             updated_at,
+            git_repo_url: local.git_repo_url.clone(),
+            git_branch: local.git_branch.clone(),
+            orbit_base_url: local.orbit_base_url.clone(),
+            orbit_owner: local.orbit_owner.clone(),
+            orbit_repo: local.orbit_repo.clone(),
         }
     } else {
         Project {
@@ -74,6 +79,11 @@ fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Projec
             specs_title: None,
             created_at,
             updated_at,
+            git_repo_url: net.git_repo_url.clone(),
+            git_branch: net.git_branch.clone(),
+            orbit_base_url: net.orbit_base_url.clone(),
+            orbit_owner: net.orbit_owner.clone(),
+            orbit_repo: net.orbit_repo.clone(),
         }
     }
 }
@@ -106,6 +116,11 @@ pub async fn create_project(
         org_id: req.org_id.to_string(),
         description: Some(req.description.clone()),
         folder: folder_name_from_path(&req.linked_folder_path),
+        git_repo_url: req.git_repo_url.clone(),
+        git_branch: req.git_branch.clone(),
+        orbit_base_url: req.orbit_base_url.clone(),
+        orbit_owner: req.orbit_owner.clone(),
+        orbit_repo: req.orbit_repo.clone(),
     };
     let net_project = client
         .create_project(&jwt, &net_req)
@@ -131,6 +146,11 @@ pub async fn create_project(
         specs_title: None,
         created_at: now,
         updated_at: now,
+        git_repo_url: req.git_repo_url.clone(),
+        git_branch: req.git_branch.clone(),
+        orbit_base_url: req.orbit_base_url.clone(),
+        orbit_owner: req.orbit_owner.clone(),
+        orbit_repo: req.orbit_repo.clone(),
     };
     ensure_local_shadow(&state, &project);
 
@@ -199,6 +219,11 @@ pub async fn update_project(
         linked_folder_path: req.linked_folder_path.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
+        git_repo_url: req.git_repo_url.clone(),
+        git_branch: req.git_branch.clone(),
+        orbit_base_url: req.orbit_base_url.clone(),
+        orbit_owner: req.orbit_owner.clone(),
+        orbit_repo: req.orbit_repo.clone(),
     };
     let project = state
         .project_service
@@ -219,6 +244,11 @@ pub async fn update_project(
             name: req.name,
             description: req.description,
             folder,
+            git_repo_url: req.git_repo_url.clone(),
+            git_branch: req.git_branch.clone(),
+            orbit_base_url: req.orbit_base_url.clone(),
+            orbit_owner: req.orbit_owner.clone(),
+            orbit_repo: req.orbit_repo.clone(),
         };
         client
             .update_project(&project_id.to_string(), &jwt, &net_req)
