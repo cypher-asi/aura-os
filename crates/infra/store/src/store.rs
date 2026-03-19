@@ -8,13 +8,8 @@ use serde::de::DeserializeOwned;
 use crate::batch::BatchOp;
 use crate::error::StoreResult;
 
-pub(crate) const CF_NAMES: &[&str] = &[
-    "projects",
-    "agents",
-    "settings",
-    "messages",
-    "orgs",
-];
+/// Only settings CF is persisted; projects, orgs, agents, messages are remote-only.
+pub(crate) const CF_NAMES: &[&str] = &["settings"];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
 
@@ -72,6 +67,7 @@ impl RocksStore {
             .unwrap_or_else(|| panic!("column family '{name}' not found"))
     }
 
+    #[allow(dead_code)] // kept for potential future settings scan
     pub(crate) fn scan_cf<T: DeserializeOwned>(
         &self,
         cf: &impl rocksdb::AsColumnFamilyRef,

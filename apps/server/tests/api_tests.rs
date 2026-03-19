@@ -217,7 +217,6 @@ fn build_test_app_from_store(
     ));
     let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
-    let network_client: Option<Arc<aura_network::NetworkClient>> = None;
     let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
     let runtime_agent_state: aura_server::state::RuntimeAgentStateMap =
         Arc::new(Mutex::new(HashMap::new()));
@@ -225,7 +224,7 @@ fn build_test_app_from_store(
         store.clone(),
         storage_client.clone(),
         runtime_agent_state.clone(),
-        network_client,
+        network_client.clone(),
     ));
     let llm_config = LlmConfig::default();
     let session_service = Arc::new(SessionService::new(
@@ -459,32 +458,10 @@ async fn project_create_invalid_name() {
 
 #[tokio::test]
 async fn agent_list_empty() {
-    let (app, state, _db) = build_test_app_with_mocks().await;
+    let (app, _state, _db) = build_test_app_with_mocks().await;
 
     let pid = ProjectId::new();
-    let now = chrono::Utc::now();
-    let project = Project {
-        project_id: pid,
-        org_id: OrgId::new(),
-        name: "Test".into(),
-        description: "d".into(),
-        linked_folder_path: ".".into(),
-        requirements_doc_path: None,
-        current_status: ProjectStatus::Planning,
-        build_command: None,
-        test_command: None,
-        specs_summary: None,
-        specs_title: None,
-        created_at: now,
-        updated_at: now,
-        git_repo_url: None,
-        git_branch: None,
-        orbit_base_url: None,
-        orbit_owner: None,
-        orbit_repo: None,
-    };
-    state.store.put_project(&project).unwrap();
-
+    // Project agents come from storage only; mock storage returns empty list.
     let req = json_request("GET", &format!("/api/projects/{pid}/agents"), None);
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);

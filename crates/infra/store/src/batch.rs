@@ -1,20 +1,12 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColumnFamilyName {
-    Projects,
-    Agents,
     Settings,
-    Messages,
-    Orgs,
 }
 
 impl ColumnFamilyName {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Projects => "projects",
-            Self::Agents => "agents",
             Self::Settings => "settings",
-            Self::Messages => "messages",
-            Self::Orgs => "orgs",
         }
     }
 }
