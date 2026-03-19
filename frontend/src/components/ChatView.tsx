@@ -36,8 +36,10 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [agentName, setAgentName] = useState<string | undefined>();
+  const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
+  const prevIsStreamingRef = useRef(false);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { handleScroll } = useAutoScroll(messageAreaRef, agentInstanceId);
 
@@ -53,9 +55,39 @@ export function ChatView() {
     }
   }, [projectId, agentInstanceId]);
 
+  const fetchActiveSessionContext = useCallback(() => {
+    if (!projectId || !agentInstanceId) {
+      setContextUsagePercent(null);
+      return;
+    }
+    api
+      .listSessions(projectId, agentInstanceId)
+      .then((sessions) => {
+        const active = sessions.find((s) => s.status === "active");
+        if (active != null && typeof active.context_usage_estimate === "number") {
+          setContextUsagePercent(Math.round(active.context_usage_estimate * 100));
+        } else {
+          setContextUsagePercent(null);
+        }
+      })
+      .catch(() => setContextUsagePercent(null));
+  }, [projectId, agentInstanceId]);
+
+  useEffect(() => {
+    fetchActiveSessionContext();
+  }, [fetchActiveSessionContext]);
+
+  useEffect(() => {
+    if (prevIsStreamingRef.current && !isStreaming) {
+      fetchActiveSessionContext();
+    }
+    prevIsStreamingRef.current = isStreaming;
+  }, [isStreaming, fetchActiveSessionContext]);
+
   useEffect(() => {
     if (!projectId || !agentInstanceId) {
       resetMessages([]);
+      setContextUsagePercent(null);
       return;
     }
     api
@@ -162,6 +194,7 @@ export function ChatView() {
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
+          contextUsagePercent={projectId && agentInstanceId ? contextUsagePercent : undefined}
         />
       </div>
     </div>
