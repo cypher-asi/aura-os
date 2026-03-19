@@ -8,7 +8,7 @@ import {
 } from "./client";
 
 function mockFetch(status: number, body: unknown, headers?: Record<string, string>) {
-  const headerEntries = { "content-type": "application/json", ...headers };
+  const headerEntries: Record<string, string> = { "content-type": "application/json", ...headers };
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,

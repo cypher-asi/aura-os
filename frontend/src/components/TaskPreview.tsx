@@ -10,7 +10,7 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput, type BuildStep, type TestStep } from "../context/EventContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
-import { formatRelativeTime, toBullets, formatTokens, formatModelName } from "../utils/format";
+import { toBullets, formatTokens, formatModelName } from "../utils/format";
 import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
