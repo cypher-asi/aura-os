@@ -100,6 +100,19 @@ pub(crate) fn auto_correct_build_command(cmd: &str) -> Option<String> {
     None
 }
 
+pub(crate) fn infer_default_build_command(project_root: &Path) -> Option<String> {
+    if project_root.join("Cargo.toml").is_file() {
+        return Some("cargo check --workspace --tests".to_string());
+    }
+    if project_root.join("package.json").is_file() {
+        return Some("npm run build --if-present".to_string());
+    }
+    if project_root.join("pyproject.toml").is_file() || project_root.join("requirements.txt").is_file() {
+        return Some("python -m compileall .".to_string());
+    }
+    None
+}
+
 impl DevLoopEngine {
     pub(crate) fn persist_build_step(&self, _task: &Task, _step: BuildStepRecord) {
         // build_steps are not stored in aura-storage
@@ -108,9 +121,24 @@ impl DevLoopEngine {
     async fn resolve_build_command(
         &self, project: &Project, session: &Session, task: &Task,
     ) -> Option<String> {
+        let project_root = Path::new(&project.linked_folder_path);
         let cmd = match &project.build_command {
             Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
             _ => {
+                if let Some(fallback) = infer_default_build_command(project_root) {
+                    info!(
+                        command = %fallback,
+                        "build_command missing; using inferred safe default for verification"
+                    );
+                    self.persist_build_step(task, BuildStepRecord {
+                        kind: "fallback_command".into(),
+                        command: Some(fallback.clone()),
+                        stderr: None,
+                        stdout: Some("build_command missing; inferred fallback command".into()),
+                        attempt: None,
+                    });
+                    return Some(fallback);
+                }
                 self.emit(EngineEvent::BuildVerificationSkipped {
                     project_id: project.project_id,
                     agent_instance_id: session.agent_instance_id,
@@ -536,6 +564,36 @@ mod tests {
         assert_eq!(auto_correct_build_command("cargo build"), None);
         assert_eq!(auto_correct_build_command("npm run build"), None);
         assert_eq!(auto_correct_build_command("make"), None);
+    }
+
+    // -----------------------------------------------------------------------
+    // infer_default_build_command
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn infer_default_build_command_rust_workspace() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("Cargo.toml"), "[workspace]").unwrap();
+        assert_eq!(
+            infer_default_build_command(dir.path()),
+            Some("cargo check --workspace --tests".into())
+        );
+    }
+
+    #[test]
+    fn infer_default_build_command_node_project() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("package.json"), "{}").unwrap();
+        assert_eq!(
+            infer_default_build_command(dir.path()),
+            Some("npm run build --if-present".into())
+        );
+    }
+
+    #[test]
+    fn infer_default_build_command_none_when_unknown() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(infer_default_build_command(dir.path()), None);
     }
 
     // -----------------------------------------------------------------------
