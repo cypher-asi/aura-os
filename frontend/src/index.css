@@ -8,6 +8,7 @@
   color-scheme: dark;
   --font-sans: 'Inter Variable', sans-serif;
   --color-text-muted: #555;
+  --color-backdrop: #000;
   --status-pending: #5c6078;
   --status-ready: #45aaf2;
   --status-in-progress: #9CDCFE;
