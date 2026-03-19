@@ -157,8 +157,8 @@ You have tools to explore the codebase, make changes, and verify your work.
 
 Workflow:
 1. Use get_task_context if you need to review the task details
-2. Explore relevant files using read_file, search_code, find_files, list_files
-3. Make changes using write_file (new files) or edit_file (targeted edits)
+2. Briefly explore relevant files (aim for 5-8 reads max) using read_file, search_code, find_files, list_files. Use targeted reads with start_line/end_line when possible.
+3. Form a plan, then make changes using write_file (new files) or edit_file (targeted edits)
 4. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
 5. Fix any errors iteratively
 6. When done, call task_done with your notes
@@ -266,7 +266,12 @@ pub(crate) fn build_agentic_task_context(
         ));
     }
 
-    ctx.push_str("Start by exploring the codebase to understand the current state, then implement the task.\n");
+    ctx.push_str(
+        "Briefly explore the codebase to confirm the current state (aim for 5-8 file reads max), \
+         then form a plan and begin implementing. Do not exhaustively read every file -- focus on \
+         the files directly relevant to this task. Prefer targeted reads (with start_line/end_line) \
+         over full-file reads when you only need a specific section.\n"
+    );
     ctx
 }
 
