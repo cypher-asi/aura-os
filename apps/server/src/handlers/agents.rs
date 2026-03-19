@@ -236,15 +236,19 @@ fn storage_message_to_message(sm: &StorageMessage) -> Message {
         Some("assistant") => ChatRole::Assistant,
         _ => ChatRole::User,
     };
+
+    let raw_content = sm.content.as_deref().unwrap_or_default();
+    let decoded = aura_chat::decode_message_content(raw_content);
+
     Message {
         message_id,
         agent_instance_id,
         project_id,
         role,
-        content: sm.content.clone().unwrap_or_default(),
-        content_blocks: None,
-        thinking: None,
-        thinking_duration_ms: None,
+        content: decoded.text,
+        content_blocks: decoded.content_blocks,
+        thinking: decoded.thinking,
+        thinking_duration_ms: decoded.thinking_duration_ms,
         created_at: parse_dt(&sm.created_at),
     }
 }

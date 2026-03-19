@@ -318,6 +318,9 @@ impl ChatService {
         agent_instance_id: &AgentInstanceId,
         role: &str,
         content: &str,
+        content_blocks: Option<&[ChatContentBlock]>,
+        thinking: Option<&str>,
+        thinking_duration_ms: Option<u64>,
         input_tokens: Option<u64>,
         output_tokens: Option<u64>,
         session_id: Option<&str>,
@@ -343,11 +346,18 @@ impl ChatService {
             },
         };
 
+        let encoded_content = crate::message_metadata::encode_message_content(
+            content,
+            content_blocks,
+            thinking,
+            thinking_duration_ms,
+        );
+
         let req = aura_storage::CreateMessageRequest {
             project_agent_id: agent_instance_id.to_string(),
             project_id: project_id.to_string(),
             role: role.to_string(),
-            content: content.to_string(),
+            content: encoded_content,
             input_tokens,
             output_tokens,
         };
@@ -464,6 +474,9 @@ impl ChatService {
             agent_instance_id,
             "user",
             content,
+            _content_blocks.as_deref(),
+            None,
+            None,
             None,
             None,
             Some(session_id.as_str()),
