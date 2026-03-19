@@ -125,21 +125,20 @@ impl DevLoopEngine {
         self
     }
 
-    /// Load a spec from aura-storage (if configured), falling back to local RocksDB.
+    /// Load a spec from aura-storage.
     pub(crate) async fn load_spec(
         &self,
-        project_id: &ProjectId,
+        _project_id: &ProjectId,
         spec_id: &SpecId,
     ) -> Result<Spec, EngineError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt_for_storage()?;
-            let ss = storage
-                .get_spec(&spec_id.to_string(), &jwt)
-                .await?;
-            return storage_spec_to_core(ss)
-                .map_err(|e| EngineError::Parse(format!("spec conversion: {e}")));
-        }
-        Ok(self.store.get_spec(project_id, spec_id)?)
+        let storage = self.storage_client.as_ref()
+            .ok_or_else(|| EngineError::Parse("aura-storage not configured".into()))?;
+        let jwt = self.get_jwt_for_storage()?;
+        let ss = storage
+            .get_spec(&spec_id.to_string(), &jwt)
+            .await?;
+        storage_spec_to_core(ss)
+            .map_err(|e| EngineError::Parse(format!("spec conversion: {e}")))
     }
 
     fn get_jwt_for_storage(&self) -> Result<String, EngineError> {

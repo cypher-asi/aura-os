@@ -10,7 +10,6 @@ use crate::error::StoreResult;
 
 pub(crate) const CF_NAMES: &[&str] = &[
     "projects",
-    "specs",
     "agents",
     "settings",
     "messages",

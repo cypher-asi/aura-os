@@ -38,27 +38,38 @@ pub async fn list_log_entries(
                 .collect()
         };
 
+        let log_futs: Vec<_> = project_ids
+            .iter()
+            .map(|pid| storage.list_log_entries(pid, &jwt, None, None, None))
+            .collect();
+        let log_results = futures_util::future::join_all(log_futs).await;
+
         let mut entries = Vec::new();
-        for pid in &project_ids {
-            if let Ok(storage_logs) = storage
-                .list_log_entries(pid, &jwt, None, Some(limit as u32), None)
-                .await
-            {
-                for sl in &storage_logs {
-                    let timestamp_ms = sl
-                        .created_at
-                        .as_deref()
-                        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-                        .map(|dt| dt.timestamp_millis())
-                        .unwrap_or(0);
-                    let event = sl
-                        .metadata
-                        .clone()
-                        .unwrap_or_else(|| serde_json::json!({
-                            "type": "log_line",
-                            "message": sl.message.clone().unwrap_or_default(),
-                        }));
-                    entries.push(PersistedLogEntry { timestamp_ms, event });
+        for (i, result) in log_results.into_iter().enumerate() {
+            match result {
+                Ok(storage_logs) => {
+                    for sl in &storage_logs {
+                        let timestamp_ms = sl
+                            .created_at
+                            .as_deref()
+                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                            .map(|dt| dt.timestamp_millis())
+                            .unwrap_or(0);
+                        let event = sl
+                            .metadata
+                            .clone()
+                            .unwrap_or_else(|| serde_json::json!({
+                                "type": "log_line",
+                                "message": sl.message.clone().unwrap_or_default(),
+                            }));
+                        entries.push(PersistedLogEntry { timestamp_ms, event });
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        project_id = %project_ids[i], error = %e,
+                        "Failed to list log entries from storage"
+                    );
                 }
             }
         }

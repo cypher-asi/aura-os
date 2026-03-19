@@ -98,6 +98,7 @@ impl ChatService {
         agent_instance_id: &AgentInstanceId,
         agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let (api_key, system, api_messages, stored_messages) =
             match self.prepare_chat_context(project_id, agent_instance_id, agent_instance, tx).await {
@@ -152,7 +153,7 @@ impl ChatService {
         self.save_assistant_message(
             project_id, agent_instance_id, agent_instance,
             &api_key, &stored_messages, result, tool_blocks,
-            thinking_start, tx,
+            thinking_start, tx, active_session_id,
         )
         .await;
     }
@@ -296,6 +297,7 @@ impl ChatService {
         tool_blocks: ContentBlockAccumulator,
         thinking_start: std::time::Instant,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
             Ok(mutex) => mutex.into_inner().unwrap_or_default(),
@@ -331,6 +333,7 @@ impl ChatService {
                 &assistant_reply,
                 Some(result.total_input_tokens),
                 Some(result.total_output_tokens),
+                active_session_id,
             )
             .await;
 
@@ -396,6 +399,7 @@ impl ChatService {
         agent_instance_id: &AgentInstanceId,
         _agent_instance: &AgentInstance,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        active_session_id: Option<&str>,
     ) {
         let send = |evt: ChatStreamEvent| {
             let _ = tx.send(evt);
@@ -481,6 +485,7 @@ impl ChatService {
                 &accumulated,
                 Some(spec_input_tokens),
                 Some(spec_output_tokens),
+                active_session_id,
             )
             .await;
         }

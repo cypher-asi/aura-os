@@ -266,8 +266,26 @@ impl ChatService {
         Some(session.access_token)
     }
 
-    /// Save a message to aura-storage via the latest active session.
+    /// Resolve the active session ID for a given agent instance.
+    pub(crate) async fn find_active_session_id(
+        &self,
+        agent_instance_id: &AgentInstanceId,
+    ) -> Option<String> {
+        let storage = self.storage_client.as_ref()?;
+        let jwt = self.get_jwt()?;
+        let sessions = storage
+            .list_sessions(&agent_instance_id.to_string(), &jwt)
+            .await
+            .ok()?;
+        sessions
+            .iter()
+            .find(|s| s.status.as_deref() == Some("active"))
+            .map(|s| s.id.clone())
+    }
+
+    /// Save a message to aura-storage.
     /// Fire-and-forget: logs a warning on failure but does not propagate errors.
+    /// When `session_id` is provided, skips the session lookup HTTP call.
     pub(crate) async fn save_message_to_storage(
         &self,
         project_id: &ProjectId,
@@ -276,18 +294,28 @@ impl ChatService {
         content: &str,
         input_tokens: Option<u64>,
         output_tokens: Option<u64>,
+        session_id: Option<&str>,
     ) {
         let Some(ref storage) = self.storage_client else { return };
         let Some(jwt) = self.get_jwt() else { return };
 
-        let sessions = storage
-            .list_sessions(&agent_instance_id.to_string(), &jwt)
-            .await
-            .unwrap_or_default();
-        let active_session = sessions
-            .iter()
-            .find(|s| s.status.as_deref() == Some("active"));
-        let Some(session) = active_session else { return };
+        let owned_session_id;
+        let sid = match session_id {
+            Some(id) => id,
+            None => match self.find_active_session_id(agent_instance_id).await {
+                Some(id) => {
+                    owned_session_id = id;
+                    &owned_session_id
+                }
+                None => {
+                    warn!(
+                        %project_id, %agent_instance_id,
+                        "No active session found, cannot save message to aura-storage"
+                    );
+                    return;
+                }
+            },
+        };
 
         let req = aura_storage::CreateMessageRequest {
             project_agent_id: agent_instance_id.to_string(),
@@ -298,7 +326,7 @@ impl ChatService {
             output_tokens,
         };
 
-        if let Err(e) = storage.create_message(&session.id, &jwt, &req).await {
+        if let Err(e) = storage.create_message(sid, &jwt, &req).await {
             warn!(
                 %project_id, %agent_instance_id,
                 error = %e,
@@ -363,17 +391,24 @@ impl ChatService {
             send(ChatStreamEvent::Done);
             return;
         }
-        self.save_message_to_storage(project_id, agent_instance_id, "user", content, None, None)
-            .await;
+        let active_session_id = self.find_active_session_id(agent_instance_id).await;
+        self.save_message_to_storage(
+            project_id, agent_instance_id, "user", content, None, None,
+            active_session_id.as_deref(),
+        ).await;
 
         match action {
             Some("generate_specs") => {
-                self.handle_generate_specs(project_id, agent_instance_id, agent_instance, &tx)
-                    .await;
+                self.handle_generate_specs(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
             }
             _ => {
-                self.handle_chat_with_tools(project_id, agent_instance_id, agent_instance, &tx)
-                    .await;
+                self.handle_chat_with_tools(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
             }
         }
 

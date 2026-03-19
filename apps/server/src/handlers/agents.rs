@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
+use futures_util::future::join_all;
 use tracing::{info, warn};
 
 use axum::http::StatusCode;
@@ -458,51 +459,81 @@ pub async fn list_agent_messages(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<Message>>> {
-    // Aggregate messages across all project agents matching this agent_id
+    let mut messages = Vec::new();
+
+    // Source 1: project-scoped messages from aura-storage
     if let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) {
         let all_projects = state.project_service.list_projects().unwrap_or_default();
         let agent_id_str = agent_id.to_string();
-        let mut messages = Vec::new();
 
-        for project in &all_projects {
-            let pid = project.project_id.to_string();
-            let agents = storage
-                .list_project_agents(&pid, &jwt)
-                .await
-                .unwrap_or_default();
+        let pids: Vec<String> = all_projects
+            .iter()
+            .map(|p| p.project_id.to_string())
+            .collect();
+        let agent_futs: Vec<_> = pids
+            .iter()
+            .map(|pid| storage.list_project_agents(pid, &jwt))
+            .collect();
+        let agent_results = join_all(agent_futs).await;
 
-            for pa in agents
-                .iter()
-                .filter(|a| a.agent_id.as_deref() == Some(&agent_id_str))
-            {
-                let sessions = storage
-                    .list_sessions(&pa.id, &jwt)
-                    .await
-                    .unwrap_or_default();
+        let matching_agents: Vec<_> = agent_results
+            .into_iter()
+            .enumerate()
+            .flat_map(|(i, result)| match result {
+                Ok(agents) => agents
+                    .into_iter()
+                    .filter(|a| a.agent_id.as_deref() == Some(agent_id_str.as_str()))
+                    .collect::<Vec<_>>(),
+                Err(e) => {
+                    warn!(project_id = %pids[i], error = %e, "Failed to list project agents");
+                    Vec::new()
+                }
+            })
+            .collect();
 
-                for session in &sessions {
-                    if let Ok(session_msgs) =
-                        storage.list_messages(&session.id, &jwt, None, None).await
-                    {
-                        for sm in &session_msgs {
-                            messages.push(storage_message_to_message(sm));
-                        }
+        let session_futs: Vec<_> = matching_agents
+            .iter()
+            .map(|pa| storage.list_sessions(&pa.id, &jwt))
+            .collect();
+        let session_results = join_all(session_futs).await;
+
+        let all_sessions: Vec<_> = session_results
+            .into_iter()
+            .enumerate()
+            .flat_map(|(i, result)| match result {
+                Ok(sessions) => sessions,
+                Err(e) => {
+                    warn!(project_agent_id = %matching_agents[i].id, error = %e, "Failed to list sessions");
+                    Vec::new()
+                }
+            })
+            .collect();
+
+        let msg_futs: Vec<_> = all_sessions
+            .iter()
+            .map(|s| storage.list_messages(&s.id, &jwt, None, None))
+            .collect();
+        let msg_results = join_all(msg_futs).await;
+
+        for (i, result) in msg_results.into_iter().enumerate() {
+            match result {
+                Ok(session_msgs) => {
+                    for sm in &session_msgs {
+                        messages.push(storage_message_to_message(sm));
                     }
+                }
+                Err(e) => {
+                    warn!(session_id = %all_sessions[i].id, error = %e, "Failed to list messages");
                 }
             }
         }
-
-        if !messages.is_empty() {
-            messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-            return Ok(Json(messages));
-        }
     }
 
-    // Fallback: local agent-level messages (deprecated, removed in Phase 9)
-    let mut messages = state
-        .store
-        .list_agent_messages(&agent_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    // Source 2: agent-level messages from local store (multi-project chat)
+    if let Ok(local_msgs) = state.store.list_agent_messages(&agent_id) {
+        messages.extend(local_msgs);
+    }
+
     messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
     Ok(Json(messages))
 }
