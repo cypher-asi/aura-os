@@ -30,6 +30,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/access-token", get(auth::get_access_token))
+        .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
         // Users (proxied to aura-network)
         .route("/api/users/me", get(users::get_me).put(users::update_me))
         .route(
