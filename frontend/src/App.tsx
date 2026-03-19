@@ -16,6 +16,9 @@ import { AgentChatView } from "./apps/agents/AgentChatView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { IdeView } from "./views/IdeView";
 import { ProjectEmptyView } from "./views/ProjectEmptyView";
+import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
+import { ProjectWorkView } from "./views/ProjectWorkView";
+import { ProjectFilesView } from "./views/ProjectFilesView";
 
 export default function App() {
   return (
@@ -38,8 +41,11 @@ export default function App() {
                     <Route path="projects/settings" element={<SettingsView />} />
                     <Route path="projects/:projectId" element={<ProjectLayout />}>
                       <Route index element={<ProjectEmptyView />} />
+                      <Route path="agent" element={<ProjectAgentRedirectView />} />
                       <Route path="agents/:agentInstanceId" element={<ChatView />} />
                       <Route path="execution" element={<ExecutionView />} />
+                      <Route path="work" element={<ProjectWorkView />} />
+                      <Route path="files" element={<ProjectFilesView />} />
                     </Route>
 
                     {/* Agents app routes */}

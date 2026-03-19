@@ -232,7 +232,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         defaultExpandedIds={defaultExpandedIds}
         defaultSelectedIds={defaultSelectedIds}
         onSelect={(ids) => {
-          const id = ids[0];
+          const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
           if (!id) return;
           const task = taskMap.get(id);
           if (task) sidekick.viewTask(task);

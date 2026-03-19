@@ -14,6 +14,13 @@ import { AgentSelectorModal } from "./AgentSelectorModal";
 import { useEventContext } from "../context/EventContext";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useProjectsList } from "../apps/projects/useProjectsList";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import {
+  getMobileProjectDestination,
+  projectAgentRoute,
+  projectFilesRoute,
+  projectWorkRoute,
+} from "../utils/mobileNavigation";
 import styles from "./ProjectList.module.css";
 
 function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
@@ -72,6 +79,7 @@ export function ProjectList() {
 
   const { query: searchQuery, setAction } = useSidebarSearch();
   const { subscribe } = useEventContext();
+  const { isMobileLayout } = useAuraCapabilities();
   const [automatingProjectId, setAutomatingProjectId] = useState<string | null>(null);
   const [automatingAgentInstanceId, setAutomatingAgentInstanceId] = useState<string | null>(null);
   const agentInstanceIdRef = useRef(agentInstanceId);
@@ -119,6 +127,16 @@ export function ProjectList() {
       }
     }
   }, [agentInstanceId, agentsByProject, projectId, refreshProjectAgents]);
+
+  useEffect(() => {
+    if (!isMobileLayout || projects.length === 0) return;
+
+    for (const project of projects) {
+      if (!(project.project_id in agentsByProject)) {
+        void refreshProjectAgents(project.project_id);
+      }
+    }
+  }, [agentsByProject, isMobileLayout, projects, refreshProjectAgents]);
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -178,7 +196,16 @@ export function ProjectList() {
   }, [subscribe]);
 
   useEffect(() => {
-    if (!projectId || agentInstanceId || location.pathname.endsWith("/execution")) {
+    if (
+      !projectId ||
+      agentInstanceId ||
+      location.pathname.endsWith("/execution") ||
+      location.pathname.endsWith("/work") ||
+      location.pathname.endsWith("/files") ||
+      location.pathname.endsWith("/agent") ||
+      isMobileLayout ||
+      location.pathname !== `/projects/${projectId}`
+    ) {
       return;
     }
 
@@ -191,7 +218,7 @@ export function ProjectList() {
 
       navigate(`/projects/${projectId}/execution`, { replace: true });
     }
-  }, [agentInstanceId, agentsByProject, location.pathname, navigate, projectId]);
+  }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId]);
 
   const projectMap = useMemo(
     () => new Map(projects.map((p) => [p.project_id, p])),
@@ -280,13 +307,17 @@ export function ProjectList() {
     [explorerData, searchQuery],
   );
   const defaultExpandedIds = useMemo(
-    () => (projectId ? [projectId] : []),
-    [projectId],
+    () => (isMobileLayout
+      ? projects.map((project) => project.project_id)
+      : projectId
+        ? [projectId]
+        : []),
+    [isMobileLayout, projectId, projects],
   );
 
   const defaultSelectedIds = useMemo(() => {
     if (agentInstanceId) return [agentInstanceId];
-    if (projectId && location.pathname.endsWith("/execution")) {
+    if (projectId && (location.pathname.endsWith("/execution") || location.pathname.endsWith("/work"))) {
       return [executionNodeId(projectId)];
     }
     if (projectId) return [projectId];
@@ -297,8 +328,32 @@ export function ProjectList() {
     (ids: string[]) => {
       const id = ids[ids.length - 1];
       if (!id) return;
+      const mobileDestination = getMobileProjectDestination(location.pathname);
+      const isNestedMobileProjectView =
+        Boolean(agentInstanceId) ||
+        location.pathname.endsWith("/execution") ||
+        location.pathname.endsWith("/work") ||
+        location.pathname.endsWith("/files");
+
       if (projectMap.has(id)) {
         if (id !== projectId) sidekick.closePreview();
+        if (isMobileLayout) {
+          if (id === projectId && isNestedMobileProjectView) {
+            navigate(`/projects/${id}`);
+            return;
+          }
+          if (mobileDestination === "tasks") {
+            navigate(projectWorkRoute(id));
+            return;
+          }
+          if (mobileDestination === "files") {
+            navigate(projectFilesRoute(id));
+            return;
+          }
+          navigate(projectAgentRoute(id));
+          return;
+        }
+
         const agents = agentsByProject[id];
         if (agents && agents.length > 0) {
           navigate(`/projects/${id}/agents/${agents[0].agent_instance_id}`);
@@ -308,21 +363,27 @@ export function ProjectList() {
       } else if (id.startsWith("execution:")) {
         const pid = id.slice("execution:".length);
         if (pid !== projectId) sidekick.closePreview();
-        navigate(`/projects/${pid}/execution`);
+        navigate(isMobileLayout ? projectWorkRoute(pid) : `/projects/${pid}/execution`);
       } else if (agentMeta.has(id)) {
         const { projectId: pid } = agentMeta.get(id)!;
         if (pid !== projectId) sidekick.closePreview();
         navigate(`/projects/${pid}/agents/${id}`);
       }
     },
-    [projectMap, agentMeta, agentsByProject, navigate, projectId, sidekick],
+    [projectMap, agentMeta, agentsByProject, agentInstanceId, isMobileLayout, location.pathname, navigate, projectId, sidekick],
   );
 
   const handleExpand = useCallback(
     (nodeId: string, expanded: boolean) => {
-      if (!expanded && nodeId === projectId && (agentInstanceId || location.pathname.endsWith("/execution"))) {
+      const isNestedProjectRoute =
+        Boolean(agentInstanceId) ||
+        location.pathname.endsWith("/execution") ||
+        location.pathname.endsWith("/work") ||
+        location.pathname.endsWith("/files");
+
+      if (!expanded && nodeId === projectId && isNestedProjectRoute) {
         sidekick.closePreview();
-        navigate("/projects");
+        navigate(isMobileLayout ? `/projects/${nodeId}` : "/projects");
         return;
       }
 
@@ -330,7 +391,7 @@ export function ProjectList() {
         void refreshProjectAgents(nodeId);
       }
     },
-    [agentInstanceId, agentsByProject, location.pathname, navigate, projectId, projectMap, refreshProjectAgents, sidekick],
+    [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId, projectMap, refreshProjectAgents, sidekick],
   );
 
   const handleKeyDown = useCallback(

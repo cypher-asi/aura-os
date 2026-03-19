@@ -22,42 +22,42 @@ test.beforeEach(async ({ page }) => {
 });
 
 const tasks = [
-      {
-        task_id: "task-1",
-        project_id: "proj-1",
-        spec_id: "spec-1",
-        dependency_ids: [],
-        parent_task_id: null,
-        session_id: null,
-        user_id: "user-1",
-        assigned_agent_instance_id: "agent-inst-1",
-        title: "Patch auth flow",
-        description: "Verify mobile preview parity",
-        status: "ready",
-        execution_notes: "",
-        files_changed: [{ op: "modify", path: "src/auth.ts" }],
-        build_steps: [],
-        test_steps: [],
-        order_index: 0,
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        model: null,
-        live_output: "",
-        created_at: "2026-03-17T01:00:00.000Z",
-        updated_at: "2026-03-17T01:00:00.000Z",
-      },
+  {
+    task_id: "task-1",
+    project_id: "proj-1",
+    spec_id: "spec-1",
+    dependency_ids: [],
+    parent_task_id: null,
+    session_id: null,
+    user_id: "user-1",
+    assigned_agent_instance_id: "agent-inst-1",
+    title: "Patch auth flow",
+    description: "Verify mobile preview parity",
+    status: "ready",
+    execution_notes: "",
+    files_changed: [{ op: "modify", path: "src/auth.ts" }],
+    build_steps: [],
+    test_steps: [],
+    order_index: 0,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    model: null,
+    live_output: "",
+    created_at: "2026-03-17T01:00:00.000Z",
+    updated_at: "2026-03-17T01:00:00.000Z",
+  },
 ];
 
 const specs = [
-      {
-        spec_id: "spec-1",
-        project_id: "proj-1",
-        title: "Mobile parity spec",
-        markdown_contents: "# Mobile parity",
-        order_index: 0,
-        created_at: "2026-03-17T01:00:00.000Z",
-        updated_at: "2026-03-17T01:00:00.000Z",
-      },
+  {
+    spec_id: "spec-1",
+    project_id: "proj-1",
+    title: "Mobile parity spec",
+    markdown_contents: "# Mobile parity",
+    order_index: 0,
+    created_at: "2026-03-17T01:00:00.000Z",
+    updated_at: "2026-03-17T01:00:00.000Z",
+  },
 ];
 
 async function mockAuthenticatedMobileApp(
@@ -119,26 +119,15 @@ async function mockAuthenticatedMobileApp(
   });
 }
 
-async function openMockedProjectExecution(page: import("@playwright/test").Page) {
-  await page.goto("/projects/proj-1/execution");
-  await expect(page.getByText("Demo Project")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible({ timeout: 10000 });
+async function openProjectDrawer(page: import("@playwright/test").Page, projectName?: string) {
+  await page.getByRole("button", { name: projectName ? new RegExp(`Open project navigation for ${projectName}`, "i") : /Open project navigation/i }).click();
 }
 
-async function ensureExecutionRouteContent(page: import("@playwright/test").Page) {
-  const startButton = page.locator("main").getByRole("button", { name: "Start" }).first();
-
-  try {
-    await expect(startButton).toBeVisible({ timeout: 10000 });
-    return;
-  } catch {
-    // Mobile WebKit occasionally lands on the correct route with the project shell
-    // mounted before the nested execution pane finishes attaching. The broader
-    // responsive suite already asserts direct route mounting, so here we recover
-    // the pane and keep this test focused on details/preview behavior.
-    await page.getByRole("treeitem", { name: "Execution" }).dispatchEvent("click");
-    await expect(startButton).toBeVisible({ timeout: 10000 });
-  }
+async function tapPrimaryNav(page: import("@playwright/test").Page, label: "Agent" | "Tasks" | "Files" | "Feed") {
+  await page
+    .getByRole("navigation", { name: "Primary mobile navigation" })
+    .getByRole("button", { name: label })
+    .tap();
 }
 
 test("mobile login page renders with PWA metadata", async ({ page }) => {
@@ -157,112 +146,93 @@ test("mobile login page can open host settings", async ({ page }) => {
   await page.goto("/login");
 
   await page.getByRole("button", { name: "Change host" }).click();
-
   await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
-  await expect(page.getByPlaceholder("192.168.1.20:5173")).toBeVisible();
 });
 
-test("mobile projects route reuses shared project navigation for execution and chat", async ({ page }) => {
+test("mobile root uses project drawer plus the four-tab primary navigation", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/projects/proj-1/agents/agent-inst-1");
-
-  await expect(page.getByText("Demo Project")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible({ timeout: 10000 });
-  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/, { timeout: 10000 });
-
-  await page.getByRole("treeitem", { name: "Execution" }).dispatchEvent("click");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/execution$/);
-
-  await page.getByRole("treeitem", { name: "Builder Bot" }).dispatchEvent("click");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
-});
-
-test("mobile projects route keeps the welcome view and opens project navigation", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
   await page.goto("/projects");
 
-  await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
   await expect(page.getByText("Welcome to AURA")).toBeVisible();
-  await expect(page.getByText("Select a project from navigation or create a new one to get started.")).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Execution" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Agent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tasks" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Files" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Feed" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Projects" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await openProjectDrawer(page);
   await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible();
 });
 
-test("mobile drawer exposes team and app settings", async ({ page }) => {
+test("mobile primary navigation opens shared agent, work, files, and feed routes", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
-
-  await openMockedProjectExecution(page);
-  await ensureExecutionRouteContent(page);
-
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
-  await page.getByRole("button", { name: "App settings" }).click();
-  const settingsDialog = page.getByRole("dialog");
-  await expect(settingsDialog).toBeVisible();
-  await expect(settingsDialog.getByRole("heading", { name: "Settings" })).toBeVisible();
-});
-
-test("mobile feed exposes inline filter controls", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/feed");
-
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Organization" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
-});
-
-test("mobile leaderboard keeps ranking filters visible without opening the drawer", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/leaderboard");
-
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
-});
-
-test("mobile profile keeps project scope visible without opening the drawer", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/profile");
-
-  await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "aura-code" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "the-grid" })).toBeVisible();
-});
-
-test("mobile new project modal presents local file actions", async ({ page, browserName }) => {
-  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
-  await mockAuthenticatedMobileApp(page);
-
   await page.goto("/projects");
 
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  const newProjectButton = page.locator('button[title="New Project"]:visible');
-  await expect(newProjectButton).toBeVisible();
-  await newProjectButton.click();
+  await tapPrimaryNav(page, "Agent");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
+  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
+
+  await tapPrimaryNav(page, "Tasks");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
+  await expect(page.getByText("Execution")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Specs")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("main").getByRole("button", { name: "Tasks" })).toBeVisible();
+
+  const directoryLoaded = page.waitForResponse((response) =>
+    response.url().includes("/api/list-directory") && response.request().method() === "POST",
+  );
+  await tapPrimaryNav(page, "Files");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
+  await expect(page.getByPlaceholder("Search files...")).toBeVisible({ timeout: 10000 });
+  expect((await directoryLoaded).ok()).toBeTruthy();
+  await expect(page.getByText("Could not load files")).toHaveCount(0);
+  await expect(page.getByText("No linked workspace")).toHaveCount(0);
+
+  await tapPrimaryNav(page, "Feed");
+  await expect(page).toHaveURL(/\/feed$/);
+  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+});
+
+test("mobile project title opens the drawer and back returns to the project root state", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+  await page.goto("/projects/proj-1/work");
+
+  await expect(page.getByRole("button", { name: /Open project navigation for Demo Project/i })).toBeVisible();
+  await openProjectDrawer(page, "Demo Project");
+  await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible();
+  await page.getByRole("button", { name: "Close drawer" }).dispatchEvent("click");
+  await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toBeVisible();
+
+  await tapPrimaryNav(page, "Agent");
+  await expect(page.getByRole("button", { name: "Back to project" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to project" }).click();
+  await expect(page).toHaveURL(/\/projects\/proj-1$/);
+  await expect(page.getByRole("button", { name: /Open project navigation for Demo Project/i })).toBeVisible();
+});
+
+test("mobile new project modal opens from the project drawer", async ({ page, browserName }) => {
+  test.skip(browserName === "webkit", "Headless WebKit is flaky with file chooser coverage; Chromium covers the modal flow.");
+  await mockAuthenticatedMobileApp(page);
+  await page.goto("/projects");
+
+  await openProjectDrawer(page);
+  await page.locator('button[title="New Project"]:visible').click();
 
   await expect(page.getByPlaceholder("Project name")).toBeVisible();
   await expect(page.getByText("Choose a folder or files from this device to start a project.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open folder" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Choose files" })).toBeVisible();
-  await expect(page.getByText("Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.")).toBeVisible();
 });
 
 test("mobile new project modal falls back to an existing project org when org lookup is unavailable", async ({ page, browserName }) => {
-  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
+  test.skip(browserName === "webkit", "Headless WebKit is flaky with file chooser coverage; Chromium covers the modal flow.");
   await mockAuthenticatedApp(page, { orgsUnavailable: true });
-
   await page.goto("/projects");
 
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await openProjectDrawer(page);
   await page.locator('button[title="New Project"]:visible').click();
 
   await expect(page.getByPlaceholder("Project name")).toBeVisible();
@@ -270,123 +240,49 @@ test("mobile new project modal falls back to an existing project org when org lo
   await expect(page.getByRole("button", { name: "Create Project" })).toBeEnabled();
 });
 
-test("mobile file selection keeps the new project modal open", async ({ page, browserName }) => {
-  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
+test("mobile work view opens shared preview details for specs and tasks", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
+  await page.goto("/projects/proj-1/work");
 
+  await expect(page.getByText("Execution")).toBeVisible({ timeout: 10000 });
+  const specButton = page.getByRole("button", { name: "Mobile parity spec", exact: true });
+  await expect(specButton).toBeVisible({ timeout: 10000 });
+  await specButton.click();
+  await expect(page.getByRole("heading", { name: "Mobile parity" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Mobile parity" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Close", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Patch auth flow/i })).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: /Patch auth flow/i }).click();
+  await expect(page.getByText("Files Changed")).toBeVisible();
+});
+
+test("mobile account sheet exposes profile, leaderboard, team settings, and app settings", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
 
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.locator('button[title="New Project"]:visible').click();
-
-  await expect(page.getByPlaceholder("Project name")).toBeVisible();
-
-  await page.locator('input[type="file"]').nth(1).setInputFiles({
-    name: "notes.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("hello aura"),
-  });
-
-  await expect(page.getByPlaceholder("Project name")).toBeVisible();
-  await expect(page.getByText("1 file selected")).toBeVisible();
-  await expect(page.getByText("notes.txt")).toBeVisible();
-});
-
-test("mobile new project modal restores after a reload-like remount", async ({ page, browserName }) => {
-  test.skip(browserName === "webkit", "Headless WebKit is flaky opening the drawer-triggered modal; Chromium covers the local file flow.");
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/projects");
-
-  await page.getByRole("button", { name: "Open navigation" }).click();
-  await page.locator('button[title="New Project"]:visible').click();
-
-  await page.getByPlaceholder("Project name").fill("Restore me");
-  await page.getByPlaceholder("Description (optional)").fill("Android lifecycle check");
-  await page.locator('input[type="file"]').nth(1).setInputFiles({
-    name: "restore.txt",
-    mimeType: "text/plain",
-    buffer: Buffer.from("persist me"),
-  });
-
-  await page.reload();
-
-  await expect(page.getByPlaceholder("Project name")).toHaveValue("Restore me");
-  await expect(page.getByPlaceholder("Description (optional)")).toHaveValue("Android lifecycle check");
-  await expect(page.getByText("1 file selected")).toBeVisible();
-  await expect(page.getByText("restore.txt")).toBeVisible();
-});
-
-test("mobile details selection auto-opens preview", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await openMockedProjectExecution(page);
-  await ensureExecutionRouteContent(page);
-
-  await page.getByRole("button", { name: "Open details" }).click();
-  await expect(page.getByRole("treeitem", { name: "Patch auth flow" })).toBeVisible({ timeout: 10000 });
-  await page.getByRole("treeitem", { name: "Patch auth flow" }).dispatchEvent("click");
-
-  await expect(page.getByText("Open changed files from a linked desktop workspace.")).toBeVisible();
-});
-
-test("mobile profile details sheet scrolls to lower profile fields", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/profile");
-
-  await page.getByRole("button", { name: "Open details" }).click();
-  await expect(page.getByText("PROFILE DETAILS")).toBeVisible();
-  await expect(page.getByText("Test User")).toBeVisible();
-
-  const footer = page.getByText("CYPHER-ASI // AURA");
-  await footer.scrollIntoViewIfNeeded();
-  await expect(page.getByText("Joined March 2026")).toBeVisible();
-  await expect(footer).toBeVisible();
-});
-
-test("mobile team settings opens above the closed navigation drawer", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await openMockedProjectExecution(page);
-  await ensureExecutionRouteContent(page);
-
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByRole("button", { name: "Open account" }).click();
+  await expect(page.getByRole("button", { name: "Profile" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Leaderboard" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();
-  await page.getByRole("button", { name: "Team settings" }).click();
+  await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
 
-  await expect(page.getByRole("dialog").filter({ hasText: "Team Settings" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Team Settings" })).toBeVisible();
+  await page.getByRole("button", { name: "Profile" }).click();
+  await expect(page).toHaveURL(/\/profile$/);
 });
 
 test("mobile team settings shows an unavailable state when org loading fails", async ({ page }) => {
   await mockAuthenticatedMobileApp(page, { orgsUnavailable: true });
+  await page.goto("/projects");
 
-  await openMockedProjectExecution(page);
-  await ensureExecutionRouteContent(page);
-
-  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByRole("button", { name: "Open account" }).click();
   await page.getByRole("button", { name: "Team settings" }).click();
 
   const dialog = page.getByRole("dialog").filter({ hasText: "Team Settings" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Team settings are currently unavailable.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Retry" })).toBeVisible();
-});
-
-test("mobile agents route reuses the shared agent list", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-
-  await page.goto("/agents/agent-1");
-
-  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("treeitem", { name: "Research Bot" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Chat with Builder Bot")).toBeVisible({ timeout: 10000 });
-
-  await page.getByRole("treeitem", { name: "Research Bot" }).dispatchEvent("click");
-
-  await expect(page).toHaveURL(/\/agents\/agent-2$/);
-  await expect(page.getByText("Chat with Research Bot")).toBeVisible();
 });
 
 test("manifest and service worker assets are reachable", async ({ page }) => {

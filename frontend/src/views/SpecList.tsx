@@ -124,7 +124,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   );
 
   const handleSelect = (ids: string[]) => {
-    const id = ids[0];
+    const id = [...ids].reverse().find((candidate) => candidate === "__specs_root__" || specById.has(candidate));
     if (!id) return;
     if (id === "__specs_root__") {
       setSelectedId(id);

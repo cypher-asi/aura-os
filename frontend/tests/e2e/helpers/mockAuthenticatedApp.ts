@@ -285,6 +285,34 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         total_tests: 0,
       });
     }
+    if (pathname === `/api/projects/${project.project_id}/start-loop`) return json({ ok: true });
+    if (pathname === `/api/projects/${project.project_id}/pause-loop`) return json({ ok: true });
+    if (pathname === `/api/projects/${project.project_id}/stop-loop`) return json({ ok: true });
+    if (pathname === "/api/log-entries") return json([]);
+    if (pathname === "/api/list-directory") {
+      return json({
+        ok: true,
+        entries: [
+          {
+            path: "/tmp/demo-project/src",
+            name: "src",
+            is_dir: true,
+            children: [
+              {
+                path: "/tmp/demo-project/src/auth.ts",
+                name: "auth.ts",
+                is_dir: false,
+              },
+            ],
+          },
+          {
+            path: "/tmp/demo-project/README.md",
+            name: "README.md",
+            is_dir: false,
+          },
+        ],
+      });
+    }
     if (pathname === "/api/agents") return json(agents);
     if (pathname === "/api/feed") return json(mockFeedEvents);
     if (pathname.startsWith("/api/feed?")) return json(mockFeedEvents);

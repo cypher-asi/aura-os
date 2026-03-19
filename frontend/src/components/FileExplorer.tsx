@@ -26,13 +26,10 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { features } = useAuraCapabilities();
+  const { features, isMobileLayout } = useAuraCapabilities();
+  const canBrowseWorkspace = Boolean(rootPath);
 
   useEffect(() => {
-    if (!features.linkedWorkspace) {
-      const frame = window.requestAnimationFrame(() => setLoading(false));
-      return () => window.cancelAnimationFrame(frame);
-    }
     if (!rootPath) {
       const frame = window.requestAnimationFrame(() => {
         setEntries([]);
@@ -96,17 +93,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
     [features.linkedWorkspace, filteredData, onFileSelect, rootPath],
   );
 
-  if (!features.linkedWorkspace) {
-    return (
-      <PageEmptyState
-        icon={<FolderOpen size={32} />}
-        title="Files stay on desktop"
-        description="This device does not expose the host filesystem or IDE."
-      />
-    );
-  }
-
-  if (!rootPath) {
+  if (!canBrowseWorkspace) {
     return (
       <PageEmptyState
         icon={<FolderOpen size={32} />}
@@ -144,16 +131,99 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
     );
   }
 
+  if (isMobileLayout) {
+    return (
+      <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", width: "100%", overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", width: "100%", padding: "var(--space-2)" }}>
+          {renderMobileNodes({
+            nodes: filteredData,
+            features,
+            onFileSelect,
+            rootPath,
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <Explorer
-      data={filteredData}
-      expandOnSelect
-      enableDragDrop={false}
-      enableMultiSelect={false}
-      defaultExpandedIds={defaultExpandedIds}
-      onSelect={handleSelect}
-    />
+    <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", width: "100%" }}>
+      <Explorer
+        data={filteredData}
+        expandOnSelect
+        enableDragDrop={false}
+        enableMultiSelect={false}
+        defaultExpandedIds={defaultExpandedIds}
+        onSelect={handleSelect}
+      />
+    </div>
   );
+}
+
+function renderMobileNodes({
+  nodes,
+  features,
+  onFileSelect,
+  rootPath,
+  depth = 0,
+}: {
+  nodes: ExplorerNode[];
+  features: ReturnType<typeof useAuraCapabilities>["features"];
+  onFileSelect?: (path: string) => void;
+  rootPath?: string;
+  depth?: number;
+}) {
+  return nodes.map((node) => {
+    const isDir = Boolean(node.children?.length) || node.metadata?.is_dir === true;
+    const canOpenFile = !isDir && (Boolean(onFileSelect) || features.ideIntegration);
+    const rowStyle = {
+      display: "flex",
+      alignItems: "center",
+      gap: "var(--space-2)",
+      width: "100%",
+      padding: "10px 12px",
+      paddingLeft: `${12 + depth * 16}px`,
+      borderRadius: "var(--radius-md)",
+      border: "1px solid var(--color-border-subtle)",
+      background: "var(--color-panel-solid)",
+      color: "inherit",
+      textAlign: "left" as const,
+    };
+
+    const content = (
+      <>
+        {node.icon}
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {node.label}
+        </span>
+      </>
+    );
+
+    return (
+      <div key={node.id} style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+        {canOpenFile ? (
+          <button
+            type="button"
+            style={{ ...rowStyle, cursor: "pointer" }}
+            onClick={() => {
+              if (onFileSelect) {
+                onFileSelect(node.id);
+              } else {
+                api.openIde(node.id, rootPath);
+              }
+            }}
+          >
+            {content}
+          </button>
+        ) : (
+          <div style={rowStyle}>
+            {content}
+          </div>
+        )}
+        {node.children?.length ? renderMobileNodes({ nodes: node.children, features, onFileSelect, rootPath, depth: depth + 1 }) : null}
+      </div>
+    );
+  });
 }
 
 function findNode(nodes: ExplorerNode[], id: string): ExplorerNode | null {

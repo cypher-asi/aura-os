@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type SetStateAction } from "react";
+import { useEffect, useState, useCallback, useMemo, useLayoutEffect, type SetStateAction } from "react";
 import { useParams, useNavigate, Outlet } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project, Spec, Task } from "../types";
@@ -6,15 +6,21 @@ import type { EngineEvent } from "../types/events";
 import { useProjectRegister } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { EmptyState } from "../components/EmptyState";
+import { useProjectsList } from "../apps/projects/useProjectsList";
 
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { projects } = useProjectsList();
+  const cachedProject = useMemo(
+    () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
+    [projectId, projects],
+  );
 
-  const [project, setProjectRaw] = useState<Project | null>(null);
+  const [project, setProjectRaw] = useState<Project | null>(() => cachedProject);
   const [initialSpecs, setInitialSpecs] = useState<Spec[]>([]);
   const [initialTasks, setInitialTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cachedProject == null);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
   const { subscribe } = useEventContext();
@@ -28,11 +34,19 @@ export function ProjectLayout() {
   }, []);
 
   useEffect(() => {
+    if (!cachedProject) return;
+    setProjectRaw((prev) => prev ?? cachedProject);
+    setLoading(false);
+  }, [cachedProject]);
+
+  useEffect(() => {
     if (!projectId) return;
     let cancelled = false;
     const frame = window.requestAnimationFrame(() => {
-      setLoading(true);
-      setProjectRaw(null);
+      if (!cachedProject) {
+        setLoading(true);
+      }
+      setProjectRaw((prev) => prev?.project_id === projectId ? prev : cachedProject);
       setInitialSpecs([]);
       setInitialTasks([]);
     });
@@ -53,7 +67,7 @@ export function ProjectLayout() {
       cancelled = true;
       window.cancelAnimationFrame(frame);
     };
-  }, [projectId]);
+  }, [cachedProject, projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -64,7 +78,7 @@ export function ProjectLayout() {
     });
   }, [projectId, setProjectSafe, subscribe]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!project) {
       unregister();
       return;

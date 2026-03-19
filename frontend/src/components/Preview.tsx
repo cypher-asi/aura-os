@@ -133,13 +133,27 @@ export function PreviewHeader() {
   return (
     <div className={styles.previewHeader}>
       {canGoBack && displayItem.kind !== "specs_overview" && (
-        <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={14} />} onClick={goBackPreview} />
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon={<ArrowLeft size={14} />}
+          aria-label="Back"
+          onClick={goBackPreview}
+        />
       )}
       <Text size="sm" className={styles.previewTitle} style={{ fontWeight: 600 }}>
         {title}
       </Text>
       {displayItem.kind === "task" && <RunTaskButton task={displayItem.task} />}
-      <Button variant="ghost" size="sm" iconOnly icon={<X size={14} />} onClick={closePreview} />
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        icon={<X size={14} />}
+        aria-label="Close"
+        onClick={closePreview}
+      />
     </div>
   );
 }
