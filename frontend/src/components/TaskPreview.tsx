@@ -14,6 +14,7 @@ import { toBullets, formatTokens, formatModelName } from "../utils/format";
 import { formatCostFromTokens } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
+import { useLoopActive } from "../hooks/use-loop-active";
 import { FormattedRawOutput } from "./FormattedRawOutput";
 import { IterationBar } from "./IterationBar";
 import type { AgentInstance } from "../types";
@@ -280,6 +281,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
   const sidekick = useSidekick();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
+  const loopActive = useLoopActive(projectId);
   const [retrying, setRetrying] = useState(false);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
@@ -303,7 +305,9 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
   const streamBuf = taskOutput.text;
   const liveFileOps = taskOutput.fileOps;
 
-  const effectiveStatus = liveStatus ?? task.status;
+  const rawStatus = liveStatus ?? task.status;
+  const effectiveStatus =
+    rawStatus === "in_progress" && !loopActive ? "ready" : rawStatus;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";

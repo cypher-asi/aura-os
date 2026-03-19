@@ -6,6 +6,7 @@ import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
+import { useLoopActive } from "../hooks/use-loop-active";
 import { mergeById } from "../utils/collections";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
@@ -18,6 +19,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
   const { subscribe } = useEventContext();
+  const loopActive = useLoopActive(projectId);
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading, setLoading] = useState(false);
@@ -130,10 +132,12 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
 
       function toNode(task: Task): ExplorerNode {
         const subtasks = childrenByParent.get(task.task_id);
+        const displayStatus =
+          task.status === "in_progress" && !loopActive ? "ready" : task.status;
         return {
           id: task.task_id,
           label: task.title,
-          suffix: <TaskStatusIcon status={task.status} />,
+          suffix: <TaskStatusIcon status={displayStatus} />,
           metadata: { type: "task" },
           ...(subtasks && subtasks.length > 0
             ? { children: subtasks.map(toNode) }
@@ -168,7 +172,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     }
 
     return specNodes;
-  }, [groupedTasks, ungrouped]);
+  }, [groupedTasks, ungrouped, loopActive]);
 
   const defaultExpandedIds = useMemo(
     () => explorerData.map((node) => node.id),
