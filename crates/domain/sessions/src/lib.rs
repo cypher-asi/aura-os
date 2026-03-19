@@ -69,7 +69,6 @@ fn storage_session_to_session(
     })
 }
 
-#[allow(deprecated)] // session store methods are stubs during migration; full cleanup in Phase 9
 impl SessionService {
     pub fn new(store: Arc<RocksStore>, rollover_threshold: f64, model_context_window: u64) -> Self {
         Self {
@@ -125,13 +124,11 @@ impl SessionService {
             session.user_id = user_id;
             session.model = model;
             session.summary_of_previous_context = summary;
-            // Also write locally for test fallback and stale-session cleanup
-            let _ = self.store.put_session(&session);
             return Ok(session);
         }
 
         let now = Utc::now();
-        let session = Session {
+        Ok(Session {
             session_id: SessionId::new(),
             agent_instance_id: *agent_instance_id,
             project_id: *project_id,
@@ -146,9 +143,7 @@ impl SessionService {
             model,
             started_at: now,
             ended_at: None,
-        };
-        self.store.put_session(&session)?;
-        Ok(session)
+        })
     }
 
     pub async fn update_context_usage(
@@ -180,8 +175,6 @@ impl SessionService {
                 .update_session(&session_id.to_string(), &jwt, &req)
                 .await?;
         }
-        // Keep local store in sync for get_session fallback
-        let _ = self.store.put_session(&session);
         Ok(session)
     }
 
@@ -213,13 +206,6 @@ impl SessionService {
             storage
                 .update_session(&session_id.to_string(), &jwt, &req)
                 .await?;
-        }
-        // Update local copy
-        {
-            let mut old = old_session.clone();
-            old.status = SessionStatus::RolledOver;
-            old.ended_at = Some(Utc::now());
-            let _ = self.store.put_session(&old);
         }
 
         self.create_session(
@@ -259,26 +245,20 @@ impl SessionService {
                 .update_session(&session_id.to_string(), &jwt, &req)
                 .await?;
         }
-        let _ = self.store.put_session(&session);
         Ok(session)
     }
 
     pub async fn get_session(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
+        _project_id: &ProjectId,
+        _agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
     ) -> Result<Session, SessionError> {
         if let Some(ref storage) = self.storage_client {
             let jwt = self.get_jwt()?;
             match storage.get_session(&session_id.to_string(), &jwt).await {
                 Ok(ss) => {
-                    // Merge with local data for fields not in StorageSession
-                    let local = self
-                        .store
-                        .get_session(project_id, agent_instance_id, session_id)
-                        .ok();
-                    return storage_session_to_session(ss, local.as_ref())
+                    return storage_session_to_session(ss, None)
                         .map_err(|e| SessionError::Parse(e));
                 }
                 Err(aura_storage::StorageError::Server { status: 404, .. }) => {
@@ -287,17 +267,12 @@ impl SessionService {
                 Err(e) => return Err(SessionError::Storage(e)),
             }
         }
-        self.store
-            .get_session(project_id, agent_instance_id, session_id)
-            .map_err(|e| match e {
-                aura_store::StoreError::NotFound(_) => SessionError::NotFound,
-                other => SessionError::Store(other),
-            })
+        Err(SessionError::NotFound)
     }
 
     pub async fn list_sessions(
         &self,
-        project_id: &ProjectId,
+        _project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<Vec<Session>, SessionError> {
         if let Some(ref storage) = self.storage_client {
@@ -310,27 +285,18 @@ impl SessionService {
                 .filter_map(|s| storage_session_to_session(s, None).ok())
                 .collect());
         }
-        Ok(self
-            .store
-            .list_sessions_by_agent(project_id, agent_instance_id)?)
+        Ok(Vec::new())
     }
 
     pub async fn record_task_worked(
         &self,
         project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        session_id: &SessionId,
+        _agent_instance_id: &AgentInstanceId,
+        _session_id: &SessionId,
         task_id: TaskId,
     ) -> Result<Session, SessionError> {
-        // tasks_worked is local-only (not in StorageSession), keep in local store
-        let mut session = self
-            .store
-            .get_session(project_id, agent_instance_id, session_id)
-            .unwrap_or_else(|_| Session::dummy(*project_id));
-        if !session.tasks_worked.contains(&task_id) {
-            session.tasks_worked.push(task_id);
-            let _ = self.store.put_session(&session);
-        }
+        let mut session = Session::dummy(*project_id);
+        session.tasks_worked.push(task_id);
         Ok(session)
     }
 
@@ -338,54 +304,33 @@ impl SessionService {
         &self,
         project_id: &ProjectId,
     ) -> Result<Vec<Session>, SessionError> {
-        if let Some(ref storage) = self.storage_client {
-            let jwt = self.get_jwt()?;
-            let agents = storage
-                .list_project_agents(&project_id.to_string(), &jwt)
-                .await?;
-            let mut closed = Vec::new();
-            for agent in &agents {
-                let sessions = storage.list_sessions(&agent.id, &jwt).await?;
-                for ss in sessions {
-                    if ss.status.as_deref() == Some("active") {
-                        let req = aura_storage::UpdateSessionRequest {
-                            status: Some("completed".to_string()),
-                            context_usage_estimate: None,
-                            ended_at: Some(Utc::now().to_rfc3339()),
-                        };
-                        if let Err(e) =
-                            storage.update_session(&ss.id, &jwt, &req).await
-                        {
-                            warn!(session_id = %ss.id, error = %e, "failed to close stale session");
-                            continue;
-                        }
-                        if let Ok(s) = storage_session_to_session(ss, None) {
-                            closed.push(s);
-                        }
-                    }
-                }
-            }
-            // Also clean up local store
-            if let Ok(local_sessions) = self.store.list_sessions_by_project(project_id) {
-                for mut s in local_sessions {
-                    if s.status == SessionStatus::Active {
-                        s.status = SessionStatus::Completed;
-                        s.ended_at = Some(Utc::now());
-                        let _ = self.store.put_session(&s);
-                    }
-                }
-            }
-            return Ok(closed);
-        }
-
-        let all = self.store.list_sessions_by_project(project_id)?;
+        let Some(ref storage) = self.storage_client else {
+            return Ok(Vec::new());
+        };
+        let jwt = self.get_jwt()?;
+        let agents = storage
+            .list_project_agents(&project_id.to_string(), &jwt)
+            .await?;
         let mut closed = Vec::new();
-        for mut session in all {
-            if session.status == SessionStatus::Active {
-                session.status = SessionStatus::Completed;
-                session.ended_at = Some(Utc::now());
-                self.store.put_session(&session)?;
-                closed.push(session);
+        for agent in &agents {
+            let sessions = storage.list_sessions(&agent.id, &jwt).await?;
+            for ss in sessions {
+                if ss.status.as_deref() == Some("active") {
+                    let req = aura_storage::UpdateSessionRequest {
+                        status: Some("completed".to_string()),
+                        context_usage_estimate: None,
+                        ended_at: Some(Utc::now().to_rfc3339()),
+                    };
+                    if let Err(e) =
+                        storage.update_session(&ss.id, &jwt, &req).await
+                    {
+                        warn!(session_id = %ss.id, error = %e, "failed to close stale session");
+                        continue;
+                    }
+                    if let Ok(s) = storage_session_to_session(ss, None) {
+                        closed.push(s);
+                    }
+                }
             }
         }
         Ok(closed)

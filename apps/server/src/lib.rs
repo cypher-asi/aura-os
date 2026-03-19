@@ -139,7 +139,6 @@ fn spawn_event_rebroadcast(
     task_output_buffers: TaskOutputBuffers,
 ) {
     tokio::spawn(async move {
-        let mut write_count: u64 = 0;
         let mut delta_count: u64 = 0;
         let mut delta_broadcast_buf: HashMap<aura_core::TaskId, (aura_core::ProjectId, aura_core::AgentInstanceId, String)> = HashMap::new();
         let mut flush_interval = interval(Duration::from_millis(DELTA_BROADCAST_INTERVAL_MS));
@@ -176,20 +175,7 @@ fn spawn_event_rebroadcast(
                         continue;
                     }
 
-                    if let Ok(json_bytes) = serde_json::to_vec(&event) {
-                        if let Err(e) = store.append_log_entry(&json_bytes) {
-                            warn!("Failed to persist log entry: {e}");
-                        } else {
-                            write_count += 1;
-                            if write_count % 500 == 0 {
-                                if let Err(e) = store.prune_log_entries_if_needed() {
-                                    warn!("Failed to prune log entries: {e}");
-                                }
-                            }
-                        }
-                    }
-
-                    // Also write to aura-storage
+                    // Write to aura-storage
                     if let Some(ref sc) = storage_client {
                         if let Some(pid) = event_project_id(&event) {
                             if let Some(jwt) = get_jwt_from_store(&store) {

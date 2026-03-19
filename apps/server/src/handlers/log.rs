@@ -3,7 +3,7 @@ use axum::Json;
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ApiError, ApiResult};
+use crate::error::ApiResult;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -63,31 +63,12 @@ pub async fn list_log_entries(
             }
         }
 
-        if !entries.is_empty() {
-            entries.sort_by(|a, b| a.timestamp_ms.cmp(&b.timestamp_ms));
-            if entries.len() > limit {
-                entries = entries.split_off(entries.len() - limit);
-            }
-            return Ok(Json(entries));
+        entries.sort_by(|a, b| a.timestamp_ms.cmp(&b.timestamp_ms));
+        if entries.len() > limit {
+            entries = entries.split_off(entries.len() - limit);
         }
+        return Ok(Json(entries));
     }
 
-    // Fallback: local RocksDB (deprecated, removed in Phase 9)
-    let raw = state
-        .store
-        .list_log_entries(limit)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    let entries: Vec<PersistedLogEntry> = raw
-        .into_iter()
-        .filter_map(|(ts, bytes)| {
-            let event: serde_json::Value = serde_json::from_slice(&bytes).ok()?;
-            Some(PersistedLogEntry {
-                timestamp_ms: ts,
-                event,
-            })
-        })
-        .collect();
-
-    Ok(Json(entries))
+    Ok(Json(Vec::new()))
 }
