@@ -1,7 +1,9 @@
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 
-use crate::error::{ApiError, ApiResult};
+use aura_core::ProjectId;
+
+use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -44,4 +46,41 @@ pub async fn list_orbit_repos(
         .collect();
 
     Ok(axum::Json(repos_with_url))
+}
+
+/// GET /api/projects/:project_id/orbit-collaborators
+/// Returns Orbit repo collaborators for a project with an Orbit link. Uses current user's JWT.
+/// "Can add people" = repo owner + users with owner role.
+pub async fn get_project_orbit_collaborators(
+    State(state): State<AppState>,
+    Path(project_id): Path<ProjectId>,
+) -> ApiResult<axum::Json<Vec<aura_orbit::OrbitCollaborator>>> {
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_project = client
+        .get_project(&project_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    let base_url = net_project
+        .orbit_base_url
+        .as_deref()
+        .or(state.orbit_base_url.as_deref())
+        .ok_or_else(|| ApiError::bad_request("project has no Orbit link"))?;
+    let owner = net_project
+        .orbit_owner
+        .as_deref()
+        .ok_or_else(|| ApiError::bad_request("project has no Orbit link"))?;
+    let repo = net_project
+        .orbit_repo
+        .as_deref()
+        .ok_or_else(|| ApiError::bad_request("project has no Orbit link"))?;
+
+    let collaborators = state
+        .orbit_client
+        .list_collaborators(base_url, owner, repo, &jwt)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok(axum::Json(collaborators))
 }

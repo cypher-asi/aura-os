@@ -39,3 +39,14 @@ pub struct CreateRepoResponse {
     #[serde(default)]
     pub git_url: Option<String>,
 }
+
+/// Collaborator returned by list_collaborators. Repo owner and users with owner role can add people.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrbitCollaborator {
+    pub user_id: Option<String>,
+    pub username: Option<String>,
+    pub role: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+}

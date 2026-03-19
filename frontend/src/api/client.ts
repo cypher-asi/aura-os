@@ -127,6 +127,13 @@ export interface OrbitRepo {
   git_url?: string;
 }
 
+export interface OrbitCollaborator {
+  user_id?: string;
+  username?: string;
+  role: string;
+  display_name?: string;
+}
+
 export interface DirEntry {
   name: string;
   path: string;
@@ -233,6 +240,8 @@ export const api = {
   getProject: (id: ProjectId) => apiFetch<Project>(`/api/projects/${id}`),
   listOrbitRepos: (q?: string) =>
     apiFetch<OrbitRepo[]>(q ? `/api/orbit/repos?q=${encodeURIComponent(q)}` : "/api/orbit/repos"),
+  listProjectOrbitCollaborators: (projectId: ProjectId) =>
+    apiFetch<OrbitCollaborator[]>(`/api/projects/${projectId}/orbit-collaborators`),
   updateProject: (id: ProjectId, data: UpdateProjectRequest) =>
     apiFetch<Project>(`/api/projects/${id}`, {
       method: "PUT",

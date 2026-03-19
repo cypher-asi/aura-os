@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 use crate::error::OrbitError;
-use crate::types::{CreateRepoResponse, OrbitRepo};
+use crate::types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo};
 
 /// HTTP client for Orbit REST API.
 /// Uses JWT (Bearer) for auth; owner is always org_id or user_id (UUID).
@@ -40,6 +40,39 @@ impl OrbitClient {
             .post(&url)
             .header("Authorization", format!("Bearer {}", jwt))
             .json(&body)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_text = resp.text().await?;
+
+        if !status.is_success() {
+            return Err(OrbitError::Api {
+                status: status.as_u16(),
+                body: body_text,
+            });
+        }
+
+        serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))
+    }
+
+    /// List collaborators for a repo. Owner is Aura org_id or user_id (UUID).
+    /// Repo owner and users with owner role can add people.
+    pub async fn list_collaborators(
+        &self,
+        base_url: &str,
+        owner: &str,
+        repo: &str,
+        jwt: &str,
+    ) -> Result<Vec<OrbitCollaborator>, OrbitError> {
+        let base = base_url.trim_end_matches('/');
+        let url = format!("{}/api/repos/{}/{}/collaborators", base, owner, repo);
+        debug!(%url, "Orbit list_collaborators");
+
+        let resp = self
+            .http
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", jwt))
             .send()
             .await?;
 

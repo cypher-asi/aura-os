@@ -107,6 +107,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         )
         // Orbit (repos list/search; JWT auth)
         .route("/api/orbit/repos", get(orbit::list_orbit_repos))
+        .route(
+            "/api/projects/:project_id/orbit-collaborators",
+            get(orbit::get_project_orbit_collaborators),
+        )
         // Specs
         .route("/api/projects/:project_id/specs", get(specs::list_specs))
         .route(
