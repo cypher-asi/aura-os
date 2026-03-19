@@ -2,119 +2,13 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Serialize;
-use tracing::{info, warn};
 
 use aura_core::*;
 use aura_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
 
-use crate::dto::{OrgOrbitRepoLink, SetBillingRequest, SetOrgOrbitRepoRequest};
+use crate::dto::SetBillingRequest;
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
-
-const ORG_ORBIT_REPO_KEY_PREFIX: &str = "org_orbit_repo:";
-const USER_ORBIT_USERNAME_KEY_PREFIX: &str = "user_orbit_username:";
-
-fn org_orbit_repo_key(org_id: &OrgId) -> String {
-    format!("{}{}", ORG_ORBIT_REPO_KEY_PREFIX, org_id)
-}
-
-fn user_orbit_username_key(user_id: &str) -> String {
-    format!("{}{}", USER_ORBIT_USERNAME_KEY_PREFIX, user_id)
-}
-
-/// If org has Orbit link, add the user as collaborator (by orbit_username or user_id). Does not fail on Orbit errors.
-async fn sync_orbit_add_collaborator(
-    state: &AppState,
-    org_id: &OrgId,
-    user_id: &str,
-    role: &str,
-) {
-    let key = org_orbit_repo_key(org_id);
-    let link_json = match state.settings_service.get_setting(&key) {
-        Ok(Some(s)) => s,
-        _ => return,
-    };
-    let link: OrgOrbitRepoLink = match serde_json::from_str(&link_json) {
-        Ok(l) => l,
-        Err(e) => {
-            warn!(org_id = %org_id, error = %e, "sync_orbit_add: invalid org orbit link");
-            return;
-        }
-    };
-    let base_url = state.orbit_base_url.as_deref().unwrap_or(link.orbit_base_url.as_str());
-    let jwt = match state.get_jwt() {
-        Ok(j) => j,
-        Err(_) => return,
-    };
-    let collaborator_id = state
-        .settings_service
-        .get_setting(&user_orbit_username_key(user_id))
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| user_id.to_string());
-    let orbit_role = match role.to_lowercase().as_str() {
-        "owner" | "admin" => "owner",
-        _ => "writer",
-    };
-    if let Err(e) = state
-        .orbit_client
-        .add_collaborator(
-            base_url,
-            &link.orbit_owner,
-            &link.orbit_repo,
-            &collaborator_id,
-            orbit_role,
-            &jwt,
-        )
-        .await
-    {
-        warn!(org_id = %org_id, user_id = %user_id, error = %e, "Orbit add_collaborator failed (invite still accepted)");
-    } else {
-        info!(org_id = %org_id, user_id = %user_id, "Orbit collaborator added");
-    }
-}
-
-/// If org has Orbit link, remove the user from repo collaborators. Does not fail on Orbit errors.
-async fn sync_orbit_remove_collaborator(state: &AppState, org_id: &OrgId, user_id: &str) {
-    let key = org_orbit_repo_key(org_id);
-    let link_json = match state.settings_service.get_setting(&key) {
-        Ok(Some(s)) => s,
-        _ => return,
-    };
-    let link: OrgOrbitRepoLink = match serde_json::from_str(&link_json) {
-        Ok(l) => l,
-        Err(e) => {
-            warn!(org_id = %org_id, error = %e, "sync_orbit_remove: invalid org orbit link");
-            return;
-        }
-    };
-    let base_url = state.orbit_base_url.as_deref().unwrap_or(link.orbit_base_url.as_str());
-    let jwt = match state.get_jwt() {
-        Ok(j) => j,
-        Err(_) => return,
-    };
-    let collaborator_id = state
-        .settings_service
-        .get_setting(&user_orbit_username_key(user_id))
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| user_id.to_string());
-    if let Err(e) = state
-        .orbit_client
-        .remove_collaborator(
-            base_url,
-            &link.orbit_owner,
-            &link.orbit_repo,
-            &collaborator_id,
-            &jwt,
-        )
-        .await
-    {
-        warn!(org_id = %org_id, user_id = %user_id, error = %e, "Orbit remove_collaborator failed (member still removed)");
-    } else {
-        info!(org_id = %org_id, user_id = %user_id, "Orbit collaborator removed");
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Response types — match the frontend's expected shapes
@@ -220,38 +114,6 @@ fn map_org_err(e: aura_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
     match &e {
         aura_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
         _ => ApiError::internal(e.to_string()),
-    }
-}
-
-/// Ensure the current user is the org owner or has owner/admin role. Returns Err if not.
-async fn require_org_owner_or_admin(
-    state: &AppState,
-    org_id: &OrgId,
-) -> ApiResult<()> {
-    let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
-    let session = state.get_session()?;
-    let user_id = &session.user_id;
-
-    let net_org = client
-        .get_org(&org_id.to_string(), &jwt)
-        .await
-        .map_err(map_network_error)?;
-    if net_org.owner_user_id == *user_id {
-        return Ok(());
-    }
-
-    let members = client
-        .list_org_members(&org_id.to_string(), &jwt)
-        .await
-        .map_err(map_network_error)?;
-    let role = members
-        .iter()
-        .find(|m| m.user_id == *user_id)
-        .map(|m| m.role.as_str());
-    match role {
-        Some("owner") | Some("admin") => Ok(()),
-        _ => Err(ApiError::forbidden("org owner or admin only")),
     }
 }
 
@@ -430,8 +292,6 @@ pub async fn update_member_role(
         .await
         .map_err(map_network_error)?;
 
-    sync_orbit_add_collaborator(&state, &org_id, &target_user_id, &role_str).await;
-
     Ok(Json(MemberResponse::from(member)))
 }
 
@@ -446,8 +306,6 @@ pub async fn remove_member(
         .remove_org_member(&org_id_str, &target_user_id, &jwt)
         .await
         .map_err(map_network_error)?;
-
-    sync_orbit_remove_collaborator(&state, &org_id, &target_user_id).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -513,14 +371,6 @@ pub async fn accept_invite(
         .await
         .map_err(map_network_error)?;
 
-    // Sync to Orbit repo if org has link (do not fail invite on Orbit errors)
-    let org_id = member.org_id.clone();
-    let user_id = member.user_id.clone();
-    let role = member.role.clone();
-    if let Ok(oid) = org_id.parse::<OrgId>() {
-        sync_orbit_add_collaborator(&state, &oid, &user_id, &role).await;
-    }
-
     Ok(Json(MemberResponse::from(member)))
 }
 
@@ -551,42 +401,3 @@ pub async fn get_billing(
     let billing = state.org_service.get_billing(&org_id).map_err(map_org_err)?;
     Ok(Json(billing))
 }
-
-// ---------------------------------------------------------------------------
-// Org Orbit repo link (org owner/admin only)
-// ---------------------------------------------------------------------------
-
-pub async fn get_org_orbit_repo(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-) -> ApiResult<Json<Option<OrgOrbitRepoLink>>> {
-    require_org_owner_or_admin(&state, &org_id).await?;
-    let key = org_orbit_repo_key(&org_id);
-    let opt = state
-        .settings_service
-        .get_setting(&key)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    let link = opt.and_then(|s| serde_json::from_str::<OrgOrbitRepoLink>(&s).ok());
-    Ok(Json(link))
-}
-
-pub async fn put_org_orbit_repo(
-    State(state): State<AppState>,
-    Path(org_id): Path<OrgId>,
-    Json(req): Json<SetOrgOrbitRepoRequest>,
-) -> ApiResult<Json<OrgOrbitRepoLink>> {
-    require_org_owner_or_admin(&state, &org_id).await?;
-    let link = OrgOrbitRepoLink {
-        orbit_base_url: req.orbit_base_url,
-        orbit_owner: req.orbit_owner,
-        orbit_repo: req.orbit_repo,
-    };
-    let key = org_orbit_repo_key(&org_id);
-    let value = serde_json::to_string(&link).map_err(|e| ApiError::internal(e.to_string()))?;
-    state
-        .settings_service
-        .set_setting(&key, &value)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok(Json(link))
-}
-

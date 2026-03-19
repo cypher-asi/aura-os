@@ -3,17 +3,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub struct SetSettingRequest {
-    pub value: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct GetSettingResponse {
-    pub key: String,
-    pub value: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CreateProjectRequest {
     pub org_id: OrgId,
     pub name: String,
@@ -156,31 +145,6 @@ pub struct UpdateMemberRoleRequest {
 pub struct SetBillingRequest {
     pub billing_email: Option<String>,
     pub plan: String,
-}
-
-/// Org-linked Orbit repo (owner = org_id). Stored under key org_orbit_repo:{org_id}.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OrgOrbitRepoLink {
-    pub orbit_base_url: String,
-    pub orbit_owner: String,
-    pub orbit_repo: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetOrgOrbitRepoRequest {
-    pub orbit_base_url: String,
-    pub orbit_owner: String,
-    pub orbit_repo: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetOrbitUsernameRequest {
-    pub value: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct OrbitUsernameResponse {
-    pub value: Option<String>,
 }
 
 // -- Follow DTOs --

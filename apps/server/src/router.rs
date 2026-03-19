@@ -33,10 +33,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
         // Users (proxied to aura-network)
         .route("/api/users/me", get(users::get_me).put(users::update_me))
-        .route(
-            "/api/users/me/orbit-username",
-            get(users::get_my_orbit_username).put(users::put_my_orbit_username),
-        )
         .route("/api/users/:user_id", get(users::get_user))
         .route("/api/users/:user_id/profile", get(users::get_user_profile))
         // Profiles (proxied to aura-network)
@@ -65,10 +61,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/orgs/:org_id/billing",
             put(orgs::set_billing).get(orgs::get_billing),
         )
-        .route(
-            "/api/orgs/:org_id/orbit-repo",
-            get(orgs::get_org_orbit_repo).put(orgs::put_org_orbit_repo),
-        )
         // Credits / Billing
         .route(
             "/api/orgs/:org_id/credits/tiers",
@@ -94,10 +86,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route(
             "/api/settings/fee-schedule",
             get(pricing::get_fee_schedule).put(pricing::set_fee_schedule),
-        )
-        .route(
-            "/api/settings/:key",
-            get(settings::get_setting).put(settings::set_setting),
         )
         // Projects
         .route(

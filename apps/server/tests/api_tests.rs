@@ -324,28 +324,6 @@ async fn settings_api_key_lifecycle() {
     assert!(body["configured"].is_boolean(), "expected configured field: {}", body);
 }
 
-#[tokio::test]
-async fn settings_plain_setting() {
-    let (app, _, _db) = build_test_app();
-
-    // PUT a setting
-    let req = json_request(
-        "PUT",
-        "/api/settings/theme",
-        Some(serde_json::json!({"value": "dark"})),
-    );
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
-
-    // GET the setting
-    let req = json_request("GET", "/api/settings/theme", None);
-    let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::OK);
-    let body = response_json(resp).await;
-    assert_eq!(body["key"], "theme");
-    assert_eq!(body["value"], "dark");
-}
-
 // ---------------------------------------------------------------------------
 // Project Endpoint Tests
 // ---------------------------------------------------------------------------

@@ -6,11 +6,8 @@ use tracing::warn;
 use aura_core::ZeroAuthSession;
 use aura_network::{NetworkProfile, NetworkUser};
 
-use crate::dto::{OrbitUsernameResponse, SetOrbitUsernameRequest};
-use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
-
-const USER_ORBIT_USERNAME_KEY_PREFIX: &str = "user_orbit_username:";
 
 // ---------------------------------------------------------------------------
 // Response types (snake_case for local API)
@@ -154,35 +151,6 @@ pub async fn get_user_profile(
         .map_err(map_network_error)?;
 
     Ok(Json(ProfileResponse::from(profile)))
-}
-
-/// GET /api/users/me/orbit-username — current user's Orbit username for org sync.
-pub async fn get_my_orbit_username(
-    State(state): State<AppState>,
-) -> ApiResult<Json<OrbitUsernameResponse>> {
-    let session = state.get_session()?;
-    let key = format!("{}{}", USER_ORBIT_USERNAME_KEY_PREFIX, session.user_id);
-    let value = state
-        .settings_service
-        .get_setting(&key)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok(Json(OrbitUsernameResponse { value }))
-}
-
-/// PUT /api/users/me/orbit-username — set current user's Orbit username for org sync.
-pub async fn put_my_orbit_username(
-    State(state): State<AppState>,
-    Json(req): Json<SetOrbitUsernameRequest>,
-) -> ApiResult<Json<OrbitUsernameResponse>> {
-    let session = state.get_session()?;
-    let key = format!("{}{}", USER_ORBIT_USERNAME_KEY_PREFIX, session.user_id);
-    state
-        .settings_service
-        .set_setting(&key, &req.value)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok(Json(OrbitUsernameResponse {
-        value: Some(req.value),
-    }))
 }
 
 /// GET /api/profiles/:id — proxy to aura-network, returns a profile by ID.
