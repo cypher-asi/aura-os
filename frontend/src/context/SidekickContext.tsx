@@ -114,8 +114,9 @@ export function SidekickProvider({ children }: { children: React.ReactNode }) {
       const history = [...prev.previewHistory];
       let previousItem = history.pop()!;
       if (previousItem.kind === "task") {
-        const fresh = prev.tasks.find((t) => t.task_id === previousItem.task.task_id);
-        if (fresh) previousItem = { kind: "task", task: { ...previousItem.task, ...fresh } };
+        const prevTask = previousItem.task;
+        const fresh = prev.tasks.find((t) => t.task_id === prevTask.task_id);
+        if (fresh) previousItem = { kind: "task", task: { ...prevTask, ...fresh } };
       }
       return { ...prev, previewItem: previousItem, previewHistory: history };
     });
