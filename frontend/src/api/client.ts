@@ -257,9 +257,9 @@ export const api = {
       }),
   },
 
-  // Projects (org-scoped; orgId required)
-  listProjects: (orgId: string) =>
-    apiFetch<Project[]>(`/api/projects?org_id=${orgId}`),
+  // Projects
+  listProjects: (orgId?: string) =>
+    apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
   createProject: (data: CreateProjectRequest) =>
     apiFetch<Project>("/api/projects", {
       method: "POST",

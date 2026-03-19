@@ -59,44 +59,74 @@ export function ChatView() {
     };
   }, [projectId, agentInstanceId]);
 
-  const fetchActiveSessionContext = useCallback(() => {
+  const fetchActiveSessionContext = useCallback(async () => {
     if (!projectId || !agentInstanceId) {
-      setContextUsagePercent(null);
-      return;
+      return null;
     }
-    api
-      .listSessions(projectId, agentInstanceId)
-      .then((sessions) => {
-        const active = sessions.find((s) => s.status === "active");
-        if (active != null && typeof active.context_usage_estimate === "number") {
-          setContextUsagePercent(Math.round(active.context_usage_estimate * 100));
-        } else {
-          setContextUsagePercent(null);
-        }
-      })
-      .catch(() => setContextUsagePercent(null));
+
+    try {
+      const sessions = await api.listSessions(projectId, agentInstanceId);
+      const active = sessions.find((s) => s.status === "active");
+      if (active != null && typeof active.context_usage_estimate === "number") {
+        return Math.round(active.context_usage_estimate * 100);
+      }
+    } catch {
+      // Ignore context refresh failures and fall back to no usage display.
+    }
+
+    return null;
   }, [projectId, agentInstanceId]);
 
   useEffect(() => {
-    fetchActiveSessionContext();
+    let cancelled = false;
+
+    void fetchActiveSessionContext().then((nextPercent) => {
+      if (!cancelled) {
+        setContextUsagePercent(nextPercent);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [fetchActiveSessionContext]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (prevIsStreamingRef.current && !isStreaming) {
-      fetchActiveSessionContext();
+      void fetchActiveSessionContext().then((nextPercent) => {
+        if (!cancelled) {
+          setContextUsagePercent(nextPercent);
+        }
+      });
     }
+
     prevIsStreamingRef.current = isStreaming;
+
+    return () => {
+      cancelled = true;
+    };
   }, [isStreaming, fetchActiveSessionContext]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!projectId || !agentInstanceId) {
-      resetMessages([]);
-      setContextUsagePercent(null);
+      queueMicrotask(() => {
+        if (!cancelled) {
+          resetMessages([]);
+          setContextUsagePercent(null);
+        }
+      });
       return;
     }
+
     api
       .getMessages(projectId, agentInstanceId)
       .then((msgs) => {
+        if (cancelled) return;
+
         resetMessages(
           msgs
             .filter((m: Message) => (m.content && m.content.trim().length > 0) || (m.content_blocks && m.content_blocks.length > 0) || m.thinking)
@@ -121,6 +151,10 @@ export function ChatView() {
         );
       })
       .catch(console.error);
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, agentInstanceId, resetMessages]);
 
   useEffect(() => {

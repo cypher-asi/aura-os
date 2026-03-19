@@ -43,55 +43,52 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const loopActive = useLoopActive(projectId);
-  const [running, setRunning] = useState(false);
-  const [status, setStatus] = useState(task.status);
-  const [liveStatus, setLiveStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    setStatus(task.status);
-    setRunning(false);
-    setLiveStatus(null);
-  }, [task.task_id, task.status]);
+  const [runState, setRunState] = useState(() => ({
+    taskId: task.task_id,
+    running: false,
+    liveStatus: null as string | null,
+  }));
+  const activeRunState =
+    runState.taskId === task.task_id
+      ? runState
+      : { taskId: task.task_id, running: false, liveStatus: null };
 
   useEffect(() => {
     const unsubs = [
       subscribe("task_started", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("in_progress");
-        setLiveStatus("in_progress");
-        setRunning(false);
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "in_progress" });
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("done");
-        setLiveStatus("done");
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "done" });
       }),
       subscribe("task_failed", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("failed");
-        setLiveStatus("failed");
-        setRunning(false);
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "failed" });
       }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [task.task_id, subscribe]);
 
   const handleRun = useCallback(async () => {
-    if (!projectId || running) return;
-    setRunning(true);
+    if (!projectId || activeRunState.running) return;
+    setRunState({ taskId: task.task_id, running: true, liveStatus: null });
     try {
       await api.runTask(projectId, task.task_id, agentInstanceId);
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
-      setRunning(false);
+      setRunState((prev) =>
+        prev.taskId === task.task_id ? { ...prev, running: false } : prev,
+      );
     }
-  }, [agentInstanceId, projectId, running, task]);
+  }, [activeRunState.running, agentInstanceId, projectId, task.task_id]);
 
   const effectiveStatus =
-    status === "in_progress" && !loopActive && liveStatus === null
+    (activeRunState.liveStatus ?? task.status) === "in_progress" && !loopActive && activeRunState.liveStatus === null
       ? "ready"
-      : status;
+      : activeRunState.liveStatus ?? task.status;
   const visible = effectiveStatus === "ready";
 
   return (
@@ -99,10 +96,10 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
       variant="ghost"
       size="sm"
       iconOnly
-      icon={running ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
+      icon={activeRunState.running ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
       onClick={visible ? handleRun : undefined}
-      disabled={!visible || running}
-      title={running ? "Running..." : "Run task"}
+      disabled={!visible || activeRunState.running}
+      title={activeRunState.running ? "Running..." : "Run task"}
       style={visible ? undefined : { visibility: "hidden" }}
     />
   );

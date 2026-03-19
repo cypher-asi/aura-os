@@ -33,9 +33,7 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
     const requestId = ++refreshRequestId.current;
     setLoadingProjects(true);
     try {
-      const nextProjects = activeOrg?.org_id
-        ? await api.listProjects(activeOrg.org_id)
-        : [];
+      const nextProjects = await api.listProjects(activeOrg?.org_id);
       if (refreshRequestId.current === requestId) {
         setProjects(nextProjects);
       }
