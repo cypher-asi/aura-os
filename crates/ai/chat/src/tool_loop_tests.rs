@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_billing::testutil;
-use crate::tool_loop_helpers::{detect_blocked_reads, detect_blocked_exploration};
+use crate::tool_loop_helpers::{detect_blocked_reads, detect_blocked_exploration, detect_blocked_write_failures};
 
 fn default_config(max_iterations: usize) -> ToolLoopConfig {
     ToolLoopConfig {
@@ -355,4 +355,122 @@ async fn test_exploration_unblocks_after_write() {
         }
     }
     assert!(post_write_read_succeeded, "read after write should succeed (exploration unblocked)");
+}
+
+#[test]
+fn test_detect_blocked_write_failures_allows_first_two() {
+    let mut failures: HashMap<String, usize> = HashMap::new();
+    let calls = vec![
+        ToolCall { id: "t1".into(), name: "write_file".into(), input: serde_json::json!({"path": "src/lib.rs"}) },
+    ];
+
+    failures.insert("src/lib.rs".into(), 1);
+    let blocked = detect_blocked_write_failures(&calls, &failures);
+    assert!(blocked.is_empty(), "1 failure should not block");
+
+    failures.insert("src/lib.rs".into(), 2);
+    let blocked = detect_blocked_write_failures(&calls, &failures);
+    assert!(blocked.is_empty(), "2 failures should not block");
+}
+
+#[test]
+fn test_detect_blocked_write_failures_blocks_at_three() {
+    let mut failures: HashMap<String, usize> = HashMap::new();
+    failures.insert("src/lib.rs".into(), 3);
+
+    let calls = vec![
+        ToolCall { id: "t1".into(), name: "write_file".into(), input: serde_json::json!({"path": "src/lib.rs"}) },
+        ToolCall { id: "t2".into(), name: "edit_file".into(), input: serde_json::json!({"path": "src/lib.rs"}) },
+    ];
+
+    let blocked = detect_blocked_write_failures(&calls, &failures);
+    assert_eq!(blocked, vec![0, 1], "3 failures should block both write and edit");
+}
+
+#[test]
+fn test_detect_blocked_write_failures_independent_per_file() {
+    let mut failures: HashMap<String, usize> = HashMap::new();
+    failures.insert("a.rs".into(), 3);
+    failures.insert("b.rs".into(), 1);
+
+    let calls = vec![
+        ToolCall { id: "t1".into(), name: "write_file".into(), input: serde_json::json!({"path": "a.rs"}) },
+        ToolCall { id: "t2".into(), name: "write_file".into(), input: serde_json::json!({"path": "b.rs"}) },
+    ];
+
+    let blocked = detect_blocked_write_failures(&calls, &failures);
+    assert_eq!(blocked, vec![0], "only a.rs (3 failures) should be blocked, not b.rs (1 failure)");
+}
+
+#[tokio::test]
+async fn test_write_failure_tracking_blocks_after_repeated_errors() {
+    // Each batch pairs an edit_file with a do_thing so the consecutive-write
+    // tracker resets, isolating the per-file failure tracker.
+    let responses = vec![
+        MockResponse::tool_use(vec![
+            ToolCall { id: "e1".into(), name: "edit_file".into(),
+                input: serde_json::json!({"path": "f.rs", "old_text": "x", "new_text": "y"}) },
+            ToolCall { id: "d1".into(), name: "do_thing".into(), input: serde_json::json!({}) },
+        ]).with_tokens(50, 30),
+        MockResponse::tool_use(vec![
+            ToolCall { id: "e2".into(), name: "edit_file".into(),
+                input: serde_json::json!({"path": "f.rs", "old_text": "x", "new_text": "y"}) },
+            ToolCall { id: "d2".into(), name: "do_thing".into(), input: serde_json::json!({}) },
+        ]).with_tokens(50, 30),
+        MockResponse::tool_use(vec![
+            ToolCall { id: "e3".into(), name: "edit_file".into(),
+                input: serde_json::json!({"path": "f.rs", "old_text": "x", "new_text": "y"}) },
+            ToolCall { id: "d3".into(), name: "do_thing".into(), input: serde_json::json!({}) },
+        ]).with_tokens(50, 30),
+        MockResponse::tool_use(vec![
+            ToolCall { id: "e4".into(), name: "edit_file".into(),
+                input: serde_json::json!({"path": "f.rs", "old_text": "x", "new_text": "y"}) },
+            ToolCall { id: "d4".into(), name: "do_thing".into(), input: serde_json::json!({}) },
+        ]).with_tokens(50, 30),
+        MockResponse::text("Gave up").with_tokens(50, 30),
+    ];
+
+    let mock = Arc::new(MockLlmProvider::with_responses(responses));
+    let (llm, _tmp) = testutil::make_test_llm(mock).await;
+    let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+    let config = default_config(10);
+
+    let executor = SimpleExecutor {
+        handler: Box::new(|calls| {
+            calls.iter().map(|tc| {
+                if tc.name == "edit_file" {
+                    ToolCallResult {
+                        tool_use_id: tc.id.clone(),
+                        content: "edit failed: old_text not found".into(),
+                        is_error: true,
+                        stop_loop: false,
+                    }
+                } else {
+                    ToolCallResult {
+                        tool_use_id: tc.id.clone(),
+                        content: "ok".into(),
+                        is_error: false,
+                        stop_loop: false,
+                    }
+                }
+            }).collect()
+        }),
+    };
+
+    let result = run_tool_loop(
+        llm, "test-key", "test", vec![RichMessage::user("edit")],
+        Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
+    ).await;
+
+    assert!(!result.timed_out);
+
+    let mut blocked_on_e4 = false;
+    while let Ok(evt) = event_rx.try_recv() {
+        if let ToolLoopEvent::ToolResult { tool_use_id, content, is_error, .. } = evt {
+            if tool_use_id == "e4" && is_error && content.contains("blocked after") {
+                blocked_on_e4 = true;
+            }
+        }
+    }
+    assert!(blocked_on_e4, "4th edit attempt should be blocked after 3 failures");
 }

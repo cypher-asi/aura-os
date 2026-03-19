@@ -43,6 +43,28 @@ pub(crate) fn detect_blocked_writes(
         .collect()
 }
 
+/// Block write/edit calls on files that have accumulated 3+ failures across
+/// the session (unlike `detect_blocked_writes` which tracks consecutive batches,
+/// this tracks total error outcomes per file and is only reset on success).
+pub(crate) fn detect_blocked_write_failures(
+    tool_calls: &[ToolCall],
+    file_write_failures: &HashMap<String, usize>,
+) -> Vec<usize> {
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if matches!(tc.name.as_str(), "write_file" | "edit_file") {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if file_write_failures.get(path).copied().unwrap_or(0) >= 3 {
+                    return Some(i);
+                }
+            }
+            None
+        })
+        .collect()
+}
+
 /// Block `read_file` calls when the same file has been read 3+ times total
 /// (any combination of full/partial reads).
 pub(crate) fn detect_blocked_reads(
@@ -249,7 +271,7 @@ pub(crate) fn summarize_write_file_input(input: &serde_json::Value) -> serde_jso
 
 /// Heuristic check for truncated file content: unbalanced braces/brackets
 /// or content that ends mid-line without a newline.
-fn looks_truncated(content: &str) -> bool {
+pub(crate) fn looks_truncated(content: &str) -> bool {
     if content.len() < 200 {
         return false;
     }

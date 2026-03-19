@@ -1,19 +1,83 @@
 use std::path::Path;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 use tracing::info;
 
 use aura_core::*;
 use aura_projects::UpdateProjectInput;
+use aura_storage::StorageSpec;
 
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
+use crate::tool_loop_helpers::looks_truncated;
+
+fn storage_spec_to_core(s: StorageSpec) -> Result<Spec, String> {
+    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
+        v.as_deref()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now)
+    };
+    Ok(Spec {
+        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project id: {e}"))?,
+        title: s.title.unwrap_or_default(),
+        order_index: s.order_index.unwrap_or(0) as u32,
+        markdown_contents: s.markdown_contents.unwrap_or_default(),
+        created_at: parse_dt(&s.created_at),
+        updated_at: parse_dt(&s.updated_at),
+    })
+}
 
 impl ChatToolExecutor {
+    fn get_jwt(&self) -> Result<String, ToolExecResult> {
+        let bytes = self
+            .store
+            .get_setting("zero_auth_session")
+            .map_err(|_| ToolExecResult::err("no active session"))?;
+        let session: ZeroAuthSession =
+            serde_json::from_slice(&bytes).map_err(|e| ToolExecResult::err(e))?;
+        Ok(session.access_token)
+    }
+
+    fn require_storage(&self) -> Result<&std::sync::Arc<aura_storage::StorageClient>, ToolExecResult> {
+        self.storage_client
+            .as_ref()
+            .ok_or_else(|| ToolExecResult::err("aura-storage is not configured"))
+    }
+
+    async fn list_specs_from_storage(&self, project_id: &ProjectId) -> Result<Vec<Spec>, ToolExecResult> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let storage_specs = storage
+            .list_specs(&project_id.to_string(), &jwt)
+            .await
+            .map_err(|e| ToolExecResult::err(format!("aura-storage: {e}")))?;
+        Ok(storage_specs
+            .into_iter()
+            .filter_map(|s| storage_spec_to_core(s).ok())
+            .collect())
+    }
+
+    async fn get_spec_from_storage(&self, spec_id: &SpecId) -> Result<Spec, ToolExecResult> {
+        let storage = self.require_storage()?;
+        let jwt = self.get_jwt()?;
+        let ss = storage
+            .get_spec(&spec_id.to_string(), &jwt)
+            .await
+            .map_err(|e| ToolExecResult::err(format!("aura-storage: {e}")))?;
+        storage_spec_to_core(ss).map_err(|e| ToolExecResult::err(e))
+    }
+
     /// Resolve a `spec_id` field that may be a UUID, a title prefix like "01",
     /// or a numeric order index. Falls back to matching against existing specs
     /// when UUID parsing fails so the LLM doesn't need to get the format right.
-    fn resolve_spec_id(
+    async fn resolve_spec_id(
         &self,
         project_id: &ProjectId,
         input: &Value,
@@ -25,10 +89,7 @@ impl ChatToolExecutor {
             return Ok(id);
         }
 
-        let specs = self
-            .store
-            .list_specs_by_project(project_id)
-            .map_err(|e| ToolExecResult::err(format!("Failed to list specs: {e}")))?;
+        let specs = self.list_specs_from_storage(project_id).await?;
 
         if let Some(spec) = specs.iter().find(|s| s.title.starts_with(&format!("{raw}:"))) {
             return Ok(spec.spec_id);
@@ -53,8 +114,8 @@ impl ChatToolExecutor {
     // Spec operations
     // -----------------------------------------------------------------------
 
-    pub(crate) fn list_specs(&self, project_id: &ProjectId) -> ToolExecResult {
-        match self.store.list_specs_by_project(project_id) {
+    pub(crate) async fn list_specs(&self, project_id: &ProjectId) -> ToolExecResult {
+        match self.list_specs_from_storage(project_id).await {
             Ok(specs) => {
                 let summaries: Vec<Value> = specs
                     .iter()
@@ -68,79 +129,112 @@ impl ChatToolExecutor {
                     .collect();
                 ToolExecResult::ok(json!({ "specs": summaries }))
             }
-            Err(e) => ToolExecResult::err(e),
+            Err(e) => e,
         }
     }
 
-    pub(crate) fn get_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
-        let spec_id = match self.resolve_spec_id(project_id, input) {
+    pub(crate) async fn get_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
         };
-        match self.store.get_spec(project_id, &spec_id) {
+        match self.get_spec_from_storage(&spec_id).await {
             Ok(s) => ToolExecResult::ok(json!(s)),
-            Err(e) => ToolExecResult::err(e),
+            Err(e) => e,
         }
     }
 
-    pub(crate) fn create_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn create_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let title = str_field(input, "title").unwrap_or_default();
         let markdown = str_field(input, "markdown_contents").unwrap_or_default();
 
-        let existing = self.store.list_specs_by_project(project_id).unwrap_or_default();
+        let existing = self.list_specs_from_storage(project_id).await.unwrap_or_default();
         let order = existing.iter().map(|s| s.order_index).max().unwrap_or(0) + 1;
 
-        let now = Utc::now();
-        let spec = Spec {
-            spec_id: SpecId::new(),
-            project_id: *project_id,
-            title,
-            order_index: order,
-            markdown_contents: markdown,
-            created_at: now,
-            updated_at: now,
-        };
-        match self.store.put_spec(&spec) {
-            Ok(()) => ToolExecResult::ok_with_spec(json!(spec), spec),
-            Err(e) => ToolExecResult::err(e),
-        }
-    }
-
-    pub(crate) fn update_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
-        let spec_id = match self.resolve_spec_id(project_id, input) {
-            Ok(id) => id,
-            Err(e) => return e,
-        };
-        let mut spec = match self.store.get_spec(project_id, &spec_id) {
+        let storage = match self.require_storage() {
             Ok(s) => s,
-            Err(e) => return ToolExecResult::err(e),
+            Err(e) => return e,
         };
-        if let Some(t) = str_field(input, "title") {
-            spec.title = t;
-        }
-        if let Some(m) = str_field(input, "markdown_contents") {
-            spec.markdown_contents = m;
-        }
-        spec.updated_at = Utc::now();
-        match self.store.put_spec(&spec) {
-            Ok(()) => ToolExecResult::ok_with_spec(json!(spec), spec),
-            Err(e) => ToolExecResult::err(e),
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+        let req = aura_storage::CreateSpecRequest {
+            title: title.clone(),
+            order_index: Some(order as i32),
+            markdown_contents: Some(markdown.clone()),
+        };
+        match storage.create_spec(&project_id.to_string(), &jwt, &req).await {
+            Ok(ss) => {
+                match storage_spec_to_core(ss) {
+                    Ok(spec) => ToolExecResult::ok_with_spec(json!(spec), spec),
+                    Err(e) => ToolExecResult::err(e),
+                }
+            }
+            Err(e) => ToolExecResult::err(format!("aura-storage: {e}")),
         }
     }
 
-    pub(crate) fn delete_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
-        let spec_id = match self.resolve_spec_id(project_id, input) {
+    pub(crate) async fn update_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
         };
+        let spec = match self.get_spec_from_storage(&spec_id).await {
+            Ok(s) => s,
+            Err(e) => return e,
+        };
+        let storage = match self.require_storage() {
+            Ok(s) => s,
+            Err(e) => return e,
+        };
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+        let new_title = str_field(input, "title");
+        let new_markdown = str_field(input, "markdown_contents");
+        let req = aura_storage::UpdateSpecRequest {
+            title: new_title.clone(),
+            order_index: None,
+            markdown_contents: new_markdown.clone(),
+        };
+        if let Err(e) = storage.update_spec(&spec_id.to_string(), &jwt, &req).await {
+            return ToolExecResult::err(format!("aura-storage: {e}"));
+        }
+        let mut updated = spec;
+        if let Some(t) = new_title {
+            updated.title = t;
+        }
+        if let Some(m) = new_markdown {
+            updated.markdown_contents = m;
+        }
+        updated.updated_at = Utc::now();
+        ToolExecResult::ok_with_spec(json!(updated), updated)
+    }
+
+    pub(crate) async fn delete_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let spec_id = match self.resolve_spec_id(project_id, input).await {
+            Ok(id) => id,
+            Err(e) => return e,
+        };
+        // Tasks still live in local RocksDB until Phase 5
         if let Ok(tasks) = self.store.list_tasks_by_spec(project_id, &spec_id) {
             for t in &tasks {
                 let _ = self.store.delete_task(project_id, &spec_id, &t.task_id);
             }
         }
-        match self.store.delete_spec(project_id, &spec_id) {
+        let storage = match self.require_storage() {
+            Ok(s) => s,
+            Err(e) => return e,
+        };
+        let jwt = match self.get_jwt() {
+            Ok(j) => j,
+            Err(e) => return e,
+        };
+        match storage.delete_spec(&spec_id.to_string(), &jwt).await {
             Ok(()) => ToolExecResult::ok(json!({ "deleted": spec_id.to_string() })),
-            Err(e) => ToolExecResult::err(e),
+            Err(e) => ToolExecResult::err(format!("aura-storage: {e}")),
         }
     }
 
@@ -148,9 +242,9 @@ impl ChatToolExecutor {
     // Task operations
     // -----------------------------------------------------------------------
 
-    pub(crate) fn list_tasks(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn list_tasks(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let tasks = if str_field(input, "spec_id").is_some() {
-            match self.resolve_spec_id(project_id, input) {
+            match self.resolve_spec_id(project_id, input).await {
                 Ok(spec_id) => self.store.list_tasks_by_spec(project_id, &spec_id),
                 Err(e) => return e,
             }
@@ -177,8 +271,8 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) fn create_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
-        let spec_id = match self.resolve_spec_id(project_id, input) {
+    pub(crate) async fn create_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+        let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
         };
@@ -248,12 +342,12 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) fn delete_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn delete_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
         };
-        let spec_id = match self.resolve_spec_id(project_id, input) {
+        let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
         };
@@ -380,6 +474,29 @@ impl ChatToolExecutor {
             Ok(p) => p,
             Err(e) => return e,
         };
+        if abs.exists() {
+            if let Ok(meta) = std::fs::metadata(&abs) {
+                let cur_size = meta.len() as usize;
+                if cur_size > 500 && content.len() < cur_size / 10 {
+                    return ToolExecResult::err(format!(
+                        "REJECTED: Content is {} bytes for a {cur_size}-byte file (<10%). \
+                         Your output was likely truncated. File is unchanged on disk. \
+                         Break the write into smaller parts: write a skeleton first, \
+                         then use edit_file to fill in sections. \
+                         Or run `git checkout -- {rel}` if the file was previously corrupted.",
+                        content.len()
+                    ));
+                }
+                if cur_size > 200 && content.len() < cur_size / 2 && looks_truncated(&content) {
+                    return ToolExecResult::err(format!(
+                        "REJECTED: Content appears truncated ({} bytes for a {cur_size}-byte file, \
+                         with unbalanced delimiters). File is unchanged. Use edit_file for \
+                         targeted changes instead of rewriting the full file.",
+                        content.len()
+                    ));
+                }
+            }
+        }
         if let Some(parent) = abs.parent() {
             if let Err(e) = std::fs::create_dir_all(parent) {
                 return ToolExecResult::err(format!("Failed to create directories: {e}"));
@@ -496,6 +613,14 @@ impl ChatToolExecutor {
         } else {
             content.replacen(&old_text, &new_text, 1)
         };
+
+        if content.len() > 200 && new_content.len() < content.len() / 5 {
+            return ToolExecResult::err(format!(
+                "REJECTED: This edit would shrink '{rel}' from {} to {} bytes (>80% reduction). \
+                 The file is unchanged. Use a more targeted old_text/new_text pair.",
+                content.len(), new_content.len()
+            ));
+        }
 
         match std::fs::write(&abs, &new_content) {
             Ok(()) => ToolExecResult::ok(json!({

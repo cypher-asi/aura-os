@@ -14,7 +14,8 @@ use crate::compaction;
 pub use crate::tool_loop_types::*;
 use crate::tool_loop_helpers::{
     detect_blocked_writes, detect_blocked_commands, detect_blocked_reads,
-    detect_blocked_exploration, apply_cmd_failure_tracking,
+    detect_blocked_exploration, detect_blocked_write_failures,
+    apply_cmd_failure_tracking,
     build_tool_result_blocks, summarize_write_file_input,
 };
 
@@ -27,6 +28,7 @@ struct LoopState {
     cumulative_credits: u64,
     file_read_cache: HashMap<String, u64>,
     consecutive_write_tracker: HashMap<String, usize>,
+    file_write_failures: HashMap<String, usize>,
     consecutive_cmd_failures: usize,
     file_read_counts: HashMap<String, usize>,
     total_exploration_calls: usize,
@@ -91,6 +93,7 @@ pub async fn run_tool_loop(
         cumulative_credits: 0,
         file_read_cache: HashMap::new(),
         consecutive_write_tracker: HashMap::new(),
+        file_write_failures: HashMap::new(),
         consecutive_cmd_failures: 0,
         file_read_counts: HashMap::new(),
         total_exploration_calls: 0,
@@ -470,6 +473,7 @@ async fn process_tool_calls(
     state.api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
     let blocked_indices = detect_blocked_writes(&iter.iter_tool_calls, &mut state.consecutive_write_tracker);
+    let write_fail_blocked = detect_blocked_write_failures(&iter.iter_tool_calls, &state.file_write_failures);
     let cmd_blocked_indices = detect_blocked_commands(&iter.iter_tool_calls, state.consecutive_cmd_failures);
     let read_blocked_indices = detect_blocked_reads(&iter.iter_tool_calls, &mut state.file_read_counts);
     let exploration_is_blocked = state.total_exploration_calls >= state.exploration_allowance;
@@ -477,7 +481,8 @@ async fn process_tool_calls(
 
     let all_blocked: Vec<usize> = {
         let mut v = blocked_indices.clone();
-        for i in cmd_blocked_indices.iter()
+        for i in write_fail_blocked.iter()
+            .chain(cmd_blocked_indices.iter())
             .chain(read_blocked_indices.iter())
             .chain(exploration_blocked_indices.iter())
         {
@@ -516,6 +521,20 @@ async fn process_tool_calls(
                             tc.name, path
                         )
                     }).to_string(),
+                    is_error: true,
+                    stop_loop: false,
+                }
+            } else if write_fail_blocked.contains(&i) {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let count = state.file_write_failures.get(path).copied().unwrap_or(0);
+                warn!(path, count, tool = %tc.name, "Blocked write after repeated failures");
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: format!(
+                        "Writes to '{path}' blocked after {count} failures. STOP trying to write this file. \
+                         Run `git checkout -- {path}` to restore it, then read_file to see the recovered content, \
+                         and try a fundamentally different approach with small targeted edits."
+                    ),
                     is_error: true,
                     stop_loop: false,
                 }
@@ -563,6 +582,18 @@ async fn process_tool_calls(
             }
         })
         .collect();
+
+    for (tc, result) in iter.iter_tool_calls.iter().zip(results.iter()) {
+        if matches!(tc.name.as_str(), "write_file" | "edit_file") {
+            if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                if result.is_error {
+                    *state.file_write_failures.entry(path.to_string()).or_insert(0) += 1;
+                } else {
+                    state.file_write_failures.remove(path);
+                }
+            }
+        }
+    }
 
     let results = apply_cmd_failure_tracking(
         &iter.iter_tool_calls,
