@@ -386,35 +386,8 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         storage_client.clone(),
     ));
 
-    // Reset any tasks left InProgress from a previous unclean shutdown.
-    // This is async (StorageClient), so defer to a spawned task.
-    {
-        let ts = task_service.clone();
-        let ps = project_service.clone();
-        tokio::spawn(async move {
-            if let Ok(projects) = ps.list_projects() {
-                for project in &projects {
-                    match ts.reset_in_progress_tasks(&project.project_id).await {
-                        Ok(reset) if !reset.is_empty() => {
-                            info!(
-                                project_id = %project.project_id,
-                                count = reset.len(),
-                                "Reset orphaned InProgress tasks on startup"
-                            );
-                        }
-                        Err(e) => {
-                            warn!(
-                                project_id = %project.project_id,
-                                error = %e,
-                                "Failed to reset orphaned tasks on startup"
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        });
-    }
+    // Task reset on startup removed: project list is org-scoped from network only.
+    // Orphaned InProgress tasks could be reset later when listing projects by org if desired.
 
     let (event_tx, event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(4096);
