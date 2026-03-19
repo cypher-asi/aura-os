@@ -431,15 +431,6 @@ impl ChatService {
         Ok(messages)
     }
 
-    pub fn list_agent_messages(
-        &self,
-        agent_id: &AgentId,
-    ) -> Result<Vec<Message>, ChatError> {
-        let mut messages = self.store.list_agent_messages(agent_id)?;
-        messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-        Ok(messages)
-    }
-
     // -- Streaming message handler ------------------------------------------
 
     pub async fn send_message_streaming(
@@ -498,12 +489,14 @@ impl ChatService {
     }
 
     // -- Agent-level streaming (multi-project) ---------------------------------
+    // Messages are from aura-storage aggregate only; current user message is in-memory for this turn (no agent-level message API yet).
 
     pub async fn send_agent_message_streaming(
         &self,
         agent_id: &AgentId,
         agent: &Agent,
         projects: &[Project],
+        storage_messages: Vec<Message>,
         content: &str,
         _action: Option<&str>,
         attachments: &[ChatAttachment],
@@ -530,15 +523,11 @@ impl ChatService {
             thinking_duration_ms: None,
             created_at: now,
         };
-        if let Err(e) = self.store.put_agent_message(agent_id, &user_msg) {
-            send(ChatStreamEvent::Error(format!("Failed to save user message: {e}")));
-            send(ChatStreamEvent::Done);
-            return;
-        }
-        // Agent-level messages use dummy IDs; no StorageClient write
-        // (aura-storage scopes messages by session, not agent)
 
-        self.handle_agent_chat_with_tools(agent_id, agent, projects, &tx)
+        let mut messages_for_context = storage_messages;
+        messages_for_context.push(user_msg);
+
+        self.handle_agent_chat_with_tools(agent_id, agent, projects, messages_for_context, &tx)
             .await;
 
         send(ChatStreamEvent::Done);
