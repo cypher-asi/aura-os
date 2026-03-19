@@ -413,88 +413,93 @@ pub async fn delete_agent_instance(
 // Agent-level messages (multi-project)
 // ---------------------------------------------------------------------------
 
+/// Aggregate agent-level messages from aura-storage only (all project-agents for this agent_id → sessions → messages).
+/// Caller must ensure storage and jwt are present; returns empty vec on partial failures (logs warnings).
+pub async fn aggregate_agent_messages_from_storage(
+    state: &AppState,
+    agent_id: &AgentId,
+) -> Vec<Message> {
+    let mut messages = Vec::new();
+    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
+        return messages;
+    };
+    let all_projects = projects::list_all_projects_from_network(state)
+        .await
+        .unwrap_or_default();
+    let agent_id_str = agent_id.to_string();
+
+    let pids: Vec<String> = all_projects
+        .iter()
+        .map(|p| p.project_id.to_string())
+        .collect();
+    let agent_futs: Vec<_> = pids
+        .iter()
+        .map(|pid| storage.list_project_agents(pid, &jwt))
+        .collect();
+    let agent_results = join_all(agent_futs).await;
+
+    let matching_agents: Vec<_> = agent_results
+        .into_iter()
+        .enumerate()
+        .flat_map(|(i, result)| match result {
+            Ok(agents) => agents
+                .into_iter()
+                .filter(|a| a.agent_id.as_deref() == Some(agent_id_str.as_str()))
+                .collect::<Vec<_>>(),
+            Err(e) => {
+                warn!(project_id = %pids[i], error = %e, "Failed to list project agents");
+                Vec::new()
+            }
+        })
+        .collect();
+
+    let session_futs: Vec<_> = matching_agents
+        .iter()
+        .map(|pa| storage.list_sessions(&pa.id, &jwt))
+        .collect();
+    let session_results = join_all(session_futs).await;
+
+    let all_sessions: Vec<_> = session_results
+        .into_iter()
+        .enumerate()
+        .flat_map(|(i, result)| match result {
+            Ok(sessions) => sessions,
+            Err(e) => {
+                warn!(project_agent_id = %matching_agents[i].id, error = %e, "Failed to list sessions");
+                Vec::new()
+            }
+        })
+        .collect();
+
+    let msg_futs: Vec<_> = all_sessions
+        .iter()
+        .map(|s| storage.list_messages(&s.id, &jwt, None, None))
+        .collect();
+    let msg_results = join_all(msg_futs).await;
+
+    for (i, result) in msg_results.into_iter().enumerate() {
+        match result {
+            Ok(session_msgs) => {
+                for sm in &session_msgs {
+                    messages.push(storage_message_to_message(sm));
+                }
+            }
+            Err(e) => {
+                warn!(session_id = %all_sessions[i].id, error = %e, "Failed to list messages");
+            }
+        }
+    }
+    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    messages
+}
+
 pub async fn list_agent_messages(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<Message>>> {
-    let mut messages = Vec::new();
-
-    // Source 1: project-scoped messages from aura-storage
-    if let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) {
-        let all_projects = projects::list_all_projects_from_network(&state)
-            .await
-            .unwrap_or_default();
-        let agent_id_str = agent_id.to_string();
-
-        let pids: Vec<String> = all_projects
-            .iter()
-            .map(|p| p.project_id.to_string())
-            .collect();
-        let agent_futs: Vec<_> = pids
-            .iter()
-            .map(|pid| storage.list_project_agents(pid, &jwt))
-            .collect();
-        let agent_results = join_all(agent_futs).await;
-
-        let matching_agents: Vec<_> = agent_results
-            .into_iter()
-            .enumerate()
-            .flat_map(|(i, result)| match result {
-                Ok(agents) => agents
-                    .into_iter()
-                    .filter(|a| a.agent_id.as_deref() == Some(agent_id_str.as_str()))
-                    .collect::<Vec<_>>(),
-                Err(e) => {
-                    warn!(project_id = %pids[i], error = %e, "Failed to list project agents");
-                    Vec::new()
-                }
-            })
-            .collect();
-
-        let session_futs: Vec<_> = matching_agents
-            .iter()
-            .map(|pa| storage.list_sessions(&pa.id, &jwt))
-            .collect();
-        let session_results = join_all(session_futs).await;
-
-        let all_sessions: Vec<_> = session_results
-            .into_iter()
-            .enumerate()
-            .flat_map(|(i, result)| match result {
-                Ok(sessions) => sessions,
-                Err(e) => {
-                    warn!(project_agent_id = %matching_agents[i].id, error = %e, "Failed to list sessions");
-                    Vec::new()
-                }
-            })
-            .collect();
-
-        let msg_futs: Vec<_> = all_sessions
-            .iter()
-            .map(|s| storage.list_messages(&s.id, &jwt, None, None))
-            .collect();
-        let msg_results = join_all(msg_futs).await;
-
-        for (i, result) in msg_results.into_iter().enumerate() {
-            match result {
-                Ok(session_msgs) => {
-                    for sm in &session_msgs {
-                        messages.push(storage_message_to_message(sm));
-                    }
-                }
-                Err(e) => {
-                    warn!(session_id = %all_sessions[i].id, error = %e, "Failed to list messages");
-                }
-            }
-        }
-    }
-
-    // Source 2: agent-level messages from local store (multi-project chat)
-    if let Ok(local_msgs) = state.store.list_agent_messages(&agent_id) {
-        messages.extend(local_msgs);
-    }
-
-    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    let _ = state.require_storage_client()?;
+    let _ = state.get_jwt()?;
+    let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
     Ok(Json(messages))
 }
 
@@ -544,6 +549,8 @@ pub async fn send_agent_message_stream(
         Vec::new()
     };
 
+    let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
+
     let (tx, rx) = mpsc::unbounded_channel::<ChatStreamEvent>();
 
     let chat_service = state.chat_service.clone();
@@ -558,6 +565,7 @@ pub async fn send_agent_message_stream(
                     &agent_id,
                     agent,
                     &projects,
+                    messages,
                     &content,
                     action.as_deref(),
                     &attachments,
