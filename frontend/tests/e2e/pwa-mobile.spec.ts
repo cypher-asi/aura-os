@@ -311,18 +311,16 @@ test("mobile team settings opens above the closed navigation drawer", async ({ p
   await expect(page.getByRole("heading", { name: "Team Settings" })).toBeVisible();
 });
 
-test("mobile agent header can switch between agents", async ({ page }) => {
+test("mobile agents route reuses the shared agent list", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
 
   await page.goto("/agents/agent-1");
 
-  const agentSelect = page.getByRole("combobox", { name: "Choose agent" });
-  await expect(agentSelect).toBeVisible();
-  await expect(agentSelect).toHaveValue("agent-1");
-  await expect(page.getByText("Engineer").first()).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Research Bot" })).toBeVisible();
   await expect(page.getByText("Chat with Builder Bot")).toBeVisible();
 
-  await agentSelect.selectOption({ label: "Research Bot" });
+  await page.getByRole("treeitem", { name: "Research Bot" }).dispatchEvent("click");
 
   await expect(page).toHaveURL(/\/agents\/agent-2$/);
   await expect(page.getByText("Chat with Research Bot")).toBeVisible();

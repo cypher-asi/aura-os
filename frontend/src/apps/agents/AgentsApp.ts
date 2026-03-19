@@ -1,7 +1,6 @@
 import { Brain } from "lucide-react";
 import { AgentList } from "./AgentList";
 import { AgentMainPanel } from "./AgentMainPanel";
-import { AgentsResponsiveControls } from "./AgentsResponsiveControls";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentAppProvider } from "./AgentAppProvider";
 import type { AuraApp } from "../types";
@@ -13,7 +12,7 @@ export const AgentsApp: AuraApp = {
   basePath: "/agents",
   LeftPanel: AgentList,
   MainPanel: AgentMainPanel,
-  ResponsiveControls: AgentsResponsiveControls,
+  ResponsiveControls: AgentList,
   SidekickPanel: AgentInfoPanel,
   Provider: AgentAppProvider,
   searchPlaceholder: "Search Agents...",
