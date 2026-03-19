@@ -100,12 +100,22 @@ export interface CreateProjectRequest {
   name: string;
   description: string;
   linked_folder_path: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   linked_folder_path?: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface DirEntry {
