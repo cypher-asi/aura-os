@@ -15,7 +15,6 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "settings",
     "messages",
     "orgs",
-    "log_entries",
 ];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;

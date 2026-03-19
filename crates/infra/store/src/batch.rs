@@ -3,8 +3,8 @@ pub enum ColumnFamilyName {
     Projects,
     Specs,
     Agents,
-    Sessions,
     Settings,
+    Messages,
     Orgs,
 }
 
@@ -14,8 +14,8 @@ impl ColumnFamilyName {
             Self::Projects => "projects",
             Self::Specs => "specs",
             Self::Agents => "agents",
-            Self::Sessions => "sessions",
             Self::Settings => "settings",
+            Self::Messages => "messages",
             Self::Orgs => "orgs",
         }
     }

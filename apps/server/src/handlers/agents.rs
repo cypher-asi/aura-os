@@ -14,10 +14,11 @@ use axum::http::StatusCode;
 
 use aura_core::{
     Agent, AgentId, AgentInstance, AgentInstanceId, AgentStatus, ChatRole, Message, MessageId,
-    ProfileId, ProjectId, Session, SessionId, SessionStatus, Task, ZeroAuthSession,
+    ProfileId, ProjectId, Session, SessionId, Task, ZeroAuthSession,
 };
-use aura_storage::{StorageMessage, StorageSession};
+use aura_storage::StorageMessage;
 use aura_agents::{merge_agent_instance, AgentInstanceService};
+use aura_sessions::{parse_dt, storage_session_to_session};
 use aura_chat::ChatStreamEvent;
 use aura_engine::EngineEvent;
 use aura_network::NetworkAgent;
@@ -240,19 +241,8 @@ fn get_user_id_opt(state: &AppState) -> Result<String, ()> {
 }
 
 // ---------------------------------------------------------------------------
-// StorageSession -> Session conversion
+// StorageSession / StorageMessage -> domain type conversion
 // ---------------------------------------------------------------------------
-
-fn parse_session_status(s: &str) -> SessionStatus {
-    serde_json::from_str(&format!("\"{s}\"")).unwrap_or(SessionStatus::Active)
-}
-
-fn parse_dt(v: &Option<String>) -> DateTime<Utc> {
-    v.as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now)
-}
 
 fn storage_message_to_message(sm: &StorageMessage) -> Message {
     let message_id = sm
@@ -285,39 +275,6 @@ fn storage_message_to_message(sm: &StorageMessage) -> Message {
         thinking_duration_ms: None,
         created_at: parse_dt(&sm.created_at),
     }
-}
-
-fn storage_session_to_session(s: StorageSession) -> Result<Session, String> {
-    Ok(Session {
-        session_id: s.id.parse().map_err(|e| format!("invalid session id: {e}"))?,
-        agent_instance_id: s
-            .project_agent_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project_agent_id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project_id: {e}"))?,
-        active_task_id: None,
-        tasks_worked: Vec::new(),
-        context_usage_estimate: s.context_usage_estimate.unwrap_or(0.0),
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        summary_of_previous_context: s.summary_of_previous_context.unwrap_or_default(),
-        status: parse_session_status(s.status.as_deref().unwrap_or("active")),
-        user_id: None,
-        model: None,
-        started_at: parse_dt(&s.created_at),
-        ended_at: s
-            .ended_at
-            .as_deref()
-            .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-            .map(|dt| dt.with_timezone(&Utc)),
-    })
 }
 
 // ---------------------------------------------------------------------------
@@ -897,12 +854,16 @@ pub async fn list_project_sessions(
 
     let mut sessions = Vec::new();
     for agent in &storage_agents {
-        if let Ok(agent_sessions) = storage.list_sessions(&agent.id, &jwt).await {
-            for ss in agent_sessions {
-                if let Ok(s) = storage_session_to_session(ss) {
-                    sessions.push(s);
+        match storage.list_sessions(&agent.id, &jwt).await {
+            Ok(agent_sessions) => {
+                for ss in agent_sessions {
+                    match storage_session_to_session(ss, None) {
+                        Ok(s) => sessions.push(s),
+                        Err(e) => warn!(error = %e, "skipping malformed session"),
+                    }
                 }
             }
+            Err(e) => warn!(agent_id = %agent.id, error = %e, "failed to list sessions for agent"),
         }
     }
     sessions.sort_by(|a, b| b.started_at.cmp(&a.started_at));
@@ -921,7 +882,7 @@ pub async fn list_sessions(
         .map_err(map_storage_error)?;
     let sessions: Vec<Session> = storage_sessions
         .into_iter()
-        .filter_map(|s| storage_session_to_session(s).ok())
+        .filter_map(|s| storage_session_to_session(s, None).map_err(|e| warn!(error = %e, "skipping malformed session")).ok())
         .collect();
     Ok(Json(sessions))
 }
@@ -945,7 +906,7 @@ pub async fn get_session(
             }
             _ => map_storage_error(e),
         })?;
-    let session = storage_session_to_session(ss).map_err(|e| ApiError::internal(e))?;
+    let session = storage_session_to_session(ss, None).map_err(|e| ApiError::internal(e))?;
     Ok(Json(session))
 }
 
