@@ -57,26 +57,46 @@ impl TaskService {
         }
     }
 
+    /// Resets a task to ready so it can be picked up again. Uses two-step transition
+    /// (in_progress → failed → ready) when the task is in progress, because aura-storage
+    /// does not allow a direct in_progress → ready transition.
     pub async fn reset_task_to_ready(
         &self,
         project_id: &ProjectId,
         spec_id: &SpecId,
         task_id: &TaskId,
     ) -> Result<Task, TaskError> {
-        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready).await
+        let current = self.get_task(project_id, spec_id, task_id).await?;
+        if current.status == TaskStatus::InProgress {
+            self.transition_task(project_id, spec_id, task_id, TaskStatus::Failed)
+                .await?;
+        }
+        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready)
+            .await
     }
 
+    /// Resets all in-progress tasks to ready (e.g. after restart or loop error). Uses
+    /// two-step transition (in_progress → failed → ready) because aura-storage does
+    /// not allow a direct in_progress → ready transition.
     pub async fn reset_in_progress_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
         let mut reset = Vec::new();
         for task in &all_tasks {
             if task.status == TaskStatus::InProgress {
+                self.transition_task(
+                    project_id,
+                    &task.spec_id,
+                    &task.task_id,
+                    TaskStatus::Failed,
+                )
+                .await?;
                 let ready_task = self.transition_task(
                     project_id,
                     &task.spec_id,
                     &task.task_id,
                     TaskStatus::Ready,
-                ).await?;
+                )
+                .await?;
                 reset.push(ready_task);
             }
         }

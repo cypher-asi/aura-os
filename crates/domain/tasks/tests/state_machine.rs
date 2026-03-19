@@ -28,6 +28,20 @@ fn illegal_transitions_are_rejected() {
     assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Done).is_err());
 }
 
+/// Reset-from-in-progress is implemented as two storage transitions (in_progress → failed → ready)
+/// because aura-storage does not allow direct in_progress → ready. Both steps are valid per validation.
+#[test]
+fn reset_from_in_progress_uses_two_step_sequence() {
+    assert!(
+        TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Failed).is_ok(),
+        "first step of reset: in_progress → failed"
+    );
+    assert!(
+        TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok(),
+        "second step of reset: failed → ready"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // 2. Cycle detection (pure logic, no store needed)
 // ---------------------------------------------------------------------------
