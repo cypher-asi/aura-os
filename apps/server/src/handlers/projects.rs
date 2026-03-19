@@ -171,26 +171,13 @@ pub async fn list_projects(
 
         let projects: Vec<Project> = net_projects
             .iter()
-            .map(|net| {
-                let local = net
-                    .id
-                    .parse::<ProjectId>()
-                    .ok()
-                    .and_then(|pid| state.store.get_project(&pid).ok());
-                let project = project_from_network(net, local.as_ref());
-                ensure_local_shadow(&state, &project);
-                project
-            })
+            .map(|net| project_from_network(net, None))
             .collect();
 
         Ok(Json(projects))
     } else {
-        // No org_id — network API is org-scoped, so fall back to local list.
-        let projects = state
-            .project_service
-            .list_projects()
-            .map_err(|e| ApiError::internal(e.to_string()))?;
-        Ok(Json(projects))
+        // No org_id — listing is org-scoped only; return empty (web-only, no local fallback).
+        Ok(Json(Vec::new()))
     }
 }
 
@@ -198,13 +185,13 @@ pub async fn get_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {
-    let project = state
-        .project_service
-        .get_project(&project_id)
-        .map_err(|e| match &e {
-            aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
-            _ => ApiError::internal(e.to_string()),
-        })?;
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let net_project = client
+        .get_project(&project_id.to_string(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+    let project = project_from_network(&net_project, None);
     Ok(Json(project))
 }
 
