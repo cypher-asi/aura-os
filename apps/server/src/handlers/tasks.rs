@@ -8,7 +8,7 @@ use tracing::warn;
 
 use aura_core::{ProjectId, SpecId, Task, TaskId, TaskStatus};
 use aura_storage::StorageTask;
-use aura_tasks::ProjectProgress;
+use aura_tasks::{ProjectProgress, TaskService};
 
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
@@ -123,6 +123,17 @@ pub async fn transition_task(
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
 
+    let current = storage
+        .get_task(&task_id.to_string(), &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_storage::StorageError::Server { status: 404, .. } => ApiError::not_found("task not found"),
+            _ => ApiError::internal(e.to_string()),
+        })?;
+    let task = storage_task_to_task(current).map_err(ApiError::internal)?;
+    TaskService::validate_transition(task.status, req.new_status)
+        .map_err(|e| ApiError::bad_request(e.to_string()))?;
+
     let status_str =
         serde_json::to_value(req.new_status).unwrap().as_str().unwrap_or("pending").to_string();
 
@@ -157,6 +168,17 @@ pub async fn retry_task(
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
+
+    let current = storage
+        .get_task(&task_id.to_string(), &jwt)
+        .await
+        .map_err(|e| match &e {
+            aura_storage::StorageError::Server { status: 404, .. } => ApiError::not_found("task not found"),
+            _ => ApiError::internal(e.to_string()),
+        })?;
+    let task = storage_task_to_task(current).map_err(ApiError::internal)?;
+    TaskService::validate_transition(task.status, TaskStatus::Ready)
+        .map_err(|e| ApiError::bad_request(e.to_string()))?;
 
     storage
         .transition_task(
