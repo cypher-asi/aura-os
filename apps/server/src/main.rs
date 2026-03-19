@@ -47,7 +47,11 @@ async fn main() {
 
     let app = aura_server::create_router_with_frontend(state, frontend_dir);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3100));
+    let port: u16 = std::env::var("AURA_SERVER_PORT")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3100);
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
     info!("Aura server listening on http://{addr}");
 
     let listener = TcpListener::bind(addr).await.expect("failed to bind");
