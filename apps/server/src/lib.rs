@@ -131,47 +131,25 @@ fn spawn_event_rebroadcast(
     });
 }
 
-fn flush_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
-    let snapshot: Vec<(aura_core::TaskId, String)> = {
-        let Ok(bufs) = buffers.lock() else { return };
-        bufs.iter().map(|(k, v)| (*k, v.clone())).collect()
-    };
-    for (task_id, text) in snapshot {
-        if let Err(e) = store.atomic_update_task_by_id(&task_id, |task| {
-            task.live_output = text;
-        }) {
-            warn!(%task_id, "Failed to flush live_output: {e}");
-        }
-    }
+fn flush_live_output(_store: &Arc<RocksStore>, _buffers: &TaskOutputBuffers) {
+    // Live output is kept only in memory (task_output_buffers).
+    // Task persistence moved to aura-storage which doesn't store live_output.
 }
 
 fn finalize_live_output(
-    store: &Arc<RocksStore>,
+    _store: &Arc<RocksStore>,
     buffers: &TaskOutputBuffers,
     task_id: &aura_core::TaskId,
 ) {
-    let final_text = buffers.lock().ok().and_then(|mut bufs| bufs.remove(task_id));
-    if let Some(text) = final_text {
-        if let Err(e) = store.atomic_update_task_by_id(task_id, |task| {
-            task.live_output = text;
-        }) {
-            warn!(%task_id, "Failed to finalize live_output: {e}");
-        }
+    // Remove from buffer on task completion; output was already streamed via WS.
+    if let Ok(mut bufs) = buffers.lock() {
+        bufs.remove(task_id);
     }
 }
 
-fn finalize_all_live_output(store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
-    let entries: Vec<(aura_core::TaskId, String)> = {
-        let Ok(mut bufs) = buffers.lock() else { return };
-        let drained: Vec<_> = bufs.drain().collect();
-        drained
-    };
-    for (task_id, text) in entries {
-        if let Err(e) = store.atomic_update_task_by_id(&task_id, |task| {
-            task.live_output = text;
-        }) {
-            warn!(%task_id, "Failed to finalize live_output: {e}");
-        }
+fn finalize_all_live_output(_store: &Arc<RocksStore>, buffers: &TaskOutputBuffers) {
+    if let Ok(mut bufs) = buffers.lock() {
+        bufs.drain();
     }
 }
 

@@ -861,13 +861,16 @@ pub async fn list_session_tasks(
             _ => ApiError::internal(e.to_string()),
         })?;
 
-    let all_tasks = state
-        .store
-        .list_tasks_by_project(&project_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let all_storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
-    let session_tasks: Vec<Task> = all_tasks
+    let session_tasks: Vec<Task> = all_storage_tasks
         .into_iter()
+        .filter_map(|s| super::tasks::storage_task_to_task(s).ok())
         .filter(|t| session.tasks_worked.contains(&t.task_id))
         .collect();
 

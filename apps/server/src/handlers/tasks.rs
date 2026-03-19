@@ -2,24 +2,85 @@ use std::path::Path as FsPath;
 
 use axum::extract::{Path, State};
 use axum::Json;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
-use aura_core::{ProjectId, SpecId, Task, TaskId};
+use aura_core::{ProjectId, SpecId, Task, TaskId, TaskStatus};
+use aura_storage::StorageTask;
 use aura_tasks::ProjectProgress;
 
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
+fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
+    s.as_deref()
+        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn parse_task_status(s: &str) -> TaskStatus {
+    serde_json::from_str(&format!("\"{s}\"")).unwrap_or(TaskStatus::Pending)
+}
+
+pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
+    Ok(Task {
+        task_id: s.id.parse().map_err(|e| format!("invalid task id: {e}"))?,
+        project_id: s
+            .project_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid project id: {e}"))?,
+        spec_id: s
+            .spec_id
+            .as_deref()
+            .unwrap_or("")
+            .parse()
+            .map_err(|e| format!("invalid spec id: {e}"))?,
+        title: s.title.unwrap_or_default(),
+        description: s.description.unwrap_or_default(),
+        status: parse_task_status(s.status.as_deref().unwrap_or("pending")),
+        order_index: s.order_index.unwrap_or(0) as u32,
+        dependency_ids: s
+            .dependency_ids
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|id| id.parse().ok())
+            .collect(),
+        parent_task_id: None,
+        assigned_agent_instance_id: None,
+        completed_by_agent_instance_id: None,
+        session_id: None,
+        execution_notes: String::new(),
+        files_changed: vec![],
+        live_output: String::new(),
+        build_steps: vec![],
+        test_steps: vec![],
+        user_id: None,
+        model: None,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: parse_dt(&s.created_at),
+        updated_at: parse_dt(&s.updated_at),
+    })
+}
+
 pub async fn list_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
-    let tasks = state
-        .store
-        .list_tasks_by_project(&project_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+    let tasks: Vec<Task> = storage_tasks
+        .into_iter()
+        .filter_map(|s| storage_task_to_task(s).ok())
+        .collect();
     Ok(Json(tasks))
 }
 
@@ -27,10 +88,17 @@ pub async fn list_tasks_by_spec(
     State(state): State<AppState>,
     Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Vec<Task>>> {
-    let tasks = state
-        .store
-        .list_tasks_by_spec(&project_id, &spec_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+    let storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+    let tasks: Vec<Task> = storage_tasks
+        .into_iter()
+        .filter_map(|s| storage_task_to_task(s).ok())
+        .filter(|t| t.spec_id == spec_id)
+        .collect();
     Ok(Json(tasks))
 }
 
@@ -48,67 +116,122 @@ pub async fn extract_tasks(
 
 pub async fn transition_task(
     State(state): State<AppState>,
-    Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
     Json(req): Json<TransitionTaskRequest>,
 ) -> ApiResult<Json<Task>> {
-    let all_tasks = state
-        .store
-        .list_tasks_by_project(&project_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
 
-    let task = all_tasks
-        .iter()
-        .find(|t| t.task_id == task_id)
-        .ok_or_else(|| ApiError::not_found("task not found"))?;
+    let status_str =
+        serde_json::to_value(req.new_status).unwrap().as_str().unwrap_or("pending").to_string();
 
-    let updated = state
-        .task_service
-        .transition_task(&project_id, &task.spec_id, &task_id, req.new_status)
+    storage
+        .transition_task(
+            &task_id.to_string(),
+            &jwt,
+            &aura_storage::TransitionTaskRequest { status: status_str },
+        )
+        .await
         .map_err(|e| match &e {
-            aura_tasks::TaskError::NotFound => ApiError::not_found("task not found"),
-            aura_tasks::TaskError::IllegalTransition { .. } => {
-                ApiError::bad_request(e.to_string())
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("task not found")
+            }
+            aura_storage::StorageError::Server { status: 400, body } => {
+                ApiError::bad_request(body.clone())
             }
             _ => ApiError::internal(e.to_string()),
         })?;
-    Ok(Json(updated))
+
+    let updated = storage
+        .get_task(&task_id.to_string(), &jwt)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let task = storage_task_to_task(updated).map_err(|e| ApiError::internal(e))?;
+    Ok(Json(task))
 }
 
 pub async fn retry_task(
     State(state): State<AppState>,
-    Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
+    Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<Task>> {
-    let all_tasks = state
-        .store
-        .list_tasks_by_project(&project_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
 
-    let task = all_tasks
-        .iter()
-        .find(|t| t.task_id == task_id)
-        .ok_or_else(|| ApiError::not_found("task not found"))?;
-
-    let updated = state
-        .task_service
-        .retry_task(&project_id, &task.spec_id, &task_id)
+    storage
+        .transition_task(
+            &task_id.to_string(),
+            &jwt,
+            &aura_storage::TransitionTaskRequest {
+                status: "ready".to_string(),
+            },
+        )
+        .await
         .map_err(|e| match &e {
-            aura_tasks::TaskError::NotFound => ApiError::not_found("task not found"),
-            aura_tasks::TaskError::IllegalTransition { .. } => {
-                ApiError::bad_request(e.to_string())
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("task not found")
+            }
+            aura_storage::StorageError::Server { status: 400, body } => {
+                ApiError::bad_request(body.clone())
             }
             _ => ApiError::internal(e.to_string()),
         })?;
-    Ok(Json(updated))
+
+    let updated = storage
+        .get_task(&task_id.to_string(), &jwt)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    let task = storage_task_to_task(updated).map_err(|e| ApiError::internal(e))?;
+    Ok(Json(task))
 }
 
 pub async fn get_progress(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<ProjectProgress>> {
-    let mut progress = state
-        .task_service
-        .get_project_progress(&project_id)
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+
+    let storage_tasks = storage
+        .list_tasks(&project_id.to_string(), &jwt)
+        .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    let tasks: Vec<Task> = storage_tasks
+        .into_iter()
+        .filter_map(|s| storage_task_to_task(s).ok())
+        .collect();
+
+    let total = tasks.len();
+    let done = tasks.iter().filter(|t| t.status == TaskStatus::Done).count();
+    let pct = if total == 0 { 0.0 } else { (done as f64 / total as f64) * 100.0 };
+
+    let mut progress = ProjectProgress {
+        project_id,
+        total_tasks: total,
+        pending_tasks: tasks.iter().filter(|t| t.status == TaskStatus::Pending).count(),
+        ready_tasks: tasks.iter().filter(|t| t.status == TaskStatus::Ready).count(),
+        in_progress_tasks: tasks.iter().filter(|t| t.status == TaskStatus::InProgress).count(),
+        blocked_tasks: tasks.iter().filter(|t| t.status == TaskStatus::Blocked).count(),
+        done_tasks: done,
+        failed_tasks: tasks.iter().filter(|t| t.status == TaskStatus::Failed).count(),
+        completion_percentage: pct,
+        total_tokens: 0,
+        total_cost: 0.0,
+        lines_changed: 0,
+        lines_of_code: 0,
+        total_commits: 0,
+        total_pull_requests: 0,
+        total_messages: 0,
+        total_sessions: 0,
+        total_time_seconds: 0,
+        total_tests: 0,
+        total_agents: 0,
+        total_parse_retries: 0,
+        total_build_fix_attempts: 0,
+        build_verify_failures: 0,
+        execution_failures: 0,
+        file_ops_failures: 0,
+    };
 
     aggregate_session_metrics(&state, &project_id, &mut progress);
     aggregate_agent_instance_metrics(&state, &project_id, &mut progress).await;
@@ -237,19 +360,7 @@ pub async fn get_task_output(
         .cloned()
         .unwrap_or_default();
 
-    if !output.is_empty() {
-        return Ok(Json(TaskOutputResponse { output }));
-    }
-
-    let persisted = state
-        .store
-        .find_task_by_id(&task_id)
-        .ok()
-        .flatten()
-        .map(|t| t.live_output)
-        .unwrap_or_default();
-
-    Ok(Json(TaskOutputResponse { output: persisted }))
+    Ok(Json(TaskOutputResponse { output }))
 }
 
 async fn count_lines_of_code(folder: &str) -> u64 {
@@ -392,4 +503,3 @@ async fn count_git_commits(folder: &str) -> u64 {
         _ => 0,
     }
 }
-
