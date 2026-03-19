@@ -23,7 +23,7 @@ impl Default for LlmConfig {
         Self {
             default_model: "claude-opus-4-6".into(),
             chat_max_tokens: 24_576,
-            task_execution_max_tokens: 32_768,
+            task_execution_max_tokens: 64_000,
             thinking_budget: 10_000,
             max_context_tokens: 150_000,
             keep_recent_messages: 10,
