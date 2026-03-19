@@ -13,7 +13,8 @@ use crate::compaction;
 
 pub use crate::tool_loop_types::*;
 use crate::tool_loop_helpers::{
-    detect_blocked_writes, detect_blocked_commands, apply_cmd_failure_tracking,
+    detect_blocked_writes, detect_blocked_commands, detect_blocked_reads,
+    detect_blocked_exploration, apply_cmd_failure_tracking,
     build_tool_result_blocks, summarize_write_file_input,
 };
 
@@ -27,10 +28,13 @@ struct LoopState {
     file_read_cache: HashMap<String, u64>,
     consecutive_write_tracker: HashMap<String, usize>,
     consecutive_cmd_failures: usize,
-    total_read_results: usize,
-    consecutive_readonly_iterations: usize,
-    budget_warning_50_sent: bool,
-    budget_warning_75_sent: bool,
+    file_read_counts: HashMap<String, usize>,
+    total_exploration_calls: usize,
+    exploration_allowance: usize,
+    exploration_warning_8_sent: bool,
+    exploration_warning_10_sent: bool,
+    budget_warning_30_sent: bool,
+    budget_warning_60_sent: bool,
 }
 
 impl LoopState {
@@ -88,10 +92,13 @@ pub async fn run_tool_loop(
         file_read_cache: HashMap::new(),
         consecutive_write_tracker: HashMap::new(),
         consecutive_cmd_failures: 0,
-        total_read_results: 0,
-        consecutive_readonly_iterations: 0,
-        budget_warning_50_sent: false,
-        budget_warning_75_sent: false,
+        file_read_counts: HashMap::new(),
+        total_exploration_calls: 0,
+        exploration_allowance: 12,
+        exploration_warning_8_sent: false,
+        exploration_warning_10_sent: false,
+        budget_warning_30_sent: false,
+        budget_warning_60_sent: false,
     };
 
     for iteration in 0..config.max_iterations {
@@ -142,23 +149,24 @@ pub async fn run_tool_loop(
             return state.build_result(iteration + 1, false, false, None);
         }
 
-        let all_readonly = !iter.iter_tool_calls.is_empty() && iter.iter_tool_calls.iter().all(|tc| {
-            matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files" | "get_task_context")
-        });
-        if all_readonly {
-            state.consecutive_readonly_iterations += 1;
-            if state.consecutive_readonly_iterations == 6 {
-                let nudge = format!(
-                    "[EXPLORATION NUDGE] You have done {} consecutive read-only iterations \
-                     without making any changes. Consider starting implementation now. \
-                     You can always read more files later if needed during editing.",
-                    state.consecutive_readonly_iterations,
-                );
-                info!(consecutive_readonly = state.consecutive_readonly_iterations, "Injecting read-only nudge");
-                state.api_messages.push(RichMessage::user(&nudge));
-            }
-        } else {
-            state.consecutive_readonly_iterations = 0;
+        if state.total_exploration_calls >= 10 && !state.exploration_warning_10_sent {
+            state.exploration_warning_10_sent = true;
+            let warning = format!(
+                "[EXPLORATION WARNING] {} exploration calls. Further reads will be limited. \
+                 Begin writing immediately.",
+                state.total_exploration_calls,
+            );
+            info!(total_exploration = state.total_exploration_calls, "Injecting strong exploration warning");
+            state.api_messages.push(RichMessage::user(&warning));
+        } else if state.total_exploration_calls >= 8 && !state.exploration_warning_8_sent {
+            state.exploration_warning_8_sent = true;
+            let warning = format!(
+                "[EXPLORATION WARNING] You have done {} exploration calls. \
+                 Start implementing now.",
+                state.total_exploration_calls,
+            );
+            info!(total_exploration = state.total_exploration_calls, "Injecting exploration warning");
+            state.api_messages.push(RichMessage::user(&warning));
         }
 
         if let Some(budget) = config.credit_budget {
@@ -168,25 +176,25 @@ pub async fn run_tool_loop(
                 0.0
             };
 
-            if utilization >= 0.75 && !state.budget_warning_75_sent {
-                state.budget_warning_75_sent = true;
+            if utilization >= 0.60 && !state.budget_warning_60_sent {
+                state.budget_warning_60_sent = true;
                 let warning = format!(
                     "[BUDGET WARNING] You have used ~{:.0}% of your credit budget. \
                      Wrap up immediately: finish the current edit, verify it compiles, \
                      and call task_done. Do NOT start new explorations.",
                     utilization * 100.0,
                 );
-                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 75% budget warning");
+                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 60% budget warning");
                 state.api_messages.push(RichMessage::user(&warning));
-            } else if utilization >= 0.50 && !state.budget_warning_50_sent {
-                state.budget_warning_50_sent = true;
+            } else if utilization >= 0.30 && !state.budget_warning_30_sent {
+                state.budget_warning_30_sent = true;
                 let warning = format!(
                     "[BUDGET WARNING] You have used ~{:.0}% of your credit budget. \
                      Prioritize completing the implementation over further exploration. \
                      Focus on writing and verifying code.",
                     utilization * 100.0,
                 );
-                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 50% budget warning");
+                info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 30% budget warning");
                 state.api_messages.push(RichMessage::user(&warning));
             }
 
@@ -463,10 +471,16 @@ async fn process_tool_calls(
 
     let blocked_indices = detect_blocked_writes(&iter.iter_tool_calls, &mut state.consecutive_write_tracker);
     let cmd_blocked_indices = detect_blocked_commands(&iter.iter_tool_calls, state.consecutive_cmd_failures);
+    let read_blocked_indices = detect_blocked_reads(&iter.iter_tool_calls, &mut state.file_read_counts);
+    let exploration_is_blocked = state.total_exploration_calls >= state.exploration_allowance;
+    let exploration_blocked_indices = detect_blocked_exploration(&iter.iter_tool_calls, exploration_is_blocked);
 
     let all_blocked: Vec<usize> = {
         let mut v = blocked_indices.clone();
-        for i in &cmd_blocked_indices {
+        for i in cmd_blocked_indices.iter()
+            .chain(read_blocked_indices.iter())
+            .chain(exploration_blocked_indices.iter())
+        {
             if !v.contains(i) {
                 v.push(*i);
             }
@@ -517,6 +531,33 @@ async fn process_tool_calls(
                     is_error: true,
                     stop_loop: false,
                 }
+            } else if read_blocked_indices.contains(&i) {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let count = state.file_read_counts.get(path).copied().unwrap_or(0);
+                warn!(path, count, "Blocked fragmented re-read of same file");
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: format!(
+                        "BLOCKED: You have read '{}' {} times. Use the content you already have. \
+                         If you need a specific section, use search_code to find the exact lines.",
+                        path, count
+                    ),
+                    is_error: true,
+                    stop_loop: false,
+                }
+            } else if exploration_blocked_indices.contains(&i) {
+                warn!(tool = %tc.name, total = state.total_exploration_calls,
+                    "Blocked exploration call (hard limit reached)");
+                ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: format!(
+                        "Exploration blocked after {} calls. Use the context you have and start \
+                         implementing. Reads will unblock after you use write_file or edit_file.",
+                        state.total_exploration_calls
+                    ),
+                    is_error: true,
+                    stop_loop: false,
+                }
             } else {
                 allowed_iter.next().expect("allowed_results count mismatch")
             }
@@ -529,17 +570,31 @@ async fn process_tool_calls(
         &mut state.consecutive_cmd_failures,
     );
 
-    let read_count = iter.iter_tool_calls
+    let exploration_count = iter.iter_tool_calls
         .iter()
-        .zip(results.iter())
-        .filter(|(tc, r)| tc.name == "read_file" && !r.is_error)
+        .enumerate()
+        .filter(|(i, tc)| {
+            !all_blocked.contains(i)
+                && matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files")
+        })
         .count();
-    state.total_read_results += read_count;
+    state.total_exploration_calls += exploration_count;
 
-    if state.total_read_results >= 8 {
+    let had_write = iter.iter_tool_calls
+        .iter()
+        .enumerate()
+        .any(|(i, tc)| {
+            !all_blocked.contains(&i)
+                && matches!(tc.name.as_str(), "write_file" | "edit_file")
+        });
+    if had_write {
+        state.exploration_allowance = state.total_exploration_calls + 4;
+    }
+
+    if state.total_exploration_calls >= 8 {
         info!(
-            total_reads = state.total_read_results,
-            "High read accumulation, proactively compacting older tool results"
+            total_exploration = state.total_exploration_calls,
+            "High exploration accumulation, proactively compacting older tool results"
         );
         compaction::compact_older_tool_results(&mut state.api_messages, 4);
     }

@@ -43,6 +43,56 @@ pub(crate) fn detect_blocked_writes(
         .collect()
 }
 
+/// Block `read_file` calls when the same file has been read 3+ times total
+/// (any combination of full/partial reads).
+pub(crate) fn detect_blocked_reads(
+    tool_calls: &[ToolCall],
+    file_read_counts: &mut HashMap<String, usize>,
+) -> Vec<usize> {
+    for tc in tool_calls {
+        if tc.name == "read_file" {
+            if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                *file_read_counts.entry(path.to_string()).or_insert(0) += 1;
+            }
+        }
+    }
+
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if tc.name == "read_file" {
+                let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if file_read_counts.get(path).copied().unwrap_or(0) >= 3 {
+                    return Some(i);
+                }
+            }
+            None
+        })
+        .collect()
+}
+
+/// Block all exploration tool calls when the hard limit has been reached.
+pub(crate) fn detect_blocked_exploration(
+    tool_calls: &[ToolCall],
+    blocked: bool,
+) -> Vec<usize> {
+    if !blocked {
+        return vec![];
+    }
+    tool_calls
+        .iter()
+        .enumerate()
+        .filter_map(|(i, tc)| {
+            if matches!(tc.name.as_str(), "read_file" | "search_code" | "find_files" | "list_files") {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Block `run_command` calls when consecutive failures reach the hard limit (5+).
 pub(crate) fn detect_blocked_commands(tool_calls: &[ToolCall], consecutive_failures: usize) -> Vec<usize> {
     if consecutive_failures < 5 {
