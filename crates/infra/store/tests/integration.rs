@@ -86,26 +86,6 @@ fn make_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInstanc
     }
 }
 
-fn make_session(agent_instance_id: AgentInstanceId, project_id: ProjectId) -> Session {
-    let now = Utc::now();
-    Session {
-        session_id: SessionId::new(),
-        agent_instance_id,
-        project_id,
-        active_task_id: None,
-        tasks_worked: Vec::new(),
-        context_usage_estimate: 0.0,
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        summary_of_previous_context: String::new(),
-        status: SessionStatus::Active,
-        user_id: None,
-        model: None,
-        started_at: now,
-        ended_at: None,
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Project CRUD
 // ---------------------------------------------------------------------------
@@ -237,57 +217,9 @@ fn list_agents_by_user_filters_correctly() {
 // Agent instance CRUD tests removed.
 
 // ---------------------------------------------------------------------------
-// Session CRUD
-// ---------------------------------------------------------------------------
-
-#[test]
-fn session_crud_round_trip() {
-    let (store, _dir) = open_temp_store();
-    let project = make_project();
-    let agent = make_agent();
-    store.put_project(&project).unwrap();
-    store.put_agent(&agent).unwrap();
-
-    let instance = make_agent_instance(project.project_id, agent.agent_id);
-
-    let session = make_session(instance.agent_instance_id, project.project_id);
-    store.put_session(&session).unwrap();
-
-    let fetched = store
-        .get_session(&project.project_id, &instance.agent_instance_id, &session.session_id)
-        .unwrap();
-    assert_eq!(session, fetched);
-
-    store
-        .delete_session(&project.project_id, &instance.agent_instance_id, &session.session_id)
-        .unwrap();
-    let result = store.get_session(&project.project_id, &instance.agent_instance_id, &session.session_id);
-    assert!(matches!(result, Err(StoreError::NotFound(_))));
-}
-
-#[test]
-fn list_sessions_by_agent_filters_correctly() {
-    let (store, _dir) = open_temp_store();
-    let project = make_project();
-    let agent = make_agent();
-    store.put_project(&project).unwrap();
-    store.put_agent(&agent).unwrap();
-
-    let i1 = make_agent_instance(project.project_id, agent.agent_id);
-    let i2 = make_agent_instance(project.project_id, agent.agent_id);
-
-    let s1 = make_session(i1.agent_instance_id, project.project_id);
-    let s2 = make_session(i1.agent_instance_id, project.project_id);
-    let s3 = make_session(i2.agent_instance_id, project.project_id);
-    store.put_session(&s1).unwrap();
-    store.put_session(&s2).unwrap();
-    store.put_session(&s3).unwrap();
-
-    let sessions = store
-        .list_sessions_by_agent(&project.project_id, &i1.agent_instance_id)
-        .unwrap();
-    assert_eq!(sessions.len(), 2);
-}
+// Session storage has been migrated to aura-storage.
+// The RocksStore session methods are now stubs (no-ops / NotFound).
+// Full cleanup in Phase 9.
 
 // ---------------------------------------------------------------------------
 // Settings CRUD

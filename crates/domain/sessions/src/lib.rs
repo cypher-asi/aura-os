@@ -69,6 +69,7 @@ fn storage_session_to_session(
     })
 }
 
+#[allow(deprecated)] // session store methods are stubs during migration; full cleanup in Phase 9
 impl SessionService {
     pub fn new(store: Arc<RocksStore>, rollover_threshold: f64, model_context_window: u64) -> Self {
         Self {
@@ -490,7 +491,7 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // SessionService basic operations (local store fallback, no StorageClient)
+    // SessionService pure-logic tests (no StorageClient or local persistence)
     // -----------------------------------------------------------------------
 
     #[tokio::test]
@@ -531,7 +532,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_get_session() {
+    async fn create_session_returns_active_session() {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
         let svc = SessionService::new(store, 0.8, 150_000);
@@ -545,40 +546,14 @@ mod tests {
 
         assert_eq!(session.status, SessionStatus::Active);
         assert_eq!(session.summary_of_previous_context, "initial context");
-
-        let fetched = svc
-            .get_session(&pid, &aid, &session.session_id)
-            .await
-            .unwrap();
-        assert_eq!(fetched.session_id, session.session_id);
+        assert_eq!(session.project_id, pid);
+        assert_eq!(session.agent_instance_id, aid);
+        assert_eq!(session.context_usage_estimate, 0.0);
     }
 
-    #[tokio::test]
-    async fn rollover_session_ends_old_creates_new() {
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
-        let svc = SessionService::new(store, 0.8, 150_000);
-
-        let pid = ProjectId::new();
-        let aid = AgentInstanceId::new();
-        let old = svc
-            .create_session(&aid, &pid, None, String::new(), None, None)
-            .await
-            .unwrap();
-
-        let new_session = svc
-            .rollover_session(&pid, &aid, &old.session_id, "summary".into(), None)
-            .await
-            .unwrap();
-
-        let old_fetched = svc.get_session(&pid, &aid, &old.session_id).await.unwrap();
-        assert_eq!(old_fetched.status, SessionStatus::RolledOver);
-        assert!(old_fetched.ended_at.is_some());
-
-        assert_eq!(new_session.status, SessionStatus::Active);
-        assert_eq!(new_session.summary_of_previous_context, "summary");
-        assert_ne!(new_session.session_id, old.session_id);
-    }
+    // Full session CRUD + rollover tests require a running aura-storage instance.
+    // Local store session methods are now stubs. End-to-end session lifecycle
+    // is tested via the test script (scripts/test-aura-storage.mjs).
 
     // -----------------------------------------------------------------------
     // generate_rollover_summary with MockLlmProvider

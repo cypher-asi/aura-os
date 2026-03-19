@@ -11,10 +11,6 @@ impl RocksStore {
         self.cf_handle("agents")
     }
 
-    fn cf_sessions(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
-        self.cf_handle("sessions")
-    }
-
     fn cf_settings(&self) -> Arc<rocksdb::BoundColumnFamily<'_>> {
         self.cf_handle("settings")
     }
@@ -148,59 +144,50 @@ impl RocksStore {
         Ok(())
     }
 
-    // -- Session CRUD --
+    // -- Session stubs (migrated to aura-storage, full cleanup in Phase 9) --
 
-    pub fn put_session(&self, session: &Session) -> StoreResult<()> {
-        let key = format!(
-            "{}:{}:{}",
-            session.project_id, session.agent_instance_id, session.session_id
-        );
-        let value = serde_json::to_vec(session)?;
-        self.db
-            .put_cf(&self.cf_sessions(), key.as_bytes(), &value)?;
+    #[deprecated(note = "sessions migrated to aura-storage")]
+    pub fn put_session(&self, _session: &Session) -> StoreResult<()> {
         Ok(())
     }
 
+    #[deprecated(note = "sessions migrated to aura-storage")]
     pub fn get_session(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
         session_id: &SessionId,
     ) -> StoreResult<Session> {
-        let key = format!("{project_id}:{agent_instance_id}:{session_id}");
-        let bytes = self
-            .db
-            .get_cf(&self.cf_sessions(), key.as_bytes())?
-            .ok_or_else(|| StoreError::NotFound(format!("session:{key}")))?;
-        Ok(serde_json::from_slice(&bytes)?)
+        Err(StoreError::NotFound(format!(
+            "session:{project_id}:{agent_instance_id}:{session_id} (migrated to aura-storage)"
+        )))
     }
 
+    #[deprecated(note = "sessions migrated to aura-storage")]
     pub fn delete_session(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        session_id: &SessionId,
+        _project_id: &ProjectId,
+        _agent_instance_id: &AgentInstanceId,
+        _session_id: &SessionId,
     ) -> StoreResult<()> {
-        let key = format!("{project_id}:{agent_instance_id}:{session_id}");
-        self.db.delete_cf(&self.cf_sessions(), key.as_bytes())?;
         Ok(())
     }
 
+    #[deprecated(note = "sessions migrated to aura-storage")]
     pub fn list_sessions_by_agent(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
+        _project_id: &ProjectId,
+        _agent_instance_id: &AgentInstanceId,
     ) -> StoreResult<Vec<Session>> {
-        let prefix = format!("{project_id}:{agent_instance_id}:");
-        self.scan_cf::<Session>(&self.cf_sessions(), Some(&prefix))
+        Ok(Vec::new())
     }
 
+    #[deprecated(note = "sessions migrated to aura-storage")]
     pub fn list_sessions_by_project(
         &self,
-        project_id: &ProjectId,
+        _project_id: &ProjectId,
     ) -> StoreResult<Vec<Session>> {
-        let prefix = format!("{project_id}:");
-        self.scan_cf::<Session>(&self.cf_sessions(), Some(&prefix))
+        Ok(Vec::new())
     }
 
     // -- Settings CRUD --

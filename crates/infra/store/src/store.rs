@@ -12,7 +12,6 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "projects",
     "specs",
     "agents",
-    "sessions",
     "settings",
     "messages",
     "orgs",
