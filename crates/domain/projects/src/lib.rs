@@ -145,10 +145,8 @@ impl ProjectService {
 
         let folder = input
             .linked_folder_path
-            .as_ref()
-            .and_then(|p| std::path::Path::new(p).file_name())
-            .and_then(|n| n.to_str())
-            .map(String::from);
+            .clone()
+            .filter(|p| !p.is_empty());
 
         let net_req = aura_network::UpdateProjectRequest {
             name: input.name,

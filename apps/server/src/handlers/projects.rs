@@ -61,13 +61,6 @@ fn project_from_network(net: &NetworkProject) -> Project {
     }
 }
 
-fn folder_name_from_path(path: &str) -> Option<String> {
-    std::path::Path::new(path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|s| s.to_string())
-}
-
 /// List all projects for the current user from the network (all orgs). Used by agents/log when no org scope.
 pub(crate) async fn list_all_projects_from_network(state: &AppState) -> ApiResult<Vec<Project>> {
     let client = state.require_network_client()?;
@@ -159,7 +152,11 @@ pub async fn create_project(
         name: req.name.clone(),
         org_id: req.org_id.to_string(),
         description: Some(req.description.clone()),
-        folder: folder_name_from_path(&req.linked_folder_path),
+        folder: if req.linked_folder_path.is_empty() {
+            None
+        } else {
+            Some(req.linked_folder_path.clone())
+        },
         git_repo_url: git_repo_url.clone(),
         git_branch: git_branch.clone(),
         orbit_base_url: orbit_base_url.clone(),
@@ -250,8 +247,8 @@ pub async fn update_project(
     let jwt = state.get_jwt()?;
     let folder = req
         .linked_folder_path
-        .as_deref()
-        .and_then(folder_name_from_path);
+        .clone()
+        .filter(|p| !p.is_empty());
     let net_req = aura_network::UpdateProjectRequest {
         name: req.name.clone(),
         description: req.description.clone(),
