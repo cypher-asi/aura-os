@@ -248,6 +248,9 @@ impl StorageClient {
         jwt: &str,
         req: &UpdateTaskRequest,
     ) -> Result<(), StorageError> {
+        // Forward the full typed payload so any optional execution fields
+        // (execution_notes/files_changed/model/token totals) are persisted
+        // whenever callers provide them.
         self.put_authed_no_response(
             &format!("{}/api/tasks/{}", self.base_url, task_id),
             jwt,
