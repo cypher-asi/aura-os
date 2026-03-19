@@ -101,6 +101,21 @@ fn folder_name_from_path(path: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+fn orbit_create_repo_url(
+    base_url: &str,
+    owner: &str,
+    repo: &str,
+    resp: &aura_orbit::CreateRepoResponse,
+) -> String {
+    resp.clone_url
+        .clone()
+        .or_else(|| resp.git_url.clone())
+        .unwrap_or_else(|| {
+            let base = base_url.trim_end_matches('/');
+            format!("{}/{}/{}", base, owner, repo)
+        })
+}
+
 pub async fn create_project(
     State(state): State<AppState>,
     Json(req): Json<CreateProjectRequest>,
@@ -111,16 +126,60 @@ pub async fn create_project(
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
 
+    let (git_repo_url, git_branch, orbit_base_url, orbit_owner, orbit_repo) =
+        if let (Some(ref owner), Some(ref repo)) = (&req.orbit_owner, &req.orbit_repo) {
+            if let Some(ref base_url) = state.orbit_base_url {
+                match state
+                    .orbit_client
+                    .create_repo(base_url, owner, repo, &jwt)
+                    .await
+                {
+                    Ok(created) => {
+                        let url = orbit_create_repo_url(base_url, owner, repo, &created);
+                        (
+                            Some(url),
+                            req.git_branch.clone().or_else(|| Some("main".into())),
+                            req.orbit_base_url.clone().or_else(|| Some(base_url.clone())),
+                            req.orbit_owner.clone(),
+                            req.orbit_repo.clone(),
+                        )
+                    }
+                    Err(e) => {
+                        return Err(ApiError::internal(format!(
+                            "Failed to create Orbit repo: {}",
+                            e
+                        )));
+                    }
+                }
+            } else {
+                (
+                    req.git_repo_url.clone(),
+                    req.git_branch.clone(),
+                    req.orbit_base_url.clone(),
+                    req.orbit_owner.clone(),
+                    req.orbit_repo.clone(),
+                )
+            }
+        } else {
+            (
+                req.git_repo_url.clone(),
+                req.git_branch.clone(),
+                req.orbit_base_url.clone(),
+                req.orbit_owner.clone(),
+                req.orbit_repo.clone(),
+            )
+        };
+
     let net_req = aura_network::CreateProjectRequest {
         name: req.name.clone(),
         org_id: req.org_id.to_string(),
         description: Some(req.description.clone()),
         folder: folder_name_from_path(&req.linked_folder_path),
-        git_repo_url: req.git_repo_url.clone(),
-        git_branch: req.git_branch.clone(),
-        orbit_base_url: req.orbit_base_url.clone(),
-        orbit_owner: req.orbit_owner.clone(),
-        orbit_repo: req.orbit_repo.clone(),
+        git_repo_url: git_repo_url.clone(),
+        git_branch: git_branch.clone(),
+        orbit_base_url: orbit_base_url.clone(),
+        orbit_owner: orbit_owner.clone(),
+        orbit_repo: orbit_repo.clone(),
     };
     let net_project = client
         .create_project(&jwt, &net_req)
@@ -146,11 +205,11 @@ pub async fn create_project(
         specs_title: None,
         created_at: now,
         updated_at: now,
-        git_repo_url: req.git_repo_url.clone(),
-        git_branch: req.git_branch.clone(),
-        orbit_base_url: req.orbit_base_url.clone(),
-        orbit_owner: req.orbit_owner.clone(),
-        orbit_repo: req.orbit_repo.clone(),
+        git_repo_url,
+        git_branch,
+        orbit_base_url,
+        orbit_owner,
+        orbit_repo,
     };
     ensure_local_shadow(&state, &project);
 

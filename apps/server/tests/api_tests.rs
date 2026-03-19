@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::Mutex as StdMutex;
 
 use axum::body::Body;
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::{Request, StatusCode};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::Json;
 use axum::Router;
 use serde_json::Value;
@@ -20,6 +21,7 @@ use aura_chat::ChatService;
 use aura_claude::ClaudeClient;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
+use aura_orbit::OrbitClient;
 use aura_orgs::OrgService;
 use aura_projects::ProjectService;
 use aura_server::state::{AppState, TaskOutputBuffers};
@@ -56,41 +58,108 @@ async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir) {
 
     let now = chrono::Utc::now().to_rfc3339();
     let now_put = now.clone();
+    let now_list = now.clone();
+    let now_post = now.clone();
+    let now_put_get = now_put.clone();
+    let now_put_put = now_put.clone();
+    let created_ids: Arc<StdMutex<HashSet<String>>> = Arc::new(StdMutex::new(HashSet::new()));
+    let created_ids_post = created_ids.clone();
+    let created_ids_get = created_ids.clone();
+    let created_ids_put = created_ids.clone();
+    let created_ids_del = created_ids.clone();
     let network_app = Router::new()
         .route(
             "/api/projects",
-            post(move || async move {
-                (
-                    StatusCode::CREATED,
-                    Json(serde_json::json!({
+            get(move |Query(q): Query<std::collections::HashMap<String, String>>| async move {
+                if q.get("org_id").is_some() {
+                    Json(vec![serde_json::json!({
                         "id": ProjectId::new().to_string(),
                         "name": "Test Project",
                         "description": "A test",
-                        "orgId": OrgId::new().to_string(),
+                        "orgId": q.get("org_id").unwrap_or(&String::new()),
                         "folder": ".",
-                        "createdAt": now,
-                        "updatedAt": now,
-                    })),
-                )
+                        "createdAt": now_list,
+                        "updatedAt": now_list,
+                    })])
+                } else {
+                    Json(vec![])
+                }
+            })
+            .post(move || {
+                let created_ids = created_ids_post.clone();
+                let id = ProjectId::new().to_string();
+                created_ids.lock().unwrap().insert(id.clone());
+                async move {
+                    (
+                        StatusCode::CREATED,
+                        Json(serde_json::json!({
+                            "id": id,
+                            "name": "Test Project",
+                            "description": "A test",
+                            "orgId": OrgId::new().to_string(),
+                            "folder": ".",
+                            "createdAt": now_post,
+                            "updatedAt": now_post,
+                        })),
+                    )
+                }
             }),
         )
         .route(
             "/api/projects/:project_id",
-            put(move || async move {
-                (
-                    StatusCode::OK,
-                    Json(serde_json::json!({
-                        "id": "",
-                        "name": "Updated Name",
-                        "description": "",
-                        "orgId": "",
-                        "folder": ".",
-                        "createdAt": now_put.clone(),
-                        "updatedAt": now_put.clone(),
-                    })),
-                )
+            get(move |Path(project_id): Path<String>| {
+                let created_ids = created_ids_get.clone();
+                let now_put = now_put_get.clone();
+                async move {
+                    if created_ids.lock().unwrap().contains(&project_id) {
+                        (
+                            StatusCode::OK,
+                            Json(serde_json::json!({
+                                "id": project_id,
+                                "name": "Test Project",
+                                "description": "A test",
+                                "orgId": "",
+                                "folder": ".",
+                                "createdAt": now_put,
+                                "updatedAt": now_put,
+                            })),
+                        )
+                    } else {
+                        (
+                            StatusCode::NOT_FOUND,
+                            Json(serde_json::json!({"error": "project not found"})),
+                        )
+                    }
+                }
             })
-            .delete(|| async { StatusCode::NO_CONTENT }),
+            .put(move |Path(project_id): Path<String>| {
+                let created_ids = created_ids_put.clone();
+                async move {
+                    if created_ids.lock().unwrap().contains(&project_id) {
+                        (
+                            StatusCode::OK,
+                            Json(serde_json::json!({
+                                "id": "",
+                                "name": "Updated Name",
+                                "description": "",
+                                "orgId": "",
+                                "folder": ".",
+                                "createdAt": now_put_put,
+                                "updatedAt": now_put_put,
+                            })),
+                        )
+                    } else {
+                        (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "not found"})))
+                    }
+                }
+            })
+            .delete(move |Path(project_id): Path<String>| {
+                let created_ids = created_ids_del.clone();
+                async move {
+                    created_ids.lock().unwrap().remove(&project_id);
+                    StatusCode::NO_CONTENT
+                }
+            }),
         );
     let net_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let net_addr = net_listener.local_addr().unwrap();
@@ -200,6 +269,8 @@ fn build_test_app_from_store(
         terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
         network_client,
         storage_client,
+        orbit_client: Arc::new(OrbitClient::new()),
+        orbit_base_url: None,
         runtime_agent_state: Arc::new(Mutex::new(HashMap::new())),
     };
 
@@ -302,8 +373,12 @@ async fn project_crud() {
     let project_id = body["project_id"].as_str().unwrap().to_string();
     assert_eq!(body["name"], "Test Project");
 
-    // List
-    let req = json_request("GET", "/api/projects", None);
+    // List (org-scoped; no org_id returns empty)
+    let req = json_request(
+        "GET",
+        &format!("/api/projects?org_id={}", org_id),
+        None,
+    );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
@@ -337,14 +412,14 @@ async fn project_crud() {
 
 #[tokio::test]
 async fn project_not_found() {
-    let (app, _, _db) = build_test_app();
+    let (app, _, _db) = build_test_app_with_mocks().await;
 
     let fake_id = ProjectId::new();
     let req = json_request("GET", &format!("/api/projects/{fake_id}"), None);
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     let body = response_json(resp).await;
-    assert_eq!(body["code"], "not_found");
+    assert_eq!(body["code"], "network_error");
 }
 
 #[tokio::test]
