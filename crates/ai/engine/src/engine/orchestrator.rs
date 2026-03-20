@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use tokio::sync::{mpsc, watch};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use chrono::{DateTime, Utc};
 
@@ -11,6 +11,7 @@ use aura_agents::AgentInstanceService;
 use aura_billing::{MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
+use aura_network::NetworkClient;
 use aura_storage::StorageClient;
 use aura_tasks::TaskService;
 use aura_settings::SettingsService;
@@ -88,6 +89,8 @@ pub struct DevLoopEngine {
     pub(crate) llm_config: LlmConfig,
     pub(crate) pricing_service: PricingService,
     pub(crate) storage_client: Option<Arc<StorageClient>>,
+    pub(crate) network_client: Option<Arc<NetworkClient>>,
+    pub(crate) internal_service_token: Option<String>,
 }
 
 impl DevLoopEngine {
@@ -117,11 +120,23 @@ impl DevLoopEngine {
             llm_config: LlmConfig::from_env(),
             pricing_service,
             storage_client: None,
+            network_client: None,
+            internal_service_token: None,
         }
     }
 
     pub fn with_storage_client(mut self, client: Option<Arc<StorageClient>>) -> Self {
         self.storage_client = client;
+        self
+    }
+
+    pub fn with_network_client(mut self, client: Option<Arc<NetworkClient>>) -> Self {
+        self.network_client = client;
+        self
+    }
+
+    pub fn with_internal_service_token(mut self, token: Option<String>) -> Self {
+        self.internal_service_token = token;
         self
     }
 
@@ -325,6 +340,8 @@ impl DevLoopEngine {
             self.agent_instance_service.finish_working(&project_id, &agent_instance_id).await?;
             if self.llm.is_credits_exhausted() { return Ok(ctx.handle_credits_exhausted(self).await); }
             if failed { continue; }
+
+            self.try_push_after_spec(&task, &project, agent_instance_id).await;
             if let Some(out) = ctx.try_session_rollover(self, &mut stop_rx).await? {
                 return Ok(out);
             }
@@ -373,6 +390,143 @@ impl DevLoopEngine {
             .ok()
             .and_then(|bytes| serde_json::from_slice::<ZeroAuthSession>(&bytes).ok())
             .map(|s| s.user_id)
+    }
+
+    /// After a task completes, check if all tasks for its spec are done; if so, push to orbit.
+    async fn try_push_after_spec(
+        &self,
+        task: &Task,
+        project: &Project,
+        agent_instance_id: AgentInstanceId,
+    ) {
+        let git_repo_url = match project.git_repo_url.as_deref() {
+            Some(url) if !url.is_empty() => url,
+            _ => return,
+        };
+        let branch = project.git_branch.as_deref().unwrap_or("main");
+        let project_root = &project.linked_folder_path;
+        if !crate::git_ops::is_git_repo(project_root) {
+            return;
+        }
+
+        let all_tasks = match self.task_service.list_tasks(&task.project_id).await {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+        let spec_tasks: Vec<&Task> = all_tasks
+            .iter()
+            .filter(|t| t.spec_id == task.spec_id)
+            .collect();
+        let all_done = spec_tasks
+            .iter()
+            .all(|t| t.status == TaskStatus::Done);
+        if !all_done {
+            return;
+        }
+
+        let jwt = match self.get_jwt_for_storage() {
+            Ok(jwt) => jwt,
+            Err(_) => return,
+        };
+
+        let repo_label = format!(
+            "{}/{}",
+            project.orbit_owner.as_deref().unwrap_or(""),
+            project.orbit_repo.as_deref().unwrap_or("")
+        );
+
+        match crate::git_ops::git_push(project_root, git_repo_url, branch, &jwt).await {
+            Ok(commits) => {
+                let summary = format!(
+                    "Spec complete -- {} task(s) pushed",
+                    spec_tasks.len()
+                );
+                self.emit(EngineEvent::GitPushed {
+                    project_id: task.project_id,
+                    agent_instance_id,
+                    spec_id: task.spec_id,
+                    repo: repo_label.clone(),
+                    branch: branch.to_string(),
+                    commits: commits.clone(),
+                    summary: summary.clone(),
+                });
+
+                self.post_feed_event(
+                    agent_instance_id,
+                    task.project_id,
+                    &repo_label,
+                    branch,
+                    &commits,
+                    &summary,
+                )
+                .await;
+            }
+            Err(e) => {
+                warn!(error = %e, "git push after spec completion failed (non-fatal)");
+            }
+        }
+    }
+
+    /// Post a feed event to aura-network's internal activity API.
+    async fn post_feed_event(
+        &self,
+        agent_instance_id: AgentInstanceId,
+        project_id: ProjectId,
+        repo: &str,
+        branch: &str,
+        commits: &[crate::git_ops::CommitInfo],
+        summary: &str,
+    ) {
+        let network = match self.network_client.as_ref() {
+            Some(n) => n,
+            None => return,
+        };
+        let token = match self.internal_service_token.as_deref() {
+            Some(t) if !t.is_empty() => t,
+            _ => return,
+        };
+
+        let instance = self
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .ok();
+
+        let jwt = self.get_jwt_for_storage().ok();
+        let net_agent = match (instance.as_ref(), jwt.as_deref()) {
+            (Some(inst), Some(jwt)) => {
+                network.get_agent(&inst.agent_id.to_string(), jwt).await.ok()
+            }
+            _ => None,
+        };
+
+        let profile_id = net_agent
+            .as_ref()
+            .and_then(|a| a.profile_id.as_deref())
+            .unwrap_or("");
+        if profile_id.is_empty() {
+            info!("agent has no profile_id, skipping feed event post");
+            return;
+        }
+
+        let metadata = serde_json::json!({
+            "author_name": net_agent.as_ref().map(|a| a.name.as_str()).unwrap_or("Agent"),
+            "author_type": "agent",
+            "author_avatar": net_agent.as_ref().and_then(|a| a.icon.as_deref()).unwrap_or(""),
+            "repo": repo,
+            "branch": branch,
+            "commits": commits,
+            "summary": summary,
+        });
+
+        if let Err(e) = network
+            .post_internal_activity(token, profile_id, "push", metadata)
+            .await
+        {
+            warn!(error = %e, "failed to post feed event to aura-network (non-fatal)");
+        } else {
+            info!("posted push feed event to aura-network");
+        }
     }
 
     pub(crate) fn emit(&self, event: EngineEvent) {

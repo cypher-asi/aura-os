@@ -115,7 +115,9 @@ impl AppState {
                 self.event_tx.clone(),
             )
             .with_write_coordinator(self.write_coordinator.clone())
-            .with_storage_client(self.storage_client.clone()),
+            .with_storage_client(self.storage_client.clone())
+            .with_network_client(self.network_client.clone())
+            .with_internal_service_token(self.internal_service_token.clone()),
         )
     }
 

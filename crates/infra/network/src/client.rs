@@ -579,6 +579,35 @@ impl NetworkClient {
     }
 
     // -----------------------------------------------------------------------
+    // Internal (service-to-service) API
+    // -----------------------------------------------------------------------
+
+    /// Post a feed/activity event via `POST /internal/activity`.
+    /// Authenticated with `X-Internal-Token` (not JWT).
+    pub async fn post_internal_activity(
+        &self,
+        internal_token: &str,
+        profile_id: &str,
+        event_type: &str,
+        metadata: serde_json::Value,
+    ) -> Result<NetworkFeedEvent, NetworkError> {
+        let url = format!("{}/internal/activity", self.base_url);
+        let resp = self
+            .http
+            .post(&url)
+            .header("X-Internal-Token", internal_token)
+            .json(&serde_json::json!({
+                "profileId": profile_id,
+                "eventType": event_type,
+                "metadata": metadata,
+            }))
+            .send()
+            .await?;
+
+        self.handle_response(resp).await
+    }
+
+    // -----------------------------------------------------------------------
     // Internal HTTP helpers
     // -----------------------------------------------------------------------
 
