@@ -75,6 +75,37 @@ fn normalize_line_col_refs(line: &str) -> String {
     result
 }
 
+/// Split compiler stderr into individual error blocks and normalize each one
+/// independently, returning a `HashSet<String>` of unique error signatures.
+pub(crate) fn parse_individual_error_signatures(stderr: &str) -> HashSet<String> {
+    let mut signatures = HashSet::new();
+    let mut current_block = String::new();
+    let mut in_error_block = false;
+    for line in stderr.lines() {
+        if line.starts_with("error[") || line.starts_with("error:") {
+            if in_error_block && !current_block.is_empty() {
+                let sig = normalize_error_signature(&current_block);
+                if !sig.is_empty() {
+                    signatures.insert(sig);
+                }
+                current_block.clear();
+            }
+            in_error_block = true;
+        }
+        if in_error_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+    if in_error_block && !current_block.is_empty() {
+        let sig = normalize_error_signature(&current_block);
+        if !sig.is_empty() {
+            signatures.insert(sig);
+        }
+    }
+    signatures
+}
+
 /// Rewrite known server-starting commands to their build/check equivalents.
 ///
 /// When a build command times out, it's usually because the command starts a
@@ -116,6 +147,33 @@ pub(crate) fn infer_default_build_command(project_root: &Path) -> Option<String>
 impl DevLoopEngine {
     pub(crate) fn persist_build_step(&self, _task: &Task, _step: BuildStepRecord) {
         // build_steps are not stored in aura-storage
+    }
+
+    /// Run the build command once and return the set of pre-existing error
+    /// signatures. Mirrors `capture_test_baseline` for build errors.
+    pub(crate) async fn capture_build_baseline(&self, project: &Project) -> HashSet<String> {
+        let project_root = Path::new(&project.linked_folder_path);
+        let build_cmd = match &project.build_command {
+            Some(cmd) if !cmd.trim().is_empty() => cmd.clone(),
+            _ => match infer_default_build_command(project_root) {
+                Some(cmd) => cmd,
+                None => return HashSet::new(),
+            },
+        };
+        match build_verify::run_build_command(project_root, &build_cmd, None).await {
+            Ok(result) if !result.success => {
+                let errors = parse_individual_error_signatures(&result.stderr);
+                if !errors.is_empty() {
+                    info!(
+                        count = errors.len(),
+                        "captured {} pre-existing build error(s) as baseline",
+                        errors.len()
+                    );
+                }
+                errors
+            }
+            _ => HashSet::new(),
+        }
     }
 
     async fn resolve_build_command(
@@ -486,6 +544,7 @@ impl DevLoopEngine {
         &self, project: &Project, task: &Task, session: &Session,
         api_key: &str, initial_execution: &TaskExecution,
         baseline_test_failures: &HashSet<String>,
+        baseline_build_errors: &HashSet<String>,
         workspace_cache: &WorkspaceCache,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64, String), EngineError> {
         let mut build_cmd = match self.resolve_build_command(project, session, task).await {
@@ -525,6 +584,21 @@ impl DevLoopEngine {
                 project, session, task, &build_cmd,
                 &br.stdout, &br.stderr, dur, attempt,
             );
+            if !baseline_build_errors.is_empty() {
+                let current_errors = parse_individual_error_signatures(&br.stderr);
+                let new_errors: HashSet<_> = current_errors
+                    .difference(baseline_build_errors)
+                    .cloned()
+                    .collect();
+                if new_errors.is_empty() && !current_errors.is_empty() {
+                    info!(
+                        task_id = %task.task_id,
+                        pre_existing = current_errors.len(),
+                        "all build errors are pre-existing (baseline), treating as passed"
+                    );
+                    return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t, String::new()));
+                }
+            }
             if attempt == self.engine_config.max_build_fix_retries {
                 info!(task_id = %task.task_id, "build still failing after max retries");
                 return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t, last_stderr));
@@ -843,5 +917,98 @@ error[E0308]: mismatched types
         assert!(refs.methods_not_found.is_empty());
         assert!(refs.source_locations.is_empty());
         assert!(refs.wrong_arg_counts.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // parse_individual_error_signatures
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn parse_individual_splits_multi_error_stderr() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+   |
+10 |     let x: i32 = \"hello\";
+   |                  ^^^^^^^ expected `i32`, found `&str`
+
+error[E0599]: no method named `foo` found for struct `Bar`
+  --> src/lib.rs:42:9
+";
+        let sigs = parse_individual_error_signatures(stderr);
+        assert_eq!(sigs.len(), 2, "should split into two distinct error signatures");
+    }
+
+    #[test]
+    fn parse_individual_deduplicates_identical_errors() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+error[E0308]: mismatched types
+  --> src/main.rs:20:5
+";
+        let sigs = parse_individual_error_signatures(stderr);
+        assert_eq!(sigs.len(), 1, "identical errors on different lines should dedup to one");
+    }
+
+    #[test]
+    fn parse_individual_empty_stderr() {
+        let sigs = parse_individual_error_signatures("");
+        assert!(sigs.is_empty());
+    }
+
+    #[test]
+    fn parse_individual_no_error_prefix() {
+        let sigs = parse_individual_error_signatures("warning: unused variable\n");
+        assert!(sigs.is_empty() || sigs.iter().all(|s| s.is_empty()),
+            "non-error output should produce no meaningful signatures");
+    }
+
+    // -----------------------------------------------------------------------
+    // build baseline filtering logic
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn baseline_filters_all_preexisting_errors() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+error[E0599]: no method named `foo` found for struct `Bar`
+  --> src/lib.rs:42:9
+";
+        let baseline = parse_individual_error_signatures(stderr);
+        let current = parse_individual_error_signatures(stderr);
+        let new_errors: HashSet<_> = current.difference(&baseline).cloned().collect();
+        assert!(new_errors.is_empty(), "all errors are pre-existing, none should be new");
+    }
+
+    #[test]
+    fn baseline_detects_new_errors_mixed_with_preexisting() {
+        let baseline_stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+";
+        let current_stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+error[E0599]: no method named `foo` found for struct `Bar`
+  --> src/lib.rs:42:9
+";
+        let baseline = parse_individual_error_signatures(baseline_stderr);
+        let current = parse_individual_error_signatures(current_stderr);
+        let new_errors: HashSet<_> = current.difference(&baseline).cloned().collect();
+        assert_eq!(new_errors.len(), 1, "should detect exactly one new error");
+    }
+
+    #[test]
+    fn empty_baseline_means_no_filtering() {
+        let stderr = "\
+error[E0308]: mismatched types
+  --> src/main.rs:10:5
+";
+        let baseline: HashSet<String> = HashSet::new();
+        let current = parse_individual_error_signatures(stderr);
+        let new_errors: HashSet<_> = current.difference(&baseline).cloned().collect();
+        assert_eq!(new_errors.len(), current.len(), "with empty baseline, all errors are new");
     }
 }

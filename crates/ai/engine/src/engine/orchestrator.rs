@@ -317,6 +317,7 @@ impl DevLoopEngine {
             ctx.begin_task(self, &task).await?;
             let project = self.project_service.get_project_async(&project_id).await?;
             let baseline = ctx.get_or_capture_test_baseline(self, &project).await;
+            let build_baseline = ctx.get_or_capture_build_baseline(self, &project).await;
             let task_start = Instant::now();
             let agent = self.agent_instance_service
                 .get_instance(&project_id, &agent_instance_id).await.ok();
@@ -336,8 +337,8 @@ impl DevLoopEngine {
             };
             let outcome = self.finalize_task_execution(
                 project_id, agent_instance_id, &task, &ctx.session, &ctx.api_key,
-                &ctx.session.user_id, &ctx.session.model, task_start, &baseline, result,
-                &ctx.workspace_cache,
+                &ctx.session.user_id, &ctx.session.model, task_start, &baseline,
+                &build_baseline, result, &ctx.workspace_cache,
             ).await?;
             let failed = ctx.process_outcome(self, &task, outcome).await?;
             self.agent_instance_service.finish_working(&project_id, &agent_instance_id).await?;

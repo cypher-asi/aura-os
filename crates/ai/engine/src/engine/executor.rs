@@ -102,9 +102,11 @@ impl DevLoopEngine {
         let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let fee_schedule = self.pricing_service.get_fee_schedule();
 
-        let baseline_test_failures = {
+        let (baseline_test_failures, baseline_build_errors) = {
             let project = self.project_service.get_project_async(&project_id).await?;
-            self.capture_test_baseline(&project).await
+            let test_bl = self.capture_test_baseline(&project).await;
+            let build_bl = self.capture_build_baseline(&project).await;
+            (test_bl, build_bl)
         };
 
         let execution_result = if let Some(cmd) = shell::extract_shell_command(&task) {
@@ -116,8 +118,8 @@ impl DevLoopEngine {
 
         let outcome = self.finalize_task_execution(
             project_id, aiid, &task, &session, &api_key,
-            &user_id, &model, task_start, &baseline_test_failures, execution_result,
-            &workspace_cache,
+            &user_id, &model, task_start, &baseline_test_failures,
+            &baseline_build_errors, execution_result, &workspace_cache,
         ).await?;
 
         self.record_single_task_metrics(
@@ -146,6 +148,7 @@ impl DevLoopEngine {
         model: &Option<String>,
         task_start: Instant,
         baseline_test_failures: &HashSet<String>,
+        baseline_build_errors: &HashSet<String>,
         execution_result: Result<TaskExecution, EngineError>,
         workspace_cache: &WorkspaceCache,
     ) -> Result<TaskOutcome, EngineError> {
@@ -191,7 +194,7 @@ impl DevLoopEngine {
         let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out, last_build_stderr) = self
             .verify_and_fix_build(
                 &project, task, session, api_key, &execution, baseline_test_failures,
-                workspace_cache,
+                baseline_build_errors, workspace_cache,
             ).await?;
         let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
         let task_duration_ms = task_start.elapsed().as_millis() as u64;

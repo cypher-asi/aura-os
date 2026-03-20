@@ -38,6 +38,7 @@ pub(crate) struct LoopRunContext {
     fee_schedule: Vec<FeeScheduleEntry>,
     pub workspace_cache: WorkspaceCache,
     cached_test_baseline: Option<HashSet<String>>,
+    cached_build_baseline: Option<HashSet<String>>,
     baseline_invalidated: bool,
 }
 
@@ -84,6 +85,7 @@ impl LoopRunContext {
             fee_schedule,
             workspace_cache,
             cached_test_baseline: None,
+            cached_build_baseline: None,
             baseline_invalidated: false,
         })
     }
@@ -105,6 +107,25 @@ impl LoopRunContext {
         let baseline = engine.capture_test_baseline(project).await;
         self.cached_test_baseline = Some(baseline.clone());
         self.baseline_invalidated = false;
+        baseline
+    }
+
+    // ------------------------------------------------------------------
+    // Build baseline caching
+    // ------------------------------------------------------------------
+
+    pub async fn get_or_capture_build_baseline(
+        &mut self,
+        engine: &DevLoopEngine,
+        project: &Project,
+    ) -> HashSet<String> {
+        if let Some(ref baseline) = self.cached_build_baseline {
+            if !self.baseline_invalidated {
+                return baseline.clone();
+            }
+        }
+        let baseline = engine.capture_build_baseline(project).await;
+        self.cached_build_baseline = Some(baseline.clone());
         baseline
     }
 
@@ -414,6 +435,14 @@ impl LoopRunContext {
         });
         if touches_tests {
             self.baseline_invalidated = true;
+        }
+        let touches_build_manifest = changed_files.iter().any(|f| {
+            f.ends_with("Cargo.toml")
+                || f.ends_with("package.json")
+                || f.ends_with("pyproject.toml")
+        });
+        if touches_build_manifest {
+            self.cached_build_baseline = None;
         }
         self.work_log.push(format!(
             "Task (completed): {}\nNotes: {}\nFiles changed: {}",
