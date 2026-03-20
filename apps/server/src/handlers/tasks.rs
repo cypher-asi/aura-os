@@ -461,7 +461,31 @@ pub async fn get_task_output(
         .cloned()
         .unwrap_or_default();
 
-    Ok(Json(TaskOutputResponse { output }))
+    if !output.is_empty() {
+        return Ok(Json(TaskOutputResponse { output }));
+    }
+
+    if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {
+        if let Ok(task) = storage.get_task(&task_id.to_string(), &jwt).await {
+            if let Some(session_id) = task.session_id {
+                if let Ok(msgs) = storage.list_messages(&session_id, &jwt, None, None).await {
+                    let content: String = msgs
+                        .iter()
+                        .filter(|m| m.role.as_deref() == Some("assistant"))
+                        .filter_map(|m| m.content.as_deref())
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    if !content.is_empty() {
+                        return Ok(Json(TaskOutputResponse { output: content }));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(Json(TaskOutputResponse {
+        output: String::new(),
+    }))
 }
 
 async fn count_lines_of_code(folder: &str) -> u64 {
