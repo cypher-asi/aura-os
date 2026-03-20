@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 
 use tokio::net::TcpListener;
@@ -51,7 +51,11 @@ async fn main() {
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(3100);
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let host: IpAddr = std::env::var("AURA_SERVER_HOST")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(IpAddr::from([127, 0, 0, 1]));
+    let addr = SocketAddr::from((host, port));
     info!("Aura server listening on http://{addr}");
 
     let listener = TcpListener::bind(addr).await.expect("failed to bind");
