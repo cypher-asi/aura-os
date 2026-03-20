@@ -282,4 +282,272 @@ mod tests {
         };
         assert_eq!(content.len(), 5000, "tool results are compacted by dedicated routines");
     }
+
+    // -------------------------------------------------------------------
+    // truncate
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn truncate_content_below_threshold_unchanged() {
+        let content = "short content";
+        let result = truncate(content, &MICRO);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn truncate_content_above_threshold_has_head_tail_and_marker() {
+        let content = "a".repeat(20_000);
+        let result = truncate(&content, &MICRO);
+        assert!(result.len() < content.len());
+        assert!(result.contains("omitted"));
+        // Head part
+        assert!(result.starts_with("aaa"));
+        // Tail part
+        assert!(result.ends_with("aaa"));
+    }
+
+    #[test]
+    fn truncate_marker_contains_correct_char_count() {
+        let content = "b".repeat(20_000);
+        let result = truncate(&content, &MICRO);
+        let omitted_count = 20_000 - MICRO.keep_head - MICRO.keep_tail;
+        let expected_marker = format!("...{} chars omitted...", omitted_count);
+        assert!(result.contains(&expected_marker));
+    }
+
+    // -------------------------------------------------------------------
+    // microcompact
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn microcompact_below_16k_unchanged() {
+        let content = "x".repeat(15_000);
+        let result = microcompact(&content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn microcompact_above_16k_truncated_with_guidance() {
+        let content = "y".repeat(20_000);
+        let result = microcompact(&content);
+        assert!(result.len() < content.len());
+        assert!(result.contains("characters omitted"));
+        assert!(result.contains("read_file"));
+    }
+
+    // -------------------------------------------------------------------
+    // smart_compact
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn smart_compact_non_read_file_uses_microcompact() {
+        let content = "z".repeat(20_000);
+        let result = smart_compact("run_command", &content);
+        assert!(result.contains("characters omitted"));
+    }
+
+    #[test]
+    fn smart_compact_small_content_passed_through() {
+        let content = "fn main() {}";
+        let result = smart_compact("read_file", content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn smart_compact_large_non_rust_falls_back_to_microcompact() {
+        let content = "console.log('hello');\n".repeat(2000);
+        let result = smart_compact("read_file", &content);
+        assert!(result.len() < content.len());
+        assert!(result.contains("characters omitted") || result.contains("Compacted"));
+    }
+
+    // -------------------------------------------------------------------
+    // smart_compact_error
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn smart_compact_error_uses_aggressive_thresholds() {
+        let content = "e".repeat(5_000);
+        let result = smart_compact_error("run_command", &content);
+        assert!(result.len() < content.len(), "should truncate at aggressive threshold");
+        assert!(result.contains("omitted"));
+    }
+
+    #[test]
+    fn smart_compact_error_small_content_unchanged() {
+        let content = "error: not found";
+        let result = smart_compact_error("run_command", content);
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn smart_compact_error_large_content_truncated_aggressively() {
+        let content = "f".repeat(10_000);
+        let result = smart_compact_error("run_command", &content);
+        let expected_max = AGGRESSIVE.keep_head + AGGRESSIVE.keep_tail + 100;
+        assert!(result.len() < expected_max, "should be aggressively truncated");
+    }
+
+    // -------------------------------------------------------------------
+    // compact_older_tool_results
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn compact_older_tool_results_skips_last_n_messages() {
+        let big_content = "x".repeat(10_000);
+        let mut messages = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: big_content.clone(), is_error: None,
+            }]),
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t2".into(), content: big_content.clone(), is_error: None,
+            }]),
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t3".into(), content: big_content.clone(), is_error: None,
+            }]),
+        ];
+
+        compact_older_tool_results(&mut messages, 2);
+
+        // First message should be compacted, last two should be untouched
+        let c0 = match &messages[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.len(), _ => 0 },
+            _ => 0,
+        };
+        let c2 = match &messages[2].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.len(), _ => 0 },
+            _ => 0,
+        };
+        assert!(c0 < big_content.len(), "old message should be compacted");
+        assert_eq!(c2, big_content.len(), "recent message should be untouched");
+    }
+
+    #[test]
+    fn compact_older_tool_results_only_compacts_user_messages() {
+        let big_content = "x".repeat(10_000);
+        let mut messages = vec![
+            RichMessage::assistant_text(&big_content),
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: big_content.clone(), is_error: None,
+            }]),
+        ];
+
+        compact_older_tool_results(&mut messages, 0);
+
+        let assistant_len = match &messages[0].content {
+            MessageContent::Text(t) => t.len(),
+            _ => 0,
+        };
+        assert_eq!(assistant_len, big_content.len(), "assistant messages should not be compacted by this function");
+    }
+
+    #[test]
+    fn compact_older_tool_results_skips_assistant_messages() {
+        let big = "y".repeat(10_000);
+        let mut messages = vec![
+            RichMessage::assistant_blocks(vec![ContentBlock::Text { text: big.clone() }]),
+            RichMessage::user("recent"),
+        ];
+
+        compact_older_tool_results(&mut messages, 1);
+
+        let len = match &messages[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::Text { text } => text.len(), _ => 0 },
+            _ => 0,
+        };
+        assert_eq!(len, big.len());
+    }
+
+    #[test]
+    fn compact_older_tool_results_small_results_untouched() {
+        let small = "small content";
+        let mut messages = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: small.into(), is_error: None,
+            }]),
+        ];
+
+        compact_older_tool_results(&mut messages, 0);
+
+        let content = match &messages[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.as_str(), _ => "" },
+            _ => "",
+        };
+        assert_eq!(content, small);
+    }
+
+    // -------------------------------------------------------------------
+    // compact_older_tool_results_tiered
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn compact_older_tool_results_tiered_uses_custom_thresholds() {
+        let content = "z".repeat(5_000);
+        let mut messages = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: content.clone(), is_error: None,
+            }]),
+            RichMessage::user("recent"),
+        ];
+
+        compact_older_tool_results_tiered(&mut messages, 1, &AGGRESSIVE);
+
+        let compacted = match &messages[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.clone(), _ => String::new() },
+            _ => String::new(),
+        };
+        assert!(compacted.len() < content.len(), "should be compacted with aggressive config");
+    }
+
+    // -------------------------------------------------------------------
+    // compact_tool_results_in_history
+    // -------------------------------------------------------------------
+
+    #[test]
+    fn compact_tool_results_in_history_uses_history_config() {
+        let big = "h".repeat(5_000);
+        let messages = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: big.clone(), is_error: None,
+            }]),
+            RichMessage::user("recent"),
+        ];
+
+        let result = compact_tool_results_in_history(messages, 1);
+
+        let compacted = match &result[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.clone(), _ => String::new() },
+            _ => String::new(),
+        };
+        assert!(compacted.len() < big.len(), "should compact with HISTORY config");
+        assert!(compacted.contains("omitted"));
+    }
+
+    #[test]
+    fn compact_tool_results_in_history_returns_new_vec() {
+        let messages = vec![
+            RichMessage::user("hello"),
+            RichMessage::assistant_text("world"),
+        ];
+        let result = compact_tool_results_in_history(messages, 0);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn compact_tool_results_in_history_preserves_recent() {
+        let big = "r".repeat(5_000);
+        let messages = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(), content: big.clone(), is_error: None,
+            }]),
+        ];
+
+        let result = compact_tool_results_in_history(messages, 1);
+
+        let content = match &result[0].content {
+            MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.clone(), _ => String::new() },
+            _ => String::new(),
+        };
+        assert_eq!(content.len(), big.len(), "keep_recent=1 should preserve the only message");
+    }
 }
