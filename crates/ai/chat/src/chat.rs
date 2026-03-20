@@ -490,7 +490,7 @@ impl ChatService {
                 .list_messages(&session.id, &jwt, None, None)
                 .await
                 .map_err(ChatError::Storage)?;
-            for sm in &session_msgs {
+            for sm in session_msgs.iter().filter(|sm| sm.role.as_deref() != Some("system")) {
                 messages.push(Self::storage_message_to_message(
                     sm,
                     *project_id,

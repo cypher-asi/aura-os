@@ -500,7 +500,7 @@ pub async fn aggregate_agent_messages_from_storage(
     for (i, result) in msg_results.into_iter().enumerate() {
         match result {
             Ok(session_msgs) => {
-                for sm in &session_msgs {
+                for sm in session_msgs.iter().filter(|sm| sm.role.as_deref() != Some("system")) {
                     messages.push(storage_message_to_message(sm));
                 }
             }
@@ -635,7 +635,7 @@ pub async fn list_messages(
         if let Ok(session_msgs) =
             storage.list_messages(&session.id, &jwt, None, None).await
         {
-            for sm in &session_msgs {
+            for sm in session_msgs.iter().filter(|sm| sm.role.as_deref() != Some("system")) {
                 messages.push(storage_message_to_message(sm));
             }
         }
@@ -849,6 +849,10 @@ pub async fn list_session_messages(
         .await
         .map_err(map_storage_error)?;
 
-    let messages: Vec<Message> = storage_msgs.iter().map(storage_message_to_message).collect();
+    let messages: Vec<Message> = storage_msgs
+        .iter()
+        .filter(|sm| sm.role.as_deref() != Some("system"))
+        .map(storage_message_to_message)
+        .collect();
     Ok(Json(messages))
 }
