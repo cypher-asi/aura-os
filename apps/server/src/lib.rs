@@ -590,6 +590,9 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         .ok()
         .filter(|s| !s.trim().is_empty())
         .map(|s| s.trim_end_matches('/').to_string());
+    let internal_service_token = std::env::var("INTERNAL_SERVICE_TOKEN")
+        .ok()
+        .filter(|s| !s.trim().is_empty());
 
     if let Some(ref client) = storage_client {
         let health_client = client.clone();
@@ -658,6 +661,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         storage_client,
         orbit_client,
         orbit_base_url,
+        internal_service_token,
         runtime_agent_state,
     }
 }

@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use tracing::warn;
 
-use aura_core::{OrgId, Project, ProjectId, ProjectStatus};
+use aura_core::{OrgId, Project, ProjectId, ProjectStatus, UserId};
 use aura_network::NetworkProject;
 use aura_projects::{CreateProjectInput, UpdateProjectInput};
 
@@ -116,8 +116,34 @@ fn orbit_create_repo_url(
         .or_else(|| resp.git_url.clone())
         .unwrap_or_else(|| {
             let base = base_url.trim_end_matches('/');
-            format!("{}/{}/{}", base, owner, repo)
+            format!("{}/{}/{}.git", base, owner, repo)
         })
+}
+
+fn current_orbit_owner_user_id(state: &AppState) -> ApiResult<String> {
+    let session = state.get_session()?;
+    if let Some(user_id) = session.network_user_id {
+        return Ok(user_id.to_string());
+    }
+    if session.user_id.parse::<UserId>().is_ok() {
+        return Ok(session.user_id);
+    }
+    Err(ApiError::internal(
+        "Could not determine the current network user for Orbit repo creation",
+    ))
+}
+
+fn should_create_new_orbit_repo(
+    git_repo_url: &Option<String>,
+    orbit_owner: &Option<String>,
+    orbit_repo: &Option<String>,
+) -> bool {
+    orbit_owner.is_some()
+        && orbit_repo.is_some()
+        && git_repo_url
+            .as_ref()
+            .map(|value| value.trim().is_empty())
+            .unwrap_or(true)
 }
 
 fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput {
@@ -261,28 +287,55 @@ pub async fn create_project(
 
     if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
-        let (git_repo_url, git_branch, orbit_base_url, orbit_owner, orbit_repo) = {
-            if let (Some(owner), Some(repo)) = (&req.orbit_owner, &req.orbit_repo) {
-                if let Some(base_url) = &state.orbit_base_url {
-                    match state.orbit_client.create_repo(base_url, owner, repo, &jwt).await {
-                        Ok(created) => (
-                            Some(orbit_create_repo_url(base_url, owner, repo, &created)),
-                            req.git_branch.clone().or_else(|| Some("main".into())),
-                            req.orbit_base_url.clone().or_else(|| Some(base_url.clone())),
-                            req.orbit_owner.clone(),
-                            req.orbit_repo.clone(),
-                        ),
-                        Err(err) => return Err(ApiError::internal(err.message_for_api())),
-                    }
-                } else {
-                    (
-                        req.git_repo_url.clone(),
-                        req.git_branch.clone(),
-                        req.orbit_base_url.clone(),
-                        req.orbit_owner.clone(),
-                        req.orbit_repo.clone(),
+        let net_req = aura_network::CreateProjectRequest {
+            name: req.name.clone(),
+            org_id: req.org_id.to_string(),
+            description: Some(req.description.clone()),
+            folder: folder_name_from_path(&req.linked_folder_path),
+            git_repo_url: req.git_repo_url.clone(),
+            git_branch: req.git_branch.clone(),
+            orbit_base_url: req.orbit_base_url.clone(),
+            orbit_owner: req.orbit_owner.clone(),
+            orbit_repo: req.orbit_repo.clone(),
+        };
+        let net_project = client
+            .create_project(&jwt, &net_req)
+            .await
+            .map_err(map_network_error)?;
+
+        let (git_repo_url, git_branch, orbit_base_url, orbit_owner, orbit_repo) =
+            if should_create_new_orbit_repo(&req.git_repo_url, &req.orbit_owner, &req.orbit_repo) {
+                let base_url = state
+                    .orbit_base_url
+                    .as_deref()
+                    .ok_or_else(|| ApiError::service_unavailable("Orbit repo creation is not configured"))?;
+                let internal_token = state
+                    .internal_service_token
+                    .as_deref()
+                    .ok_or_else(|| ApiError::service_unavailable("Orbit internal repo creation is not configured"))?;
+                let owner_id = current_orbit_owner_user_id(&state)?;
+                let owner = req.orbit_owner.as_deref().unwrap_or(&net_project.org_id);
+                let repo = req.orbit_repo.as_deref().unwrap_or(&req.name);
+                let created = state
+                    .orbit_client
+                    .create_repo_internal(
+                        base_url,
+                        internal_token,
+                        &net_project.org_id,
+                        &net_project.id,
+                        &owner_id,
+                        repo,
+                        (!req.description.trim().is_empty()).then_some(req.description.as_str()),
                     )
-                }
+                    .await
+                    .map_err(|err| ApiError::internal(err.message_for_api()))?;
+                (
+                    Some(orbit_create_repo_url(base_url, owner, &created.name, &created)),
+                    req.git_branch.clone().or_else(|| Some("main".into())),
+                    Some(base_url.to_string()),
+                    Some(owner.to_string()),
+                    Some(created.name),
+                )
             } else {
                 (
                     req.git_repo_url.clone(),
@@ -291,24 +344,7 @@ pub async fn create_project(
                     req.orbit_owner.clone(),
                     req.orbit_repo.clone(),
                 )
-            }
-        };
-
-        let net_req = aura_network::CreateProjectRequest {
-            name: req.name.clone(),
-            org_id: req.org_id.to_string(),
-            description: Some(req.description.clone()),
-            folder: folder_name_from_path(&req.linked_folder_path),
-            git_repo_url: git_repo_url.clone(),
-            git_branch: git_branch.clone(),
-            orbit_base_url: orbit_base_url.clone(),
-            orbit_owner: orbit_owner.clone(),
-            orbit_repo: orbit_repo.clone(),
-        };
-        let net_project = client
-            .create_project(&jwt, &net_req)
-            .await
-            .map_err(map_network_error)?;
+            };
 
         let local_shadow = build_local_shadow(
             net_project
@@ -389,39 +425,6 @@ pub async fn create_imported_project(
 
     if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
-        let (git_repo_url, git_branch, orbit_base_url, orbit_owner, orbit_repo) = {
-            if let (Some(owner), Some(repo)) = (&orbit_owner, &orbit_repo) {
-                if let Some(base_url) = &state.orbit_base_url {
-                    match state.orbit_client.create_repo(base_url, owner, repo, &jwt).await {
-                        Ok(created) => (
-                            Some(orbit_create_repo_url(base_url, owner, repo, &created)),
-                            git_branch.clone().or_else(|| Some("main".into())),
-                            orbit_base_url.clone().or_else(|| Some(base_url.clone())),
-                            orbit_owner.clone(),
-                            orbit_repo.clone(),
-                        ),
-                        Err(err) => return Err(ApiError::internal(err.message_for_api())),
-                    }
-                } else {
-                    (
-                        git_repo_url.clone(),
-                        git_branch.clone(),
-                        orbit_base_url.clone(),
-                        orbit_owner.clone(),
-                        orbit_repo.clone(),
-                    )
-                }
-            } else {
-                (
-                    git_repo_url.clone(),
-                    git_branch.clone(),
-                    orbit_base_url.clone(),
-                    orbit_owner.clone(),
-                    orbit_repo.clone(),
-                )
-            }
-        };
-
         let net_req = aura_network::CreateProjectRequest {
             name: name.clone(),
             org_id: org_id.to_string(),
@@ -437,6 +440,49 @@ pub async fn create_imported_project(
             .create_project(&jwt, &net_req)
             .await
             .map_err(map_network_error)?;
+
+        let (git_repo_url, git_branch, orbit_base_url, orbit_owner, orbit_repo) =
+            if should_create_new_orbit_repo(&git_repo_url, &orbit_owner, &orbit_repo) {
+                let base_url = state
+                    .orbit_base_url
+                    .as_deref()
+                    .ok_or_else(|| ApiError::service_unavailable("Orbit repo creation is not configured"))?;
+                let internal_token = state
+                    .internal_service_token
+                    .as_deref()
+                    .ok_or_else(|| ApiError::service_unavailable("Orbit internal repo creation is not configured"))?;
+                let owner_id = current_orbit_owner_user_id(&state)?;
+                let owner = orbit_owner.as_deref().unwrap_or(&net_project.org_id);
+                let repo = orbit_repo.as_deref().unwrap_or(&name);
+                let created = state
+                    .orbit_client
+                    .create_repo_internal(
+                        base_url,
+                        internal_token,
+                        &net_project.org_id,
+                        &net_project.id,
+                        &owner_id,
+                        repo,
+                        (!description.trim().is_empty()).then_some(description.as_str()),
+                    )
+                    .await
+                    .map_err(|err| ApiError::internal(err.message_for_api()))?;
+                (
+                    Some(orbit_create_repo_url(base_url, owner, &created.name, &created)),
+                    git_branch.clone().or_else(|| Some("main".into())),
+                    Some(base_url.to_string()),
+                    Some(owner.to_string()),
+                    Some(created.name),
+                )
+            } else {
+                (
+                    git_repo_url.clone(),
+                    git_branch.clone(),
+                    orbit_base_url.clone(),
+                    orbit_owner.clone(),
+                    orbit_repo.clone(),
+                )
+            };
 
         let local_shadow = build_local_shadow(
             net_project

@@ -64,6 +64,8 @@ pub struct AppState {
     pub orbit_client: Arc<OrbitClient>,
     /// URL of the standalone Orbit service; `None` when `ORBIT_BASE_URL` is not set. Aura does not run Orbit; it only connects as a client.
     pub orbit_base_url: Option<String>,
+    /// Shared internal token used for service-to-service calls, including Orbit internal repo creation.
+    pub internal_service_token: Option<String>,
     /// In-memory runtime state for agent instances (current_task_id, current_session_id).
     pub runtime_agent_state: RuntimeAgentStateMap,
 }

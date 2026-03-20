@@ -9,4 +9,4 @@ mod types;
 
 pub use client::OrbitClient;
 pub use error::OrbitError;
-pub use types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo};
+pub use types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo, OrbitRepoApiResponse};
