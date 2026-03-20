@@ -14,6 +14,7 @@ use aura_store::RocksStore;
 use aura_storage::StorageClient;
 
 use aura_billing::MeteredLlm;
+use crate::channel_ext::send_or_log;
 use crate::error::SpecGenError;
 
 use parser::{RawSpecOutput, parse_claude_response, raw_to_specs};
@@ -81,7 +82,7 @@ impl SpecGenerationService {
 
     fn emit(progress: &Option<ProgressTx>, msg: &str) {
         if let Some(tx) = progress {
-            let _ = tx.send(msg.to_string());
+            send_or_log(tx, msg.to_string());
         }
     }
 

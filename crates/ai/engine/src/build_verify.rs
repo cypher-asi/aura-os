@@ -8,6 +8,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
 use aura_core::IndividualTestResult;
+use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
 
 #[derive(Debug, Clone)]
@@ -103,7 +104,7 @@ pub async fn run_build_command(
             let mut reader = tokio::io::BufReader::new(pipe).lines();
             while let Ok(Some(line)) = reader.next_line().await {
                 if let Some(ref tx) = stdout_tx {
-                    let _ = tx.send(format!("{line}\n"));
+                    send_or_log(tx, format!("{line}\n"));
                 }
                 collected.push_str(&line);
                 collected.push('\n');
@@ -118,7 +119,7 @@ pub async fn run_build_command(
             let mut reader = tokio::io::BufReader::new(pipe).lines();
             while let Ok(Some(line)) = reader.next_line().await {
                 if let Some(ref tx) = stderr_tx {
-                    let _ = tx.send(format!("{line}\n"));
+                    send_or_log(tx, format!("{line}\n"));
                 }
                 collected.push_str(&line);
                 collected.push('\n');

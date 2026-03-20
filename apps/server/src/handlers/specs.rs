@@ -12,6 +12,7 @@ use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
 use aura_specs::SpecStreamEvent;
 
+use crate::channel_ext::send_or_log;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
@@ -78,7 +79,7 @@ pub async fn generate_specs(
     super::billing::require_credits(&state).await?;
     info!(%project_id, "Spec generation requested");
 
-    let _ = state.event_tx.send(EngineEvent::SpecGenStarted {
+    send_or_log(&state.event_tx, EngineEvent::SpecGenStarted {
         project_id,
     });
 
@@ -89,7 +90,7 @@ pub async fn generate_specs(
     tokio::spawn(async move {
         while let Some(stage) = progress_rx.recv().await {
             info!(%pid, stage, "Spec generation progress");
-            let _ = event_tx.send(EngineEvent::SpecGenProgress {
+            send_or_log(&event_tx, EngineEvent::SpecGenProgress {
                 project_id: pid,
                 stage,
             });
@@ -104,7 +105,7 @@ pub async fn generate_specs(
     match result {
         Ok(specs) => {
             info!(%project_id, count = specs.len(), "Spec generation completed");
-            let _ = state.event_tx.send(EngineEvent::SpecGenCompleted {
+            send_or_log(&state.event_tx, EngineEvent::SpecGenCompleted {
                 project_id,
                 spec_count: specs.len(),
             });
@@ -112,7 +113,7 @@ pub async fn generate_specs(
         }
         Err(e) => {
             error!(%project_id, error = %e, "Spec generation failed");
-            let _ = state.event_tx.send(EngineEvent::SpecGenFailed {
+            send_or_log(&state.event_tx, EngineEvent::SpecGenFailed {
                 project_id,
                 reason: e.to_string(),
             });
@@ -139,7 +140,7 @@ pub async fn generate_specs_stream(
     super::billing::require_credits(&state).await?;
     info!(%project_id, "Streaming spec generation requested");
 
-    let _ = state.event_tx.send(EngineEvent::SpecGenStarted { project_id });
+    send_or_log(&state.event_tx, EngineEvent::SpecGenStarted { project_id });
 
     let (tx, rx) = mpsc::unbounded_channel::<SpecStreamEvent>();
 
@@ -183,7 +184,7 @@ pub async fn generate_specs_stream(
                     .unwrap()
             }
             SpecStreamEvent::SpecSaved(ref spec) => {
-                let _ = event_tx_map.send(EngineEvent::SpecSaved {
+                send_or_log(&event_tx_map, EngineEvent::SpecSaved {
                     project_id,
                     spec: spec.clone(),
                 });
@@ -199,7 +200,7 @@ pub async fn generate_specs_stream(
                     .unwrap()
             }
             SpecStreamEvent::Complete(specs) => {
-                let _ = event_tx_map.send(EngineEvent::SpecGenCompleted {
+                send_or_log(&event_tx_map, EngineEvent::SpecGenCompleted {
                     project_id,
                     spec_count: specs.len(),
                 });
@@ -209,7 +210,7 @@ pub async fn generate_specs_stream(
                     .unwrap()
             }
             SpecStreamEvent::Error(msg) => {
-                let _ = event_tx_map.send(EngineEvent::SpecGenFailed {
+                send_or_log(&event_tx_map, EngineEvent::SpecGenFailed {
                     project_id,
                     reason: msg.clone(),
                 });

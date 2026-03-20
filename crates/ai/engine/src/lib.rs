@@ -1,4 +1,5 @@
 pub mod build_verify;
+pub(crate) mod channel_ext;
 pub mod engine;
 pub mod error;
 pub mod events;

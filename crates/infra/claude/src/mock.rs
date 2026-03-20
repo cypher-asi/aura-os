@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use async_trait::async_trait;
 use tokio::sync::{mpsc, Mutex};
 
+use crate::channel_ext::send_or_log;
 use crate::{
     ClaudeClientError, ClaudeStreamEvent, LlmProvider, LlmResponse, LlmStreamEvent, RichMessage,
     ThinkingConfig, ToolCall, ToolDefinition, ToolStreamResponse,
@@ -134,20 +135,20 @@ impl MockLlmProvider {
 
     fn send_events(resp: &MockResponse, event_tx: &mpsc::UnboundedSender<LlmStreamEvent>) {
         if !resp.text.is_empty() {
-            let _ = event_tx.send(ClaudeStreamEvent::Delta(resp.text.clone()));
+            send_or_log(event_tx, ClaudeStreamEvent::Delta(resp.text.clone()));
         }
         for tc in &resp.tool_calls {
-            let _ = event_tx.send(ClaudeStreamEvent::ToolUseStarted {
+            send_or_log(event_tx, ClaudeStreamEvent::ToolUseStarted {
                 id: tc.id.clone(),
                 name: tc.name.clone(),
             });
-            let _ = event_tx.send(ClaudeStreamEvent::ToolUse {
+            send_or_log(event_tx, ClaudeStreamEvent::ToolUse {
                 id: tc.id.clone(),
                 name: tc.name.clone(),
                 input: tc.input.clone(),
             });
         }
-        let _ = event_tx.send(ClaudeStreamEvent::Done {
+        send_or_log(event_tx, ClaudeStreamEvent::Done {
             stop_reason: resp.stop_reason.clone(),
             input_tokens: resp.input_tokens,
             output_tokens: resp.output_tokens,

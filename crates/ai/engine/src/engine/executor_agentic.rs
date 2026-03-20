@@ -11,6 +11,7 @@ use super::orchestrator::DevLoopEngine;
 use super::prompts::*;
 use super::tool_executor::EngineToolLoopExecutor;
 use super::types::*;
+use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
@@ -204,7 +205,7 @@ impl DevLoopEngine {
             while let Some(evt) = loop_rx.recv().await {
                 match evt {
                     ToolLoopEvent::Delta(text) => {
-                        let _ = engine_tx.send(EngineEvent::TaskOutputDelta {
+                        send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
                             project_id: pid,
                             agent_instance_id: aiid,
                             task_id,
@@ -212,7 +213,7 @@ impl DevLoopEngine {
                         });
                     }
                     ToolLoopEvent::Error(msg) => {
-                        let _ = engine_tx.send(EngineEvent::TaskOutputDelta {
+                        send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
                             project_id: pid,
                             agent_instance_id: aiid,
                             task_id,

@@ -1,3 +1,4 @@
+pub(crate) mod channel_ext;
 mod error;
 mod chat;
 mod chat_agent;
@@ -10,6 +11,7 @@ pub mod compaction;
 pub mod message_metadata;
 mod tool_loop_types;
 mod tool_loop_helpers;
+mod tool_loop_streaming;
 pub mod tool_loop;
 
 pub use error::ChatError;

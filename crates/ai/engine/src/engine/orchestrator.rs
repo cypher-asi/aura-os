@@ -20,6 +20,7 @@ use super::loop_context::LoopRunContext;
 use super::shell;
 use super::types::*;
 use super::write_coordinator::ProjectWriteCoordinator;
+use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::FileOp;
@@ -506,6 +507,6 @@ impl DevLoopEngine {
     }
 
     pub(crate) fn emit(&self, event: EngineEvent) {
-        let _ = self.event_tx.send(event);
+        send_or_log(&self.event_tx, event);
     }
 }

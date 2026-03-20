@@ -25,6 +25,7 @@ use aura_chat::ChatStreamEvent;
 use aura_engine::EngineEvent;
 use aura_network::NetworkAgent;
 
+use crate::channel_ext::send_or_log;
 use crate::dto::{
     CreateAgentInstanceRequest, CreateAgentRequest, SendMessageRequest, UpdateAgentInstanceRequest,
     UpdateAgentRequest,
@@ -600,10 +601,10 @@ pub async fn send_agent_message_stream(
                 )
                 .await;
         } else {
-            let _ = tx.send(ChatStreamEvent::Error(
+            send_or_log(&tx, ChatStreamEvent::Error(
                 "agent not found".to_string(),
             ));
-            let _ = tx.send(ChatStreamEvent::Done);
+            send_or_log(&tx, ChatStreamEvent::Done);
         }
     });
 
@@ -669,9 +670,7 @@ pub async fn send_message_stream(
 
     let is_generate_specs = body.action.as_deref() == Some("generate_specs");
     if is_generate_specs {
-        let _ = state
-            .event_tx
-            .send(EngineEvent::SpecGenStarted { project_id });
+        send_or_log(&state.event_tx, EngineEvent::SpecGenStarted { project_id });
     }
 
     tokio::spawn(async move {
@@ -688,10 +687,10 @@ pub async fn send_message_stream(
                 )
                 .await;
         } else {
-            let _ = tx.send(ChatStreamEvent::Error(
+            send_or_log(&tx, ChatStreamEvent::Error(
                 "agent instance not found".to_string(),
             ));
-            let _ = tx.send(ChatStreamEvent::Done);
+            send_or_log(&tx, ChatStreamEvent::Done);
         }
     });
 
@@ -702,14 +701,14 @@ pub async fn send_message_stream(
         match &evt {
             ChatStreamEvent::SpecSaved(spec) => {
                 spec_count += 1;
-                let _ = event_tx.send(EngineEvent::SpecSaved {
+                send_or_log(&event_tx, EngineEvent::SpecSaved {
                     project_id,
                     spec: spec.clone(),
                 });
             }
             ChatStreamEvent::Done => {
                 if is_generate_specs {
-                    let _ = event_tx.send(EngineEvent::SpecGenCompleted {
+                    send_or_log(&event_tx, EngineEvent::SpecGenCompleted {
                         project_id,
                         spec_count,
                     });

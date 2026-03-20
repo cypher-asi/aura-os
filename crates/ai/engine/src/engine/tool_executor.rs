@@ -15,6 +15,7 @@ use super::build_fix::{
 use super::prompts::build_stub_fix_prompt;
 use super::types::{track_file_op, FollowUpSuggestion};
 use crate::build_verify;
+use crate::channel_ext::send_or_log;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp};
 
@@ -50,7 +51,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
             .map(String::from)
             .or_else(|| infer_default_build_command(project_root))?;
 
-        let _ = self.engine_event_tx.send(EngineEvent::TaskOutputDelta {
+        send_or_log(&self.engine_event_tx, EngineEvent::TaskOutputDelta {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
             task_id: self.task_id,
@@ -222,7 +223,7 @@ impl EngineToolLoopExecutor {
                 if !stub_reports.is_empty() {
                     *attempts += 1;
                     let attempt = *attempts;
-                    let _ = self.engine_event_tx.send(EngineEvent::TaskOutputDelta {
+                    send_or_log(&self.engine_event_tx, EngineEvent::TaskOutputDelta {
                         project_id: self.project_id,
                         agent_instance_id: self.agent_instance_id,
                         task_id: self.task_id,
@@ -321,7 +322,7 @@ impl EngineToolLoopExecutor {
             } else {
                 format!("\n[tool: {}({}) -> {}]\n", tc.name, arg_hint, status_str)
             };
-            let _ = self.engine_event_tx.send(EngineEvent::TaskOutputDelta {
+            send_or_log(&self.engine_event_tx, EngineEvent::TaskOutputDelta {
                 project_id: self.project_id,
                 agent_instance_id: self.agent_instance_id,
                 task_id: self.task_id,

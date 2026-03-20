@@ -1,3 +1,4 @@
+pub(crate) mod channel_ext;
 mod error;
 pub mod mock;
 mod retry;

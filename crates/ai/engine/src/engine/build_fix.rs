@@ -17,6 +17,7 @@ use super::parser::parse_execution_response;
 use super::prompts::{build_fix_system_prompt, build_fix_prompt_with_history};
 use super::types::*;
 use crate::build_verify;
+use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
@@ -256,7 +257,7 @@ impl DevLoopEngine {
         let fwd_tid = task.task_id;
         tokio::spawn(async move {
             while let Some(line) = line_rx.recv().await {
-                let _ = fwd_event_tx.send(EngineEvent::TaskOutputDelta {
+                send_or_log(&fwd_event_tx, EngineEvent::TaskOutputDelta {
                     project_id: fwd_pid,
                     agent_instance_id: fwd_aiid,
                     task_id: fwd_tid,

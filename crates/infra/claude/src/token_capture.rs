@@ -1,5 +1,6 @@
 use tokio::sync::mpsc;
 
+use crate::channel_ext::send_or_log;
 use crate::types::ClaudeStreamEvent;
 
 /// Handle returned by [`StreamTokenCapture`] constructors. Await to get
@@ -42,7 +43,7 @@ impl StreamTokenCapture {
                     g.2 = *cache_creation_input_tokens;
                     g.3 = *cache_read_input_tokens;
                 }
-                let _ = outer.send(evt);
+                send_or_log(&outer, evt);
             }
         });
         (tx, TokenCaptureHandle { forwarder, tokens })

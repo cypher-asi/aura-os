@@ -1,3 +1,4 @@
+pub(crate) mod channel_ext;
 pub mod dto;
 pub mod error;
 pub mod handlers;
@@ -17,6 +18,7 @@ use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio::time::{interval, Duration};
 use tracing::{debug, info, warn};
 
+use crate::channel_ext::broadcast_or_log;
 use crate::loop_log::LoopLogWriter;
 use crate::state::{TaskOutputBuffers, TaskStepBuffers};
 
@@ -281,7 +283,7 @@ fn flush_buffered_events(
     ready_broadcast_buf: &mut ReadyBroadcastBuf,
 ) {
     for (task_id, (pid, aiid, text)) in delta_broadcast_buf.drain() {
-        let _ = broadcast_tx.send(EngineEvent::TaskOutputDelta {
+        broadcast_or_log(&broadcast_tx, EngineEvent::TaskOutputDelta {
             project_id: pid,
             agent_instance_id: aiid,
             task_id,
@@ -291,7 +293,7 @@ fn flush_buffered_events(
     if !ready_broadcast_buf.is_empty() {
         let (pid, aiid, _) = ready_broadcast_buf[0];
         let task_ids: Vec<aura_core::TaskId> = ready_broadcast_buf.drain(..).map(|(_, _, tid)| tid).collect();
-        let _ = broadcast_tx.send(EngineEvent::TasksBecameReady {
+        broadcast_or_log(&broadcast_tx, EngineEvent::TasksBecameReady {
             project_id: pid,
             agent_instance_id: aiid,
             task_ids,

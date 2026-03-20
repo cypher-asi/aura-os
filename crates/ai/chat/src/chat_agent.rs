@@ -9,6 +9,7 @@ use tracing::info;
 use aura_core::*;
 use aura_claude::{ThinkingConfig, ToolCall};
 
+use crate::channel_ext::send_or_log;
 use crate::chat::{
     ChatService, ChatStreamEvent, ContentBlockAccumulator,
     convert_messages_to_rich, forward_tool_loop_event,
@@ -98,7 +99,7 @@ impl ToolExecutor for AgentToolLoopExecutor {
                             title: spec.title.clone(),
                         });
                     }
-                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec.clone()));
+                    send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(spec.clone()));
                 }
                 if let Some(task) = &result.saved_task {
                     if let Ok(mut acc) = self.blocks.lock() {
@@ -107,7 +108,7 @@ impl ToolExecutor for AgentToolLoopExecutor {
                             title: task.title.clone(),
                         });
                     }
-                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task.clone()));
+                    send_or_log(&self.chat_tx, ChatStreamEvent::TaskSaved(task.clone()));
                 }
                 ToolCallResult {
                     tool_use_id: tc.id.clone(),
@@ -133,7 +134,7 @@ impl ChatService {
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
-            let _ = tx.send(evt);
+            send_or_log(&tx, evt);
         };
 
         let api_key = match self.settings.get_decrypted_api_key() {
@@ -144,7 +145,7 @@ impl ChatService {
             }
         };
 
-        let _ = tx.send(ChatStreamEvent::Progress("Building context...".to_string()));
+        send_or_log(&tx, ChatStreamEvent::Progress("Building context...".to_string()));
 
         let system = build_multi_project_system_prompt(agent, projects);
 
@@ -157,7 +158,7 @@ impl ChatService {
         api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
         api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
 
-        let _ = tx.send(ChatStreamEvent::Progress("Waiting for response...".to_string()));
+        send_or_log(&tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
 
         let tools = multi_project_tool_definitions();
 

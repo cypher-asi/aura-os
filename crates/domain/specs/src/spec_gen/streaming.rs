@@ -6,6 +6,7 @@ use aura_core::*;
 
 use aura_claude::ClaudeStreamEvent;
 
+use crate::channel_ext::send_or_log;
 use crate::SpecGenError;
 use super::parser::{IncrementalSpecParser, RawSpecOutput, order_index_from_spec_title, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
 use super::{SpecGenerationService, SpecStreamEvent, SPEC_OVERVIEW_MAX_TOKENS, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, MAX_TOKENS};
@@ -116,7 +117,7 @@ impl SpecGenerationService {
         project_id: &ProjectId,
         tx: mpsc::UnboundedSender<SpecStreamEvent>,
     ) {
-        let send = |evt: SpecStreamEvent| { let _ = tx.send(evt); };
+        let send = |evt: SpecStreamEvent| { send_or_log(&tx, evt); };
 
         let (requirements_content, api_key) =
             match self.load_project_and_key(project_id, &tx).await {
@@ -170,9 +171,9 @@ impl SpecGenerationService {
                 ClaudeStreamEvent::Delta(text) => {
                     token_count += text.split_whitespace().count().max(1);
                     delta_count += 1;
-                    let _ = tx.send(SpecStreamEvent::Delta(text.clone()));
+                    send_or_log(&tx, SpecStreamEvent::Delta(text.clone()));
                     if delta_count.is_multiple_of(20) {
-                        let _ = tx.send(SpecStreamEvent::Generating { tokens: token_count });
+                        send_or_log(&tx, SpecStreamEvent::Generating { tokens: token_count });
                     }
                     for json_obj in parser.feed(&text) {
                         if let Ok(raw) = serde_json::from_str::<RawSpecOutput>(&json_obj) {
@@ -196,11 +197,11 @@ impl SpecGenerationService {
                     }
                 }
                 ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                    let _ = tx.send(SpecStreamEvent::Generating { tokens: token_count });
-                    let _ = tx.send(SpecStreamEvent::TokenUsage { input_tokens, output_tokens });
+                    send_or_log(&tx, SpecStreamEvent::Generating { tokens: token_count });
+                    send_or_log(&tx, SpecStreamEvent::TokenUsage { input_tokens, output_tokens });
                 }
                 ClaudeStreamEvent::Error(msg) => {
-                    let _ = tx.send(SpecStreamEvent::Error(msg));
+                    send_or_log(&tx, SpecStreamEvent::Error(msg));
                 }
                 _ => {}
             }
@@ -214,7 +215,7 @@ impl SpecGenerationService {
         stream_handle: tokio::task::JoinHandle<Result<String, E>>,
         saved_specs: &mut Vec<Spec>,
     ) {
-        let send = |evt: SpecStreamEvent| { let _ = tx.send(evt); };
+        let send = |evt: SpecStreamEvent| { send_or_log(&tx, evt); };
         let response_text = match stream_handle.await {
             Ok(Ok(text)) => Some(text),
             Ok(Err(e)) => {
@@ -287,18 +288,18 @@ impl SpecGenerationService {
         project_id: &ProjectId,
         tx: &mpsc::UnboundedSender<SpecStreamEvent>,
     ) -> Option<(String, String)> {
-        let _ = tx.send(SpecStreamEvent::Progress("Loading project".into()));
+        send_or_log(&tx, SpecStreamEvent::Progress("Loading project".into()));
         info!(%project_id, "Loading project for streaming spec generation");
 
         let project = match self.project_service.get_project_async(project_id).await {
             Ok(p) => p,
             Err(_) => {
-                let _ = tx.send(SpecStreamEvent::Error(format!("Project not found: {project_id}")));
+                send_or_log(&tx, SpecStreamEvent::Error(format!("Project not found: {project_id}")));
                 return None;
             }
         };
 
-        let _ = tx.send(SpecStreamEvent::Progress("Reading requirements document".into()));
+        send_or_log(&tx, SpecStreamEvent::Progress("Reading requirements document".into()));
 
         let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
         if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
@@ -307,23 +308,23 @@ impl SpecGenerationService {
             } else {
                 format!("Requirements file not found: {req_path}")
             };
-            let _ = tx.send(SpecStreamEvent::Error(msg));
+            send_or_log(&tx, SpecStreamEvent::Error(msg));
             return None;
         }
         let requirements_content = match std::fs::read_to_string(req_path) {
             Ok(c) => c,
             Err(e) => {
-                let _ = tx.send(SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
+                send_or_log(&tx, SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
                 return None;
             }
         };
 
-        let _ = tx.send(SpecStreamEvent::Progress("Decrypting API key".into()));
+        send_or_log(&tx, SpecStreamEvent::Progress("Decrypting API key".into()));
 
         let api_key = match self.settings.get_decrypted_api_key() {
             Ok(k) => k,
             Err(e) => {
-                let _ = tx.send(SpecStreamEvent::Error(format!("API key error: {e}")));
+                send_or_log(&tx, SpecStreamEvent::Error(format!("API key error: {e}")));
                 return None;
             }
         };
@@ -345,7 +346,7 @@ impl SpecGenerationService {
         }
         *spec_index += 1;
         saved_specs.push(spec.clone());
-        let _ = tx.send(SpecStreamEvent::SpecSaved(spec.clone()));
+        send_or_log(&tx, SpecStreamEvent::SpecSaved(spec.clone()));
 
         let tasks = parse_tasks_from_markdown(
             project_id,
@@ -358,7 +359,7 @@ impl SpecGenerationService {
             } else {
                 info!(%project_id, spec = %spec.title, count = tasks.len(), "Tasks extracted and saved");
                 for task in tasks {
-                    let _ = tx.send(SpecStreamEvent::TaskSaved(Box::new(task)));
+                    send_or_log(&tx, SpecStreamEvent::TaskSaved(Box::new(task)));
                 }
             }
         }
@@ -372,7 +373,7 @@ impl SpecGenerationService {
         saved_specs: &mut Vec<Spec>,
     ) {
         let send = |evt: SpecStreamEvent| {
-            let _ = tx.send(evt);
+            send_or_log(&tx, evt);
         };
 
         send(SpecStreamEvent::Progress("Parsing AI response".into()));

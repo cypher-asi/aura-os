@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use aura_core::{AgentInstanceId, ProjectId, TaskId};
 
+use crate::channel_ext::send_or_log;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -164,7 +165,7 @@ pub async fn run_single_task(
     let event_tx = state.event_tx.clone();
     tokio::spawn(async move {
         if let Err(e) = engine.run_single_task(project_id, task_id, agent_instance_id).await {
-            let _ = event_tx.send(aura_engine::EngineEvent::TaskFailed {
+            send_or_log(&event_tx, aura_engine::EngineEvent::TaskFailed {
                 project_id,
                 agent_instance_id: aura_core::AgentInstanceId::new(),
                 task_id,

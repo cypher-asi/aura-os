@@ -21,6 +21,7 @@ use crate::error::ChatError;
 use aura_projects::ProjectService;
 use aura_specs::SpecGenerationService;
 use aura_tasks::TaskService;
+use crate::channel_ext::send_or_log;
 use crate::tool_loop::ToolLoopEvent;
 
 pub(crate) fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
@@ -110,13 +111,13 @@ pub(crate) fn forward_tool_loop_event(
 ) {
     match evt {
         ToolLoopEvent::Delta(text) => {
-            let _ = tx.send(ChatStreamEvent::Delta(text));
+            send_or_log(&tx, ChatStreamEvent::Delta(text));
         }
         ToolLoopEvent::ThinkingDelta(text) => {
-            let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
+            send_or_log(&tx, ChatStreamEvent::ThinkingDelta(text));
         }
         ToolLoopEvent::ToolUseStarted { id, name } => {
-            let _ = tx.send(ChatStreamEvent::ToolCallStarted { id, name });
+            send_or_log(&tx, ChatStreamEvent::ToolCallStarted { id, name });
         }
         ToolLoopEvent::ToolUseDetected { id, name, input } => {
             if let Ok(mut acc) = blocks.lock() {
@@ -126,7 +127,7 @@ pub(crate) fn forward_tool_loop_event(
                     input: input.clone(),
                 });
             }
-            let _ = tx.send(ChatStreamEvent::ToolCall { id, name, input });
+            send_or_log(&tx, ChatStreamEvent::ToolCall { id, name, input });
         }
         ToolLoopEvent::ToolResult {
             tool_use_id,
@@ -141,7 +142,7 @@ pub(crate) fn forward_tool_loop_event(
                     is_error: if is_error { Some(true) } else { None },
                 });
             }
-            let _ = tx.send(ChatStreamEvent::ToolResult {
+            send_or_log(&tx, ChatStreamEvent::ToolResult {
                 id: tool_use_id,
                 name: tool_name,
                 result: content,
@@ -152,13 +153,13 @@ pub(crate) fn forward_tool_loop_event(
             input_tokens,
             output_tokens,
         } => {
-            let _ = tx.send(ChatStreamEvent::TokenUsage {
+            send_or_log(&tx, ChatStreamEvent::TokenUsage {
                 input_tokens,
                 output_tokens,
             });
         }
         ToolLoopEvent::Error(msg) => {
-            let _ = tx.send(ChatStreamEvent::Error(msg));
+            send_or_log(&tx, ChatStreamEvent::Error(msg));
         }
     }
 }
@@ -515,7 +516,7 @@ impl ChatService {
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
-            let _ = tx.send(evt);
+            send_or_log(&tx, evt);
         };
 
         send(ChatStreamEvent::Progress("Connecting...".to_string()));
@@ -580,7 +581,7 @@ impl ChatService {
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
-            let _ = tx.send(evt);
+            send_or_log(&tx, evt);
         };
 
         send(ChatStreamEvent::Progress("Connecting...".to_string()));

@@ -1,6 +1,7 @@
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
+use crate::channel_ext::send_or_log;
 use crate::error::ClaudeClientError;
 use crate::types::{ClaudeStreamEvent, ToolCall, ToolStreamResponse};
 
@@ -85,7 +86,7 @@ pub(crate) async fn parse_sse_events(
                                     current_tool_id = cb.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                     current_tool_name = cb.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                     current_tool_json.clear();
-                                    let _ = event_tx.send(ClaudeStreamEvent::ToolUseStarted {
+                                    send_or_log(&event_tx, ClaudeStreamEvent::ToolUseStarted {
                                         id: current_tool_id.clone(),
                                         name: current_tool_name.clone(),
                                     });
@@ -110,12 +111,12 @@ pub(crate) async fn parse_sse_events(
                                 "text_delta" => {
                                     if let Some(text) = delta.get("text").and_then(|t| t.as_str()) {
                                         accumulated_text.push_str(text);
-                                        let _ = event_tx.send(ClaudeStreamEvent::Delta(text.to_string()));
+                                        send_or_log(&event_tx, ClaudeStreamEvent::Delta(text.to_string()));
                                     }
                                 }
                                 "thinking_delta" => {
                                     if let Some(text) = delta.get("thinking").and_then(|t| t.as_str()) {
-                                        let _ = event_tx.send(ClaudeStreamEvent::ThinkingDelta(text.to_string()));
+                                        send_or_log(&event_tx, ClaudeStreamEvent::ThinkingDelta(text.to_string()));
                                     }
                                 }
                                 "input_json_delta" => {
@@ -140,7 +141,7 @@ pub(crate) async fn parse_sse_events(
                             name: current_tool_name.clone(),
                             input: input.clone(),
                         };
-                        let _ = event_tx.send(ClaudeStreamEvent::ToolUse {
+                        send_or_log(&event_tx, ClaudeStreamEvent::ToolUse {
                             id: current_tool_id.clone(),
                             name: current_tool_name.clone(),
                             input,
@@ -176,13 +177,13 @@ pub(crate) async fn parse_sse_events(
                         .unwrap_or_else(|| data_str.clone());
 
                     if error_type == Some("overloaded_error") {
-                        let _ = event_tx.send(ClaudeStreamEvent::Error(
+                        send_or_log(&event_tx, ClaudeStreamEvent::Error(
                             "The AI model is temporarily overloaded.".to_string(),
                         ));
                         return Err(ClaudeClientError::Overloaded);
                     }
 
-                    let _ = event_tx.send(ClaudeStreamEvent::Error(msg.clone()));
+                    send_or_log(&event_tx, ClaudeStreamEvent::Error(msg.clone()));
                     return Err(ClaudeClientError::Parse(msg));
                 }
                 _ => {}
@@ -199,7 +200,7 @@ pub(crate) async fn parse_sse_events(
         );
     }
 
-    let _ = event_tx.send(ClaudeStreamEvent::Done {
+    send_or_log(&event_tx, ClaudeStreamEvent::Done {
         stop_reason: stop_reason.clone(),
         input_tokens,
         output_tokens,

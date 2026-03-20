@@ -9,6 +9,7 @@ use aura_billing::MeteredLlm;
 use crate::compaction;
 
 pub use crate::tool_loop_types::*;
+use crate::channel_ext::send_or_log;
 use crate::chat_sanitize;
 use crate::tool_loop_helpers::{
     detect_blocked_writes, detect_blocked_commands, detect_blocked_reads,
@@ -140,7 +141,7 @@ pub async fn run_tool_loop(
 
         state.total_input_tokens += iter.input_tokens;
         state.total_output_tokens += iter.output_tokens;
-        let _ = event_tx.send(ToolLoopEvent::IterationTokenUsage {
+        send_or_log(&event_tx, ToolLoopEvent::IterationTokenUsage {
             input_tokens: state.total_input_tokens,
             output_tokens: state.total_output_tokens,
         });
@@ -278,7 +279,7 @@ fn check_budget_warnings(
             budget_state.cumulative_credits, next_estimate, budget,
             "Credit budget would be exceeded, stopping tool loop"
         );
-        let _ = event_tx.send(ToolLoopEvent::Error(
+        send_or_log(&event_tx, ToolLoopEvent::Error(
             "Stopping: credit budget for this session would be exceeded.".to_string(),
         ));
         return Some(None);
@@ -387,7 +388,7 @@ fn handle_truncated_tool_calls(
              to fill in one section at a time.",
             tc.name
         );
-        let _ = event_tx.send(ToolLoopEvent::ToolResult {
+        send_or_log(&event_tx, ToolLoopEvent::ToolResult {
             tool_use_id: tc.id.clone(),
             tool_name: tc.name.clone(),
             content: msg.clone(),
@@ -726,7 +727,7 @@ fn detect_stall_fail_fast(
             streak = writes.no_progress_streak,
             "Fail-fast triggered due to same-target no-progress stall"
         );
-        let _ = event_tx.send(ToolLoopEvent::Error(recovery.clone()));
+        send_or_log(&event_tx, ToolLoopEvent::Error(recovery.clone()));
         api_messages.push(RichMessage::user(&recovery));
         return true;
     }

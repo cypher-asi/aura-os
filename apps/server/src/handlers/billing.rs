@@ -4,6 +4,7 @@ use axum::Json;
 
 use aura_core::{OrgId, ZeroAuthSession};
 
+use crate::channel_ext::broadcast_or_log;
 use crate::dto::{CreateCreditCheckoutRequest, FulfillmentWebhookRequest, FulfillmentWebhookResponse};
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -118,8 +119,7 @@ pub async fn handle_fulfillment(
         "Fulfillment webhook received"
     );
 
-    // Broadcast a credits-updated event via WebSocket so frontend can update
-    let _ = state.event_broadcast.send(aura_engine::EngineEvent::LogLine {
+    broadcast_or_log(&state.event_broadcast, aura_engine::EngineEvent::LogLine {
         message: format!(
             "Credits fulfilled: {} credits for entity {}",
             body.credits, body.entity_id

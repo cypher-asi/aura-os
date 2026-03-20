@@ -10,6 +10,7 @@ use aura_claude::{ThinkingConfig, ToolCall, ToolDefinition};
 use aura_specs::SpecStreamEvent;
 use aura_tools::agent_tool_definitions;
 
+use crate::channel_ext::send_or_log;
 use crate::chat::{
     ChatService, ChatStreamEvent, ContentBlockAccumulator,
     forward_tool_loop_event,
@@ -80,7 +81,7 @@ impl ToolExecutor for ChatToolLoopExecutor {
                             title: spec.title.clone(),
                         });
                     }
-                    let _ = self.chat_tx.send(ChatStreamEvent::SpecSaved(spec.clone()));
+                    send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(spec.clone()));
                 }
                 if let Some(task) = &result.saved_task {
                     if let Ok(mut acc) = self.blocks.lock() {
@@ -89,7 +90,7 @@ impl ToolExecutor for ChatToolLoopExecutor {
                             title: task.title.clone(),
                         });
                     }
-                    let _ = self.chat_tx.send(ChatStreamEvent::TaskSaved(task.clone()));
+                    send_or_log(&self.chat_tx, ChatStreamEvent::TaskSaved(task.clone()));
                 }
                 ToolCallResult {
                     tool_use_id: tc.id.clone(),
@@ -141,7 +142,7 @@ impl ChatService {
 
         self.maybe_generate_attachment_overview(&stored_messages, project_id, tx).await;
 
-        let _ = tx.send(ChatStreamEvent::Progress("Waiting for response...".to_string()));
+        send_or_log(&tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
 
         let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
         let executor = ChatToolLoopExecutor {
@@ -205,22 +206,22 @@ impl ChatService {
         let api_key = match self.settings.get_decrypted_api_key() {
             Ok(k) => k,
             Err(e) => {
-                let _ = tx.send(ChatStreamEvent::Error(format!("API key error: {e}")));
+                send_or_log(&tx, ChatStreamEvent::Error(format!("API key error: {e}")));
                 return None;
             }
         };
 
-        let _ = tx.send(ChatStreamEvent::Progress("Loading conversation...".to_string()));
+        send_or_log(&tx, ChatStreamEvent::Progress("Loading conversation...".to_string()));
 
         let stored_messages = match self.list_messages_async(project_id, agent_instance_id).await {
             Ok(m) => m,
             Err(e) => {
-                let _ = tx.send(ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
+                send_or_log(&tx, ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
                 return None;
             }
         };
 
-        let _ = tx.send(ChatStreamEvent::Progress("Building context...".to_string()));
+        send_or_log(&tx, ChatStreamEvent::Progress("Building context...".to_string()));
 
         let custom_prompt = agent_instance.system_prompt.clone();
         let system = match self.project_service.get_project_async(project_id).await {
@@ -265,7 +266,7 @@ impl ChatService {
                     .unwrap_or(false)
         });
         if has_text_attachments_flag {
-            let _ = tx.send(ChatStreamEvent::Progress("Analyzing attachments...".to_string()));
+            send_or_log(&tx, ChatStreamEvent::Progress("Analyzing attachments...".to_string()));
         }
 
         let has_text_attachments = stored_messages.iter().any(|m| {
@@ -293,12 +294,12 @@ impl ChatService {
         match self.spec_gen.generate_project_overview(project_id, &requirements_content).await {
             Ok((title, summary)) => {
                 info!(%project_id, %title, "Project overview generated");
-                let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
-                let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
+                send_or_log(&tx, ChatStreamEvent::SpecsTitle(title));
+                send_or_log(&tx, ChatStreamEvent::SpecsSummary(summary));
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate project overview");
-                let _ = tx.send(ChatStreamEvent::Error(
+                send_or_log(&tx, ChatStreamEvent::Error(
                     format!("Failed to generate project overview: {e}"),
                 ));
             }
@@ -382,7 +383,7 @@ impl ChatService {
                 thinking_duration_ms,
                 created_at: Utc::now(),
             };
-            let _ = tx.send(ChatStreamEvent::MessageSaved(assistant_msg));
+            send_or_log(&tx, ChatStreamEvent::MessageSaved(assistant_msg));
             self.save_message_to_storage(
                 project_id,
                 agent_instance_id,
@@ -454,7 +455,7 @@ impl ChatService {
                 let mut instance = agent_instance.clone();
                 instance.name = title;
                 instance.updated_at = Utc::now();
-                let _ = tx.send(ChatStreamEvent::AgentInstanceUpdated(instance));
+                send_or_log(&tx, ChatStreamEvent::AgentInstanceUpdated(instance));
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate title");
@@ -471,7 +472,7 @@ impl ChatService {
         active_session_id: Option<&str>,
     ) {
         let send = |evt: ChatStreamEvent| {
-            let _ = tx.send(evt);
+            send_or_log(&tx, evt);
         };
 
         let (spec_tx, mut spec_rx) = mpsc::unbounded_channel::<SpecStreamEvent>();
@@ -490,30 +491,30 @@ impl ChatService {
             match evt {
                 SpecStreamEvent::Delta(text) => {
                     accumulated.push_str(&text);
-                    let _ = tx.send(ChatStreamEvent::Delta(text));
+                    send_or_log(&tx, ChatStreamEvent::Delta(text));
                 }
                 SpecStreamEvent::SpecSaved(spec) => {
-                    let _ = tx.send(ChatStreamEvent::SpecSaved(spec));
+                    send_or_log(&tx, ChatStreamEvent::SpecSaved(spec));
                 }
                 SpecStreamEvent::SpecsTitle(title) => {
-                    let _ = tx.send(ChatStreamEvent::SpecsTitle(title));
+                    send_or_log(&tx, ChatStreamEvent::SpecsTitle(title));
                 }
                 SpecStreamEvent::SpecsSummary(summary) => {
-                    let _ = tx.send(ChatStreamEvent::SpecsSummary(summary));
+                    send_or_log(&tx, ChatStreamEvent::SpecsSummary(summary));
                 }
                 SpecStreamEvent::TaskSaved(task) => {
-                    let _ = tx.send(ChatStreamEvent::TaskSaved(task));
+                    send_or_log(&tx, ChatStreamEvent::TaskSaved(task));
                 }
                 SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
                     spec_input_tokens += input_tokens;
                     spec_output_tokens += output_tokens;
-                    let _ = tx.send(ChatStreamEvent::TokenUsage {
+                    send_or_log(&tx, ChatStreamEvent::TokenUsage {
                         input_tokens: spec_input_tokens,
                         output_tokens: spec_output_tokens,
                     });
                 }
                 SpecStreamEvent::Error(msg) => {
-                    let _ = tx.send(ChatStreamEvent::Error(msg));
+                    send_or_log(&tx, ChatStreamEvent::Error(msg));
                 }
                 SpecStreamEvent::Complete(_) => {}
                 SpecStreamEvent::Progress(_) | SpecStreamEvent::Generating { .. } => {}

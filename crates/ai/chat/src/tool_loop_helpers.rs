@@ -4,6 +4,7 @@ use tokio::sync::mpsc;
 
 use aura_claude::{ContentBlock, ToolCall};
 use crate::compaction;
+use crate::channel_ext::send_or_log;
 use crate::tool_loop::{ToolCallResult, ToolLoopEvent};
 
 pub(crate) fn detect_blocked_writes(
@@ -172,7 +173,7 @@ pub(crate) fn build_tool_result_blocks(
     let mut result_blocks: Vec<ContentBlock> = Vec::new();
 
     for (tc, result) in tool_calls.iter().zip(results) {
-        let _ = event_tx.send(ToolLoopEvent::ToolResult {
+        send_or_log(&event_tx, ToolLoopEvent::ToolResult {
             tool_use_id: result.tool_use_id.clone(),
             tool_name: tc.name.clone(),
             content: result.content.clone(),
