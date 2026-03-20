@@ -313,14 +313,23 @@ fn compute_exploration_allowance(
     task_description: &str,
     member_count: usize,
 ) -> usize {
+    let complexity = classify_task_complexity(task_title, task_description);
     let combined = format!("{} {}", task_title, task_description).to_lowercase();
-    let is_test_task = combined.contains("integration test")
-        || combined.contains("end-to-end")
-        || combined.contains("e2e test")
-        || (combined.contains("test") && combined.contains("pipeline"));
 
-    let base: usize = if is_test_task { 18 } else { 12 };
+    let is_refactoring = combined.contains("refactor")
+        || combined.contains("rename across")
+        || combined.contains("migrate")
+        || combined.contains("multi-file");
 
+    let base: usize = match complexity {
+        TaskComplexity::Simple => 8,
+        TaskComplexity::Standard => 12,
+        TaskComplexity::Complex => {
+            if is_refactoring { 22 } else { 18 }
+        }
+    };
+
+    // Scale with workspace size
     if member_count >= 15 {
         base + 4
     } else if member_count >= 8 {
