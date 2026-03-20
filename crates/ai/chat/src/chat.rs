@@ -115,6 +115,9 @@ pub(crate) fn forward_tool_loop_event(
         ToolLoopEvent::ThinkingDelta(text) => {
             let _ = tx.send(ChatStreamEvent::ThinkingDelta(text));
         }
+        ToolLoopEvent::ToolUseStarted { id, name } => {
+            let _ = tx.send(ChatStreamEvent::ToolCallStarted { id, name });
+        }
         ToolLoopEvent::ToolUseDetected { id, name, input } => {
             if let Ok(mut acc) = blocks.lock() {
                 acc.push(ChatContentBlock::ToolUse {
@@ -212,6 +215,10 @@ pub enum ChatStreamEvent {
     Delta(String),
     ThinkingDelta(String),
     Progress(String),
+    ToolCallStarted {
+        id: String,
+        name: String,
+    },
     ToolCall {
         id: String,
         name: String,
