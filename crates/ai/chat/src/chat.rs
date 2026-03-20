@@ -27,54 +27,75 @@ pub(crate) fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage>
     messages
         .iter()
         .filter(|m| m.role == ChatRole::User || m.role == ChatRole::Assistant)
-        .map(|m| {
+        .flat_map(|m| {
             let role = match m.role {
                 ChatRole::User => "user",
                 ChatRole::Assistant => "assistant",
                 ChatRole::System => "user",
             };
             if let Some(blocks) = &m.content_blocks {
-                let content_blocks: Vec<ContentBlock> = blocks
-                    .iter()
-                    .filter_map(|b| match b {
-                        ChatContentBlock::Text { text } => Some(ContentBlock::Text {
-                            text: text.clone(),
-                        }),
+                let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
+                let mut tool_result_blocks: Vec<ContentBlock> = Vec::new();
+
+                for b in blocks {
+                    match b {
+                        ChatContentBlock::Text { text } => {
+                            assistant_blocks.push(ContentBlock::Text {
+                                text: text.clone(),
+                            });
+                        }
                         ChatContentBlock::ToolUse { id, name, input } => {
-                            Some(ContentBlock::ToolUse {
+                            assistant_blocks.push(ContentBlock::ToolUse {
                                 id: id.clone(),
                                 name: name.clone(),
                                 input: input.clone(),
-                            })
+                            });
                         }
                         ChatContentBlock::ToolResult {
                             tool_use_id,
                             content,
                             is_error,
-                        } => Some(ContentBlock::ToolResult {
-                            tool_use_id: tool_use_id.clone(),
-                            content: content.clone(),
-                            is_error: *is_error,
-                        }),
-                        ChatContentBlock::Image { media_type, data } => Some(ContentBlock::Image {
-                            source: ImageSource {
-                                source_type: "base64".to_string(),
-                                media_type: media_type.clone(),
-                                data: data.clone(),
-                            },
-                        }),
-                        ChatContentBlock::TaskRef { .. } | ChatContentBlock::SpecRef { .. } => None,
-                    })
-                    .collect();
-                RichMessage {
-                    role: role.to_string(),
-                    content: MessageContent::Blocks(content_blocks),
+                        } => {
+                            let block = ContentBlock::ToolResult {
+                                tool_use_id: tool_use_id.clone(),
+                                content: content.clone(),
+                                is_error: *is_error,
+                            };
+                            if role == "assistant" {
+                                tool_result_blocks.push(block);
+                            } else {
+                                assistant_blocks.push(block);
+                            }
+                        }
+                        ChatContentBlock::Image { media_type, data } => {
+                            assistant_blocks.push(ContentBlock::Image {
+                                source: ImageSource {
+                                    source_type: "base64".to_string(),
+                                    media_type: media_type.clone(),
+                                    data: data.clone(),
+                                },
+                            });
+                        }
+                        ChatContentBlock::TaskRef { .. } | ChatContentBlock::SpecRef { .. } => {}
+                    }
                 }
+
+                let mut result = vec![RichMessage {
+                    role: role.to_string(),
+                    content: MessageContent::Blocks(assistant_blocks),
+                }];
+                if !tool_result_blocks.is_empty() {
+                    result.push(RichMessage {
+                        role: "user".to_string(),
+                        content: MessageContent::Blocks(tool_result_blocks),
+                    });
+                }
+                result
             } else {
-                RichMessage {
+                vec![RichMessage {
                     role: role.to_string(),
                     content: MessageContent::Text(m.content.clone()),
-                }
+                }]
             }
         })
         .collect()
@@ -668,6 +689,46 @@ mod tests {
                 matches!(&blocks[3], ContentBlock::Image { .. });
             }
             _ => panic!("expected Blocks content"),
+        }
+    }
+
+    #[test]
+    fn convert_splits_tool_results_from_assistant_message() {
+        let mut msg = make_message(ChatRole::Assistant, "");
+        msg.content_blocks = Some(vec![
+            ChatContentBlock::Text {
+                text: "I'll read the file".into(),
+            },
+            ChatContentBlock::ToolUse {
+                id: "t1".into(),
+                name: "read_file".into(),
+                input: serde_json::json!({"path": "a.rs"}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "file contents".into(),
+                is_error: None,
+            },
+        ]);
+
+        let rich = convert_messages_to_rich(&[msg]);
+        assert_eq!(rich.len(), 2, "assistant msg with ToolResult should split into 2 messages");
+        assert_eq!(rich[0].role, "assistant");
+        assert_eq!(rich[1].role, "user");
+        match &rich[0].content {
+            MessageContent::Blocks(blocks) => {
+                assert_eq!(blocks.len(), 2);
+                assert!(matches!(&blocks[0], ContentBlock::Text { .. }));
+                assert!(matches!(&blocks[1], ContentBlock::ToolUse { .. }));
+            }
+            _ => panic!("expected Blocks content for assistant"),
+        }
+        match &rich[1].content {
+            MessageContent::Blocks(blocks) => {
+                assert_eq!(blocks.len(), 1);
+                assert!(matches!(&blocks[0], ContentBlock::ToolResult { .. }));
+            }
+            _ => panic!("expected Blocks content for tool_results user msg"),
         }
     }
 

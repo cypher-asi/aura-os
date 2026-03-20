@@ -308,22 +308,23 @@ function handleStreamError(ctx: StreamCtx, message: string) {
   if (isInsufficientCreditsError(message)) {
     dispatchInsufficientCredits();
   }
-  if (ctx.streamBufferRef.current) {
-    const { savedThinking, savedThinkingDuration } = snapshotThinking(
-      ctx.thinkingBufferRef, ctx.thinkingStartRef,
-    );
-    ctx.setMessages((prev) => [
-      ...prev,
-      {
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: ctx.streamBufferRef.current + `\n\n*Error: ${message}*`,
-        toolCalls: snapshotToolCalls(ctx.toolCallsRef),
-        thinkingText: savedThinking,
-        thinkingDurationMs: savedThinkingDuration,
-      },
-    ]);
-  }
+  const { savedThinking, savedThinkingDuration } = snapshotThinking(
+    ctx.thinkingBufferRef, ctx.thinkingStartRef,
+  );
+  const prefix = ctx.streamBufferRef.current
+    ? ctx.streamBufferRef.current + "\n\n"
+    : "";
+  ctx.setMessages((prev) => [
+    ...prev,
+    {
+      id: `error-${Date.now()}`,
+      role: "assistant",
+      content: prefix + `*Error: ${message}*`,
+      toolCalls: snapshotToolCalls(ctx.toolCallsRef),
+      thinkingText: savedThinking,
+      thinkingDurationMs: savedThinkingDuration,
+    },
+  ]);
   resetStreamBuffers(ctx);
 }
 
