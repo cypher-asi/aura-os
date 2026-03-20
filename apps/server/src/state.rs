@@ -28,6 +28,7 @@ use aura_store::RocksStore;
 use crate::error::ApiError;
 
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
+pub type TaskStepBuffers = Arc<std::sync::Mutex<HashMap<TaskId, (Vec<serde_json::Value>, Vec<serde_json::Value>)>>>;
 
 /// Tracks all active agent loops across projects.
 pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
@@ -55,6 +56,7 @@ pub struct AppState {
     pub loop_registry: LoopRegistry,
     pub write_coordinator: ProjectWriteCoordinator,
     pub task_output_buffers: TaskOutputBuffers,
+    pub task_step_buffers: TaskStepBuffers,
     pub terminal_manager: Arc<TerminalManager>,
     /// Optional aura-network client. `None` when `AURA_NETWORK_URL` is not set.
     pub network_client: Option<Arc<NetworkClient>>,

@@ -18,7 +18,7 @@ use tokio::time::{interval, Duration};
 use tracing::{debug, info, warn};
 
 use crate::loop_log::LoopLogWriter;
-use crate::state::TaskOutputBuffers;
+use crate::state::{TaskOutputBuffers, TaskStepBuffers};
 
 use aura_core::ZeroAuthSession;
 use aura_engine::EngineEvent;
@@ -149,6 +149,7 @@ fn spawn_event_rebroadcast(
     store: Arc<RocksStore>,
     storage_client: Option<Arc<StorageClient>>,
     task_output_buffers: TaskOutputBuffers,
+    task_step_buffers: TaskStepBuffers,
     loop_log: Arc<LoopLogWriter>,
 ) {
     tokio::spawn(async move {
@@ -186,6 +187,30 @@ fn spawn_event_rebroadcast(
                                 agent_instance_id: *agent_instance_id,
                                 session_id: *session_id,
                             });
+                            if let Ok(mut steps) = task_step_buffers.lock() {
+                                steps.remove(task_id);
+                            }
+                        }
+                        EngineEvent::BuildVerificationSkipped { task_id, .. }
+                        | EngineEvent::BuildVerificationStarted { task_id, .. }
+                        | EngineEvent::BuildVerificationPassed { task_id, .. }
+                        | EngineEvent::BuildVerificationFailed { task_id, .. }
+                        | EngineEvent::BuildFixAttempt { task_id, .. } => {
+                            if let Ok(val) = serde_json::to_value(&event) {
+                                if let Ok(mut steps) = task_step_buffers.lock() {
+                                    steps.entry(*task_id).or_default().0.push(val);
+                                }
+                            }
+                        }
+                        EngineEvent::TestVerificationStarted { task_id, .. }
+                        | EngineEvent::TestVerificationPassed { task_id, .. }
+                        | EngineEvent::TestVerificationFailed { task_id, .. }
+                        | EngineEvent::TestFixAttempt { task_id, .. } => {
+                            if let Ok(val) = serde_json::to_value(&event) {
+                                if let Ok(mut steps) = task_step_buffers.lock() {
+                                    steps.entry(*task_id).or_default().1.push(val);
+                                }
+                            }
                         }
                         EngineEvent::TaskCompleted { task_id, .. }
                         | EngineEvent::TaskFailed { task_id, .. } => {
@@ -194,6 +219,11 @@ fn spawn_event_rebroadcast(
                             } else {
                                 String::new()
                             };
+                            let (build_steps, test_steps) = if let Ok(mut steps) = task_step_buffers.lock() {
+                                steps.remove(task_id).unwrap_or_default()
+                            } else {
+                                (Vec::new(), Vec::new())
+                            };
                             task_output_for_log = Some((*task_id, output.clone()));
 
                             if let Some(ref sc) = storage_client {
@@ -201,6 +231,7 @@ fn spawn_event_rebroadcast(
                                     persist_task_to_storage(
                                         sc, &jwt, &event, &output,
                                         task_session_map.get(task_id),
+                                        &build_steps, &test_steps,
                                     ).await;
                                 }
                             }
@@ -210,6 +241,9 @@ fn spawn_event_rebroadcast(
                         EngineEvent::LoopStopped { .. } | EngineEvent::LoopFinished { .. } => {
                             task_session_map.clear();
                             finalize_all_live_output(&store, &task_output_buffers);
+                            if let Ok(mut steps) = task_step_buffers.lock() {
+                                steps.clear();
+                            }
                         }
                         _ => {}
                     }
@@ -338,6 +372,8 @@ async fn persist_task_to_storage(
     event: &EngineEvent,
     live_output: &str,
     session_entry: Option<&TaskSessionEntry>,
+    build_steps: &[serde_json::Value],
+    test_steps: &[serde_json::Value],
 ) {
     match event {
         EngineEvent::TaskCompleted {
@@ -435,6 +471,35 @@ async fn persist_task_to_storage(
                 warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task output as session message");
             } else {
                 info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task output as session message");
+            }
+        }
+
+        if !build_steps.is_empty() || !test_steps.is_empty() {
+            let task_id = match event {
+                EngineEvent::TaskCompleted { task_id, .. }
+                | EngineEvent::TaskFailed { task_id, .. } => task_id,
+                _ => return,
+            };
+            let steps_payload = serde_json::json!({
+                "_type": "task_steps",
+                "build_steps": build_steps,
+                "test_steps": test_steps,
+            });
+            let steps_msg = aura_storage::CreateMessageRequest {
+                project_agent_id: entry.agent_instance_id.to_string(),
+                project_id: entry.project_id.to_string(),
+                role: "system".to_string(),
+                content: steps_payload.to_string(),
+                input_tokens: None,
+                output_tokens: None,
+            };
+            if let Err(e) = storage
+                .create_message(&entry.session_id.to_string(), jwt, &steps_msg)
+                .await
+            {
+                warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task steps as session message");
+            } else {
+                info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task build/test steps as session message");
             }
         }
     }
@@ -594,6 +659,8 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(4096);
     let task_output_buffers: TaskOutputBuffers =
         Arc::new(std::sync::Mutex::new(HashMap::new()));
+    let task_step_buffers: TaskStepBuffers =
+        Arc::new(std::sync::Mutex::new(HashMap::new()));
 
     let loop_log_dir = std::env::var("AURA_LOOP_LOG_DIR")
         .ok()
@@ -608,6 +675,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         store.clone(),
         storage_client.clone(),
         task_output_buffers.clone(),
+        task_step_buffers.clone(),
         loop_log,
     );
 
@@ -682,6 +750,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         loop_registry: Arc::new(Mutex::new(HashMap::new())),
         write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
+        task_step_buffers,
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
         storage_client,

@@ -24,6 +24,7 @@ const EVENT_LABELS: Record<EngineEventType, string> = {
   task_failed: "Task",
   task_retrying: "Task",
   task_became_ready: "Task",
+  tasks_became_ready: "Task",
   task_output_delta: "Output",
   file_ops_applied: "Files",
   follow_up_task_created: "Task",
@@ -137,6 +138,8 @@ function summariseTaskEvent(e: EngineEvent): string {
       return `Retrying: ${e.task_id} (attempt ${e.attempt ?? "?"})`;
     case "task_became_ready":
       return `Task ready: ${e.task_id}`;
+    case "tasks_became_ready":
+      return `Tasks ready: ${(e.task_ids ?? []).length} task(s)`;
     case "task_output_delta":
       return `Output: ${(e.delta ?? "").slice(0, 80)}`;
     case "file_ops_applied":
@@ -240,6 +243,7 @@ function summarise(e: EngineEvent): string {
     case "task_failed":
     case "task_retrying":
     case "task_became_ready":
+    case "tasks_became_ready":
     case "task_output_delta":
     case "file_ops_applied":
     case "follow_up_task_created":
@@ -328,6 +332,7 @@ export function useLogStream() {
       "task_failed",
       "task_retrying",
       "task_became_ready",
+      "tasks_became_ready",
       "task_output_delta",
       "file_ops_applied",
       "follow_up_task_created",

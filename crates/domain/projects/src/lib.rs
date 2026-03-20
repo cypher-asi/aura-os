@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use tracing::debug;
 
 use aura_core::*;
 use aura_network::NetworkClient;
@@ -34,6 +35,15 @@ fn network_project_to_core(
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
+
+    let folder = net.folder.clone().unwrap_or_default();
+    debug!(
+        project_id = %net.id,
+        name = %net.name,
+        network_folder = ?net.folder,
+        resolved_folder = %folder,
+        "network_project_to_core"
+    );
 
     Project {
         project_id,

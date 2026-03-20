@@ -26,6 +26,9 @@ fn parse_task_status(s: &str) -> TaskStatus {
 }
 
 pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
+    let status = parse_task_status(s.status.as_deref().unwrap_or("pending"));
+    let assigned_id = s.assigned_project_agent_id.as_deref().and_then(|id| id.parse().ok());
+    let completed_id = if status == TaskStatus::Done { assigned_id } else { None };
     Ok(Task {
         task_id: s.id.parse().map_err(|e| format!("invalid task id: {e}"))?,
         project_id: s
@@ -42,7 +45,7 @@ pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
             .map_err(|e| format!("invalid spec id: {e}"))?,
         title: s.title.unwrap_or_default(),
         description: s.description.unwrap_or_default(),
-        status: parse_task_status(s.status.as_deref().unwrap_or("pending")),
+        status,
         order_index: s.order_index.unwrap_or(0) as u32,
         dependency_ids: s
             .dependency_ids
@@ -51,10 +54,8 @@ pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
             .filter_map(|id| id.parse().ok())
             .collect(),
         parent_task_id: None,
-        assigned_agent_instance_id: s
-            .assigned_project_agent_id
-            .and_then(|id| id.parse().ok()),
-        completed_by_agent_instance_id: None,
+        assigned_agent_instance_id: assigned_id,
+        completed_by_agent_instance_id: completed_id,
         session_id: s.session_id.and_then(|id| id.parse().ok()),
         execution_notes: s.execution_notes.unwrap_or_default(),
         files_changed: s
@@ -447,6 +448,10 @@ async fn aggregate_repo_metrics(
 #[derive(Serialize)]
 pub struct TaskOutputResponse {
     pub output: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub build_steps: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub test_steps: Vec<serde_json::Value>,
 }
 
 pub async fn get_task_output(
@@ -462,7 +467,13 @@ pub async fn get_task_output(
         .unwrap_or_default();
 
     if !output.is_empty() {
-        return Ok(Json(TaskOutputResponse { output }));
+        let (build_steps, test_steps) = state
+            .task_step_buffers
+            .lock()
+            .ok()
+            .and_then(|s| s.get(&task_id).cloned())
+            .unwrap_or_default();
+        return Ok(Json(TaskOutputResponse { output, build_steps, test_steps }));
     }
 
     if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {
@@ -475,8 +486,28 @@ pub async fn get_task_output(
                         .filter_map(|m| m.content.as_deref())
                         .collect::<Vec<_>>()
                         .join("\n");
-                    if !content.is_empty() {
-                        return Ok(Json(TaskOutputResponse { output: content }));
+
+                    let (mut build_steps, mut test_steps) = (Vec::new(), Vec::new());
+                    for msg in &msgs {
+                        if msg.role.as_deref() != Some("system") {
+                            continue;
+                        }
+                        if let Some(content) = msg.content.as_deref() {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
+                                if val.get("_type").and_then(|t| t.as_str()) == Some("task_steps") {
+                                    if let Some(bs) = val.get("build_steps").and_then(|v| v.as_array()) {
+                                        build_steps = bs.clone();
+                                    }
+                                    if let Some(ts) = val.get("test_steps").and_then(|v| v.as_array()) {
+                                        test_steps = ts.clone();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if !content.is_empty() || !build_steps.is_empty() || !test_steps.is_empty() {
+                        return Ok(Json(TaskOutputResponse { output: content, build_steps, test_steps }));
                     }
                 }
             }
@@ -485,6 +516,8 @@ pub async fn get_task_output(
 
     Ok(Json(TaskOutputResponse {
         output: String::new(),
+        build_steps: Vec::new(),
+        test_steps: Vec::new(),
     }))
 }
 

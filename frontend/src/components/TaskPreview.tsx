@@ -409,7 +409,41 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
       } else {
         hydratedRef.current = task.task_id;
         api.getTaskOutput(projectId, task.task_id).then((res) => {
-          if (res.output) seedTaskOutput(task.task_id, res.output);
+          const buildKindMap: Record<string, BuildStep["kind"]> = {
+            build_verification_skipped: "skipped",
+            build_verification_started: "started",
+            build_verification_passed: "passed",
+            build_verification_failed: "failed",
+            build_fix_attempt: "fix_attempt",
+          };
+          const testKindMap: Record<string, TestStep["kind"]> = {
+            test_verification_started: "started",
+            test_verification_passed: "passed",
+            test_verification_failed: "failed",
+            test_fix_attempt: "fix_attempt",
+          };
+          const loadedBuildSteps = res.build_steps?.map((s: Record<string, unknown>) => ({
+            kind: (buildKindMap[(s.type as string) ?? ""] ?? s.kind ?? "started") as BuildStep["kind"],
+            command: s.command as string | undefined,
+            stderr: s.stderr as string | undefined,
+            stdout: s.stdout as string | undefined,
+            attempt: s.attempt as number | undefined,
+            reason: (s.type === "build_verification_skipped" || s.kind === "skipped") ? (s.reason as string ?? s.stdout as string ?? undefined) : undefined,
+            timestamp: 0,
+          }));
+          const loadedTestSteps = res.test_steps?.map((s: Record<string, unknown>) => ({
+            kind: (testKindMap[(s.type as string) ?? ""] ?? s.kind ?? "started") as TestStep["kind"],
+            command: s.command as string | undefined,
+            stderr: s.stderr as string | undefined,
+            stdout: s.stdout as string | undefined,
+            attempt: s.attempt as number | undefined,
+            tests: (s.tests as { name: string; status: string; message?: string }[]) ?? [],
+            summary: s.summary as string | undefined,
+            timestamp: 0,
+          }));
+          if (res.output || loadedBuildSteps?.length || loadedTestSteps?.length) {
+            seedTaskOutput(task.task_id, res.output, loadedBuildSteps, loadedTestSteps);
+          }
         }).catch((err) => console.warn("Failed to load task output:", err));
       }
     }

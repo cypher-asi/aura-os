@@ -109,6 +109,9 @@ fn parse_task_status(s: &str) -> TaskStatus {
 }
 
 pub fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
+    let status = parse_task_status(s.status.as_deref().unwrap_or("pending"));
+    let assigned_id = s.assigned_project_agent_id.as_deref().and_then(|id| id.parse().ok());
+    let completed_id = if status == TaskStatus::Done { assigned_id } else { None };
     Ok(Task {
         task_id: s.id.parse().map_err(|e| format!("invalid task id: {e}"))?,
         project_id: s
@@ -125,7 +128,7 @@ pub fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
             .map_err(|e| format!("invalid spec id: {e}"))?,
         title: s.title.unwrap_or_default(),
         description: s.description.unwrap_or_default(),
-        status: parse_task_status(s.status.as_deref().unwrap_or("pending")),
+        status,
         order_index: s.order_index.unwrap_or(0) as u32,
         dependency_ids: s
             .dependency_ids
@@ -134,10 +137,8 @@ pub fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
             .filter_map(|id| id.parse().ok())
             .collect(),
         parent_task_id: None,
-        assigned_agent_instance_id: s
-            .assigned_project_agent_id
-            .and_then(|id| id.parse().ok()),
-        completed_by_agent_instance_id: None,
+        assigned_agent_instance_id: assigned_id,
+        completed_by_agent_instance_id: completed_id,
         session_id: s.session_id.and_then(|id| id.parse().ok()),
         execution_notes: s.execution_notes.unwrap_or_default(),
         files_changed: s

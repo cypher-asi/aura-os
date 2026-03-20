@@ -26,6 +26,8 @@ import type {
   CheckoutSessionResponse,
   DailyCommitActivity,
   Follow,
+  BuildStepRecord,
+  TestStepRecord,
 } from "../types";
 import {
   generateSpecsStream,
@@ -326,7 +328,7 @@ export const api = {
   getProgress: (projectId: ProjectId) =>
     apiFetch<ProjectProgress>(`/api/projects/${projectId}/progress`),
   getTaskOutput: (projectId: ProjectId, taskId: TaskId) =>
-    apiFetch<{ output: string }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
+    apiFetch<{ output: string; build_steps?: BuildStepRecord[]; test_steps?: TestStepRecord[] }>(`/api/projects/${projectId}/tasks/${taskId}/output`),
 
   // Sessions (project-level)
   listProjectSessions: (projectId: ProjectId) =>

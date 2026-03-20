@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import type { ProjectProgress, ProjectId } from "../types";
+import type { EngineEvent } from "../types/events";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 
@@ -63,7 +64,19 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
           };
         });
       }),
-      subscribe("follow_up_task_created", () => {
+      subscribe("tasks_became_ready", (e: EngineEvent) => {
+        const count = e.task_ids?.length ?? 0;
+        if (count === 0) return;
+        setProgress((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            ready_tasks: prev.ready_tasks + count,
+            pending_tasks: Math.max(0, prev.pending_tasks - count),
+          };
+        });
+      }),
+      subscribe("follow_up_task_created", (_e: EngineEvent) => {
         setProgress((prev) => {
           if (!prev) return prev;
           const total = prev.total_tasks + 1;

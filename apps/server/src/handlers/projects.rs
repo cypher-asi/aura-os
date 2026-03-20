@@ -12,6 +12,8 @@ use aura_core::{OrgId, Project, ProjectId, ProjectStatus, UserId};
 use aura_network::NetworkProject;
 use aura_projects::{CreateProjectInput, UpdateProjectInput};
 
+use tracing::debug;
+
 use crate::dto::{
     CreateImportedProjectRequest, CreateProjectRequest, ImportedProjectFile, UpdateProjectRequest,
 };
@@ -45,6 +47,15 @@ fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Projec
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
 
+    let folder = net.folder.clone().unwrap_or_default();
+    debug!(
+        project_id = %net.id,
+        name = %net.name,
+        network_folder = ?net.folder,
+        resolved_folder = %folder,
+        "project_from_network"
+    );
+
     Project {
         project_id,
         org_id,
@@ -56,7 +67,7 @@ fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> Projec
             .unwrap_or_default(),
         linked_folder_path: local
             .map(|project| project.linked_folder_path.clone())
-            .unwrap_or_else(|| net.folder.clone().unwrap_or_default()),
+            .unwrap_or(folder),
         workspace_source: local.and_then(|project| project.workspace_source.clone()),
         workspace_display_path: local.and_then(|project| project.workspace_display_path.clone()),
         requirements_doc_path: local.and_then(|project| project.requirements_doc_path.clone()),
@@ -283,6 +294,9 @@ pub async fn create_project(
 ) -> ApiResult<(StatusCode, Json<Project>)> {
     if req.name.trim().is_empty() {
         return Err(ApiError::bad_request("name must not be empty"));
+    }
+    if req.linked_folder_path.trim().is_empty() {
+        return Err(ApiError::bad_request("linked_folder_path must not be empty"));
     }
 
     if let Some(client) = &state.network_client {
