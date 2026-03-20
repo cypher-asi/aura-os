@@ -4,7 +4,7 @@ import { PanelSearch } from "../components/PanelSearch";
 import { FileExplorer } from "../components/FileExplorer";
 import { useProjectContext } from "../context/ProjectContext";
 import { useProjectsList } from "../apps/projects/useProjectsList";
-import { getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
+import { getProjectWorkspaceRoot } from "../utils/projectWorkspace";
 
 export function ProjectFilesView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -12,7 +12,7 @@ export function ProjectFilesView() {
   const { projectId } = useParams<{ projectId: string }>();
   const { projects } = useProjectsList();
   const project = ctx?.project ?? projects.find((candidate) => candidate.project_id === projectId) ?? null;
-  const rootPath = getLinkedWorkspaceRoot(project);
+  const rootPath = getProjectWorkspaceRoot(project);
 
   return (
     <div

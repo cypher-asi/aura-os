@@ -290,23 +290,26 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (pathname === `/api/projects/${project.project_id}/stop-loop`) return json({ ok: true });
     if (pathname === "/api/log-entries") return json([]);
     if (pathname === "/api/list-directory") {
+      const workspaceRoot = typeof project.linked_folder_path === "string" && project.linked_folder_path.length > 0
+        ? project.linked_folder_path
+        : "/tmp/demo-project";
       return json({
         ok: true,
         entries: [
           {
-            path: "/tmp/demo-project/src",
+            path: `${workspaceRoot}/src`,
             name: "src",
             is_dir: true,
             children: [
               {
-                path: "/tmp/demo-project/src/auth.ts",
+                path: `${workspaceRoot}/src/auth.ts`,
                 name: "auth.ts",
                 is_dir: false,
               },
             ],
           },
           {
-            path: "/tmp/demo-project/README.md",
+            path: `${workspaceRoot}/README.md`,
             name: "README.md",
             is_dir: false,
           },

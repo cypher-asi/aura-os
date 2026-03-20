@@ -62,7 +62,7 @@ const specs = [
 
 async function mockAuthenticatedMobileApp(
   page: import("@playwright/test").Page,
-  options: { orgsUnavailable?: boolean } = {},
+  options: { orgsUnavailable?: boolean; withAgentInstance?: boolean } = {},
 ) {
   const agentInstance = {
     agent_instance_id: "agent-inst-1",
@@ -111,7 +111,7 @@ async function mockAuthenticatedMobileApp(
   ];
 
   await mockAuthenticatedApp(page, {
-    agentInstances: [agentInstance],
+    agentInstances: options.withAgentInstance === false ? [] : [agentInstance],
     agents,
     tasks,
     specs,
@@ -163,8 +163,8 @@ test("mobile root uses project drawer plus the four-tab primary navigation", asy
   await openProjectDrawer(page);
   await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
   await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "Execution" })).toHaveCount(0);
+  await expect(page.getByRole("treeitem", { name: "Builder Bot" })).toHaveCount(0);
 });
 
 test("mobile primary navigation opens shared agent, work, files, and feed routes", async ({ page }) => {
@@ -196,20 +196,57 @@ test("mobile primary navigation opens shared agent, work, files, and feed routes
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
 });
 
-test("mobile project title opens the drawer and back returns to the project root state", async ({ page }) => {
+test("mobile files view shows imported workspace snapshots", async ({ page }) => {
+  await mockAuthenticatedApp(page, {
+    project: {
+      project_id: "proj-1",
+      org_id: "org-1",
+      name: "Imported Project",
+      description: "Imported workspace project",
+      linked_folder_path: "/tmp/imported-workspaces/proj-1/workspace",
+      workspace_source: "imported",
+      workspace_display_path: "Imported workspace snapshot",
+      current_status: "active",
+      created_at: "2026-03-17T01:00:00.000Z",
+      updated_at: "2026-03-17T01:00:00.000Z",
+    },
+    tasks,
+    specs,
+  });
+
+  await page.goto("/projects/proj-1/files");
+
+  await expect(page.getByPlaceholder("Search files...")).toBeVisible();
+  await expect(page.getByText("No linked workspace")).toHaveCount(0);
+  await expect(page.getByText("README.md")).toBeVisible();
+  await expect(page.getByText("auth.ts")).toBeVisible();
+});
+
+test("mobile agent tab shows a project empty state when no agent exists", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page, { withAgentInstance: false });
+  await page.goto("/projects");
+
+  await tapPrimaryNav(page, "Agent");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agent$/);
+  await expect(page.getByText("No agent is assigned yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Tasks" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Files" })).toBeVisible();
+});
+
+test("mobile project title opens the drawer from the primary project tabs", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects/proj-1/work");
 
   await expect(page.getByRole("button", { name: /Open project navigation for Demo Project/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to project" })).toHaveCount(0);
   await openProjectDrawer(page, "Demo Project");
+  await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
   await expect(page.getByRole("treeitem", { name: "Execution" })).toBeVisible();
   await page.getByRole("button", { name: "Close drawer" }).dispatchEvent("click");
   await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toBeVisible();
 
   await tapPrimaryNav(page, "Agent");
-  await expect(page.getByRole("button", { name: "Back to project" })).toBeVisible();
-  await page.getByRole("button", { name: "Back to project" }).click();
-  await expect(page).toHaveURL(/\/projects\/proj-1$/);
+  await expect(page.getByRole("button", { name: "Back to project" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Open project navigation for Demo Project/i })).toBeVisible();
 });
 
