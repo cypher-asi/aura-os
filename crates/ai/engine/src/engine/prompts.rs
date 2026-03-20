@@ -280,7 +280,10 @@ pub(crate) fn build_agentic_task_context(
 
     if !work_log_summary.is_empty() {
         ctx.push_str(&format!(
-            "# Session Progress (tasks completed so far)\n{}\n\n",
+            "# Session Progress (tasks completed so far)\n{}\n\n\
+             IMPORTANT: Review the completed tasks above. If your task's work was already done \
+             by a prior task (e.g. the struct/module/function already exists), verify quickly with \
+             search_code or read_file and call task_done immediately instead of re-implementing.\n\n",
             work_log_summary
         ));
     }
