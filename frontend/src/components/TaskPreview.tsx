@@ -402,41 +402,18 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
       timestamp: 0,
     }));
 
-    if (isTerminal) {
+    if (isTerminal || isActive) {
       if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
         hydratedRef.current = task.task_id;
         seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
-      } else if (effectiveSessionId) {
+      } else {
         hydratedRef.current = task.task_id;
-        const loadMessages = async () => {
-          let agentId = task.assigned_agent_instance_id;
-          if (!agentId) {
-            const instances = await api.listAgentInstances(projectId);
-            if (instances.length > 0) agentId = instances[0].agent_instance_id;
-          }
-          if (!agentId) return;
-          const messages = await api.listSessionMessages(projectId, agentId, effectiveSessionId);
-          const assistantMsgs = messages.filter((m) => m.role === "assistant");
-          const content = assistantMsgs.map((m) => m.content).join("\n");
-          if (content) seedTaskOutput(task.task_id, content);
-        };
-        loadMessages().catch(() => {});
+        api.getTaskOutput(projectId, task.task_id).then((res) => {
+          if (res.output) seedTaskOutput(task.task_id, res.output);
+        }).catch((err) => console.warn("Failed to load task output:", err));
       }
-      return;
     }
-
-    if (!isActive) return;
-    hydratedRef.current = task.task_id;
-
-    if (task.live_output) {
-      seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
-      return;
-    }
-
-    api.getTaskOutput(projectId, task.task_id).then((res) => {
-      if (res.output) seedTaskOutput(task.task_id, res.output);
-    }).catch(() => {});
-  }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput, effectiveSessionId, task.assigned_agent_instance_id]);
+  }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
 
   const hasOutput = isActive || isTerminal;
   const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
