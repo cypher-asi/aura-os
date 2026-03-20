@@ -13,4 +13,7 @@ pub enum StorageError {
 
     #[error("aura-storage is not configured (AURA_STORAGE_URL not set)")]
     NotConfigured,
+
+    #[error("validation error: {0}")]
+    Validation(String),
 }

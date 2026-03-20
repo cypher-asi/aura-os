@@ -96,7 +96,10 @@ impl ChatToolExecutor {
             .unwrap_or(0)
             .min(10) as usize;
 
-        let regex = match regex::Regex::new(&pattern) {
+        let regex = match regex::RegexBuilder::new(&pattern)
+            .size_limit(1_000_000) // 1 MB compiled size limit to prevent ReDoS
+            .build()
+        {
             Ok(r) => r,
             Err(e) => return ToolExecResult::err(format!("Invalid regex: {e}")),
         };

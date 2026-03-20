@@ -6,6 +6,24 @@ use tracing::info;
 use crate::error::StorageError;
 use crate::types::*;
 
+/// Validate that a string ID is safe to interpolate into a URL path.
+/// Accepts UUID format (hex digits and hyphens) to prevent path traversal or injection.
+fn validate_url_id(id: &str, label: &str) -> Result<(), StorageError> {
+    if id.is_empty() {
+        return Err(StorageError::Validation(format!("{label} is empty")));
+    }
+    let valid = id.len() <= 64
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-');
+    if !valid {
+        return Err(StorageError::Validation(format!(
+            "{label} contains invalid characters: {id}"
+        )));
+    }
+    Ok(())
+}
+
 /// HTTP client for the aura-storage shared backend service.
 ///
 /// Wraps `reqwest` with typed methods for each aura-storage API endpoint.
@@ -29,7 +47,7 @@ impl StorageClient {
         info!(%base_url, "aura-storage client configured");
 
         Some(Self {
-            http: Client::new(),
+            http: Self::build_http_client(),
             base_url,
         })
     }
@@ -37,9 +55,17 @@ impl StorageClient {
     /// Create a client with an explicit base URL (e.g. for tests or custom deployment).
     pub fn with_base_url(base_url: &str) -> Self {
         Self {
-            http: Client::new(),
+            http: Self::build_http_client(),
             base_url: base_url.trim_end_matches('/').to_string(),
         }
+    }
+
+    fn build_http_client() -> Client {
+        Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| Client::new())
     }
 
     pub fn base_url(&self) -> &str {
@@ -74,6 +100,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateProjectAgentRequest,
     ) -> Result<StorageProjectAgent, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.post_authed(
             &format!("{}/api/projects/{}/agents", self.base_url, project_id),
             jwt,
@@ -87,6 +114,7 @@ impl StorageClient {
         project_id: &str,
         jwt: &str,
     ) -> Result<Vec<StorageProjectAgent>, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.get_authed(
             &format!("{}/api/projects/{}/agents", self.base_url, project_id),
             jwt,
@@ -99,6 +127,7 @@ impl StorageClient {
         project_agent_id: &str,
         jwt: &str,
     ) -> Result<StorageProjectAgent, StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
         self.get_authed(
             &format!("{}/api/project-agents/{}", self.base_url, project_agent_id),
             jwt,
@@ -112,6 +141,7 @@ impl StorageClient {
         jwt: &str,
         req: &UpdateProjectAgentRequest,
     ) -> Result<(), StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
         self.put_authed_no_response(
             &format!("{}/api/project-agents/{}", self.base_url, project_agent_id),
             jwt,
@@ -125,6 +155,7 @@ impl StorageClient {
         project_agent_id: &str,
         jwt: &str,
     ) -> Result<(), StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
         self.delete_authed(
             &format!("{}/api/project-agents/{}", self.base_url, project_agent_id),
             jwt,
@@ -142,6 +173,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateSpecRequest,
     ) -> Result<StorageSpec, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.post_authed(
             &format!("{}/api/projects/{}/specs", self.base_url, project_id),
             jwt,
@@ -155,6 +187,7 @@ impl StorageClient {
         project_id: &str,
         jwt: &str,
     ) -> Result<Vec<StorageSpec>, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.get_authed(
             &format!("{}/api/projects/{}/specs", self.base_url, project_id),
             jwt,
@@ -167,6 +200,7 @@ impl StorageClient {
         spec_id: &str,
         jwt: &str,
     ) -> Result<StorageSpec, StorageError> {
+        validate_url_id(spec_id, "spec_id")?;
         self.get_authed(
             &format!("{}/api/specs/{}", self.base_url, spec_id),
             jwt,
@@ -180,6 +214,7 @@ impl StorageClient {
         jwt: &str,
         req: &UpdateSpecRequest,
     ) -> Result<(), StorageError> {
+        validate_url_id(spec_id, "spec_id")?;
         self.put_authed_no_response(
             &format!("{}/api/specs/{}", self.base_url, spec_id),
             jwt,
@@ -193,6 +228,7 @@ impl StorageClient {
         spec_id: &str,
         jwt: &str,
     ) -> Result<(), StorageError> {
+        validate_url_id(spec_id, "spec_id")?;
         self.delete_authed(
             &format!("{}/api/specs/{}", self.base_url, spec_id),
             jwt,
@@ -210,6 +246,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateTaskRequest,
     ) -> Result<StorageTask, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.post_authed(
             &format!("{}/api/projects/{}/tasks", self.base_url, project_id),
             jwt,
@@ -223,6 +260,7 @@ impl StorageClient {
         project_id: &str,
         jwt: &str,
     ) -> Result<Vec<StorageTask>, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         self.get_authed(
             &format!("{}/api/projects/{}/tasks", self.base_url, project_id),
             jwt,
@@ -235,6 +273,7 @@ impl StorageClient {
         task_id: &str,
         jwt: &str,
     ) -> Result<StorageTask, StorageError> {
+        validate_url_id(task_id, "task_id")?;
         self.get_authed(
             &format!("{}/api/tasks/{}", self.base_url, task_id),
             jwt,
@@ -251,6 +290,7 @@ impl StorageClient {
         // Forward the full typed payload so any optional execution fields
         // (execution_notes/files_changed/model/token totals) are persisted
         // whenever callers provide them.
+        validate_url_id(task_id, "task_id")?;
         self.put_authed_no_response(
             &format!("{}/api/tasks/{}", self.base_url, task_id),
             jwt,
@@ -265,6 +305,7 @@ impl StorageClient {
         jwt: &str,
         req: &TransitionTaskRequest,
     ) -> Result<(), StorageError> {
+        validate_url_id(task_id, "task_id")?;
         let url = format!("{}/api/tasks/{}/transition", self.base_url, task_id);
         let resp = self
             .http
@@ -289,6 +330,7 @@ impl StorageClient {
         task_id: &str,
         jwt: &str,
     ) -> Result<(), StorageError> {
+        validate_url_id(task_id, "task_id")?;
         self.delete_authed(
             &format!("{}/api/tasks/{}", self.base_url, task_id),
             jwt,
@@ -306,6 +348,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateSessionRequest,
     ) -> Result<StorageSession, StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
         self.post_authed(
             &format!(
                 "{}/api/project-agents/{}/sessions",
@@ -322,6 +365,7 @@ impl StorageClient {
         project_agent_id: &str,
         jwt: &str,
     ) -> Result<Vec<StorageSession>, StorageError> {
+        validate_url_id(project_agent_id, "project_agent_id")?;
         self.get_authed(
             &format!(
                 "{}/api/project-agents/{}/sessions",
@@ -337,6 +381,7 @@ impl StorageClient {
         session_id: &str,
         jwt: &str,
     ) -> Result<StorageSession, StorageError> {
+        validate_url_id(session_id, "session_id")?;
         self.get_authed(
             &format!("{}/api/sessions/{}", self.base_url, session_id),
             jwt,
@@ -350,6 +395,7 @@ impl StorageClient {
         jwt: &str,
         req: &UpdateSessionRequest,
     ) -> Result<(), StorageError> {
+        validate_url_id(session_id, "session_id")?;
         self.put_authed_no_response(
             &format!("{}/api/sessions/{}", self.base_url, session_id),
             jwt,
@@ -368,6 +414,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateMessageRequest,
     ) -> Result<StorageMessage, StorageError> {
+        validate_url_id(session_id, "session_id")?;
         self.post_authed(
             &format!("{}/api/sessions/{}/messages", self.base_url, session_id),
             jwt,
@@ -383,6 +430,7 @@ impl StorageClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<StorageMessage>, StorageError> {
+        validate_url_id(session_id, "session_id")?;
         let mut url = format!("{}/api/sessions/{}/messages", self.base_url, session_id);
         let mut params = Vec::new();
         if let Some(l) = limit {
@@ -408,6 +456,7 @@ impl StorageClient {
         jwt: &str,
         req: &CreateLogEntryRequest,
     ) -> Result<(), StorageError> {
+        validate_url_id(project_id, "project_id")?;
         let url = format!("{}/api/projects/{}/logs", self.base_url, project_id);
         let resp = self
             .http
@@ -435,6 +484,7 @@ impl StorageClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<Vec<StorageLogEntry>, StorageError> {
+        validate_url_id(project_id, "project_id")?;
         let mut url = format!("{}/api/projects/{}/logs", self.base_url, project_id);
         let mut params = Vec::new();
         if let Some(l) = level {
