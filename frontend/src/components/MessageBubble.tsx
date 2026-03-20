@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -375,12 +375,17 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
   );
 }
 
-export function MessageBubble({ message }: Props) {
+export const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
   const hasContentBlocks = message.contentBlocks && message.contentBlocks.length > 0;
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
+
+  const normalizedContent = useMemo(
+    () => (hasContent ? normalizeMidSentenceBreaks(stripEmojis(message.content)) : ""),
+    [hasContent, message.content],
+  );
 
   if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking && !hasArtifactRefs) return null;
 
@@ -443,7 +448,7 @@ export function MessageBubble({ message }: Props) {
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 rehypePlugins={[rehypeHighlight]}
               >
-                {normalizeMidSentenceBreaks(stripEmojis(message.content))}
+                {normalizedContent}
               </ReactMarkdown>
             )}
           </div>
@@ -451,7 +456,7 @@ export function MessageBubble({ message }: Props) {
       </div>
     </div>
   );
-}
+});
 
 interface StreamingBubbleProps {
   text: string;
