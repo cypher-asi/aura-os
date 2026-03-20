@@ -98,62 +98,9 @@ impl TaskService {
     }
 }
 
-fn parse_task_status(s: &str) -> TaskStatus {
-    serde_json::from_str(&format!("\"{s}\"")).unwrap_or(TaskStatus::Pending)
-}
-
+/// Convert a `StorageTask` into a domain `Task`.
+///
+/// Delegates to the canonical `TryFrom<StorageTask>` impl in `aura_storage`.
 pub fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
-    let status = parse_task_status(s.status.as_deref().unwrap_or("pending"));
-    let assigned_id = s.assigned_project_agent_id.as_deref().and_then(|id| id.parse().ok());
-    let completed_id = if status == TaskStatus::Done { assigned_id } else { None };
-    Ok(Task {
-        task_id: s.id.parse().map_err(|e| format!("invalid task id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project id: {e}"))?,
-        spec_id: s
-            .spec_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid spec id: {e}"))?,
-        title: s.title.unwrap_or_default(),
-        description: s.description.unwrap_or_default(),
-        status,
-        order_index: s.order_index.unwrap_or(0) as u32,
-        dependency_ids: s
-            .dependency_ids
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|id| id.parse().ok())
-            .collect(),
-        parent_task_id: None,
-        assigned_agent_instance_id: assigned_id,
-        completed_by_agent_instance_id: completed_id,
-        session_id: s.session_id.and_then(|id| id.parse().ok()),
-        execution_notes: s.execution_notes.unwrap_or_default(),
-        files_changed: s
-            .files_changed
-            .unwrap_or_default()
-            .into_iter()
-            .map(|f| FileChangeSummary {
-                op: f.op,
-                path: f.path,
-                lines_added: f.lines_added,
-                lines_removed: f.lines_removed,
-            })
-            .collect(),
-        live_output: String::new(),
-        build_steps: vec![],
-        test_steps: vec![],
-        user_id: None,
-        model: s.model,
-        total_input_tokens: s.total_input_tokens.unwrap_or(0),
-        total_output_tokens: s.total_output_tokens.unwrap_or(0),
-        created_at: parse_dt(&s.created_at),
-        updated_at: parse_dt(&s.updated_at),
-    })
+    Task::try_from(s)
 }

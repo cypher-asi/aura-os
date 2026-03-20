@@ -3,7 +3,7 @@ pub use error::SessionError;
 
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use tracing::warn;
 
 use aura_core::*;
@@ -21,58 +21,26 @@ pub struct SessionService {
     model_context_window: u64,
 }
 
-pub fn parse_session_status(s: &str) -> SessionStatus {
-    match s {
-        "active" => SessionStatus::Active,
-        "completed" => SessionStatus::Completed,
-        "failed" => SessionStatus::Failed,
-        "rolled_over" => SessionStatus::RolledOver,
-        other => {
-            warn!(status = other, "unknown session status, defaulting to Active");
-            SessionStatus::Active
-        }
-    }
-}
-
+/// Convert a `StorageSession` into a domain `Session`, optionally merging
+/// ephemeral fields from a `local_overrides` session held in memory.
+///
+/// Without overrides the ephemeral fields (`active_task_id`, `total_*_tokens`,
+/// `user_id`, `model`) are defaulted; `tasks_worked` is reconstructed from the
+/// persisted `tasks_worked_count`.
 pub fn storage_session_to_session(
     s: aura_storage::StorageSession,
     local_overrides: Option<&Session>,
 ) -> Result<Session, String> {
-    Ok(Session {
-        session_id: s.id.parse().map_err(|e| format!("invalid session id: {e}"))?,
-        agent_instance_id: s
-            .project_agent_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project_agent_id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project_id: {e}"))?,
-        active_task_id: local_overrides.and_then(|o| o.active_task_id),
-        tasks_worked: local_overrides
-            .map(|o| o.tasks_worked.clone())
-            .unwrap_or_else(|| {
-                let count = s.tasks_worked_count.unwrap_or(0) as usize;
-                (0..count).map(|_| TaskId::new()).collect()
-            }),
-        context_usage_estimate: s.context_usage_estimate.unwrap_or(0.0),
-        total_input_tokens: local_overrides.map(|o| o.total_input_tokens).unwrap_or(0),
-        total_output_tokens: local_overrides.map(|o| o.total_output_tokens).unwrap_or(0),
-        summary_of_previous_context: s.summary_of_previous_context.unwrap_or_default(),
-        status: parse_session_status(s.status.as_deref().unwrap_or("active")),
-        user_id: local_overrides.and_then(|o| o.user_id.clone()),
-        model: local_overrides.and_then(|o| o.model.clone()),
-        started_at: parse_dt(&s.created_at),
-        ended_at: s
-            .ended_at
-            .as_deref()
-            .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-            .map(|dt| dt.with_timezone(&Utc)),
-    })
+    let mut session = Session::try_from(s)?;
+    if let Some(o) = local_overrides {
+        session.active_task_id = o.active_task_id;
+        session.tasks_worked = o.tasks_worked.clone();
+        session.total_input_tokens = o.total_input_tokens;
+        session.total_output_tokens = o.total_output_tokens;
+        session.user_id = o.user_id.clone();
+        session.model = o.model.clone();
+    }
+    Ok(session)
 }
 
 impl SessionService {
