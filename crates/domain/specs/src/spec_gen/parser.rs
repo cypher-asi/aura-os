@@ -2,6 +2,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use aura_core::*;
+use aura_core::extract_fenced_json;
 
 use crate::error::SpecGenError;
 
@@ -116,19 +117,6 @@ pub(crate) fn parse_claude_response(
         "failed to parse Claude response as JSON array of specs. Response: {}",
         &trimmed[..trimmed.len().min(500)]
     )))
-}
-
-fn extract_fenced_json(text: &str) -> Option<String> {
-    let start_markers = ["```json", "```"];
-    for marker in &start_markers {
-        if let Some(start) = text.find(marker) {
-            let after_marker = start + marker.len();
-            if let Some(end) = text[after_marker..].find("```") {
-                return Some(text[after_marker..after_marker + end].trim().to_string());
-            }
-        }
-    }
-    None
 }
 
 fn validate_raw_specs(specs: Vec<RawSpecOutput>) -> Result<Vec<RawSpecOutput>, SpecGenError> {

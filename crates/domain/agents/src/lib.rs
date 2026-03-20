@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
 use aura_core::*;
+use aura_core::parse_dt;
 use aura_network::NetworkAgent;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
@@ -68,13 +69,9 @@ impl AgentService {
     }
 
     fn get_jwt(&self) -> Result<String, AgentError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| AgentError::NoSession)?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or(AgentError::NoSession)
     }
 
     /// Get agent from aura-network only. Returns error if network is not configured or agent not found.
@@ -133,13 +130,9 @@ impl AgentInstanceService {
     }
 
     fn get_jwt(&self) -> Result<String, AgentError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| AgentError::NoSession)?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or(AgentError::NoSession)
     }
 
     /// Resolve agent config from aura-network only. Returns None if network is unavailable or agent not found.
@@ -313,13 +306,6 @@ impl AgentInstanceService {
 // ---------------------------------------------------------------------------
 // StorageProjectAgent -> AgentInstance merge (three-source)
 // ---------------------------------------------------------------------------
-
-fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
-    s.as_deref()
-        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now)
-}
 
 pub fn parse_agent_status(s: &str) -> AgentStatus {
     match s {

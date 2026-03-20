@@ -1,49 +1,21 @@
 use std::path::Path;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde_json::{json, Value};
 use tracing::info;
 
 use aura_core::*;
 use aura_projects::UpdateProjectInput;
-use aura_storage::StorageSpec;
 use aura_tasks::storage_task_to_task;
 
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 use crate::tool_loop_helpers::looks_truncated;
 
-fn storage_spec_to_core(s: StorageSpec) -> Result<Spec, String> {
-    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
-        v.as_deref()
-            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now)
-    };
-    Ok(Spec {
-        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project id: {e}"))?,
-        title: s.title.unwrap_or_default(),
-        order_index: s.order_index.unwrap_or(0) as u32,
-        markdown_contents: s.markdown_contents.unwrap_or_default(),
-        created_at: parse_dt(&s.created_at),
-        updated_at: parse_dt(&s.updated_at),
-    })
-}
-
 impl ChatToolExecutor {
     fn get_jwt(&self) -> Result<String, ToolExecResult> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| ToolExecResult::err("no active session"))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| ToolExecResult::err(e))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or_else(|| ToolExecResult::err("no active session"))
     }
 
     fn require_storage(&self) -> Result<&std::sync::Arc<aura_storage::StorageClient>, ToolExecResult> {
@@ -61,7 +33,7 @@ impl ChatToolExecutor {
             .map_err(|e| ToolExecResult::err(format!("aura-storage: {e}")))?;
         Ok(storage_specs
             .into_iter()
-            .filter_map(|s| storage_spec_to_core(s).ok())
+            .filter_map(|s| Spec::try_from(s).ok())
             .collect())
     }
 
@@ -72,7 +44,7 @@ impl ChatToolExecutor {
             .get_spec(&spec_id.to_string(), &jwt)
             .await
             .map_err(|e| ToolExecResult::err(format!("aura-storage: {e}")))?;
-        storage_spec_to_core(ss).map_err(|e| ToolExecResult::err(e))
+        Spec::try_from(ss).map_err(|e| ToolExecResult::err(e))
     }
 
     /// Resolve a `spec_id` field that may be a UUID, a title prefix like "01",
@@ -167,7 +139,7 @@ impl ChatToolExecutor {
         };
         match storage.create_spec(&project_id.to_string(), &jwt, &req).await {
             Ok(ss) => {
-                match storage_spec_to_core(ss) {
+                match Spec::try_from(ss) {
                     Ok(spec) => ToolExecResult::ok_with_spec(json!(spec), spec),
                     Err(e) => ToolExecResult::err(e),
                 }
@@ -684,7 +656,7 @@ impl ChatToolExecutor {
 
         let (new_content, replacements) = if occurrence_count == 0 {
             // Exact match failed -- try fuzzy whitespace-normalized matching
-            match fuzzy_search_replace_single(&content, &norm_old, &norm_new) {
+            match fuzzy_search_replace(&content, &norm_old, &norm_new) {
                 Some(c) => (c, 1usize),
                 None => return ToolExecResult::err(format!(
                     "old_text not found in {rel}. Make sure it matches the file content exactly, \
@@ -948,58 +920,6 @@ const SKIP_DIRS: &[&str] = &[
 
 fn should_skip_path(path: &str) -> bool {
     path.split('/').any(|segment| SKIP_DIRS.contains(&segment))
-}
-
-/// Fuzzy search-replace: when exact match fails, try matching with
-/// leading/trailing whitespace stripped from each line. Returns `Some(new_content)`
-/// if exactly one fuzzy match was found and replaced.
-fn fuzzy_search_replace_single(content: &str, search: &str, replace: &str) -> Option<String> {
-    let search_lines: Vec<&str> = search.lines().map(|l| l.trim()).collect();
-    if search_lines.is_empty() || search_lines.iter().all(|l| l.is_empty()) {
-        return None;
-    }
-
-    let content_lines: Vec<&str> = content.lines().collect();
-    let mut match_positions: Vec<usize> = Vec::new();
-
-    'outer: for start in 0..content_lines.len() {
-        if start + search_lines.len() > content_lines.len() {
-            break;
-        }
-        for (j, search_line) in search_lines.iter().enumerate() {
-            if content_lines[start + j].trim() != *search_line {
-                continue 'outer;
-            }
-        }
-        match_positions.push(start);
-    }
-
-    if match_positions.len() != 1 {
-        return None;
-    }
-
-    let match_start = match_positions[0];
-    let match_end = match_start + search_lines.len();
-
-    let mut result = String::with_capacity(content.len());
-    for (i, line) in content_lines.iter().enumerate() {
-        if i == match_start {
-            result.push_str(replace);
-            if !replace.ends_with('\n') {
-                result.push('\n');
-            }
-        } else if i >= match_start && i < match_end {
-            continue;
-        } else {
-            result.push_str(line);
-            result.push('\n');
-        }
-    }
-    if !content.ends_with('\n') && result.ends_with('\n') {
-        result.pop();
-    }
-
-    Some(result)
 }
 
 fn search_directory(

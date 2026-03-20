@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 
 use axum::extract::{Path, State};
-use axum::response::sse::{Event, Sse};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use chrono::{DateTime, Utc};
 use tokio::sync::mpsc;
@@ -19,7 +19,8 @@ use aura_core::{
 };
 use aura_storage::StorageMessage;
 use aura_agents::{merge_agent_instance, AgentInstanceService};
-use aura_sessions::{parse_dt, storage_session_to_session};
+use aura_core::parse_dt;
+use aura_sessions::storage_session_to_session;
 use aura_chat::ChatStreamEvent;
 use aura_engine::EngineEvent;
 use aura_network::NetworkAgent;
@@ -679,7 +680,7 @@ pub async fn send_agent_message_stream(
         Ok(sse_event)
     });
 
-    Ok(Sse::new(stream))
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }
 
 // ---------------------------------------------------------------------------
@@ -854,7 +855,7 @@ pub async fn send_message_stream(
         Ok(sse_event)
     });
 
-    Ok(Sse::new(stream))
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }
 
 // ---------------------------------------------------------------------------

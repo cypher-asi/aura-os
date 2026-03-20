@@ -291,9 +291,7 @@ impl ChatService {
     }
 
     pub(crate) fn get_jwt(&self) -> Option<String> {
-        let bytes = self.store.get_setting("zero_auth_session").ok()?;
-        let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
-        Some(session.access_token)
+        self.store.get_jwt()
     }
 
     /// Resolve the active session ID for a given agent instance.
@@ -520,6 +518,8 @@ impl ChatService {
             let _ = tx.send(evt);
         };
 
+        send(ChatStreamEvent::Progress("Connecting...".to_string()));
+
         let _content_blocks = build_attachment_blocks(content, attachments);
 
         let active_session_id = self
@@ -582,6 +582,8 @@ impl ChatService {
         let send = |evt: ChatStreamEvent| {
             let _ = tx.send(evt);
         };
+
+        send(ChatStreamEvent::Progress("Connecting...".to_string()));
 
         let now = Utc::now();
         let content_blocks = build_attachment_blocks(content, attachments);

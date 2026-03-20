@@ -1,10 +1,9 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use chrono::Utc;
 use tokio::sync::{mpsc, watch};
 use tracing::{error, info, warn};
-
-use chrono::{DateTime, Utc};
 
 use aura_core::*;
 use aura_agents::AgentInstanceService;
@@ -24,29 +23,6 @@ use super::write_coordinator::ProjectWriteCoordinator;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::FileOp;
-
-fn storage_spec_to_core(s: aura_storage::StorageSpec) -> Result<Spec, String> {
-    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
-        v.as_deref()
-            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now)
-    };
-    Ok(Spec {
-        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project id: {e}"))?,
-        title: s.title.unwrap_or_default(),
-        order_index: s.order_index.unwrap_or(0) as u32,
-        markdown_contents: s.markdown_contents.unwrap_or_default(),
-        created_at: parse_dt(&s.created_at),
-        updated_at: parse_dt(&s.updated_at),
-    })
-}
 
 pub struct LoopHandle {
     pub project_id: ProjectId,
@@ -152,18 +128,14 @@ impl DevLoopEngine {
         let ss = storage
             .get_spec(&spec_id.to_string(), &jwt)
             .await?;
-        storage_spec_to_core(ss)
+        Spec::try_from(ss)
             .map_err(|e| EngineError::Parse(format!("spec conversion: {e}")))
     }
 
     fn get_jwt_for_storage(&self) -> Result<String, EngineError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| EngineError::Parse("no active session for aura-storage".into()))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| EngineError::Parse(e.to_string()))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or_else(|| EngineError::Parse("no active session for aura-storage".into()))
     }
 
     pub fn with_write_coordinator(mut self, coordinator: ProjectWriteCoordinator) -> Self {

@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use tracing::warn;
 
 use aura_core::*;
+pub use aura_core::parse_dt;
 use aura_store::RocksStore;
 use aura_storage::StorageClient;
 use aura_billing::MeteredLlm;
@@ -18,19 +19,6 @@ pub struct SessionService {
     storage_client: Option<Arc<StorageClient>>,
     rollover_threshold: f64,
     model_context_window: u64,
-}
-
-pub fn parse_dt(v: &Option<String>) -> DateTime<Utc> {
-    match v.as_deref() {
-        Some(s) => match DateTime::parse_from_rfc3339(s) {
-            Ok(dt) => dt.with_timezone(&Utc),
-            Err(e) => {
-                warn!(value = s, error = %e, "failed to parse RFC3339 timestamp, defaulting to now");
-                Utc::now()
-            }
-        },
-        None => Utc::now(),
-    }
 }
 
 pub fn parse_session_status(s: &str) -> SessionStatus {
@@ -100,13 +88,9 @@ impl SessionService {
     }
 
     fn get_jwt(&self) -> Result<String, SessionError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| SessionError::Parse("no active session for JWT".into()))?;
-        let session: ZeroAuthSession = serde_json::from_slice(&bytes)
-            .map_err(|e| SessionError::Parse(format!("invalid session JSON: {e}")))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or_else(|| SessionError::Parse("no active session for JWT".into()))
     }
 
     pub async fn create_session(

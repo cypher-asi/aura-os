@@ -1,9 +1,8 @@
 use std::convert::Infallible;
 
 use axum::extract::{Path, State};
-use axum::response::sse::{Event, Sse};
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
-use chrono::{DateTime, Utc};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
@@ -12,34 +11,9 @@ use tracing::{error, info};
 use aura_core::{ProjectId, Spec, SpecId};
 use aura_engine::EngineEvent;
 use aura_specs::SpecStreamEvent;
-use aura_storage::StorageSpec;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-
-fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
-    s.as_deref()
-        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now)
-}
-
-fn storage_spec_to_spec(s: StorageSpec) -> Result<Spec, String> {
-    Ok(Spec {
-        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project id: {e}"))?,
-        title: s.title.unwrap_or_default(),
-        order_index: s.order_index.unwrap_or(0) as u32,
-        markdown_contents: s.markdown_contents.unwrap_or_default(),
-        created_at: parse_dt(&s.created_at),
-        updated_at: parse_dt(&s.updated_at),
-    })
-}
 
 pub async fn list_specs(
     State(state): State<AppState>,
@@ -53,7 +27,7 @@ pub async fn list_specs(
         .map_err(|e| ApiError::internal(e.to_string()))?;
     let mut specs: Vec<Spec> = storage_specs
         .into_iter()
-        .filter_map(|s| storage_spec_to_spec(s).ok())
+        .filter_map(|s| Spec::try_from(s).ok())
         .collect();
     specs.sort_by_key(|s| s.order_index);
     Ok(Json(specs))
@@ -92,8 +66,8 @@ pub async fn get_spec(
             }
             _ => ApiError::internal(e.to_string()),
         })?;
-    let spec = storage_spec_to_spec(storage_spec)
-        .map_err(|e| ApiError::internal(e))?;
+    let spec = Spec::try_from(storage_spec)
+        .map_err(ApiError::internal)?;
     Ok(Json(spec))
 }
 
@@ -257,5 +231,5 @@ pub async fn generate_specs_stream(
         Ok(sse_event)
     });
 
-    Ok(Sse::new(stream))
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }

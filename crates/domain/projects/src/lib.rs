@@ -381,13 +381,9 @@ impl ProjectService {
     }
 
     fn get_jwt(&self) -> Result<String, ProjectError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| ProjectError::NoSession)?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|_| ProjectError::NoSession)?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or(ProjectError::NoSession)
     }
 
     pub async fn get_project_async(&self, id: &ProjectId) -> Result<Project, ProjectError> {

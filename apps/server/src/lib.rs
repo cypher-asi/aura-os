@@ -20,7 +20,6 @@ use tracing::{debug, info, warn};
 use crate::loop_log::LoopLogWriter;
 use crate::state::{TaskOutputBuffers, TaskStepBuffers};
 
-use aura_core::ZeroAuthSession;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
 use aura_orbit::OrbitClient;
@@ -229,7 +228,7 @@ fn spawn_event_rebroadcast(
                             task_output_for_log = Some((*task_id, output.clone()));
 
                             if let Some(ref sc) = storage_client {
-                                if let Some(jwt) = get_jwt_from_store(&store) {
+                                if let Some(jwt) = store.get_jwt() {
                                     persist_task_to_storage(
                                         sc, &jwt, &event, &output,
                                         task_session_map.get(task_id),
@@ -278,7 +277,7 @@ fn spawn_event_rebroadcast(
                     // Write to aura-storage
                     if let Some(ref sc) = storage_client {
                         if let Some(pid) = event_project_id(&event) {
-                            if let Some(jwt) = get_jwt_from_store(&store) {
+                            if let Some(jwt) = store.get_jwt() {
                                 let metadata = serde_json::to_value(&event).ok();
                                 let req = aura_storage::CreateLogEntryRequest {
                                     level: event_log_level(&event).to_string(),
@@ -507,12 +506,6 @@ async fn persist_task_to_storage(
     }
 }
 
-/// Reads the stored JWT from RocksDB, returning `None` if unavailable.
-fn get_jwt_from_store(store: &RocksStore) -> Option<String> {
-    let bytes = store.get_setting("zero_auth_session").ok()?;
-    let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
-    Some(session.access_token)
-}
 
 /// Connects to the aura-network WebSocket and rebroadcasts social events
 /// (feed activity, follows, usage updates) on the local event_broadcast channel.
@@ -526,7 +519,7 @@ fn spawn_network_ws_bridge(
         let max_backoff = Duration::from_secs(60);
 
         loop {
-            let jwt = match get_jwt_from_store(&store) {
+            let jwt = match store.get_jwt() {
                 Some(jwt) => jwt,
                 None => {
                     debug!("No session available for network WS bridge, retrying...");

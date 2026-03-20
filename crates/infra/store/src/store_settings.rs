@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use aura_core::ZeroAuthSession;
+
 use crate::error::{StoreError, StoreResult};
 use crate::store::RocksStore;
 
@@ -37,5 +39,13 @@ impl RocksStore {
             values.push((String::from_utf8_lossy(&key).into_owned(), value.to_vec()));
         }
         Ok(values)
+    }
+
+    /// Extract the JWT access token from the stored zOS auth session.
+    /// Returns `None` when no session is stored or it cannot be parsed.
+    pub fn get_jwt(&self) -> Option<String> {
+        let bytes = self.get_setting("zero_auth_session").ok()?;
+        let session: ZeroAuthSession = serde_json::from_slice(&bytes).ok()?;
+        Some(session.access_token)
     }
 }

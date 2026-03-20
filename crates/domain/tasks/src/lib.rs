@@ -10,7 +10,6 @@ pub use task_progress::ProjectProgress;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
 use aura_core::*;
@@ -38,13 +37,9 @@ impl TaskService {
     }
 
     fn get_jwt(&self) -> Result<String, TaskError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| TaskError::ParseError("no active session for storage".into()))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| TaskError::ParseError(e.to_string()))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or_else(|| TaskError::ParseError("no active session for storage".into()))
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
@@ -95,13 +90,6 @@ impl TaskService {
         let st = storage.get_task(&task_id.to_string(), &jwt).await?;
         storage_task_to_task(st).map_err(TaskError::ParseError)
     }
-}
-
-fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
-    s.as_deref()
-        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now)
 }
 
 fn parse_task_status(s: &str) -> TaskStatus {

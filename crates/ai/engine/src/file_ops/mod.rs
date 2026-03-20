@@ -3,6 +3,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
+use aura_core::fuzzy_search_replace;
 use crate::error::EngineError;
 
 pub mod stub_detection;
@@ -234,63 +235,6 @@ pub fn compute_file_changes(
             }
         })
         .collect()
-}
-
-/// Attempt a fuzzy search-replace by normalizing whitespace. When the LLM
-/// generates a search string with slightly different indentation or trailing
-/// whitespace, this finds the intended match by comparing line-by-line with
-/// leading/trailing whitespace stripped.
-///
-/// Returns `Some(new_content)` if exactly one fuzzy match was found and
-/// replaced, `None` otherwise.
-fn fuzzy_search_replace(content: &str, search: &str, replace: &str) -> Option<String> {
-    let search_lines: Vec<&str> = search.lines().map(|l| l.trim()).collect();
-    if search_lines.is_empty() || search_lines.iter().all(|l| l.is_empty()) {
-        return None;
-    }
-
-    let content_lines: Vec<&str> = content.lines().collect();
-    let mut match_positions: Vec<usize> = Vec::new();
-
-    'outer: for start in 0..content_lines.len() {
-        if start + search_lines.len() > content_lines.len() {
-            break;
-        }
-        for (j, search_line) in search_lines.iter().enumerate() {
-            if content_lines[start + j].trim() != *search_line {
-                continue 'outer;
-            }
-        }
-        match_positions.push(start);
-    }
-
-    if match_positions.len() != 1 {
-        return None;
-    }
-
-    let match_start = match_positions[0];
-    let match_end = match_start + search_lines.len();
-
-    let mut result = String::with_capacity(content.len());
-    for (i, line) in content_lines.iter().enumerate() {
-        if i == match_start {
-            result.push_str(replace);
-            if !replace.ends_with('\n') {
-                result.push('\n');
-            }
-        } else if i >= match_start && i < match_end {
-            continue;
-        } else {
-            result.push_str(line);
-            result.push('\n');
-        }
-    }
-    // Trim trailing newline if original didn't end with one
-    if !content.ends_with('\n') && result.ends_with('\n') {
-        result.pop();
-    }
-
-    Some(result)
 }
 
 pub(crate) const SKIP_DIRS: &[&str] = &[

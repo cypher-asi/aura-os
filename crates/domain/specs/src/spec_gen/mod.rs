@@ -39,30 +39,6 @@ pub(crate) const MAX_TOKENS: u32 = 32768;
 
 pub(crate) const SPEC_OVERVIEW_MAX_TOKENS: u32 = 256;
 
-fn storage_spec_to_core(s: aura_storage::StorageSpec) -> Result<Spec, String> {
-    use chrono::{DateTime, Utc};
-    let parse_dt = |v: &Option<String>| -> DateTime<Utc> {
-        v.as_deref()
-            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now)
-    };
-    Ok(Spec {
-        spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
-        project_id: s
-            .project_id
-            .as_deref()
-            .unwrap_or("")
-            .parse()
-            .map_err(|e| format!("invalid project id: {e}"))?,
-        title: s.title.unwrap_or_default(),
-        order_index: s.order_index.unwrap_or(0) as u32,
-        markdown_contents: s.markdown_contents.unwrap_or_default(),
-        created_at: parse_dt(&s.created_at),
-        updated_at: parse_dt(&s.updated_at),
-    })
-}
-
 pub(crate) const SPEC_SUMMARY_MAX_TOKENS: u32 = 512;
 pub(crate) const SPEC_SUMMARY_MAX_WORDS: usize = 85;
 
@@ -92,13 +68,9 @@ impl SpecGenerationService {
     }
 
     fn get_jwt(&self) -> Result<String, SpecGenError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| SpecGenError::ParseError("no active session".into()))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| SpecGenError::ParseError(e.to_string()))?;
-        Ok(session.access_token)
+        self.store
+            .get_jwt()
+            .ok_or_else(|| SpecGenError::ParseError("no active session".into()))
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, SpecGenError> {
@@ -280,7 +252,7 @@ impl SpecGenerationService {
             .await?;
         let mut specs: Vec<Spec> = storage_specs
             .into_iter()
-            .filter_map(|s| storage_spec_to_core(s).ok())
+            .filter_map(|s| Spec::try_from(s).ok())
             .collect();
         specs.sort_by_key(|s| s.order_index);
         Ok(specs)
@@ -291,7 +263,7 @@ impl SpecGenerationService {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
         let storage_spec = storage.get_spec(&spec_id.to_string(), &jwt).await?;
-        storage_spec_to_core(storage_spec).map_err(|e| SpecGenError::ParseError(e))
+        Spec::try_from(storage_spec).map_err(SpecGenError::ParseError)
     }
 
     /// Test-only wrapper for parse_claude_response.

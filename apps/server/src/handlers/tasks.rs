@@ -6,20 +6,13 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use tracing::warn;
 
-use aura_core::{ProjectId, SpecId, Task, TaskId, TaskStatus};
+use aura_core::{parse_dt, ProjectId, SpecId, Task, TaskId, TaskStatus};
 use aura_storage::StorageTask;
 use aura_tasks::{ProjectProgress, TaskService};
 
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-
-fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
-    s.as_deref()
-        .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now)
-}
 
 fn parse_task_status(s: &str) -> TaskStatus {
     serde_json::from_str(&format!("\"{s}\"")).unwrap_or(TaskStatus::Pending)

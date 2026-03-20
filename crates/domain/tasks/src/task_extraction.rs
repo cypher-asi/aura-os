@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use aura_core::*;
@@ -45,37 +45,9 @@ impl TaskExtractionService {
     }
 
     fn get_jwt(&self) -> Result<String, TaskError> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| TaskError::ParseError("no active session for storage".into()))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| TaskError::ParseError(e.to_string()))?;
-        Ok(session.access_token)
-    }
-
-    fn parse_dt(s: &Option<String>) -> DateTime<Utc> {
-        s.as_deref()
-            .and_then(|v| DateTime::parse_from_rfc3339(v).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now)
-    }
-
-    fn storage_spec_to_core(s: aura_storage::StorageSpec) -> Result<Spec, String> {
-        Ok(Spec {
-            spec_id: s.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
-            project_id: s
-                .project_id
-                .as_deref()
-                .unwrap_or("")
-                .parse()
-                .map_err(|e| format!("invalid project id: {e}"))?,
-            title: s.title.unwrap_or_default(),
-            order_index: s.order_index.unwrap_or(0) as u32,
-            markdown_contents: s.markdown_contents.unwrap_or_default(),
-            created_at: Self::parse_dt(&s.created_at),
-            updated_at: Self::parse_dt(&s.updated_at),
-        })
+        self.store
+            .get_jwt()
+            .ok_or_else(|| TaskError::ParseError("no active session for storage".into()))
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
@@ -92,7 +64,7 @@ impl TaskExtractionService {
             .await?;
         let mut specs: Vec<Spec> = storage_specs
             .into_iter()
-            .filter_map(|s| Self::storage_spec_to_core(s).ok())
+            .filter_map(|s| Spec::try_from(s).ok())
             .collect();
         specs.sort_by_key(|s| s.order_index);
         Ok(specs)
@@ -257,7 +229,7 @@ impl TaskExtractionService {
             return Ok(tasks);
         }
 
-        if let Some(json_str) = Self::extract_fenced_json(trimmed) {
+        if let Some(json_str) = extract_fenced_json(trimmed) {
             if let Ok(tasks) = serde_json::from_str::<Vec<RawTaskOutput>>(&json_str) {
                 if tasks.is_empty() {
                     return Err(TaskError::ParseError(
@@ -274,18 +246,6 @@ impl TaskExtractionService {
         )))
     }
 
-    fn extract_fenced_json(text: &str) -> Option<String> {
-        let start_markers = ["```json", "```"];
-        for marker in &start_markers {
-            if let Some(start) = text.find(marker) {
-                let after_marker = start + marker.len();
-                if let Some(end) = text[after_marker..].find("```") {
-                    return Some(text[after_marker..after_marker + end].trim().to_string());
-                }
-            }
-        }
-        None
-    }
 }
 
 #[cfg(test)]
@@ -352,26 +312,26 @@ Here are the extracted tasks:
     #[test]
     fn extract_fenced_json_with_lang() {
         let input = "text\n```json\n{\"key\":\"val\"}\n```\nmore";
-        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        let result = extract_fenced_json(input).unwrap();
         assert_eq!(result, "{\"key\":\"val\"}");
     }
 
     #[test]
     fn extract_fenced_json_without_lang() {
         let input = "```\n[1,2,3]\n```";
-        let result = TaskExtractionService::extract_fenced_json(input).unwrap();
+        let result = extract_fenced_json(input).unwrap();
         assert_eq!(result, "[1,2,3]");
     }
 
     #[test]
     fn extract_fenced_json_no_fence_returns_none() {
         let input = "no fences here";
-        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
+        assert!(extract_fenced_json(input).is_none());
     }
 
     #[test]
     fn extract_fenced_json_unclosed_returns_none() {
         let input = "```json\n{\"key\":\"val\"}";
-        assert!(TaskExtractionService::extract_fenced_json(input).is_none());
+        assert!(extract_fenced_json(input).is_none());
     }
 }

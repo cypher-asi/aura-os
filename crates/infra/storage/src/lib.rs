@@ -1,4 +1,5 @@
 pub mod client;
+mod conversions;
 pub mod error;
 pub mod types;
 
