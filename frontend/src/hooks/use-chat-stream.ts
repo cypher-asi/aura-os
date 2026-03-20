@@ -425,6 +425,29 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const pendingSpecIdsRef = useRef<string[]>([]);
   const pendingTaskIdsRef = useRef<string[]>([]);
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (thinkingRafRef.current !== null) cancelAnimationFrame(thinkingRafRef.current);
+      rafRef.current = null;
+      thinkingRafRef.current = null;
+      streamBufferRef.current = "";
+      thinkingBufferRef.current = "";
+      thinkingStartRef.current = null;
+      toolCallsRef.current = [];
+      needsSeparatorRef.current = false;
+      setStreamingText("");
+      setThinkingText("");
+      setThinkingDurationMs(null);
+      setActiveToolCalls([]);
+      setIsStreaming(false);
+      setProgressText("");
+      sidekick.setStreamingAgentInstanceId(null);
+    };
+  }, [projectId, agentInstanceId, sidekick]);
+
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
     setMessages(msgs);
   }, []);

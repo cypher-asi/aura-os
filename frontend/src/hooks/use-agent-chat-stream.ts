@@ -258,6 +258,28 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
     setIsStreaming,
   };
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (thinkingRafRef.current !== null) cancelAnimationFrame(thinkingRafRef.current);
+      rafRef.current = null;
+      thinkingRafRef.current = null;
+      streamBufferRef.current = "";
+      thinkingBufferRef.current = "";
+      thinkingStartRef.current = null;
+      toolCallsRef.current = [];
+      needsSeparatorRef.current = false;
+      setStreamingText("");
+      setThinkingText("");
+      setThinkingDurationMs(null);
+      setActiveToolCalls([]);
+      setIsStreaming(false);
+      setProgressText("");
+    };
+  }, [agentId]);
+
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
     setMessages(msgs);
   }, []);

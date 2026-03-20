@@ -56,6 +56,8 @@ export function AgentChatView() {
   }, [agentId, agents, selectAgent]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!agentId) {
       resetMessages([]);
       return;
@@ -63,6 +65,7 @@ export function AgentChatView() {
     api.agents
       .listMessages(agentId as never)
       .then((msgs) => {
+        if (cancelled) return;
         resetMessages(
           msgs
             .filter((m: Message) =>
@@ -93,13 +96,9 @@ export function AgentChatView() {
         );
       })
       .catch(console.error);
-  }, [agentId, resetMessages]);
 
-  useEffect(() => {
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [rafRef]);
+    return () => { cancelled = true; };
+  }, [agentId, resetMessages]);
 
   const handleRemoveAttachment = useCallback(
     (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id)),

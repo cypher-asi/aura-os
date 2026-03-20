@@ -160,13 +160,6 @@ export function ChatView() {
     };
   }, [projectId, agentInstanceId, resetMessages]);
 
-  useEffect(() => {
-    const raf = rafRef.current;
-    return () => {
-      if (raf !== null) cancelAnimationFrame(raf);
-    };
-  }, [rafRef]);
-
   const handleRemoveAttachment = useCallback(
     (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id)),
     [],
