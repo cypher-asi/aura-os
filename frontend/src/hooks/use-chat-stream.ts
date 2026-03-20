@@ -538,13 +538,19 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
       const controller = new AbortController();
       abortRef.current = controller;
-      await api.sendMessageStream(
-        projectId, agentInstanceId, userMsg.content, action, null,
-        attachments, createStreamCallbacks(ctx), controller.signal,
-      );
-      setIsStreaming(false);
-      sidekickRef.current.setStreamingAgentInstanceId(null);
-      abortRef.current = null;
+      try {
+        await api.sendMessageStream(
+          projectId, agentInstanceId, userMsg.content, action, null,
+          attachments, createStreamCallbacks(ctx), controller.signal,
+        );
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        handleStreamError(ctx, err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsStreaming(false);
+        sidekickRef.current.setStreamingAgentInstanceId(null);
+        abortRef.current = null;
+      }
     },
     [projectId, agentInstanceId],
   );
