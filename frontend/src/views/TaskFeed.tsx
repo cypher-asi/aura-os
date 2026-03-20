@@ -62,6 +62,15 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
           ),
         );
       }),
+      subscribe("tasks_became_ready", (e) => {
+        if (!e.task_ids?.length) return;
+        const readySet = new Set(e.task_ids);
+        setTasks((prev) =>
+          prev.map((t) =>
+            readySet.has(t.task_id) ? { ...t, status: "ready" as const } : t,
+          ),
+        );
+      }),
       subscribe("follow_up_task_created", (e) => {
         if (e.task_id) refetch();
       }),

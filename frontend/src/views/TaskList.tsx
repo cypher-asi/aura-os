@@ -99,6 +99,15 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       subscribe("task_became_ready", (e) => {
         if (e.task_id) updateTaskStatus(e.task_id, "ready");
       }),
+      subscribe("tasks_became_ready", (e) => {
+        if (!e.task_ids?.length) return;
+        setLocalTasks((prev) => {
+          const readySet = new Set(e.task_ids);
+          return prev.map((t) =>
+            readySet.has(t.task_id) ? { ...t, status: "ready" as const } : t,
+          );
+        });
+      }),
       subscribe("follow_up_task_created", () => {
         refetchTasks();
       }),

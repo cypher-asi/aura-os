@@ -27,10 +27,13 @@ export function useEventStream(
     try {
       const event: EngineEvent = JSON.parse(data);
       setLatestEvent(event);
-      setEvents((prev) => {
-        const next = [...prev, event];
-        return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
-      });
+      // Skip high-volume, low-value events from the history array to avoid allocation churn
+      if (event.type !== "task_became_ready" && event.type !== "tasks_became_ready") {
+        setEvents((prev) => {
+          const next = [...prev, event];
+          return next.length > MAX_EVENTS ? next.slice(-MAX_EVENTS) : next;
+        });
+      }
       onEventRef.current?.(event);
     } catch {
       // ignore malformed events

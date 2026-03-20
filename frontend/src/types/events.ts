@@ -5,6 +5,7 @@ export type EngineEventType =
   | "task_failed"
   | "task_retrying"
   | "task_became_ready"
+  | "tasks_became_ready"
   | "task_output_delta"
   | "file_ops_applied"
   | "follow_up_task_created"
@@ -38,6 +39,7 @@ export interface PhaseTimingEntry {
 export interface EngineEvent {
   type: EngineEventType;
   task_id?: string;
+  task_ids?: string[];
   task_title?: string;
   session_id?: string;
   delta?: string;
