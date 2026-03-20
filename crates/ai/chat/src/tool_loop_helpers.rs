@@ -253,19 +253,32 @@ pub(crate) fn build_tool_result_blocks(
 
 pub(crate) fn summarize_write_file_input(input: &serde_json::Value) -> serde_json::Value {
     let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("unknown");
-    let content_len = input
-        .get("content")
-        .and_then(|v| v.as_str())
-        .map(|s| s.len())
-        .unwrap_or(0);
-    let line_count = input
-        .get("content")
-        .and_then(|v| v.as_str())
-        .map(|s| s.lines().count())
-        .unwrap_or(0);
+    let content = input.get("content").and_then(|v| v.as_str()).unwrap_or("");
+    let content_len = content.len();
+    let lines: Vec<&str> = content.lines().collect();
+    let line_count = lines.len();
+
+    const HEAD_LINES: usize = 10;
+    const TAIL_LINES: usize = 5;
+
+    let summary = if line_count <= HEAD_LINES + TAIL_LINES + 2 {
+        content.to_string()
+    } else {
+        let head: Vec<&str> = lines[..HEAD_LINES].to_vec();
+        let tail: Vec<&str> = lines[line_count - TAIL_LINES..].to_vec();
+        format!(
+            "{}\n// ... ({} lines omitted, {} total lines, {} chars) ...\n// ... content successfully written to disk. Use read_file to see full content. ...\n{}",
+            head.join("\n"),
+            line_count - HEAD_LINES - TAIL_LINES,
+            line_count,
+            content_len,
+            tail.join("\n"),
+        )
+    };
+
     serde_json::json!({
         "path": path,
-        "content": format!("[wrote {line_count} lines, {content_len} chars to {path}]"),
+        "content": summary,
     })
 }
 
