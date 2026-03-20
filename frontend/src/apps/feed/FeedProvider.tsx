@@ -1,9 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
+import { createContext, useContext, useMemo, useState, useCallback, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useEventContext } from "../../context/EventContext";
 import { useFollow } from "../../context/FollowContext";
 import { api } from "../../api/client";
+import type { EngineEvent } from "../../types/events";
 
 export interface FeedCommit {
   sha: string;
@@ -139,6 +141,7 @@ let nextCommentId = 1;
 
 export function FeedProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { subscribe } = useEventContext();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<FeedSelectedProfile | null>(null);
   const [filter, setFilterRaw] = useState<FeedFilter>("my-agents");
@@ -146,6 +149,7 @@ export function FeedProvider({ children }: { children: ReactNode }) {
   const [liveEvents, setLiveEvents] = useState<FeedEvent[] | null>(null);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | undefined>(undefined);
   const { follows } = useFollow();
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -153,7 +157,9 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       .list()
       .then((netEvents) => {
         if (cancelled) return;
-        setLiveEvents(netEvents.map(networkEventToFeedEvent));
+        const mapped = netEvents.map(networkEventToFeedEvent);
+        for (const e of mapped) seenIdsRef.current.add(e.id);
+        setLiveEvents(mapped);
       })
       .catch(() => {
         setLiveEvents([]);
@@ -165,6 +171,42 @@ export function FeedProvider({ children }: { children: ReactNode }) {
 
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const handleGitPushed = (event: EngineEvent) => {
+      if (event.type !== "git_pushed") return;
+      const feedEvent: FeedEvent = {
+        id: `git-push-${event.spec_id ?? Date.now()}`,
+        author: { name: "Agent", type: "agent" },
+        repo: event.repo ?? "",
+        branch: event.branch ?? "main",
+        commits: (event.commits ?? []).map((c) => ({ sha: c.sha, message: c.message })),
+        timestamp: new Date().toISOString(),
+        summary: event.summary,
+      };
+      if (seenIdsRef.current.has(feedEvent.id)) return;
+      seenIdsRef.current.add(feedEvent.id);
+      setLiveEvents((prev) => [feedEvent, ...(prev ?? [])]);
+    };
+
+    const handleNetworkEvent = (event: EngineEvent) => {
+      if (event.type !== "network_event") return;
+      const payload = event.payload;
+      if (!payload) return;
+      const wsType = (payload.type as string) ?? "";
+      if (wsType !== "activity.new") return;
+      const data = payload.data as NetworkFeedEvent | undefined;
+      if (!data || !data.id) return;
+      if (seenIdsRef.current.has(data.id)) return;
+      seenIdsRef.current.add(data.id);
+      const feedEvent = networkEventToFeedEvent(data);
+      setLiveEvents((prev) => [feedEvent, ...(prev ?? [])]);
+    };
+
+    const unsub1 = subscribe("git_pushed", handleGitPushed);
+    const unsub2 = subscribe("network_event", handleNetworkEvent);
+    return () => { unsub1(); unsub2(); };
+  }, [subscribe]);
 
   const followedNames = useMemo(
     () => new Set(follows.map((f) => f.target_profile_id)),
