@@ -6,7 +6,7 @@ use rocksdb::{ColumnFamilyDescriptor, DBWithThreadMode, MultiThreaded, Options, 
 use serde::de::DeserializeOwned;
 
 use crate::batch::BatchOp;
-use crate::error::StoreResult;
+use crate::error::{StoreError, StoreResult};
 
 /// Only settings CF is persisted; projects, orgs, agents, messages are remote-only.
 pub(crate) const CF_NAMES: &[&str] = &["settings"];
@@ -61,10 +61,10 @@ impl RocksStore {
         })
     }
 
-    pub(crate) fn cf_handle(&self, name: &str) -> Arc<rocksdb::BoundColumnFamily<'_>> {
+    pub(crate) fn cf_handle(&self, name: &str) -> StoreResult<Arc<rocksdb::BoundColumnFamily<'_>>> {
         self.db
             .cf_handle(name)
-            .unwrap_or_else(|| panic!("column family '{name}' not found"))
+            .ok_or_else(|| StoreError::NotFound(format!("column family '{name}'")))
     }
 
     #[allow(dead_code)] // kept for potential future settings scan
@@ -107,10 +107,10 @@ impl RocksStore {
         for op in ops {
             match op {
                 BatchOp::Put { cf, key, value } => {
-                    batch.put_cf(&self.cf_handle(cf.as_str()), key.as_bytes(), &value);
+                    batch.put_cf(&self.cf_handle(cf.as_str())?, key.as_bytes(), &value);
                 }
                 BatchOp::Delete { cf, key } => {
-                    batch.delete_cf(&self.cf_handle(cf.as_str()), key.as_bytes());
+                    batch.delete_cf(&self.cf_handle(cf.as_str())?, key.as_bytes());
                 }
             }
         }

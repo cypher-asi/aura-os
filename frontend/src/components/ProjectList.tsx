@@ -1,13 +1,11 @@
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { api, ApiClientError } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
-import { clearLastAgentIf } from "../utils/storage";
-import type { Project, AgentInstance } from "../types";
+import type { AgentInstance } from "../types";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { Bot, FolderGit2, Gauge, Pencil, Trash2, Loader2, Settings } from "lucide-react";
+import { Bot, FolderGit2, Gauge, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
 import { InlineRenameInput } from "./InlineRenameInput";
 import { DeleteProjectModal, DeleteAgentInstanceModal, ProjectSettingsModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
@@ -15,6 +13,7 @@ import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useLoopStatus } from "../hooks/use-loop-status";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { useProjectListActions } from "../hooks/use-project-list-actions";
 import {
   getMobileProjectDestination,
   projectRootPath,
@@ -51,13 +50,6 @@ const agentMenuItems: MenuItem[] = [
   { id: "delete-agent", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
-interface ContextMenuState {
-  x: number;
-  y: number;
-  project?: Project;
-  agent?: AgentInstance;
-}
-
 function executionNodeId(projectId: string) {
   return `execution:${projectId}`;
 }
@@ -75,25 +67,14 @@ export function ProjectList() {
     setAgentsByProject,
     refreshProjectAgents,
     openNewProjectModal,
-    setProjects,
   } = useProjectsList();
 
   const { query: searchQuery, setAction } = useSidebarSearch();
   const { isMobileLayout } = useAuraCapabilities();
   const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(agentInstanceId);
 
-  const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
-  const [renameTarget, setRenameTarget] = useState<Project | null>(null);
-  const [settingsTarget, setSettingsTarget] = useState<Project | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteAgentTarget, setDeleteAgentTarget] = useState<AgentInstance | null>(null);
-  const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
-  const [deleteAgentError, setDeleteAgentError] = useState<string | null>(null);
-  const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
+  const actions = useProjectListActions();
   const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
-
-  const ctxMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setAction(
@@ -125,26 +106,6 @@ export function ProjectList() {
       }
     }
   }, [agentInstanceId, agentsByProject, projectId, refreshProjectAgents]);
-
-  useEffect(() => {
-    if (!ctxMenu) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node)) {
-        setCtxMenu(null);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setCtxMenu(null);
-    };
-
-    document.addEventListener("mousedown", handleMouseDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [ctxMenu]);
 
   useEffect(() => {
     return sidekick.onAgentInstanceUpdate((instance) => {
@@ -204,11 +165,6 @@ export function ProjectList() {
 
   const { streamingAgentInstanceId } = sidekick;
 
-  const handleAddAgent = useCallback(
-    (pid: string) => setAgentSelectorProjectId(pid),
-    [],
-  );
-
   const explorerData: ExplorerNode[] = useMemo(
     () =>
       projects.filter((p) => p.name.trim()).map((p) => {
@@ -255,7 +211,7 @@ export function ProjectList() {
             <span className={styles.projectSuffix}>
               <span onClick={(e) => e.stopPropagation()} className={styles.newChatWrap}>
                 <ButtonPlus
-                  onClick={() => handleAddAgent(p.project_id)}
+                  onClick={() => actions.handleAddAgent(p.project_id)}
                   size="sm"
                   title="Add Agent"
                 />
@@ -266,7 +222,7 @@ export function ProjectList() {
           children: childNodes,
         };
       }),
-    [projects, agentsByProject, streamingAgentInstanceId, automatingProjectId, automatingAgentInstanceId, failedIcons, handleAddAgent],
+    [projects, agentsByProject, streamingAgentInstanceId, automatingProjectId, automatingAgentInstanceId, failedIcons, actions.handleAddAgent],
   );
 
   const filteredExplorerData = useMemo(
@@ -369,10 +325,10 @@ export function ProjectList() {
       const proj = projectMap.get(focused.id);
       if (proj) {
         e.preventDefault();
-        setRenameTarget(proj);
+        actions.setRenameTarget(proj);
       }
     },
-    [projectMap],
+    [projectMap, actions],
   );
 
   const handleContextMenu = useCallback(
@@ -384,121 +340,18 @@ export function ProjectList() {
       const proj = projectMap.get(nodeId);
       if (proj) {
         e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, project: proj });
+        actions.setCtxMenu({ x: e.clientX, y: e.clientY, project: proj });
         return;
       }
 
       const meta = agentMeta.get(nodeId);
       if (meta) {
         e.preventDefault();
-        setCtxMenu({ x: e.clientX, y: e.clientY, agent: meta.agent });
+        actions.setCtxMenu({ x: e.clientX, y: e.clientY, agent: meta.agent });
       }
     },
-    [projectMap, agentMeta],
+    [projectMap, agentMeta, actions],
   );
-
-  const handleAgentCreated = useCallback(
-    (instance: AgentInstance) => {
-      const pid = instance.project_id;
-      void refreshProjectAgents(pid);
-      navigate(`/projects/${pid}/agents/${instance.agent_instance_id}`);
-    },
-    [navigate, refreshProjectAgents],
-  );
-
-  const handleMenuAction = (actionId: string) => {
-    if (!ctxMenu) return;
-    const target = ctxMenu.project;
-    const agentTarget = ctxMenu.agent;
-    setCtxMenu(null);
-
-    if (actionId === "add-agent" && target) {
-      handleAddAgent(target.project_id);
-    } else if (actionId === "rename" && target) {
-      setRenameTarget(target);
-    } else if (actionId === "settings" && target) {
-      setSettingsTarget(target);
-    } else if (actionId === "delete" && target) {
-      setDeleteTarget(target);
-    } else if (actionId === "delete-agent" && agentTarget) {
-      setDeleteAgentTarget(agentTarget);
-    }
-  };
-
-  const handleRename = useCallback(
-    async (newName: string) => {
-      if (!renameTarget) return;
-      try {
-        await api.updateProject(renameTarget.project_id, { name: newName });
-        await refreshProjects();
-      } catch (err) {
-        console.error("Failed to rename project", err);
-      } finally {
-        setRenameTarget(null);
-      }
-    },
-    [refreshProjects, renameTarget],
-  );
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true);
-    try {
-      await api.deleteProject(deleteTarget.project_id);
-      clearLastAgentIf({ projectId: deleteTarget.project_id });
-      if (projectId === deleteTarget.project_id) {
-        navigate("/projects");
-      }
-      setDeleteTarget(null);
-      await refreshProjects();
-    } catch (err) {
-      console.error("Failed to delete project", err);
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const handleDeleteAgent = async () => {
-    if (!deleteAgentTarget) return;
-    const { project_id: pid, agent_instance_id: aid } = deleteAgentTarget;
-    setDeleteAgentLoading(true);
-    setDeleteAgentError(null);
-
-    const prevAgents = agentsByProject[pid];
-    setAgentsByProject((prev) => ({
-      ...prev,
-      [pid]: (prev[pid] ?? []).filter((s) => s.agent_instance_id !== aid),
-    }));
-
-    try {
-      await api.deleteAgentInstance(pid, aid);
-      clearLastAgentIf({ agentInstanceId: aid });
-      if (agentInstanceId === aid) {
-        const remaining = (prevAgents ?? []).filter((s) => s.agent_instance_id !== aid);
-        if (remaining.length > 0) {
-          navigate(`/projects/${pid}/agents/${remaining[remaining.length - 1].agent_instance_id}`);
-        } else {
-          navigate(`/projects/${pid}`);
-        }
-      }
-      setDeleteAgentTarget(null);
-      void refreshProjectAgents(pid);
-    } catch (err) {
-      console.error("Failed to delete agent instance", err);
-      const message =
-        err instanceof ApiClientError
-          ? err.body.error
-          : err instanceof Error
-            ? err.message
-            : "Failed to remove agent.";
-      setDeleteAgentError(message);
-      if (prevAgents) {
-        setAgentsByProject((prev) => ({ ...prev, [pid]: prevAgents }));
-      }
-    } finally {
-      setDeleteAgentLoading(false);
-    }
-  };
 
   if (!loadingProjects && projects.length === 0) {
     return (
@@ -527,16 +380,16 @@ export function ProjectList() {
         />
       </div>
 
-      {ctxMenu &&
+      {actions.ctxMenu &&
         createPortal(
           <div
-            ref={ctxMenuRef}
+            ref={actions.ctxMenuRef}
             className={styles.contextMenuOverlay}
-            style={{ left: ctxMenu.x, top: ctxMenu.y }}
+            style={{ left: actions.ctxMenu.x, top: actions.ctxMenu.y }}
           >
             <Menu
-              items={ctxMenu.project ? projectMenuItems : agentMenuItems}
-              onChange={handleMenuAction}
+              items={actions.ctxMenu.project ? projectMenuItems : agentMenuItems}
+              onChange={actions.handleMenuAction}
               background="solid"
               border="solid"
               rounded="md"
@@ -547,48 +400,43 @@ export function ProjectList() {
           document.body,
         )}
 
-      {renameTarget && (
+      {actions.renameTarget && (
         <InlineRenameInput
-          target={renameTarget}
-          onSave={handleRename}
-          onCancel={() => setRenameTarget(null)}
+          target={actions.renameTarget}
+          onSave={actions.handleRename}
+          onCancel={() => actions.setRenameTarget(null)}
         />
       )}
 
       <ProjectSettingsModal
-        target={settingsTarget}
-        onClose={() => setSettingsTarget(null)}
-        onSaved={(project) => {
-          setProjects((prev) => prev.map((existing) => (
-            existing.project_id === project.project_id ? project : existing
-          )));
-          setSettingsTarget(null);
-        }}
+        target={actions.settingsTarget}
+        onClose={() => actions.setSettingsTarget(null)}
+        onSaved={actions.handleProjectSaved}
       />
 
       <DeleteProjectModal
-        target={deleteTarget}
-        loading={deleteLoading}
-        onClose={() => setDeleteTarget(null)}
-        onDelete={handleDelete}
+        target={actions.deleteTarget}
+        loading={actions.deleteLoading}
+        onClose={() => actions.setDeleteTarget(null)}
+        onDelete={actions.handleDelete}
       />
 
       <DeleteAgentInstanceModal
-        target={deleteAgentTarget}
-        loading={deleteAgentLoading}
-        error={deleteAgentError}
+        target={actions.deleteAgentTarget}
+        loading={actions.deleteAgentLoading}
+        error={actions.deleteAgentError}
         onClose={() => {
-          setDeleteAgentTarget(null);
-          setDeleteAgentError(null);
+          actions.setDeleteAgentTarget(null);
+          actions.setDeleteAgentError(null);
         }}
-        onDelete={handleDeleteAgent}
+        onDelete={actions.handleDeleteAgent}
       />
 
       <AgentSelectorModal
-        isOpen={!!agentSelectorProjectId}
-        projectId={agentSelectorProjectId!}
-        onClose={() => setAgentSelectorProjectId(null)}
-        onCreated={handleAgentCreated}
+        isOpen={!!actions.agentSelectorProjectId}
+        projectId={actions.agentSelectorProjectId!}
+        onClose={() => actions.setAgentSelectorProjectId(null)}
+        onCreated={actions.handleAgentCreated}
       />
     </div>
   );

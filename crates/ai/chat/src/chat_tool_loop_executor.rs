@@ -70,6 +70,12 @@ impl ProjectResolver for MultiProjectResolver {
 // Unified forwarding executor
 // ---------------------------------------------------------------------------
 
+/// Unified tool executor that resolves project IDs and forwards results to
+/// the chat stream.
+///
+/// Uses `std::sync::Mutex` for `blocks` intentionally: the critical sections
+/// are sub-microsecond (single `Vec::push`) and never held across `.await`
+/// points, matching the Tokio-recommended pattern for short synchronous locks.
 pub(crate) struct ForwardingToolExecutor<R: ProjectResolver> {
     pub(crate) inner: ChatToolExecutor,
     pub(crate) resolver: R,

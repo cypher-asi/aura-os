@@ -22,4 +22,3 @@ tempfile = "3"
 tokio = { version = "1", features = ["full"] }
 aura-storage = { path = "../../infra/storage", features = ["test-utils"] }
 aura-billing = { path = "../billing", features = ["test-utils"] }
-axum = "0.7"

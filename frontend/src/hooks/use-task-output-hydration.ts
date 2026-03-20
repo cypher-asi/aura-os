@@ -21,6 +21,8 @@ export function useTaskOutputHydration(
     if (!projectId) return;
     if (streamBuf || hydratedRef.current === task.task_id) return;
 
+    let cancelled = false;
+
     const persistedBuildSteps = task.build_steps?.map((s) => ({
       kind: s.kind as BuildStep["kind"],
       command: s.command,
@@ -49,6 +51,7 @@ export function useTaskOutputHydration(
       } else {
         hydratedRef.current = task.task_id;
         api.getTaskOutput(projectId, task.task_id).then((res) => {
+          if (cancelled) return;
           const buildKindMap: Record<string, BuildStep["kind"]> = {
             build_verification_skipped: "skipped",
             build_verification_started: "started",
@@ -93,5 +96,7 @@ export function useTaskOutputHydration(
         }).catch((err) => console.warn("Failed to load task output:", err));
       }
     }
-  }, [isActive, isTerminal, projectId, task.task_id, task.status, task.live_output, streamBuf, seedTaskOutput]);
+
+    return () => { cancelled = true; };
+  }, [isActive, isTerminal, projectId, task.task_id, task.status, task.live_output, task.build_steps, task.test_steps, streamBuf, seedTaskOutput]);
 }

@@ -40,3 +40,6 @@ pub(crate) const SEARCH_REGEX_SIZE_LIMIT: usize = 1_000_000;
 
 /// Maximum number of matches returned by `search_code` / `find_files`.
 pub(crate) const MAX_SEARCH_RESULTS: usize = 200;
+
+/// Hard cap on the number of tool-loop iterations in a single chat turn.
+pub(crate) const MAX_TOOL_ITERATIONS: usize = 25;

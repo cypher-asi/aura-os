@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Loader2, MinusCircle, SkipForward, Wrench, XCircle } from "lucide-react";
 import type { BuildStep, TestStep } from "../context/EventContext";
 import styles from "./Preview.module.css";
@@ -78,6 +78,10 @@ export function VerificationStepItem({
 }) {
   const [expanded, setExpanded] = useState(step.kind === "failed");
 
+  useEffect(() => {
+    setExpanded(step.kind === "failed");
+  }, [step.kind]);
+
   const statusClass =
     step.kind === "passed" ? styles.buildPassed :
     step.kind === "failed" ? styles.buildFailed :
@@ -110,8 +114,8 @@ export function VerificationStepItem({
         )}
         {tests && tests.length > 0 && (
           <div className={styles.testResultsList}>
-            {tests.map((t, i) => (
-              <div key={i} className={styles.testResultItem}>
+            {tests.map((t) => (
+              <div key={t.name} className={styles.testResultItem}>
                 <TestResultIcon status={t.status} />
                 <span className={styles.testResultName}>{t.name}</span>
               </div>

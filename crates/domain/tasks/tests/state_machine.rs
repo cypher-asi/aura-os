@@ -115,7 +115,16 @@ mod integration {
         fn compute_task_cost(&self, _: &str, _: u64, _: u64) -> f64 { 0.0 }
     }
 
-    async fn setup() -> (Arc<TaskService>, Arc<StorageClient>, Arc<RocksStore>, String, tempfile::TempDir) {
+    struct TestCtx {
+        task_service: Arc<TaskService>,
+        storage_client: Arc<StorageClient>,
+        store: Arc<RocksStore>,
+        spec_id: String,
+        project_id: String,
+        _tmp: tempfile::TempDir,
+    }
+
+    async fn setup() -> TestCtx {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
         aura_billing::testutil::store_zero_auth_session(&store);
@@ -143,11 +152,14 @@ mod integration {
             .await
             .unwrap();
 
-        // Store spec_id so tests can reference it
-        std::env::set_var("_TEST_SPEC_ID", &spec.id);
-        std::env::set_var("_TEST_PROJECT_ID", &pid);
-
-        (task_service, storage_client, store, spec.id, tmp)
+        TestCtx {
+            task_service,
+            storage_client,
+            store,
+            spec_id: spec.id,
+            project_id: pid,
+            _tmp: tmp,
+        }
     }
 
     async fn create_task(
@@ -185,25 +197,24 @@ mod integration {
 
     #[tokio::test]
     async fn claim_ordering_respects_order_index() {
-        let (svc, sc, store, spec_id, _tmp) = setup().await;
-        let pid_str = std::env::var("_TEST_PROJECT_ID").unwrap();
-        let pid: ProjectId = pid_str.parse().unwrap();
+        let ctx = setup().await;
+        let pid: ProjectId = ctx.project_id.parse().unwrap();
         let aid = AgentInstanceId::new();
 
-        create_task(&sc, &store, &pid_str, &spec_id, "Third", "ready", 2, None).await;
-        create_task(&sc, &store, &pid_str, &spec_id, "First", "ready", 0, None).await;
-        create_task(&sc, &store, &pid_str, &spec_id, "Second", "ready", 1, None).await;
+        create_task(&ctx.storage_client, &ctx.store, &ctx.project_id, &ctx.spec_id, "Third", "ready", 2, None).await;
+        create_task(&ctx.storage_client, &ctx.store, &ctx.project_id, &ctx.spec_id, "First", "ready", 0, None).await;
+        create_task(&ctx.storage_client, &ctx.store, &ctx.project_id, &ctx.spec_id, "Second", "ready", 1, None).await;
 
-        let t1 = svc.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
+        let t1 = ctx.task_service.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
         assert_eq!(t1.title, "First", "should claim lowest order_index first");
 
-        let t2 = svc.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
+        let t2 = ctx.task_service.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
         assert_eq!(t2.title, "Second");
 
-        let t3 = svc.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
+        let t3 = ctx.task_service.claim_next_task(&pid, &aid, None).await.unwrap().unwrap();
         assert_eq!(t3.title, "Third");
 
-        let none = svc.claim_next_task(&pid, &aid, None).await.unwrap();
+        let none = ctx.task_service.claim_next_task(&pid, &aid, None).await.unwrap();
         assert!(none.is_none(), "no more ready tasks");
     }
 

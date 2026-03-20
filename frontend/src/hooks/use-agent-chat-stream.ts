@@ -58,31 +58,36 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const controller = new AbortController();
       abortRef.current = controller;
 
-      await api.agents.sendMessageStream(
-        agentId,
-        userMsg.content,
-        action,
-        null,
-        attachments,
-        {
-          onProgress: (stage) => core.setProgressText(stage),
-          onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
-          onDelta: (text) => handleTextDelta(refs, setters, thinkingDurationMsRef.current, text),
-          onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
-          onToolCall: (info) => handleToolCall(refs, setters, info),
-          onToolResult: (info) => handleToolResult(refs, setters, info),
-          onSpecSaved: (spec) => onSpecSavedRef.current?.(spec),
-          onTaskSaved: (task) => onTaskSavedRef.current?.(task),
-          onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
-          onTokenUsage() {},
-          onError: (message) => handleStreamError(refs, setters, message),
-          onDone: () => finalizeStream(refs, setters, abortRef, isStreamingRef.current),
-        },
-        controller.signal,
-      );
-
-      core.setIsStreaming(false);
-      abortRef.current = null;
+      try {
+        await api.agents.sendMessageStream(
+          agentId,
+          userMsg.content,
+          action,
+          null,
+          attachments,
+          {
+            onProgress: (stage) => core.setProgressText(stage),
+            onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
+            onDelta: (text) => handleTextDelta(refs, setters, thinkingDurationMsRef.current, text),
+            onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
+            onToolCall: (info) => handleToolCall(refs, setters, info),
+            onToolResult: (info) => handleToolResult(refs, setters, info),
+            onSpecSaved: (spec) => onSpecSavedRef.current?.(spec),
+            onTaskSaved: (task) => onTaskSavedRef.current?.(task),
+            onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
+            onTokenUsage() {},
+            onError: (message) => handleStreamError(refs, setters, message),
+            onDone: () => finalizeStream(refs, setters, abortRef, isStreamingRef.current),
+          },
+          controller.signal,
+        );
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
+      } finally {
+        core.setIsStreaming(false);
+        abortRef.current = null;
+      }
     },
     [agentId],
   );

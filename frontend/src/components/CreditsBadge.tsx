@@ -33,7 +33,7 @@ export function CreditsBadge({ onClick }: Props) {
     api.orgs
       .getCreditBalance(orgId)
       .then((b) => setCredits(b.total_credits))
-      .catch(() => {});
+      .catch((err) => console.warn("Failed to fetch credit balance:", err));
   }, [orgId]);
 
   const debouncedFetch = useCallback(() => {
@@ -74,8 +74,12 @@ export function CreditsBadge({ onClick }: Props) {
 
   const displayCredits = credits !== null ? formatCredits(credits) : "---";
   return (
-    <div className={styles.creditsBadge} onClick={onClick} role="button" tabIndex={0}>
+    <button
+      className={styles.creditsBadge}
+      onClick={onClick}
+      type="button"
+    >
       <span className={styles.label}>{displayCredits} Z</span>
-    </div>
+    </button>
   );
 }

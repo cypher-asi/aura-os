@@ -311,6 +311,8 @@ export function useLogStream() {
     }).catch(() => {
       // Silently ignore load failures; live events still work
     });
+
+    return () => { historyLoadedRef.current = false; };
   }, []);
 
   const addEntry = useCallback((event: EngineEvent) => {

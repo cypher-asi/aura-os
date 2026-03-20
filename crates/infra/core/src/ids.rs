@@ -46,8 +46,11 @@ macro_rules! define_id {
         }
 
         impl Default for $name {
+            /// Returns the nil (all-zero) UUID sentinel. Use `new()` for a
+            /// random ID. Returning nil avoids surprises when Default is used
+            /// in struct initializers or `Option::unwrap_or_default`.
             fn default() -> Self {
-                Self::new()
+                Self::nil()
             }
         }
     };

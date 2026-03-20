@@ -25,7 +25,7 @@ mod tests {
     struct TestHarness {
         engine: Arc<DevLoopEngine>,
         event_rx: mpsc::UnboundedReceiver<EngineEvent>,
-        #[allow(dead_code)]
+        #[allow(dead_code)] // kept for JWT access and future assertions
         store: Arc<RocksStore>,
         storage_client: Arc<StorageClient>,
         project_id: ProjectId,
@@ -33,13 +33,30 @@ mod tests {
         _tmp: tempfile::TempDir,
     }
 
-    /// Start a mock storage server + billing, wire everything together.
-    ///
-    /// When `zero_balance` is true the billing mock starts with 0 credits so the
-    /// first LLM call triggers InsufficientCredits.
-    async fn setup_with_billing(
-        mock: Arc<MockLlmProvider>,
+    struct SetupConfig {
         zero_balance: bool,
+        build_command: Option<String>,
+        test_command: Option<String>,
+        rollover_threshold: f64,
+        model_context_window: u64,
+    }
+
+    impl Default for SetupConfig {
+        fn default() -> Self {
+            Self {
+                zero_balance: false,
+                build_command: None,
+                test_command: None,
+                rollover_threshold: 0.8,
+                model_context_window: 200_000,
+            }
+        }
+    }
+
+    /// Start a mock storage server + billing, wire everything together.
+    async fn setup_with_config(
+        mock: Arc<MockLlmProvider>,
+        cfg: SetupConfig,
     ) -> TestHarness {
         let tmp = tempfile::TempDir::new().unwrap();
         let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
@@ -47,11 +64,12 @@ mod tests {
         // JWT is always needed for storage operations
         testutil::store_zero_auth_session(&store);
 
+        // Safe for parallel tests: all tests set the same idempotent value.
         std::env::set_var("ANTHROPIC_API_KEY", "test-key");
 
         // Billing: use stateful mock so we can control balance
         let billing_state = Arc::new(tokio::sync::Mutex::new(
-            testutil::MockBillingState::new(if zero_balance { 0 } else { 10_000_000 }),
+            testutil::MockBillingState::new(if cfg.zero_balance { 0 } else { 10_000_000 }),
         ));
         let billing_url = testutil::start_stateful_mock_billing_server(billing_state).await;
         let billing = Arc::new(testutil::billing_client_for_url(&billing_url));
@@ -77,7 +95,7 @@ mod tests {
             None,
         ));
         let session_service = Arc::new(
-            SessionService::new(store.clone(), 0.8, 200_000)
+            SessionService::new(store.clone(), cfg.rollover_threshold, cfg.model_context_window)
                 .with_storage_client(Some(storage_client.clone())),
         );
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -107,8 +125,8 @@ mod tests {
                 linked_folder_path: project_dir.to_string_lossy().to_string(),
                 workspace_source: None,
                 workspace_display_path: None,
-                build_command: None,
-                test_command: None,
+                build_command: cfg.build_command,
+                test_command: cfg.test_command,
             })
             .unwrap();
 
@@ -137,6 +155,13 @@ mod tests {
             spec_id: spec.id,
             _tmp: tmp,
         }
+    }
+
+    async fn setup_with_billing(
+        mock: Arc<MockLlmProvider>,
+        zero_balance: bool,
+    ) -> TestHarness {
+        setup_with_config(mock, SetupConfig { zero_balance, ..Default::default() }).await
     }
 
     async fn setup(mock: Arc<MockLlmProvider>) -> TestHarness {
@@ -210,13 +235,15 @@ mod tests {
         let mock = Arc::new(MockLlmProvider::new());
         let mut h = setup(mock).await;
 
+        // No tasks: loop may complete before seeing the pause signal (timing-dependent).
+        // We accept either outcome; the important thing is it doesn't hang or error.
         let handle = h.engine.clone().start(h.project_id, None).await.unwrap();
         handle.pause();
-        let outcome = handle.wait().await.unwrap();
+        let outcome = handle.wait().await.expect("loop should complete");
 
         assert!(
             matches!(outcome, LoopOutcome::Paused { .. } | LoopOutcome::AllTasksComplete),
-            "expected Paused or AllTasksComplete (no tasks), got {outcome:?}"
+            "expected Paused or AllTasksComplete, got {outcome:?}"
         );
 
         let events = collect_events(&mut h.event_rx);
@@ -236,9 +263,11 @@ mod tests {
         create_storage_task(&h, "Task 1", "ready").await;
         create_storage_task(&h, "Task 2", "ready").await;
 
+        // Stop is non-blocking; the loop may complete all tasks before processing
+        // the signal (timing-dependent).
         let handle = h.engine.clone().start(h.project_id, None).await.unwrap();
         handle.stop();
-        let outcome = handle.wait().await.unwrap();
+        let outcome = handle.wait().await.expect("loop should complete");
 
         let is_valid = matches!(
             outcome,
@@ -313,103 +342,14 @@ mod tests {
             MockResponse::text("Task completed successfully"),
         ]));
 
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        testutil::store_zero_auth_session(&store);
+        let mut h = setup_with_config(mock, SetupConfig {
+            build_command: Some("cargo --version".into()),
+            ..Default::default()
+        }).await;
 
-        std::env::set_var("ANTHROPIC_API_KEY", "test-key");
+        create_storage_task(&h, "Implement feature A", "ready").await;
 
-        let billing_url = testutil::start_mock_billing_server().await;
-        let billing = Arc::new(testutil::billing_client_for_url(&billing_url));
-
-        let (storage_url, _mock_db) = aura_storage::testutil::start_mock_storage().await;
-        let storage_client = Arc::new(StorageClient::with_base_url(&storage_url));
-
-        let llm = Arc::new(aura_billing::MeteredLlm::new(mock, billing, store.clone()));
-        let settings = Arc::new(SettingsService::new(store.clone()));
-        let project_service = Arc::new(ProjectService::new(store.clone()));
-        let pricing_service = Arc::new(aura_billing::PricingService::new(store.clone()));
-        let task_service = Arc::new(TaskService::new(
-            store.clone(),
-            Some(storage_client.clone()),
-            pricing_service,
-        ));
-        let runtime_agent_state = Arc::new(Mutex::new(HashMap::new()));
-        let agent_instance_service = Arc::new(AgentInstanceService::new(
-            store.clone(),
-            Some(storage_client.clone()),
-            runtime_agent_state,
-            None,
-        ));
-        let session_service = Arc::new(
-            SessionService::new(store.clone(), 0.8, 200_000)
-                .with_storage_client(Some(storage_client.clone())),
-        );
-        let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-
-        let engine = Arc::new(
-            DevLoopEngine::new(
-                store.clone(),
-                settings,
-                llm,
-                project_service.clone(),
-                task_service.clone(),
-                agent_instance_service,
-                session_service,
-                event_tx,
-            )
-            .with_storage_client(Some(storage_client.clone())),
-        );
-
-        let project_dir = tmp.path().join("project");
-        std::fs::create_dir_all(&project_dir).unwrap();
-
-        let project = project_service
-            .create_project(CreateProjectInput {
-                org_id: OrgId::new(),
-                name: "build-test-project".into(),
-                description: "test".into(),
-                linked_folder_path: project_dir.to_string_lossy().to_string(),
-                workspace_source: None,
-                workspace_display_path: None,
-                build_command: Some("cargo --version".into()),
-                test_command: None,
-            })
-            .unwrap();
-
-        let jwt = store.get_jwt().unwrap();
-        let pid = project.project_id.to_string();
-
-        let spec = storage_client
-            .create_spec(
-                &pid,
-                &jwt,
-                &CreateSpecRequest {
-                    title: "Test spec".into(),
-                    order_index: Some(0),
-                    markdown_contents: Some("Test specification".into()),
-                },
-            )
-            .await
-            .unwrap();
-
-        storage_client
-            .create_task(
-                &pid,
-                &jwt,
-                &CreateTaskRequest {
-                    spec_id: spec.id,
-                    title: "Implement feature A".into(),
-                    description: Some("Description for Implement feature A".into()),
-                    status: Some("ready".into()),
-                    order_index: Some(0),
-                    dependency_ids: None,
-                },
-            )
-            .await
-            .unwrap();
-
-        let handle = engine.clone().start(project.project_id, None).await.unwrap();
+        let handle = h.engine.clone().start(h.project_id, None).await.unwrap();
         let outcome = handle.wait().await.unwrap();
 
         assert!(
@@ -417,7 +357,7 @@ mod tests {
             "expected AllTasksComplete, got {outcome:?}"
         );
 
-        let events = collect_events(&mut event_rx);
+        let events = collect_events(&mut h.event_rx);
         assert!(
             events.iter().any(|e| matches!(e, EngineEvent::BuildVerificationStarted { .. })),
             "should trigger build verification"
@@ -430,8 +370,8 @@ mod tests {
 
     #[tokio::test]
     async fn loop_triggers_session_rollover() {
-        // Response order: task exec → rollover summary → task exec → rollover summary → task exec
-        // High token counts on task responses ensure context_usage_estimate exceeds the threshold.
+        // High token counts on task responses ensure context_usage_estimate exceeds the
+        // rollover threshold (0.01 of 10k window = 100 tokens).
         let mock = Arc::new(MockLlmProvider::with_responses(vec![
             MockResponse::text("Task 1 done").with_tokens(5_000, 5_000),
             MockResponse::text("Summary after task 1").with_tokens(100, 50),
@@ -442,98 +382,20 @@ mod tests {
             MockResponse::text("Extra response").with_tokens(100, 50),
         ]));
 
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-        testutil::store_zero_auth_session(&store);
-
-        std::env::set_var("ANTHROPIC_API_KEY", "test-key");
-
-        let billing_state = Arc::new(tokio::sync::Mutex::new(
-            testutil::MockBillingState::new(10_000_000),
-        ));
-        let billing_url = testutil::start_stateful_mock_billing_server(billing_state).await;
-        let billing = Arc::new(testutil::billing_client_for_url(&billing_url));
-
-        let (storage_url, _mock_db) = aura_storage::testutil::start_mock_storage().await;
-        let storage_client = Arc::new(StorageClient::with_base_url(&storage_url));
-
-        let llm = Arc::new(aura_billing::MeteredLlm::new(mock, billing, store.clone()));
-        let settings = Arc::new(SettingsService::new(store.clone()));
-        let project_service = Arc::new(ProjectService::new(store.clone()));
-        let pricing_service = Arc::new(aura_billing::PricingService::new(store.clone()));
-        let task_service = Arc::new(TaskService::new(
-            store.clone(),
-            Some(storage_client.clone()),
-            pricing_service,
-        ));
-        let runtime_agent_state = Arc::new(Mutex::new(HashMap::new()));
-        let agent_instance_service = Arc::new(AgentInstanceService::new(
-            store.clone(),
-            Some(storage_client.clone()),
-            runtime_agent_state,
-            None,
-        ));
-        // Low threshold (0.01) + small context window (10k tokens) so rollover triggers
-        // after first task (10k tokens / 10k window = 1.0 usage >> 0.01 threshold).
-        let session_service = Arc::new(
-            SessionService::new(store.clone(), 0.01, 10_000)
-                .with_storage_client(Some(storage_client.clone())),
-        );
-        let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-
-        let engine = Arc::new(
-            DevLoopEngine::new(
-                store.clone(),
-                settings,
-                llm,
-                project_service.clone(),
-                task_service.clone(),
-                agent_instance_service,
-                session_service,
-                event_tx,
-            )
-            .with_storage_client(Some(storage_client.clone())),
-        );
-
-        let project_dir = tmp.path().join("project");
-        std::fs::create_dir_all(&project_dir).unwrap();
-
-        let project = project_service
-            .create_project(CreateProjectInput {
-                org_id: OrgId::new(),
-                name: "rollover-test".into(),
-                description: "test".into(),
-                linked_folder_path: project_dir.to_string_lossy().to_string(),
-                workspace_source: None,
-                workspace_display_path: None,
-                build_command: None,
-                test_command: None,
-            })
-            .unwrap();
-
-        let jwt = store.get_jwt().unwrap();
-        let pid = project.project_id.to_string();
-
-        let spec = storage_client
-            .create_spec(
-                &pid,
-                &jwt,
-                &CreateSpecRequest {
-                    title: "Multi-task spec".into(),
-                    order_index: Some(0),
-                    markdown_contents: Some("Spec for rollover test".into()),
-                },
-            )
-            .await
-            .unwrap();
+        let mut h = setup_with_config(mock, SetupConfig {
+            rollover_threshold: 0.01,
+            model_context_window: 10_000,
+            ..Default::default()
+        }).await;
 
         for i in 0..3 {
-            storage_client
+            let jwt = h.store.get_jwt().unwrap();
+            h.storage_client
                 .create_task(
-                    &pid,
+                    &h.project_id.to_string(),
                     &jwt,
                     &CreateTaskRequest {
-                        spec_id: spec.id.clone(),
+                        spec_id: h.spec_id.clone(),
                         title: format!("Task {}", i + 1),
                         description: Some(format!("Task {} desc", i + 1)),
                         status: Some("ready".into()),
@@ -545,7 +407,7 @@ mod tests {
                 .unwrap();
         }
 
-        let handle = engine.clone().start(project.project_id, None).await.unwrap();
+        let handle = h.engine.clone().start(h.project_id, None).await.unwrap();
         let outcome = handle.wait().await.unwrap();
 
         assert!(
@@ -553,7 +415,7 @@ mod tests {
             "expected AllTasksComplete, got {outcome:?}"
         );
 
-        let events = collect_events(&mut event_rx);
+        let events = collect_events(&mut h.event_rx);
 
         let rollover_count = events
             .iter()

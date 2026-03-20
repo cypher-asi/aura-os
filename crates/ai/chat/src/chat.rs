@@ -24,6 +24,8 @@ use aura_tasks::TaskService;
 use crate::channel_ext::send_or_log;
 use crate::tool_loop::ToolLoopEvent;
 
+const SESSION_STATUS_ACTIVE: &str = "active";
+
 pub(crate) fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage> {
     messages
         .iter()
@@ -104,6 +106,11 @@ pub(crate) fn convert_messages_to_rich(messages: &[Message]) -> Vec<RichMessage>
 
 pub(crate) type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
 
+/// Forward a tool-loop event to the chat stream and accumulate content blocks.
+///
+/// Uses `std::sync::Mutex` intentionally: the critical sections are sub-microsecond
+/// (single `Vec::push`) and never held across `.await` points, which is the
+/// recommended pattern per Tokio docs for short, synchronous locks.
 pub(crate) fn forward_tool_loop_event(
     evt: ToolLoopEvent,
     tx: &mpsc::UnboundedSender<ChatStreamEvent>,
@@ -186,7 +193,14 @@ fn build_attachment_blocks(
         } else if att.type_ == "text" {
             let text = match B64.decode(&att.data) {
                 Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
-                Err(_) => continue,
+                Err(e) => {
+                    warn!(
+                        name = att.name.as_deref().unwrap_or("<unnamed>"),
+                        error = %e,
+                        "Skipping text attachment with invalid base64"
+                    );
+                    continue;
+                }
             };
             let header = att
                 .name
@@ -308,7 +322,7 @@ impl ChatService {
             .ok()?;
         sessions
             .iter()
-            .find(|s| s.status.as_deref() == Some("active"))
+            .find(|s| s.status.as_deref() == Some(SESSION_STATUS_ACTIVE))
             .map(|s| s.id.clone())
     }
 
@@ -326,7 +340,7 @@ impl ChatService {
         let jwt = self.get_jwt()?;
         let req = aura_storage::CreateSessionRequest {
             project_id: project_id.to_string(),
-            status: Some("active".to_string()),
+            status: Some(SESSION_STATUS_ACTIVE.to_string()),
             context_usage_estimate: None,
             summary_of_previous_context: None,
         };
@@ -437,10 +451,10 @@ impl ChatService {
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
     ) -> Message {
-        let message_id = sm
-            .id
-            .parse::<MessageId>()
-            .unwrap_or_else(|_| MessageId::new());
+        let message_id = sm.id.parse::<MessageId>().unwrap_or_else(|e| {
+            warn!(raw_id = %sm.id, error = %e, "Generating new MessageId for unparseable storage ID");
+            MessageId::new()
+        });
         let role = match sm.role.as_deref() {
             Some("user") => ChatRole::User,
             Some("assistant") => ChatRole::Assistant,
@@ -522,7 +536,7 @@ impl ChatService {
 
         send(ChatStreamEvent::Progress("Connecting...".to_string()));
 
-        let _content_blocks = build_attachment_blocks(content, attachments);
+        let content_blocks = build_attachment_blocks(content, attachments);
 
         let active_session_id = self
             .ensure_active_session(project_id, agent_instance_id)
@@ -539,7 +553,7 @@ impl ChatService {
             agent_instance_id,
             "user",
             content,
-            _content_blocks.as_deref(),
+            content_blocks.as_deref(),
             None,
             None,
             None,

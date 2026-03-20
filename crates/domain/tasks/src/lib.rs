@@ -45,13 +45,13 @@ impl TaskService {
     fn get_jwt(&self) -> Result<String, TaskError> {
         self.store
             .get_jwt()
-            .ok_or_else(|| TaskError::ParseError("no active session for storage".into()))
+            .ok_or(TaskError::NoActiveSession)
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
-        self.storage_client.as_ref().ok_or_else(|| {
-            TaskError::ParseError("aura-storage is not configured".into())
-        })
+        self.storage_client
+            .as_ref()
+            .ok_or(TaskError::StorageNotConfigured)
     }
 
     pub async fn list_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
@@ -62,7 +62,13 @@ impl TaskService {
             .await?;
         let tasks = storage_tasks
             .into_iter()
-            .filter_map(|s| storage_task_to_task(s).ok())
+            .filter_map(|s| {
+                let id = s.id.clone();
+                storage_task_to_task(s).map_err(|e| {
+                    tracing::warn!(task_id = %id, error = %e, "Skipping task that failed conversion");
+                    e
+                }).ok()
+            })
             .collect();
         Ok(tasks)
     }
@@ -79,7 +85,13 @@ impl TaskService {
             .await?;
         let tasks = storage_tasks
             .into_iter()
-            .filter_map(|s| storage_task_to_task(s).ok())
+            .filter_map(|s| {
+                let id = s.id.clone();
+                storage_task_to_task(s).map_err(|e| {
+                    tracing::warn!(task_id = %id, error = %e, "Skipping task that failed conversion");
+                    e
+                }).ok()
+            })
             .filter(|t| t.spec_id == *spec_id)
             .collect();
         Ok(tasks)

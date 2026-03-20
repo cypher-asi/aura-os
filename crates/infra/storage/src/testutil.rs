@@ -101,11 +101,17 @@ async fn update_session(
 }
 
 async fn list_sessions(
-    Path(_project_agent_id): Path<String>,
+    Path(project_agent_id): Path<String>,
     State(db): State<SharedDb>,
 ) -> Json<Vec<StorageSession>> {
     let db = db.lock().await;
-    Json(db.sessions.clone())
+    let filtered: Vec<StorageSession> = db
+        .sessions
+        .iter()
+        .filter(|s| s.project_agent_id.as_deref() == Some(project_agent_id.as_str()))
+        .cloned()
+        .collect();
+    Json(filtered)
 }
 
 // ---------------------------------------------------------------------------
@@ -372,6 +378,21 @@ async fn get_project_agent(
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
+async fn update_project_agent(
+    Path(project_agent_id): Path<String>,
+    State(db): State<SharedDb>,
+    Json(req): Json<UpdateProjectAgentRequest>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    if let Some(agent) = db.project_agents.iter_mut().find(|a| a.id == project_agent_id) {
+        agent.status = Some(req.status);
+        agent.updated_at = Some(Utc::now().to_rfc3339());
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Health
 // ---------------------------------------------------------------------------
@@ -423,7 +444,7 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             "/api/projects/:project_id/agents",
             post(create_project_agent).get(list_project_agents),
         )
-        .route("/api/project-agents/:id", get(get_project_agent))
+        .route("/api/project-agents/:id", get(get_project_agent).put(update_project_agent))
         .with_state(db)
 }
 

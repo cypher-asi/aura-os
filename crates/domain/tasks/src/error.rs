@@ -26,6 +26,10 @@ pub enum TaskError {
     Settings(#[from] SettingsError),
     #[error("task extraction parse error: {0}")]
     ParseError(String),
+    #[error("no active session for storage")]
+    NoActiveSession,
+    #[error("aura-storage is not configured")]
+    StorageNotConfigured,
     #[error("duplicate follow-up task")]
     DuplicateFollowUp,
     #[error("insufficient credits")]

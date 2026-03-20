@@ -10,7 +10,7 @@ use aura_store::RocksStore;
 use aura_projects::ProjectService;
 use aura_tasks::TaskService;
 
-const MAX_TOOL_ITERATIONS: usize = 25;
+use crate::constants::MAX_TOOL_ITERATIONS;
 
 pub struct ChatToolExecutor {
     pub(crate) store: Arc<RocksStore>,

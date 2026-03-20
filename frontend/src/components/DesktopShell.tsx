@@ -1,0 +1,185 @@
+import { useState, useEffect, useRef } from "react";
+import { Link, useOutlet } from "react-router-dom";
+import { Topbar, Button } from "@cypher-asi/zui";
+import { Server } from "lucide-react";
+import { Lane } from "./Lane";
+import { AppNavRail } from "./AppNavRail";
+import { BottomTaskbar } from "./BottomTaskbar";
+import { HostSettingsModal } from "./HostSettingsModal";
+import { UpdateBanner } from "./UpdateBanner";
+import { PanelSearch } from "./PanelSearch";
+import { WindowControls } from "./WindowControls";
+import { useAppContext } from "../context/AppContext";
+import { useSidebarSearch } from "../context/SidebarSearchContext";
+import { useSidekick } from "../context/SidekickContext";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { apps } from "../apps/registry";
+import { windowCommand } from "../lib/windowCommand";
+import styles from "./AppShell.module.css";
+
+function blurActiveElement() {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement) {
+    active.blur();
+  }
+}
+
+function SidebarSearchInput() {
+  const { query, setQuery, action } = useSidebarSearch();
+  const { activeApp } = useAppContext();
+
+  return (
+    <PanelSearch
+      placeholder={activeApp.searchPlaceholder ?? "Search..."}
+      value={query}
+      onChange={setQuery}
+      action={action}
+    />
+  );
+}
+
+function SidekickLaneInner() {
+  const { activeApp } = useAppContext();
+  const { SidekickPanel, SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
+
+  if (!SidekickPanel) return null;
+
+  return (
+    <Lane
+      resizable
+      resizePosition="left"
+      defaultWidth={320}
+      minWidth={200}
+      maxWidth={1200}
+      storageKey="aura-sidekick-v2"
+      header={SidekickTaskbar && <SidekickTaskbar />}
+      taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
+      style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
+    >
+      <SidekickPanel />
+    </Lane>
+  );
+}
+
+function SidekickLane() {
+  const { activeApp } = useAppContext();
+  return <SidekickLaneInner key={activeApp.id} />;
+}
+
+function PreviewLane() {
+  const { activeApp } = useAppContext();
+  const { PreviewPanel, PreviewHeader: PreviewHeaderComp } = activeApp;
+  const { previewItem } = useSidekick();
+
+  return (
+    <Lane
+      resizable
+      resizePosition="left"
+      defaultWidth={320}
+      maxWidth={1200}
+      storageKey="aura-preview"
+      collapsible
+      collapsed={!previewItem}
+      header={PreviewHeaderComp && <PreviewHeaderComp />}
+      style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
+    >
+      {PreviewPanel && <PreviewPanel />}
+    </Lane>
+  );
+}
+
+export function DesktopShell({
+  onOpenOrgSettings,
+  onBuyCredits,
+}: {
+  onOpenOrgSettings: () => void;
+  onBuyCredits: () => void;
+}) {
+  const { activeApp } = useAppContext();
+  const { features } = useAuraCapabilities();
+  const routeContent = useOutlet();
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
+  const { MainPanel, PreviewPanel } = activeApp;
+
+  useEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      document.documentElement.style.setProperty("--left-panel-width", `${w}px`);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <>
+      <div className={styles.desktopShell}>
+        <Topbar
+          className="titlebar-drag"
+          onDoubleClick={() => windowCommand("maximize")}
+          icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
+          title={<span className="titlebar-center"><Link to="/projects" style={{ color: "inherit", textDecoration: "none" }}>AURA</Link></span>}
+          actions={(
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {features.hostRetargeting && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  icon={<Server size={16} />}
+                  aria-label="Open host settings"
+                  onClick={() => setHostSettingsOpen(true)}
+                />
+              )}
+              <WindowControls />
+            </div>
+          )}
+        />
+        <UpdateBanner />
+
+        <div className={styles.desktopContent}>
+          <div ref={leftPanelRef} className={styles.desktopSidebar}>
+            <div className={styles.desktopSidebarBody}>
+              <AppNavRail />
+              <Lane
+                resizable
+                resizePosition="right"
+                defaultWidth={200}
+                maxWidth={600}
+                storageKey="aura-sidebar"
+                header={<SidebarSearchInput />}
+              >
+                {apps.map((app) => (
+                  <div
+                    key={app.id}
+                    style={{ display: app.id === activeApp.id ? "contents" : "none" }}
+                  >
+                    <app.LeftPanel />
+                  </div>
+                ))}
+              </Lane>
+            </div>
+            <BottomTaskbar
+              onOpenOrgSettings={onOpenOrgSettings}
+              onBuyCredits={onBuyCredits}
+            />
+          </div>
+
+          <MainPanel>{routeContent}</MainPanel>
+          <SidekickLane />
+          {PreviewPanel && <PreviewLane />}
+        </div>
+      </div>
+
+      <HostSettingsModal
+        isOpen={hostSettingsOpen}
+        onClose={() => {
+          blurActiveElement();
+          setHostSettingsOpen(false);
+        }}
+      />
+    </>
+  );
+}

@@ -9,8 +9,8 @@ import {
   loadNewProjectDraftFiles,
   saveNewProjectDraftFiles,
 } from "../lib/new-project-draft";
-
-const NEW_PROJECT_DRAFT_STORAGE_KEY = "aura:new-project-draft";
+import { useNewProjectDraft } from "./use-new-project-draft";
+import { useOrbitRepos } from "./use-orbit-repos";
 
 function slugFromName(name: string): string {
   return name
@@ -36,40 +36,6 @@ type DirectoryInput = HTMLInputElement & {
   webkitdirectory?: boolean;
   directory?: boolean;
 };
-
-type NewProjectDraft = {
-  workspaceMode: WorkspaceMode;
-  name: string;
-  description: string;
-  folderPath: string;
-};
-
-function readDraft(): NewProjectDraft | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(NEW_PROJECT_DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    return {
-      workspaceMode: parsed.workspaceMode === "linked" ? "linked" : "imported",
-      name: typeof parsed.name === "string" ? parsed.name : "",
-      description: typeof parsed.description === "string" ? parsed.description : "",
-      folderPath: typeof parsed.folderPath === "string" ? parsed.folderPath : "",
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeDraft(draft: NewProjectDraft | null) {
-  if (typeof window === "undefined") return;
-  if (!draft) {
-    window.sessionStorage.removeItem(NEW_PROJECT_DRAFT_STORAGE_KEY);
-    return;
-  }
-  window.sessionStorage.setItem(NEW_PROJECT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
-}
 
 function getRelativePath(file: File): string {
   const browserFile = file as BrowserFile;
@@ -158,23 +124,13 @@ export function useNewProjectForm(
   const { projects } = useProjectsList();
   const { features } = useAuraCapabilities();
 
-  const storedDraftRef = useRef<NewProjectDraft | null>(null);
-  if (storedDraftRef.current === null) {
-    storedDraftRef.current = readDraft();
-  }
-  const storedDraft = storedDraftRef.current;
-
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>(
-    storedDraft?.workspaceMode === "linked" && features.linkedWorkspace ? "linked" : "imported",
-  );
-  const [name, setName] = useState(storedDraft?.name ?? "");
-  const [description, setDescription] = useState(storedDraft?.description ?? "");
-  const [folderPath, setFolderPath] = useState(storedDraft?.folderPath ?? "");
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("imported");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [folderPath, setFolderPath] = useState("");
   const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
   const [orbitRepoName, setOrbitRepoName] = useState("");
   const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("none");
-  const [orbitRepos, setOrbitRepos] = useState<OrbitRepo[]>([]);
-  const [orbitReposLoading, setOrbitReposLoading] = useState(false);
   const [selectedOrbitRepo, setSelectedOrbitRepo] = useState<OrbitRepo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -183,6 +139,19 @@ export function useNewProjectForm(
   const importFilesInputRef = useRef<HTMLInputElement>(null);
   const restoringImportDraftRef = useRef(false);
   const userChangedImportSelectionRef = useRef(false);
+
+  const { storedDraft, clearDraft } = useNewProjectDraft(isOpen, { workspaceMode, name, description, folderPath });
+  const { orbitRepos, orbitReposLoading, resetOrbitRepos } = useOrbitRepos(isOpen, orbitRepoMode, isAuthenticated);
+
+  const draftAppliedRef = useRef(false);
+  useEffect(() => {
+    if (draftAppliedRef.current || !storedDraft) return;
+    draftAppliedRef.current = true;
+    setWorkspaceMode(storedDraft.workspaceMode === "linked" && features.linkedWorkspace ? "linked" : "imported");
+    if (storedDraft.name) setName(storedDraft.name);
+    if (storedDraft.description) setDescription(storedDraft.description);
+    if (storedDraft.folderPath) setFolderPath(storedDraft.folderPath);
+  }, [storedDraft, features.linkedWorkspace]);
 
   const orbitOwner = activeOrg?.org_id ?? user?.user_id ?? null;
   const proposedRepoSlug = slugFromName(name) || "my-project";
@@ -216,11 +185,6 @@ export function useNewProjectForm(
   }, [isOpen, workspaceMode]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    writeDraft({ workspaceMode, name, description, folderPath });
-  }, [description, folderPath, isOpen, name, workspaceMode]);
-
-  useEffect(() => {
     if (workspaceMode !== "imported") {
       void clearNewProjectDraftFiles();
       return;
@@ -235,16 +199,6 @@ export function useNewProjectForm(
     }
   }, [isOpen, isAuthenticated]);
 
-  useEffect(() => {
-    if (!isOpen || orbitRepoMode !== "existing" || !isAuthenticated) return;
-    setOrbitReposLoading(true);
-    api
-      .listOrbitRepos()
-      .then(setOrbitRepos)
-      .catch(() => setOrbitRepos([]))
-      .finally(() => setOrbitReposLoading(false));
-  }, [isOpen, orbitRepoMode, isAuthenticated]);
-
   const reset = useCallback(() => {
     setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
     setName("");
@@ -253,23 +207,23 @@ export function useNewProjectForm(
     setImportCandidates([]);
     setOrbitRepoName("");
     setOrbitRepoMode("none");
-    setOrbitRepos([]);
+    resetOrbitRepos();
     setSelectedOrbitRepo(null);
     setLoading(false);
     setError("");
     setNameError("");
-    writeDraft(null);
+    clearDraft();
     void clearNewProjectDraftFiles();
     if (importFolderInputRef.current) importFolderInputRef.current.value = "";
     if (importFilesInputRef.current) importFilesInputRef.current.value = "";
-  }, [features.linkedWorkspace]);
+  }, [features.linkedWorkspace, clearDraft, resetOrbitRepos]);
 
   const handleClose = useCallback(() => {
     reset();
     onClose();
   }, [reset, onClose]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!name.trim()) {
       setNameError("Project name is required");
       return;
@@ -349,7 +303,9 @@ export function useNewProjectForm(
     } finally {
       setLoading(false);
     }
-  };
+  }, [name, workspaceMode, folderPath, importCandidates, orbitRepoMode,
+      selectedOrbitRepo, orbitRepoName, proposedRepoSlug, orbitOwner,
+      resolvedOrgId, reset, onCreated]);
 
   const importSummary = useMemo(() => {
     const totalBytes = importCandidates.reduce((sum, candidate) => sum + candidate.file.size, 0);
@@ -407,7 +363,6 @@ export function useNewProjectForm(
   ]);
   const canSubmit = !loading && !submitBlocker;
 
-  // Suppress unused - selectedWorkspaceModeOption is returned via workspaceModeOptions
   void selectedWorkspaceModeOption;
 
   return {
