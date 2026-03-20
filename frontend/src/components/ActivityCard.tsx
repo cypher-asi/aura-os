@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { FeedEvent, FeedComment } from "../apps/feed/FeedProvider";

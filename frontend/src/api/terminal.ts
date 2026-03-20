@@ -1,4 +1,4 @@
-const BASE_URL = "";
+import { resolveApiUrl, resolveWsUrl } from "../lib/host-config";
 
 export interface TerminalInfo {
   id: string;
@@ -19,8 +19,9 @@ export async function spawnTerminal(opts: {
   rows: number;
   cwd?: string;
 }): Promise<SpawnTerminalResponse> {
-  const res = await fetch(`${BASE_URL}/api/terminal`, {
+  const res = await fetch(resolveApiUrl("/api/terminal"), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(opts),
   });
@@ -29,20 +30,20 @@ export async function spawnTerminal(opts: {
 }
 
 export async function listTerminals(): Promise<TerminalInfo[]> {
-  const res = await fetch(`${BASE_URL}/api/terminal`);
+  const res = await fetch(resolveApiUrl("/api/terminal"), { credentials: "include" });
   if (!res.ok) throw new Error(`List terminals failed: ${res.statusText}`);
   return res.json();
 }
 
 export async function killTerminal(id: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/api/terminal/${id}`, {
+  const res = await fetch(resolveApiUrl(`/api/terminal/${id}`), {
     method: "DELETE",
+    credentials: "include",
   });
   if (!res.ok && res.status !== 204)
     throw new Error(`Kill terminal failed: ${res.statusText}`);
 }
 
 export function terminalWsUrl(id: string): string {
-  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}/ws/terminal/${id}`;
+  return resolveWsUrl(`/ws/terminal/${id}`);
 }

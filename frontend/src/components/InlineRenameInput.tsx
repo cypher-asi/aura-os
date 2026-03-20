@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Project } from "../types";
 import styles from "./ProjectList.module.css";
@@ -12,27 +12,31 @@ interface InlineRenameInputProps {
 export function InlineRenameInput({ target, onSave, onCancel }: InlineRenameInputProps) {
   const [value, setValue] = useState(target.name);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [rect, setRect] = useState<DOMRect | null>(null);
   const saved = useRef(false);
-  const labelRef = useRef<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
     const row = document.getElementById(target.project_id);
     const label = row?.querySelector<HTMLElement>("[class*='label']");
-    if (label) {
-      labelRef.current = label;
-      setRect(label.getBoundingClientRect());
-      label.style.visibility = "hidden";
-    }
+    if (!label) return;
+
+    const rect = label.getBoundingClientRect();
+    input.style.top = `${rect.top}px`;
+    input.style.left = `${rect.left}px`;
+    input.style.width = `${rect.width}px`;
+    input.style.height = `${rect.height}px`;
+    input.style.visibility = "visible";
+    label.style.visibility = "hidden";
+    input.focus();
+    input.select();
+
     return () => {
-      if (labelRef.current) labelRef.current.style.visibility = "";
+      label.style.visibility = "";
+      input.style.visibility = "";
     };
   }, [target.project_id]);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [rect]);
 
   const commit = useCallback(() => {
     if (saved.current) return;
@@ -44,13 +48,11 @@ export function InlineRenameInput({ target, onSave, onCancel }: InlineRenameInpu
       onCancel();
     }
   }, [value, target.name, onSave, onCancel]);
-
-  if (!rect) return null;
   return createPortal(
     <input
       ref={inputRef}
       className={styles.inlineRenameInput}
-      style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
+      style={{ visibility: "hidden" }}
       value={value}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") onCancel(); }}

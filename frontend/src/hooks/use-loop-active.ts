@@ -12,23 +12,31 @@ export function useLoopActive(projectId: ProjectId | undefined): boolean {
   const { subscribe } = useEventContext();
   const [loopActive, setLoopActive] = useState(false);
 
-  const fetchStatus = useCallback(() => {
+  const fetchStatus = useCallback(async () => {
     if (!projectId) {
-      setLoopActive(false);
-      return;
+      return false;
     }
-    api
-      .getLoopStatus(projectId)
-      .then((res) => {
-        setLoopActive(
-          !!(res.active_agent_instances && res.active_agent_instances.length > 0),
-        );
-      })
-      .catch(() => setLoopActive(false));
+
+    try {
+      const res = await api.getLoopStatus(projectId);
+      return !!(res.active_agent_instances && res.active_agent_instances.length > 0);
+    } catch {
+      return false;
+    }
   }, [projectId]);
 
   useEffect(() => {
-    fetchStatus();
+    let cancelled = false;
+
+    void fetchStatus().then((nextLoopActive) => {
+      if (!cancelled) {
+        setLoopActive(nextLoopActive);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [fetchStatus]);
 
   useEffect(() => {

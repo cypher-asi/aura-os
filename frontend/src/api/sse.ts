@@ -10,7 +10,7 @@ export async function streamSSE<T extends string>(
   callbacks: SSECallbacks<T>,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(url, { ...init, signal });
+  const response = await fetch(url, { ...init, credentials: "include", signal });
 
   if (!response.ok) {
     const text = await response.text().catch(() => response.statusText);

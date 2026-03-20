@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useContext,
@@ -28,8 +29,8 @@ export function FollowProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) {
-      setFollows([]);
-      return;
+      const frame = window.requestAnimationFrame(() => setFollows([]));
+      return () => window.cancelAnimationFrame(frame);
     }
     api.follows.list().then(setFollows).catch(() => setFollows([]));
   }, [user]);

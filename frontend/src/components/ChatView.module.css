@@ -35,6 +35,17 @@
   flex: 1;
 }
 
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 /* Messages */
 .message {
   display: flex;
@@ -405,6 +416,12 @@
   border-radius: 0;
 }
 
+@media (pointer: coarse), (max-width: 900px) {
+  .textarea {
+    font-size: 16px;
+  }
+}
+
 .textarea::placeholder {
   color: var(--color-text-muted);
 }
@@ -540,4 +557,3 @@
   border-radius: 2px;
   background: var(--color-text-muted);
 }
-

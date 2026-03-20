@@ -287,6 +287,8 @@ mod tests {
             name: name.into(),
             description: "Test project description".into(),
             linked_folder_path: folder.into(),
+            workspace_source: None,
+            workspace_display_path: None,
             requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
             build_command: Some("cargo build".into()),

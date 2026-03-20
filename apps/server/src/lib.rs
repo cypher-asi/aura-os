@@ -501,6 +501,10 @@ fn spawn_network_ws_bridge(
 }
 
 pub fn build_app_state(db_path: &Path) -> AppState {
+    let data_dir = db_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
@@ -514,7 +518,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         store.clone(),
     ));
     let network_client = NetworkClient::from_env().map(Arc::new);
-    let project_service = Arc::new(ProjectService::new(network_client.clone(), store.clone()));
+    let project_service = Arc::new(ProjectService::new_with_network(network_client.clone(), store.clone()));
     let storage_client = StorageClient::from_env().map(Arc::new);
     let spec_gen_service = Arc::new(SpecGenerationService::new(
         store.clone(),
@@ -565,7 +569,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     let task_output_buffers: TaskOutputBuffers =
         Arc::new(std::sync::Mutex::new(HashMap::new()));
 
-    let data_dir = db_path.parent().unwrap_or(Path::new("."));
     let loop_log_dir = std::env::var("AURA_LOOP_LOG_DIR")
         .ok()
         .filter(|s| !s.trim().is_empty())
@@ -587,6 +590,9 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         .ok()
         .filter(|s| !s.trim().is_empty())
         .map(|s| s.trim_end_matches('/').to_string());
+    let internal_service_token = std::env::var("INTERNAL_SERVICE_TOKEN")
+        .ok()
+        .filter(|s| !s.trim().is_empty());
 
     if let Some(ref client) = storage_client {
         let health_client = client.clone();
@@ -629,6 +635,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
     }
 
     AppState {
+        data_dir: data_dir.to_path_buf(),
         store,
         org_service,
         auth_service,
@@ -654,6 +661,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         storage_client,
         orbit_client,
         orbit_base_url,
+        internal_service_token,
         runtime_agent_state,
     }
 }

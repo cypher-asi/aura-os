@@ -1,7 +1,14 @@
 .container {
   position: relative;
+  width: 100%;
+  min-width: 0;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-surface);
+}
+
+.drawerContainer {
+  border-top: none;
+  background: transparent;
 }
 
 .trigger {
@@ -22,6 +29,12 @@
   cursor: pointer;
 }
 
+.drawerTrigger {
+  min-height: 32px;
+  padding: 0 2px;
+  color: var(--color-text-primary);
+}
+
 .trigger:hover {
   background: var(--color-surface-hover);
 }
@@ -38,9 +51,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+  text-align: left;
 }
 
 .chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.triggerIcon {
   flex-shrink: 0;
   color: var(--color-text-muted);
 }

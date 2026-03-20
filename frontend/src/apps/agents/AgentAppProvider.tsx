@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { Agent } from "../../types";
@@ -26,7 +27,10 @@ export function AgentAppProvider({ children }: { children: ReactNode }) {
     }).catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(refresh);
+    return () => window.cancelAnimationFrame(frame);
+  }, [refresh]);
 
   const value = useMemo(
     () => ({ agents, loading, selectedAgent, selectAgent: setSelectedAgent, refresh }),
@@ -41,4 +45,3 @@ export function useAgentApp() {
   if (!ctx) throw new Error("useAgentApp must be used within AgentAppProvider");
   return ctx;
 }
-

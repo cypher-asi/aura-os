@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import type { ProjectProgress, ProjectId } from "../types";
-import type { EngineEvent } from "../types/events";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
 
@@ -20,7 +19,7 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
 
   useEffect(() => {
     const unsubs = [
-      subscribe("task_completed", (_e: EngineEvent) => {
+      subscribe("task_completed", () => {
         setProgress((prev) => {
           if (!prev) return prev;
           const done = prev.done_tasks + 1;
@@ -34,7 +33,7 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
           };
         });
       }),
-      subscribe("task_failed", (_e: EngineEvent) => {
+      subscribe("task_failed", () => {
         setProgress((prev) => {
           if (!prev) return prev;
           return {
@@ -44,7 +43,7 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
           };
         });
       }),
-      subscribe("task_started", (_e: EngineEvent) => {
+      subscribe("task_started", () => {
         setProgress((prev) => {
           if (!prev) return prev;
           return {
@@ -54,7 +53,7 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
           };
         });
       }),
-      subscribe("task_became_ready", (_e: EngineEvent) => {
+      subscribe("task_became_ready", () => {
         setProgress((prev) => {
           if (!prev) return prev;
           return {
@@ -64,7 +63,7 @@ export function useLiveProgress(projectId: ProjectId): ProjectProgress | null {
           };
         });
       }),
-      subscribe("follow_up_task_created", (_e: EngineEvent) => {
+      subscribe("follow_up_task_created", () => {
         setProgress((prev) => {
           if (!prev) return prev;
           const total = prev.total_tasks + 1;

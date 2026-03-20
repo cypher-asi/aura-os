@@ -12,6 +12,7 @@ export const LeaderboardApp: AuraApp = {
   basePath: "/leaderboard",
   LeftPanel: LeaderboardSidebar,
   MainPanel: LeaderboardMainPanel,
+  ResponsiveControls: LeaderboardSidebar,
   SidekickPanel: LeaderboardSidekickPanel,
   Provider: LeaderboardProvider,
 };

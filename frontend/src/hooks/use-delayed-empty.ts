@@ -20,12 +20,12 @@ export function useDelayedEmpty(
 
   useEffect(() => {
     if (loading || !isEmpty) {
-      setShowEmpty(false);
-      return;
+      const frame = window.requestAnimationFrame(() => setShowEmpty(false));
+      return () => window.cancelAnimationFrame(frame);
     }
     if (delayMs <= 0) {
-      setShowEmpty(true);
-      return;
+      const frame = window.requestAnimationFrame(() => setShowEmpty(true));
+      return () => window.cancelAnimationFrame(frame);
     }
     const timer = setTimeout(() => setShowEmpty(true), delayMs);
     return () => clearTimeout(timer);

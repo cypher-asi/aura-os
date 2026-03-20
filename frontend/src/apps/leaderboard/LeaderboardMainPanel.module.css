@@ -32,6 +32,7 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--space-2) var(--space-5);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
 }
 
 .chartInner {
@@ -106,4 +107,39 @@
 
 .chunk:hover {
   opacity: 0.8;
+}
+
+@media (max-width: 900px) {
+  .chartWrap {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+
+  .chartInner {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .chartWrap {
+    padding: 12px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .legend {
+    gap: var(--space-2);
+    padding: 12px 0 4px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .row {
+    padding: 6px 4px;
+  }
+
+  .nameCell {
+    width: 108px;
+  }
 }

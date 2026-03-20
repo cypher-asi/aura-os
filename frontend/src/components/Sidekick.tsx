@@ -15,9 +15,15 @@ import { StatsDashboard } from "../views/StatsDashboard";
 import { SessionList } from "../views/SessionList";
 import { SidekickLog } from "../views/SidekickLog";
 import { FileExplorer } from "./FileExplorer";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { hasLinkedWorkspace, getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
 import styles from "./Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../types").Project; onClose: () => void }) {
+  const workspaceLabel = project.workspace_source === "imported"
+    ? project.workspace_display_path ?? "Imported workspace snapshot"
+    : project.linked_folder_path || "—";
+
   return (
     <div className={styles.infoArea}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
@@ -27,8 +33,8 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
       <div className={styles.infoGrid}>
         <Text variant="muted" size="sm" as="span">Status</Text>
         <span><StatusBadge status={project.current_status} /></span>
-        <Text variant="muted" size="sm" as="span">Folder</Text>
-        <Text size="sm" as="span">{project.linked_folder_path || "—"}</Text>
+        <Text variant="muted" size="sm" as="span">Workspace</Text>
+        <Text size="sm" as="span">{workspaceLabel}</Text>
         <Text variant="muted" size="sm" as="span">Created</Text>
         <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
       </div>
@@ -59,6 +65,14 @@ export function SidekickTaskbar() {
   const [menuRect, setMenuRect] = useState<{ top: number; left: number } | null>(null);
   const moreBtnRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const { features } = useAuraCapabilities();
+  const canBrowseFiles = features.linkedWorkspace && hasLinkedWorkspace(ctx?.project);
+
+  useEffect(() => {
+    if (!canBrowseFiles && activeTab === "files") {
+      setActiveTab("tasks");
+    }
+  }, [activeTab, canBrowseFiles, setActiveTab]);
 
   useLayoutEffect(() => {
     if (moreOpen && moreBtnRef.current) {
@@ -74,11 +88,12 @@ export function SidekickTaskbar() {
   if (!ctx || showInfo) return null;
 
   const { project, handleArchive } = ctx;
+  const visibleTabs = canBrowseFiles ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
 
   return (
     <div className={styles.sidekickTaskbar}>
       <div className={styles.sidekickTabBar}>
-        {TAB_ICONS.map(({ id, icon, title }) => (
+        {visibleTabs.map(({ id, icon, title }) => (
           <Button
             key={id}
             variant="ghost"
@@ -154,9 +169,11 @@ export function SidekickContent() {
   const { activeTab, showInfo, toggleInfo } = useSidekick();
   const ctx = useProjectContext();
   const [searchQuery, setSearchQuery] = useState("");
+  const { features } = useAuraCapabilities();
 
   useEffect(() => {
-    setSearchQuery("");
+    const frame = window.requestAnimationFrame(() => setSearchQuery(""));
+    return () => window.cancelAnimationFrame(frame);
   }, [activeTab]);
 
   if (!ctx) {
@@ -164,6 +181,8 @@ export function SidekickContent() {
   }
 
   const { project } = ctx;
+  const linkedWorkspaceRoot = getLinkedWorkspaceRoot(project);
+  const canBrowseFiles = features.linkedWorkspace && Boolean(linkedWorkspaceRoot);
 
   if (showInfo) {
     return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
@@ -176,7 +195,17 @@ export function SidekickContent() {
     tasks: <TaskList searchQuery={searchQuery} />,
     stats: <StatsDashboard />,
     sessions: <SessionList searchQuery={searchQuery} />,
-    files: <FileExplorer rootPath={project.linked_folder_path} searchQuery={searchQuery} />,
+    files: canBrowseFiles
+      ? <FileExplorer rootPath={linkedWorkspaceRoot ?? undefined} searchQuery={searchQuery} />
+      : (
+        <div className={styles.emptyState}>
+          <Text variant="muted" size="sm">
+            {features.linkedWorkspace
+              ? "Imported workspaces do not expose live host files."
+              : "File browsing stays in the desktop app for now."}
+          </Text>
+        </div>
+      ),
   };
 
   return (

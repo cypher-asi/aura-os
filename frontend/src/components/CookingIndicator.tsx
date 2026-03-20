@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { ToolCallEntry } from "../hooks/use-chat-stream";
 import styles from "./CookingIndicator.module.css";
 

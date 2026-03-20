@@ -32,13 +32,12 @@ import {
   sendMessageStream,
   sendAgentMessageStream,
 } from "./streams";
+import { resolveApiUrl } from "../lib/host-config";
 
 export type {
   SpecGenStreamCallbacks,
   ChatStreamCallbacks,
 } from "./streams";
-
-const BASE_URL = "";
 
 export class ApiClientError extends Error {
   status: number;
@@ -72,8 +71,9 @@ export function dispatchInsufficientCredits(): void {
 }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(resolveApiUrl(path), {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     ...options,
   });
   if (!res.ok) {
@@ -100,6 +100,8 @@ export interface CreateProjectRequest {
   name: string;
   description: string;
   linked_folder_path: string;
+  workspace_source?: string;
+  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -111,6 +113,8 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   linked_folder_path?: string;
+  workspace_source?: string;
+  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -132,6 +136,25 @@ export interface OrbitCollaborator {
   username?: string;
   role: string;
   display_name?: string;
+}
+
+export interface ImportedProjectFile {
+  relative_path: string;
+  contents_base64: string;
+}
+
+export interface CreateImportedProjectRequest {
+  org_id: string;
+  name: string;
+  description: string;
+  files: ImportedProjectFile[];
+  build_command?: string;
+  test_command?: string;
+  git_repo_url?: string;
+  git_branch?: string;
+  orbit_base_url?: string;
+  orbit_owner?: string;
+  orbit_repo?: string;
 }
 
 export interface DirEntry {
@@ -234,11 +257,16 @@ export const api = {
       }),
   },
 
-  // Projects (org-scoped; orgId required)
-  listProjects: (orgId: string) =>
-    apiFetch<Project[]>(`/api/projects?org_id=${orgId}`),
+  // Projects
+  listProjects: (orgId?: string) =>
+    apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
   createProject: (data: CreateProjectRequest) =>
     apiFetch<Project>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  importProject: (data: CreateImportedProjectRequest) =>
+    apiFetch<Project>("/api/projects/import", {
       method: "POST",
       body: JSON.stringify(data),
     }),

@@ -1,0 +1,14 @@
+.taskbar {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  padding-left: var(--space-3);
+  padding-right: var(--space-2);
+  flex-shrink: 0;
+}

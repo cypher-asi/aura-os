@@ -23,17 +23,18 @@ export function CreditsBadge({ onClick }: Props) {
   const { subscribe } = useEventContext();
   const [credits, setCredits] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const orgId = activeOrg?.org_id ?? null;
 
   const fetchBalance = useCallback(() => {
-    if (!activeOrg) {
+    if (!orgId) {
       setCredits(null);
       return;
     }
     api.orgs
-      .getCreditBalance(activeOrg.org_id)
+      .getCreditBalance(orgId)
       .then((b) => setCredits(b.total_credits))
       .catch(() => {});
-  }, [activeOrg?.org_id]);
+  }, [orgId]);
 
   const debouncedFetch = useCallback(() => {
     clearTimeout(debounceRef.current);
@@ -42,7 +43,8 @@ export function CreditsBadge({ onClick }: Props) {
 
   // Fetch on mount / org change
   useEffect(() => {
-    fetchBalance();
+    const frame = window.requestAnimationFrame(fetchBalance);
+    return () => window.cancelAnimationFrame(frame);
   }, [fetchBalance]);
 
   // Periodic polling

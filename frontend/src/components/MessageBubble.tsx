@@ -254,7 +254,9 @@ function ThinkingBlock({ text, isStreaming, durationMs }: ThinkingBlockProps) {
 
   useEffect(() => {
     if (prevStreamingRef.current && !isStreaming) {
-      setExpanded(false);
+      const frame = window.requestAnimationFrame(() => setExpanded(false));
+      prevStreamingRef.current = isStreaming;
+      return () => window.cancelAnimationFrame(frame);
     }
     prevStreamingRef.current = isStreaming;
   }, [isStreaming]);

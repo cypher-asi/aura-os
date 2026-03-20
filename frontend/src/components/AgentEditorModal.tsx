@@ -3,6 +3,7 @@ import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
 import { ImagePlus, X } from "lucide-react";
 import { api } from "../api/client";
 import type { Agent } from "../types";
+import { useModalInitialFocus } from "../hooks/use-modal-initial-focus";
 import styles from "./AgentEditorModal.module.css";
 
 interface AgentEditorModalProps {
@@ -21,7 +22,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
-  const nameRef = useRef<HTMLInputElement>(null);
+  const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!agent;
@@ -44,10 +45,6 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
     setError("");
     setNameError("");
   }, [isOpen, agent]);
-
-  useEffect(() => {
-    if (isOpen) requestAnimationFrame(() => nameRef.current?.focus());
-  }, [isOpen]);
 
   const handleClose = useCallback(() => {
     setError("");
@@ -110,6 +107,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
       onClose={handleClose}
       title={isEditing ? "Edit Agent" : "Create Agent"}
       size="md"
+      initialFocusRef={initialFocusRef}
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={handleClose} disabled={saving}>

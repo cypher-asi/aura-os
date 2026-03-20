@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { api } from "../api/client";
 import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
@@ -20,7 +20,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const sidekick = useSidekick();
   const { subscribe } = useEventContext();
   const loopActive = useLoopActive(projectId);
-  const liveTaskIdsRef = useRef(new Set<string>());
+  const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading, setLoading] = useState(false);
@@ -55,20 +55,26 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   }, [projectId]);
 
   useEffect(() => {
-    liveTaskIdsRef.current.clear();
+    queueMicrotask(() => setLiveTaskIds(new Set()));
     const unsubs = [
       subscribe("task_started", (e) => {
         if (e.task_id) {
-          liveTaskIdsRef.current.add(e.task_id);
-          updateTaskStatus(e.task_id, "in_progress", {
+          const taskId = e.task_id;
+          setLiveTaskIds((prev) => new Set(prev).add(taskId));
+          updateTaskStatus(taskId, "in_progress", {
             ...(e.session_id ? { session_id: e.session_id } : {}),
           });
         }
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id) {
-          liveTaskIdsRef.current.delete(e.task_id);
-          updateTaskStatus(e.task_id, "done", {
+          const taskId = e.task_id;
+          setLiveTaskIds((prev) => {
+            const next = new Set(prev);
+            next.delete(taskId);
+            return next;
+          });
+          updateTaskStatus(taskId, "done", {
             execution_notes: e.execution_notes,
             ...(e.files ? { files_changed: e.files } : {}),
           });
@@ -76,8 +82,13 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       }),
       subscribe("task_failed", (e) => {
         if (e.task_id) {
-          liveTaskIdsRef.current.delete(e.task_id);
-          updateTaskStatus(e.task_id, "failed");
+          const taskId = e.task_id;
+          setLiveTaskIds((prev) => {
+            const next = new Set(prev);
+            next.delete(taskId);
+            return next;
+          });
+          updateTaskStatus(taskId, "failed");
         }
       }),
       subscribe("file_ops_applied", (e) => {
@@ -142,7 +153,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       function toNode(task: Task): ExplorerNode {
         const subtasks = childrenByParent.get(task.task_id);
         const displayStatus =
-          task.status === "in_progress" && !loopActive && !liveTaskIdsRef.current.has(task.task_id)
+          task.status === "in_progress" && !loopActive && !liveTaskIds.has(task.task_id)
             ? "ready"
             : task.status;
         return {
@@ -178,12 +189,12 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       specNodes.push({
         id: "__other__",
         label: "Other",
-        children: buildTaskTree(ungrouped),
+        children: buildTaskTree([...ungrouped]),
       });
     }
 
     return specNodes;
-  }, [groupedTasks, ungrouped, loopActive]);
+  }, [groupedTasks, ungrouped, loopActive, liveTaskIds]);
 
   const defaultExpandedIds = useMemo(
     () => explorerData.map((node) => node.id),
@@ -221,7 +232,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
         defaultExpandedIds={defaultExpandedIds}
         defaultSelectedIds={defaultSelectedIds}
         onSelect={(ids) => {
-          const id = ids[0];
+          const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
           if (!id) return;
           const task = taskMap.get(id);
           if (task) sidekick.viewTask(task);

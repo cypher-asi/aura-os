@@ -1,27 +1,20 @@
 import { useMemo, useCallback } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Globe, FolderOpen } from "lucide-react";
 import { useProfile } from "./ProfileProvider";
+import { ALL_PROFILE_PROJECTS_ID, getProfileSelectorItems } from "./profileSelectors";
 import styles from "./ProfileList.module.css";
 
 export function ProfileList() {
   const { projects, selectedProject, setSelectedProject } = useProfile();
 
   const data: ExplorerNode[] = useMemo(
-    () => [
-      { id: "__all__", label: "All", icon: <Globe size={14} /> },
-      ...projects.map((p) => ({
-        id: p.id,
-        label: p.name,
-        icon: <FolderOpen size={14} />,
-      })),
-    ],
+    () => getProfileSelectorItems(projects),
     [projects],
   );
 
   const defaultSelectedIds = useMemo(
-    () => [selectedProject ?? "__all__"],
+    () => [selectedProject ?? ALL_PROFILE_PROJECTS_ID],
     [selectedProject],
   );
 
@@ -29,7 +22,7 @@ export function ProfileList() {
     (ids: string[]) => {
       const id = ids[ids.length - 1];
       if (!id) return;
-      setSelectedProject(id === "__all__" ? null : id);
+      setSelectedProject(id === ALL_PROFILE_PROJECTS_ID ? null : id);
     },
     [setSelectedProject],
   );

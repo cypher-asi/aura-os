@@ -8,6 +8,8 @@
   padding: var(--space-5);
   height: 100%;
   overflow-y: auto;
+  box-sizing: border-box;
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
 }
 
 .card {
@@ -160,4 +162,38 @@
   letter-spacing: 0.12em;
   color: var(--color-text-secondary);
   opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+  .cardContainer {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    padding: 12px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+
+  .card {
+    max-width: min(100%, 300px);
+  }
+
+  .cardHeader {
+    padding: 8px 12px;
+  }
+
+  .imageBlock {
+    aspect-ratio: 16 / 9;
+  }
+
+  .nameRow {
+    padding: 12px;
+  }
+
+  .stat {
+    padding: 10px 8px;
+  }
+
+  .cardFooter {
+    padding: 10px 12px;
+  }
 }

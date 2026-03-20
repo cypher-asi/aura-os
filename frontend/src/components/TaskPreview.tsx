@@ -9,11 +9,13 @@ import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "..
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput, type BuildStep, type TestStep } from "../context/EventContext";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { toBullets, formatTokens, formatModelName } from "../utils/format";
 import { formatCostFromTokens, getCostEstimateLabel } from "../utils/pricing";
 import { parseTaskStream } from "../utils/parse-task-stream";
 import { deriveActivity, computeIterationStats } from "../utils/derive-activity";
+import { getLinkedWorkspaceRoot } from "../utils/projectWorkspace";
 import { useLoopActive } from "../hooks/use-loop-active";
 import { FormattedRawOutput } from "./FormattedRawOutput";
 import { IterationBar } from "./IterationBar";
@@ -41,55 +43,52 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const loopActive = useLoopActive(projectId);
-  const [running, setRunning] = useState(false);
-  const [status, setStatus] = useState(task.status);
-  const [liveStatus, setLiveStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    setStatus(task.status);
-    setRunning(false);
-    setLiveStatus(null);
-  }, [task.task_id, task.status]);
+  const [runState, setRunState] = useState(() => ({
+    taskId: task.task_id,
+    running: false,
+    liveStatus: null as string | null,
+  }));
+  const activeRunState =
+    runState.taskId === task.task_id
+      ? runState
+      : { taskId: task.task_id, running: false, liveStatus: null };
 
   useEffect(() => {
     const unsubs = [
       subscribe("task_started", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("in_progress");
-        setLiveStatus("in_progress");
-        setRunning(false);
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "in_progress" });
       }),
       subscribe("task_completed", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("done");
-        setLiveStatus("done");
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "done" });
       }),
       subscribe("task_failed", (e) => {
         if (e.task_id !== task.task_id) return;
-        setStatus("failed");
-        setLiveStatus("failed");
-        setRunning(false);
+        setRunState({ taskId: task.task_id, running: false, liveStatus: "failed" });
       }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [task.task_id, subscribe]);
 
   const handleRun = useCallback(async () => {
-    if (!projectId || running) return;
-    setRunning(true);
+    if (!projectId || activeRunState.running) return;
+    setRunState({ taskId: task.task_id, running: true, liveStatus: null });
     try {
       await api.runTask(projectId, task.task_id, agentInstanceId);
     } catch (err) {
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Run task failed:", err);
-      setRunning(false);
+      setRunState((prev) =>
+        prev.taskId === task.task_id ? { ...prev, running: false } : prev,
+      );
     }
-  }, [projectId, task.task_id, running, agentInstanceId]);
+  }, [activeRunState.running, agentInstanceId, projectId, task.task_id]);
 
   const effectiveStatus =
-    status === "in_progress" && !loopActive && liveStatus === null
+    (activeRunState.liveStatus ?? task.status) === "in_progress" && !loopActive && activeRunState.liveStatus === null
       ? "ready"
-      : status;
+      : activeRunState.liveStatus ?? task.status;
   const visible = effectiveStatus === "ready";
 
   return (
@@ -97,10 +96,10 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
       variant="ghost"
       size="sm"
       iconOnly
-      icon={running ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
+      icon={activeRunState.running ? <Loader2 size={14} className={styles.spinner} /> : <Play size={14} />}
       onClick={visible ? handleRun : undefined}
-      disabled={!visible || running}
-      title={running ? "Running..." : "Run task"}
+      disabled={!visible || activeRunState.running}
+      title={activeRunState.running ? "Running..." : "Run task"}
       style={visible ? undefined : { visibility: "hidden" }}
     />
   );
@@ -255,22 +254,24 @@ function TestStepItem({ step, active }: { step: TestStep; active: boolean }) {
 }
 
 function useElapsedTime(active: boolean) {
-  const startRef = useRef(Date.now());
+  const startRef = useRef<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     if (!active) {
-      setElapsed(0);
+      startRef.current = null;
       return;
     }
     startRef.current = Date.now();
     const id = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      if (startRef.current !== null) {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      }
     }, 1000);
     return () => clearInterval(id);
   }, [active]);
 
-  return elapsed;
+  return active ? elapsed : 0;
 }
 
 function formatElapsed(seconds: number): string {
@@ -287,6 +288,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectContext();
   const sidekick = useSidekick();
+  const { features } = useAuraCapabilities();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const loopActive = useLoopActive(projectId);
@@ -519,13 +521,13 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
     } finally {
       setRetrying(false);
     }
-  }, [projectId, task.task_id, retrying]);
+  }, [projectId, retrying, routeAgentInstanceId, task.task_id]);
 
   const handleViewSession = useCallback(async () => {
     if (!projectId || !effectiveSessionId) return;
     try {
-      let agentInstanceId = task.assigned_agent_instance_id;
-      if (!agentInstanceId) {
+      const assignedAgentInstanceId = task.assigned_agent_instance_id;
+      if (!assignedAgentInstanceId) {
         const instances = await api.listAgentInstances(projectId);
         for (const a of instances) {
           try {
@@ -537,7 +539,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
         console.error("Failed to load session: agent instance not found");
         return;
       }
-      const session = await api.getSession(projectId, agentInstanceId, effectiveSessionId);
+      const session = await api.getSession(projectId, assignedAgentInstanceId, effectiveSessionId);
       sidekick.pushPreview({ kind: "session", session });
     } catch (err) {
       console.error("Failed to load session:", err);
@@ -661,23 +663,37 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
 
       {fileOps.length > 0 && (
         <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen className={styles.section}>
-          <div className={styles.fileOpsList}>
-            {fileOps.map((f) => {
-              const fullPath = ctx?.project.linked_folder_path
-                ? `${ctx.project.linked_folder_path}/${f.path}`.replace(/\//g, "\\")
-                : f.path;
-              return (
-                <Item
-                  key={f.path}
-                  onClick={() => api.openIde(fullPath)}
-                  className={styles.fileOpItem}
-                >
-                  <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
-                  <Item.Label>{f.path}</Item.Label>
-                </Item>
-              );
-            })}
-          </div>
+          {(() => {
+            const linkedWorkspaceRoot = getLinkedWorkspaceRoot(ctx?.project);
+            const canOpenChangedFiles = features.ideIntegration && Boolean(linkedWorkspaceRoot);
+
+            return (
+              <>
+                <div className={styles.fileOpsList}>
+                  {fileOps.map((f) => {
+                    const fullPath = linkedWorkspaceRoot
+                      ? `${linkedWorkspaceRoot}/${f.path}`
+                      : null;
+                    return (
+                      <Item
+                        key={f.path}
+                        onClick={canOpenChangedFiles && fullPath ? () => api.openIde(fullPath) : undefined}
+                        className={styles.fileOpItem}
+                      >
+                        <Item.Icon><FileOpIcon op={f.op} /></Item.Icon>
+                        <Item.Label>{f.path}</Item.Label>
+                      </Item>
+                    );
+                  })}
+                </div>
+                {!canOpenChangedFiles && (
+                  <Text variant="muted" size="sm" style={{ padding: "var(--space-2) var(--space-3) 0" }}>
+                    Open changed files from a linked desktop workspace.
+                  </Text>
+                )}
+              </>
+            );
+          })()}
         </GroupCollapsible>
       )}
 

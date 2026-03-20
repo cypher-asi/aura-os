@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { Text } from "@cypher-asi/zui";
 import { MessageSquare } from "lucide-react";
-import { EmptyState } from "../../components/EmptyState";
 import { api } from "../../api/client";
 import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
@@ -11,12 +11,12 @@ import { CookingIndicator } from "../../components/CookingIndicator";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import type { Message } from "../../types";
-import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
+import { extractArtifactRefs, extractToolCalls } from "../../utils/chat-history";
 import styles from "../../components/ChatView.module.css";
 
 export function AgentChatView() {
   const { agentId } = useParams<{ agentId: string }>();
-  const { selectedAgent, selectAgent } = useAgentApp();
+  const { agents, selectedAgent, selectAgent } = useAgentApp();
 
   const {
     messages,
@@ -42,11 +42,15 @@ export function AgentChatView() {
     if (agentId) {
       localStorage.setItem("aura:lastAgentId", agentId);
       requestAnimationFrame(() => inputBarRef.current?.focus());
+      const cachedAgent = agents.find((agent) => agent.agent_id === agentId);
+      if (cachedAgent) {
+        selectAgent(cachedAgent);
+      }
       api.agents.get(agentId as never).then((a) => {
         selectAgent(a);
       }).catch(() => {});
     }
-  }, [agentId, selectAgent]);
+  }, [agentId, agents, selectAgent]);
 
   useEffect(() => {
     if (!agentId) {
@@ -65,7 +69,7 @@ export function AgentChatView() {
             )
             .map((m: Message) => {
               const allBlocks = m.content_blocks ?? [];
-              const displayBlocks = allBlocks
+              const blocks = allBlocks
                 .filter((b) => b.type === "text" || b.type === "image")
                 .map((b) =>
                   b.type === "text"
@@ -76,7 +80,7 @@ export function AgentChatView() {
                 id: m.message_id,
                 role: m.role,
                 content: m.content,
-                contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
+                contentBlocks: blocks.length > 0 ? blocks : undefined,
                 toolCalls: extractToolCalls(allBlocks),
                 artifactRefs: extractArtifactRefs(allBlocks),
                 thinkingText: m.thinking || undefined,
@@ -129,9 +133,12 @@ export function AgentChatView() {
         >
           <div className={styles.messageContent}>
             {!hasMessages ? (
-              <EmptyState icon={<MessageSquare size={40} />}>
-                Send a message.
-              </EmptyState>
+              <div className={styles.emptyState}>
+                <MessageSquare size={40} className={styles.emptyIcon} />
+                <Text variant="muted" size="sm">
+                  Send a message to chat with {agentName ?? "this agent"} across all linked projects
+                </Text>
+              </div>
             ) : (
               <>
                 {messages.map((msg) => (

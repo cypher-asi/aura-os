@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useAppContext } from "./AppContext";
 
@@ -28,7 +29,8 @@ export function SidebarSearchProvider({ children }: { children: ReactNode }) {
   const setAction = useCallback((appId: string, node: ReactNode | null) => {
     setActionsMap((prev) => {
       if (node === null) {
-        const { [appId]: _, ...rest } = prev;
+        const { [appId]: removedAction, ...rest } = prev;
+        void removedAction;
         return rest;
       }
       return { ...prev, [appId]: node };

@@ -30,17 +30,35 @@ export function SessionPreview({ session }: { session: Session }) {
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const requestKey = projectId
+    ? `${projectId}:${session.agent_instance_id}:${session.session_id}`
+    : null;
 
   useEffect(() => {
-    if (!projectId) return;
-    setLoading(true);
+    if (!projectId || !requestKey) return;
+    let cancelled = false;
+
     api
       .listSessionTasks(projectId, session.agent_instance_id, session.session_id)
-      .then((t) => setTasks(t))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [projectId, session.session_id, session.agent_instance_id]);
+      .then((nextTasks) => {
+        if (cancelled) return;
+        setTasks(nextTasks);
+        setLoadedKey(requestKey);
+      })
+      .catch((error) => {
+        console.error(error);
+        if (cancelled) return;
+        setTasks([]);
+        setLoadedKey(requestKey);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, requestKey, session.agent_instance_id, session.session_id]);
+
+  const loading = !!requestKey && loadedKey !== requestKey;
 
   const contextPct = Math.round(session.context_usage_estimate * 100);
 

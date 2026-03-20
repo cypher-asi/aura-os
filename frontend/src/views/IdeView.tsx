@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ButtonWindow, Spinner, Text, Topbar } from "@cypher-asi/zui";
+import { PageEmptyState, Spinner, Text, Topbar } from "@cypher-asi/zui";
 import { Save, X } from "lucide-react";
 import hljs from "highlight.js/lib/common";
 import { api } from "../api/client";
 import { FileExplorer } from "../components/FileExplorer";
 import { Lane } from "../components/Lane";
+import { WindowControls } from "../components/WindowControls";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { filenameFromPath, langFromPath } from "../ide/lang";
 import { windowCommand } from "../lib/windowCommand";
 import styles from "./IdeView.module.css";
@@ -21,6 +23,7 @@ interface TabState {
 }
 
 export function IdeView() {
+  const { features } = useAuraCapabilities();
   const [params] = useSearchParams();
   const initialFile = params.get("file") ?? "";
   const rootPath =
@@ -225,6 +228,15 @@ export function IdeView() {
     [openTab],
   );
 
+  if (!features.ideIntegration) {
+    return (
+      <PageEmptyState
+        title="IDE stays on desktop"
+        description="This device does not expose local file editing or IDE workflows."
+      />
+    );
+  }
+
   return (
     <div className={styles.root}>
       {/* ---- Titlebar ---- */}
@@ -233,13 +245,7 @@ export function IdeView() {
         onDoubleClick={() => windowCommand("maximize")}
         icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
         title={<span className="titlebar-center">AURA IDE</span>}
-        actions={
-          <div className="titlebar-no-drag" style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-            <ButtonWindow action="minimize" size="sm" onClick={() => windowCommand("minimize")} />
-            <ButtonWindow action="maximize" size="sm" onClick={() => windowCommand("maximize")} />
-            <ButtonWindow action="close" size="sm" onClick={() => windowCommand("close")} />
-          </div>
-        }
+        actions={<WindowControls />}
       />
 
       {/* ---- Body ---- */}

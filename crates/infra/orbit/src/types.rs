@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+fn build_clone_url(base_url: &str, owner: &str, repo: &str) -> String {
+    let base = base_url.trim_end_matches('/');
+    format!("{}/{}/{}.git", base, owner, repo)
+}
+
 /// Repo descriptor returned by list_repos / search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,10 +26,7 @@ impl OrbitRepo {
         self.clone_url
             .clone()
             .or_else(|| self.git_url.clone())
-            .unwrap_or_else(|| {
-                let base = base_url.trim_end_matches('/');
-                format!("{}/{}/{}", base, self.owner, self.name)
-            })
+            .unwrap_or_else(|| build_clone_url(base_url, &self.owner, &self.name))
     }
 }
 
@@ -38,6 +40,43 @@ pub struct CreateRepoResponse {
     pub clone_url: Option<String>,
     #[serde(default)]
     pub git_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrbitRepoApiResponse {
+    pub id: String,
+    pub owner_id: String,
+    pub org_id: String,
+    pub project_id: String,
+    pub name: String,
+    pub slug: String,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+impl OrbitRepoApiResponse {
+    pub fn to_orbit_repo(&self, base_url: &str) -> OrbitRepo {
+        let clone_url = build_clone_url(base_url, &self.org_id, &self.slug);
+        OrbitRepo {
+            id: Some(self.id.clone()),
+            name: self.slug.clone(),
+            owner: self.org_id.clone(),
+            full_name: Some(format!("{}/{}", self.org_id, self.slug)),
+            clone_url: Some(clone_url.clone()),
+            git_url: Some(clone_url),
+        }
+    }
+
+    pub fn to_create_repo_response(&self, base_url: &str) -> CreateRepoResponse {
+        let clone_url = build_clone_url(base_url, &self.org_id, &self.slug);
+        CreateRepoResponse {
+            name: self.slug.clone(),
+            owner: self.org_id.clone(),
+            clone_url: Some(clone_url.clone()),
+            git_url: Some(clone_url),
+        }
+    }
 }
 
 /// Collaborator returned by list_collaborators. Repo owner and users with owner role can add people.

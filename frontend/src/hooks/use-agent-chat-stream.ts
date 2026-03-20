@@ -299,7 +299,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       setIsStreaming(false);
       abortRef.current = null;
     },
-    [agentId, isStreaming],
+    [agentId, isStreaming, onSpecSaved, onTaskSaved, thinkingDurationMs],
   );
 
   const stopStreaming = useCallback(() => {

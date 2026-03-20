@@ -9,7 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, feed, follows, leaderboard, log, orbit, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
+use crate::handlers::{agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orbit, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -93,6 +93,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             post(projects::create_project).get(projects::list_projects),
         )
         .route(
+            "/api/projects/import",
+            post(projects::create_imported_project),
+        )
+        .route(
             "/api/projects/:project_id",
             get(projects::get_project)
                 .put(projects::update_project)
@@ -102,6 +106,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/archive",
             post(projects::archive_project),
         )
+        .route("/api/list-directory", post(files::list_directory))
         // Orbit (repos list/search; JWT auth)
         .route("/api/orbit/repos", get(orbit::list_orbit_repos))
         .route(

@@ -4,7 +4,7 @@ use std::time::Duration;
 use tracing::debug;
 
 use crate::error::OrbitError;
-use crate::types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo};
+use crate::types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo, OrbitRepoApiResponse};
 
 /// Default timeout for Orbit API calls (e.g. create_repo can be slow if Orbit's DB is busy).
 const ORBIT_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
@@ -64,6 +64,52 @@ impl OrbitClient {
         serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))
     }
 
+    /// Create a repository using Orbit's internal service-to-service endpoint.
+    pub async fn create_repo_internal(
+        &self,
+        base_url: &str,
+        internal_token: &str,
+        org_id: &str,
+        project_id: &str,
+        owner_id: &str,
+        repo: &str,
+        description: Option<&str>,
+    ) -> Result<CreateRepoResponse, OrbitError> {
+        let url = format!("{}/internal/repos", base_url.trim_end_matches('/'));
+        debug!(%url, org_id, project_id, owner_id, repo, "Orbit create_repo_internal");
+
+        let body = serde_json::json!({
+            "orgId": org_id,
+            "projectId": project_id,
+            "ownerId": owner_id,
+            "name": repo,
+            "description": description,
+            "visibility": "private",
+        });
+
+        let resp = self
+            .http
+            .post(&url)
+            .header("X-Internal-Token", internal_token)
+            .json(&body)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body_text = resp.text().await?;
+
+        if !status.is_success() {
+            return Err(OrbitError::Api {
+                status: status.as_u16(),
+                body: body_text,
+            });
+        }
+
+        let repo_resp: OrbitRepoApiResponse =
+            serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
+        Ok(repo_resp.to_create_repo_response(base_url))
+    }
+
     /// List collaborators for a repo. Owner is Aura org_id or user_id (UUID).
     /// Repo owner and users with owner role can add people.
     pub async fn list_collaborators(
@@ -74,7 +120,7 @@ impl OrbitClient {
         jwt: &str,
     ) -> Result<Vec<OrbitCollaborator>, OrbitError> {
         let base = base_url.trim_end_matches('/');
-        let url = format!("{}/api/repos/{}/{}/collaborators", base, owner, repo);
+        let url = format!("{}/repos/{}/{}/collaborators", base, owner, repo);
         debug!(%url, "Orbit list_collaborators");
 
         let resp = self
@@ -110,7 +156,7 @@ impl OrbitClient {
     ) -> Result<(), OrbitError> {
         let base = base_url.trim_end_matches('/');
         let url = format!(
-            "{}/api/repos/{}/{}/collaborators/{}",
+            "{}/repos/{}/{}/collaborators/{}",
             base,
             owner,
             repo,
@@ -151,7 +197,7 @@ impl OrbitClient {
     ) -> Result<(), OrbitError> {
         let base = base_url.trim_end_matches('/');
         let url = format!(
-            "{}/api/repos/{}/{}/collaborators/{}",
+            "{}/repos/{}/{}/collaborators/{}",
             base,
             owner,
             repo,
@@ -187,7 +233,7 @@ impl OrbitClient {
         q: Option<&str>,
     ) -> Result<Vec<OrbitRepo>, OrbitError> {
         let base = base_url.trim_end_matches('/');
-        let url = format!("{}/api/repos", base);
+        let url = format!("{}/repos", base);
         let mut req = self.http.get(&url).header("Authorization", format!("Bearer {}", jwt));
         if let Some(q) = q {
             if !q.is_empty() {
@@ -208,7 +254,9 @@ impl OrbitClient {
             });
         }
 
-        serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))
+        let repos: Vec<OrbitRepoApiResponse> =
+            serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
+        Ok(repos.into_iter().map(|repo| repo.to_orbit_repo(base)).collect())
     }
 }
 

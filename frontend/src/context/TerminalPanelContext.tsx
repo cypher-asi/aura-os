@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useContext,
@@ -66,8 +67,7 @@ export function TerminalPanelProvider({
   const [activeId, setActiveId] = useState<string | null>(null);
   const hookRefs = useRef<Map<string, UseTerminalReturn>>(new Map());
   const nextNum = useRef(1);
-  const initial = useRef(loadPanelState());
-  const [panelHeight, setPanelHeight] = useState(initial.current.height);
+  const [panelHeight, setPanelHeight] = useState(() => loadPanelState().height);
   const [collapsed, setCollapsed] = useState(true);
   const [contentReady, setContentReady] = useState(false);
   const hasBeenExpandedOnce = useRef(false);
@@ -82,8 +82,8 @@ export function TerminalPanelProvider({
   /* Delay showing terminal content on expand to hide initial PTY output flash */
   useEffect(() => {
     if (collapsed) {
-      setContentReady(false);
-      return;
+      const frame = window.requestAnimationFrame(() => setContentReady(false));
+      return () => window.cancelAnimationFrame(frame);
     }
     const delay = hasBeenExpandedOnce.current ? SUBSEQUENT_EXPAND_DELAY_MS : FIRST_EXPAND_DELAY_MS;
     const id = setTimeout(() => {

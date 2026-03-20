@@ -61,7 +61,9 @@ export const ChatInputBar = forwardRef<ChatInputBarHandle, Props>(function ChatI
   }));
 
   const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
   useEffect(
     () => () => {
       attachmentsRef.current.forEach((a) => a.preview && URL.revokeObjectURL(a.preview));

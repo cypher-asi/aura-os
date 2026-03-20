@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, type ReactNode, type SetStateAction } from "react";
 import type { Project, Spec, Task } from "../types";
 
@@ -44,4 +45,3 @@ export function useProjectRegister() {
   const { register, unregister } = useContext(ProjectContext);
   return { register, unregister };
 }
-

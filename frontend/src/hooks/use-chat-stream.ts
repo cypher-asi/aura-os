@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
@@ -389,7 +389,10 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const sidekick = useSidekick();
   const projectCtx = useProjectContext();
   const projectCtxRef = useRef(projectCtx);
-  projectCtxRef.current = projectCtx;
+
+  useEffect(() => {
+    projectCtxRef.current = projectCtx;
+  }, [projectCtx]);
 
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -462,7 +465,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       sidekick.setStreamingAgentInstanceId(null);
       abortRef.current = null;
     },
-    [projectId, agentInstanceId, isStreaming, sidekick],
+    [projectId, agentInstanceId, isStreaming, sidekick, thinkingDurationMs],
   );
 
   const stopStreaming = useCallback(() => {

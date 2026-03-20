@@ -5,18 +5,53 @@
   background: var(--color-bg);
 }
 
+.pageMobile {
+  min-height: 100%;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 18%),
+    var(--color-bg);
+}
+
 .container {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 1;
   min-height: 0;
+  padding: var(--space-4);
+}
+
+.containerMobile {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + var(--space-10))
+    var(--space-4)
+    calc(env(safe-area-inset-bottom, 0px) + var(--space-8));
+}
+
+.mobileHero {
+  width: 100%;
+  max-width: 440px;
+  margin: var(--space-3) auto var(--space-7);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .card {
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   padding: var(--space-8);
+}
+
+.cardMobile {
+  margin: 0 auto;
+  padding: var(--space-6);
+  background: rgba(10, 10, 12, 0.84);
+  backdrop-filter: blur(16px);
 }
 
 .header {
@@ -42,8 +77,109 @@
   text-align: center;
 }
 
+.mobileSectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.mobileSectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.mobileSectionEyebrow {
+  letter-spacing: 0.16em;
+}
+
+.mobileHostButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: 0;
+  min-height: auto;
+  color: var(--color-text-secondary);
+  text-transform: none;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.mobileHostButtonLabel {
+  color: var(--color-text-muted);
+}
+
+.mobileHostStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.mobileHostStatusDotOnline {
+  background: var(--color-success, #14f1d9);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success, #14f1d9) 18%, transparent);
+}
+
+.mobileHostStatusDotOffline {
+  background: var(--color-danger, #ef4444);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger, #ef4444) 18%, transparent);
+}
+
 .tabs {
   margin-bottom: var(--space-5);
+}
+
+.hostCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hostCardMobile {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+}
+
+.hostCardWarning {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.hostCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hostCardText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.hostLabel {
+  word-break: break-word;
+}
+
+.hostActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.hostActionsMobile {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .form {
@@ -63,4 +199,39 @@
 
 .submit {
   margin-top: var(--space-2);
+}
+
+.spinnerWhite {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--space-6);
+  }
+
+  .containerMobile {
+    padding:
+      calc(env(safe-area-inset-top, 0px) + var(--space-9))
+      var(--space-3)
+      calc(env(safe-area-inset-bottom, 0px) + var(--space-6));
+  }
+
+  .mobileHero {
+    margin-top: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .hostCardTop {
+    flex-direction: column;
+  }
+
+  .mobileHostButton {
+    font-size: 0.875rem;
+  }
+
+  .hostActionsMobile {
+    grid-template-columns: 1fr;
+  }
 }

@@ -82,13 +82,31 @@ describe("dispatchInsufficientCredits", () => {
 
 describe("api (via apiFetch)", () => {
   const originalFetch = globalThis.fetch;
+  const originalLocalStorage = window.localStorage;
+
+  const localStorageMock = {
+    getItem: vi.fn(() => null),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    key: vi.fn(() => null),
+    length: 0,
+  } as unknown as Storage;
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: localStorageMock,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
   });
 
   it("throws ApiClientError on non-ok response", async () => {

@@ -10,8 +10,8 @@ export function ConnectionDot() {
 
   useEffect(() => {
     if (!connected) {
-      setStale(false);
-      return;
+      const frame = window.requestAnimationFrame(() => setStale(false));
+      return () => window.cancelAnimationFrame(frame);
     }
     intervalRef.current = setInterval(() => {
       const ts = getLastEventAt();

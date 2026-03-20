@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useOrg } from "../context/OrgContext";
 import { useAuth } from "../context/AuthContext";
 import { api, ApiClientError } from "../api/client";
-import { Modal, Navigator } from "@cypher-asi/zui";
+import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
 import type { NavigatorItemProps } from "@cypher-asi/zui";
 import { Settings, Users, Mail, CreditCard } from "lucide-react";
 import type { OrgInvite, OrgBilling, OrgRole, CreditTier, CreditBalance } from "../types";
@@ -30,9 +30,10 @@ const NAV_ITEMS: NavigatorItemProps[] = [
 ];
 
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
-  const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs } = useOrg();
+  const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs, isLoading } = useOrg();
   const { user } = useAuth();
   const [section, setSection] = useState<Section>(initialSection ?? "general");
+  const [retryingOrg, setRetryingOrg] = useState(false);
 
   useEffect(() => {
     if (isOpen) setSection(initialSection ?? "general");
@@ -62,7 +63,7 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
 
   useEffect(() => {
     setTeamName(activeOrg?.name ?? "");
-  }, [activeOrg?.org_id]);
+  }, [activeOrg?.name, activeOrg?.org_id]);
 
   const handleTeamNameChange = (value: string) => {
     setTeamName(value);
@@ -165,6 +166,15 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     try { await api.orgs.setBilling(orgId, billingEmail || null, billing?.plan ?? "free"); loadBilling(); } catch (err) { console.error("Failed to save billing", err); } finally { setSaving(false); }
   };
 
+  const handleRetryOrg = useCallback(async () => {
+    setRetryingOrg(true);
+    try {
+      await refreshOrgs();
+    } finally {
+      setRetryingOrg(false);
+    }
+  }, [refreshOrgs]);
+
   const handleBuyTier = async (tierId: string) => {
     if (!orgId) return;
     setCheckoutError(null);
@@ -207,7 +217,28 @@ export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
     }
   }, [pollingStatus, settledBalance, resetPolling]);
 
-  if (!activeOrg) return null;
+  if (!activeOrg) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Team Settings" size="sm">
+        <div className={styles.unavailableState}>
+          <Text size="sm">
+            {isLoading ? "Loading team settings..." : "Team settings are currently unavailable."}
+          </Text>
+          <Text variant="muted" size="sm">
+            Aura couldn't load your team from the current host. Check the host connection and try again.
+          </Text>
+          <div className={styles.unavailableActions}>
+            <Button variant="ghost" onClick={onClose}>
+              Close
+            </Button>
+            <Button variant="primary" onClick={handleRetryOrg} disabled={retryingOrg || isLoading}>
+              {retryingOrg ? "Retrying..." : "Retry"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Team Settings" size="xl" noPadding fullHeight>

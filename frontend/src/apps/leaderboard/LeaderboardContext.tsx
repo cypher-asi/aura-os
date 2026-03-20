@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { TimePeriod, LeaderboardFilter, LeaderboardUser } from "./mockData";
@@ -28,7 +29,7 @@ export function LeaderboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    const frame = window.requestAnimationFrame(() => setLoading(true));
     api.leaderboard
       .get(period)
       .then((data) => {
@@ -57,7 +58,10 @@ export function LeaderboardProvider({ children }: { children: ReactNode }) {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
   }, [period]);
 
   const value = useMemo(
@@ -76,4 +80,3 @@ export function useLeaderboard() {
     throw new Error("useLeaderboard must be used within LeaderboardProvider");
   return ctx;
 }
-

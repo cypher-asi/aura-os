@@ -86,6 +86,117 @@ npm run dev
 
 Open `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to `http://localhost:3100`, so the backend must be running.
 
+### Run mobile web
+
+For all mobile browser testing, use the shared mobile dev runner from the repo root:
+
+```bash
+./scripts/run-mobile-dev.sh
+```
+
+What it does:
+
+- starts `aura-server` on `AURA_SERVER_HOST:AURA_SERVER_PORT`
+- starts the frontend on `AURA_FRONTEND_HOST:AURA_FRONTEND_PORT`
+- prints the exact URL you should open for simulator or phone testing
+- fails fast if those ports are already in use, so the printed URLs stay accurate
+
+The same runner supports both data modes:
+
+- **Local-only mobile**: leave `AURA_NETWORK_URL`, `AURA_STORAGE_URL`, and `ORBIT_BASE_URL` unset in `.env`
+- **Remote-backed mobile**: set those URLs in `.env`, then run the same script
+
+Recommended remote-backed setup:
+
+```bash
+AURA_NETWORK_URL=https://aura-network.onrender.com
+AURA_STORAGE_URL=https://aura-storage.onrender.com
+ORBIT_BASE_URL=https://orbit-sfvu.onrender.com
+```
+
+#### Use iOS Simulator / Android Emulator
+
+Use the defaults:
+
+```bash
+./scripts/run-mobile-dev.sh
+```
+
+Then open:
+
+```bash
+http://127.0.0.1:5173/projects
+```
+
+This is the easiest path for simulator testing.
+
+#### Use a physical phone
+
+To test Aura on your actual phone, your phone and computer must be on the same Wi-Fi network.
+
+1. Find your computer's LAN IP address, for example `192.168.1.42`.
+2. Start the shared mobile runner with LAN bindings and a public host:
+
+```bash
+AURA_SERVER_HOST=0.0.0.0 \
+AURA_FRONTEND_HOST=0.0.0.0 \
+AURA_PUBLIC_HOST=192.168.1.42 \
+./scripts/run-mobile-dev.sh
+```
+
+3. Open the printed URL on your phone:
+
+```bash
+http://192.168.1.42:5173/projects
+```
+
+Notes:
+
+- `AURA_SERVER_HOST=0.0.0.0` lets the local Aura host accept requests from your phone.
+- `AURA_FRONTEND_HOST=0.0.0.0` lets Vite serve the frontend to your phone.
+- `AURA_PUBLIC_HOST` is only for the printed/opened URL. Set it to your machine's real LAN IP, not `0.0.0.0`.
+- If your macOS firewall prompts for access, allow incoming connections for the dev processes.
+- `127.0.0.1` only works for simulators running on the same machine. It does **not** work from a physical phone.
+
+### Install as a mobile app (PWA)
+
+If you want the mobile experience without Safari chrome, install Aura from the browser as a home-screen app.
+
+#### iPhone / iPad (Safari)
+
+1. Open the mobile URL in Safari:
+
+```bash
+http://127.0.0.1:5173/projects
+```
+
+If you are testing on a real iPhone instead of Simulator, use your LAN URL instead, for example:
+
+```bash
+http://192.168.1.42:5173/projects
+```
+
+2. Tap the Share button.
+3. Choose **Add to Home Screen**.
+4. Launch Aura from the new home-screen icon instead of the Safari tab.
+
+This gives you the installed-PWA presentation, which is closer to the intended mobile shell and avoids most of the Safari URL-bar chrome.
+
+#### Android (Chrome)
+
+1. Open the same mobile URL in Chrome.
+2. Open the browser menu.
+3. Choose **Install app** or **Add to Home screen**.
+4. Launch Aura from the installed app icon.
+
+Notes:
+
+- Mobile web uses the local Aura host (`aura-server`) even when the underlying services are remote.
+- Some capabilities remain desktop-only by design, such as linked host folders, IDE open, and other native bridge actions.
+- Imported project files do work on mobile through the shared host file APIs; true linked-workspace browsing is still a desktop capability.
+- If you need different ports, set `AURA_SERVER_PORT` and/or `AURA_FRONTEND_PORT` before running the script.
+- For simulator/local-only use, the defaults still bind to `127.0.0.1`, which is the simplest setup.
+
 ### Run desktop app
 
 Build the frontend once, then run the desktop shell (it embeds the server and frontend):

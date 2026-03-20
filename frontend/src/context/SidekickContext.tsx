@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useCallback, useState, useRef, type ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";

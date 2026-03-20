@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../components/Lane";
 import { CommitGrid } from "../../components/CommitGrid";

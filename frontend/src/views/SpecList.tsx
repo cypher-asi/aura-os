@@ -21,9 +21,12 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   const { subscribe } = useEventContext();
   const sidekick = useSidekick();
   const sidekickRef = useRef(sidekick);
-  sidekickRef.current = sidekick;
   const ctxRef = useRef(ctx);
-  ctxRef.current = ctx;
+
+  useEffect(() => {
+    sidekickRef.current = sidekick;
+    ctxRef.current = ctx;
+  }, [ctx, sidekick]);
   const mergedSpecs = useMemo(() => {
     const merged = mergeById(localSpecs, sidekick.specs, "spec_id");
     if (sidekick.deletedSpecIds.length === 0) return merged;
@@ -121,7 +124,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   );
 
   const handleSelect = (ids: string[]) => {
-    const id = ids[0];
+    const id = [...ids].reverse().find((candidate) => candidate === "__specs_root__" || specById.has(candidate));
     if (!id) return;
     if (id === "__specs_root__") {
       setSelectedId(id);

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button, Text } from "@cypher-asi/zui";
 import { Download, X } from "lucide-react";
 import { api } from "../api/client";
+import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import styles from "./UpdateBanner.module.css";
 
 interface UpdateStatusResponse {
@@ -18,6 +19,7 @@ interface UpdateStatusResponse {
 const POLL_INTERVAL = 60_000;
 
 export function UpdateBanner() {
+  const { features } = useAuraCapabilities();
   const [data, setData] = useState<UpdateStatusResponse | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [installing, setInstalling] = useState(false);
@@ -27,10 +29,13 @@ export function UpdateBanner() {
   }, []);
 
   useEffect(() => {
+    if (!features.nativeUpdater) return;
     poll();
     const id = setInterval(poll, POLL_INTERVAL);
     return () => clearInterval(id);
-  }, [poll]);
+  }, [features.nativeUpdater, poll]);
+
+  if (!features.nativeUpdater) return null;
 
   if (!data || dismissed) return null;
 

@@ -115,6 +115,8 @@ fn sample_project() -> Project {
         name: "Test Project".into(),
         description: "A test project".into(),
         linked_folder_path: "/tmp/code".into(),
+        workspace_source: None,
+        workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
         build_command: None,
@@ -191,8 +193,47 @@ fn sample_agent() -> Agent {
     }
 }
 
-fn sample_session(project_id: ProjectId) -> Session {
-    Session::dummy(project_id)
+fn sample_agent_instance(project_id: ProjectId, agent_id: AgentId) -> AgentInstance {
+    let now = Utc::now();
+    AgentInstance {
+        agent_instance_id: AgentInstanceId::new(),
+        project_id,
+        agent_id,
+        name: "Agent-1".into(),
+        role: "Engineer".into(),
+        personality: "Helpful".into(),
+        system_prompt: "You are a helpful engineer.".into(),
+        skills: vec![],
+        icon: None,
+        status: AgentStatus::Idle,
+        current_task_id: None,
+        current_session_id: None,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        model: None,
+        created_at: now,
+        updated_at: now,
+    }
+}
+
+fn sample_session(project_id: ProjectId, agent_instance_id: AgentInstanceId) -> Session {
+    let now = Utc::now();
+    Session {
+        session_id: SessionId::new(),
+        agent_instance_id,
+        project_id,
+        active_task_id: None,
+        tasks_worked: Vec::new(),
+        context_usage_estimate: 0.0,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        summary_of_previous_context: String::new(),
+        status: SessionStatus::Active,
+        user_id: None,
+        model: None,
+        started_at: now,
+        ended_at: None,
+    }
 }
 
 macro_rules! test_entity_round_trip {
@@ -218,7 +259,14 @@ test_entity_round_trip!(task_round_trip, {
     sample_task(p.project_id, s.spec_id)
 });
 test_entity_round_trip!(agent_round_trip, sample_agent());
+test_entity_round_trip!(agent_instance_round_trip, {
+    let p = sample_project();
+    let a = sample_agent();
+    sample_agent_instance(p.project_id, a.agent_id)
+});
 test_entity_round_trip!(session_round_trip, {
     let p = sample_project();
-    sample_session(p.project_id)
+    let a = sample_agent();
+    let instance = sample_agent_instance(p.project_id, a.agent_id);
+    sample_session(p.project_id, instance.agent_instance_id)
 });

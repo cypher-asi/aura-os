@@ -12,6 +12,7 @@ export const AgentsApp: AuraApp = {
   basePath: "/agents",
   LeftPanel: AgentList,
   MainPanel: AgentMainPanel,
+  ResponsiveControls: AgentList,
   SidekickPanel: AgentInfoPanel,
   Provider: AgentAppProvider,
   searchPlaceholder: "Search Agents...",

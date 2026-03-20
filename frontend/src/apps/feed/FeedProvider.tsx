@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "../../context/AuthContext";
@@ -466,4 +467,3 @@ export function useFeed() {
   if (!ctx) throw new Error("useFeed must be used within FeedProvider");
   return ctx;
 }
-

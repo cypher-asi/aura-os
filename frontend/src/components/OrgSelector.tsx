@@ -3,10 +3,18 @@ import { useOrg } from "../context/OrgContext";
 import { Building2, ChevronDown, Plus } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
 import { useClickOutside } from "../hooks/use-click-outside";
+import { useModalInitialFocus } from "../hooks/use-modal-initial-focus";
 import styles from "./OrgSelector.module.css";
 
-export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function OrgSelector({
+  onOpenSettings,
+  variant = "default",
+}: {
+  onOpenSettings: () => void;
+  variant?: "default" | "drawer";
+}) {
   const { orgs, activeOrg, switchOrg, createOrg } = useOrg();
+  const { inputRef: newNameRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -31,12 +39,16 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
   };
 
   return (
-    <div className={styles.container} ref={dropdownRef}>
+    <div
+      className={`${styles.container} ${variant === "drawer" ? styles.drawerContainer : ""}`}
+      ref={dropdownRef}
+    >
       <button
         type="button"
-        className={styles.trigger}
+        className={`${styles.trigger} ${variant === "drawer" ? styles.drawerTrigger : ""}`}
         onClick={() => setDropdownOpen((v) => !v)}
       >
+        {variant === "drawer" && <Building2 size={14} className={styles.triggerIcon} />}
         <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
         <ChevronDown size={12} className={styles.chevron} />
       </button>
@@ -87,6 +99,7 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
         onClose={() => setShowCreate(false)}
         title="Create Team"
         size="sm"
+        initialFocusRef={initialFocusRef}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowCreate(false)}>
@@ -103,13 +116,14 @@ export function OrgSelector({ onOpenSettings }: { onOpenSettings: () => void }) 
         }
       >
         <Input
+          ref={newNameRef}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleCreate();
           }}
           placeholder="Team name"
-          autoFocus
+          autoFocus={autoFocus}
         />
       </Modal>
     </div>

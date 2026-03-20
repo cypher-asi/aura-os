@@ -17,6 +17,7 @@ export const ProjectsApp: AuraApp = {
   basePath: "/projects",
   LeftPanel: ProjectList,
   MainPanel: ProjectMainPanel,
+  ResponsiveControls: ProjectList,
   SidekickPanel: SidekickContent,
   SidekickTaskbar: SidekickTaskbar,
   SidekickHeader: SidekickHeader,

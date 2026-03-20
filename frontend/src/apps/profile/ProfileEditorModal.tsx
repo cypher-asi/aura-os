@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
 import type { UserProfileData } from "./ProfileProvider";
+import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import styles from "../../components/AgentEditorModal.module.css";
 
 interface ProfileEditorModalProps {
@@ -17,21 +18,20 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
   const [location, setLocation] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [nameError, setNameError] = useState("");
-  const nameRef = useRef<HTMLInputElement>(null);
+  const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
 
   useEffect(() => {
     if (!isOpen) return;
-    setName(profile.name);
-    setBio(profile.bio);
-    setWebsite(profile.website);
-    setLocation(profile.location);
-    setAvatarUrl(profile.avatarUrl ?? "");
-    setNameError("");
+    const frame = window.requestAnimationFrame(() => {
+      setName(profile.name);
+      setBio(profile.bio);
+      setWebsite(profile.website);
+      setLocation(profile.location);
+      setAvatarUrl(profile.avatarUrl ?? "");
+      setNameError("");
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, profile]);
-
-  useEffect(() => {
-    if (isOpen) requestAnimationFrame(() => nameRef.current?.focus());
-  }, [isOpen]);
 
   const handleClose = useCallback(() => {
     setNameError("");
@@ -60,6 +60,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
       onClose={handleClose}
       title="Edit Profile"
       size="md"
+      initialFocusRef={initialFocusRef}
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={handleClose}>

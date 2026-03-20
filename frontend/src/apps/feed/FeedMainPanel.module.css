@@ -34,3 +34,29 @@
   gap: var(--space-1);
 }
 
+@media (max-width: 900px) {
+  .scrollArea {
+    padding: var(--space-3);
+  }
+
+  .commitGridWrapper,
+  .feedList {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .scrollArea {
+    padding: 12px;
+  }
+
+  .commitGridWrapper {
+    padding: 12px 12px 8px;
+  }
+
+  .feedList {
+    gap: 2px;
+  }
+}

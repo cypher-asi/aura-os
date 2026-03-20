@@ -13,6 +13,7 @@ export const FeedApp: AuraApp = {
   basePath: "/feed",
   LeftPanel: FeedList,
   MainPanel: FeedMainPanel,
+  ResponsiveControls: FeedList,
   SidekickPanel: FeedSidekickPanel,
   SidekickTaskbar: FeedSidekickHeader,
   Provider: FeedProvider,

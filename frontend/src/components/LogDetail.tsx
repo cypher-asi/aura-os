@@ -11,7 +11,7 @@ function fmtMs(ms: number): string {
   return `${m}m ${s}s`;
 }
 
-export function logDetailPairs(event: EngineEvent): [string, string][] {
+function logDetailPairs(event: EngineEvent): [string, string][] {
   const pairs: [string, string][] = [];
 
   if (event.task_id) pairs.push(["Task ID", event.task_id]);

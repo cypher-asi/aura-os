@@ -25,4 +25,17 @@ impl RocksStore {
         self.db.delete_cf(&self.cf_settings(), key.as_bytes())?;
         Ok(())
     }
+
+    pub fn list_settings_with_prefix(&self, prefix: &str) -> StoreResult<Vec<(String, Vec<u8>)>> {
+        let iter = self.db.prefix_iterator_cf(&self.cf_settings(), prefix.as_bytes());
+        let mut values = Vec::new();
+        for item in iter {
+            let (key, value) = item?;
+            if !key.starts_with(prefix.as_bytes()) {
+                break;
+            }
+            values.push((String::from_utf8_lossy(&key).into_owned(), value.to_vec()));
+        }
+        Ok(values)
+    }
 }

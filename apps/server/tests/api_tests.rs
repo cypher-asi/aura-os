@@ -201,7 +201,7 @@ fn build_test_app_from_store(
     let llm = Arc::new(MeteredLlm::new(claude_client.clone(), billing_client.clone(), store.clone()));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
-    let project_service = Arc::new(ProjectService::new(network_client.clone(), store.clone()));
+    let project_service = Arc::new(ProjectService::new_with_network(network_client.clone(), store.clone()));
     let spec_gen_service = Arc::new(SpecGenerationService::new(
         store.clone(),
         project_service.clone(),
@@ -249,6 +249,7 @@ fn build_test_app_from_store(
 
     let state = AppState {
         store,
+        data_dir: db_dir.path().to_path_buf(),
         org_service,
         auth_service,
         settings_service,
@@ -315,7 +316,6 @@ async fn response_json(response: axum::http::Response<Body>) -> Value {
 #[tokio::test]
 async fn settings_api_key_lifecycle() {
     let (app, _, _db) = build_test_app();
-
     // GET returns ApiKeyInfo { configured: bool }.
     let req = json_request("GET", "/api/settings/api-key", None);
     let resp = app.clone().oneshot(req).await.unwrap();

@@ -45,3 +45,29 @@
   align-items: center;
   justify-content: space-between;
 }
+
+@media (max-width: 640px) {
+  .content {
+    padding: var(--space-3);
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .channelSelect {
+    width: 100%;
+  }
+
+  .logoutSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .logoutSection button {
+    width: 100%;
+    justify-content: center;
+  }
+}
