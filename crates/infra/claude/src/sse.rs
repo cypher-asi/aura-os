@@ -135,7 +135,15 @@ pub(crate) async fn parse_sse_events(
                     }
                     if in_tool_block {
                         let input: serde_json::Value = serde_json::from_str(&current_tool_json)
-                            .unwrap_or(serde_json::Value::Object(Default::default()));
+                            .unwrap_or_else(|e| {
+                                tracing::warn!(
+                                    tool_name = %current_tool_name,
+                                    error = %e,
+                                    json_len = current_tool_json.len(),
+                                    "failed to parse tool call JSON from SSE stream, falling back to empty object"
+                                );
+                                serde_json::Value::Object(Default::default())
+                            });
                         let tool_call = ToolCall {
                             id: current_tool_id.clone(),
                             name: current_tool_name.clone(),

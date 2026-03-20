@@ -220,13 +220,15 @@ impl DevLoopEngine {
                 old = %build_command, new = %corrected,
                 "eagerly rewriting server-starting build command"
             );
-            let _ = self.project_service.update_project_async(
+            if let Err(e) = self.project_service.update_project_async(
                 &project.project_id,
                 aura_projects::UpdateProjectInput {
                     build_command: Some(corrected.clone()),
                     ..Default::default()
                 },
-            ).await;
+            ).await {
+                warn!(project_id = %project.project_id, error = %e, "failed to persist auto-corrected build command");
+            }
             build_command = corrected;
         }
         Some(build_command)
@@ -280,13 +282,15 @@ impl DevLoopEngine {
             old = %build_command, new = %corrected,
             "build command timed out, auto-correcting"
         );
-        let _ = self.project_service.update_project_async(
+        if let Err(e) = self.project_service.update_project_async(
             &project.project_id,
             aura_projects::UpdateProjectInput {
                 build_command: Some(corrected.clone()),
                 ..Default::default()
             },
-        ).await;
+        ).await {
+            warn!(project_id = %project.project_id, error = %e, "failed to persist timeout-corrected build command");
+        }
         Some(corrected)
     }
 

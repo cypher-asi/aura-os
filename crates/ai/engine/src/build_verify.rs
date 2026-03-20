@@ -151,7 +151,9 @@ pub async fn run_build_command(
                 timeout_secs = BUILD_TIMEOUT.as_secs(),
                 "build command timed out, killing process"
             );
-            let _ = child.kill().await;
+            if let Err(e) = child.kill().await {
+                tracing::warn!(command = %build_command, error = %e, "failed to kill timed-out build process");
+            }
             let partial_stderr = stderr_handle.await.unwrap_or_default();
             let timeout_msg = format!(
                 "Build command timed out after {}s. The command may start a long-running \

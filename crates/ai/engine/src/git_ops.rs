@@ -36,23 +36,29 @@ pub async fn ensure_remote(project_root: &str, name: &str, url: &str) {
         Ok(o) if o.status.success() => {
             let current = String::from_utf8_lossy(&o.stdout).trim().to_string();
             if current != url {
-                let _ = git_output(
+                if let Err(e) = git_output(
                     Command::new("git")
                         .args(["remote", "set-url", name, url])
                         .current_dir(project_root),
                 )
-                .await;
-                debug!(remote = name, %url, "updated git remote URL");
+                .await {
+                    tracing::warn!(remote = name, %url, error = %e, "failed to set-url git remote");
+                } else {
+                    debug!(remote = name, %url, "updated git remote URL");
+                }
             }
         }
         _ => {
-            let _ = git_output(
+            if let Err(e) = git_output(
                 Command::new("git")
                     .args(["remote", "add", name, url])
                     .current_dir(project_root),
             )
-            .await;
-            debug!(remote = name, %url, "added git remote");
+            .await {
+                tracing::warn!(remote = name, %url, error = %e, "failed to add git remote");
+            } else {
+                debug!(remote = name, %url, "added git remote");
+            }
         }
     }
 }

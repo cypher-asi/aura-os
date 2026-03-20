@@ -254,7 +254,12 @@ impl DevLoopEngine {
                     total_build_fix_attempts: None,
                     duplicate_error_bailouts: None,
                 });
-                let _ = engine.agent_instance_service.finish_working(&project_id, &aiid).await;
+                if let Err(e) = engine.agent_instance_service.finish_working(&project_id, &aiid).await {
+                    tracing::warn!(
+                        %project_id, agent_instance_id = %aiid, error = %e,
+                        "failed to mark agent instance as finished"
+                    );
+                }
             }
             result
         });
@@ -292,8 +297,17 @@ impl DevLoopEngine {
             let baseline = ctx.get_or_capture_test_baseline(self, &project).await;
             let build_baseline = ctx.get_or_capture_build_baseline(self, &project).await;
             let task_start = Instant::now();
-            let agent = self.agent_instance_service
-                .get_instance(&project_id, &agent_instance_id).await.ok();
+            let agent = match self.agent_instance_service
+                .get_instance(&project_id, &agent_instance_id).await {
+                Ok(a) => Some(a),
+                Err(e) => {
+                    tracing::warn!(
+                        %project_id, %agent_instance_id, error = %e,
+                        "failed to fetch agent instance for task context"
+                    );
+                    None
+                }
+            };
             let result = if let Some(cmd) = shell::extract_shell_command(&task) {
                 Some(self.execute_shell_task(&project, &task, &cmd, agent_instance_id).await)
             } else {

@@ -479,12 +479,20 @@ impl DevLoopEngine {
     ) {
         if let TaskOutcome::Completed { follow_up_tasks, .. } = outcome {
             for follow_up in follow_up_tasks {
-                if let Ok(new_task) = self.task_service.create_follow_up_task(
+                match self.task_service.create_follow_up_task(
                     task, follow_up.title.clone(), follow_up.description.clone(), vec![],
                 ).await {
-                    self.emit(EngineEvent::FollowUpTaskCreated {
-                        project_id, agent_instance_id: aiid, task_id: new_task.task_id,
-                    });
+                    Ok(new_task) => {
+                        self.emit(EngineEvent::FollowUpTaskCreated {
+                            project_id, agent_instance_id: aiid, task_id: new_task.task_id,
+                        });
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            task_id = %task.task_id, follow_up_title = %follow_up.title,
+                            error = %e, "failed to create follow-up task"
+                        );
+                    }
                 }
             }
         }

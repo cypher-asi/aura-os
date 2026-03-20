@@ -27,10 +27,17 @@ pub struct ToolExecResult {
     pub saved_task: Option<Box<Task>>,
 }
 
+fn pretty_json(v: &Value) -> String {
+    serde_json::to_string_pretty(v).unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "failed to serialize tool result to JSON");
+        v.to_string()
+    })
+}
+
 impl ToolExecResult {
     pub(crate) fn ok(v: Value) -> Self {
         Self {
-            content: serde_json::to_string_pretty(&v).unwrap_or_default(),
+            content: pretty_json(&v),
             is_error: false,
             saved_spec: None,
             saved_task: None,
@@ -38,7 +45,7 @@ impl ToolExecResult {
     }
     pub(crate) fn ok_with_spec(v: Value, spec: Spec) -> Self {
         Self {
-            content: serde_json::to_string_pretty(&v).unwrap_or_default(),
+            content: pretty_json(&v),
             is_error: false,
             saved_spec: Some(spec),
             saved_task: None,
@@ -46,7 +53,7 @@ impl ToolExecResult {
     }
     pub(crate) fn ok_with_task(v: Value, task: Task) -> Self {
         Self {
-            content: serde_json::to_string_pretty(&v).unwrap_or_default(),
+            content: pretty_json(&v),
             is_error: false,
             saved_spec: None,
             saved_task: Some(Box::new(task)),
