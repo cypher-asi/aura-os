@@ -17,6 +17,7 @@ pub(crate) enum ErrorCategory {
     RustTypeError,
     RustBorrowCheck,
     RustStructFieldMismatch,
+    RustMissingImport,
     RustApiHallucination,
     NpmDependency,
     NpmTypeScript,
@@ -41,6 +42,12 @@ pub(crate) fn classify_build_errors(stderr: &str) -> Vec<ErrorCategory> {
 
     if stderr.contains("file not found for module") || stderr.contains("E0583") {
         categories.push(ErrorCategory::RustMissingModule);
+    }
+
+    if stderr.contains("cannot find") || stderr.contains("E0425") || stderr.contains("E0433")
+        || stderr.contains("not found in this scope") || stderr.contains("use of undeclared")
+    {
+        categories.push(ErrorCategory::RustMissingImport);
     }
 
     if stderr.contains("no method named") || stderr.contains("E0599") {
@@ -133,6 +140,18 @@ pub(crate) fn error_category_guidance(categories: &[ErrorCategory]) -> String {
                 "Update every initializer and field access to match the current struct fields exactly. ",
                 "Add any new required fields (use Default/None for Option types), remove fields that ",
                 "no longer exist, and rename fields that were renamed.\n",
+            ),
+            ErrorCategory::RustMissingImport => concat!(
+                "DIAGNOSIS: Missing import or undeclared type/value (E0425/E0433).\n",
+                "FIX: Add the missing `use` statement. The compiler help message usually shows the exact ",
+                "import path. Common cases:\n",
+                "- Standard library types: `use std::path::{Path, PathBuf};`, `use std::collections::HashMap;`\n",
+                "- Crate-local items: `use crate::module::Item;`\n",
+                "- Items in test modules: if a type/function exists in another module's `#[cfg(test)]` block, ",
+                "it is NOT accessible from outside. Use the public API or duplicate the helper.\n",
+                "- If the item genuinely doesn't exist on the type (method not found), check whether tests ",
+                "are calling functions from the wrong module -- e.g. `Struct::func()` when `func` is a ",
+                "free function in `crate::other_module`.",
             ),
             ErrorCategory::RustApiHallucination => concat!(
                 "DIAGNOSIS: Systematic API hallucination detected -- your code assumes an API ",
