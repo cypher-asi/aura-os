@@ -137,14 +137,30 @@ impl DevLoopEngine {
             exploration_allowance,
         };
 
-        let thinking_budget = compute_thinking_budget(
-            self.llm_config.thinking_budget,
-            workspace_cache.member_count,
-        );
+        let complexity = classify_task_complexity(&task.title, &task.description);
+        let thinking_budget = match complexity {
+            TaskComplexity::Simple => 2_000.min(self.llm_config.thinking_budget),
+            TaskComplexity::Standard => compute_thinking_budget(
+                self.llm_config.thinking_budget,
+                workspace_cache.member_count,
+            ),
+            TaskComplexity::Complex => compute_thinking_budget(
+                self.llm_config.thinking_budget,
+                workspace_cache.member_count,
+            ).max(12_000),
+        };
+        let max_tokens = match complexity {
+            TaskComplexity::Simple => self.llm_config.task_execution_max_tokens.min(8_192),
+            _ => self.llm_config.task_execution_max_tokens,
+        };
+        let max_iterations = match complexity {
+            TaskComplexity::Simple => self.engine_config.max_agentic_iterations.min(15),
+            _ => self.engine_config.max_agentic_iterations,
+        };
 
         let config = ToolLoopConfig {
-            max_iterations: self.engine_config.max_agentic_iterations,
-            max_tokens: self.llm_config.task_execution_max_tokens,
+            max_iterations,
+            max_tokens,
             thinking: Some(ThinkingConfig::enabled(thinking_budget)),
             stream_timeout: std::time::Duration::from_secs(self.llm_config.stream_timeout_secs),
             billing_reason: "aura_task",
@@ -249,6 +265,47 @@ fn compute_thinking_budget(base: u32, member_count: usize) -> u32 {
     } else {
         base
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TaskComplexity {
+    Simple,
+    Standard,
+    Complex,
+}
+
+fn classify_task_complexity(title: &str, description: &str) -> TaskComplexity {
+    let combined = format!("{} {}", title, description).to_lowercase();
+
+    let simple_patterns = [
+        "add dependency", "add dep ", "set up dependency",
+        "define enum", "define struct", "define type",
+        "add import", "update cargo.toml", "update package.json",
+        "rename ", "move file",
+    ];
+    if simple_patterns.iter().any(|p| combined.contains(p)) {
+        return TaskComplexity::Simple;
+    }
+
+    let complex_patterns = [
+        "integration test", "end-to-end", "e2e test",
+        "refactor", "migrate", "rewrite",
+        "multi-file", "cross-crate",
+        "implement service", "implement api",
+    ];
+    if complex_patterns.iter().any(|p| combined.contains(p)) {
+        return TaskComplexity::Complex;
+    }
+
+    // Longer descriptions generally indicate more complex tasks
+    if description.len() > 1000 {
+        return TaskComplexity::Complex;
+    }
+    if description.len() < 200 {
+        return TaskComplexity::Simple;
+    }
+
+    TaskComplexity::Standard
 }
 
 fn compute_exploration_allowance(
