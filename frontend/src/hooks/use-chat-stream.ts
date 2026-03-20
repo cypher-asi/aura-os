@@ -162,9 +162,11 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
   useEffect(() => {
     return () => {
-      sidekickRef.current.setStreamingAgentInstanceId(null);
+      if (!core.isStreamingRef.current) {
+        sidekickRef.current.setStreamingAgentInstanceId(null);
+      }
     };
-  }, [projectId, agentInstanceId]);
+  }, [projectId, agentInstanceId, core.isStreamingRef]);
 
   const sendMessage = useCallback(
     async (

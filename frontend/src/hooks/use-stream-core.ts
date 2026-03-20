@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useLayoutEffect, useEffect, useMemo } from "react";
 import type { MutableRefObject, Dispatch, SetStateAction } from "react";
 import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import type { ToolCallStartedInfo, ToolCallInfo, ToolResultInfo } from "../api/streams";
@@ -71,6 +71,102 @@ export interface StreamSetters {
   setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
   setProgressText: Dispatch<SetStateAction<string>>;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Module-level stream store                                          */
+/*                                                                     */
+/*  Keeps stream state alive across React mount/unmount cycles so      */
+/*  navigating away from a chat and returning restores the live        */
+/*  stream instead of aborting it.                                     */
+/* ------------------------------------------------------------------ */
+
+interface StreamEntry {
+  key: string;
+  refs: StreamRefs;
+  abort: AbortController | null;
+  isStreaming: boolean;
+  messages: DisplayMessage[];
+  streamingText: string;
+  thinkingText: string;
+  thinkingDurationMs: number | null;
+  activeToolCalls: ToolCallEntry[];
+  progressText: string;
+  /** Current React setters – null when the component is unmounted. */
+  reactSetters: StreamSetters | null;
+}
+
+const streamStore = new Map<string, StreamEntry>();
+
+function storeKey(deps: unknown[]): string {
+  return deps.filter(Boolean).join(":");
+}
+
+function makeEntry(key: string): StreamEntry {
+  return {
+    key,
+    refs: {
+      streamBuffer: { current: "" },
+      thinkingBuffer: { current: "" },
+      thinkingStart: { current: null },
+      toolCalls: { current: [] },
+      needsSeparator: { current: false },
+      raf: { current: null },
+      thinkingRaf: { current: null },
+    },
+    abort: null,
+    isStreaming: false,
+    messages: [],
+    streamingText: "",
+    thinkingText: "",
+    thinkingDurationMs: null,
+    activeToolCalls: [],
+    progressText: "",
+    reactSetters: null,
+  };
+}
+
+function resolve<T>(action: SetStateAction<T>, prev: T): T {
+  return typeof action === "function"
+    ? (action as (p: T) => T)(prev)
+    : action;
+}
+
+/**
+ * Create proxy setters that always update the persistent entry snapshot
+ * and forward to React when the component is mounted.
+ */
+function createProxySetters(entry: StreamEntry): StreamSetters {
+  return {
+    setStreamingText(v) {
+      entry.streamingText = resolve(v, entry.streamingText);
+      entry.reactSetters?.setStreamingText(entry.streamingText);
+    },
+    setThinkingText(v) {
+      entry.thinkingText = resolve(v, entry.thinkingText);
+      entry.reactSetters?.setThinkingText(entry.thinkingText);
+    },
+    setThinkingDurationMs(v) {
+      entry.thinkingDurationMs = resolve(v, entry.thinkingDurationMs);
+      entry.reactSetters?.setThinkingDurationMs(entry.thinkingDurationMs);
+    },
+    setActiveToolCalls(v) {
+      entry.activeToolCalls = resolve(v, entry.activeToolCalls);
+      entry.reactSetters?.setActiveToolCalls(entry.activeToolCalls);
+    },
+    setMessages(v) {
+      entry.messages = resolve(v, entry.messages);
+      entry.reactSetters?.setMessages(entry.messages);
+    },
+    setIsStreaming(v) {
+      entry.isStreaming = resolve(v, entry.isStreaming);
+      entry.reactSetters?.setIsStreaming(entry.isStreaming);
+    },
+    setProgressText(v) {
+      entry.progressText = resolve(v, entry.progressText);
+      entry.reactSetters?.setProgressText(entry.progressText);
+    },
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -309,103 +405,134 @@ export function finalizeStream(
 /* ------------------------------------------------------------------ */
 
 export function useStreamCore(resetDeps: unknown[]) {
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState("");
-  const [thinkingText, setThinkingText] = useState("");
-  const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(null);
-  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
-  const [progressText, setProgressText] = useState("");
+  const key = storeKey(resetDeps);
 
-  const isStreamingRef = useRef(false);
+  // Find or create the persistent entry for this chat.
+  const entryRef = useRef<{ key: string; entry: StreamEntry } | null>(null);
+  if (!entryRef.current || entryRef.current.key !== key) {
+    let entry = streamStore.get(key);
+    if (!entry) {
+      entry = makeEntry(key);
+      streamStore.set(key, entry);
+    }
+    entryRef.current = { key, entry };
+  }
+  const entry = entryRef.current.entry;
+
+  // Stable proxy setters (recreated only when the entry changes).
+  const settersRef = useRef<StreamSetters>(null!);
+  if (!settersRef.current || entryRef.current.key !== key) {
+    settersRef.current = createProxySetters(entry);
+  }
+  const setters = settersRef.current;
+
+  // React state – initialised from the persistent entry so the first
+  // render already contains any data accumulated while unmounted.
+  const [messages, setMessages] = useState<DisplayMessage[]>(() => entry.messages);
+  const [isStreaming, setIsStreaming] = useState(() => entry.isStreaming);
+  const [streamingText, setStreamingText] = useState(() => entry.streamingText);
+  const [thinkingText, setThinkingText] = useState(() => entry.thinkingText);
+  const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(() => entry.thinkingDurationMs);
+  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>(() => entry.activeToolCalls);
+  const [progressText, setProgressText] = useState(() => entry.progressText);
+
+  const isStreamingRef = useRef(entry.isStreaming);
   useEffect(() => { isStreamingRef.current = isStreaming; }, [isStreaming]);
 
-  const thinkingDurationMsRef = useRef<number | null>(null);
+  const thinkingDurationMsRef = useRef<number | null>(entry.thinkingDurationMs);
   useEffect(() => { thinkingDurationMsRef.current = thinkingDurationMs; }, [thinkingDurationMs]);
 
-  const abortRef = useRef<AbortController | null>(null);
-  const streamBufferRef = useRef("");
-  const rafRef = useRef<number | null>(null);
-  const thinkingBufferRef = useRef("");
-  const thinkingRafRef = useRef<number | null>(null);
-  const thinkingStartRef = useRef<number | null>(null);
-  const toolCallsRef = useRef<ToolCallEntry[]>([]);
-  const needsSeparatorRef = useRef(false);
+  // Proxy abort ref – reads/writes go directly to the entry so the
+  // background stream and the hook always share the same controller.
+  const abortRef = useMemo<MutableRefObject<AbortController | null>>(() => {
+    const holder: { current: AbortController | null } = { current: null };
+    Object.defineProperty(holder, "current", {
+      get() { return entryRef.current!.entry.abort; },
+      set(v: AbortController | null) { entryRef.current!.entry.abort = v; },
+      enumerable: true,
+      configurable: true,
+    });
+    return holder;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const refs: StreamRefs = {
-    streamBuffer: streamBufferRef,
-    thinkingBuffer: thinkingBufferRef,
-    thinkingStart: thinkingStartRef,
-    toolCalls: toolCallsRef,
-    needsSeparator: needsSeparatorRef,
-    raf: rafRef,
-    thinkingRaf: thinkingRafRef,
+  // Connect React setters to the entry on every render so the proxy
+  // always forwards to the live component instance.
+  entry.reactSetters = {
+    setStreamingText, setThinkingText, setThinkingDurationMs,
+    setActiveToolCalls, setMessages, setIsStreaming, setProgressText,
   };
 
-  const setters: StreamSetters = {
-    setStreamingText,
-    setThinkingText,
-    setThinkingDurationMs,
-    setActiveToolCalls,
-    setMessages,
-    setIsStreaming,
-    setProgressText,
-  };
+  // Sync state from the entry on mount / deps change and disconnect
+  // React on cleanup.  The stream is NOT aborted – it keeps running
+  // in the background with callbacks writing to the persistent entry.
+  useLayoutEffect(() => {
+    const e = entryRef.current!.entry;
+    setMessages(e.messages);
+    setIsStreaming(e.isStreaming);
+    setStreamingText(e.streamingText);
+    setThinkingText(e.thinkingText);
+    setThinkingDurationMs(e.thinkingDurationMs);
+    setActiveToolCalls(e.activeToolCalls);
+    setProgressText(e.progressText);
+    isStreamingRef.current = e.isStreaming;
+    thinkingDurationMsRef.current = e.thinkingDurationMs;
 
-  useEffect(() => {
     return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (thinkingRafRef.current !== null) cancelAnimationFrame(thinkingRafRef.current);
-      rafRef.current = null;
-      thinkingRafRef.current = null;
-      streamBufferRef.current = "";
-      thinkingBufferRef.current = "";
-      thinkingStartRef.current = null;
-      toolCallsRef.current = [];
-      needsSeparatorRef.current = false;
-      setStreamingText("");
-      setThinkingText("");
-      setThinkingDurationMs(null);
-      setActiveToolCalls([]);
-      setIsStreaming(false);
-      setProgressText("");
+      e.reactSetters = null;
+      if (e.refs.raf.current !== null) {
+        cancelAnimationFrame(e.refs.raf.current);
+        e.refs.raf.current = null;
+      }
+      if (e.refs.thinkingRaf.current !== null) {
+        cancelAnimationFrame(e.refs.thinkingRaf.current);
+        e.refs.thinkingRaf.current = null;
+      }
+      if (!e.isStreaming) {
+        streamStore.delete(e.key);
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, resetDeps);
 
+  // resetMessages guards against overwriting an active stream's
+  // accumulated messages with a stale API response.
   const resetMessages = useCallback((msgs: DisplayMessage[]) => {
+    const e = entryRef.current!.entry;
+    if (e.isStreaming) return;
+    e.messages = msgs;
     setMessages(msgs);
   }, []);
 
   const baseStopStreaming = useCallback(() => {
-    abortRef.current?.abort();
-    if (streamBufferRef.current) {
-      const snap = snapshotThinking(refs);
-      setMessages((prev) => [
+    const e = entryRef.current!.entry;
+    const s = settersRef.current;
+    e.abort?.abort();
+    if (e.refs.streamBuffer.current) {
+      const snap = snapshotThinking(e.refs);
+      s.setMessages((prev) => [
         ...prev,
         {
           id: `stopped-${Date.now()}`,
           role: "assistant" as const,
-          content: streamBufferRef.current,
-          toolCalls: snapshotToolCalls(refs),
+          content: e.refs.streamBuffer.current,
+          toolCalls: snapshotToolCalls(e.refs),
           thinkingText: snap.savedThinking,
           thinkingDurationMs: snap.savedThinkingDuration,
         },
       ]);
     }
-    resetStreamBuffers(refs, setters);
-    setIsStreaming(false);
-    abortRef.current = null;
+    resetStreamBuffers(e.refs, s);
+    s.setIsStreaming(false);
+    e.abort = null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
     messages, isStreaming, streamingText, thinkingText, thinkingDurationMs,
     activeToolCalls, progressText,
-    refs, setters, abortRef, isStreamingRef, thinkingDurationMsRef, rafRef,
-    setMessages, setIsStreaming, setProgressText,
+    refs: entry.refs, setters, abortRef, isStreamingRef, thinkingDurationMsRef, rafRef: entry.refs.raf,
+    setMessages: setters.setMessages, setIsStreaming: setters.setIsStreaming, setProgressText: setters.setProgressText,
     resetMessages, baseStopStreaming,
   };
 }
