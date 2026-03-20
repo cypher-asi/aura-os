@@ -89,6 +89,11 @@ pub enum EngineEvent {
         agent_instance_id: AgentInstanceId,
         task_id: TaskId,
     },
+    TasksBecameReady {
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+        task_ids: Vec<TaskId>,
+    },
     FollowUpTaskCreated {
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,

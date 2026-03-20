@@ -176,6 +176,7 @@ fn event_project_id(event: &EngineEvent) -> Option<ProjectId> {
         | EngineEvent::TaskFailed { project_id, .. }
         | EngineEvent::TaskRetrying { project_id, .. }
         | EngineEvent::TaskBecameReady { project_id, .. }
+        | EngineEvent::TasksBecameReady { project_id, .. }
         | EngineEvent::FollowUpTaskCreated { project_id, .. }
         | EngineEvent::SessionRolledOver { project_id, .. }
         | EngineEvent::LoopPaused { project_id, .. }
@@ -229,6 +230,11 @@ fn event_run_scope(event: &EngineEvent) -> Option<(ProjectId, AgentInstanceId)> 
             ..
         }
         | EngineEvent::TaskBecameReady {
+            project_id,
+            agent_instance_id,
+            ..
+        }
+        | EngineEvent::TasksBecameReady {
             project_id,
             agent_instance_id,
             ..

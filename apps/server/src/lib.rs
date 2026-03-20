@@ -54,6 +54,7 @@ fn event_project_id(event: &EngineEvent) -> Option<aura_core::ProjectId> {
         | EngineEvent::TaskFailed { project_id, .. }
         | EngineEvent::TaskRetrying { project_id, .. }
         | EngineEvent::TaskBecameReady { project_id, .. }
+        | EngineEvent::TasksBecameReady { project_id, .. }
         | EngineEvent::FollowUpTaskCreated { project_id, .. }
         | EngineEvent::SessionRolledOver { project_id, .. }
         | EngineEvent::LoopPaused { project_id, .. }
@@ -153,6 +154,7 @@ fn spawn_event_rebroadcast(
     tokio::spawn(async move {
         let mut delta_count: u64 = 0;
         let mut delta_broadcast_buf: HashMap<aura_core::TaskId, (aura_core::ProjectId, aura_core::AgentInstanceId, String)> = HashMap::new();
+        let mut ready_broadcast_buf: Vec<(aura_core::ProjectId, aura_core::AgentInstanceId, aura_core::TaskId)> = Vec::new();
         let mut flush_interval = interval(Duration::from_millis(DELTA_BROADCAST_INTERVAL_MS));
         flush_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         let mut task_output_for_log: Option<(aura_core::TaskId, String)> = None;
@@ -174,6 +176,9 @@ fn spawn_event_rebroadcast(
                             let entry = delta_broadcast_buf.entry(*task_id)
                                 .or_insert_with(|| (*project_id, *agent_instance_id, String::new()));
                             entry.2.push_str(delta);
+                        }
+                        EngineEvent::TaskBecameReady { project_id, agent_instance_id, task_id } => {
+                            ready_broadcast_buf.push((*project_id, *agent_instance_id, *task_id));
                         }
                         EngineEvent::TaskStarted { project_id, agent_instance_id, task_id, session_id, .. } => {
                             task_session_map.insert(*task_id, TaskSessionEntry {
@@ -209,7 +214,7 @@ fn spawn_event_rebroadcast(
                         _ => {}
                     }
 
-                    if matches!(event, EngineEvent::TaskOutputDelta { .. }) {
+                    if matches!(event, EngineEvent::TaskOutputDelta { .. } | EngineEvent::TaskBecameReady { .. }) {
                         continue;
                     }
 
@@ -263,6 +268,17 @@ fn spawn_event_rebroadcast(
                         let _ = broadcast_tx.send(coalesced);
                     }
 
+                    // Flush buffered TaskBecameReady as a single batched event
+                    if !ready_broadcast_buf.is_empty() {
+                        let (pid, aiid, _) = ready_broadcast_buf[0];
+                        let task_ids: Vec<aura_core::TaskId> = ready_broadcast_buf.drain(..).map(|(_, _, tid)| tid).collect();
+                        let _ = broadcast_tx.send(EngineEvent::TasksBecameReady {
+                            project_id: pid,
+                            agent_instance_id: aiid,
+                            task_ids,
+                        });
+                    }
+
                     debug!(?event, "Broadcasting engine event");
                     if broadcast_tx.send(event).is_err() {
                         warn!("No WebSocket subscribers for engine event");
@@ -276,6 +292,16 @@ fn spawn_event_rebroadcast(
                             agent_instance_id: aiid,
                             task_id,
                             delta: text,
+                        });
+                    }
+                    if !ready_broadcast_buf.is_empty() {
+                        let (pid, aiid, _) = ready_broadcast_buf[0];
+                        let task_ids: Vec<aura_core::TaskId> = ready_broadcast_buf.drain(..).map(|(_, _, tid)| tid).collect();
+                        debug!(count = task_ids.len(), "Flushing coalesced TasksBecameReady");
+                        let _ = broadcast_tx.send(EngineEvent::TasksBecameReady {
+                            project_id: pid,
+                            agent_instance_id: aiid,
+                            task_ids,
                         });
                     }
                 }
