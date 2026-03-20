@@ -8,6 +8,7 @@ mod chat_sanitize;
 mod chat_streaming;
 mod chat_tool_executor;
 mod chat_tool_handlers;
+mod chat_tool_loop_executor;
 pub mod compaction;
 pub mod message_metadata;
 mod tool_loop_types;

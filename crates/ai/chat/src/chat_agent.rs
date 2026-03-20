@@ -1,13 +1,12 @@
 use std::sync::{Arc, Mutex};
 use std::collections::HashSet;
 
-use async_trait::async_trait;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::info;
 
 use aura_core::*;
-use aura_claude::{ThinkingConfig, ToolCall};
+use aura_claude::ThinkingConfig;
 
 use crate::channel_ext::send_or_log;
 use crate::chat::{
@@ -16,7 +15,8 @@ use crate::chat::{
 };
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
-use crate::tool_loop::{run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent};
+use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
+use crate::tool_loop::{run_tool_loop, ToolLoopConfig, ToolLoopEvent};
 use aura_tools::multi_project_tool_definitions;
 
 fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> String {
@@ -51,76 +51,8 @@ fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> Str
 }
 
 // ---------------------------------------------------------------------------
-// ToolExecutor for multi-project agent chat
+// ToolExecutor for multi-project agent chat (via ForwardingToolExecutor)
 // ---------------------------------------------------------------------------
-
-struct AgentToolLoopExecutor {
-    inner: ChatToolExecutor,
-    allowed_project_ids: HashSet<String>,
-    chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
-    blocks: ContentBlockAccumulator,
-}
-
-#[async_trait]
-impl ToolExecutor for AgentToolLoopExecutor {
-    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
-        let futures: Vec<_> = tool_calls
-            .iter()
-            .map(|tc| {
-                let pid_str = tc
-                    .input
-                    .get("project_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let project_id = if self.allowed_project_ids.contains(pid_str) {
-                    pid_str.parse::<ProjectId>().ok()
-                } else {
-                    None
-                };
-                async move {
-                    match project_id {
-                        Some(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
-                        None => crate::chat_tool_executor::ToolExecResult::err_static(
-                            "Missing or invalid project_id. You must specify a valid project_id from the available projects."
-                        ),
-                    }
-                }
-            })
-            .collect();
-        let exec_results = futures::future::join_all(futures).await;
-
-        exec_results
-            .into_iter()
-            .zip(tool_calls)
-            .map(|(result, tc)| {
-                if let Some(spec) = &result.saved_spec {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::SpecRef {
-                            spec_id: spec.spec_id.to_string(),
-                            title: spec.title.clone(),
-                        });
-                    }
-                    send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(spec.clone()));
-                }
-                if let Some(task) = &result.saved_task {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::TaskRef {
-                            task_id: task.task_id.to_string(),
-                            title: task.title.clone(),
-                        });
-                    }
-                    send_or_log(&self.chat_tx, ChatStreamEvent::TaskSaved(task.clone()));
-                }
-                ToolCallResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content,
-                    is_error: result.is_error,
-                    stop_loop: false,
-                }
-            })
-            .collect()
-    }
-}
 
 impl ChatService {
     pub(crate) async fn handle_agent_chat_with_tools(
@@ -170,14 +102,14 @@ impl ChatService {
 
         let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
 
-        let executor = AgentToolLoopExecutor {
+        let executor = ForwardingToolExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
                 self.storage_client.clone(),
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),
-            allowed_project_ids,
+            resolver: MultiProjectResolver { allowed_project_ids },
             chat_tx: tx.clone(),
             blocks: Arc::clone(&tool_blocks),
         };

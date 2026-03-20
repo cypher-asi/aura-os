@@ -1,12 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use async_trait::async_trait;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{error, info};
 
 use aura_core::*;
-use aura_claude::{ThinkingConfig, ToolCall, ToolDefinition};
+use aura_claude::{ThinkingConfig, ToolDefinition};
 use aura_specs::SpecStreamEvent;
 use aura_tools::agent_tool_definitions;
 
@@ -18,91 +17,10 @@ use crate::chat::{
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
 use crate::chat_tool_executor::ChatToolExecutor;
+use crate::chat_tool_loop_executor::{ForwardingToolExecutor, SingleProjectResolver};
 use crate::tool_loop::{
-    run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult,
+    run_tool_loop, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult,
 };
-
-struct ChatToolLoopExecutor {
-    inner: ChatToolExecutor,
-    project_id: ProjectId,
-    chat_tx: mpsc::UnboundedSender<ChatStreamEvent>,
-    blocks: ContentBlockAccumulator,
-}
-
-#[async_trait]
-impl ToolExecutor for ChatToolLoopExecutor {
-    async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
-        let mut indexed_results: Vec<(usize, crate::chat_tool_executor::ToolExecResult)> =
-            Vec::with_capacity(tool_calls.len());
-
-        // Partition into create_task (sequential) vs everything else (concurrent)
-        let mut concurrent_indices = Vec::new();
-        let mut sequential_indices = Vec::new();
-        for (i, tc) in tool_calls.iter().enumerate() {
-            if tc.name == "create_task" {
-                sequential_indices.push(i);
-            } else {
-                concurrent_indices.push(i);
-            }
-        }
-
-        // Run non-create_task calls concurrently
-        if !concurrent_indices.is_empty() {
-            let futures: Vec<_> = concurrent_indices
-                .iter()
-                .map(|&i| {
-                    let tc = &tool_calls[i];
-                    self.inner.execute(&self.project_id, &tc.name, tc.input.clone())
-                })
-                .collect();
-            let results = futures::future::join_all(futures).await;
-            for (result, &i) in results.into_iter().zip(&concurrent_indices) {
-                indexed_results.push((i, result));
-            }
-        }
-
-        // Run create_task calls sequentially to prevent order_index races
-        for &i in &sequential_indices {
-            let tc = &tool_calls[i];
-            let result = self.inner.execute(&self.project_id, &tc.name, tc.input.clone()).await;
-            indexed_results.push((i, result));
-        }
-
-        // Sort back into original order
-        indexed_results.sort_by_key(|(i, _)| *i);
-
-        indexed_results
-            .into_iter()
-            .map(|(i, result)| {
-                let tc = &tool_calls[i];
-                if let Some(spec) = &result.saved_spec {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::SpecRef {
-                            spec_id: spec.spec_id.to_string(),
-                            title: spec.title.clone(),
-                        });
-                    }
-                    send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(spec.clone()));
-                }
-                if let Some(task) = &result.saved_task {
-                    if let Ok(mut acc) = self.blocks.lock() {
-                        acc.push(ChatContentBlock::TaskRef {
-                            task_id: task.task_id.to_string(),
-                            title: task.title.clone(),
-                        });
-                    }
-                    send_or_log(&self.chat_tx, ChatStreamEvent::TaskSaved(task.clone()));
-                }
-                ToolCallResult {
-                    tool_use_id: tc.id.clone(),
-                    content: result.content,
-                    is_error: result.is_error,
-                    stop_loop: false,
-                }
-            })
-            .collect()
-    }
-}
 
 fn extract_user_text(messages: &[Message]) -> String {
     messages
@@ -146,14 +64,14 @@ impl ChatService {
         send_or_log(&tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
 
         let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
-        let executor = ChatToolLoopExecutor {
+        let executor = ForwardingToolExecutor {
             inner: ChatToolExecutor::new(
                 self.store.clone(),
                 self.storage_client.clone(),
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),
-            project_id: *project_id,
+            resolver: SingleProjectResolver { project_id: *project_id },
             chat_tx: tx.clone(),
             blocks: Arc::clone(&tool_blocks),
         };
