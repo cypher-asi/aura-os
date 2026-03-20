@@ -1,9 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   lookupRate,
-  computeCost,
   formatCost,
-  formatCostFromTokens,
   type FeeScheduleEntry,
 } from "./pricing";
 
