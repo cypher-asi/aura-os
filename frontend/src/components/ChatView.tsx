@@ -42,6 +42,8 @@ export function ChatView() {
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const prevIsStreamingRef = useRef(false);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
+  const attachmentsRef = useRef(attachments);
+  useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll } = useAutoScroll(messageAreaRef, agentInstanceId);
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export function ChatView() {
   const handleSend = useCallback(
     (content: string, action?: string, atts?: AttachmentItem[]) => {
       setInput("");
-      const toSend = atts ?? attachments;
+      const toSend = atts ?? attachmentsRef.current;
       const apiAttachments = toSend.length > 0
         ? toSend.map((a) => ({
             type: a.attachmentType,
@@ -185,7 +187,7 @@ export function ChatView() {
       sendMessage(content, action ?? null, null, apiAttachments);
       setAttachments([]);
     },
-    [sendMessage, attachments],
+    [sendMessage],
   );
 
   if (!agentInstanceId) {
