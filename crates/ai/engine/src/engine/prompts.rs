@@ -91,7 +91,7 @@ Use to remove files. {{"op":"delete","path":"src/old.rs"}}
 - For constructing JSON in tests: prefer serde_json::json!() macro over string literals.
 - Remember that \n inside a JSON string value (in your response) becomes a literal newline in the Rust source file. If you want the Rust string to contain a newline escape, you need \\n in your JSON.
 - Do NOT call methods that don't exist on a type. Check the codebase snapshot for actual APIs.
-- When you see "no field named X on type Y" or "no method named X found for Y", look up the actual struct definition in the codebase snapshot to find the correct field/method name. Do not guess alternatives.
+- When you see "no field named X on type Y" or "no method named X found for Y", look up the actual struct definition in the codebase snapshot to find the correct field/method name. Do not guess alternatives. If the struct is not in the snapshot, check the "Actual API Reference" section or the error context.
 
 ### TypeScript/JavaScript (.ts/.tsx/.js/.jsx files)
 - Use forward slashes in import paths, never backslashes.
@@ -182,6 +182,8 @@ Rules:
 
 TOOL USAGE:
 - Do NOT use run_command for searching code, reading files, or finding files. Always use the dedicated tools: search_code, read_file, find_files, list_files. Reserve run_command for build, test, git, and package manager commands only.
+- NEVER create temporary script files (.ps1, .sh, .bat) for bulk operations. Use edit_file with replace_all:true on each file individually. If you need to rename something across multiple files, call edit_file once per file.
+- After using run_command to modify files (e.g. git checkout), always read_file to verify actual content before attempting edit_file.
 
 EXPLORATION LIMITS (ENFORCED):
 - You have a hard limit of ~{exploration_allowance} exploration calls (read_file + search_code) before reads are blocked.
@@ -190,9 +192,11 @@ EXPLORATION LIMITS (ENFORCED):
 - Reading without writing wastes your budget. Every read costs tokens that could be spent on implementation.
 
 STRUCT AND TYPE VERIFICATION (CRITICAL):
-- When writing tests or code that constructs existing types, ALWAYS read the struct definition first to verify exact field names, constructor parameters, and method signatures.
+- When writing ANY code that references existing types (not just tests), ALWAYS verify the exact struct definition by reading it or using search_code for "struct TypeName" before writing.
 - Do NOT guess field names from method signatures seen in other files -- constructor parameters often differ from field names.
-- Before creating test helpers that instantiate structs, search_code for "struct TypeName" to find the actual definition.
+- Pay special attention to: constructor ::new() parameters, field names vs accessor methods, enum variant names, trait method signatures.
+- If the task context includes a "Type Definitions Referenced in Task" section, use those definitions as your primary reference.
+- When compilation errors show "no field named X" or "method not found", read the actual struct/trait definition before attempting a fix.
 
 SCOPE: Stay strictly on-task.
 - ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
