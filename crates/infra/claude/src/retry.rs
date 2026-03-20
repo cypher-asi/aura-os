@@ -175,3 +175,7 @@ impl ClaudeClient {
         sse::parse_sse_events(byte_stream, event_tx).await
     }
 }
+
+#[cfg(test)]
+#[path = "retry_tests.rs"]
+mod retry_tests;

@@ -3,6 +3,9 @@ mod task_handlers;
 mod file_handlers;
 mod shell_handlers;
 
+#[cfg(test)]
+mod handler_tests;
+
 use std::path::Path;
 
 use serde_json::{json, Value};
