@@ -1,4 +1,5 @@
 pub(crate) mod channel_ext;
+pub(crate) mod constants;
 mod error;
 mod chat;
 mod chat_agent;

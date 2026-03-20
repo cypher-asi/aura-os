@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use aura_claude::{ContentBlock, ToolCall};
 use crate::compaction;
 use crate::channel_ext::send_or_log;
+use crate::constants::{MAX_WRITE_FAILURES_PER_FILE, MAX_READS_PER_FILE, MAX_CONSECUTIVE_CMD_FAILURES, CMD_FAILURE_WARNING_THRESHOLD};
 use crate::tool_loop::{ToolCallResult, ToolLoopEvent};
 
 pub(crate) fn detect_blocked_writes(
@@ -60,7 +61,7 @@ pub(crate) fn detect_blocked_write_failures(
         .filter_map(|(i, tc)| {
             if matches!(tc.name.as_str(), "write_file" | "edit_file") {
                 let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                if file_write_failures.get(path).copied().unwrap_or(0) >= 3 {
+                if file_write_failures.get(path).copied().unwrap_or(0) >= MAX_WRITE_FAILURES_PER_FILE {
                     return Some(i);
                 }
             }
@@ -89,7 +90,7 @@ pub(crate) fn detect_blocked_reads(
         .filter_map(|(i, tc)| {
             if tc.name == "read_file" {
                 let path = tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                if file_read_counts.get(path).copied().unwrap_or(0) >= 3 {
+                if file_read_counts.get(path).copied().unwrap_or(0) >= MAX_READS_PER_FILE {
                     return Some(i);
                 }
             }
@@ -121,7 +122,7 @@ pub(crate) fn detect_blocked_exploration(
 
 /// Block `run_command` calls when consecutive failures reach the hard limit (5+).
 pub(crate) fn detect_blocked_commands(tool_calls: &[ToolCall], consecutive_failures: usize) -> Vec<usize> {
-    if consecutive_failures < 5 {
+    if consecutive_failures < MAX_CONSECUTIVE_CMD_FAILURES {
         return vec![];
     }
     tool_calls
@@ -148,7 +149,7 @@ pub(crate) fn apply_cmd_failure_tracking(
     for (tc, result) in tool_calls.iter().zip(results.iter_mut()) {
         if tc.name == "run_command" && result.is_error {
             *consecutive_failures += 1;
-            if *consecutive_failures >= 3 {
+            if *consecutive_failures >= CMD_FAILURE_WARNING_THRESHOLD {
                 result.content.push_str(&format!(
                     "\n\n[WARNING: {} consecutive run_command failures. \
                      Use search_code, read_file, find_files, or list_files instead \

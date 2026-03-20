@@ -14,6 +14,7 @@ use crate::chat::{
     ChatService, ChatStreamEvent, ContentBlockAccumulator,
     convert_messages_to_rich, forward_tool_loop_event,
 };
+use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::tool_loop::{run_tool_loop, ToolCallResult, ToolExecutor, ToolLoopConfig, ToolLoopEvent};
 use aura_tools::multi_project_tool_definitions;
@@ -187,7 +188,7 @@ impl ChatService {
             max_iterations: ChatToolExecutor::max_iterations(),
             max_tokens: self.llm_config.chat_max_tokens,
             thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
-            stream_timeout: std::time::Duration::from_secs(300),
+            stream_timeout: DEFAULT_STREAM_TIMEOUT,
             billing_reason: "aura_chat",
             max_context_tokens: Some(self.llm_config.max_context_tokens),
             credit_budget,

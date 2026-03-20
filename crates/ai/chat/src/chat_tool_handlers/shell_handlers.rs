@@ -6,6 +6,7 @@ use tracing::info;
 use aura_core::*;
 
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
+use crate::constants::{DEFAULT_CMD_TIMEOUT_SECS, MAX_CMD_TIMEOUT_SECS, CMD_STDOUT_TRUNCATE_CHARS, CMD_STDERR_TRUNCATE_CHARS, SEARCH_REGEX_SIZE_LIMIT, MAX_SEARCH_RESULTS};
 use super::str_field;
 
 impl ChatToolExecutor {
@@ -24,8 +25,8 @@ impl ChatToolExecutor {
         let timeout_secs = input
             .get("timeout_secs")
             .and_then(|v| v.as_u64())
-            .unwrap_or(60)
-            .min(300);
+            .unwrap_or(DEFAULT_CMD_TIMEOUT_SECS)
+            .min(MAX_CMD_TIMEOUT_SECS);
 
         info!(command = %command, cwd = %abs_dir.display(), timeout_secs, "Running shell command");
 
@@ -51,8 +52,8 @@ impl ChatToolExecutor {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let exit_code = output.status.code().unwrap_or(-1);
 
-                let truncated_stdout = truncate_output(&stdout, 8000);
-                let truncated_stderr = truncate_output(&stderr, 4000);
+                let truncated_stdout = truncate_output(&stdout, CMD_STDOUT_TRUNCATE_CHARS);
+                let truncated_stderr = truncate_output(&stderr, CMD_STDERR_TRUNCATE_CHARS);
 
                 let is_error = !output.status.success();
                 ToolExecResult {
@@ -97,7 +98,7 @@ impl ChatToolExecutor {
             .min(10) as usize;
 
         let regex = match regex::RegexBuilder::new(&pattern)
-            .size_limit(1_000_000) // 1 MB compiled size limit to prevent ReDoS
+            .size_limit(SEARCH_REGEX_SIZE_LIMIT)
             .build()
         {
             Ok(r) => r,
@@ -151,7 +152,7 @@ impl ChatToolExecutor {
                         found.push(p);
                     }
                 }
-                if found.len() >= 200 {
+                if found.len() >= MAX_SEARCH_RESULTS {
                     break;
                 }
             }

@@ -7,6 +7,7 @@ use tracing::{info, warn};
 use aura_claude::{ContentBlock, RichMessage, ToolCall, ToolDefinition};
 use aura_billing::MeteredLlm;
 use crate::compaction;
+use crate::constants::DEFAULT_EXPLORATION_ALLOWANCE;
 
 pub use crate::tool_loop_types::*;
 use crate::channel_ext::send_or_log;
@@ -106,7 +107,7 @@ pub async fn run_tool_loop(
         file_read_counts: HashMap::new(),
         exploration: ExplorationState {
             total_calls: 0,
-            allowance: config.exploration_allowance.unwrap_or(12),
+            allowance: config.exploration_allowance.unwrap_or(DEFAULT_EXPLORATION_ALLOWANCE),
             warning_mild_sent: false,
             warning_strong_sent: false,
         },
