@@ -20,6 +20,7 @@ use types::{
 };
 
 pub(crate) const ANTHROPIC_API_VERSION: &str = "2023-06-01";
+pub(crate) const ANTHROPIC_BETA: &str = "prompt-caching-2024-07-31";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
 pub const MID_MODEL: &str = "claude-opus-4-6";
