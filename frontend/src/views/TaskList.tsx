@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { api } from "../api/client";
 import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
@@ -25,6 +25,11 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading, setLoading] = useState(false);
 
+  const sidekickRef = useRef(sidekick);
+  sidekickRef.current = sidekick;
+  const projectIdRef = useRef(projectId);
+  projectIdRef.current = projectId;
+
   useEffect(() => {
     if (!projectId) return;
     Promise.all([api.listSpecs(projectId), api.listTasks(projectId)])
@@ -41,21 +46,21 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       setLocalTasks((prev) =>
         prev.map((t) => (t.task_id === taskId ? { ...t, ...extra, status: newStatus } : t)),
       );
-      sidekick.patchTask(taskId, { ...extra, status: newStatus });
-      sidekick.updatePreviewTask({ task_id: taskId, ...extra, status: newStatus });
+      sidekickRef.current.patchTask(taskId, { ...extra, status: newStatus });
+      sidekickRef.current.updatePreviewTask({ task_id: taskId, ...extra, status: newStatus });
     },
-    [sidekick],
+    [],
   );
 
   const refetchTasks = useCallback(() => {
-    if (!projectId) return;
-    api.listTasks(projectId).then((t) => {
+    const pid = projectIdRef.current;
+    if (!pid) return;
+    api.listTasks(pid).then((t) => {
       setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
     }).catch(console.error);
-  }, [projectId]);
+  }, []);
 
   useEffect(() => {
-    queueMicrotask(() => setLiveTaskIds(new Set()));
     const unsubs = [
       subscribe("task_started", (e) => {
         if (e.task_id) {

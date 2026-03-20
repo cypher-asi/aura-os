@@ -402,7 +402,7 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
       timestamp: 0,
     }));
 
-    if (isTerminal || isActive) {
+    if (isTerminal || isActive || task.status === "in_progress") {
       if (task.live_output || persistedBuildSteps?.length || persistedTestSteps?.length) {
         hydratedRef.current = task.task_id;
         seedTaskOutput(task.task_id, task.live_output, persistedBuildSteps, persistedTestSteps);
@@ -453,9 +453,9 @@ export function TaskPreview({ task }: { task: import("../types").Task }) {
         }).catch((err) => console.warn("Failed to load task output:", err));
       }
     }
-  }, [isActive, isTerminal, projectId, task.task_id, task.live_output, streamBuf, seedTaskOutput]);
+  }, [isActive, isTerminal, projectId, task.task_id, task.status, task.live_output, streamBuf, seedTaskOutput]);
 
-  const hasOutput = isActive || isTerminal;
+  const hasOutput = isActive || isTerminal || !!streamBuf;
   const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
 
   const fileOps = hasOutput

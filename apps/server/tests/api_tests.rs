@@ -24,7 +24,7 @@ use aura_network::NetworkClient;
 use aura_orbit::OrbitClient;
 use aura_orgs::OrgService;
 use aura_projects::ProjectService;
-use aura_server::state::{AppState, TaskOutputBuffers};
+use aura_server::state::{AppState, TaskOutputBuffers, TaskStepBuffers};
 use aura_sessions::SessionService;
 use aura_settings::SettingsService;
 use aura_specs::SpecGenerationService;
@@ -184,6 +184,7 @@ async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir) {
 
     let (app, state) = build_test_app_from_store(
         store.clone(),
+        db_dir.path().to_path_buf(),
         Some(Arc::new(NetworkClient::with_base_url(&net_url))),
         Some(Arc::new(StorageClient::with_base_url(&storage_url))),
     );
@@ -192,6 +193,7 @@ async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir) {
 
 fn build_test_app_from_store(
     store: Arc<RocksStore>,
+    data_dir: std::path::PathBuf,
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
 ) -> (Router, AppState) {
@@ -247,9 +249,12 @@ fn build_test_app_from_store(
     let task_output_buffers: TaskOutputBuffers =
         Arc::new(std::sync::Mutex::new(HashMap::new()));
 
+    let task_step_buffers: TaskStepBuffers =
+        Arc::new(std::sync::Mutex::new(HashMap::new()));
+
     let state = AppState {
         store,
-        data_dir: db_dir.path().to_path_buf(),
+        data_dir,
         org_service,
         auth_service,
         settings_service,
@@ -269,11 +274,13 @@ fn build_test_app_from_store(
         loop_registry: Arc::new(Mutex::new(HashMap::new())),
         write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
         task_output_buffers,
+        task_step_buffers,
         terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
         network_client,
         storage_client,
         orbit_client: Arc::new(OrbitClient::new()),
         orbit_base_url: None,
+        internal_service_token: None,
         runtime_agent_state: Arc::new(Mutex::new(HashMap::new())),
     };
 
@@ -284,7 +291,7 @@ fn build_test_app_from_store(
 fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
-    let (app, state) = build_test_app_from_store(store, None, None);
+    let (app, state) = build_test_app_from_store(store, db_dir.path().to_path_buf(), None, None);
     (app, state, db_dir)
 }
 

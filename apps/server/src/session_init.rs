@@ -78,6 +78,8 @@ mod tests {
             name: "Test".into(),
             description: String::new(),
             linked_folder_path: "/tmp/x".into(),
+            workspace_source: None,
+            workspace_display_path: None,
             requirements_doc_path: None,
             current_status: ProjectStatus::Active,
             build_command: None,

@@ -44,6 +44,8 @@ const EVENT_LABELS: Record<EngineEventType, string> = {
   test_verification_passed: "Test",
   test_verification_failed: "Test",
   test_fix_attempt: "Test",
+  git_committed: "Git",
+  git_pushed: "Git",
   network_event: "Network",
 };
 
@@ -268,6 +270,10 @@ function summarise(e: EngineEvent): string {
     case "test_verification_failed":
     case "test_fix_attempt":
       return summariseTestEvent(e);
+    case "git_committed":
+      return `Git commit: ${e.commit_sha?.slice(0, 8) ?? e.task_id ?? ""}`;
+    case "git_pushed":
+      return `Git push: ${e.branch ?? e.task_id ?? ""}`;
     case "network_event":
       return `Network: ${e.network_event_type ?? "event"}`;
     default:
@@ -352,6 +358,8 @@ export function useLogStream() {
       "test_verification_passed",
       "test_verification_failed",
       "test_fix_attempt",
+      "git_committed",
+      "git_pushed",
       "network_event",
     ];
     const unsubs = allTypes.map((type) =>
