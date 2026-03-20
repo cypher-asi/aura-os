@@ -11,8 +11,8 @@ import { Bot, FolderGit2, Gauge, Pencil, Trash2, Loader2, Settings } from "lucid
 import { InlineRenameInput } from "./InlineRenameInput";
 import { DeleteProjectModal, DeleteAgentInstanceModal, ProjectSettingsModal } from "./ProjectModals";
 import { AgentSelectorModal } from "./AgentSelectorModal";
-import { useEventContext } from "../context/EventContext";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
+import { useLoopStatus } from "../hooks/use-loop-status";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import {
@@ -79,11 +79,8 @@ export function ProjectList() {
   } = useProjectsList();
 
   const { query: searchQuery, setAction } = useSidebarSearch();
-  const { subscribe } = useEventContext();
   const { isMobileLayout } = useAuraCapabilities();
-  const [automatingProjectId, setAutomatingProjectId] = useState<string | null>(null);
-  const [automatingAgentInstanceId, setAutomatingAgentInstanceId] = useState<string | null>(null);
-  const agentInstanceIdRef = useRef(agentInstanceId);
+  const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(agentInstanceId);
 
   const [ctxMenu, setCtxMenu] = useState<ContextMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<Project | null>(null);
@@ -164,27 +161,6 @@ export function ProjectList() {
       });
     });
   }, [setAgentsByProject, sidekick]);
-
-  agentInstanceIdRef.current = agentInstanceId;
-
-  useEffect(() => {
-    const clearAutomation = () => {
-      setAutomatingProjectId(null);
-      setAutomatingAgentInstanceId(null);
-    };
-    const unsubs = [
-      subscribe("loop_started", (e) => {
-        if (e.project_id) {
-          setAutomatingProjectId(e.project_id);
-          setAutomatingAgentInstanceId(agentInstanceIdRef.current ?? null);
-        }
-      }),
-      subscribe("loop_paused", clearAutomation),
-      subscribe("loop_stopped", clearAutomation),
-      subscribe("loop_finished", clearAutomation),
-    ];
-    return () => unsubs.forEach((u) => u());
-  }, [subscribe]);
 
   useEffect(() => {
     if (

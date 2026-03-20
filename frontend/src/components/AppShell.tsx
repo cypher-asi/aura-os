@@ -12,18 +12,14 @@ import { OrgSettingsPanel } from "./OrgSettingsPanel";
 import { PanelSearch } from "./PanelSearch";
 import { WindowControls } from "./WindowControls";
 import { ProjectList } from "./ProjectList";
-import { OrgProvider } from "../context/OrgContext";
-import { AppProvider, useAppContext } from "../context/AppContext";
-import { SidebarSearchProvider, useSidebarSearch } from "../context/SidebarSearchContext";
+import { AppProviders } from "./AppProviders";
+import { useAppContext } from "../context/AppContext";
+import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
+import { useMobileDrawers } from "../hooks/use-mobile-drawers";
 import { useProjectContext } from "../context/ProjectContext";
-import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
 import { useProjectsList } from "../apps/projects/useProjectsList";
-import { AgentAppProvider } from "../apps/agents/AgentAppProvider";
-import { FeedProvider } from "../apps/feed/FeedProvider";
-import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
-import { ProfileProvider } from "../apps/profile/ProfileProvider";
 import { apps } from "../apps/registry";
 import { NewProjectModal } from "./NewProjectModal";
 import { windowCommand } from "../lib/windowCommand";
@@ -40,22 +36,6 @@ import {
   projectWorkRoute,
 } from "../utils/mobileNavigation";
 import styles from "./AppShell.module.css";
-
-function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): string | null {
-  if (!item) return null;
-  switch (item.kind) {
-    case "spec":
-      return `spec:${item.spec.spec_id}`;
-    case "specs_overview":
-      return `specs:${item.specs.map((spec) => spec.spec_id).join(",")}`;
-    case "task":
-      return `task:${item.task.task_id}`;
-    case "session":
-      return `session:${item.session.session_id}`;
-    case "log":
-      return `log:${item.entry.timestamp}:${item.entry.summary}`;
-  }
-}
 
 function blurActiveElement() {
   const active = document.activeElement;
@@ -296,23 +276,25 @@ function ResponsiveShell({
 }) {
   const { activeApp } = useAppContext();
   const { features, isMobileLayout, isPhoneLayout } = useAuraCapabilities();
-  const { previewItem } = useSidekick();
   const projectContext = useProjectContext();
   const { projects, mostRecentProject } = useProjectsList();
   const routeContent = useOutlet();
   const location = useLocation();
   const navigate = useNavigate();
-  const [navOpen, setNavOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const lastPreviewKeyRef = useRef<string | null>(null);
   const {
     MainPanel,
     ResponsiveControls,
     PreviewPanel,
   } = activeApp;
+  const {
+    navOpen, setNavOpen,
+    previewOpen, setPreviewOpen,
+    accountOpen, setAccountOpen,
+    hostSettingsOpen, setHostSettingsOpen,
+    drawerOpen, overlayDrawerOpen,
+    closeDrawers, openAfterDrawerClose,
+  } = useMobileDrawers(Boolean(PreviewPanel));
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const currentProject = projectContext?.project
     ?? projects.find((project) => project.project_id === currentProjectId)
@@ -360,59 +342,6 @@ function ResponsiveShell({
     ro.observe(el);
     return () => ro.disconnect();
   }, [isMobileLayout]);
-
-  useEffect(() => {
-    if (!isMobileLayout) return;
-    const frame = window.requestAnimationFrame(() => {
-      setNavOpen(false);
-      setPreviewOpen(false);
-      setAccountOpen(false);
-      setHostSettingsOpen(false);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [isMobileLayout, location.pathname]);
-
-  useEffect(() => {
-    if (!isMobileLayout) return;
-    if (!PreviewPanel || !previewItem) {
-      const frame = window.requestAnimationFrame(() => setPreviewOpen(false));
-      return () => window.cancelAnimationFrame(frame);
-    }
-  }, [PreviewPanel, isMobileLayout, previewItem]);
-
-  useEffect(() => {
-    if (!isMobileLayout) return;
-    const key = previewItemKey(previewItem);
-
-    if (!PreviewPanel || !key) {
-      lastPreviewKeyRef.current = null;
-      return;
-    }
-
-    if (lastPreviewKeyRef.current === key) {
-      return;
-    }
-
-    lastPreviewKeyRef.current = key;
-    const frame = window.requestAnimationFrame(() => {
-      setAccountOpen(false);
-      setPreviewOpen(true);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [PreviewPanel, isMobileLayout, previewItem]);
-
-  const drawerOpen = navOpen || previewOpen || accountOpen || hostSettingsOpen;
-  const overlayDrawerOpen = navOpen || previewOpen || accountOpen;
-  const closeDrawers = useCallback(() => {
-    blurActiveElement();
-    setNavOpen(false);
-    setPreviewOpen(false);
-    setAccountOpen(false);
-  }, []);
-  const openAfterDrawerClose = useCallback((callback: () => void) => {
-    closeDrawers();
-    window.setTimeout(callback, 180);
-  }, [closeDrawers]);
 
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
     if (id === "feed") {
@@ -698,22 +627,8 @@ function AppContent() {
 
 export function AppShell() {
   return (
-    <OrgProvider>
-      <AppProvider apps={apps}>
-        <SidebarSearchProvider>
-          <ProjectsProvider>
-            <AgentAppProvider>
-              <FeedProvider>
-                <LeaderboardProvider>
-                  <ProfileProvider>
-                    <AppContent />
-                  </ProfileProvider>
-                </LeaderboardProvider>
-              </FeedProvider>
-            </AgentAppProvider>
-          </ProjectsProvider>
-        </SidebarSearchProvider>
-      </AppProvider>
-    </OrgProvider>
+    <AppProviders>
+      <AppContent />
+    </AppProviders>
   );
 }
