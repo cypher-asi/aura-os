@@ -129,16 +129,6 @@ export function ProjectList() {
   }, [agentInstanceId, agentsByProject, projectId, refreshProjectAgents]);
 
   useEffect(() => {
-    if (!isMobileLayout || projects.length === 0) return;
-
-    for (const project of projects) {
-      if (!(project.project_id in agentsByProject)) {
-        void refreshProjectAgents(project.project_id);
-      }
-    }
-  }, [agentsByProject, isMobileLayout, projects, refreshProjectAgents]);
-
-  useEffect(() => {
     if (!ctxMenu) return;
 
     const handleMouseDown = (e: MouseEvent) => {
@@ -308,11 +298,11 @@ export function ProjectList() {
   );
   const defaultExpandedIds = useMemo(
     () => (isMobileLayout
-      ? projects.map((project) => project.project_id)
+      ? (projectId ? [projectId] : [])
       : projectId
         ? [projectId]
         : []),
-    [isMobileLayout, projectId, projects],
+    [isMobileLayout, projectId],
   );
 
   const defaultSelectedIds = useMemo(() => {

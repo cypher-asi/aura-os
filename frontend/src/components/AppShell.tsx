@@ -135,7 +135,10 @@ function ProjectCreationModalHost() {
   const handleProjectCreated = useCallback((project: import("../types").Project) => {
     closeNewProjectModal();
     sidekick.closePreview();
-    setProjects((prev) => [...prev, project]);
+    setProjects((prev) => {
+      const next = prev.filter((existing) => existing.project_id !== project.project_id);
+      return [...next, project];
+    });
     navigate(`/projects/${project.project_id}`);
   }, [closeNewProjectModal, navigate, setProjects, sidekick]);
 
@@ -324,8 +327,16 @@ function ResponsiveShell({
     location.pathname === currentProjectRootPath
       || isProjectSubroute(location.pathname, currentProjectId)
   );
-  const showProjectTitle = Boolean(currentProjectId) && isProjectRoute;
-  const showProjectBack = Boolean(currentProjectId) && isProjectRoute && location.pathname !== currentProjectRootPath;
+  const isPrimaryProjectDestination = mobileDestination === "agent"
+    || mobileDestination === "tasks"
+    || mobileDestination === "files";
+  const hasResolvedCurrentProject = Boolean(currentProject);
+  const showProjectTitle = hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute;
+  const showProjectBack = hasResolvedCurrentProject
+    && Boolean(currentProjectId)
+    && isProjectRoute
+    && location.pathname !== currentProjectRootPath
+    && !isPrimaryProjectDestination;
   const showProjectResponsiveControls = isMobileLayout && activeApp.id !== "projects";
 
   useEffect(() => {
@@ -452,6 +463,7 @@ function ResponsiveShell({
               aria-label="Open project navigation"
             >
               <span className={styles.mobileTopbarTitleText}>AURA</span>
+              <ChevronDown size={14} />
             </button>
           )}
         </span>

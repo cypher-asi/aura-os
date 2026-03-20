@@ -15,6 +15,19 @@ import { ProjectsListContext, type ProjectsListContextValue } from "./ProjectsLi
 
 const NEW_PROJECT_MODAL_STORAGE_KEY = "aura:new-project-modal-open";
 
+function dedupeProjects(projects: Project[]) {
+  const seen = new Set<string>();
+  const next: Project[] = [];
+
+  for (const project of projects) {
+    if (seen.has(project.project_id)) continue;
+    seen.add(project.project_id);
+    next.push(project);
+  }
+
+  return next;
+}
+
 export function ProjectsListProvider({ children }: { children: ReactNode }) {
   const { activeOrg } = useOrg();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -35,7 +48,7 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
     try {
       const nextProjects = await api.listProjects(activeOrg?.org_id);
       if (refreshRequestId.current === requestId) {
-        setProjects(nextProjects);
+        setProjects(dedupeProjects(nextProjects));
       }
     } catch (error) {
       if (refreshRequestId.current === requestId) {
