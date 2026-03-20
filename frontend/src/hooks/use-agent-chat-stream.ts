@@ -1,14 +1,20 @@
-import { useRef, useState, useCallback, useEffect } from "react";
-import type { MutableRefObject, Dispatch, SetStateAction } from "react";
-import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
-import type { ToolCallInfo, ToolCallStartedInfo, ToolResultInfo } from "../api/streams";
-import type { Message, Spec, Task } from "../types";
-import type {
-  DisplayMessage,
-  DisplayContentBlockUnion,
-  ToolCallEntry,
-} from "./use-chat-stream";
-import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
+import { useRef, useCallback, useEffect } from "react";
+import { api } from "../api/client";
+import type { ChatAttachment } from "../api/streams";
+import type { Spec, Task } from "../types";
+import {
+  useStreamCore,
+  resetStreamBuffers,
+  handleThinkingDelta,
+  handleTextDelta,
+  handleToolCallStarted,
+  handleToolCall,
+  handleToolResult,
+  handleMessageSaved,
+  handleStreamError,
+  finalizeStream,
+} from "./use-stream-core";
+import type { DisplayMessage } from "./use-stream-core";
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
@@ -16,258 +22,9 @@ interface UseAgentChatStreamOptions {
   onSpecSaved?: (spec: Spec) => void;
 }
 
-interface StreamRefs {
-  streamBuffer: MutableRefObject<string>;
-  thinkingBuffer: MutableRefObject<string>;
-  thinkingStart: MutableRefObject<number | null>;
-  toolCalls: MutableRefObject<ToolCallEntry[]>;
-  needsSeparator: MutableRefObject<boolean>;
-  raf: MutableRefObject<number | null>;
-  thinkingRaf: MutableRefObject<number | null>;
-}
-
-interface StreamSetters {
-  setStreamingText: Dispatch<SetStateAction<string>>;
-  setThinkingText: Dispatch<SetStateAction<string>>;
-  setThinkingDurationMs: Dispatch<SetStateAction<number | null>>;
-  setActiveToolCalls: Dispatch<SetStateAction<ToolCallEntry[]>>;
-  setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
-  setIsStreaming: Dispatch<SetStateAction<boolean>>;
-}
-
-function snapshotThinking(refs: StreamRefs) {
-  return {
-    savedThinking: refs.thinkingBuffer.current || undefined,
-    savedThinkingDuration: refs.thinkingStart.current != null
-      ? Date.now() - refs.thinkingStart.current
-      : null,
-  };
-}
-
-function snapshotToolCalls(refs: StreamRefs): ToolCallEntry[] | undefined {
-  return refs.toolCalls.current.length > 0
-    ? [...refs.toolCalls.current]
-    : undefined;
-}
-
-function resetStreamState(refs: StreamRefs, setters: StreamSetters) {
-  setters.setStreamingText("");
-  refs.streamBuffer.current = "";
-  setters.setThinkingText("");
-  refs.thinkingBuffer.current = "";
-  refs.thinkingStart.current = null;
-  setters.setThinkingDurationMs(null);
-  refs.toolCalls.current = [];
-  setters.setActiveToolCalls([]);
-}
-
-function handleThinkingDelta(
-  text: string,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  if (refs.thinkingStart.current === null) {
-    refs.thinkingStart.current = Date.now();
-  }
-  refs.thinkingBuffer.current += text;
-  if (refs.thinkingRaf.current === null) {
-    refs.thinkingRaf.current = requestAnimationFrame(() => {
-      refs.thinkingRaf.current = null;
-      setters.setThinkingText(refs.thinkingBuffer.current);
-    });
-  }
-}
-
-function handleTextDelta(
-  text: string,
-  closureThinkingDurationMs: number | null,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  if (refs.thinkingStart.current !== null && closureThinkingDurationMs === null) {
-    setters.setThinkingDurationMs(Date.now() - refs.thinkingStart.current);
-  }
-  if (refs.needsSeparator.current && refs.streamBuffer.current.length > 0) {
-    refs.streamBuffer.current += "\n\n";
-    refs.needsSeparator.current = false;
-  }
-  refs.streamBuffer.current += text;
-  if (refs.raf.current === null) {
-    refs.raf.current = requestAnimationFrame(() => {
-      refs.raf.current = null;
-      setters.setStreamingText(refs.streamBuffer.current);
-    });
-  }
-}
-
-function handleToolCallStarted(
-  info: ToolCallStartedInfo,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  const entry: ToolCallEntry = {
-    id: info.id,
-    name: info.name,
-    input: {},
-    pending: true,
-    started: true,
-  };
-  refs.toolCalls.current = [...refs.toolCalls.current, entry];
-  setters.setActiveToolCalls([...refs.toolCalls.current]);
-}
-
-function handleToolCall(
-  info: ToolCallInfo,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  const existingIdx = refs.toolCalls.current.findIndex(
-    (tc) => tc.id === info.id && tc.started,
-  );
-  if (existingIdx !== -1) {
-    refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-      tc.id === info.id && tc.started
-        ? { ...tc, input: info.input, started: false }
-        : tc,
-    );
-  } else {
-    const entry: ToolCallEntry = {
-      id: info.id,
-      name: info.name,
-      input: info.input,
-      pending: true,
-    };
-    refs.toolCalls.current = [...refs.toolCalls.current, entry];
-  }
-  setters.setActiveToolCalls([...refs.toolCalls.current]);
-}
-
-function handleToolResult(
-  info: ToolResultInfo,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-    tc.id === info.id
-      ? { ...tc, result: info.result, isError: info.is_error, pending: false }
-      : tc,
-  );
-  setters.setActiveToolCalls([...refs.toolCalls.current]);
-  refs.needsSeparator.current = true;
-}
-
-function handleMessageSaved(
-  msg: Message,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  const allBlocks = msg.content_blocks ?? [];
-  const displayBlocks: DisplayContentBlockUnion[] = allBlocks
-    .filter((b) => b.type === "text" || b.type === "image")
-    .map((b) =>
-      b.type === "text"
-        ? { type: "text" as const, text: b.text ?? "" }
-        : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
-    );
-
-  const msgToolCalls = extractToolCalls(allBlocks);
-  const finalToolCalls =
-    msgToolCalls && msgToolCalls.length > 0
-      ? msgToolCalls
-      : snapshotToolCalls(refs);
-
-  const savedThinking = msg.thinking || refs.thinkingBuffer.current || undefined;
-  const savedThinkingDuration = msg.thinking_duration_ms
-    ?? (refs.thinkingStart.current != null ? Date.now() - refs.thinkingStart.current : null);
-  setters.setMessages((prev) => [
-    ...prev,
-    {
-      id: msg.message_id,
-      role: "assistant",
-      content: msg.content,
-      contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
-      toolCalls: finalToolCalls,
-      artifactRefs: extractArtifactRefs(allBlocks),
-      thinkingText: savedThinking,
-      thinkingDurationMs: savedThinkingDuration,
-    },
-  ]);
-  resetStreamState(refs, setters);
-}
-
-function handleStreamError(
-  message: string,
-  refs: StreamRefs,
-  setters: StreamSetters,
-) {
-  console.error("Agent chat stream error:", message);
-  if (isInsufficientCreditsError(message)) {
-    dispatchInsufficientCredits();
-  }
-  const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
-  const errorContent = refs.streamBuffer.current
-    ? refs.streamBuffer.current + `\n\n*Error: ${message}*`
-    : `*Error: ${message}*`;
-  setters.setMessages((prev) => [
-    ...prev,
-    {
-      id: `error-${Date.now()}`,
-      role: "assistant",
-      content: errorContent,
-      toolCalls: snapshotToolCalls(refs),
-      thinkingText: savedThinking,
-      thinkingDurationMs: savedThinkingDuration,
-    },
-  ]);
-  resetStreamState(refs, setters);
-}
-
-function finalizeStream(
-  refs: StreamRefs,
-  setters: StreamSetters,
-  abortRef: MutableRefObject<AbortController | null>,
-  closureIsStreaming: boolean,
-) {
-  if (refs.streamBuffer.current && !closureIsStreaming) {
-    const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
-    setters.setMessages((prev) => [
-      ...prev,
-      {
-        id: `stream-${Date.now()}`,
-        role: "assistant",
-        content: refs.streamBuffer.current,
-        toolCalls: snapshotToolCalls(refs),
-        thinkingText: savedThinking,
-        thinkingDurationMs: savedThinkingDuration,
-      },
-    ]);
-    setters.setStreamingText("");
-    refs.streamBuffer.current = "";
-    refs.toolCalls.current = [];
-    setters.setActiveToolCalls([]);
-  }
-  setters.setThinkingText("");
-  refs.thinkingBuffer.current = "";
-  refs.thinkingStart.current = null;
-  setters.setThinkingDurationMs(null);
-  setters.setIsStreaming(false);
-  abortRef.current = null;
-}
-
 export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions) {
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState("");
-  const [thinkingText, setThinkingText] = useState("");
-  const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(null);
-  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
-  const [progressText, setProgressText] = useState("");
-
-  const isStreamingRef = useRef(false);
-  useEffect(() => { isStreamingRef.current = isStreaming; }, [isStreaming]);
-
-  const thinkingDurationMsRef = useRef<number | null>(null);
-  useEffect(() => { thinkingDurationMsRef.current = thinkingDurationMs; }, [thinkingDurationMs]);
+  const core = useStreamCore([agentId]);
+  const { refs, setters, abortRef, isStreamingRef, thinkingDurationMsRef } = core;
 
   const onSpecSavedRef = useRef(onSpecSaved);
   useEffect(() => { onSpecSavedRef.current = onSpecSaved; }, [onSpecSaved]);
@@ -275,66 +32,12 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
   const onTaskSavedRef = useRef(onTaskSaved);
   useEffect(() => { onTaskSavedRef.current = onTaskSaved; }, [onTaskSaved]);
 
-  const abortRef = useRef<AbortController | null>(null);
-  const streamBufferRef = useRef("");
-  const rafRef = useRef<number | null>(null);
-  const thinkingBufferRef = useRef("");
-  const thinkingRafRef = useRef<number | null>(null);
-  const thinkingStartRef = useRef<number | null>(null);
-  const toolCallsRef = useRef<ToolCallEntry[]>([]);
-  const needsSeparatorRef = useRef(false);
-
-  const refs: StreamRefs = {
-    streamBuffer: streamBufferRef,
-    thinkingBuffer: thinkingBufferRef,
-    thinkingStart: thinkingStartRef,
-    toolCalls: toolCallsRef,
-    needsSeparator: needsSeparatorRef,
-    raf: rafRef,
-    thinkingRaf: thinkingRafRef,
-  };
-
-  const setters: StreamSetters = {
-    setStreamingText,
-    setThinkingText,
-    setThinkingDurationMs,
-    setActiveToolCalls,
-    setMessages,
-    setIsStreaming,
-  };
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (thinkingRafRef.current !== null) cancelAnimationFrame(thinkingRafRef.current);
-      rafRef.current = null;
-      thinkingRafRef.current = null;
-      streamBufferRef.current = "";
-      thinkingBufferRef.current = "";
-      thinkingStartRef.current = null;
-      toolCallsRef.current = [];
-      needsSeparatorRef.current = false;
-      setStreamingText("");
-      setThinkingText("");
-      setThinkingDurationMs(null);
-      setActiveToolCalls([]);
-      setIsStreaming(false);
-      setProgressText("");
-    };
-  }, [agentId]);
-
-  const resetMessages = useCallback((msgs: DisplayMessage[]) => {
-    setMessages(msgs);
-  }, []);
-
   const sendMessage = useCallback(
     async (
       content: string,
       action: string | null = null,
       _selectedModel?: string | null,
-      attachments?: import("../api/streams").ChatAttachment[],
+      attachments?: ChatAttachment[],
     ) => {
       if (!agentId || isStreamingRef.current) return;
       const trimmed = content.trim();
@@ -347,10 +50,10 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         content: trimmed || "",
       };
 
-      setMessages((prev) => [...prev, userMsg]);
-      setIsStreaming(true);
-      resetStreamState(refs, setters);
-      needsSeparatorRef.current = false;
+      core.setMessages((prev) => [...prev, userMsg]);
+      core.setIsStreaming(true);
+      resetStreamBuffers(refs, setters);
+      refs.needsSeparator.current = false;
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -362,60 +65,39 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         null,
         attachments,
         {
-          onProgress: (stage) => setProgressText(stage),
-          onThinkingDelta: (text) => { setProgressText(""); handleThinkingDelta(text, refs, setters); },
-          onDelta: (text) => { setProgressText(""); handleTextDelta(text, thinkingDurationMsRef.current, refs, setters); },
-          onToolCallStarted: (info) => { setProgressText(""); handleToolCallStarted(info, refs, setters); },
-          onToolCall: (info) => { setProgressText(""); handleToolCall(info, refs, setters); },
-          onToolResult: (info) => handleToolResult(info, refs, setters),
+          onProgress: (stage) => core.setProgressText(stage),
+          onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
+          onDelta: (text) => handleTextDelta(refs, setters, thinkingDurationMsRef.current, text),
+          onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
+          onToolCall: (info) => handleToolCall(refs, setters, info),
+          onToolResult: (info) => handleToolResult(refs, setters, info),
           onSpecSaved: (spec) => onSpecSavedRef.current?.(spec),
           onTaskSaved: (task) => onTaskSavedRef.current?.(task),
-          onMessageSaved: (msg) => handleMessageSaved(msg, refs, setters),
+          onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
           onTokenUsage() {},
-          onError: (message) => handleStreamError(message, refs, setters),
+          onError: (message) => handleStreamError(refs, setters, message),
           onDone: () => finalizeStream(refs, setters, abortRef, isStreamingRef.current),
         },
         controller.signal,
       );
 
-      setIsStreaming(false);
+      core.setIsStreaming(false);
       abortRef.current = null;
     },
     [agentId],
   );
 
-  const stopStreaming = useCallback(() => {
-    abortRef.current?.abort();
-    if (streamBufferRef.current) {
-      const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `stopped-${Date.now()}`,
-          role: "assistant",
-          content: streamBufferRef.current,
-          toolCalls: snapshotToolCalls(refs),
-          thinkingText: savedThinking,
-          thinkingDurationMs: savedThinkingDuration,
-        },
-      ]);
-    }
-    resetStreamState(refs, setters);
-    setIsStreaming(false);
-    abortRef.current = null;
-  }, []);
-
   return {
-    messages,
-    isStreaming,
-    streamingText,
-    thinkingText,
-    thinkingDurationMs,
-    activeToolCalls,
-    progressText,
+    messages: core.messages,
+    isStreaming: core.isStreaming,
+    streamingText: core.streamingText,
+    thinkingText: core.thinkingText,
+    thinkingDurationMs: core.thinkingDurationMs,
+    activeToolCalls: core.activeToolCalls,
+    progressText: core.progressText,
     sendMessage,
-    stopStreaming,
-    resetMessages,
-    rafRef,
+    stopStreaming: core.baseStopStreaming,
+    resetMessages: core.resetMessages,
+    rafRef: core.rafRef,
   };
 }

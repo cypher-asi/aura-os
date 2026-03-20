@@ -1,5 +1,5 @@
 import type { ChatContentBlock } from "../types";
-import type { ToolCallEntry, ArtifactRef } from "../hooks/use-chat-stream";
+import type { ToolCallEntry, ArtifactRef } from "../hooks/use-stream-core";
 
 export function extractToolCalls(blocks: ChatContentBlock[]): ToolCallEntry[] | undefined {
   const toolUseBlocks = blocks.filter((b) => b.type === "tool_use");

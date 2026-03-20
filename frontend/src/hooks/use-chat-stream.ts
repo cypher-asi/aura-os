@@ -1,86 +1,40 @@
-import { useRef, useState, useCallback, useEffect } from "react";
-import type { Dispatch, SetStateAction } from "react";
-import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
+import { useRef, useCallback, useEffect } from "react";
+import { api } from "../api/client";
 import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
-import type { ChatStreamCallbacks, ChatAttachment, ToolCallInfo, ToolCallStartedInfo, ToolResultInfo } from "../api/streams";
-import type { Message } from "../types";
-import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
+import type { ChatStreamCallbacks, ChatAttachment, ToolCallInfo } from "../api/streams";
+import {
+  useStreamCore,
+  resetStreamBuffers,
+  handleThinkingDelta,
+  handleTextDelta,
+  handleToolCallStarted,
+  handleToolCall as coreHandleToolCall,
+  handleToolResult as coreHandleToolResult,
+  handleMessageSaved,
+  handleStreamError,
+  finalizeStream,
+} from "./use-stream-core";
 
-export interface DisplayContentBlock {
-  type: "text";
-  text: string;
-}
+export type {
+  DisplayContentBlock,
+  DisplayImageBlock,
+  DisplayContentBlockUnion,
+  ArtifactRef,
+  DisplayMessage,
+  ToolCallEntry,
+} from "./use-stream-core";
 
-export interface DisplayImageBlock {
-  type: "image";
-  media_type: string;
-  data: string;
-}
-
-export type DisplayContentBlockUnion = DisplayContentBlock | DisplayImageBlock;
-
-export interface ArtifactRef {
-  kind: "task" | "spec";
-  id: string;
-  title: string;
-}
-
-export interface DisplayMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  toolCalls?: ToolCallEntry[];
-  artifactRefs?: ArtifactRef[];
-  contentBlocks?: DisplayContentBlockUnion[];
-  thinkingText?: string;
-  thinkingDurationMs?: number | null;
-}
-
-export interface ToolCallEntry {
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-  result?: string;
-  isError?: boolean;
-  pending: boolean;
-  started?: boolean;
-}
+import type { DisplayContentBlockUnion } from "./use-stream-core";
 
 interface UseChatStreamOptions {
   projectId: string | undefined;
   agentInstanceId: string | undefined;
 }
 
-interface StreamCtx {
-  projectId: string;
-  sidekickRef: { current: ReturnType<typeof useSidekick> };
-  projectCtxRef: { current: ReturnType<typeof useProjectContext> };
-  capturedThinkingDurationMs: number | null;
-  capturedIsStreaming: boolean;
-  streamBufferRef: { current: string };
-  thinkingBufferRef: { current: string };
-  thinkingStartRef: { current: number | null };
-  thinkingRafRef: { current: number | null };
-  rafRef: { current: number | null };
-  toolCallsRef: { current: ToolCallEntry[] };
-  needsSeparatorRef: { current: boolean };
-  pendingSpecIdsRef: { current: string[] };
-  pendingTaskIdsRef: { current: string[] };
-  abortRef: { current: AbortController | null };
-  setStreamingText: Dispatch<SetStateAction<string>>;
-  setThinkingText: Dispatch<SetStateAction<string>>;
-  setThinkingDurationMs: Dispatch<SetStateAction<number | null>>;
-  setActiveToolCalls: Dispatch<SetStateAction<ToolCallEntry[]>>;
-  setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
-  setIsStreaming: Dispatch<SetStateAction<boolean>>;
-  setProgressText: Dispatch<SetStateAction<string>>;
-}
-
-type StreamBufferState = Pick<StreamCtx,
-  'streamBufferRef' | 'thinkingBufferRef' | 'thinkingStartRef' | 'toolCallsRef' |
-  'setStreamingText' | 'setThinkingText' | 'setThinkingDurationMs' | 'setActiveToolCalls'
->;
+/* ------------------------------------------------------------------ */
+/*  Attachment helpers (unique to project chat)                        */
+/* ------------------------------------------------------------------ */
 
 function decodeBase64Text(base64: string): string {
   try {
@@ -91,35 +45,6 @@ function decodeBase64Text(base64: string): string {
   } catch {
     return "";
   }
-}
-
-function snapshotThinking(
-  thinkingBufferRef: { current: string },
-  thinkingStartRef: { current: number | null },
-) {
-  return {
-    savedThinking: thinkingBufferRef.current || undefined,
-    savedThinkingDuration: thinkingStartRef.current != null
-      ? Date.now() - thinkingStartRef.current
-      : null,
-  };
-}
-
-function snapshotToolCalls(
-  toolCallsRef: { current: ToolCallEntry[] },
-): ToolCallEntry[] | undefined {
-  return toolCallsRef.current.length > 0 ? [...toolCallsRef.current] : undefined;
-}
-
-function resetStreamBuffers(state: StreamBufferState) {
-  state.setStreamingText("");
-  state.streamBufferRef.current = "";
-  state.setThinkingText("");
-  state.thinkingBufferRef.current = "";
-  state.thinkingStartRef.current = null;
-  state.setThinkingDurationMs(null);
-  state.toolCallsRef.current = [];
-  state.setActiveToolCalls([]);
 }
 
 function buildContentBlocks(
@@ -146,6 +71,10 @@ function buildAttachmentLabel(attachments: ChatAttachment[] | undefined): string
     ? `[${attachments.length} file(s)]`
     : `[${attachments.length} image(s)]`;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Optimistic artifact helpers (unique to project chat)               */
+/* ------------------------------------------------------------------ */
 
 function pushPendingSpec(
   info: ToolCallInfo,
@@ -212,227 +141,9 @@ function removePendingArtifact(
   }
 }
 
-function handleThinkingDelta(ctx: StreamCtx, text: string) {
-  ctx.setProgressText("");
-  if (ctx.thinkingStartRef.current === null) {
-    ctx.thinkingStartRef.current = Date.now();
-  }
-  ctx.thinkingBufferRef.current += text;
-  if (ctx.thinkingRafRef.current === null) {
-    ctx.thinkingRafRef.current = requestAnimationFrame(() => {
-      ctx.thinkingRafRef.current = null;
-      ctx.setThinkingText(ctx.thinkingBufferRef.current);
-    });
-  }
-}
-
-function handleDelta(ctx: StreamCtx, text: string) {
-  ctx.setProgressText("");
-  if (ctx.thinkingStartRef.current !== null && ctx.capturedThinkingDurationMs === null) {
-    ctx.setThinkingDurationMs(Date.now() - ctx.thinkingStartRef.current);
-  }
-  if (ctx.needsSeparatorRef.current && ctx.streamBufferRef.current.length > 0) {
-    ctx.streamBufferRef.current += "\n\n";
-    ctx.needsSeparatorRef.current = false;
-  }
-  ctx.streamBufferRef.current += text;
-  if (ctx.rafRef.current === null) {
-    ctx.rafRef.current = requestAnimationFrame(() => {
-      ctx.rafRef.current = null;
-      ctx.setStreamingText(ctx.streamBufferRef.current);
-    });
-  }
-}
-
-function handleToolCallStarted(ctx: StreamCtx, info: ToolCallStartedInfo) {
-  ctx.setProgressText("");
-  const entry: ToolCallEntry = {
-    id: info.id,
-    name: info.name,
-    input: {},
-    pending: true,
-    started: true,
-  };
-  ctx.toolCallsRef.current = [...ctx.toolCallsRef.current, entry];
-  ctx.setActiveToolCalls([...ctx.toolCallsRef.current]);
-}
-
-function handleToolCall(ctx: StreamCtx, info: ToolCallInfo) {
-  ctx.setProgressText("");
-  const existingIdx = ctx.toolCallsRef.current.findIndex(
-    (tc) => tc.id === info.id && tc.started,
-  );
-  if (existingIdx !== -1) {
-    ctx.toolCallsRef.current = ctx.toolCallsRef.current.map((tc) =>
-      tc.id === info.id && tc.started
-        ? { ...tc, input: info.input, started: false }
-        : tc,
-    );
-  } else {
-    const entry: ToolCallEntry = {
-      id: info.id,
-      name: info.name,
-      input: info.input,
-      pending: true,
-    };
-    ctx.toolCallsRef.current = [...ctx.toolCallsRef.current, entry];
-  }
-  ctx.setActiveToolCalls([...ctx.toolCallsRef.current]);
-  if (info.name === "create_spec" && ctx.projectId) {
-    pushPendingSpec(info, ctx.projectId, ctx.sidekickRef.current, ctx.pendingSpecIdsRef);
-  }
-  if (info.name === "create_task" && ctx.projectId) {
-    pushPendingTask(info, ctx.projectId, ctx.sidekickRef.current, ctx.pendingTaskIdsRef);
-  }
-}
-
-function handleToolResult(ctx: StreamCtx, info: ToolResultInfo) {
-  ctx.toolCallsRef.current = ctx.toolCallsRef.current.map((tc) =>
-    tc.id === info.id
-      ? { ...tc, result: info.result, isError: info.is_error, pending: false }
-      : tc,
-  );
-  ctx.setActiveToolCalls([...ctx.toolCallsRef.current]);
-  ctx.needsSeparatorRef.current = true;
-  if (info.name === "create_spec" && info.is_error) {
-    removePendingArtifact(info.id, ctx.pendingSpecIdsRef, (id) => ctx.sidekickRef.current.removeSpec(id));
-  }
-  if (info.name === "create_task" && info.is_error) {
-    removePendingArtifact(info.id, ctx.pendingTaskIdsRef, (id) => ctx.sidekickRef.current.removeTask(id));
-  }
-  if (info.name === "delete_spec" && !info.is_error) {
-    try {
-      const parsed = JSON.parse(info.result) as { deleted?: string };
-      if (typeof parsed?.deleted === "string") ctx.sidekickRef.current.removeSpec(parsed.deleted);
-    } catch {
-      /* ignore parse errors */
-    }
-  }
-}
-
-function handleMessageSaved(ctx: StreamCtx, msg: Message) {
-  const allBlocks = msg.content_blocks ?? [];
-  const displayBlocks: DisplayContentBlockUnion[] = allBlocks
-    .filter((b) => b.type === "text" || b.type === "image")
-    .map((b) =>
-      b.type === "text"
-        ? { type: "text" as const, text: b.text ?? "" }
-        : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
-    );
-
-  const msgToolCalls = extractToolCalls(allBlocks);
-  const finalToolCalls =
-    msgToolCalls && msgToolCalls.length > 0
-      ? msgToolCalls
-      : snapshotToolCalls(ctx.toolCallsRef);
-
-  const savedThinking = msg.thinking || ctx.thinkingBufferRef.current || undefined;
-  const savedThinkingDuration = msg.thinking_duration_ms
-    ?? (ctx.thinkingStartRef.current != null ? Date.now() - ctx.thinkingStartRef.current : null);
-  ctx.setMessages((prev) => [
-    ...prev,
-    {
-      id: msg.message_id,
-      role: "assistant",
-      content: msg.content,
-      contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
-      toolCalls: finalToolCalls,
-      artifactRefs: extractArtifactRefs(allBlocks),
-      thinkingText: savedThinking,
-      thinkingDurationMs: savedThinkingDuration,
-    },
-  ]);
-  resetStreamBuffers(ctx);
-}
-
-function handleStreamError(ctx: StreamCtx, message: string) {
-  console.error("Chat stream error:", message);
-  if (isInsufficientCreditsError(message)) {
-    dispatchInsufficientCredits();
-  }
-  const { savedThinking, savedThinkingDuration } = snapshotThinking(
-    ctx.thinkingBufferRef, ctx.thinkingStartRef,
-  );
-  const prefix = ctx.streamBufferRef.current
-    ? ctx.streamBufferRef.current + "\n\n"
-    : "";
-  ctx.setMessages((prev) => [
-    ...prev,
-    {
-      id: `error-${Date.now()}`,
-      role: "assistant",
-      content: prefix + `*Error: ${message}*`,
-      toolCalls: snapshotToolCalls(ctx.toolCallsRef),
-      thinkingText: savedThinking,
-      thinkingDurationMs: savedThinkingDuration,
-    },
-  ]);
-  resetStreamBuffers(ctx);
-}
-
-function handleStreamDone(ctx: StreamCtx) {
-  if (ctx.streamBufferRef.current && !ctx.capturedIsStreaming) {
-    const { savedThinking, savedThinkingDuration } = snapshotThinking(
-      ctx.thinkingBufferRef, ctx.thinkingStartRef,
-    );
-    ctx.setMessages((prev) => [
-      ...prev,
-      {
-        id: `stream-${Date.now()}`,
-        role: "assistant",
-        content: ctx.streamBufferRef.current,
-        toolCalls: snapshotToolCalls(ctx.toolCallsRef),
-        thinkingText: savedThinking,
-        thinkingDurationMs: savedThinkingDuration,
-      },
-    ]);
-    ctx.setStreamingText("");
-    ctx.streamBufferRef.current = "";
-    ctx.toolCallsRef.current = [];
-    ctx.setActiveToolCalls([]);
-  }
-  ctx.setThinkingText("");
-  ctx.thinkingBufferRef.current = "";
-  ctx.thinkingStartRef.current = null;
-  ctx.setThinkingDurationMs(null);
-  ctx.setIsStreaming(false);
-  ctx.sidekickRef.current.setStreamingAgentInstanceId(null);
-  ctx.abortRef.current = null;
-}
-
-function createStreamCallbacks(ctx: StreamCtx): ChatStreamCallbacks {
-  return {
-    onProgress: (stage) => ctx.setProgressText(stage),
-    onThinkingDelta: (text) => handleThinkingDelta(ctx, text),
-    onDelta: (text) => handleDelta(ctx, text),
-    onToolCallStarted: (info) => handleToolCallStarted(ctx, info),
-    onToolCall: (info) => handleToolCall(ctx, info),
-    onToolResult: (info) => handleToolResult(ctx, info),
-    onSpecSaved(spec) {
-      const pendingId = ctx.pendingSpecIdsRef.current.shift();
-      if (pendingId) ctx.sidekickRef.current.removeSpec(pendingId);
-      ctx.sidekickRef.current.pushSpec(spec);
-    },
-    onSpecsTitle(title) {
-      const pctx = ctx.projectCtxRef.current;
-      if (pctx) pctx.setProject((prev) => ({ ...prev, specs_title: title }));
-    },
-    onSpecsSummary(summary) {
-      const pctx = ctx.projectCtxRef.current;
-      if (pctx) pctx.setProject((prev) => ({ ...prev, specs_summary: summary }));
-    },
-    onTaskSaved(task) {
-      const pendingId = ctx.pendingTaskIdsRef.current.shift();
-      if (pendingId) ctx.sidekickRef.current.removeTask(pendingId);
-      ctx.sidekickRef.current.pushTask(task);
-    },
-    onMessageSaved: (msg) => handleMessageSaved(ctx, msg),
-    onAgentInstanceUpdated: (instance) => ctx.sidekickRef.current.notifyAgentInstanceUpdate(instance),
-    onTokenUsage() {},
-    onError: (message) => handleStreamError(ctx, message),
-    onDone: () => handleStreamDone(ctx),
-  };
-}
+/* ------------------------------------------------------------------ */
+/*  Hook                                                               */
+/* ------------------------------------------------------------------ */
 
 export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptions) {
   const sidekick = useSidekick();
@@ -441,61 +152,19 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const projectCtxRef = useRef(projectCtx);
 
   useEffect(() => { sidekickRef.current = sidekick; }, [sidekick]);
-  useEffect(() => {
-    projectCtxRef.current = projectCtx;
-  }, [projectCtx]);
+  useEffect(() => { projectCtxRef.current = projectCtx; }, [projectCtx]);
 
-  const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState("");
-  const [thinkingText, setThinkingText] = useState("");
-  const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(null);
-  const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
-  const [progressText, setProgressText] = useState("");
+  const core = useStreamCore([projectId, agentInstanceId]);
+  const { refs, setters, abortRef, isStreamingRef, thinkingDurationMsRef } = core;
 
-  const isStreamingRef = useRef(false);
-  useEffect(() => { isStreamingRef.current = isStreaming; }, [isStreaming]);
-
-  const thinkingDurationMsRef = useRef<number | null>(null);
-  useEffect(() => { thinkingDurationMsRef.current = thinkingDurationMs; }, [thinkingDurationMs]);
-
-  const abortRef = useRef<AbortController | null>(null);
-  const streamBufferRef = useRef("");
-  const rafRef = useRef<number | null>(null);
-  const thinkingBufferRef = useRef("");
-  const thinkingRafRef = useRef<number | null>(null);
-  const thinkingStartRef = useRef<number | null>(null);
-  const toolCallsRef = useRef<ToolCallEntry[]>([]);
-  const needsSeparatorRef = useRef(false);
   const pendingSpecIdsRef = useRef<string[]>([]);
   const pendingTaskIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-      if (thinkingRafRef.current !== null) cancelAnimationFrame(thinkingRafRef.current);
-      rafRef.current = null;
-      thinkingRafRef.current = null;
-      streamBufferRef.current = "";
-      thinkingBufferRef.current = "";
-      thinkingStartRef.current = null;
-      toolCallsRef.current = [];
-      needsSeparatorRef.current = false;
-      setStreamingText("");
-      setThinkingText("");
-      setThinkingDurationMs(null);
-      setActiveToolCalls([]);
-      setIsStreaming(false);
-      setProgressText("");
       sidekickRef.current.setStreamingAgentInstanceId(null);
     };
   }, [projectId, agentInstanceId]);
-
-  const resetMessages = useCallback((msgs: DisplayMessage[]) => {
-    setMessages(msgs);
-  }, []);
 
   const sendMessage = useCallback(
     async (
@@ -508,26 +177,18 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
 
-      const userMsg: DisplayMessage = {
+      const userMsg = {
         id: `temp-${Date.now()}`,
-        role: "user",
+        role: "user" as const,
         content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || buildAttachmentLabel(attachments),
         contentBlocks: buildContentBlocks(trimmed, attachments),
       };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsStreaming(true);
+      core.setMessages((prev) => [...prev, userMsg]);
+      core.setIsStreaming(true);
       sidekickRef.current.setStreamingAgentInstanceId(agentInstanceId);
 
-      const ctx: StreamCtx = {
-        projectId: projectId!, sidekickRef, projectCtxRef,
-        capturedThinkingDurationMs: thinkingDurationMsRef.current, capturedIsStreaming: isStreamingRef.current,
-        streamBufferRef, thinkingBufferRef, thinkingStartRef, thinkingRafRef, rafRef,
-        toolCallsRef, needsSeparatorRef, pendingSpecIdsRef, pendingTaskIdsRef, abortRef,
-        setStreamingText, setThinkingText, setThinkingDurationMs, setActiveToolCalls,
-        setMessages, setIsStreaming, setProgressText,
-      };
-      resetStreamBuffers(ctx);
-      needsSeparatorRef.current = false;
+      resetStreamBuffers(refs, setters);
+      refs.needsSeparator.current = false;
       pendingSpecIdsRef.current = [];
       pendingTaskIdsRef.current = [];
 
@@ -538,16 +199,74 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
       const controller = new AbortController();
       abortRef.current = controller;
+
+      const callbacks: ChatStreamCallbacks = {
+        onProgress: (stage) => core.setProgressText(stage),
+        onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
+        onDelta: (text) => handleTextDelta(refs, setters, thinkingDurationMsRef.current, text),
+        onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
+        onToolCall: (info) => {
+          coreHandleToolCall(refs, setters, info);
+          if (info.name === "create_spec" && projectId) {
+            pushPendingSpec(info, projectId, sidekickRef.current, pendingSpecIdsRef);
+          }
+          if (info.name === "create_task" && projectId) {
+            pushPendingTask(info, projectId, sidekickRef.current, pendingTaskIdsRef);
+          }
+        },
+        onToolResult: (info) => {
+          coreHandleToolResult(refs, setters, info);
+          if (info.name === "create_spec" && info.is_error) {
+            removePendingArtifact(info.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
+          }
+          if (info.name === "create_task" && info.is_error) {
+            removePendingArtifact(info.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
+          }
+          if (info.name === "delete_spec" && !info.is_error) {
+            try {
+              const parsed = JSON.parse(info.result) as { deleted?: string };
+              if (typeof parsed?.deleted === "string") sidekickRef.current.removeSpec(parsed.deleted);
+            } catch { /* ignore parse errors */ }
+          }
+        },
+        onSpecSaved(spec) {
+          const pendingId = pendingSpecIdsRef.current.shift();
+          if (pendingId) sidekickRef.current.removeSpec(pendingId);
+          sidekickRef.current.pushSpec(spec);
+        },
+        onSpecsTitle(title) {
+          const pctx = projectCtxRef.current;
+          if (pctx) pctx.setProject((prev) => ({ ...prev, specs_title: title }));
+        },
+        onSpecsSummary(summary) {
+          const pctx = projectCtxRef.current;
+          if (pctx) pctx.setProject((prev) => ({ ...prev, specs_summary: summary }));
+        },
+        onTaskSaved(task) {
+          const pendingId = pendingTaskIdsRef.current.shift();
+          if (pendingId) sidekickRef.current.removeTask(pendingId);
+          sidekickRef.current.pushTask(task);
+        },
+        onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
+        onAgentInstanceUpdated: (instance) => sidekickRef.current.notifyAgentInstanceUpdate(instance),
+        onTokenUsage() {},
+        onError: (message) => handleStreamError(refs, setters, message),
+        onDone: () => {
+          finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+          sidekickRef.current.setStreamingAgentInstanceId(null);
+        },
+      };
+
       try {
         await api.sendMessageStream(
           projectId, agentInstanceId, userMsg.content, action, null,
-          attachments, createStreamCallbacks(ctx), controller.signal,
+          attachments, callbacks, controller.signal,
         );
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        handleStreamError(ctx, err instanceof Error ? err.message : String(err));
+        handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
       } finally {
-        setIsStreaming(false);
+        core.setIsStreaming(false);
         sidekickRef.current.setStreamingAgentInstanceId(null);
         abortRef.current = null;
       }
@@ -556,30 +275,8 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   );
 
   const stopStreaming = useCallback(() => {
-    abortRef.current?.abort();
-    if (streamBufferRef.current) {
-      const { savedThinking, savedThinkingDuration } = snapshotThinking(
-        thinkingBufferRef, thinkingStartRef,
-      );
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `stopped-${Date.now()}`,
-          role: "assistant",
-          content: streamBufferRef.current,
-          toolCalls: snapshotToolCalls(toolCallsRef),
-          thinkingText: savedThinking,
-          thinkingDurationMs: savedThinkingDuration,
-        },
-      ]);
-    }
-    resetStreamBuffers({
-      streamBufferRef, thinkingBufferRef, thinkingStartRef, toolCallsRef,
-      setStreamingText, setThinkingText, setThinkingDurationMs, setActiveToolCalls,
-    });
-    setIsStreaming(false);
+    core.baseStopStreaming();
     sidekickRef.current.setStreamingAgentInstanceId(null);
-    abortRef.current = null;
 
     if (projectId && agentInstanceId) {
       const refetch = () => {
@@ -590,19 +287,19 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       setTimeout(refetch, 2000);
       setTimeout(refetch, 5000);
     }
-  }, [projectId, agentInstanceId]);
+  }, [projectId, agentInstanceId, core.baseStopStreaming]);
 
   return {
-    messages,
-    isStreaming,
-    streamingText,
-    thinkingText,
-    thinkingDurationMs,
-    activeToolCalls,
-    progressText,
+    messages: core.messages,
+    isStreaming: core.isStreaming,
+    streamingText: core.streamingText,
+    thinkingText: core.thinkingText,
+    thinkingDurationMs: core.thinkingDurationMs,
+    activeToolCalls: core.activeToolCalls,
+    progressText: core.progressText,
     sendMessage,
     stopStreaming,
-    resetMessages,
-    rafRef,
+    resetMessages: core.resetMessages,
+    rafRef: core.rafRef,
   };
 }
