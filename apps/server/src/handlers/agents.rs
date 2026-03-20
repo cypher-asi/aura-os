@@ -542,6 +542,7 @@ pub async fn send_agent_message_stream(
         }
     };
 
+    let mut storage_anchor: Option<(ProjectId, AgentInstanceId)> = None;
     let projects: Vec<aura_core::Project> = if let (Some(ref storage), Ok(jwt)) =
         (&state.storage_client, state.get_jwt())
     {
@@ -555,11 +556,16 @@ pub async fn send_agent_message_stream(
                 .list_project_agents(&project.project_id.to_string(), &jwt)
                 .await
             {
-                if agents
-                    .iter()
-                    .any(|a| a.agent_id.as_deref() == Some(&agent_id_str))
-                {
-                    matched.push(project);
+                for a in &agents {
+                    if a.agent_id.as_deref() == Some(&agent_id_str) {
+                        if storage_anchor.is_none() {
+                            if let Ok(inst_id) = a.id.parse::<AgentInstanceId>() {
+                                storage_anchor = Some((project.project_id, inst_id));
+                            }
+                        }
+                        matched.push(project.clone());
+                        break;
+                    }
                 }
             }
         }
@@ -588,6 +594,7 @@ pub async fn send_agent_message_stream(
                     &content,
                     action.as_deref(),
                     &attachments,
+                    storage_anchor,
                     tx,
                 )
                 .await;

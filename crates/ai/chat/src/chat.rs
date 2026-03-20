@@ -576,6 +576,7 @@ impl ChatService {
         content: &str,
         _action: Option<&str>,
         attachments: &[ChatAttachment],
+        storage_anchor: Option<(ProjectId, AgentInstanceId)>,
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -585,13 +586,35 @@ impl ChatService {
         let now = Utc::now();
         let content_blocks = build_attachment_blocks(content, attachments);
 
-        let dummy_project_id = ProjectId::nil();
-        let dummy_agent_instance_id = AgentInstanceId::nil();
+        let (anchor_project_id, anchor_instance_id) = storage_anchor
+            .unwrap_or((ProjectId::nil(), AgentInstanceId::nil()));
+
+        let active_session_id = if !anchor_instance_id.as_uuid().is_nil() {
+            self.ensure_active_session(&anchor_project_id, &anchor_instance_id).await
+        } else {
+            None
+        };
+
+        if active_session_id.is_some() {
+            self.save_message_to_storage(
+                &anchor_project_id,
+                &anchor_instance_id,
+                "user",
+                content,
+                content_blocks.as_deref(),
+                None,
+                None,
+                None,
+                None,
+                active_session_id.as_deref(),
+            )
+            .await;
+        }
 
         let user_msg = Message {
             message_id: MessageId::new(),
-            agent_instance_id: dummy_agent_instance_id,
-            project_id: dummy_project_id,
+            agent_instance_id: anchor_instance_id,
+            project_id: anchor_project_id,
             role: ChatRole::User,
             content: content.to_string(),
             content_blocks,
@@ -603,8 +626,17 @@ impl ChatService {
         let mut messages_for_context = storage_messages;
         messages_for_context.push(user_msg);
 
-        self.handle_agent_chat_with_tools(agent_id, agent, projects, messages_for_context, &tx)
-            .await;
+        self.handle_agent_chat_with_tools(
+            agent_id,
+            agent,
+            projects,
+            messages_for_context,
+            &anchor_project_id,
+            &anchor_instance_id,
+            active_session_id.as_deref(),
+            &tx,
+        )
+        .await;
 
         send(ChatStreamEvent::Done);
     }

@@ -5,8 +5,10 @@ import type { ToolCallInfo, ToolCallStartedInfo, ToolResultInfo } from "../api/s
 import type { Message, Spec, Task } from "../types";
 import type {
   DisplayMessage,
+  DisplayContentBlockUnion,
   ToolCallEntry,
 } from "./use-chat-stream";
+import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
@@ -159,7 +161,21 @@ function handleMessageSaved(
   refs: StreamRefs,
   setters: StreamSetters,
 ) {
-  const finalToolCalls = snapshotToolCalls(refs);
+  const allBlocks = msg.content_blocks ?? [];
+  const displayBlocks: DisplayContentBlockUnion[] = allBlocks
+    .filter((b) => b.type === "text" || b.type === "image")
+    .map((b) =>
+      b.type === "text"
+        ? { type: "text" as const, text: b.text ?? "" }
+        : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
+    );
+
+  const msgToolCalls = extractToolCalls(allBlocks);
+  const finalToolCalls =
+    msgToolCalls && msgToolCalls.length > 0
+      ? msgToolCalls
+      : snapshotToolCalls(refs);
+
   const savedThinking = msg.thinking || refs.thinkingBuffer.current || undefined;
   const savedThinkingDuration = msg.thinking_duration_ms
     ?? (refs.thinkingStart.current != null ? Date.now() - refs.thinkingStart.current : null);
@@ -169,7 +185,9 @@ function handleMessageSaved(
       id: msg.message_id,
       role: "assistant",
       content: msg.content,
+      contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
       toolCalls: finalToolCalls,
+      artifactRefs: extractArtifactRefs(allBlocks),
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,
     },

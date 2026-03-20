@@ -127,6 +127,9 @@ impl ChatService {
         agent: &Agent,
         projects: &[Project],
         stored_messages: Vec<Message>,
+        anchor_project_id: &ProjectId,
+        anchor_instance_id: &AgentInstanceId,
+        active_session_id: Option<&str>,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
@@ -231,25 +234,37 @@ impl ChatService {
         let has_tool_calls = !accumulated_blocks.is_empty();
         let content_blocks = if has_tool_calls { Some(accumulated_blocks) } else { None };
 
-        let dummy_project_id = ProjectId::nil();
-        let dummy_agent_instance_id = AgentInstanceId::nil();
-
         if !result.text.is_empty() || has_tool_calls {
             let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking) };
             let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
             let assistant_msg = Message {
                 message_id: MessageId::new(),
-                agent_instance_id: dummy_agent_instance_id,
-                project_id: dummy_project_id,
+                agent_instance_id: *anchor_instance_id,
+                project_id: *anchor_project_id,
                 role: ChatRole::Assistant,
-                content: result.text,
-                content_blocks,
-                thinking,
+                content: result.text.clone(),
+                content_blocks: content_blocks.clone(),
+                thinking: thinking.clone(),
                 thinking_duration_ms,
                 created_at: Utc::now(),
             };
-            // Agent-level messages: no local store; persist via future storage/network API when available.
             send(ChatStreamEvent::MessageSaved(assistant_msg));
+
+            if active_session_id.is_some() {
+                self.save_message_to_storage(
+                    anchor_project_id,
+                    anchor_instance_id,
+                    "assistant",
+                    &result.text,
+                    content_blocks.as_deref(),
+                    thinking.as_deref(),
+                    thinking_duration_ms,
+                    Some(result.total_input_tokens),
+                    Some(result.total_output_tokens),
+                    active_session_id,
+                )
+                .await;
+            }
         }
     }
 }

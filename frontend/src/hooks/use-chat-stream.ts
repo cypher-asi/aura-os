@@ -5,6 +5,7 @@ import { useSidekick } from "../context/SidekickContext";
 import { useProjectContext } from "../context/ProjectContext";
 import type { ChatStreamCallbacks, ChatAttachment, ToolCallInfo, ToolCallStartedInfo, ToolResultInfo } from "../api/streams";
 import type { Message } from "../types";
+import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
 
 export interface DisplayContentBlock {
   type: "text";
@@ -310,7 +311,21 @@ function handleToolResult(ctx: StreamCtx, info: ToolResultInfo) {
 }
 
 function handleMessageSaved(ctx: StreamCtx, msg: Message) {
-  const finalToolCalls = snapshotToolCalls(ctx.toolCallsRef);
+  const allBlocks = msg.content_blocks ?? [];
+  const displayBlocks: DisplayContentBlockUnion[] = allBlocks
+    .filter((b) => b.type === "text" || b.type === "image")
+    .map((b) =>
+      b.type === "text"
+        ? { type: "text" as const, text: b.text ?? "" }
+        : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
+    );
+
+  const msgToolCalls = extractToolCalls(allBlocks);
+  const finalToolCalls =
+    msgToolCalls && msgToolCalls.length > 0
+      ? msgToolCalls
+      : snapshotToolCalls(ctx.toolCallsRef);
+
   const savedThinking = msg.thinking || ctx.thinkingBufferRef.current || undefined;
   const savedThinkingDuration = msg.thinking_duration_ms
     ?? (ctx.thinkingStartRef.current != null ? Date.now() - ctx.thinkingStartRef.current : null);
@@ -320,7 +335,9 @@ function handleMessageSaved(ctx: StreamCtx, msg: Message) {
       id: msg.message_id,
       role: "assistant",
       content: msg.content,
+      contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
       toolCalls: finalToolCalls,
+      artifactRefs: extractArtifactRefs(allBlocks),
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,
     },
