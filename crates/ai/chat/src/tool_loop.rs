@@ -562,9 +562,9 @@ async fn process_tool_calls(
     for path in &duplicate_paths {
         state.write_file_cooldowns.insert(path.clone(), FULL_REWRITE_BLOCK_ITERS);
         let recovery = format!(
-            "[STALL RECOVERY] Repeated write/edit attempts detected for '{path}'. \
+            "[STALL RECOVERY] Repeated full-file write_file attempts detected for '{path}'. \
              For the next {FULL_REWRITE_BLOCK_ITERS} iterations, write_file is blocked for this path. \
-             Use this exact strategy: (1) read_file with a line range, (2) edit_file for one small \
+             Use edit_file instead: (1) read_file with a line range, (2) edit_file for one small \
              section/function at a time, (3) verify before the next edit. Do NOT rewrite the full file."
         );
         info!(path = path.as_str(), "Injecting adaptive rewrite recovery instruction");
@@ -811,7 +811,7 @@ fn collect_duplicate_write_paths(tool_calls: &[ToolCall], blocked_indices: &[usi
     let mut paths: Vec<String> = Vec::new();
     for i in blocked_indices {
         if let Some(tc) = tool_calls.get(*i) {
-            if matches!(tc.name.as_str(), "write_file" | "edit_file") {
+            if tc.name == "write_file" {
                 if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
                     if !paths.contains(&path.to_string()) {
                         paths.push(path.to_string());
@@ -839,8 +839,12 @@ fn detect_same_target_stall(
     last_signature: &mut Option<String>,
     no_progress_streak: &mut usize,
 ) -> bool {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
     let mut write_paths: Vec<String> = Vec::new();
     let mut had_write_success = false;
+    let mut content_hasher = DefaultHasher::new();
 
     for (tc, result) in tool_calls.iter().zip(results.iter()) {
         if matches!(tc.name.as_str(), "write_file" | "edit_file") {
@@ -849,6 +853,14 @@ fn detect_same_target_stall(
             }
             if !result.is_error {
                 had_write_success = true;
+            }
+            // Hash the content being written/edited so different content
+            // produces a different signature (incremental building vs stall).
+            if let Some(c) = tc.input.get("content").and_then(|v| v.as_str()) {
+                c.hash(&mut content_hasher);
+            }
+            if let Some(c) = tc.input.get("new_text").and_then(|v| v.as_str()) {
+                c.hash(&mut content_hasher);
             }
         }
     }
@@ -861,7 +873,8 @@ fn detect_same_target_stall(
 
     write_paths.sort();
     write_paths.dedup();
-    let signature = write_paths.join("|");
+    let content_hash = content_hasher.finish();
+    let signature = format!("{}#{:x}", write_paths.join("|"), content_hash);
 
     if last_signature.as_deref() == Some(signature.as_str()) {
         *no_progress_streak += 1;
