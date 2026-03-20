@@ -3,6 +3,7 @@ pub mod engine;
 pub mod error;
 pub mod events;
 pub mod file_ops;
+pub mod git_ops;
 pub mod metrics;
 
 pub use engine::{
