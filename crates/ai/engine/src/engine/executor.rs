@@ -168,7 +168,13 @@ impl DevLoopEngine {
         let file_changes = if execution.files_already_applied {
             simple_file_changes(&execution.file_ops)
         } else {
-            file_ops::compute_file_changes(base_path, &execution.file_ops)
+            let bp = base_path.to_path_buf();
+            let ops = execution.file_ops.clone();
+            tokio::task::spawn_blocking(move || {
+                file_ops::compute_file_changes(&bp, &ops)
+            })
+            .await
+            .unwrap_or_default()
         };
 
         self.update_task_tracking(

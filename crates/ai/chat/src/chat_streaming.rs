@@ -222,9 +222,14 @@ impl ChatService {
 
         let _ = tx.send(ChatStreamEvent::Progress("Building context...".to_string()));
 
-        let custom_prompt = &agent_instance.system_prompt;
+        let custom_prompt = agent_instance.system_prompt.clone();
         let system = match self.project_service.get_project_async(project_id).await {
-            Ok(p) => build_chat_system_prompt(&p, custom_prompt),
+            Ok(p) => {
+                let cp = custom_prompt.clone();
+                tokio::task::spawn_blocking(move || build_chat_system_prompt(&p, &cp))
+                    .await
+                    .unwrap_or_else(|_| CHAT_SYSTEM_PROMPT_BASE.to_string())
+            }
             Err(_) => {
                 if custom_prompt.is_empty() {
                     CHAT_SYSTEM_PROMPT_BASE.to_string()

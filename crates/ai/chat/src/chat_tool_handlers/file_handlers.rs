@@ -18,7 +18,7 @@ impl ChatToolExecutor {
         let start_line = input.get("start_line").and_then(|v| v.as_u64()).map(|n| n as usize);
         let end_line = input.get("end_line").and_then(|v| v.as_u64()).map(|n| n as usize);
 
-        if let Ok(meta) = std::fs::metadata(&abs) {
+        if let Ok(meta) = tokio::fs::metadata(&abs).await {
             if meta.len() > MAX_FILE_SIZE {
                 return ToolExecResult::err(format!(
                     "File {rel} is too large ({:.1} MB, limit is 10 MB). Use start_line/end_line to read a section.",
@@ -27,7 +27,7 @@ impl ChatToolExecutor {
             }
         }
 
-        match std::fs::read_to_string(&abs) {
+        match tokio::fs::read_to_string(&abs).await {
             Ok(content) => {
                 let content = content.replace("\r\n", "\n");
                 if start_line.is_some() || end_line.is_some() {
@@ -77,7 +77,8 @@ impl ChatToolExecutor {
         };
 
         let existing_uses_crlf = if abs.exists() {
-            std::fs::read_to_string(&abs)
+            tokio::fs::read_to_string(&abs)
+                .await
                 .map(|s| s.contains("\r\n"))
                 .unwrap_or(false)
         } else {
@@ -94,7 +95,7 @@ impl ChatToolExecutor {
         };
 
         if abs.exists() {
-            if let Ok(meta) = std::fs::metadata(&abs) {
+            if let Ok(meta) = tokio::fs::metadata(&abs).await {
                 let cur_size = meta.len() as usize;
                 if cur_size > 500 && content.len() < cur_size / 10 {
                     return ToolExecResult::err(format!(
@@ -117,7 +118,7 @@ impl ChatToolExecutor {
             }
         }
         if let Some(parent) = abs.parent() {
-            if let Err(e) = std::fs::create_dir_all(parent) {
+            if let Err(e) = tokio::fs::create_dir_all(parent).await {
                 return ToolExecResult::err(format!("Failed to create directories: {e}"));
             }
         }
@@ -129,10 +130,10 @@ impl ChatToolExecutor {
             None
         };
 
-        match std::fs::write(&abs, &content) {
+        match tokio::fs::write(&abs, &content).await {
             Ok(()) => {
                 let line_count = content.lines().count();
-                match std::fs::metadata(&abs) {
+                match tokio::fs::metadata(&abs).await {
                     Ok(meta) if meta.len() as usize != content.len() => {
                         return ToolExecResult::err(format!(
                             "Post-write verification failed for {rel}: wrote {} bytes but \
@@ -169,7 +170,7 @@ impl ChatToolExecutor {
             Ok(p) => p,
             Err(e) => return e,
         };
-        match std::fs::remove_file(&abs) {
+        match tokio::fs::remove_file(&abs).await {
             Ok(()) => ToolExecResult::ok(json!({ "deleted": rel })),
             Err(e) => ToolExecResult::err(format!("Failed to delete {rel}: {e}")),
         }
@@ -181,17 +182,17 @@ impl ChatToolExecutor {
             Ok(p) => p,
             Err(e) => return e,
         };
-        let entries = match std::fs::read_dir(&abs) {
+        let mut read_dir = match tokio::fs::read_dir(&abs).await {
             Ok(rd) => rd,
             Err(e) => return ToolExecResult::err(format!("Failed to list {rel}: {e}")),
         };
         let mut items: Vec<Value> = Vec::new();
-        for entry in entries.flatten() {
+        while let Ok(Some(entry)) = read_dir.next_entry().await {
             let name = entry.file_name().to_string_lossy().to_string();
             if name.starts_with('.') || name == "node_modules" || name == "target" || name == "__pycache__" {
                 continue;
             }
-            let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
+            let is_dir = entry.file_type().await.map(|ft| ft.is_dir()).unwrap_or(false);
             items.push(json!({ "name": name, "is_dir": is_dir }));
         }
         items.sort_by(|a, b| {
@@ -225,7 +226,7 @@ impl ChatToolExecutor {
             Err(e) => return e,
         };
 
-        if let Ok(meta) = std::fs::metadata(&abs) {
+        if let Ok(meta) = tokio::fs::metadata(&abs).await {
             if meta.len() > MAX_FILE_SIZE {
                 return ToolExecResult::err(format!(
                     "File {rel} is too large ({:.1} MB, limit is 10 MB).",
@@ -234,7 +235,7 @@ impl ChatToolExecutor {
             }
         }
 
-        let raw_content = match std::fs::read_to_string(&abs) {
+        let raw_content = match tokio::fs::read_to_string(&abs).await {
             Ok(c) => c,
             Err(e) => return ToolExecResult::err(format!("Failed to read {rel}: {e}")),
         };
@@ -281,7 +282,7 @@ impl ChatToolExecutor {
             new_content
         };
 
-        match std::fs::write(&abs, &final_content) {
+        match tokio::fs::write(&abs, &final_content).await {
             Ok(()) => ToolExecResult::ok(json!({
                 "status": "ok",
                 "path": rel,

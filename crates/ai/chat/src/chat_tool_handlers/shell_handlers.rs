@@ -101,8 +101,15 @@ impl ChatToolExecutor {
             Err(e) => return ToolExecResult::err(format!("Invalid regex: {e}")),
         };
 
-        let mut matches: Vec<Value> = Vec::new();
-        search_directory(&abs, &abs, &regex, include_glob.as_deref(), max_results, context_lines, &mut matches);
+        let include_clone = include_glob.clone();
+        let abs_clone = abs.clone();
+        let matches = tokio::task::spawn_blocking(move || {
+            let mut m: Vec<Value> = Vec::new();
+            search_directory(&abs_clone, &abs_clone, &regex, include_clone.as_deref(), max_results, context_lines, &mut m);
+            m
+        })
+        .await
+        .unwrap_or_default();
 
         ToolExecResult::ok(json!({
             "pattern": pattern,
