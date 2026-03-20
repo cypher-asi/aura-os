@@ -10,6 +10,12 @@ export function sortByOrderIndex<T extends { order_index: number }>(items: T[]):
   return [...items].sort((a, b) => a.order_index - b.order_index);
 }
 
+export function titleSortKey(title: string): number {
+  const m = title.match(/^(\d+)\.(\d+)/);
+  if (!m) return Infinity;
+  return parseInt(m[1], 10) * 100_000 + parseInt(m[2], 10);
+}
+
 export function mergeById<T extends { order_index: number }>(
   local: T[],
   remote: T[],

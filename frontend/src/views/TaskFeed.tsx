@@ -5,6 +5,7 @@ import { useEventContext } from "../context/EventContext";
 import { useLoopActive } from "../hooks/use-loop-active";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { Panel, Heading, Item } from "@cypher-asi/zui";
+import { titleSortKey } from "../utils/collections";
 import { EmptyState } from "../components/EmptyState";
 import styles from "./aura.module.css";
 
@@ -99,7 +100,12 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
       done: 4,
       failed: 5,
     };
-    return (order[a.status] ?? 99) - (order[b.status] ?? 99);
+    const statusDiff = (order[a.status] ?? 99) - (order[b.status] ?? 99);
+    if (statusDiff !== 0) return statusDiff;
+    const ka = titleSortKey(a.title);
+    const kb = titleSortKey(b.title);
+    if (ka !== kb) return ka - kb;
+    return a.order_index - b.order_index;
   });
 
   const displayed = sorted.slice(0, 50);

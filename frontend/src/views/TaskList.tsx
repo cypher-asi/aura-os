@@ -7,7 +7,7 @@ import { useEventContext } from "../context/EventContext";
 import { useSidekick } from "../context/SidekickContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { useLoopActive } from "../hooks/use-loop-active";
-import { mergeById } from "../utils/collections";
+import { mergeById, titleSortKey } from "../utils/collections";
 import { filterExplorerNodes } from "../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../components/EmptyState";
@@ -134,7 +134,14 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
     () =>
       specs.map((spec) => ({
         spec,
-        tasks: tasks.filter((t) => t.spec_id === spec.spec_id),
+        tasks: tasks
+          .filter((t) => t.spec_id === spec.spec_id)
+          .sort((a, b) => {
+            const ka = titleSortKey(a.title);
+            const kb = titleSortKey(b.title);
+            if (ka !== kb) return ka - kb;
+            return a.order_index - b.order_index;
+          }),
       })),
     [specs, tasks],
   );
