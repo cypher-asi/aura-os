@@ -108,17 +108,23 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                     error!(path = %path, error = %e, "path validation failed");
                     return Err(e);
                 }
-                let mut content = tokio::fs::read_to_string(&full_path)
+                let raw_content = tokio::fs::read_to_string(&full_path)
                     .await
                     .map_err(|e| {
                         error!(path = %path, error = %e, "failed to read file for search-replace");
                         EngineError::Io(format!("failed to read {path} for search-replace: {e}"))
                     })?;
 
+                // Preserve original line-ending convention
+                let uses_crlf = raw_content.contains("\r\n");
+                let mut content = raw_content.replace("\r\n", "\n");
+
                 for (i, rep) in replacements.iter().enumerate() {
-                    let match_count = content.matches(&rep.search).count();
+                    let norm_search = rep.search.replace("\r\n", "\n");
+                    let norm_replace = rep.replace.replace("\r\n", "\n");
+                    let match_count = content.matches(&norm_search).count();
                     if match_count == 1 {
-                        content = content.replacen(&rep.search, &rep.replace, 1);
+                        content = content.replacen(&norm_search, &norm_replace, 1);
                         continue;
                     }
                     if match_count > 1 {
@@ -131,7 +137,7 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                     }
                     // Exact match failed (0 matches). Try fuzzy matching with
                     // normalized whitespace before giving up.
-                    if let Some(replacement) = fuzzy_search_replace(&content, &rep.search, &rep.replace) {
+                    if let Some(replacement) = fuzzy_search_replace(&content, &norm_search, &norm_replace) {
                         info!(
                             path = %path, replacement_index = i + 1,
                             "search-replace: exact match failed, fuzzy whitespace match succeeded"
@@ -147,7 +153,14 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                     }
                 }
 
-                tokio::fs::write(&full_path, &content)
+                // Restore original line-ending convention before writing
+                let final_content = if uses_crlf {
+                    content.replace('\n', "\r\n")
+                } else {
+                    content
+                };
+                let written_bytes = final_content.len();
+                tokio::fs::write(&full_path, &final_content)
                     .await
                     .map_err(|e| {
                         error!(path = %path, error = %e, "failed to write after search-replace");
@@ -156,7 +169,7 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                 info!(
                     path = %path,
                     replacements = replacements.len(),
-                    bytes = content.len(),
+                    bytes = written_bytes,
                     "applied search-replace"
                 );
             }

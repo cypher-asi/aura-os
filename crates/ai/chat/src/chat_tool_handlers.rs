@@ -461,6 +461,9 @@ impl ChatToolExecutor {
 
         match std::fs::read_to_string(&abs) {
             Ok(content) => {
+                // Normalize line endings to LF so the LLM's mental model is
+                // consistent with what edit_file will match against.
+                let content = content.replace("\r\n", "\n");
                 if start_line.is_some() || end_line.is_some() {
                     let lines: Vec<&str> = content.lines().collect();
                     let total = lines.len();
@@ -506,6 +509,27 @@ impl ChatToolExecutor {
             Ok(p) => p,
             Err(e) => return e,
         };
+
+        // Detect existing file's line-ending convention so we can preserve it.
+        // For new files, use LF (the de facto standard for source code).
+        let existing_uses_crlf = if abs.exists() {
+            std::fs::read_to_string(&abs)
+                .map(|s| s.contains("\r\n"))
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        // Normalize LLM-provided content to match the file's convention
+        let content = {
+            let normalized = content.replace("\r\n", "\n");
+            if existing_uses_crlf {
+                normalized.replace('\n', "\r\n")
+            } else {
+                normalized
+            }
+        };
+
         if abs.exists() {
             if let Ok(meta) = std::fs::metadata(&abs) {
                 let cur_size = meta.len() as usize;
@@ -642,50 +666,68 @@ impl ChatToolExecutor {
             Err(e) => return e,
         };
 
-        let content = match std::fs::read_to_string(&abs) {
+        let raw_content = match std::fs::read_to_string(&abs) {
             Ok(c) => c,
             Err(e) => return ToolExecResult::err(format!("Failed to read {rel}: {e}")),
         };
 
-        let occurrence_count = content.matches(&old_text).count();
-        if occurrence_count == 0 {
-            return ToolExecResult::err(format!(
-                "old_text not found in {rel}. Make sure it matches the file content exactly, including whitespace."
-            ));
-        }
+        // Preserve original line-ending convention for writing back
+        let uses_crlf = raw_content.contains("\r\n");
 
-        if !replace_all && occurrence_count > 1 {
+        // Normalize to LF for matching (prevents mismatches when the LLM
+        // generates \n but the file on disk has \r\n, or vice versa)
+        let content = raw_content.replace("\r\n", "\n");
+        let norm_old = old_text.replace("\r\n", "\n");
+        let norm_new = new_text.replace("\r\n", "\n");
+
+        let occurrence_count = content.matches(&norm_old).count();
+
+        let (new_content, replacements) = if occurrence_count == 0 {
+            // Exact match failed -- try fuzzy whitespace-normalized matching
+            match fuzzy_search_replace_single(&content, &norm_old, &norm_new) {
+                Some(c) => (c, 1usize),
+                None => return ToolExecResult::err(format!(
+                    "old_text not found in {rel}. Make sure it matches the file content exactly, \
+                     including whitespace. Use read_file to see current content."
+                )),
+            }
+        } else if !replace_all && occurrence_count > 1 {
             return ToolExecResult::err(format!(
                 "old_text matches {occurrence_count} locations in {rel}. \
                  Provide more surrounding context to make the match unique, \
                  or set replace_all to true."
             ));
-        }
-
-        let new_content = if replace_all {
-            content.replace(&old_text, &new_text)
+        } else if replace_all {
+            (content.replace(&norm_old, &norm_new), occurrence_count)
         } else {
-            content.replacen(&old_text, &new_text, 1)
+            (content.replacen(&norm_old, &norm_new, 1), 1)
         };
 
-        if content.len() > 200 && new_content.len() < content.len() / 5 {
+        if raw_content.len() > 200 && new_content.len() < raw_content.len() / 5 {
             return ToolExecResult::err(format!(
                 "REJECTED: This edit would shrink '{rel}' from {} to {} bytes (>80% reduction). \
                  The file is unchanged. Use a more targeted old_text/new_text pair.",
-                content.len(), new_content.len()
+                raw_content.len(), new_content.len()
             ));
         }
 
-        match std::fs::write(&abs, &new_content) {
+        // Restore original line-ending convention
+        let final_content = if uses_crlf {
+            new_content.replace('\n', "\r\n")
+        } else {
+            new_content
+        };
+
+        match std::fs::write(&abs, &final_content) {
             Ok(()) => ToolExecResult::ok(json!({
                 "status": "ok",
                 "path": rel,
-                "replacements": if replace_all { occurrence_count } else { 1 },
-                "new_size": new_content.len(),
+                "replacements": replacements,
+                "new_size": final_content.len(),
                 "message": format!(
                     "Edit applied successfully ({} replacement{}). Do NOT re-read to verify.",
-                    if replace_all { occurrence_count } else { 1 },
-                    if replace_all && occurrence_count != 1 { "s" } else { "" },
+                    replacements,
+                    if replacements != 1 { "s" } else { "" },
                 ),
             })),
             Err(e) => ToolExecResult::err(format!("Failed to write {rel}: {e}")),
@@ -906,6 +948,58 @@ const SKIP_DIRS: &[&str] = &[
 
 fn should_skip_path(path: &str) -> bool {
     path.split('/').any(|segment| SKIP_DIRS.contains(&segment))
+}
+
+/// Fuzzy search-replace: when exact match fails, try matching with
+/// leading/trailing whitespace stripped from each line. Returns `Some(new_content)`
+/// if exactly one fuzzy match was found and replaced.
+fn fuzzy_search_replace_single(content: &str, search: &str, replace: &str) -> Option<String> {
+    let search_lines: Vec<&str> = search.lines().map(|l| l.trim()).collect();
+    if search_lines.is_empty() || search_lines.iter().all(|l| l.is_empty()) {
+        return None;
+    }
+
+    let content_lines: Vec<&str> = content.lines().collect();
+    let mut match_positions: Vec<usize> = Vec::new();
+
+    'outer: for start in 0..content_lines.len() {
+        if start + search_lines.len() > content_lines.len() {
+            break;
+        }
+        for (j, search_line) in search_lines.iter().enumerate() {
+            if content_lines[start + j].trim() != *search_line {
+                continue 'outer;
+            }
+        }
+        match_positions.push(start);
+    }
+
+    if match_positions.len() != 1 {
+        return None;
+    }
+
+    let match_start = match_positions[0];
+    let match_end = match_start + search_lines.len();
+
+    let mut result = String::with_capacity(content.len());
+    for (i, line) in content_lines.iter().enumerate() {
+        if i == match_start {
+            result.push_str(replace);
+            if !replace.ends_with('\n') {
+                result.push('\n');
+            }
+        } else if i >= match_start && i < match_end {
+            continue;
+        } else {
+            result.push_str(line);
+            result.push('\n');
+        }
+    }
+    if !content.ends_with('\n') && result.ends_with('\n') {
+        result.pop();
+    }
+
+    Some(result)
 }
 
 fn search_directory(
