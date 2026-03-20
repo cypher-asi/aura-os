@@ -243,6 +243,25 @@ pub trait LlmProvider: Send + Sync {
         event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
     ) -> Result<ToolStreamResponse, ClaudeClientError>;
 
+    /// Streaming tool-use completion with an explicit model override.
+    /// Default delegates to `complete_stream_with_tools`, ignoring model.
+    async fn complete_stream_with_tools_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        let _ = model;
+        self.complete_stream_with_tools(
+            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
+        ).await
+    }
+
     /// Non-streaming completion with explicit model override.
     /// Default delegates to `complete()`, ignoring the model parameter.
     async fn complete_with_model(
@@ -585,6 +604,22 @@ impl ClaudeClient {
         api_key: &str,
         system_prompt: &str,
         messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        self.complete_stream_with_tools_inner_model(
+            None, api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
+        ).await
+    }
+
+    async fn complete_stream_with_tools_inner_model(
+        &self,
+        model_override: Option<&str>,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<RichMessage>,
         mut tools: Vec<ToolDefinition>,
         max_tokens: u32,
         thinking: Option<ThinkingConfig>,
@@ -592,15 +627,14 @@ impl ClaudeClient {
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
         let msg_count = messages.len();
         let tool_count = tools.len();
+        let effective_model = model_override.unwrap_or(&self.model);
 
-        // Mark last tool definition with cache_control so the entire system
-        // prompt + tool block is eligible for Anthropic prompt caching.
         if let Some(last) = tools.last_mut() {
             last.cache_control = Some(CacheControl::ephemeral());
         }
 
         let request = ToolMessagesRequest {
-            model: self.model.clone(),
+            model: effective_model.to_string(),
             max_tokens,
             system: cached_system_blocks(system_prompt),
             messages,
@@ -611,7 +645,7 @@ impl ClaudeClient {
 
         let url = format!("{}/v1/messages", self.base_url);
         info!(
-            model = %self.model,
+            model = %effective_model,
             max_tokens,
             msg_count,
             tool_count,
@@ -1182,6 +1216,23 @@ impl LlmProvider for ClaudeClient {
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
         self.complete_stream_with_tools_inner(
             api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
+        )
+        .await
+    }
+
+    async fn complete_stream_with_tools_model(
+        &self,
+        model: &str,
+        api_key: &str,
+        system_prompt: &str,
+        messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+        thinking: Option<ThinkingConfig>,
+        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+    ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        self.complete_stream_with_tools_inner_model(
+            Some(model), api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
         )
         .await
     }

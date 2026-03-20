@@ -158,6 +158,11 @@ impl DevLoopEngine {
             _ => self.engine_config.max_agentic_iterations,
         };
 
+        let model_override = match complexity {
+            TaskComplexity::Simple => Some(resolve_simple_model()),
+            _ => None,
+        };
+
         let config = ToolLoopConfig {
             max_iterations,
             max_tokens,
@@ -167,6 +172,7 @@ impl DevLoopEngine {
             max_context_tokens: Some(self.llm_config.max_context_tokens),
             credit_budget: self.engine_config.max_task_credits,
             exploration_allowance: Some(exploration_allowance),
+            model_override,
         };
 
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
@@ -306,6 +312,13 @@ fn classify_task_complexity(title: &str, description: &str) -> TaskComplexity {
     }
 
     TaskComplexity::Standard
+}
+
+fn resolve_simple_model() -> String {
+    std::env::var("AURA_SIMPLE_MODEL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| aura_claude::MID_MODEL.to_string())
 }
 
 fn compute_exploration_allowance(

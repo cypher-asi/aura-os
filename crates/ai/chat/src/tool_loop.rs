@@ -273,9 +273,11 @@ async fn run_single_iteration(
     let thinking = config.thinking.clone();
     let reason = config.billing_reason;
 
+    let model_override = config.model_override.clone();
     let stream_handle = tokio::spawn(async move {
         llm_clone
-            .complete_stream_with_tools(
+            .complete_stream_with_tools_opt_model(
+                model_override.as_deref(),
                 &api_key_owned, &system_owned, msgs_owned, tools_owned,
                 max_tokens, thinking, claude_tx, reason, None,
             )

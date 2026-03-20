@@ -19,6 +19,7 @@ fn default_config(max_iterations: usize) -> ToolLoopConfig {
         max_context_tokens: None,
         credit_budget: None,
         exploration_allowance: None,
+        model_override: None,
     }
 }
 

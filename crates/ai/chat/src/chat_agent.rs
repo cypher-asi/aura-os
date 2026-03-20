@@ -184,6 +184,7 @@ impl ChatService {
             max_context_tokens: Some(self.llm_config.max_context_tokens),
             credit_budget,
             exploration_allowance: None,
+            model_override: None,
         };
 
         let thinking_start = std::time::Instant::now();

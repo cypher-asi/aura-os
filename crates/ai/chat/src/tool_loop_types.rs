@@ -23,6 +23,9 @@ pub struct ToolLoopConfig {
     /// Base exploration allowance (read_file, search_code, find_files,
     /// list_files calls before blocking). Defaults to 12 when `None`.
     pub exploration_allowance: Option<usize>,
+    /// Override the LLM model for this loop (e.g. use a lighter model for
+    /// simple tasks). `None` uses the provider's default.
+    pub model_override: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
