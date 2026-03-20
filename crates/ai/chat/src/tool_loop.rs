@@ -41,6 +41,7 @@ struct LoopState {
     write_file_cooldowns: HashMap<String, usize>,
     last_write_target_signature: Option<String>,
     same_target_no_progress_streak: usize,
+    plan_checkpoint_sent: bool,
 }
 
 impl LoopState {
@@ -109,6 +110,7 @@ pub async fn run_tool_loop(
         write_file_cooldowns: HashMap::new(),
         last_write_target_signature: None,
         same_target_no_progress_streak: 0,
+        plan_checkpoint_sent: false,
     };
 
     for iteration in 0..config.max_iterations {
@@ -749,6 +751,18 @@ async fn process_tool_calls(
         });
     if had_write {
         state.exploration_allowance = state.total_exploration_calls + 4;
+
+        if !state.plan_checkpoint_sent {
+            state.plan_checkpoint_sent = true;
+            state.api_messages.push(RichMessage::user(
+                "[IMPLEMENTATION CHECKPOINT] You just made your first write. Before continuing, verify:\n\
+                 1. Exact struct/type definitions for types you reference\n\
+                 2. Method signatures for functions you call\n\
+                 3. Required imports\n\
+                 If any of these are uncertain, use one more read_file or search_code call to confirm \
+                 before proceeding with further writes."
+            ));
+        }
     }
 
     let compaction_threshold = (state.exploration_allowance * 2) / 3;
