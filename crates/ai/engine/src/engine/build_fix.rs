@@ -472,14 +472,12 @@ impl DevLoopEngine {
             project, session, task, base_path, &response, attempt,
         ).await?;
         all_fix_ops.extend(ops);
-        if fix_applied {
-            let sig = normalize_error_signature(&build_result.stderr);
-            prior_attempts.push(BuildFixAttemptRecord {
-                stderr: build_result.stderr.clone(),
-                error_signature: sig,
-                files_changed,
-            });
-        }
+        let sig = normalize_error_signature(&build_result.stderr);
+        prior_attempts.push(BuildFixAttemptRecord {
+            stderr: build_result.stderr.clone(),
+            error_signature: sig,
+            files_changed: if fix_applied { files_changed } else { vec!["(fix did not apply)".into()] },
+        });
         Ok((inp, out))
     }
 
