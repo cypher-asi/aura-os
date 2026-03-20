@@ -407,6 +407,12 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>([]);
   const [progressText, setProgressText] = useState("");
 
+  const isStreamingRef = useRef(false);
+  useEffect(() => { isStreamingRef.current = isStreaming; }, [isStreaming]);
+
+  const thinkingDurationMsRef = useRef<number | null>(null);
+  useEffect(() => { thinkingDurationMsRef.current = thinkingDurationMs; }, [thinkingDurationMs]);
+
   const abortRef = useRef<AbortController | null>(null);
   const streamBufferRef = useRef("");
   const rafRef = useRef<number | null>(null);
@@ -429,7 +435,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       _selectedModel?: string | null,
       attachments?: ChatAttachment[],
     ) => {
-      if (!projectId || !agentInstanceId || isStreaming) return;
+      if (!projectId || !agentInstanceId || isStreamingRef.current) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
 
@@ -445,7 +451,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
       const ctx: StreamCtx = {
         projectId: projectId!, sidekick, projectCtxRef,
-        capturedThinkingDurationMs: thinkingDurationMs, capturedIsStreaming: isStreaming,
+        capturedThinkingDurationMs: thinkingDurationMsRef.current, capturedIsStreaming: isStreamingRef.current,
         streamBufferRef, thinkingBufferRef, thinkingStartRef, thinkingRafRef, rafRef,
         toolCallsRef, needsSeparatorRef, pendingSpecIdsRef, pendingTaskIdsRef, abortRef,
         setStreamingText, setThinkingText, setThinkingDurationMs, setActiveToolCalls,
@@ -471,7 +477,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       sidekick.setStreamingAgentInstanceId(null);
       abortRef.current = null;
     },
-    [projectId, agentInstanceId, isStreaming, sidekick, thinkingDurationMs],
+    [projectId, agentInstanceId, sidekick],
   );
 
   const stopStreaming = useCallback(() => {
