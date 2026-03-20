@@ -3,10 +3,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
-import { FileText } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import type { ToolCallEntry, ArtifactRef } from "../hooks/use-chat-stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
+import fileStyles from "./FilePreviewCard.module.css";
 import { ResponseBlock } from "./ResponseBlock";
 import { CookingIndicator, getStreamingPhaseLabel } from "./CookingIndicator";
 import { FilePreviewCard } from "./FilePreviewCard";
@@ -34,13 +35,13 @@ function normalizeMidSentenceBreaks(text: string): string {
       return "\n";
     }
 
-    const looksLikeSentenceEnd = /[.!?]\s*$/.test(lastLine);
+    const looksLikeSentenceEnd = /[.!?:]\s*$/.test(lastLine);
     const looksLikeMarkdownBlock =
       /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(lastLine) ||
       /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(nextLine);
     const looksLikeSpecIndex = /^\d{1,3}:\s+/.test(lastLine);
     const looksLikeWrappedSentence =
-      /[a-z0-9,]$/i.test(lastLine) && /^[a-z(]/i.test(nextLine);
+      /[a-z,]$/.test(lastLine) && /^[a-z]/.test(nextLine);
 
     if (looksLikeSentenceEnd || looksLikeMarkdownBlock || looksLikeSpecIndex) {
       return match;
@@ -90,28 +91,70 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 const FILE_OPS = new Set(["write_file", "edit_file", "read_file"]);
-const ARTIFACT_OPS = new Set(["create_task", "create_spec"]);
 
-function ArtifactPreview({ entry }: { entry: ToolCallEntry }) {
-  const title = (entry.input.title as string) || "";
-  const description = (entry.input.description as string) || (entry.input.markdown_contents as string) || "";
-  const firstLine = description.split("\n")[0]?.slice(0, 120) || "";
+const COLLAPSED_SPEC_LINES = 20;
+
+function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const title = (entry.input.title as string) || "Untitled spec";
+  const content = (entry.input.markdown_contents as string) || "";
+  const lines = content.split("\n");
+  const needsCollapse = lines.length > COLLAPSED_SPEC_LINES;
+  const displayContent =
+    !expanded && needsCollapse
+      ? lines.slice(0, COLLAPSED_SPEC_LINES).join("\n")
+      : content;
 
   return (
-    <div style={{ padding: "2px 0 2px 4px", fontSize: 12 }}>
-      {title && (
-        <div style={{ color: "var(--color-text, #ddd)", fontWeight: 500 }}>
-          {title}
+    <div className={fileStyles.card}>
+      <div className={fileStyles.header}>
+        <FileText size={14} className={fileStyles.fileIcon} />
+        <span className={fileStyles.fileName}>{title}</span>
+        <span className={fileStyles.badge}>Spec</span>
+      </div>
+      <div className={`${fileStyles.codeArea} ${!expanded && needsCollapse ? fileStyles.collapsed : ""}`}>
+        <pre>
+          <code className="hljs language-markdown">{displayContent}</code>
+        </pre>
+      </div>
+      {needsCollapse && (
+        <button
+          type="button"
+          className={fileStyles.toggleBtn}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Show less" : `Show all ${lines.length} lines`}
+        </button>
+      )}
+      {entry.isError && entry.result && (
+        <div style={{ color: "#f87171", fontSize: 11, padding: "4px 10px" }}>
+          {entry.result.slice(0, 200)}
         </div>
       )}
+    </div>
+  );
+}
+
+function TaskCreatedIndicator({ entry }: { entry: ToolCallEntry }) {
+  const title = (entry.input.title as string) || "";
+  const description = (entry.input.description as string) || "";
+  const firstLine = description.split("\n")[0]?.slice(0, 140) || "";
+
+  return (
+    <div className={toolStyles.taskIndicator}>
+      <div className={toolStyles.taskIndicatorRow}>
+        <Plus size={14} className={toolStyles.taskIndicatorIcon} />
+        <span className={toolStyles.taskIndicatorLabel}>Task Created</span>
+        {title && (
+          <span className={toolStyles.taskIndicatorTitle}>{title}</span>
+        )}
+      </div>
       {firstLine && (
-        <div style={{ color: "var(--color-text-muted, #888)", fontSize: 11, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {firstLine}
-        </div>
+        <div className={toolStyles.taskIndicatorDesc}>{firstLine}</div>
       )}
       {entry.isError && entry.result && (
         <div style={{ color: "#f87171", fontSize: 11, marginTop: 2 }}>
-          {entry.result.slice(0, 120)}
+          {entry.result.slice(0, 200)}
         </div>
       )}
     </div>
@@ -119,12 +162,13 @@ function ArtifactPreview({ entry }: { entry: ToolCallEntry }) {
 }
 
 function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
-  const autoExpand = entry.started && ARTIFACT_OPS.has(entry.name);
+  const isSpec = entry.name === "create_spec";
+  const isTask = entry.name === "create_task";
+  const autoExpand = isSpec && !entry.started;
   const [expanded, setExpanded] = useState(autoExpand);
   const label = TOOL_LABELS[entry.name] || entry.name;
   const inputSummary = entry.started ? "" : summarizeInput(entry.name, entry.input);
   const isFileOp = FILE_OPS.has(entry.name);
-  const isArtifactOp = ARTIFACT_OPS.has(entry.name);
 
   const stateClass = entry.pending
     ? toolStyles.taskActive
@@ -153,11 +197,20 @@ function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
         </div>
       );
     }
-    if (isArtifactOp) {
+    if (isSpec) {
       return (
         <div className={`${toolStyles.toolBodyWrap} ${expanded ? toolStyles.toolBodyExpanded : ""}`}>
           <div className={toolStyles.toolBody}>
-            <ArtifactPreview entry={entry} />
+            <SpecPreviewCard entry={entry} />
+          </div>
+        </div>
+      );
+    }
+    if (isTask) {
+      return (
+        <div className={toolStyles.toolBodyWrap} style={{ maxHeight: "none" }}>
+          <div className={toolStyles.toolBody}>
+            <TaskCreatedIndicator entry={entry} />
           </div>
         </div>
       );

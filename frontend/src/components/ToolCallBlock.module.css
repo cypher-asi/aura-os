@@ -226,6 +226,48 @@
   color: #f87171;
 }
 
+/* ── Task created indicator ── */
+
+.taskIndicator {
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.taskIndicatorRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.taskIndicatorIcon {
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.taskIndicatorLabel {
+  font-weight: 600;
+  color: var(--color-text-muted, #aaa);
+  white-space: nowrap;
+}
+
+.taskIndicatorTitle {
+  color: var(--color-text, #ddd);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.taskIndicatorDesc {
+  color: var(--color-text-muted, #888);
+  font-size: 11px;
+  margin-top: 2px;
+  padding-left: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Artifact refs (created tasks/specs) ── */
 
 .artifactRefs {
