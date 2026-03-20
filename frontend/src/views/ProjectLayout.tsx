@@ -7,11 +7,13 @@ import { useProjectRegister } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { EmptyState } from "../components/EmptyState";
 import { useProjectsList } from "../apps/projects/useProjectsList";
+import { Button } from "@cypher-asi/zui";
+import { FolderPlus, ArrowLeft } from "lucide-react";
 
 export function ProjectLayout() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects } = useProjectsList();
+  const { projects, openNewProjectModal } = useProjectsList();
   const cachedProject = useMemo(
     () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
     [projectId, projects],
@@ -61,7 +63,13 @@ export function ProjectLayout() {
         setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
         setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
       })
-      .catch(() => { if (!cancelled) setProjectRaw(null); })
+      .catch(() => {
+        if (cancelled) return;
+        setProjectRaw((prev) => {
+          if (prev?.project_id === projectId) return prev;
+          return cachedProject;
+        });
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => {
       cancelled = true;
@@ -111,7 +119,33 @@ export function ProjectLayout() {
   }, [project, initialSpecs, initialTasks, message, navigate, register, setProjectSafe, unregister]);
 
   if (loading) return null;
-  if (!project) return <EmptyState>Project not found</EmptyState>;
+  if (!project) {
+    if (projects.length === 0) {
+      return (
+        <EmptyState>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+            <strong>No project selected</strong>
+            <span>Create a project to get started.</span>
+            <Button icon={<FolderPlus size={16} />} onClick={openNewProjectModal}>
+              Create Project
+            </Button>
+          </div>
+        </EmptyState>
+      );
+    }
+
+    return (
+      <EmptyState>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+          <strong>Project not found</strong>
+          <span>Choose a project from navigation to continue.</span>
+          <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => navigate("/projects")}>
+            Back to Projects
+          </Button>
+        </div>
+      </EmptyState>
+    );
+  }
   if (project.project_id !== projectId) return null;
 
   return <Outlet />;

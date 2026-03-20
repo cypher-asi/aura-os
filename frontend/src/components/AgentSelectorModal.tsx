@@ -72,11 +72,11 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
         onClose={handleClose}
         title="Add Agent to Project"
         size="md"
-        footer={
+        footer={agents.length > 0 ? (
           <Button variant="ghost" onClick={() => setShowEditor(true)} disabled={!!creating}>
             + Create New Agent
           </Button>
-        }
+        ) : undefined}
       >
         <div className={styles.body}>
           {loading ? (
@@ -84,7 +84,14 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
               <Spinner size="sm" />
             </div>
           ) : agents.length === 0 ? (
-            <EmptyState>No agents yet. Create one to get started.</EmptyState>
+            <div className={styles.emptyState}>
+              <EmptyState>No agents yet. Create one to get started.</EmptyState>
+              <div className={styles.emptyActions}>
+                <Button variant="primary" onClick={() => setShowEditor(true)} disabled={!!creating}>
+                  Create New Agent
+                </Button>
+              </div>
+            </div>
           ) : (
             <div className={styles.grid}>
               {agents.map((agent) => (

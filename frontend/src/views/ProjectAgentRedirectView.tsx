@@ -1,18 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getLastAgent } from "../utils/storage";
 import { useProjectsList } from "../apps/projects/useProjectsList";
-import { projectAgentChatRoute, projectWorkRoute } from "../utils/mobileNavigation";
+import { projectAgentChatRoute } from "../utils/mobileNavigation";
+import { ProjectEmptyView } from "./ProjectEmptyView";
 
 export function ProjectAgentRedirectView() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const { agentsByProject, refreshProjectAgents } = useProjectsList();
+  const [hasNoAgents, setHasNoAgents] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
 
     let cancelled = false;
+    setHasNoAgents(false);
 
     const resolveTarget = async () => {
       const cachedAgents = agentsByProject[projectId];
@@ -33,7 +36,7 @@ export function ProjectAgentRedirectView() {
         return;
       }
 
-      navigate(projectWorkRoute(projectId), { replace: true });
+      setHasNoAgents(true);
     };
 
     void resolveTarget();
@@ -42,6 +45,10 @@ export function ProjectAgentRedirectView() {
       cancelled = true;
     };
   }, [agentsByProject, navigate, projectId, refreshProjectAgents]);
+
+  if (hasNoAgents) {
+    return <ProjectEmptyView mode="agent" />;
+  }
 
   return null;
 }
