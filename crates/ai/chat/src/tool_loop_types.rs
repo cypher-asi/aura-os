@@ -203,6 +203,10 @@ impl BuildBaseline {
 pub enum ToolLoopEvent {
     Delta(String),
     ThinkingDelta(String),
+    ToolUseStarted {
+        id: String,
+        name: String,
+    },
     ToolUseDetected {
         id: String,
         name: String,

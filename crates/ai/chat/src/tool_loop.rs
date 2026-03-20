@@ -304,6 +304,12 @@ async fn run_single_iteration(
                     iter_text.push_str(&text);
                     let _ = event_tx.send(ToolLoopEvent::Delta(text));
                 }
+                ClaudeStreamEvent::ToolUseStarted { id, name } => {
+                    let _ = event_tx.send(ToolLoopEvent::ToolUseStarted {
+                        id: id.clone(),
+                        name: name.clone(),
+                    });
+                }
                 ClaudeStreamEvent::ToolUse { id, name, input } => {
                     let _ = event_tx.send(ToolLoopEvent::ToolUseDetected {
                         id: id.clone(),
