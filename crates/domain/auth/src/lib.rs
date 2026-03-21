@@ -74,6 +74,12 @@ struct ZosUserResponse {
     wallets: Option<Vec<ZosWallet>>,
 }
 
+#[derive(Debug, Deserialize)]
+struct ZosProfileResponse {
+    #[serde(rename = "isZeroProSubscriber", default)]
+    is_zero_pro: bool,
+}
+
 pub struct AuthService {
     store: Arc<RocksStore>,
     http: Client,
@@ -157,6 +163,7 @@ impl AuthService {
         debug!("Validating stored auth token against zOS-api");
         match self.fetch_user_info(&session.access_token).await {
             Ok(user) => {
+                let is_zero_pro = self.fetch_is_zero_pro(&session.access_token).await;
                 let updated = ZeroAuthSession {
                     user_id: user.id,
                     network_user_id: session.network_user_id,
@@ -179,6 +186,7 @@ impl AuthService {
                         .map(|w| w.public_address)
                         .collect(),
                     access_token: session.access_token,
+                    is_zero_pro,
                     created_at: session.created_at,
                     validated_at: Utc::now(),
                 };
@@ -227,11 +235,30 @@ impl AuthService {
         res.json().await.map_err(AuthError::Http)
     }
 
+    async fn fetch_is_zero_pro(&self, token: &str) -> bool {
+        let res = self
+            .http
+            .get(format!("{ZOS_API_URL}/api/v2/users/me"))
+            .bearer_auth(token)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) if resp.status().is_success() => resp
+                .json::<ZosProfileResponse>()
+                .await
+                .map(|p| p.is_zero_pro)
+                .unwrap_or(false),
+            _ => false,
+        }
+    }
+
     async fn fetch_and_store_session(
         &self,
         access_token: &str,
     ) -> Result<ZeroAuthSession, AuthError> {
         let user = self.fetch_user_info(access_token).await?;
+        let is_zero_pro = self.fetch_is_zero_pro(access_token).await;
         let now = Utc::now();
         let session = ZeroAuthSession {
             user_id: user.id,
@@ -248,6 +275,7 @@ impl AuthService {
                 .map(|w| w.public_address)
                 .collect(),
             access_token: access_token.to_string(),
+            is_zero_pro,
             created_at: now,
             validated_at: now,
         };

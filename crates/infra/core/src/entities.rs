@@ -390,6 +390,8 @@ pub struct ZeroAuthSession {
     pub zero_wallet: String,
     pub wallets: Vec<String>,
     pub access_token: String,
+    #[serde(default)]
+    pub is_zero_pro: bool,
     pub created_at: DateTime<Utc>,
     pub validated_at: DateTime<Utc>,
 }

@@ -146,6 +146,7 @@ pub struct AuthSessionResponse {
     pub primary_zid: String,
     pub zero_wallet: String,
     pub wallets: Vec<String>,
+    pub is_zero_pro: bool,
     pub created_at: DateTime<Utc>,
     pub validated_at: DateTime<Utc>,
 }
@@ -203,6 +204,7 @@ impl From<ZeroAuthSession> for AuthSessionResponse {
             primary_zid: s.primary_zid,
             zero_wallet: s.zero_wallet,
             wallets: s.wallets,
+            is_zero_pro: s.is_zero_pro,
             created_at: s.created_at,
             validated_at: s.validated_at,
         }

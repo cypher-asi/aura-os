@@ -182,6 +182,7 @@ export interface ZeroUser {
   primary_zid: string;
   zero_wallet: string;
   wallets: string[];
+  is_zero_pro?: boolean;
 }
 
 export interface AuthSession {
@@ -193,6 +194,7 @@ export interface AuthSession {
   primary_zid: string;
   zero_wallet: string;
   wallets: string[];
+  is_zero_pro?: boolean;
   created_at: string;
   validated_at: string;
 }

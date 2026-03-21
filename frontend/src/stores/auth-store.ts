@@ -13,6 +13,7 @@ function sessionToUser(session: AuthSession): ZeroUser {
     primary_zid: session.primary_zid,
     zero_wallet: session.zero_wallet,
     wallets: session.wallets,
+    is_zero_pro: session.is_zero_pro,
   };
 }
 
