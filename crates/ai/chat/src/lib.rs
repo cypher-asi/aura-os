@@ -4,6 +4,8 @@ mod error;
 mod chat;
 mod chat_agent;
 mod chat_context;
+mod chat_message_conversion;
+mod chat_persistence;
 mod chat_sanitize;
 mod chat_streaming;
 mod chat_tool_executor;

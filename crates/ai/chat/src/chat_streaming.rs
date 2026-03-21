@@ -10,10 +10,8 @@ use aura_specs::SpecStreamEvent;
 use aura_tools::agent_tool_definitions;
 
 use crate::channel_ext::send_or_log;
-use crate::chat::{
-    ChatService, ChatStreamEvent, ContentBlockAccumulator,
-    forward_tool_loop_event,
-};
+use crate::chat::{ChatAttachment, ChatService, ChatStreamEvent};
+use crate::chat_message_conversion::build_attachment_blocks;
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
 use crate::chat_tool_executor::ChatToolExecutor;
@@ -21,6 +19,73 @@ use crate::chat_tool_loop_executor::{ForwardingToolExecutor, SingleProjectResolv
 use crate::tool_loop::{
     run_tool_loop, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult,
 };
+
+pub(crate) type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
+
+/// Forward a tool-loop event to the chat stream and accumulate content blocks.
+///
+/// Uses `std::sync::Mutex` intentionally: the critical sections are sub-microsecond
+/// (single `Vec::push`) and never held across `.await` points, which is the
+/// recommended pattern per Tokio docs for short, synchronous locks.
+pub(crate) fn forward_tool_loop_event(
+    evt: ToolLoopEvent,
+    tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+    blocks: &ContentBlockAccumulator,
+) {
+    match evt {
+        ToolLoopEvent::Delta(text) => {
+            send_or_log(&tx, ChatStreamEvent::Delta(text));
+        }
+        ToolLoopEvent::ThinkingDelta(text) => {
+            send_or_log(&tx, ChatStreamEvent::ThinkingDelta(text));
+        }
+        ToolLoopEvent::ToolUseStarted { id, name } => {
+            send_or_log(&tx, ChatStreamEvent::ToolCallStarted { id, name });
+        }
+        ToolLoopEvent::ToolUseDetected { id, name, input } => {
+            if let Ok(mut acc) = blocks.lock() {
+                acc.push(ChatContentBlock::ToolUse {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input: input.clone(),
+                });
+            }
+            send_or_log(&tx, ChatStreamEvent::ToolCall { id, name, input });
+        }
+        ToolLoopEvent::ToolResult {
+            tool_use_id,
+            tool_name,
+            content,
+            is_error,
+        } => {
+            if let Ok(mut acc) = blocks.lock() {
+                acc.push(ChatContentBlock::ToolResult {
+                    tool_use_id: tool_use_id.clone(),
+                    content: content.clone(),
+                    is_error: if is_error { Some(true) } else { None },
+                });
+            }
+            send_or_log(&tx, ChatStreamEvent::ToolResult {
+                id: tool_use_id,
+                name: tool_name,
+                result: content,
+                is_error,
+            });
+        }
+        ToolLoopEvent::IterationTokenUsage {
+            input_tokens,
+            output_tokens,
+        } => {
+            send_or_log(&tx, ChatStreamEvent::TokenUsage {
+                input_tokens,
+                output_tokens,
+            });
+        }
+        ToolLoopEvent::Error(msg) => {
+            send_or_log(&tx, ChatStreamEvent::Error(msg));
+        }
+    }
+}
 
 fn extract_user_text(messages: &[Message]) -> String {
     messages
@@ -159,7 +224,7 @@ impl ChatService {
             }
         };
 
-        let mut api_messages = crate::chat::convert_messages_to_rich(&stored_messages);
+        let mut api_messages = crate::chat_message_conversion::convert_messages_to_rich(&stored_messages);
         api_messages = self.manage_context_window(&api_key, &system, api_messages).await;
         api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
         api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
@@ -482,5 +547,146 @@ impl ChatService {
                     .await;
             }
         }
+    }
+
+    /// Ensure an active session exists for this agent instance, save the user
+    /// message to storage, and return the active session id (if any).
+    pub(crate) async fn prepare_session_and_save_user_message(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        content: &str,
+        content_blocks: Option<&[ChatContentBlock]>,
+    ) -> Option<String> {
+        let active_session_id = self
+            .ensure_active_session(project_id, agent_instance_id)
+            .await;
+        if let Some(ref session_id) = active_session_id {
+            self.save_message_to_storage(
+                project_id,
+                agent_instance_id,
+                "user",
+                content,
+                content_blocks,
+                None,
+                None,
+                None,
+                None,
+                Some(session_id.as_str()),
+            )
+            .await;
+        }
+        active_session_id
+    }
+
+    pub async fn send_message_streaming(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        agent_instance: &AgentInstance,
+        content: &str,
+        action: Option<&str>,
+        attachments: &[ChatAttachment],
+        tx: mpsc::UnboundedSender<ChatStreamEvent>,
+    ) {
+        let send = |evt: ChatStreamEvent| {
+            send_or_log(&tx, evt);
+        };
+
+        send(ChatStreamEvent::Progress("Connecting...".to_string()));
+
+        let content_blocks = build_attachment_blocks(content, attachments);
+
+        let active_session_id = self
+            .prepare_session_and_save_user_message(
+                project_id, agent_instance_id, content, content_blocks.as_deref(),
+            )
+            .await;
+        let Some(ref _session_id) = active_session_id else {
+            send(ChatStreamEvent::Error(
+                "aura-storage is not configured or could not create session".to_string(),
+            ));
+            send(ChatStreamEvent::Done);
+            return;
+        };
+
+        match action {
+            Some("generate_specs") => {
+                self.handle_generate_specs(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
+            }
+            _ => {
+                self.handle_chat_with_tools(
+                    project_id, agent_instance_id, agent_instance, &tx,
+                    active_session_id.as_deref(),
+                ).await;
+            }
+        }
+
+        send(ChatStreamEvent::Done);
+    }
+
+    pub async fn send_agent_message_streaming(
+        &self,
+        agent_id: &AgentId,
+        agent: &Agent,
+        projects: &[Project],
+        storage_messages: Vec<Message>,
+        content: &str,
+        _action: Option<&str>,
+        attachments: &[ChatAttachment],
+        storage_anchor: Option<(ProjectId, AgentInstanceId)>,
+        tx: mpsc::UnboundedSender<ChatStreamEvent>,
+    ) {
+        let send = |evt: ChatStreamEvent| {
+            send_or_log(&tx, evt);
+        };
+
+        send(ChatStreamEvent::Progress("Connecting...".to_string()));
+
+        let now = Utc::now();
+        let content_blocks = build_attachment_blocks(content, attachments);
+
+        let (anchor_project_id, anchor_instance_id) = storage_anchor
+            .unwrap_or((ProjectId::nil(), AgentInstanceId::nil()));
+
+        let active_session_id = if !anchor_instance_id.as_uuid().is_nil() {
+            self.prepare_session_and_save_user_message(
+                &anchor_project_id, &anchor_instance_id, content, content_blocks.as_deref(),
+            ).await
+        } else {
+            None
+        };
+
+        let user_msg = Message {
+            message_id: MessageId::new(),
+            agent_instance_id: anchor_instance_id,
+            project_id: anchor_project_id,
+            role: ChatRole::User,
+            content: content.to_string(),
+            content_blocks,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: now,
+        };
+
+        let mut messages_for_context = storage_messages;
+        messages_for_context.push(user_msg);
+
+        self.handle_agent_chat_with_tools(
+            agent_id,
+            agent,
+            projects,
+            messages_for_context,
+            &anchor_project_id,
+            &anchor_instance_id,
+            active_session_id.as_deref(),
+            &tx,
+        )
+        .await;
+
+        send(ChatStreamEvent::Done);
     }
 }
