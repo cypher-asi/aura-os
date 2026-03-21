@@ -4,7 +4,7 @@ import { SettingsModal } from "./SettingsModal";
 import { OrgSettingsPanel } from "./OrgSettingsPanel";
 import { BuyCreditsModal } from "./BuyCreditsModal";
 import { AppProviders } from "./AppProviders";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { NewProjectModal } from "./NewProjectModal";

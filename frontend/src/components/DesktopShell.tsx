@@ -11,7 +11,7 @@ import { PanelSearch } from "./PanelSearch";
 import { WindowControls } from "./WindowControls";
 import { useAppContext } from "../context/AppContext";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useAppUIStore } from "../stores/app-ui-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { apps } from "../apps/registry";

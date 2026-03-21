@@ -4,13 +4,13 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { X, ArrowLeft, FileText } from "lucide-react";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../context/ProjectContext";
 import { TaskPreview, RunTaskButton } from "./TaskPreview";
 import { SessionPreview } from "./SessionPreview";
 import { LogPreview } from "./LogDetail";
 import { formatRelativeTime } from "../utils/format";
-import type { PreviewItem } from "../context/SidekickContext";
+import type { PreviewItem } from "../stores/sidekick-store";
 import type { Spec } from "../types";
 import styles from "./Preview.module.css";
 

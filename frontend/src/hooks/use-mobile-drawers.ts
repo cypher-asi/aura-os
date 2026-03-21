@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuraCapabilities } from "./use-aura-capabilities";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 
 function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): string | null {
   if (!item) return null;

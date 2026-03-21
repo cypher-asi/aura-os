@@ -4,7 +4,7 @@ import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useEventContext } from "../context/EventContext";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { StatusBadge } from "./StatusBadge";
 import type { ProjectId } from "../types";
 import styles from "./Sidekick.module.css";

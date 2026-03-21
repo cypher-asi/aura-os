@@ -6,7 +6,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Button, GroupCollapsible } from "@cypher-asi/zui";
 import { Loader2, Play } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext, useTaskOutput } from "../context/EventContext";
 import { useLoopActive } from "../hooks/use-loop-active";

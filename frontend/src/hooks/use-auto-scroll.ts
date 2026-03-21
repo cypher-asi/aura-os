@@ -12,6 +12,10 @@ export function useAutoScroll(
 ): { handleScroll: () => void } {
   const autoScrollRef = useRef(true);
   const prevScrollHeightRef = useRef(0);
+  // Guards against programmatic scrollTop assignments firing the onScroll
+  // handler and falsely disabling auto-scroll when new content has already
+  // increased scrollHeight between the assignment and the scroll event.
+  const programmaticScrollRef = useRef(false);
 
   useEffect(() => {
     autoScrollRef.current = true;
@@ -25,9 +29,17 @@ export function useAutoScroll(
       prevScrollHeightRef.current = el.scrollHeight;
     };
 
+    const doProgrammaticScroll = (target: number) => {
+      programmaticScrollRef.current = true;
+      el.scrollTop = target;
+      requestAnimationFrame(() => {
+        programmaticScrollRef.current = false;
+      });
+    };
+
     const scrollIfNeeded = () => {
       if (autoScrollRef.current && el) {
-        el.scrollTop = el.scrollHeight;
+        doProgrammaticScroll(el.scrollHeight);
       }
     };
 
@@ -57,9 +69,9 @@ export function useAutoScroll(
       const newSH = el.scrollHeight;
 
       if (autoScrollRef.current) {
-        el.scrollTop = newSH;
+        doProgrammaticScroll(newSH);
       } else if (oldSH > 0 && newSH !== oldSH) {
-        el.scrollTop = Math.round(el.scrollTop * (newSH / oldSH));
+        doProgrammaticScroll(Math.round(el.scrollTop * (newSH / oldSH)));
       }
 
       syncHeight();
@@ -77,6 +89,7 @@ export function useAutoScroll(
   }, [ref, resetKey]);
 
   const handleScroll = useCallback(() => {
+    if (programmaticScrollRef.current) return;
     const el = ref.current;
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;

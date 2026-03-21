@@ -1,19 +1,9 @@
 import { useState } from "react";
 import { FileCode, FileText } from "lucide-react";
 import type { ToolCallEntry } from "../types/stream";
+import { langFromPath } from "../ide/lang";
+import { useHighlightedHtml } from "../hooks/use-highlighted-html";
 import styles from "./FilePreviewCard.module.css";
-
-const LANG_MAP: Record<string, string> = {
-  ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript",
-  rs: "rust", py: "python", go: "go", rb: "ruby", java: "java",
-  css: "css", html: "xml", json: "json", yaml: "yaml", yml: "yaml",
-  md: "markdown", sql: "sql", sh: "bash", toml: "ini",
-};
-
-function langFromPath(path: string): string | undefined {
-  const ext = path.split(".").pop()?.toLowerCase();
-  return ext ? LANG_MAP[ext] : undefined;
-}
 
 const COLLAPSED_LINE_LIMIT = 20;
 

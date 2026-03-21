@@ -4,7 +4,7 @@ import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { useLoopActive } from "../hooks/use-loop-active";
 import { mergeById, titleSortKey } from "../utils/collections";

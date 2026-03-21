@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { api } from "../api/client";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../context/ProjectContext";
 import { TaskStatusIcon } from "./TaskStatusIcon";
 import { formatRelativeTime, formatTokens, formatModelName } from "../utils/format";

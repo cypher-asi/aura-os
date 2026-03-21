@@ -9,7 +9,7 @@ import { LogPanel } from "./LogPanel";
 import { useProjectContext } from "../context/ProjectContext";
 import { useEventContext } from "../context/EventContext";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import type { Spec, Task } from "../types";
 import styles from "./ProjectWorkView.module.css";

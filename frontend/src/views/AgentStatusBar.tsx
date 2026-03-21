@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateA
 import type { ProjectId, AgentInstance, Session } from "../types";
 import { api } from "../api/client";
 import { useEventContext } from "../context/EventContext";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useClickOutside } from "../hooks/use-click-outside";
 import { StatusBadge } from "../components/StatusBadge";
 import { Panel, Badge, Text, Item } from "@cypher-asi/zui";

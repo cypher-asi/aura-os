@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { Spec } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useEventContext } from "../context/EventContext";
-import { useSidekick } from "../context/SidekickContext";
+import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../context/ProjectContext";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { mergeById } from "../utils/collections";

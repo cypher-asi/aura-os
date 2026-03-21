@@ -5,7 +5,7 @@ import { Archive, Info, ArrowLeft, Ellipsis, File, Check, Logs, Gauge, Rows3, Co
 import { EmptyState } from "./EmptyState";
 import { PanelSearch } from "./PanelSearch";
 import { AutomationBar } from "./AutomationBar";
-import { useSidekick, type SidekickTab } from "../context/SidekickContext";
+import { useSidekick, type SidekickTab } from "../stores/sidekick-store";
 import { useProjectContext } from "../context/ProjectContext";
 import { useClickOutside } from "../hooks/use-click-outside";
 import { StatusBadge } from "./StatusBadge";
