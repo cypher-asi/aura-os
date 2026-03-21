@@ -90,7 +90,11 @@ impl ChatToolExecutor {
         let (matches, files_scanned) = tokio::task::spawn_blocking(move || {
             let mut m: Vec<Value> = Vec::new();
             let mut stats = SearchStats::default();
-            search_directory(&abs_clone, &abs_clone, &regex, include_clone.as_deref(), max_results, context_lines, &mut m, &mut stats);
+            let sp = SearchParams {
+                root: &abs_clone, regex: &regex, include_glob: include_clone.as_deref(),
+                max_results, context_lines,
+            };
+            search_directory(&sp, &abs_clone, &mut m, &mut stats);
             (m, stats.files_scanned)
         })
         .await
@@ -220,13 +224,17 @@ struct SearchStats {
     files_scanned: usize,
 }
 
-fn search_directory(
-    root: &Path,
-    dir: &Path,
-    regex: &regex::Regex,
-    include_glob: Option<&str>,
+struct SearchParams<'a> {
+    root: &'a Path,
+    regex: &'a regex::Regex,
+    include_glob: Option<&'a str>,
     max_results: usize,
     context_lines: usize,
+}
+
+fn search_directory(
+    params: &SearchParams<'_>,
+    dir: &Path,
     matches: &mut Vec<Value>,
     stats: &mut SearchStats,
 ) {
@@ -235,7 +243,7 @@ fn search_directory(
         Err(_) => return,
     };
     for entry in entries.flatten() {
-        if matches.len() >= max_results {
+        if matches.len() >= params.max_results {
             return;
         }
         let name = entry.file_name().to_string_lossy().to_string();
@@ -244,21 +252,21 @@ fn search_directory(
         }
         let path = entry.path();
         if path.is_dir() {
-            search_directory(root, &path, regex, include_glob, max_results, context_lines, matches, stats);
+            search_directory(params, &path, matches, stats);
         } else if path.is_file() {
             let rel = path
-                .strip_prefix(root)
+                .strip_prefix(params.root)
                 .unwrap_or(&path)
                 .to_string_lossy()
                 .replace('\\', "/");
-            if let Some(glob_pat) = include_glob {
+            if let Some(glob_pat) = params.include_glob {
                 if let Ok(matcher) = glob::Pattern::new(glob_pat) {
                     if !matcher.matches(&rel) && !matcher.matches(&name) {
                         continue;
                     }
                 }
             }
-            search_file(&path, &rel, regex, context_lines, max_results, matches, stats);
+            search_file(&path, &rel, params.regex, params.context_lines, params.max_results, matches, stats);
         }
     }
 }

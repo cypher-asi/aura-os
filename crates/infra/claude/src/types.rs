@@ -175,31 +175,8 @@ pub trait LlmProvider: Send + Sync {
 
     async fn complete_stream_with_tools(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+        req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError>;
-
-    async fn complete_stream_with_tools_model(
-        &self,
-        model: &str,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        let _ = model;
-        self.complete_stream_with_tools(
-            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-        ).await
-    }
 
     async fn complete_with_model(
         &self,
@@ -239,6 +216,22 @@ pub enum ClaudeStreamEvent {
         cache_read_input_tokens: u64,
     },
     Error(String),
+}
+
+// ---------------------------------------------------------------------------
+// Bundled parameter structs (to avoid too_many_arguments)
+// ---------------------------------------------------------------------------
+
+/// Parameters for a tool-use streaming request.
+pub struct ToolStreamRequest<'a> {
+    pub api_key: &'a str,
+    pub system_prompt: &'a str,
+    pub messages: Vec<RichMessage>,
+    pub tools: Vec<ToolDefinition>,
+    pub max_tokens: u32,
+    pub thinking: Option<ThinkingConfig>,
+    pub event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
+    pub model_override: Option<&'a str>,
 }
 
 // ---------------------------------------------------------------------------

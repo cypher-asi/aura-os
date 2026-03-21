@@ -16,7 +16,7 @@ use aura_core::*;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
-use aura_chat::ChatService;
+use aura_chat::{ChatService, ChatServiceDeps};
 use aura_claude::ClaudeClient;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
@@ -232,15 +232,15 @@ pub fn build_test_app_from_store(
         llm_config.context_rollover_threshold,
         llm_config.max_context_tokens,
     ));
-    let chat_service = Arc::new(ChatService::new(
-        store.clone(),
-        settings_service.clone(),
-        llm.clone(),
-        spec_gen_service.clone(),
-        project_service.clone(),
-        task_service.clone(),
-        storage_client.clone(),
-    ));
+    let chat_service = Arc::new(ChatService::new(ChatServiceDeps {
+        store: store.clone(),
+        settings: settings_service.clone(),
+        llm: llm.clone(),
+        spec_gen: spec_gen_service.clone(),
+        project_service: project_service.clone(),
+        task_service: task_service.clone(),
+        storage_client: storage_client.clone(),
+    }));
 
     let (event_tx, _event_rx) = mpsc::unbounded_channel::<EngineEvent>();
     let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);

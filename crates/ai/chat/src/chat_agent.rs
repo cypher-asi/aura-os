@@ -15,7 +15,7 @@ use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_tool_loop_ev
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
-use crate::tool_loop::{run_tool_loop, ToolLoopConfig, ToolLoopEvent};
+use crate::tool_loop::{run_tool_loop, ToolLoopConfig, ToolLoopEvent, ToolLoopInput};
 use aura_tools::multi_project_tool_definitions;
 
 fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> String {
@@ -53,18 +53,26 @@ fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> Str
 // ToolExecutor for multi-project agent chat (via ForwardingToolExecutor)
 // ---------------------------------------------------------------------------
 
+pub(crate) struct AgentChatParams<'a> {
+    pub agent_id: &'a AgentId,
+    pub agent: &'a Agent,
+    pub projects: &'a [Project],
+    pub stored_messages: Vec<Message>,
+    pub anchor_project_id: &'a ProjectId,
+    pub anchor_instance_id: &'a AgentInstanceId,
+    pub active_session_id: Option<&'a str>,
+}
+
 impl ChatService {
     pub(crate) async fn handle_agent_chat_with_tools(
         &self,
-        agent_id: &AgentId,
-        agent: &Agent,
-        projects: &[Project],
-        stored_messages: Vec<Message>,
-        anchor_project_id: &ProjectId,
-        anchor_instance_id: &AgentInstanceId,
-        active_session_id: Option<&str>,
+        params: AgentChatParams<'_>,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
+        let AgentChatParams {
+            agent_id, agent, projects, stored_messages,
+            anchor_project_id, anchor_instance_id, active_session_id,
+        } = params;
         let send = |evt: ChatStreamEvent| {
             send_or_log(tx, evt);
         };
@@ -139,16 +147,16 @@ impl ChatService {
             }
         });
 
-        let result = run_tool_loop(
-            self.llm.clone(),
-            &api_key,
-            &system,
-            api_messages,
+        let result = run_tool_loop(ToolLoopInput {
+            llm: self.llm.clone(),
+            api_key: &api_key,
+            system_prompt: &system,
+            initial_messages: api_messages,
             tools,
-            &config,
-            &executor,
-            &loop_tx,
-        )
+            config: &config,
+            executor: &executor,
+            event_tx: &loop_tx,
+        })
         .await;
         drop(loop_tx);
         let _ = forwarder.await;
@@ -185,18 +193,18 @@ impl ChatService {
             send(ChatStreamEvent::MessageSaved(assistant_msg));
 
             if active_session_id.is_some() {
-                self.save_message_to_storage(
-                    anchor_project_id,
-                    anchor_instance_id,
-                    "assistant",
-                    &result.text,
-                    content_blocks.as_deref(),
-                    thinking.as_deref(),
+                self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
+                    project_id: anchor_project_id,
+                    agent_instance_id: anchor_instance_id,
+                    role: "assistant",
+                    content: &result.text,
+                    content_blocks: content_blocks.as_deref(),
+                    thinking: thinking.as_deref(),
                     thinking_duration_ms,
-                    Some(result.total_input_tokens),
-                    Some(result.total_output_tokens),
-                    active_session_id,
-                )
+                    input_tokens: Some(result.total_input_tokens),
+                    output_tokens: Some(result.total_output_tokens),
+                    session_id: active_session_id,
+                })
                 .await;
             }
         }

@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-use aura_claude::{ClaudeStreamEvent, ToolCall, ToolDefinition, ToolStreamResponse};
-use aura_billing::{MeteredLlm, MeteredLlmError};
+use aura_claude::{ClaudeStreamEvent, ToolCall, ToolStreamResponse};
+use aura_billing::{MeteredLlmError, MeteredStreamRequest};
 
 use crate::chat_sanitize;
 use crate::tool_loop_types::*;
@@ -26,24 +24,17 @@ pub(crate) struct IterationCompleted {
 }
 
 pub(crate) async fn run_single_iteration(
-    llm: &Arc<MeteredLlm>,
-    api_key: &str,
-    system_prompt: &str,
-    tools: &Arc<[ToolDefinition]>,
-    config: &ToolLoopConfig,
-    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    ctx: &IterationContext<'_>,
     state: &mut LoopState,
     iteration: usize,
 ) -> IterationOutcome {
     info!(
         iteration,
         message_count = state.api_messages.len(),
-        timeout_secs = config.stream_timeout.as_secs(),
+        timeout_secs = ctx.config.stream_timeout.as_secs(),
         "llm_iteration start"
     );
 
-    // Validate and repair message history before every API call to prevent
-    // 400 errors from orphaned tool blocks or broken alternation.
     let repaired = chat_sanitize::validate_and_repair_messages(state.api_messages.clone());
     if repaired.len() != state.api_messages.len() {
         info!(
@@ -56,23 +47,30 @@ pub(crate) async fn run_single_iteration(
 
     let (claude_tx, mut claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
 
-    let llm_clone = llm.clone();
-    let api_key_owned = api_key.to_string();
-    let system_owned = system_prompt.to_string();
+    let llm_clone = ctx.llm.clone();
+    let api_key_owned = ctx.api_key.to_string();
+    let system_owned = ctx.system_prompt.to_string();
     let msgs_owned = state.api_messages.clone();
-    let tools_owned = tools.to_vec();
-    let max_tokens = config.max_tokens;
-    let thinking = config.thinking.clone();
-    let reason = config.billing_reason;
+    let tools_owned = ctx.tools.to_vec();
+    let max_tokens = ctx.config.max_tokens;
+    let thinking = ctx.config.thinking.clone();
+    let reason = ctx.config.billing_reason;
 
-    let model_override = config.model_override.clone();
+    let model_override = ctx.config.model_override.clone();
     let stream_handle = tokio::spawn(async move {
         llm_clone
-            .complete_stream_with_tools_opt_model(
-                model_override.as_deref(),
-                &api_key_owned, &system_owned, msgs_owned, tools_owned,
-                max_tokens, thinking, claude_tx, reason, None,
-            )
+            .complete_stream_with_tools(MeteredStreamRequest {
+                api_key: &api_key_owned,
+                system_prompt: &system_owned,
+                messages: msgs_owned,
+                tools: tools_owned,
+                max_tokens,
+                thinking,
+                event_tx: claude_tx,
+                model_override: model_override.as_deref(),
+                billing_reason: reason,
+                metadata: None,
+            })
             .await
     });
 
@@ -81,20 +79,20 @@ pub(crate) async fn run_single_iteration(
     let mut stream_error_forwarded = false;
 
     let iter_timed_out = loop {
-        match tokio::time::timeout(config.stream_timeout, claude_rx.recv()).await {
+        match tokio::time::timeout(ctx.config.stream_timeout, claude_rx.recv()).await {
             Ok(Some(evt)) => match evt {
                 ClaudeStreamEvent::Delta(text) => {
                     iter_text.push_str(&text);
-                    send_or_log(event_tx, ToolLoopEvent::Delta(text));
+                    send_or_log(ctx.event_tx, ToolLoopEvent::Delta(text));
                 }
                 ClaudeStreamEvent::ToolUseStarted { id, name } => {
-                    send_or_log(event_tx, ToolLoopEvent::ToolUseStarted {
+                    send_or_log(ctx.event_tx, ToolLoopEvent::ToolUseStarted {
                         id: id.clone(),
                         name: name.clone(),
                     });
                 }
                 ClaudeStreamEvent::ToolUse { id, name, input } => {
-                    send_or_log(event_tx, ToolLoopEvent::ToolUseDetected {
+                    send_or_log(ctx.event_tx, ToolLoopEvent::ToolUseDetected {
                         id: id.clone(),
                         name: name.clone(),
                         input: input.clone(),
@@ -103,19 +101,19 @@ pub(crate) async fn run_single_iteration(
                 }
                 ClaudeStreamEvent::ThinkingDelta(text) => {
                     state.total_thinking.push_str(&text);
-                    send_or_log(event_tx, ToolLoopEvent::ThinkingDelta(text));
+                    send_or_log(ctx.event_tx, ToolLoopEvent::ThinkingDelta(text));
                 }
                 ClaudeStreamEvent::Done { stop_reason, .. } => {
                     info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Tool loop iteration done");
                 }
                 ClaudeStreamEvent::Error(msg) => {
-                    send_or_log(event_tx, ToolLoopEvent::Error(msg));
+                    send_or_log(ctx.event_tx, ToolLoopEvent::Error(msg));
                     stream_error_forwarded = true;
                 }
             },
             Ok(None) => break false,
             Err(_) => {
-                warn!(iteration, "Tool loop streaming timed out after {}s", config.stream_timeout.as_secs());
+                warn!(iteration, "Tool loop streaming timed out after {}s", ctx.config.stream_timeout.as_secs());
                 stream_handle.abort();
                 break true;
             }
@@ -123,14 +121,14 @@ pub(crate) async fn run_single_iteration(
     };
 
     if iter_timed_out {
-        send_or_log(event_tx, ToolLoopEvent::Error("LLM streaming timed out".to_string()));
+        send_or_log(ctx.event_tx, ToolLoopEvent::Error("LLM streaming timed out".to_string()));
         append_text(&mut state.total_text, &iter_text);
         return IterationOutcome::EarlyReturn(state.build_result(iteration + 1, true, false, None));
     }
 
     handle_stream_result(
         stream_handle, iter_text, iter_tool_calls,
-        stream_error_forwarded, event_tx, state, iteration,
+        stream_error_forwarded, ctx.event_tx, state, iteration,
     )
     .await
 }

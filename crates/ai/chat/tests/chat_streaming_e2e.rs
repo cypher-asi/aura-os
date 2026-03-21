@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use aura_billing::testutil;
 use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_core::*;
-use aura_chat::{ChatService, ChatStreamEvent};
+use aura_chat::{ChatMessageParams, ChatService, ChatServiceDeps, ChatStreamEvent};
 
 use aura_projects::{CreateProjectInput, ProjectService};
 use aura_settings::SettingsService;
@@ -90,13 +90,11 @@ async fn setup(mock: Arc<MockLlmProvider>) -> TestHarness {
     };
 
     let chat_service = ChatService::with_config(
-        store,
-        settings,
-        llm,
-        spec_gen,
-        project_service,
-        task_service,
-        Some(storage_client),
+        ChatServiceDeps {
+            store, settings, llm, spec_gen,
+            project_service, task_service,
+            storage_client: Some(storage_client),
+        },
         LlmConfig::from_env(),
     );
 
@@ -152,12 +150,14 @@ async fn chat_streaming_simple_text_event_sequence() {
 
     h.chat_service
         .send_message_streaming(
-            &h.project_id,
-            &h.agent_instance_id,
-            &h.agent_instance,
-            "Hello world",
-            None,
-            &[],
+            ChatMessageParams {
+                project_id: &h.project_id,
+                agent_instance_id: &h.agent_instance_id,
+                agent_instance: &h.agent_instance,
+                content: "Hello world",
+                action: None,
+                attachments: &[],
+            },
             tx,
         )
         .await;
@@ -223,12 +223,14 @@ async fn chat_streaming_tool_use_event_sequence() {
 
     h.chat_service
         .send_message_streaming(
-            &h.project_id,
-            &h.agent_instance_id,
-            &h.agent_instance,
-            "Find all Rust files",
-            None,
-            &[],
+            ChatMessageParams {
+                project_id: &h.project_id,
+                agent_instance_id: &h.agent_instance_id,
+                agent_instance: &h.agent_instance,
+                content: "Find all Rust files",
+                action: None,
+                attachments: &[],
+            },
             tx,
         )
         .await;
@@ -271,12 +273,14 @@ async fn chat_streaming_error_event_on_llm_failure() {
 
     h.chat_service
         .send_message_streaming(
-            &h.project_id,
-            &h.agent_instance_id,
-            &h.agent_instance,
-            "This should fail",
-            None,
-            &[],
+            ChatMessageParams {
+                project_id: &h.project_id,
+                agent_instance_id: &h.agent_instance_id,
+                agent_instance: &h.agent_instance,
+                content: "This should fail",
+                action: None,
+                attachments: &[],
+            },
             tx,
         )
         .await;

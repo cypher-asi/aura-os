@@ -7,7 +7,7 @@ use aura_store::RocksStore;
 
 use crate::client::BillingClient;
 use crate::testutil;
-use super::MeteredLlm;
+use super::{MeteredCompletionRequest, MeteredLlm};
 
 #[tokio::test]
 async fn test_no_access_token_returns_insufficient_credits() {
@@ -21,7 +21,10 @@ async fn test_no_access_token_returns_insufficient_credits() {
     let metered = MeteredLlm::new(mock, billing, store);
 
     let err = metered
-        .complete("key", "sys", "hi", 100, "test", None)
+        .complete(MeteredCompletionRequest {
+            model: None, api_key: "key", system_prompt: "sys",
+            user_message: "hi", max_tokens: 100, billing_reason: "test", metadata: None,
+        })
         .await
         .unwrap_err();
 
@@ -37,7 +40,10 @@ async fn test_complete_calls_provider_and_debits() {
     let (metered, _tmp) = testutil::make_test_llm(mock.clone()).await;
 
     let resp = metered
-        .complete("key", "sys", "msg", 200, "reason", None)
+        .complete(MeteredCompletionRequest {
+            model: None, api_key: "key", system_prompt: "sys",
+            user_message: "msg", max_tokens: 200, billing_reason: "reason", metadata: None,
+        })
         .await
         .unwrap();
 
@@ -58,11 +64,17 @@ async fn test_credits_exhausted_flag_persists_across_calls() {
 
     let metered = MeteredLlm::new(mock, billing, store);
 
-    let r1 = metered.complete("k", "s", "m", 10, "r", None).await;
+    let r1 = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "k", system_prompt: "s",
+        user_message: "m", max_tokens: 10, billing_reason: "r", metadata: None,
+    }).await;
     assert!(r1.unwrap_err().is_insufficient_credits());
     assert!(metered.is_credits_exhausted());
 
-    let r2 = metered.complete("k", "s", "m", 10, "r", None).await;
+    let r2 = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "k", system_prompt: "s",
+        user_message: "m", max_tokens: 10, billing_reason: "r", metadata: None,
+    }).await;
     assert!(r2.unwrap_err().is_insufficient_credits());
     assert!(metered.is_credits_exhausted());
 }
@@ -76,7 +88,13 @@ async fn test_complete_stream_forwards_events() {
 
     let (event_tx, mut event_rx) = mpsc::unbounded_channel();
     let text = metered
-        .complete_stream("key", "sys", "msg", 200, event_tx, "stream-test", None)
+        .complete_stream(
+            MeteredCompletionRequest {
+                model: None, api_key: "key", system_prompt: "sys",
+                user_message: "msg", max_tokens: 200, billing_reason: "stream-test", metadata: None,
+            },
+            event_tx,
+        )
         .await
         .unwrap();
 
@@ -209,8 +227,14 @@ async fn test_pre_flight_ttl_caching() {
     ]));
     let metered = MeteredLlm::new(mock, billing, store);
 
-    metered.complete("key", "sys", "msg", 100, "r", None).await.unwrap();
-    metered.complete("key", "sys", "msg", 100, "r", None).await.unwrap();
+    metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 100, billing_reason: "r", metadata: None,
+    }).await.unwrap();
+    metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 100, billing_reason: "r", metadata: None,
+    }).await.unwrap();
 
     assert!(!metered.is_credits_exhausted());
 }
@@ -231,7 +255,10 @@ async fn test_pre_flight_failure_sets_exhausted() {
     ]));
     let metered = MeteredLlm::new(mock, billing, store);
 
-    let err = metered.complete("key", "sys", "msg", 100, "r", None).await.unwrap_err();
+    let err = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 100, billing_reason: "r", metadata: None,
+    }).await.unwrap_err();
     assert!(err.is_insufficient_credits());
     assert!(metered.is_credits_exhausted());
 }
@@ -253,7 +280,10 @@ async fn test_credits_exhausted_then_topped_up() {
     ]));
     let metered = MeteredLlm::new(mock, billing, store);
 
-    let err = metered.complete("key", "sys", "msg", 100, "r", None).await.unwrap_err();
+    let err = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 100, billing_reason: "r", metadata: None,
+    }).await.unwrap_err();
     assert!(err.is_insufficient_credits());
     assert!(metered.is_credits_exhausted());
 
@@ -262,7 +292,10 @@ async fn test_credits_exhausted_then_topped_up() {
         guard.balance = 999_999;
     }
 
-    let resp = metered.complete("key", "sys", "msg", 100, "r", None).await.unwrap();
+    let resp = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 100, billing_reason: "r", metadata: None,
+    }).await.unwrap();
     assert_eq!(resp.text, "a");
     assert!(!metered.is_credits_exhausted());
 }
@@ -280,7 +313,10 @@ async fn test_complete_with_model_uses_correct_rate() {
     let (metered, _tmp) = make_test_llm_stateful(mock, state.clone()).await;
 
     let resp = metered
-        .complete_with_model(aura_claude::FAST_MODEL, "key", "sys", "msg", 200, "test", None)
+        .complete(MeteredCompletionRequest {
+            model: Some(aura_claude::FAST_MODEL), api_key: "key", system_prompt: "sys",
+            user_message: "msg", max_tokens: 200, billing_reason: "test", metadata: None,
+        })
         .await
         .unwrap();
     assert_eq!(resp.text, "haiku response");
@@ -310,7 +346,10 @@ async fn test_insufficient_credits_during_debit_drains_remaining() {
     ]));
     let metered = MeteredLlm::new(mock, billing, store);
 
-    let err = metered.complete("key", "sys", "msg", 200, "test", None).await.unwrap_err();
+    let err = metered.complete(MeteredCompletionRequest {
+        model: None, api_key: "key", system_prompt: "sys",
+        user_message: "msg", max_tokens: 200, billing_reason: "test", metadata: None,
+    }).await.unwrap_err();
     assert!(err.is_insufficient_credits());
     assert!(metered.is_credits_exhausted());
 

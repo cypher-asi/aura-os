@@ -137,7 +137,15 @@ impl SpecGenerationService {
 
         let llm_response = self
             .llm
-            .complete(&api_key, SPEC_GENERATION_SYSTEM_PROMPT, &requirements_content, MAX_TOKENS, "aura_spec_gen", None)
+            .complete(aura_billing::MeteredCompletionRequest {
+                model: None,
+                api_key: &api_key,
+                system_prompt: SPEC_GENERATION_SYSTEM_PROMPT,
+                user_message: &requirements_content,
+                max_tokens: MAX_TOKENS,
+                billing_reason: "aura_spec_gen",
+                metadata: None,
+            })
             .await
             .map_err(|e| {
                 error!(%project_id, error = %e, "LLM call failed");

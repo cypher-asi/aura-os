@@ -3,7 +3,8 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{error, info};
 use aura_core::*;
-use aura_claude::{ThinkingConfig, ToolDefinition};
+use aura_claude::ThinkingConfig;
+use aura_billing::MeteredCompletionRequest;
 use aura_tools::agent_tool_definitions;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatAttachment, ChatService, ChatStreamEvent};
@@ -13,7 +14,37 @@ use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, SingleProjectResolver};
-use crate::tool_loop::{run_tool_loop, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult};
+use crate::tool_loop::{run_tool_loop, ToolLoopConfig, ToolLoopEvent, ToolLoopInput, ToolLoopResult};
+
+struct ChatLoopContext<'a> {
+    project_id: &'a ProjectId,
+    agent_instance_id: &'a AgentInstanceId,
+    agent_instance: &'a AgentInstance,
+    api_key: &'a str,
+    stored_messages: &'a [Message],
+    tx: &'a mpsc::UnboundedSender<ChatStreamEvent>,
+    active_session_id: Option<&'a str>,
+}
+
+pub struct ChatMessageParams<'a> {
+    pub project_id: &'a ProjectId,
+    pub agent_instance_id: &'a AgentInstanceId,
+    pub agent_instance: &'a AgentInstance,
+    pub content: &'a str,
+    pub action: Option<&'a str>,
+    pub attachments: &'a [ChatAttachment],
+}
+
+pub struct AgentMessageParams<'a> {
+    pub agent_id: &'a AgentId,
+    pub agent: &'a Agent,
+    pub projects: &'a [Project],
+    pub storage_messages: Vec<Message>,
+    pub content: &'a str,
+    pub action: Option<&'a str>,
+    pub attachments: &'a [ChatAttachment],
+    pub storage_anchor: Option<(ProjectId, AgentInstanceId)>,
+}
 
 impl ChatService {
     pub(crate) async fn handle_chat_with_tools(
@@ -63,9 +94,28 @@ impl ChatService {
 
         let thinking_start = std::time::Instant::now();
         let tools = agent_tool_definitions();
-        let result = self
-            .run_forwarded_tool_loop(&api_key, &system, api_messages, tools, &config, &executor, tx, &tool_blocks)
-            .await;
+
+        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
+        let tx_clone = tx.clone();
+        let fwd_blocks = Arc::clone(&tool_blocks);
+        let forwarder = tokio::spawn(async move {
+            while let Some(evt) = loop_rx.recv().await {
+                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
+            }
+        });
+        let result = run_tool_loop(ToolLoopInput {
+            llm: self.llm.clone(),
+            api_key: &api_key,
+            system_prompt: &system,
+            initial_messages: api_messages,
+            tools,
+            config: &config,
+            executor: &executor,
+            event_tx: &loop_tx,
+        })
+        .await;
+        drop(loop_tx);
+        let _ = forwarder.await;
 
         self.update_instance_token_usage(
             project_id, agent_instance_id,
@@ -79,12 +129,12 @@ impl ChatService {
             "Chat loop finished"
         );
 
-        self.save_assistant_message(
+        let chat_ctx = ChatLoopContext {
             project_id, agent_instance_id, agent_instance,
-            &api_key, &stored_messages, result, tool_blocks,
-            thinking_start, tx, active_session_id,
-        )
-        .await;
+            api_key: &api_key, stored_messages: &stored_messages,
+            tx, active_session_id,
+        };
+        self.save_assistant_message(&chat_ctx, result, tool_blocks, thinking_start).await;
     }
 
     async fn prepare_chat_context(
@@ -184,36 +234,6 @@ impl ChatService {
         }
     }
 
-    async fn run_forwarded_tool_loop(
-        &self,
-        api_key: &str,
-        system: &str,
-        api_messages: Vec<aura_claude::RichMessage>,
-        tools: Arc<[ToolDefinition]>,
-        config: &ToolLoopConfig,
-        executor: &dyn ToolExecutor,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-        tool_blocks: &ContentBlockAccumulator,
-    ) -> ToolLoopResult {
-        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
-        let tx_clone = tx.clone();
-        let fwd_blocks = Arc::clone(tool_blocks);
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = loop_rx.recv().await {
-                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
-            }
-        });
-
-        let result = run_tool_loop(
-            self.llm.clone(), api_key, system, api_messages,
-            tools, config, executor, &loop_tx,
-        )
-        .await;
-        drop(loop_tx);
-        let _ = forwarder.await;
-        result
-    }
-
     pub(crate) fn update_instance_token_usage(
         &self,
         _project_id: &ProjectId,
@@ -251,16 +271,10 @@ impl ChatService {
 
     async fn save_assistant_message(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        agent_instance: &AgentInstance,
-        api_key: &str,
-        stored_messages: &[Message],
+        ctx: &ChatLoopContext<'_>,
         result: ToolLoopResult,
         tool_blocks: ContentBlockAccumulator,
         thinking_start: std::time::Instant,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-        active_session_id: Option<&str>,
     ) {
         let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
             Ok(mutex) => mutex.into_inner().unwrap_or_default(),
@@ -272,25 +286,25 @@ impl ChatService {
         if !result.text.is_empty() || has_tool_calls {
             let assistant_reply = result.text.clone();
             let (assistant_msg, thinking, thinking_duration_ms) = Self::build_assistant_message(
-                project_id, agent_instance_id, &result,
+                ctx.project_id, ctx.agent_instance_id, &result,
                 content_blocks.as_deref(), thinking_start,
             );
-            send_or_log(tx, ChatStreamEvent::MessageSaved(assistant_msg));
-            self.save_message_to_storage(
-                project_id,
-                agent_instance_id,
-                "assistant",
-                &assistant_reply,
-                content_blocks.as_deref(),
-                thinking.as_deref(),
+            send_or_log(ctx.tx, ChatStreamEvent::MessageSaved(assistant_msg));
+            self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
+                project_id: ctx.project_id,
+                agent_instance_id: ctx.agent_instance_id,
+                role: "assistant",
+                content: &assistant_reply,
+                content_blocks: content_blocks.as_deref(),
+                thinking: thinking.as_deref(),
                 thinking_duration_ms,
-                Some(result.total_input_tokens),
-                Some(result.total_output_tokens),
-                active_session_id,
-            )
+                input_tokens: Some(result.total_input_tokens),
+                output_tokens: Some(result.total_output_tokens),
+                session_id: ctx.active_session_id,
+            })
             .await;
 
-            if let Some(sid) = active_session_id {
+            if let Some(sid) = ctx.active_session_id {
                 self.update_session_context_usage(
                     sid,
                     result.total_input_tokens,
@@ -300,30 +314,21 @@ impl ChatService {
             }
 
             if !assistant_reply.is_empty() {
-                self.maybe_generate_title(
-                    project_id, agent_instance_id, agent_instance,
-                    api_key, stored_messages, &assistant_reply, tx,
-                )
-                .await;
+                self.maybe_generate_title(ctx, &assistant_reply).await;
             }
         }
     }
 
     async fn maybe_generate_title(
         &self,
-        project_id: &ProjectId,
-        _agent_instance_id: &AgentInstanceId,
-        agent_instance: &AgentInstance,
-        api_key: &str,
-        messages: &[Message],
+        ctx: &ChatLoopContext<'_>,
         assistant_reply: &str,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
-        if agent_instance.name != "New Chat" {
+        if ctx.agent_instance.name != "New Chat" {
             return;
         }
 
-        let first_user_msg = messages
+        let first_user_msg = ctx.stored_messages
             .iter()
             .find(|m| m.role == ChatRole::User)
             .map(|m| m.content.as_str())
@@ -338,18 +343,24 @@ impl ChatService {
 
         match self
             .llm
-            .complete_with_model(aura_claude::FAST_MODEL, api_key, TITLE_GEN_SYSTEM_PROMPT, &title_prompt, 30, "aura_title_gen", None)
+            .complete(MeteredCompletionRequest {
+                model: Some(aura_claude::FAST_MODEL), api_key: ctx.api_key,
+                system_prompt: TITLE_GEN_SYSTEM_PROMPT,
+                user_message: &title_prompt, max_tokens: 30,
+                billing_reason: "aura_title_gen", metadata: None,
+            })
             .await
         {
             Ok(resp) => {
                 let title = resp.text;
                 let title = title.trim().trim_matches('"').to_string();
-                let mut instance = agent_instance.clone();
+                let mut instance = ctx.agent_instance.clone();
                 instance.name = title;
                 instance.updated_at = Utc::now();
-                send_or_log(tx, ChatStreamEvent::AgentInstanceUpdated(instance));
+                send_or_log(ctx.tx, ChatStreamEvent::AgentInstanceUpdated(instance));
             }
             Err(e) => {
+                let project_id = ctx.project_id;
                 error!(%project_id, error = %e, "Failed to generate title");
             }
         }
@@ -368,18 +379,18 @@ impl ChatService {
             .ensure_active_session(project_id, agent_instance_id)
             .await;
         if let Some(ref session_id) = active_session_id {
-            self.save_message_to_storage(
+            self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
                 project_id,
                 agent_instance_id,
-                "user",
+                role: "user",
                 content,
                 content_blocks,
-                None,
-                None,
-                None,
-                None,
-                Some(session_id.as_str()),
-            )
+                thinking: None,
+                thinking_duration_ms: None,
+                input_tokens: None,
+                output_tokens: None,
+                session_id: Some(session_id.as_str()),
+            })
             .await;
         }
         active_session_id
@@ -387,14 +398,14 @@ impl ChatService {
 
     pub async fn send_message_streaming(
         &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        agent_instance: &AgentInstance,
-        content: &str,
-        action: Option<&str>,
-        attachments: &[ChatAttachment],
+        params: ChatMessageParams<'_>,
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
+        let ChatMessageParams {
+            project_id, agent_instance_id, agent_instance,
+            content, action, attachments,
+        } = params;
+
         let send = |evt: ChatStreamEvent| {
             send_or_log(&tx, evt);
         };
@@ -436,16 +447,13 @@ impl ChatService {
 
     pub async fn send_agent_message_streaming(
         &self,
-        agent_id: &AgentId,
-        agent: &Agent,
-        projects: &[Project],
-        storage_messages: Vec<Message>,
-        content: &str,
-        _action: Option<&str>,
-        attachments: &[ChatAttachment],
-        storage_anchor: Option<(ProjectId, AgentInstanceId)>,
+        params: AgentMessageParams<'_>,
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
+        let AgentMessageParams {
+            agent_id, agent, projects, storage_messages,
+            content, action: _action, attachments, storage_anchor,
+        } = params;
         let send = |evt: ChatStreamEvent| {
             send_or_log(&tx, evt);
         };
@@ -482,13 +490,15 @@ impl ChatService {
         messages_for_context.push(user_msg);
 
         self.handle_agent_chat_with_tools(
-            agent_id,
-            agent,
-            projects,
-            messages_for_context,
-            &anchor_project_id,
-            &anchor_instance_id,
-            active_session_id.as_deref(),
+            crate::chat_agent::AgentChatParams {
+                agent_id,
+                agent,
+                projects,
+                stored_messages: messages_for_context,
+                anchor_project_id: &anchor_project_id,
+                anchor_instance_id: &anchor_instance_id,
+                active_session_id: active_session_id.as_deref(),
+            },
             &tx,
         )
         .await;

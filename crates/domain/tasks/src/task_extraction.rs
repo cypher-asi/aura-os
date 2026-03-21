@@ -5,7 +5,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use aura_core::*;
-use aura_billing::MeteredLlm;
+use aura_billing::{MeteredCompletionRequest, MeteredLlm};
 use aura_settings::SettingsService;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
@@ -77,15 +77,15 @@ impl TaskExtractionService {
     ) -> Result<Vec<(RawTaskOutput, u32)>, TaskError> {
         let resp = self
             .llm
-            .complete_with_model(
-                aura_claude::MID_MODEL,
+            .complete(MeteredCompletionRequest {
+                model: Some(aura_claude::MID_MODEL),
                 api_key,
-                TASK_EXTRACTION_SYSTEM_PROMPT,
-                &spec.markdown_contents,
-                EXTRACTION_MAX_TOKENS,
-                "aura_task_extraction",
-                None,
-            )
+                system_prompt: TASK_EXTRACTION_SYSTEM_PROMPT,
+                user_message: &spec.markdown_contents,
+                max_tokens: EXTRACTION_MAX_TOKENS,
+                billing_reason: "aura_task_extraction",
+                metadata: None,
+            })
             .await?;
 
         let raw_tasks = Self::parse_extraction_response(&resp.text)?;

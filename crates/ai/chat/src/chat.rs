@@ -68,37 +68,30 @@ pub struct ChatService {
     pub(crate) llm_config: LlmConfig,
 }
 
+pub struct ChatServiceDeps {
+    pub store: Arc<RocksStore>,
+    pub settings: Arc<SettingsService>,
+    pub llm: Arc<MeteredLlm>,
+    pub spec_gen: Arc<SpecGenerationService>,
+    pub project_service: Arc<ProjectService>,
+    pub task_service: Arc<TaskService>,
+    pub storage_client: Option<Arc<StorageClient>>,
+}
+
 impl ChatService {
-    pub fn new(
-        store: Arc<RocksStore>,
-        settings: Arc<SettingsService>,
-        llm: Arc<MeteredLlm>,
-        spec_gen: Arc<SpecGenerationService>,
-        project_service: Arc<ProjectService>,
-        task_service: Arc<TaskService>,
-        storage_client: Option<Arc<StorageClient>>,
-    ) -> Self {
-        Self::with_config(store, settings, llm, spec_gen, project_service, task_service, storage_client, LlmConfig::from_env())
+    pub fn new(deps: ChatServiceDeps) -> Self {
+        Self::with_config(deps, LlmConfig::from_env())
     }
 
-    pub fn with_config(
-        store: Arc<RocksStore>,
-        settings: Arc<SettingsService>,
-        llm: Arc<MeteredLlm>,
-        spec_gen: Arc<SpecGenerationService>,
-        project_service: Arc<ProjectService>,
-        task_service: Arc<TaskService>,
-        storage_client: Option<Arc<StorageClient>>,
-        llm_config: LlmConfig,
-    ) -> Self {
+    pub fn with_config(deps: ChatServiceDeps, llm_config: LlmConfig) -> Self {
         Self {
-            store,
-            settings,
-            llm,
-            spec_gen,
-            project_service,
-            task_service,
-            storage_client,
+            store: deps.store,
+            settings: deps.settings,
+            llm: deps.llm,
+            spec_gen: deps.spec_gen,
+            project_service: deps.project_service,
+            task_service: deps.task_service,
+            storage_client: deps.storage_client,
             llm_config,
         }
     }

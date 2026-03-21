@@ -1,6 +1,7 @@
 use tracing::{info, warn};
 
 use aura_claude::{self, ContentBlock, MessageContent, RichMessage};
+use aura_billing::MeteredCompletionRequest;
 use aura_core::*;
 
 use crate::ChatService;
@@ -232,7 +233,10 @@ impl ChatService {
 
         match self
             .llm
-            .complete_with_model(aura_claude::FAST_MODEL, api_key, CONTEXT_SUMMARY_SYSTEM_PROMPT, &summary_input, 1024, "aura_context_summary", None)
+            .complete(MeteredCompletionRequest {
+                model: Some(aura_claude::FAST_MODEL), api_key, system_prompt: CONTEXT_SUMMARY_SYSTEM_PROMPT,
+                user_message: &summary_input, max_tokens: 1024, billing_reason: "aura_context_summary", metadata: None,
+            })
             .await
         {
             Ok(resp) => {

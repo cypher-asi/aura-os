@@ -1,7 +1,35 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use aura_claude::{ThinkingConfig, ToolCall};
+use tokio::sync::mpsc;
+use aura_billing::MeteredLlm;
+use aura_claude::{RichMessage, ThinkingConfig, ToolCall, ToolDefinition};
+
+// ---------------------------------------------------------------------------
+// Per-call input bundle (replaces 8 positional args to `run_tool_loop`)
+// ---------------------------------------------------------------------------
+
+pub struct ToolLoopInput<'a> {
+    pub llm: Arc<MeteredLlm>,
+    pub api_key: &'a str,
+    pub system_prompt: &'a str,
+    pub initial_messages: Vec<RichMessage>,
+    pub tools: Arc<[ToolDefinition]>,
+    pub config: &'a ToolLoopConfig,
+    pub executor: &'a (dyn ToolExecutor + 'a),
+    pub event_tx: &'a mpsc::UnboundedSender<ToolLoopEvent>,
+}
+
+/// Borrowed subset of [`ToolLoopInput`] that stays constant across iterations.
+pub(crate) struct IterationContext<'a> {
+    pub llm: &'a Arc<MeteredLlm>,
+    pub api_key: &'a str,
+    pub system_prompt: &'a str,
+    pub tools: &'a Arc<[ToolDefinition]>,
+    pub config: &'a ToolLoopConfig,
+    pub event_tx: &'a mpsc::UnboundedSender<ToolLoopEvent>,
+}
 
 // ---------------------------------------------------------------------------
 // Configuration

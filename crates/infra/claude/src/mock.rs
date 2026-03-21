@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, Mutex};
 use crate::channel_ext::send_or_log;
 use crate::{
     ClaudeClientError, ClaudeStreamEvent, LlmProvider, LlmResponse, LlmStreamEvent, RichMessage,
-    ThinkingConfig, ToolCall, ToolDefinition, ToolStreamResponse,
+    ToolCall, ToolDefinition, ToolStreamRequest, ToolStreamResponse,
 };
 
 /// A single canned response that [`MockLlmProvider`] will return.
@@ -221,14 +221,11 @@ impl LlmProvider for MockLlmProvider {
 
     async fn complete_stream_with_tools(
         &self,
-        _api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        _thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+        req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
+        let ToolStreamRequest {
+            system_prompt, messages, tools, max_tokens, event_tx, ..
+        } = req;
         self.record("complete_stream_with_tools", system_prompt, messages, tools, max_tokens).await;
         let resp = self.next_response().await?;
         Self::send_events(&resp, &event_tx);
@@ -298,7 +295,16 @@ mod tests {
 
         let (tx, mut rx) = mpsc::unbounded_channel();
         let resp = mock
-            .complete_stream_with_tools("key", "sys", vec![], vec![], 1024, None, tx)
+            .complete_stream_with_tools(ToolStreamRequest {
+                api_key: "key",
+                system_prompt: "sys",
+                messages: vec![],
+                tools: vec![],
+                max_tokens: 1024,
+                thinking: None,
+                event_tx: tx,
+                model_override: None,
+            })
             .await
             .unwrap();
 

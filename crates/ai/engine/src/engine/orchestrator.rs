@@ -359,11 +359,13 @@ impl DevLoopEngine {
             let result = if let Some(cmd) = shell::extract_shell_command(&task) {
                 Some(self.execute_shell_task(&project, &task, &cmd, agent_instance_id).await)
             } else {
+                let agentic_params = super::executor_agentic::AgenticTaskParams {
+                    project_id: &project_id, task: &task, session: &ctx.session,
+                    api_key: &ctx.api_key, agent: agent.as_ref(),
+                    work_log: &ctx.work_log, workspace_cache: &ctx.workspace_cache,
+                };
                 tokio::select! {
-                    r = self.execute_task_agentic(
-                        &project_id, &task, &ctx.session, &ctx.api_key,
-                        agent.as_ref(), &ctx.work_log, &ctx.workspace_cache,
-                    ) => Some(r),
+                    r = self.execute_task_agentic(&agentic_params) => Some(r),
                     _ = stop_rx.changed() => None,
                 }
             };
@@ -371,9 +373,14 @@ impl DevLoopEngine {
                 return Ok(ctx.handle_interruption(self, &task, &stop_rx).await);
             };
             let outcome = self.finalize_task_execution(
-                project_id, agent_instance_id, &task, &ctx.session, &ctx.api_key,
-                &ctx.session.user_id, &ctx.session.model, task_start, &baseline,
-                &build_baseline, result, &ctx.workspace_cache,
+                super::executor::TaskFinalizationParams {
+                    project_id, agent_instance_id,
+                    task: &task, session: &ctx.session, api_key: &ctx.api_key,
+                    model: &ctx.session.model, task_start,
+                    baseline_test_failures: &baseline,
+                    baseline_build_errors: &build_baseline,
+                    workspace_cache: &ctx.workspace_cache,
+                }, result,
             ).await?;
             let failed = ctx.process_outcome(self, &task, outcome).await?;
             self.agent_instance_service.finish_working(&project_id, &agent_instance_id).await?;

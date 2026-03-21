@@ -10,7 +10,7 @@ use futures_util::future::join_all;
 use tracing::{info, warn};
 
 use aura_core::{AgentId, AgentInstanceId, Message, ProjectId};
-use aura_chat::ChatStreamEvent;
+use aura_chat::{AgentMessageParams, ChatMessageParams, ChatStreamEvent};
 use aura_engine::EngineEvent;
 
 use crate::channel_ext::send_or_log;
@@ -148,9 +148,17 @@ pub async fn send_agent_message_stream(
         if let Some(ref agent) = agent {
             chat_service
                 .send_agent_message_streaming(
-                    &agent_id, agent, &projects, messages,
-                    &content, action.as_deref(), &attachments,
-                    storage_anchor, tx,
+                    AgentMessageParams {
+                        agent_id: &agent_id,
+                        agent,
+                        projects: &projects,
+                        storage_messages: messages,
+                        content: &content,
+                        action: action.as_deref(),
+                        attachments: &attachments,
+                        storage_anchor,
+                    },
+                    tx,
                 )
                 .await;
         } else {
@@ -262,7 +270,13 @@ pub async fn send_message_stream(
     tokio::spawn(async move {
         if let Some(ref instance) = agent_instance {
             chat_service
-                .send_message_streaming(&pid, &aiid, instance, &content, action.as_deref(), &attachments, tx)
+                .send_message_streaming(
+                    ChatMessageParams {
+                        project_id: &pid, agent_instance_id: &aiid, agent_instance: instance,
+                        content: &content, action: action.as_deref(), attachments: &attachments,
+                    },
+                    tx,
+                )
                 .await;
         } else {
             send_or_log(&tx, ChatStreamEvent::Error("agent instance not found".to_string()));

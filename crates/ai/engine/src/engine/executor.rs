@@ -15,6 +15,19 @@ use crate::events::EngineEvent;
 use crate::file_ops::{self, WorkspaceCache};
 use crate::metrics;
 
+pub(crate) struct TaskFinalizationParams<'a> {
+    pub project_id: ProjectId,
+    pub agent_instance_id: AgentInstanceId,
+    pub task: &'a Task,
+    pub session: &'a Session,
+    pub api_key: &'a str,
+    pub model: &'a Option<String>,
+    pub task_start: Instant,
+    pub baseline_test_failures: &'a HashSet<String>,
+    pub baseline_build_errors: &'a HashSet<String>,
+    pub workspace_cache: &'a WorkspaceCache,
+}
+
 impl DevLoopEngine {
     pub async fn run_single_task(
         self: Arc<Self>,
@@ -113,14 +126,20 @@ impl DevLoopEngine {
             let project = self.project_service.get_project_async(&project_id).await?;
             self.execute_shell_task(&project, &task, &cmd, aiid).await
         } else {
-            self.execute_task_agentic(&project_id, &task, &session, &api_key, Some(&agent), &[], &workspace_cache).await
+            self.execute_task_agentic(&super::executor_agentic::AgenticTaskParams {
+                project_id: &project_id, task: &task, session: &session, api_key: &api_key,
+                agent: Some(&agent), work_log: &[], workspace_cache: &workspace_cache,
+            }).await
         };
 
-        let outcome = self.finalize_task_execution(
-            project_id, aiid, &task, &session, &api_key,
-            &user_id, &model, task_start, &baseline_test_failures,
-            &baseline_build_errors, execution_result, &workspace_cache,
-        ).await?;
+        let outcome = self.finalize_task_execution(TaskFinalizationParams {
+            project_id, agent_instance_id: aiid,
+            task: &task, session: &session, api_key: &api_key,
+            model: &model, task_start,
+            baseline_test_failures: &baseline_test_failures,
+            baseline_build_errors: &baseline_build_errors,
+            workspace_cache: &workspace_cache,
+        }, execution_result).await?;
 
         self.record_single_task_metrics(
             &task, &outcome, &project_root, &project_id, &model_name, &fee_schedule,
@@ -139,30 +158,20 @@ impl DevLoopEngine {
 
     pub(crate) async fn finalize_task_execution(
         &self,
-        project_id: ProjectId,
-        agent_instance_id: AgentInstanceId,
-        task: &Task,
-        session: &Session,
-        api_key: &str,
-        _user_id: &Option<String>,
-        model: &Option<String>,
-        task_start: Instant,
-        baseline_test_failures: &HashSet<String>,
-        baseline_build_errors: &HashSet<String>,
+        fp: TaskFinalizationParams<'_>,
         execution_result: Result<TaskExecution, EngineError>,
-        workspace_cache: &WorkspaceCache,
     ) -> Result<TaskOutcome, EngineError> {
         let execution = match execution_result {
             Ok(exec) => exec,
             Err(e) => {
                 return Ok(self.handle_execution_error(
-                    project_id, agent_instance_id, task, model, task_start, e,
+                    fp.project_id, fp.agent_instance_id, fp.task, fp.model, fp.task_start, e,
                 ).await);
             }
         };
 
-        let llm_duration_ms = task_start.elapsed().as_millis() as u64;
-        let project = self.project_service.get_project_async(&project_id).await?;
+        let llm_duration_ms = fp.task_start.elapsed().as_millis() as u64;
+        let project = self.project_service.get_project_async(&fp.project_id).await?;
         let base_path = Path::new(&project.linked_folder_path);
 
         let file_changes = if execution.files_already_applied {
@@ -177,28 +186,31 @@ impl DevLoopEngine {
             .unwrap_or_default()
         };
 
-        let _write_guard = self.write_coordinator.acquire(&project_id).await;
+        let _write_guard = self.write_coordinator.acquire(&fp.project_id).await;
 
         let file_ops_start = Instant::now();
         if !execution.files_already_applied {
             if let Err(e) = file_ops::apply_file_ops(base_path, &execution.file_ops).await {
                 return Ok(self.handle_file_ops_failure(
-                    project_id, agent_instance_id, task, session, model,
-                    task_start, llm_duration_ms, &execution, e,
+                    fp.project_id, fp.agent_instance_id, fp.task, fp.session, fp.model,
+                    fp.task_start, llm_duration_ms, &execution, e,
                 ).await);
             }
         }
         let file_ops_duration_ms = file_ops_start.elapsed().as_millis() as u64;
-        self.emit_file_ops_applied(project_id, agent_instance_id, task, &execution.file_ops);
+        self.emit_file_ops_applied(fp.project_id, fp.agent_instance_id, fp.task, &execution.file_ops);
 
         let build_start = Instant::now();
         let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out, last_build_stderr) = self
-            .verify_and_fix_build(
-                &project, task, session, api_key, &execution, baseline_test_failures,
-                baseline_build_errors, workspace_cache,
-            ).await?;
+            .verify_and_fix_build(&super::build_fix::BuildVerifyParams {
+                project: &project, task: fp.task, session: fp.session, api_key: fp.api_key,
+                initial_execution: &execution,
+                baseline_test_failures: fp.baseline_test_failures,
+                baseline_build_errors: fp.baseline_build_errors,
+                workspace_cache: fp.workspace_cache,
+            }).await?;
         let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
-        let task_duration_ms = task_start.elapsed().as_millis() as u64;
+        let task_duration_ms = fp.task_start.elapsed().as_millis() as u64;
 
         let total_input = execution.input_tokens + fix_inp;
         let total_output = execution.output_tokens + fix_out;
@@ -216,19 +228,19 @@ impl DevLoopEngine {
         };
 
         self.run_post_build_stub_check(
-            project_id, agent_instance_id, task, base_path, &execution, build_passed,
+            fp.project_id, fp.agent_instance_id, fp.task, base_path, &execution, build_passed,
         );
 
         if !build_passed {
             return Ok(self.handle_build_failure(
-                project_id, agent_instance_id, task, session, model,
+                fp.project_id, fp.agent_instance_id, fp.task, fp.session, fp.model,
                 &execution, total_input, total_output, timings,
                 &last_build_stderr,
             ).await);
         }
 
         self.emit_completion(
-            project_id, agent_instance_id, task, session, model,
+            fp.project_id, fp.agent_instance_id, fp.task, fp.session, fp.model,
             &execution, &file_changes, total_input, total_output,
             task_duration_ms, llm_duration_ms, build_verify_duration_ms, build_attempts,
         ).await;

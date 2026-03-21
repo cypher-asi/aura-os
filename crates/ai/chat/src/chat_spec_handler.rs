@@ -8,6 +8,16 @@ use aura_specs::SpecStreamEvent;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
 
+struct SpecSaveContext<'a> {
+    project_id: &'a ProjectId,
+    agent_instance_id: &'a AgentInstanceId,
+    content: &'a str,
+    input_tokens: u64,
+    output_tokens: u64,
+    tx: &'a mpsc::UnboundedSender<ChatStreamEvent>,
+    active_session_id: Option<&'a str>,
+}
+
 impl ChatService {
     pub(crate) async fn handle_generate_specs(
         &self,
@@ -39,45 +49,42 @@ impl ChatService {
         );
 
         if !accumulated.is_empty() {
-            self.save_spec_assistant_message(
-                project_id, agent_instance_id, &accumulated,
-                spec_input_tokens, spec_output_tokens,
+            self.save_spec_assistant_message(SpecSaveContext {
+                project_id, agent_instance_id, content: &accumulated,
+                input_tokens: spec_input_tokens, output_tokens: spec_output_tokens,
                 tx, active_session_id,
-            ).await;
+            }).await;
         }
     }
 
-    async fn save_spec_assistant_message(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        accumulated: &str,
-        input_tokens: u64,
-        output_tokens: u64,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-        active_session_id: Option<&str>,
-    ) {
+    async fn save_spec_assistant_message(&self, ctx: SpecSaveContext<'_>) {
         let assistant_msg = Message {
             message_id: MessageId::new(),
-            agent_instance_id: *agent_instance_id,
-            project_id: *project_id,
+            agent_instance_id: *ctx.agent_instance_id,
+            project_id: *ctx.project_id,
             role: ChatRole::Assistant,
-            content: accumulated.to_string(),
+            content: ctx.content.to_string(),
             content_blocks: None,
             thinking: None,
             thinking_duration_ms: None,
             created_at: Utc::now(),
         };
-        send_or_log(tx, ChatStreamEvent::MessageSaved(assistant_msg));
-        self.save_message_to_storage(
-            project_id, agent_instance_id, "assistant", accumulated,
-            None, None, None,
-            Some(input_tokens), Some(output_tokens),
-            active_session_id,
-        ).await;
+        send_or_log(ctx.tx, ChatStreamEvent::MessageSaved(assistant_msg));
+        self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
+            project_id: ctx.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            role: "assistant",
+            content: ctx.content,
+            content_blocks: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            input_tokens: Some(ctx.input_tokens),
+            output_tokens: Some(ctx.output_tokens),
+            session_id: ctx.active_session_id,
+        }).await;
 
-        if let Some(sid) = active_session_id {
-            self.update_session_context_usage(sid, input_tokens, output_tokens).await;
+        if let Some(sid) = ctx.active_session_id {
+            self.update_session_context_usage(sid, ctx.input_tokens, ctx.output_tokens).await;
         }
     }
 }

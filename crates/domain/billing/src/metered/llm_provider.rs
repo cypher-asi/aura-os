@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 
 use aura_claude::{
     ClaudeClientError, LlmProvider, LlmResponse, LlmStreamEvent,
-    RichMessage, StreamTokenCapture, ThinkingConfig, ToolDefinition, ToolStreamResponse,
+    StreamTokenCapture, ToolStreamRequest, ToolStreamResponse,
 };
 
 use super::{MeteredLlm, MeteredLlmError};
@@ -74,21 +74,13 @@ impl LlmProvider for MeteredLlm {
 
     async fn complete_stream_with_tools(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+        req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        let estimated_input: u64 = aura_claude::estimate_tokens(system_prompt)
-            + messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
+        let estimated_input: u64 = aura_claude::estimate_tokens(req.system_prompt)
+            + req.messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
         let estimated_credits = self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
         self.pre_flight_check_for(estimated_credits).await.map_err(Self::map_billing_err)?;
-        let resp = self.provider.complete_stream_with_tools(
-            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-        ).await?;
+        let resp = self.provider.complete_stream_with_tools(req).await?;
         let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
         self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, TRAIT_BILLING_REASON, None)
             .await.map_err(Self::map_billing_err)?;

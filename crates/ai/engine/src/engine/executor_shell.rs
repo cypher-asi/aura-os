@@ -4,11 +4,12 @@ use std::time::Instant;
 
 use aura_core::*;
 use aura_claude::StreamTokenCapture;
+use aura_billing::MeteredCompletionRequest;
 
 use super::build_fix::{auto_correct_build_command, normalize_error_signature, BuildFixAttemptRecord};
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
-use super::prompts::*;
+use super::prompts::{BuildFixPromptParams, build_fix_system_prompt, build_fix_prompt_with_history};
 use super::types::*;
 use crate::build_verify;
 use crate::channel_ext::send_or_log;
@@ -38,6 +39,14 @@ fn check_repeated_error(
     None
 }
 
+pub(crate) struct ShellTaskContext<'a> {
+    pub project: &'a Project,
+    pub task: &'a Task,
+    pub command: &'a str,
+    pub agent_instance_id: AgentInstanceId,
+    pub base_path: &'a Path,
+}
+
 impl DevLoopEngine {
     pub(crate) async fn execute_shell_task(
         &self,
@@ -51,15 +60,14 @@ impl DevLoopEngine {
         let base_path = Path::new(&project.linked_folder_path);
         let max_attempts = self.engine_config.max_shell_task_retries;
         let mut prior: Vec<BuildFixAttemptRecord> = Vec::new();
+        let ctx = ShellTaskContext { project, task, command, agent_instance_id, base_path };
 
         for attempt in 1..=max_attempts {
-            let result = self.run_shell_attempt(
-                project, task, command, agent_instance_id, attempt, max_attempts, base_path,
-            ).await?;
+            let result = self.run_shell_attempt(&ctx, attempt, max_attempts).await?;
 
             if result.success {
                 if let Some(early) = self.handle_shell_success(
-                    project, task, command, agent_instance_id, attempt, max_attempts, base_path, &result,
+                    &ctx, attempt, max_attempts, &result,
                 ).await? {
                     return Ok(early);
                 }
@@ -67,15 +75,14 @@ impl DevLoopEngine {
             }
 
             let detail = if !result.stderr.is_empty() { &result.stderr } else { &result.stdout };
-            self.emit_shell_failure(project, task, command, agent_instance_id, attempt, &result);
+            self.emit_shell_failure(&ctx, attempt, &result);
             if let Some(e) = check_repeated_error(&prior, &normalize_error_signature(detail), &task.task_id, attempt, command) {
                 return Err(e);
             }
 
             if attempt < max_attempts {
                 let files = self.attempt_shell_fix(
-                    project, task, command, agent_instance_id, attempt,
-                    base_path, &result.stderr, &result.stdout, &prior,
+                    &ctx, attempt, &result.stderr, &result.stdout, &prior,
                 ).await?;
                 prior.push(BuildFixAttemptRecord {
                     stderr: detail.to_string(), error_signature: normalize_error_signature(detail),
@@ -88,33 +95,29 @@ impl DevLoopEngine {
 
     async fn run_shell_attempt(
         &self,
-        project: &Project,
-        task: &Task,
-        command: &str,
-        agent_instance_id: AgentInstanceId,
+        ctx: &ShellTaskContext<'_>,
         attempt: u32,
         max_attempts: u32,
-        base_path: &Path,
     ) -> Result<build_verify::BuildResult, EngineError> {
         let shell_step_start = Instant::now();
         self.emit(EngineEvent::BuildVerificationStarted {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
-            command: command.to_string(),
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
+            command: ctx.command.to_string(),
         });
         send_or_log(&self.event_tx, EngineEvent::TaskOutputDelta {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
-            delta: format!("Running: {command} (attempt {attempt}/{max_attempts})\n"),
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
+            delta: format!("Running: {} (attempt {attempt}/{max_attempts})\n", ctx.command),
         });
 
         let (line_tx, mut line_rx) = tokio::sync::mpsc::unbounded_channel();
         let fwd_event_tx = self.event_tx.clone();
-        let fwd_pid = project.project_id;
-        let fwd_aiid = agent_instance_id;
-        let fwd_tid = task.task_id;
+        let fwd_pid = ctx.project.project_id;
+        let fwd_aiid = ctx.agent_instance_id;
+        let fwd_tid = ctx.task.task_id;
         tokio::spawn(async move {
             while let Some(line) = line_rx.recv().await {
                 send_or_log(&fwd_event_tx, EngineEvent::TaskOutputDelta {
@@ -126,15 +129,15 @@ impl DevLoopEngine {
             }
         });
 
-        let result = build_verify::run_build_command(base_path, command, Some(line_tx)).await?;
+        let result = build_verify::run_build_command(ctx.base_path, ctx.command, Some(line_tx)).await?;
         let shell_step_duration_ms = shell_step_start.elapsed().as_millis() as u64;
 
         if result.success {
             self.emit(EngineEvent::BuildVerificationPassed {
-                project_id: project.project_id,
-                agent_instance_id,
-                task_id: task.task_id,
-                command: command.to_string(),
+                project_id: ctx.project.project_id,
+                agent_instance_id: ctx.agent_instance_id,
+                task_id: ctx.task.task_id,
+                command: ctx.command.to_string(),
                 stdout: result.stdout.clone(),
                 duration_ms: Some(shell_step_duration_ms),
             });
@@ -144,20 +147,16 @@ impl DevLoopEngine {
 
     async fn handle_shell_success(
         &self,
-        project: &Project,
-        task: &Task,
-        command: &str,
-        agent_instance_id: AgentInstanceId,
+        ctx: &ShellTaskContext<'_>,
         attempt: u32,
         max_attempts: u32,
-        base_path: &Path,
         result: &build_verify::BuildResult,
     ) -> Result<Option<TaskExecution>, EngineError> {
-        if let Some(ref test_cmd) = project.test_command {
+        if let Some(ref test_cmd) = ctx.project.test_command {
             if !test_cmd.trim().is_empty() {
-                let dummy_session = Session::dummy(project.project_id);
+                let dummy_session = Session::dummy(ctx.project.project_id);
                 let dummy_exec = TaskExecution {
-                    notes: format!("Shell command: {command}"),
+                    notes: format!("Shell command: {}", ctx.command),
                     file_ops: vec![], follow_up_tasks: vec![],
                     input_tokens: 0, output_tokens: 0,
                     parse_retries: 0, files_already_applied: false,
@@ -165,11 +164,11 @@ impl DevLoopEngine {
                 let mut test_fix_ops = Vec::new();
                 let no_baseline = HashSet::new();
                 let mut prior_test_attempts = Vec::new();
-                let shell_ws_cache = WorkspaceCache::build_async(&project.linked_folder_path).await?;
+                let shell_ws_cache = WorkspaceCache::build_async(&ctx.project.linked_folder_path).await?;
                 let (test_passed, _test_inp, _test_out) = self.run_and_handle_tests(
-                    project, task, &dummy_session,
+                    ctx.project, ctx.task, &dummy_session,
                     &self.settings.get_decrypted_api_key()?,
-                    &dummy_exec, test_cmd, base_path, attempt, &mut test_fix_ops,
+                    &dummy_exec, test_cmd, ctx.base_path, attempt, &mut test_fix_ops,
                     &no_baseline, &mut prior_test_attempts, &shell_ws_cache,
                 ).await?;
                 if !test_passed {
@@ -183,11 +182,11 @@ impl DevLoopEngine {
             }
         }
 
-        let notes = format!("Command `{command}` succeeded on attempt {attempt}.\n{}", result.stdout);
+        let notes = format!("Command `{}` succeeded on attempt {attempt}.\n{}", ctx.command, result.stdout);
         send_or_log(&self.event_tx, EngineEvent::TaskOutputDelta {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
             delta: notes.clone(),
         });
 
@@ -201,10 +200,7 @@ impl DevLoopEngine {
 
     fn emit_shell_failure(
         &self,
-        project: &Project,
-        task: &Task,
-        command: &str,
-        agent_instance_id: AgentInstanceId,
+        ctx: &ShellTaskContext<'_>,
         attempt: u32,
         result: &build_verify::BuildResult,
     ) {
@@ -217,10 +213,10 @@ impl DevLoopEngine {
             h
         }));
         self.emit(EngineEvent::BuildVerificationFailed {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
-            command: command.to_string(),
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
+            command: ctx.command.to_string(),
             stdout: result.stdout.clone(),
             stderr: result.stderr.clone(),
             attempt,
@@ -229,47 +225,51 @@ impl DevLoopEngine {
         });
         let detail = if !result.stderr.is_empty() { &result.stderr } else { &result.stdout };
         send_or_log(&self.event_tx, EngineEvent::TaskOutputDelta {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
             delta: format!("Command failed (attempt {attempt}):\n{detail}\n"),
         });
     }
 
     async fn attempt_shell_fix(
         &self,
-        project: &Project,
-        task: &Task,
-        command: &str,
-        agent_instance_id: AgentInstanceId,
+        ctx: &ShellTaskContext<'_>,
         attempt: u32,
-        base_path: &Path,
         stderr: &str,
         stdout: &str,
         prior_attempts: &[BuildFixAttemptRecord],
     ) -> Result<Vec<String>, EngineError> {
         self.emit(EngineEvent::BuildFixAttempt {
-            project_id: project.project_id,
-            agent_instance_id,
-            task_id: task.task_id,
+            project_id: ctx.project.project_id,
+            agent_instance_id: ctx.agent_instance_id,
+            task_id: ctx.task.task_id,
             attempt,
         });
-        let spec = self.load_spec(&task.project_id, &task.spec_id).await?;
-        let codebase_snapshot = file_ops::read_relevant_files(&project.linked_folder_path, 30_000)?;
-        let dummy_session = Session::dummy(project.project_id);
-        let fix_prompt = build_fix_prompt_with_history(
-            project, &spec, task, &dummy_session,
-            &codebase_snapshot, command,
-            stderr, stdout, &format!("Shell command task: {command}"),
+        let spec = self.load_spec(&ctx.task.project_id, &ctx.task.spec_id).await?;
+        let codebase_snapshot = file_ops::read_relevant_files(&ctx.project.linked_folder_path, 30_000)?;
+        let dummy_session = Session::dummy(ctx.project.project_id);
+        let prior_notes = format!("Shell command task: {}", ctx.command);
+        let fix_prompt = build_fix_prompt_with_history(&BuildFixPromptParams {
+            project: ctx.project, spec: &spec, task: ctx.task, session: &dummy_session,
+            codebase_snapshot: &codebase_snapshot, build_command: ctx.command,
+            stderr, stdout, prior_notes: &prior_notes,
             prior_attempts,
-        );
+        });
 
         let api_key = self.settings.get_decrypted_api_key()?;
         let (stream_tx, sink_handle) = StreamTokenCapture::sink();
         let response = self.llm.complete_stream(
-            &api_key, &build_fix_system_prompt(), &fix_prompt,
-            self.llm_config.task_execution_max_tokens,
-            stream_tx, "aura_build_fix", None,
+            MeteredCompletionRequest {
+                model: None,
+                api_key: &api_key,
+                system_prompt: &build_fix_system_prompt(),
+                user_message: &fix_prompt,
+                max_tokens: self.llm_config.task_execution_max_tokens,
+                billing_reason: "aura_build_fix",
+                metadata: None,
+            },
+            stream_tx,
         ).await?;
         let _ = sink_handle.finalize().await;
 
@@ -285,8 +285,8 @@ impl DevLoopEngine {
                     };
                     attempt_files.push(format!("{op_name} {path}"));
                 }
-                let _ = file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await;
-                self.emit_file_ops_applied(project.project_id, agent_instance_id, task, &fix_execution.file_ops);
+                let _ = file_ops::apply_file_ops(ctx.base_path, &fix_execution.file_ops).await;
+                self.emit_file_ops_applied(ctx.project.project_id, ctx.agent_instance_id, ctx.task, &fix_execution.file_ops);
             }
         }
         Ok(attempt_files)

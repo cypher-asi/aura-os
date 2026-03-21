@@ -1,11 +1,9 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use aura_claude::{ContentBlock, RichMessage, ToolCall, ToolDefinition};
-use aura_billing::MeteredLlm;
+use aura_claude::{ContentBlock, RichMessage, ToolCall};
 use crate::compaction;
 use crate::constants::DEFAULT_EXPLORATION_ALLOWANCE;
 
@@ -172,18 +170,17 @@ impl LoopState {
 ///   - Loop exits on: end_turn, max_iterations, timeout, budget exceeded,
 ///     stop_loop flag from executor, stall fail-fast, or LLM error
 /// ```
-pub async fn run_tool_loop(
-    llm: Arc<MeteredLlm>,
-    api_key: &str,
-    system_prompt: &str,
-    initial_messages: Vec<RichMessage>,
-    tools: Arc<[ToolDefinition]>,
-    config: &ToolLoopConfig,
-    executor: &dyn ToolExecutor,
-    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
-) -> ToolLoopResult {
+pub async fn run_tool_loop(input: ToolLoopInput<'_>) -> ToolLoopResult {
+    let ToolLoopInput {
+        llm, api_key, system_prompt, initial_messages, tools, config, executor, event_tx,
+    } = input;
+
     let build_baseline = executor.capture_build_baseline().await;
     let mut state = LoopState::new(initial_messages, config, build_baseline);
+
+    let ctx = IterationContext {
+        llm: &llm, api_key, system_prompt, tools: &tools, config, event_tx,
+    };
 
     for iteration in 0..config.max_iterations {
         info!(iteration, billing_reason = config.billing_reason, "tool_loop_iteration start");
@@ -191,7 +188,7 @@ pub async fn run_tool_loop(
         decrement_write_file_cooldowns(&mut state.writes.cooldowns);
         state.build.auto_build_cooldown = state.build.auto_build_cooldown.saturating_sub(1);
         let iter = match run_single_iteration(
-            &llm, api_key, system_prompt, &tools, config, event_tx, &mut state, iteration,
+            &ctx, &mut state, iteration,
         ).await {
             IterationOutcome::EarlyReturn(r) => return r,
             IterationOutcome::Completed(c) => c,
@@ -199,7 +196,7 @@ pub async fn run_tool_loop(
 
         state.total_input_tokens += iter.input_tokens;
         state.total_output_tokens += iter.output_tokens;
-        send_or_log(event_tx, ToolLoopEvent::IterationTokenUsage {
+        send_or_log(ctx.event_tx, ToolLoopEvent::IterationTokenUsage {
             input_tokens: state.total_input_tokens,
             output_tokens: state.total_output_tokens,
         });
@@ -209,7 +206,7 @@ pub async fn run_tool_loop(
         } else {
             &iter.model_used
         };
-        let iter_credits = llm.estimate_credits(billing_model, iter.input_tokens, iter.output_tokens);
+        let iter_credits = ctx.llm.estimate_credits(billing_model, iter.input_tokens, iter.output_tokens);
         state.budget.cumulative_credits += iter_credits;
 
         check_context_compaction(
@@ -227,7 +224,7 @@ pub async fn run_tool_loop(
                 tool_calls = iter.iter_tool_calls.len(),
                 "Output truncated mid-tool-call (stop_reason=max_tokens), skipping execution"
             );
-            handle_truncated_tool_calls(&iter, event_tx, &mut state);
+            handle_truncated_tool_calls(&iter, ctx.event_tx, &mut state);
             compaction::compact_older_tool_results_tiered(
                 &mut state.api_messages, 2, &compaction::HISTORY,
             );
@@ -239,7 +236,7 @@ pub async fn run_tool_loop(
             return state.build_result(iteration + 1, false, false, None);
         }
 
-        let should_stop = process_tool_calls(&iter, executor, event_tx, &mut state).await;
+        let should_stop = process_tool_calls(&iter, executor, ctx.event_tx, &mut state).await;
         if should_stop {
             return state.build_result(iteration + 1, false, false, None);
         }
@@ -252,7 +249,7 @@ pub async fn run_tool_loop(
             );
             if let Some(result) = check_budget_warnings(
                 &mut state.budget, budget, billing_model, iter.input_tokens,
-                &llm, event_tx, &mut state.api_messages,
+                ctx.llm, ctx.event_tx, &mut state.api_messages,
             ) {
                 return result.unwrap_or_else(|| state.build_result(iteration + 1, false, true, None));
             }

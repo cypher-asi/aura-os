@@ -5,6 +5,7 @@ use tracing::{error, info};
 use aura_core::*;
 
 use aura_claude::ClaudeStreamEvent;
+use aura_billing::MeteredCompletionRequest;
 
 use crate::channel_ext::send_or_log;
 use crate::SpecGenError;
@@ -83,15 +84,15 @@ impl SpecGenerationService {
         let api_key = self.settings.get_decrypted_api_key()?;
         let resp = self
             .llm
-            .complete_with_model(
-                aura_claude::FAST_MODEL,
-                &api_key,
-                SPEC_OVERVIEW_SYSTEM_PROMPT,
-                requirements_content,
-                SPEC_OVERVIEW_MAX_TOKENS,
-                "aura_spec_gen",
-                None,
-            )
+            .complete(MeteredCompletionRequest {
+                model: Some(aura_claude::FAST_MODEL),
+                api_key: &api_key,
+                system_prompt: SPEC_OVERVIEW_SYSTEM_PROMPT,
+                user_message: requirements_content,
+                max_tokens: SPEC_OVERVIEW_MAX_TOKENS,
+                billing_reason: "aura_spec_gen",
+                metadata: None,
+            })
             .await?;
         let raw_overview = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&raw_overview, SPEC_SUMMARY_MAX_WORDS);
@@ -146,8 +147,16 @@ impl SpecGenerationService {
         let req_owned = requirements_content;
         let stream_handle = tokio::spawn(async move {
             llm.complete_stream(
-                &api_key_owned, SPEC_GENERATION_SYSTEM_PROMPT, &req_owned,
-                MAX_TOKENS, claude_tx, "aura_spec_gen", None,
+                MeteredCompletionRequest {
+                    model: None,
+                    api_key: &api_key_owned,
+                    system_prompt: SPEC_GENERATION_SYSTEM_PROMPT,
+                    user_message: &req_owned,
+                    max_tokens: MAX_TOKENS,
+                    billing_reason: "aura_spec_gen",
+                    metadata: None,
+                },
+                claude_tx,
             ).await
         });
         let mut saved_specs: Vec<Spec> = Vec::new();
@@ -268,7 +277,15 @@ impl SpecGenerationService {
         );
         let resp = self
             .llm
-            .complete_with_model(aura_claude::FAST_MODEL, &api_key, SPEC_SUMMARY_SYSTEM_PROMPT, &user_prompt, SPEC_SUMMARY_MAX_TOKENS, "aura_spec_gen", None)
+            .complete(MeteredCompletionRequest {
+                model: Some(aura_claude::FAST_MODEL),
+                api_key: &api_key,
+                system_prompt: SPEC_SUMMARY_SYSTEM_PROMPT,
+                user_message: &user_prompt,
+                max_tokens: SPEC_SUMMARY_MAX_TOKENS,
+                billing_reason: "aura_spec_gen",
+                metadata: None,
+            })
             .await?;
         let response = resp.text;
         let (title_opt, summary) = parse_title_and_summary(&response, SPEC_SUMMARY_MAX_WORDS);

@@ -4,11 +4,12 @@ use tracing::warn;
 
 use aura_core::*;
 use aura_claude::StreamTokenCapture;
+use aura_billing::MeteredCompletionRequest;
 
 use super::build_fix::{normalize_error_signature, BuildFixAttemptRecord};
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
-use super::prompts::{build_fix_system_prompt, build_fix_prompt_with_history};
+use super::prompts::{BuildFixPromptParams, build_fix_system_prompt, build_fix_prompt_with_history};
 use super::types::*;
 use crate::error::EngineError;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
@@ -96,29 +97,32 @@ impl DevLoopEngine {
         prior_attempts: &[BuildFixAttemptRecord],
     ) -> Result<(String, u64, u64), EngineError> {
         let spec = self.load_spec(&task.project_id, &task.spec_id).await?;
-        let fix_prompt = build_fix_prompt_with_history(
+        let fix_prompt = build_fix_prompt_with_history(&BuildFixPromptParams {
             project,
-            &spec,
+            spec: &spec,
             task,
             session,
             codebase_snapshot,
-            command,
+            build_command: command,
             stderr,
             stdout,
-            &initial_execution.notes,
+            prior_notes: &initial_execution.notes,
             prior_attempts,
-        );
+        });
         let (tx, handle) = StreamTokenCapture::sink();
         let response = self
             .llm
             .complete_stream(
-                api_key,
-                &build_fix_system_prompt(),
-                &fix_prompt,
-                self.llm_config.task_execution_max_tokens,
+                MeteredCompletionRequest {
+                    model: None,
+                    api_key,
+                    system_prompt: &build_fix_system_prompt(),
+                    user_message: &fix_prompt,
+                    max_tokens: self.llm_config.task_execution_max_tokens,
+                    billing_reason: "aura_build_fix",
+                    metadata: None,
+                },
                 tx,
-                "aura_build_fix",
-                None,
             )
             .await?;
         let (inp, out, _, _) = handle.finalize().await;

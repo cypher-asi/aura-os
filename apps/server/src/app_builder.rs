@@ -12,7 +12,7 @@ use aura_storage::StorageClient;
 use aura_terminal::TerminalManager;
 use aura_agents::{AgentService, AgentInstanceService};
 use aura_auth::AuthService;
-use aura_chat::ChatService;
+use aura_chat::{ChatService, ChatServiceDeps};
 use aura_claude::ClaudeClient;
 use aura_orgs::OrgService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
@@ -100,15 +100,15 @@ fn init_domain_services(
         SessionService::new(store.clone(), llm_config.context_rollover_threshold, llm_config.max_context_tokens)
             .with_storage_client(storage_client.clone()),
     );
-    let chat_service = Arc::new(ChatService::new(
-        store.clone(),
-        core.settings_service.clone(),
-        core.llm.clone(),
-        spec_gen_service.clone(),
-        project_service.clone(),
-        task_service.clone(),
-        storage_client.clone(),
-    ));
+    let chat_service = Arc::new(ChatService::new(ChatServiceDeps {
+        store: store.clone(),
+        settings: core.settings_service.clone(),
+        llm: core.llm.clone(),
+        spec_gen: spec_gen_service.clone(),
+        project_service: project_service.clone(),
+        task_service: task_service.clone(),
+        storage_client: storage_client.clone(),
+    }));
     DomainServices {
         project_service, spec_gen_service, task_extraction_service,
         task_service, agent_service, agent_instance_service,

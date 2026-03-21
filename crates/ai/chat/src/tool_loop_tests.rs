@@ -1,7 +1,9 @@
 use super::*;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 use async_trait::async_trait;
+use aura_claude::ToolDefinition;
 use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_billing::testutil;
 use crate::tool_loop_blocking::{
@@ -79,16 +81,16 @@ mod basic_tests {
         let executor = noop_executor();
         let config = default_config(5);
 
-        let result = run_tool_loop(
+        let result = run_tool_loop(ToolLoopInput {
             llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Say done")],
-            Arc::from(Vec::<ToolDefinition>::new()),
-            &config,
-            &executor,
-            &event_tx,
-        )
+            api_key: "test-key",
+            system_prompt: "You are a test assistant.",
+            initial_messages: vec![RichMessage::user("Say done")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()),
+            config: &config,
+            executor: &executor,
+            event_tx: &event_tx,
+        })
         .await;
 
         assert_eq!(result.text, "Done!");
@@ -127,16 +129,16 @@ mod basic_tests {
             }),
         };
 
-        let result = run_tool_loop(
+        let result = run_tool_loop(ToolLoopInput {
             llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Read the file")],
-            Arc::from(Vec::<ToolDefinition>::new()),
-            &config,
-            &executor,
-            &event_tx,
-        )
+            api_key: "test-key",
+            system_prompt: "You are a test assistant.",
+            initial_messages: vec![RichMessage::user("Read the file")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()),
+            config: &config,
+            executor: &executor,
+            event_tx: &event_tx,
+        })
         .await;
 
         assert_eq!(result.iterations_run, 2);
@@ -178,16 +180,16 @@ mod basic_tests {
             }),
         };
 
-        let result = run_tool_loop(
+        let result = run_tool_loop(ToolLoopInput {
             llm,
-            "test-key",
-            "You are a test assistant.",
-            vec![RichMessage::user("Do many things")],
-            Arc::from(Vec::<ToolDefinition>::new()),
-            &config,
-            &executor,
-            &event_tx,
-        )
+            api_key: "test-key",
+            system_prompt: "You are a test assistant.",
+            initial_messages: vec![RichMessage::user("Do many things")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()),
+            config: &config,
+            executor: &executor,
+            event_tx: &event_tx,
+        })
         .await;
 
         assert_eq!(result.iterations_run, 3);
@@ -224,10 +226,12 @@ mod basic_tests {
             }),
         };
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("Do it")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("Do it")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 1);
         assert!(!result.timed_out);
@@ -259,10 +263,12 @@ mod basic_tests {
             }),
         };
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("Read three files")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("Read three files")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 2);
 
@@ -294,10 +300,12 @@ mod basic_tests {
         let config = default_config(5);
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(result.text.contains("First part"));
         assert!(result.text.contains("Second part"));
@@ -316,10 +324,12 @@ mod basic_tests {
         let config = default_config(5);
         let executor = noop_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 1);
         assert!(!result.timed_out);
@@ -346,10 +356,12 @@ mod basic_tests {
         let config = default_config(5);
         let executor = noop_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("write")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("write")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 2);
 
@@ -375,10 +387,12 @@ mod basic_tests {
         let config = default_config(0);
         let executor = noop_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 0);
     }
@@ -408,10 +422,12 @@ mod basic_tests {
             }),
         };
 
-        let _result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("read")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let _result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("read")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         let mut has_delta = false;
         let mut has_tool_use = false;
@@ -679,10 +695,12 @@ mod blocking_tests {
             }),
         };
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("read")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("read")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(!result.timed_out);
 
@@ -733,10 +751,12 @@ mod blocking_tests {
         let config = default_config(20);
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("read then write")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("read then write")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(!result.timed_out);
 
@@ -808,10 +828,12 @@ mod blocking_tests {
             }),
         };
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("edit")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("edit")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(!result.timed_out);
 
@@ -857,10 +879,12 @@ mod blocking_tests {
             }),
         };
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("edit")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("edit")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(result.iterations_run <= 4, "should stop early due to stall fail-fast");
 
@@ -898,10 +922,12 @@ mod blocking_tests {
         let config = default_config(10);
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("read then read more")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("read then read more")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 4);
 
@@ -1391,10 +1417,12 @@ mod budget_tests {
         let config = default_config(10);
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert_eq!(result.iterations_run, 6);
         let expected_input: u64 = token_pairs.iter().map(|(i, _)| i).sum::<u64>() + 50;
@@ -1427,10 +1455,12 @@ mod budget_tests {
             }),
         };
 
-        let _result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let _result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         let mut usage_events: Vec<(u64, u64)> = vec![];
         while let Ok(evt) = event_rx.try_recv() {
@@ -1468,10 +1498,12 @@ mod budget_tests {
 
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(result.iterations_run < 10, "should have stopped early due to credit budget");
         assert!(result.insufficient_credits, "credit budget exceeded should set insufficient_credits");
@@ -1506,10 +1538,12 @@ mod budget_tests {
 
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(result.iterations_run > 0);
 
@@ -1548,10 +1582,12 @@ mod budget_tests {
         let config = default_config(10);
         let executor = ok_executor();
 
-        let result = run_tool_loop(
-            llm, "test-key", "test", vec![RichMessage::user("go")],
-            Arc::from(Vec::<ToolDefinition>::new()), &config, &executor, &event_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm, api_key: "test-key", system_prompt: "test",
+            initial_messages: vec![RichMessage::user("go")],
+            tools: Arc::from(Vec::<ToolDefinition>::new()), config: &config,
+            executor: &executor, event_tx: &event_tx,
+        }).await;
 
         assert!(result.insufficient_credits, "should flag insufficient_credits");
         assert!(result.iterations_run >= 1, "at least 1 iteration should have run");

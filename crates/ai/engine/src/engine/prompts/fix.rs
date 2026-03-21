@@ -8,7 +8,20 @@ use crate::engine::build_fix::{
 };
 use crate::file_ops::{self, StubReport};
 
-#[allow(dead_code, clippy::too_many_arguments)]
+pub(crate) struct BuildFixPromptParams<'a> {
+    pub project: &'a Project,
+    pub spec: &'a Spec,
+    pub task: &'a Task,
+    pub session: &'a Session,
+    pub codebase_snapshot: &'a str,
+    pub build_command: &'a str,
+    pub stderr: &'a str,
+    pub stdout: &'a str,
+    pub prior_notes: &'a str,
+    pub prior_attempts: &'a [BuildFixAttemptRecord],
+}
+
+#[allow(dead_code)]
 pub(crate) fn build_fix_prompt(
     project: &Project,
     spec: &Spec,
@@ -21,33 +34,25 @@ pub(crate) fn build_fix_prompt(
     prior_notes: &str,
 ) -> String {
     let empty: Vec<BuildFixAttemptRecord> = vec![];
-    build_fix_prompt_with_history(
+    build_fix_prompt_with_history(&BuildFixPromptParams {
         project, spec, task, session, codebase_snapshot,
-        build_command, stderr, stdout, prior_notes, &empty,
-    )
+        build_command, stderr, stdout, prior_notes,
+        prior_attempts: &empty,
+    })
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn build_fix_prompt_with_history(
-    project: &Project,
-    spec: &Spec,
-    task: &Task,
-    session: &Session,
-    codebase_snapshot: &str,
-    build_command: &str,
-    stderr: &str,
-    stdout: &str,
-    prior_notes: &str,
-    prior_attempts: &[BuildFixAttemptRecord],
-) -> String {
+pub(crate) fn build_fix_prompt_with_history(params: &BuildFixPromptParams<'_>) -> String {
     let mut prompt = String::new();
 
-    prompt.push_str(&format_fix_header(project, spec, task, session, prior_notes, prior_attempts));
+    prompt.push_str(&format_fix_header(
+        params.project, params.spec, params.task, params.session,
+        params.prior_notes, params.prior_attempts,
+    ));
 
-    let mut categories = classify_build_errors(stderr);
-    let error_refs = parse_error_references(stderr);
+    let mut categories = classify_build_errors(params.stderr);
+    let error_refs = parse_error_references(params.stderr);
     let resolved_context = file_ops::resolve_error_context(
-        Path::new(&project.linked_folder_path),
+        Path::new(&params.project.linked_folder_path),
         &error_refs,
     );
 
@@ -56,8 +61,8 @@ pub(crate) fn build_fix_prompt_with_history(
     let guidance = error_category_guidance(&categories);
 
     prompt.push_str(&format_fix_body(
-        build_command, stderr, stdout, &guidance, &resolved_context,
-        &error_refs, project, codebase_snapshot,
+        params.build_command, params.stderr, params.stdout, &guidance,
+        &resolved_context, &error_refs, params.project, params.codebase_snapshot,
     ));
 
     prompt

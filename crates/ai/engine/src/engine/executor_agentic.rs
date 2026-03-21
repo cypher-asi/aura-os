@@ -6,7 +6,7 @@ use tokio::task::JoinHandle;
 
 use aura_core::*;
 use aura_claude::{RichMessage, ThinkingConfig};
-use aura_chat::{ChatToolExecutor, ToolLoopConfig, ToolLoopEvent, run_tool_loop};
+use aura_chat::{ChatToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopInput, run_tool_loop};
 use aura_tools::engine_tool_definitions;
 
 use super::orchestrator::DevLoopEngine;
@@ -391,24 +391,29 @@ fn build_tool_loop_config(params: ToolLoopParams) -> ToolLoopConfig {
     }
 }
 
+pub(crate) struct AgenticTaskParams<'a> {
+    pub project_id: &'a ProjectId,
+    pub task: &'a Task,
+    pub session: &'a Session,
+    pub api_key: &'a str,
+    pub agent: Option<&'a AgentInstance>,
+    pub work_log: &'a [String],
+    pub workspace_cache: &'a WorkspaceCache,
+}
+
 impl DevLoopEngine {
     pub(crate) async fn execute_task_agentic(
         &self,
-        project_id: &ProjectId,
-        task: &Task,
-        session: &Session,
-        api_key: &str,
-        agent: Option<&AgentInstance>,
-        work_log: &[String],
-        workspace_cache: &WorkspaceCache,
+        atp: &AgenticTaskParams<'_>,
     ) -> Result<TaskExecution, EngineError> {
         let setup = prepare_agentic_task(
-            self, project_id, task, session, agent, work_log, workspace_cache,
+            self, atp.project_id, atp.task, atp.session, atp.agent,
+            atp.work_log, atp.workspace_cache,
         ).await?;
 
         if setup.complexity == TaskComplexity::Simple {
-            if let Some(skip_reason) = check_already_completed(&setup.project, task, &setup.completed_deps).await {
-                tracing::info!(task_id = %task.task_id, reason = %skip_reason, "Skipping redundant simple task");
+            if let Some(skip_reason) = check_already_completed(&setup.project, atp.task, &setup.completed_deps).await {
+                tracing::info!(task_id = %atp.task.task_id, reason = %skip_reason, "Skipping redundant simple task");
                 return Ok(TaskExecution {
                     notes: format!("Task skipped as redundant: {}", skip_reason),
                     file_ops: Vec::new(), follow_up_tasks: Vec::new(),
@@ -423,24 +428,29 @@ impl DevLoopEngine {
         let follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>> = Arc::new(Mutex::new(Vec::new()));
 
         let executor = build_executor(
-            self, &setup, task, session,
+            self, &setup, atp.task, atp.session,
             tracked_file_ops.clone(), notes.clone(), follow_ups.clone(),
         );
-        let params = configure_llm_params(
+        let llm_params = configure_llm_params(
             setup.complexity, &self.llm_config, &self.engine_config,
-            setup.exploration_allowance, workspace_cache.member_count,
+            setup.exploration_allowance, atp.workspace_cache.member_count,
         );
-        let config = build_tool_loop_config(params);
+        let config = build_tool_loop_config(llm_params);
 
-        let pid = *project_id;
-        let aiid = session.agent_instance_id;
-        let (forwarder, loop_tx) = spawn_delta_forwarder(&self.event_tx, pid, aiid, task.task_id);
+        let pid = *atp.project_id;
+        let aiid = atp.session.agent_instance_id;
+        let (forwarder, loop_tx) = spawn_delta_forwarder(&self.event_tx, pid, aiid, atp.task.task_id);
 
-        let result = run_tool_loop(
-            self.llm.clone(), api_key, &setup.system_prompt,
-            vec![RichMessage::user(&setup.task_context)],
-            engine_tool_definitions(), &config, &executor, &loop_tx,
-        ).await;
+        let result = run_tool_loop(ToolLoopInput {
+            llm: self.llm.clone(),
+            api_key: atp.api_key,
+            system_prompt: &setup.system_prompt,
+            initial_messages: vec![RichMessage::user(&setup.task_context)],
+            tools: engine_tool_definitions(),
+            config: &config,
+            executor: &executor,
+            event_tx: &loop_tx,
+        }).await;
         drop(loop_tx);
         let _ = forwarder.await;
 

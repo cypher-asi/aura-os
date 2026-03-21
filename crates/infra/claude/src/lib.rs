@@ -220,65 +220,6 @@ impl ClaudeClient {
         Ok(result.text)
     }
 
-    async fn complete_stream_with_tools_inner(
-        &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        self.complete_stream_with_tools_inner_model(
-            None, api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-        ).await
-    }
-
-    async fn complete_stream_with_tools_inner_model(
-        &self,
-        model_override: Option<&str>,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        mut tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        let msg_count = messages.len();
-        let tool_count = tools.len();
-        let effective_model = model_override.unwrap_or(&self.model);
-
-        if let Some(last) = tools.last_mut() {
-            last.cache_control = Some(CacheControl::ephemeral());
-        }
-
-        let request = ToolMessagesRequest {
-            model: effective_model.to_string(),
-            max_tokens,
-            system: cached_system_blocks(system_prompt),
-            messages,
-            stream: Some(true),
-            tools: if tools.is_empty() { None } else { Some(tools) },
-            thinking,
-        };
-
-        let url = format!("{}/v1/messages", self.base_url);
-        info!(
-            model = %effective_model,
-            max_tokens,
-            msg_count,
-            tool_count,
-            url = %url,
-            "Sending tool-use streaming Claude API request"
-        );
-
-        let body = serde_json::to_value(&request).map_err(|e| {
-            ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
-        })?;
-        self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await
-    }
 }
 
 async fn parse_messages_response(
@@ -365,35 +306,44 @@ impl LlmProvider for ClaudeClient {
 
     async fn complete_stream_with_tools(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
+        req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        self.complete_stream_with_tools_inner(
-            api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-        )
-        .await
-    }
+        let ToolStreamRequest {
+            api_key, system_prompt, messages, mut tools,
+            max_tokens, thinking, event_tx, model_override,
+        } = req;
+        let msg_count = messages.len();
+        let tool_count = tools.len();
+        let effective_model = model_override.unwrap_or(&self.model);
 
-    async fn complete_stream_with_tools_model(
-        &self,
-        model: &str,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
-    ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        self.complete_stream_with_tools_inner_model(
-            Some(model), api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-        )
-        .await
+        if let Some(last) = tools.last_mut() {
+            last.cache_control = Some(CacheControl::ephemeral());
+        }
+
+        let request = ToolMessagesRequest {
+            model: effective_model.to_string(),
+            max_tokens,
+            system: cached_system_blocks(system_prompt),
+            messages,
+            stream: Some(true),
+            tools: if tools.is_empty() { None } else { Some(tools) },
+            thinking,
+        };
+
+        let url = format!("{}/v1/messages", self.base_url);
+        info!(
+            model = %effective_model,
+            max_tokens,
+            msg_count,
+            tool_count,
+            url = %url,
+            "Sending tool-use streaming Claude API request"
+        );
+
+        let body = serde_json::to_value(&request).map_err(|e| {
+            ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
+        })?;
+        self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await
     }
 
     async fn complete_with_model(

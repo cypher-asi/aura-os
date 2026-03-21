@@ -13,7 +13,7 @@ use tokio::sync::{mpsc, Mutex};
 
 use aura_claude::{
     ClaudeStreamEvent, LlmResponse, RichMessage, StreamTokenCapture,
-    ThinkingConfig, ToolDefinition, ToolStreamResponse,
+    ThinkingConfig, ToolDefinition, ToolStreamRequest, ToolStreamResponse,
 };
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
@@ -57,6 +57,35 @@ pub struct MeteredLlm {
     pub(crate) credits_exhausted: AtomicBool,
     pub(crate) last_preflight_ok: Mutex<Option<Instant>>,
     pub(crate) credits_per_usd: f64,
+}
+
+// ---------------------------------------------------------------------------
+// Parameter structs (to avoid too_many_arguments)
+// ---------------------------------------------------------------------------
+
+/// Bundled parameters for non-streaming metered completions.
+pub struct MeteredCompletionRequest<'a> {
+    pub model: Option<&'a str>,
+    pub api_key: &'a str,
+    pub system_prompt: &'a str,
+    pub user_message: &'a str,
+    pub max_tokens: u32,
+    pub billing_reason: &'a str,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Bundled parameters for tool-use streaming metered requests.
+pub struct MeteredStreamRequest<'a> {
+    pub api_key: &'a str,
+    pub system_prompt: &'a str,
+    pub messages: Vec<RichMessage>,
+    pub tools: Vec<ToolDefinition>,
+    pub max_tokens: u32,
+    pub thinking: Option<ThinkingConfig>,
+    pub event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
+    pub model_override: Option<&'a str>,
+    pub billing_reason: &'a str,
+    pub metadata: Option<serde_json::Value>,
 }
 
 const DEFAULT_CREDITS_PER_USD: f64 = 114_286.0;
@@ -120,55 +149,39 @@ impl MeteredLlm {
 
     pub async fn complete(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        user_message: &str,
-        max_tokens: u32,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
+        req: MeteredCompletionRequest<'_>,
     ) -> Result<LlmResponse, MeteredLlmError> {
         self.pre_flight_check().await?;
-        let resp = self.provider.complete(api_key, system_prompt, user_message, max_tokens).await?;
-        self.debit(aura_claude::DEFAULT_MODEL, resp.input_tokens, resp.output_tokens, 0, 0, reason, metadata).await?;
-        Ok(resp)
-    }
-
-    pub async fn complete_with_model(
-        &self,
-        model: &str,
-        api_key: &str,
-        system_prompt: &str,
-        user_message: &str,
-        max_tokens: u32,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
-    ) -> Result<LlmResponse, MeteredLlmError> {
-        self.pre_flight_check().await?;
-        let resp = self.provider.complete_with_model(model, api_key, system_prompt, user_message, max_tokens).await?;
-        self.debit(model, resp.input_tokens, resp.output_tokens, 0, 0, reason, metadata).await?;
+        let (model, resp) = match req.model {
+            Some(m) => {
+                let r = self.provider.complete_with_model(m, req.api_key, req.system_prompt, req.user_message, req.max_tokens).await?;
+                (m, r)
+            }
+            None => {
+                let r = self.provider.complete(req.api_key, req.system_prompt, req.user_message, req.max_tokens).await?;
+                (aura_claude::DEFAULT_MODEL, r)
+            }
+        };
+        self.debit(model, resp.input_tokens, resp.output_tokens, 0, 0, req.billing_reason, req.metadata).await?;
         Ok(resp)
     }
 
     pub async fn complete_stream(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        user_message: &str,
-        max_tokens: u32,
+        req: MeteredCompletionRequest<'_>,
         event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
     ) -> Result<String, MeteredLlmError> {
         self.pre_flight_check().await?;
         let (tx, handle) = StreamTokenCapture::forwarding(event_tx);
         let result = self.provider.complete_stream(
-            api_key, system_prompt, user_message, max_tokens, tx,
+            req.api_key, req.system_prompt, req.user_message, req.max_tokens, tx,
         ).await?;
         let (inp, out, cache_create, cache_read) = handle.finalize().await;
-        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, reason, metadata).await?;
+        self.debit(aura_claude::DEFAULT_MODEL, inp, out, cache_create, cache_read, req.billing_reason, req.metadata).await?;
         Ok(result)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn complete_stream_multi(
         &self,
         api_key: &str,
@@ -191,50 +204,25 @@ impl MeteredLlm {
 
     pub async fn complete_stream_with_tools(
         &self,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
+        req: MeteredStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, MeteredLlmError> {
-        self.complete_stream_with_tools_opt_model(
-            None, api_key, system_prompt, messages, tools, max_tokens,
-            thinking, event_tx, reason, metadata,
-        ).await
-    }
+        let MeteredStreamRequest {
+            api_key, system_prompt, messages, tools, max_tokens,
+            thinking, event_tx, model_override, billing_reason, metadata,
+        } = req;
 
-    pub async fn complete_stream_with_tools_opt_model(
-        &self,
-        model_override: Option<&str>,
-        api_key: &str,
-        system_prompt: &str,
-        messages: Vec<RichMessage>,
-        tools: Vec<ToolDefinition>,
-        max_tokens: u32,
-        thinking: Option<ThinkingConfig>,
-        event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
-        reason: &str,
-        metadata: Option<serde_json::Value>,
-    ) -> Result<ToolStreamResponse, MeteredLlmError> {
         let estimated_input: u64 = aura_claude::estimate_tokens(system_prompt)
             + messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
         let estimated_credits = self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
         self.pre_flight_check_for(estimated_credits).await?;
-        let resp = if let Some(model) = model_override {
-            self.provider.complete_stream_with_tools_model(
-                model, api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-            ).await?
-        } else {
-            self.provider.complete_stream_with_tools(
-                api_key, system_prompt, messages, tools, max_tokens, thinking, event_tx,
-            ).await?
-        };
+
+        let resp = self.provider.complete_stream_with_tools(ToolStreamRequest {
+            api_key, system_prompt, messages, tools, max_tokens,
+            thinking, event_tx, model_override,
+        }).await?;
+
         let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
-        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, reason, metadata).await?;
+        self.debit(billing_model, resp.input_tokens, resp.output_tokens, resp.cache_creation_input_tokens, resp.cache_read_input_tokens, billing_reason, metadata).await?;
         Ok(resp)
     }
 }

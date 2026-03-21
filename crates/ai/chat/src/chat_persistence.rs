@@ -6,23 +6,29 @@ use tracing::warn;
 use crate::chat::ChatService;
 use crate::error::ChatError;
 
+pub(crate) struct SaveMessageParams<'a> {
+    pub project_id: &'a ProjectId,
+    pub agent_instance_id: &'a AgentInstanceId,
+    pub role: &'a str,
+    pub content: &'a str,
+    pub content_blocks: Option<&'a [ChatContentBlock]>,
+    pub thinking: Option<&'a str>,
+    pub thinking_duration_ms: Option<u64>,
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+    pub session_id: Option<&'a str>,
+}
+
 impl ChatService {
     /// Save a message to aura-storage.
     /// Fire-and-forget: logs a warning on failure but does not propagate errors.
     /// When `session_id` is provided, skips the session lookup HTTP call.
-    pub(crate) async fn save_message_to_storage(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        role: &str,
-        content: &str,
-        content_blocks: Option<&[ChatContentBlock]>,
-        thinking: Option<&str>,
-        thinking_duration_ms: Option<u64>,
-        input_tokens: Option<u64>,
-        output_tokens: Option<u64>,
-        session_id: Option<&str>,
-    ) {
+    pub(crate) async fn save_message_to_storage(&self, params: SaveMessageParams<'_>) {
+        let SaveMessageParams {
+            project_id, agent_instance_id, role, content, content_blocks,
+            thinking, thinking_duration_ms, input_tokens, output_tokens, session_id,
+        } = params;
+
         let Some(ref storage) = self.storage_client else { return };
         let Some(jwt) = self.get_jwt() else { return };
 
