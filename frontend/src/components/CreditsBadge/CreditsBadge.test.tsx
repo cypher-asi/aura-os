@@ -56,10 +56,10 @@ describe("CreditsBadge", () => {
   it("renders placeholder when balance has not loaded", () => {
     mockGetCreditBalance.mockReturnValue(new Promise(() => {}));
     render(<CreditsBadge />);
-    expect(screen.getByText("--- Z")).toBeInTheDocument();
+    expect(screen.getByText("---")).toBeInTheDocument();
   });
 
-  it("shows formatted credit balance after fetch resolves", async () => {
+  it("shows formatted balance after fetch resolves", async () => {
     mockGetCreditBalance.mockResolvedValue({ balance_cents: 5000, plan: "free", balance_formatted: "$50.00" });
     render(<CreditsBadge />);
 
@@ -68,7 +68,7 @@ describe("CreditsBadge", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/5,000 Z/)).toBeInTheDocument();
+      expect(screen.getByText("$50.00")).toBeInTheDocument();
     });
   });
 
@@ -103,7 +103,7 @@ describe("CreditsBadge", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/200 Z/)).toBeInTheDocument();
+      expect(screen.getByText("$2.00")).toBeInTheDocument();
     });
   });
 

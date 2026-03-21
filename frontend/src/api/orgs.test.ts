@@ -136,31 +136,38 @@ describe("orgsApi", () => {
     );
   });
 
-  it("getCreditTiers fetches tiers", async () => {
-    const fetchMock = mockFetch(200, [{ id: "t1", credits: 100 }]);
-    globalThis.fetch = fetchMock;
-    await orgsApi.getCreditTiers("o1");
-    expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/credits/tiers", expect.any(Object));
-  });
-
   it("getCreditBalance fetches balance", async () => {
-    const fetchMock = mockFetch(200, { credits: 500 });
+    const fetchMock = mockFetch(200, { balance_cents: 5000, plan: "free", balance_formatted: "$50.00" });
     globalThis.fetch = fetchMock;
     await orgsApi.getCreditBalance("o1");
     expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/credits/balance", expect.any(Object));
   });
 
-  it("createCreditCheckout sends POST with tier_id and credits", async () => {
-    const fetchMock = mockFetch(200, { url: "https://checkout.stripe.com/session" });
+  it("createCreditCheckout sends POST with amount_usd", async () => {
+    const fetchMock = mockFetch(200, { checkout_url: "https://checkout.stripe.com/session", session_id: "s1" });
     globalThis.fetch = fetchMock;
-    await orgsApi.createCreditCheckout("o1", "t1", 1000);
+    await orgsApi.createCreditCheckout("o1", 25);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/orgs/o1/credits/checkout",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ tier_id: "t1", credits: 1000 }),
+        body: JSON.stringify({ amount_usd: 25 }),
       }),
     );
+  });
+
+  it("getTransactions fetches transactions", async () => {
+    const fetchMock = mockFetch(200, { transactions: [], has_more: false });
+    globalThis.fetch = fetchMock;
+    await orgsApi.getTransactions("o1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/credits/transactions", expect.any(Object));
+  });
+
+  it("getAccount fetches account", async () => {
+    const fetchMock = mockFetch(200, { user_id: "u1", balance_cents: 1000 });
+    globalThis.fetch = fetchMock;
+    await orgsApi.getAccount("o1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/orgs/o1/account", expect.any(Object));
   });
 
   it("throws ApiClientError on failure", async () => {

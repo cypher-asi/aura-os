@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useOrgStore } from "../../stores/org-store";
 import { useAuth } from "../../stores/auth-store";
+import { useBillingStore } from "../../stores/billing-store";
 import { api, ApiClientError } from "../../api/client";
-import type { OrgInvite, OrgBilling, OrgRole, CreditTier, CreditBalance } from "../../types";
+import type { OrgInvite, OrgBilling, OrgRole } from "../../types";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 
@@ -31,13 +32,12 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const [billing, setBilling] = useState<OrgBilling | null>(null);
   const [billingEmail, setBillingEmail] = useState("");
   const [saving, setSaving] = useState(false);
-  const [creditTiers, setCreditTiers] = useState<CreditTier[]>([]);
-  const [creditBalance, setCreditBalance] = useState<CreditBalance | null>(null);
-  const [tiersLoading, setTiersLoading] = useState(false);
-  const [tiersError, setTiersError] = useState<string | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const balance = useBillingStore((s) => s.balance);
+  const balanceLoading = useBillingStore((s) => s.balanceLoading);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+
   const { status: pollingStatus, settledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
 
   const orgId = activeOrg?.org_id;
@@ -68,26 +68,17 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     try { const b = await api.orgs.getBilling(orgId); setBilling(b); setBillingEmail(b?.billing_email ?? ""); } catch { /* ignore */ }
   }, [orgId]);
 
-  const loadCreditTiers = useCallback(async () => {
-    if (!orgId) return;
-    setTiersLoading(true); setTiersError(null);
-    try { setCreditTiers(await api.orgs.getCreditTiers(orgId)); }
-    catch (err) { setTiersError(err instanceof ApiClientError ? `Billing server error (${err.status})` : "Unable to reach billing server"); }
-    finally { setTiersLoading(false); }
-  }, [orgId]);
-
   const loadCreditBalance = useCallback(async () => {
     if (!orgId) return;
-    setBalanceLoading(true); setBalanceError(null);
-    try { setCreditBalance(await api.orgs.getCreditBalance(orgId)); }
+    setBalanceError(null);
+    try { await useBillingStore.getState().fetchBalance(orgId); }
     catch (err) { setBalanceError(err instanceof ApiClientError ? `Billing server error (${err.status})` : "Unable to reach billing server"); }
-    finally { setBalanceLoading(false); }
   }, [orgId]);
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
-    refreshMembers(); loadInvites(); loadBilling(); loadCreditTiers(); loadCreditBalance();
-  }, [isOpen, orgId, refreshMembers, loadInvites, loadBilling, loadCreditTiers, loadCreditBalance]);
+    refreshMembers(); loadInvites(); loadBilling(); loadCreditBalance();
+  }, [isOpen, orgId, refreshMembers, loadInvites, loadBilling, loadCreditBalance]);
 
   const handleCreateInvite = async () => { if (orgId) { try { await api.orgs.createInvite(orgId); loadInvites(); } catch (err) { console.error("Failed to create invite", err); } } };
   const handleRevokeInvite = async (inviteId: string) => { if (orgId) { try { await api.orgs.revokeInvite(orgId, inviteId); loadInvites(); } catch (err) { console.error("Failed to revoke invite", err); } } };
@@ -97,23 +88,21 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
 
   const handleRetryOrg = useCallback(async () => { setRetryingOrg(true); try { await refreshOrgs(); } finally { setRetryingOrg(false); } }, [refreshOrgs]);
 
-  const handleBuyTier = async (tierId: string) => {
+  const handlePurchase = useCallback(async (amountUsd: number) => {
     if (!orgId) return;
     setCheckoutError(null);
-    try { const prev = creditBalance?.balance_cents ?? 0; const { checkout_url } = await api.orgs.createCreditCheckout(orgId, tierId); window.open(checkout_url, "_blank"); startPolling(prev); }
-    catch (err) { setCheckoutError(err instanceof ApiClientError ? `Checkout failed (${err.status})` : "Unable to start checkout"); console.error("Failed to create checkout session", err); }
-  };
-
-  const handleBuyCustom = async (credits: number) => {
-    if (!orgId) return;
-    setCheckoutError(null);
-    try { const prev = creditBalance?.balance_cents ?? 0; const { checkout_url } = await api.orgs.createCreditCheckout(orgId, undefined, credits); window.open(checkout_url, "_blank"); startPolling(prev); }
-    catch (err) { setCheckoutError(err instanceof ApiClientError ? `Checkout failed (${err.status})` : "Unable to start checkout"); console.error("Failed to create checkout session", err); }
-  };
+    const result = await useBillingStore.getState().purchase(orgId, amountUsd);
+    if (result?.checkout_url) {
+      window.open(result.checkout_url, "_blank");
+      const prevBalance = useBillingStore.getState().balance?.balance_cents ?? 0;
+      startPolling(prevBalance);
+    }
+  }, [orgId, startPolling]);
 
   useEffect(() => {
     if (pollingStatus === "success" && settledBalance) {
-      setCreditBalance(settledBalance); resetPolling();
+      useBillingStore.setState({ balance: settledBalance });
+      resetPolling();
       window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
     }
   }, [pollingStatus, settledBalance, resetPolling]);
@@ -125,8 +114,8 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     invites, handleCreateInvite, handleRevokeInvite,
     handleRemoveMember, handleRoleChange,
     billing, billingEmail, setBillingEmail, saving, handleSaveBilling,
-    creditTiers, creditBalance, tiersLoading, tiersError, balanceLoading, balanceError,
-    checkoutError, pollingStatus, handleBuyTier, handleBuyCustom,
-    loadCreditTiers, loadCreditBalance, handleRetryOrg,
+    balance, balanceLoading, balanceError,
+    checkoutError, pollingStatus, handlePurchase,
+    loadCreditBalance, handleRetryOrg,
   };
 }

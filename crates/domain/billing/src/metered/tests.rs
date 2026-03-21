@@ -18,7 +18,8 @@ async fn test_no_access_token_returns_insufficient_credits() {
         MockResponse::text("unreachable"),
     ]));
 
-    let metered = MeteredLlm::new(mock, billing, store);
+    let mut metered = MeteredLlm::new(mock, billing, store);
+    metered.router_mode = false;
 
     let err = metered
         .complete(MeteredCompletionRequest {
@@ -62,7 +63,8 @@ async fn test_credits_exhausted_flag_persists_across_calls() {
         MockResponse::text("b"),
     ]));
 
-    let metered = MeteredLlm::new(mock, billing, store);
+    let mut metered = MeteredLlm::new(mock, billing, store);
+    metered.router_mode = false;
 
     let r1 = metered.complete(MeteredCompletionRequest {
         model: None, api_key: "k", system_prompt: "s",
@@ -182,7 +184,8 @@ async fn test_pre_flight_ttl_caching() {
         MockResponse::text("a").with_tokens(10, 5),
         MockResponse::text("b").with_tokens(10, 5),
     ]));
-    let metered = MeteredLlm::new(mock, billing, store);
+    let mut metered = MeteredLlm::new(mock, billing, store);
+    metered.router_mode = false;
 
     metered.complete(MeteredCompletionRequest {
         model: None, api_key: "key", system_prompt: "sys",
@@ -210,7 +213,8 @@ async fn test_pre_flight_failure_sets_exhausted() {
     let mock = Arc::new(MockLlmProvider::with_responses(vec![
         MockResponse::text("x").with_tokens(100, 50),
     ]));
-    let metered = MeteredLlm::new(mock, billing, store);
+    let mut metered = MeteredLlm::new(mock, billing, store);
+    metered.router_mode = false;
 
     let err = metered.complete(MeteredCompletionRequest {
         model: None, api_key: "key", system_prompt: "sys",
@@ -235,7 +239,8 @@ async fn test_credits_exhausted_then_topped_up() {
         MockResponse::text("a").with_tokens(10, 5),
         MockResponse::text("b").with_tokens(10, 5),
     ]));
-    let metered = MeteredLlm::new(mock, billing, store);
+    let mut metered = MeteredLlm::new(mock, billing, store);
+    metered.router_mode = false;
 
     let err = metered.complete(MeteredCompletionRequest {
         model: None, api_key: "key", system_prompt: "sys",
@@ -346,7 +351,8 @@ async fn test_stream_with_tools_insufficient_credits() {
     let mock = Arc::new(MockLlmProvider::with_responses(vec![
         MockResponse::text("unreachable"),
     ]));
-    let metered = super::MeteredLlm::new(mock.clone(), billing, store);
+    let mut metered = super::MeteredLlm::new(mock.clone(), billing, store);
+    metered.router_mode = false;
 
     let (event_tx, _rx) = mpsc::unbounded_channel();
     let err = metered
@@ -395,7 +401,7 @@ async fn test_complete_with_model_uses_correct_rate() {
 
 #[tokio::test]
 async fn test_router_mode_detection() {
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
 
     std::env::remove_var("AURA_ROUTER_URL");
     let tmp1 = tempfile::TempDir::new().unwrap();
@@ -428,7 +434,7 @@ async fn test_router_mode_detection() {
 /// The LLM provider is called directly and the call succeeds.
 #[tokio::test]
 async fn test_router_mode_skips_preflight_and_debit() {
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::set_var("AURA_ROUTER_URL", "https://router.example.com");
 
     let tmp = tempfile::TempDir::new().unwrap();
@@ -461,7 +467,7 @@ async fn test_router_mode_skips_preflight_and_debit() {
 /// instead of the api_key argument. If no access_token exists, it fails with InsufficientCredits.
 #[tokio::test]
 async fn test_router_mode_injects_jwt() {
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::set_var("AURA_ROUTER_URL", "https://router.example.com");
 
     // Case 1: No access_token → fails
@@ -512,7 +518,7 @@ async fn test_router_mode_injects_jwt() {
 async fn test_router_mode_catches_402() {
     use std::sync::atomic::Ordering;
 
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::set_var("AURA_ROUTER_URL", "https://router.example.com");
 
     let tmp = tempfile::TempDir::new().unwrap();
@@ -542,7 +548,7 @@ async fn test_router_mode_catches_402() {
 /// preflight + debit are called, api_key is passed through.
 #[tokio::test]
 async fn test_direct_mode_still_works() {
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::remove_var("AURA_ROUTER_URL");
 
     let mock = Arc::new(MockLlmProvider::with_responses(vec![
@@ -566,7 +572,7 @@ async fn test_direct_mode_still_works() {
 /// Router mode stream with tools skips preflight and debit.
 #[tokio::test]
 async fn test_router_mode_stream_with_tools() {
-    let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+    let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     std::env::set_var("AURA_ROUTER_URL", "https://router.example.com");
 
     let tmp = tempfile::TempDir::new().unwrap();

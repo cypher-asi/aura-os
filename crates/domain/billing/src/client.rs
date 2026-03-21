@@ -21,6 +21,13 @@ impl BillingClient {
         }
     }
 
+    pub fn with_base_url(base_url: String) -> Self {
+        Self {
+            http: Client::new(),
+            base_url,
+        }
+    }
+
     pub async fn get_balance(
         &self,
         access_token: &str,
@@ -164,9 +171,7 @@ mod tests {
         let url = format!("http://{}", listener.local_addr().unwrap());
         tokio::spawn(async move { axum::serve(listener, app).await.ok() });
 
-        let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
-        std::env::set_var("Z_BILLING_URL", &url);
-        let client = BillingClient::new();
+        let client = BillingClient::with_base_url(url.clone());
         (url, client)
     }
 
@@ -370,7 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_reads_z_billing_url() {
-        let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+        let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::set_var("Z_BILLING_URL", "https://custom.example.com");
         let client = BillingClient::new();
         assert_eq!(client.base_url, "https://custom.example.com");

@@ -23,49 +23,57 @@
   margin-top: var(--space-1);
 }
 
-/* Tier grid */
+/* Preset grid */
 
-.tierGrid {
+.presetGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
 }
 
-.tierCard {
+.presetCard {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
+  justify-content: center;
   cursor: pointer;
+  background: transparent;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.tierCard:hover {
+.presetCard:hover:not(:disabled) {
   border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
 
-.tierCredits {
+.presetCard:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.presetSelected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.presetPrice {
   font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
 }
 
-.tierLabel {
-  font-size: var(--text-2xs);
-  color: var(--color-text-muted);
-  margin-top: var(--space-1);
+.presetSelected .presetPrice {
+  color: var(--color-accent);
 }
 
-.tierPrice {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-accent);
-  margin-top: var(--space-2);
+/* Custom amount row */
+
+.customRow {
+  display: flex;
+  gap: var(--space-2);
 }
 
 /* Status / feedback */
@@ -145,7 +153,7 @@
 }
 
 @media (max-width: 640px) {
-  .tierGrid {
+  .presetGrid {
     grid-template-columns: 1fr 1fr;
   }
 }

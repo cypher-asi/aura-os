@@ -1,4 +1,4 @@
-import type { Org, OrgMember, OrgInvite, OrgBilling, OrgRole, CreditTier, CreditBalance, CheckoutSessionResponse } from "../types";
+import type { Org, OrgMember, OrgInvite, OrgBilling, OrgRole, CreditBalance, CheckoutSessionResponse, TransactionsResponse, BillingAccount } from "../types";
 import { apiFetch } from "./core";
 
 export const orgsApi = {
@@ -42,13 +42,15 @@ export const orgsApi = {
       method: "PUT",
       body: JSON.stringify({ billing_email, plan }),
     }),
-  getCreditTiers: (orgId: string) =>
-    apiFetch<CreditTier[]>(`/api/orgs/${orgId}/credits/tiers`),
   getCreditBalance: (orgId: string) =>
     apiFetch<CreditBalance>(`/api/orgs/${orgId}/credits/balance`),
-  createCreditCheckout: (orgId: string, tierId?: string, customCredits?: number) =>
+  createCreditCheckout: (orgId: string, amountUsd: number) =>
     apiFetch<CheckoutSessionResponse>(`/api/orgs/${orgId}/credits/checkout`, {
       method: "POST",
-      body: JSON.stringify({ tier_id: tierId, credits: customCredits }),
+      body: JSON.stringify({ amount_usd: amountUsd }),
     }),
+  getTransactions: (orgId: string) =>
+    apiFetch<TransactionsResponse>(`/api/orgs/${orgId}/credits/transactions`),
+  getAccount: (orgId: string) =>
+    apiFetch<BillingAccount>(`/api/orgs/${orgId}/account`),
 };

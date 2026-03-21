@@ -10,20 +10,25 @@ const DEBOUNCE_MS = 2_000;
 
 interface CreditBalanceResult {
   credits: number | null;
+  balanceFormatted: string | null;
 }
 
 export function useCreditBalance(): CreditBalanceResult {
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const subscribe = useEventStore((s) => s.subscribe);
   const [credits, setCredits] = useState<number | null>(null);
+  const [balanceFormatted, setBalanceFormatted] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const orgId = activeOrg?.org_id ?? null;
 
   const fetchBalance = useCallback(() => {
-    if (!orgId) { setCredits(null); return; }
+    if (!orgId) { setCredits(null); setBalanceFormatted(null); return; }
     api.orgs
       .getCreditBalance(orgId)
-      .then((b) => setCredits(b.balance_cents))
+      .then((b) => {
+        setCredits(b.balance_cents);
+        setBalanceFormatted(b.balance_formatted);
+      })
       .catch((err) => console.warn("Failed to fetch credit balance:", err));
   }, [orgId]);
 
@@ -59,5 +64,5 @@ export function useCreditBalance(): CreditBalanceResult {
     };
   }, [subscribe, debouncedFetch]);
 
-  return { credits };
+  return { credits, balanceFormatted };
 }

@@ -232,12 +232,12 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         },
       ]);
     }
-    if (path === "/api/orgs/org-1/credits/balance") return json({ total_credits: 1200, purchases: [] });
+    if (path === "/api/orgs/org-1/credits/balance") return json({ balance_cents: 1200, plan: "free", balance_formatted: "$12.00" });
     if (path === "/api/orgs/org-1/invites") return json([]);
     if (path === "/api/orgs/org-1/billing") return json({ billing_email: "billing@example.com", plan: "free" });
     if (path === "/api/orgs/org-1/integrations/github") return json(null);
     if (path === "/api/orgs/org-1/integrations/github/app") return json([]);
-    if (path === "/api/orgs/org-1/credits/tiers") return json([]);
+    if (path === "/api/orgs/org-1/credits/transactions") return json({ transactions: [], has_more: false });
     if (pathname === "/api/projects" && (!url.search || url.search === "?org_id=org-1")) return json([project]);
     if (pathname === `/api/projects/${project.project_id}`) return json(project);
     if (pathname === `/api/projects/${project.project_id}/specs`) return json(specs);

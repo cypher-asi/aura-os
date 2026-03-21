@@ -1,4 +1,5 @@
-import { Modal, Button } from "@cypher-asi/zui";
+import { useState } from "react";
+import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import styles from "./BuyCreditsModal.module.css";
 
@@ -8,20 +9,37 @@ interface Props {
   onOpenBilling?: () => void;
 }
 
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatCredits(n: number): string {
-  return n.toLocaleString();
-}
+const PRESETS = [5, 10, 25, 50];
+const MIN_USD = 1;
+const MAX_USD = 1000;
 
 export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
   const {
-    tiers, tiersLoading, tiersError, balanceError, checkoutError,
+    balanceError, checkoutError,
     pollingStatus, isPolling, balanceDisplay,
-    loadTiers, loadBalance, handleBuyTier, balance,
+    loadBalance, handlePurchase, balance,
   } = useBuyCreditsData(isOpen);
+
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
+
+  const customNum = parseFloat(customAmount);
+  const customValid = !isNaN(customNum) && customNum >= MIN_USD && customNum <= MAX_USD;
+  const effectiveAmount = selectedPreset ?? (customValid ? customNum : null);
+
+  const handlePresetClick = (amount: number) => {
+    setSelectedPreset(amount);
+    setCustomAmount("");
+  };
+
+  const handleCustomChange = (value: string) => {
+    setCustomAmount(value);
+    setSelectedPreset(null);
+  };
+
+  const handlePurchaseClick = () => {
+    if (effectiveAmount !== null) handlePurchase(effectiveAmount);
+  };
 
   const handleOpenBilling = () => {
     onClose();
@@ -50,7 +68,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
       <div className={styles.content}>
         <div className={styles.balanceRow}>
           <div className={styles.balanceValue}>{balanceDisplay}</div>
-          <span className={styles.balanceLabel}>credits remaining</span>
+          <span className={styles.balanceLabel}>current balance</span>
         </div>
 
         {balanceError && balance === null && (
@@ -62,32 +80,41 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
           </div>
         )}
 
-        {tiersLoading && tiers.length === 0 ? (
-          <div className={styles.loadingState}>Loading credit tiers...</div>
-        ) : tiersError && tiers.length === 0 ? (
-          <div className={styles.errorState}>
-            {tiersError}
-            <button className={styles.retryButton} onClick={loadTiers} type="button">
-              Retry
+        <div className={styles.presetGrid}>
+          {PRESETS.map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              className={`${styles.presetCard} ${selectedPreset === amount ? styles.presetSelected : ""}`}
+              onClick={() => handlePresetClick(amount)}
+              disabled={isPolling}
+            >
+              <div className={styles.presetPrice}>${amount}</div>
             </button>
-          </div>
-        ) : tiers.length > 0 ? (
-          <div className={styles.tierGrid}>
-            {tiers.map((tier) => (
-              <button
-                key={tier.id}
-                className={styles.tierCard}
-                onClick={() => handleBuyTier(tier.id)}
-                disabled={isPolling}
-                type="button"
-              >
-                <div className={styles.tierPrice}>{formatUsd(tier.price_usd_cents)}</div>
-                <div className={styles.tierCredits}>{formatCredits(tier.credits)}</div>
-                <div className={styles.tierLabel}>{tier.label}</div>
-              </button>
-            ))}
-          </div>
-        ) : null}
+          ))}
+        </div>
+
+        <div className={styles.customRow}>
+          <Input
+            size="sm"
+            type="number"
+            min={MIN_USD}
+            max={MAX_USD}
+            step="1"
+            value={customAmount}
+            onChange={(e) => handleCustomChange(e.target.value)}
+            placeholder="Custom amount ($)"
+            disabled={isPolling}
+          />
+        </div>
+
+        <Button
+          variant="primary"
+          onClick={handlePurchaseClick}
+          disabled={effectiveAmount === null || isPolling}
+        >
+          {isPolling ? "Processing..." : effectiveAmount !== null ? `Purchase $${effectiveAmount}` : "Select an amount"}
+        </Button>
 
         {checkoutError && (
           <div className={styles.errorState}>{checkoutError}</div>

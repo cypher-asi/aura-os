@@ -45,9 +45,8 @@ const { mockOrgStore, mockApis } = vi.hoisted(() => {
         updateMemberRole: vi.fn().mockResolvedValue(undefined),
         getBilling: vi.fn().mockResolvedValue(null),
         setBilling: vi.fn().mockResolvedValue(undefined),
-        getCreditTiers: vi.fn().mockResolvedValue([]),
         getCreditBalance: vi.fn().mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" }),
-        createCreditCheckout: vi.fn().mockResolvedValue({ checkout_url: "https://checkout" }),
+        createCreditCheckout: vi.fn().mockResolvedValue({ checkout_url: "https://checkout", session_id: "sess_1" }),
       },
     },
   };
@@ -80,6 +79,21 @@ vi.mock("../../hooks/use-checkout-polling", () => ({
     reset: vi.fn(),
   }),
 }));
+
+vi.mock("../../stores/billing-store", () => {
+  const state = {
+    balance: { balance_cents: 1000, plan: "free", balance_formatted: "$10.00" },
+    balanceLoading: false,
+    purchaseLoading: false,
+    fetchBalance: vi.fn(),
+    purchase: vi.fn(),
+  };
+  const store = Object.assign(
+    (sel: (s: typeof state) => unknown) => sel(state),
+    { getState: () => state, setState: vi.fn() },
+  );
+  return { useBillingStore: store };
+});
 
 vi.mock("../CreditsBadge", () => ({
   CREDITS_UPDATED_EVENT: "credits-updated",
@@ -122,7 +136,6 @@ beforeEach(() => {
   mockOrgStore.refreshOrgs = vi.fn().mockResolvedValue(undefined);
   mockApis.orgs.listInvites.mockResolvedValue([]);
   mockApis.orgs.getBilling.mockResolvedValue(null);
-  mockApis.orgs.getCreditTiers.mockResolvedValue([]);
   mockApis.orgs.getCreditBalance.mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" });
 });
 
@@ -180,8 +193,6 @@ describe("OrgSettingsPanel", () => {
     expect(mockOrgStore.refreshMembers).toHaveBeenCalled();
     expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
     expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
-    expect(mockApis.orgs.getCreditTiers).toHaveBeenCalledWith("org-1");
-    expect(mockApis.orgs.getCreditBalance).toHaveBeenCalledWith("org-1");
   });
 
   describe("when no org available", () => {

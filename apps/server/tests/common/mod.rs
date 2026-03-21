@@ -280,6 +280,7 @@ pub fn build_test_app_from_store(
         orbit_base_url: None,
         internal_service_token: None,
         runtime_agent_state: Arc::new(Mutex::new(HashMap::new())),
+        agent_message_cache: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let app = aura_server::create_router(state.clone());

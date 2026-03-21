@@ -98,10 +98,7 @@ impl MeteredLlm {
         billing: Arc<BillingClient>,
         store: Arc<RocksStore>,
     ) -> Self {
-        let credits_per_usd: f64 = std::env::var("BILLING_CREDITS_PER_USD")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(DEFAULT_CREDITS_PER_USD);
+        let credits_per_usd: f64 = DEFAULT_CREDITS_PER_USD;
         let router_mode = std::env::var("AURA_ROUTER_URL").ok().filter(|s| !s.is_empty()).is_some();
         let pricing = PricingService::new(store.clone());
         Self {

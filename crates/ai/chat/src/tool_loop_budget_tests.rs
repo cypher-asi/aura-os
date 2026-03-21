@@ -165,18 +165,8 @@ async fn test_credit_budget_warnings_emitted() {
 async fn test_insufficient_credits_mid_loop() {
     use aura_billing::testutil::{MockBillingState, make_test_llm_stateful};
 
-    let state = Arc::new(tokio::sync::Mutex::new(MockBillingState::new(100)));
+    let state = Arc::new(tokio::sync::Mutex::new(MockBillingState::new(0)));
     let mock = Arc::new(MockLlmProvider::with_responses(vec![
-        MockResponse::tool_use(vec![ToolCall {
-            id: "t0".into(),
-            name: "do_thing".into(),
-            input: serde_json::json!({}),
-        }]).with_tokens(10_000, 5_000),
-        MockResponse::tool_use(vec![ToolCall {
-            id: "t1".into(),
-            name: "do_thing".into(),
-            input: serde_json::json!({}),
-        }]).with_tokens(10_000, 5_000),
         MockResponse::text("unreachable").with_tokens(50, 20),
     ]));
 

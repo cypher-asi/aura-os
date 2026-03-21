@@ -240,26 +240,36 @@ export interface OrgBilling {
   plan: string;
 }
 
-export interface CreditTier {
-  id: string;
-  credits: number;
-  price_usd_cents: number;
-  label: string;
-}
-
-export interface CreditPurchase {
-  id: string;
-  tier_id: string | null;
-  credits: number;
-  amount_cents: number;
-  status: string;
-  created_at: string;
-}
-
 export interface CreditBalance {
   balance_cents: number;
   plan: string;
   balance_formatted: string;
+}
+
+export interface CreditTransaction {
+  id: string;
+  amount_cents: number;
+  transaction_type: string;
+  balance_after_cents: number;
+  description: string;
+  created_at: string;
+}
+
+export interface TransactionsResponse {
+  transactions: CreditTransaction[];
+  has_more: boolean;
+}
+
+export interface BillingAccount {
+  user_id: string;
+  balance_cents: number;
+  balance_formatted: string;
+  lifetime_purchased_cents: number;
+  lifetime_granted_cents: number;
+  lifetime_used_cents: number;
+  plan: string;
+  auto_refill_enabled: boolean;
+  created_at: string;
 }
 
 export interface CheckoutSessionResponse {

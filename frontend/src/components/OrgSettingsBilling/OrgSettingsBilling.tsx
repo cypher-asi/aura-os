@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
-import { EmptyState } from "../EmptyState";
-import type { OrgBilling, CreditTier, CreditBalance } from "../../types";
+import type { OrgBilling, CreditBalance } from "../../types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
@@ -13,32 +12,18 @@ interface Props {
   isAdminOrOwner: boolean;
   saving: boolean;
   onSave: () => void;
-  tiers: CreditTier[];
   balance: CreditBalance | null;
-  tiersLoading: boolean;
-  tiersError: string | null;
   balanceLoading: boolean;
   balanceError: string | null;
   checkoutError: string | null;
   pollingStatus: CheckoutPollingStatus;
-  onBuyTier: (tierId: string) => void;
-  onBuyCustom: (credits: number) => void;
-  onRetryTiers: () => void;
+  onPurchase: (amountUsd: number) => void;
   onRetryBalance: () => void;
 }
 
-function formatCreditsLong(n: number): string {
-  return n.toLocaleString();
-}
-
-function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-function bestRate(tiers: CreditTier[]): number {
-  if (tiers.length === 0) return 0;
-  return Math.min(...tiers.map((t) => t.price_usd_cents / t.credits));
-}
+const PRESETS = [5, 10, 25, 50];
+const MIN_USD = 1;
+const MAX_USD = 1000;
 
 export function OrgSettingsBilling({
   billing,
@@ -47,36 +32,38 @@ export function OrgSettingsBilling({
   isAdminOrOwner,
   saving,
   onSave,
-  tiers,
   balance,
-  tiersLoading,
-  tiersError,
   balanceLoading,
   balanceError,
   checkoutError,
   pollingStatus,
-  onBuyTier,
-  onBuyCustom,
-  onRetryTiers,
+  onPurchase,
   onRetryBalance,
 }: Props) {
-  const [customCredits, setCustomCredits] = useState("");
-  const rate = bestRate(tiers);
+  const [customAmount, setCustomAmount] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
-  const MIN_CUSTOM_CREDITS = 10_000;
-  const MAX_CUSTOM_CREDITS = 100_000_000;
-
-  const customNum = parseInt(customCredits, 10);
-  const customInRange =
-    !isNaN(customNum) &&
-    customNum >= MIN_CUSTOM_CREDITS &&
-    customNum <= MAX_CUSTOM_CREDITS;
-  const customValid = customInRange;
-  const customPrice = customValid ? Math.ceil(customNum * rate) : 0;
+  const customNum = parseFloat(customAmount);
+  const customValid = !isNaN(customNum) && customNum >= MIN_USD && customNum <= MAX_USD;
   const customOutOfRange =
-    customCredits !== "" && !isNaN(customNum) && customNum > 0 && !customInRange;
+    customAmount !== "" && !isNaN(customNum) && customNum > 0 && !customValid;
 
+  const effectiveAmount = selectedPreset ?? (customValid ? customNum : null);
   const isPolling = pollingStatus === "polling";
+
+  const handlePresetClick = (amount: number) => {
+    setSelectedPreset(amount);
+    setCustomAmount("");
+  };
+
+  const handleCustomChange = (value: string) => {
+    setCustomAmount(value);
+    setSelectedPreset(null);
+  };
+
+  const handlePurchaseClick = () => {
+    if (effectiveAmount !== null) onPurchase(effectiveAmount);
+  };
 
   return (
     <>
@@ -144,47 +131,73 @@ export function OrgSettingsBilling({
                       <button className={billingStyles.retryLink} onClick={onRetryBalance}>Retry</button>
                     </span>
                   : balance !== null
-                    ? formatCreditsLong(balance.balance_cents)
+                    ? balance.balance_formatted
                     : "---"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Credit Tiers */}
-      <div className={styles.settingsGroupLabel}>Buy Credits</div>
-      {tiersLoading && tiers.length === 0 ? (
-        <div className={billingStyles.loadingState}>Loading credit tiers...</div>
-      ) : tiersError && tiers.length === 0 ? (
-        <div className={billingStyles.errorState}>
-          {tiersError}
-          <button className={billingStyles.retryButton} onClick={onRetryTiers}>Retry</button>
-        </div>
-      ) : tiers.length === 0 ? (
-        <EmptyState>No credit tiers available</EmptyState>
-      ) : (
-        <div className={billingStyles.tierGrid}>
-          {tiers.map((tier) => (
-            <div key={tier.id} className={billingStyles.tierCard}>
-              <div className={billingStyles.tierCredits}>
-                {formatCreditsLong(tier.credits)}
+      {/* Purchase Credits */}
+      {isAdminOrOwner && (
+        <>
+          <div className={styles.settingsGroupLabel}>Buy Credits</div>
+          <div className={styles.settingsGroup}>
+            <div className={billingStyles.presetRow}>
+              {PRESETS.map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  className={`${billingStyles.presetButton} ${selectedPreset === amount ? billingStyles.presetSelected : ""}`}
+                  onClick={() => handlePresetClick(amount)}
+                  disabled={isPolling}
+                >
+                  ${amount}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.settingsRow}>
+              <div className={styles.rowInfo}>
+                <span className={styles.rowLabel}>Custom Amount</span>
+                <span className={styles.rowDescription}>
+                  Enter a USD amount (${MIN_USD}\u2013${MAX_USD})
+                </span>
               </div>
-              <div className={billingStyles.tierLabel}>{tier.label}</div>
-              <div className={billingStyles.tierPrice}>
-                {formatUsd(tier.price_usd_cents)}
+              <div className={styles.rowControl}>
+                <Input
+                  size="sm"
+                  type="number"
+                  min={MIN_USD}
+                  max={MAX_USD}
+                  step="1"
+                  value={customAmount}
+                  onChange={(e) => handleCustomChange(e.target.value)}
+                  placeholder="e.g. 15"
+                  className={billingStyles.inputWidth140}
+                  disabled={isPolling}
+                />
               </div>
+            </div>
+
+            {customOutOfRange && (
+              <div className={billingStyles.errorState}>
+                Amount must be between ${MIN_USD} and ${MAX_USD}
+              </div>
+            )}
+
+            <div className={billingStyles.purchaseAction}>
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => onBuyTier(tier.id)}
-                disabled={isPolling}
-                className={billingStyles.buyButton}
+                onClick={handlePurchaseClick}
+                disabled={effectiveAmount === null || isPolling}
               >
-                {isPolling ? "Processing..." : "Buy"}
+                {isPolling ? "Processing..." : effectiveAmount !== null ? `Purchase $${effectiveAmount}` : "Purchase"}
               </Button>
             </div>
-          ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Checkout Error */}
@@ -192,54 +205,6 @@ export function OrgSettingsBilling({
         <div className={`${billingStyles.errorState} ${billingStyles.checkoutErrorMargin}`}>
           {checkoutError}
         </div>
-      )}
-
-      {/* Custom Credits */}
-      {tiers.length > 0 && isAdminOrOwner && (
-        <>
-          <div className={styles.settingsGroupLabel}>Custom Amount</div>
-          <div className={styles.settingsGroup}>
-            <div className={styles.settingsRow}>
-              <div className={styles.rowInfo}>
-                <span className={styles.rowLabel}>Credits</span>
-                <span className={styles.rowDescription}>
-                  Enter a custom amount of credits to purchase
-                </span>
-              </div>
-              <div className={styles.rowControl}>
-                <Input
-                  size="sm"
-                  type="number"
-                  min={MIN_CUSTOM_CREDITS}
-                  max={MAX_CUSTOM_CREDITS}
-                  value={customCredits}
-                  onChange={(e) => setCustomCredits(e.target.value)}
-                  placeholder="e.g. 100000"
-                  className={billingStyles.inputWidth140}
-                />
-                {customValid && (
-                  <span className={billingStyles.customPrice}>
-                    {formatUsd(customPrice)}
-                  </span>
-                )}
-                {customOutOfRange && (
-                  <span className={billingStyles.errorState}>
-                    Must be between {formatCreditsLong(MIN_CUSTOM_CREDITS)} and{" "}
-                    {formatCreditsLong(MAX_CUSTOM_CREDITS)} credits
-                  </span>
-                )}
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => customValid && onBuyCustom(customNum)}
-                  disabled={!customValid || isPolling}
-                >
-                  {isPolling ? "Processing..." : "Buy Custom"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
       )}
 
       {/* Polling Status */}
@@ -250,7 +215,6 @@ export function OrgSettingsBilling({
           {pollingStatus === "timeout" && "Payment not yet confirmed. Credits will appear once the payment is processed."}
         </div>
       )}
-
     </>
   );
 }

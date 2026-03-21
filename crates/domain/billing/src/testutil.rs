@@ -103,9 +103,7 @@ pub async fn start_stateful_mock_billing_server(
 }
 
 pub fn billing_client_for_url(url: &str) -> BillingClient {
-    let _guard = ENV_LOCK.lock().unwrap();
-    std::env::set_var("Z_BILLING_URL", url);
-    BillingClient::new()
+    BillingClient::with_base_url(url.to_string())
 }
 
 pub fn store_zero_auth_session(store: &RocksStore) {
@@ -127,8 +125,8 @@ pub fn store_zero_auth_session(store: &RocksStore) {
 }
 
 /// Create a fully wired `MeteredLlm` backed by a mock billing server and
-/// the given `LlmProvider`. Returns the metered LLM and a temp dir (keep
-/// it alive for the duration of the test).
+/// the given `LlmProvider`. Always operates in non-router mode regardless
+/// of the `AURA_ROUTER_URL` env var (avoids env-var races with parallel tests).
 pub async fn make_test_llm(
     provider: Arc<dyn aura_claude::LlmProvider>,
 ) -> (Arc<MeteredLlm>, tempfile::TempDir) {
@@ -137,12 +135,13 @@ pub async fn make_test_llm(
     let tmp = tempfile::TempDir::new().unwrap();
     let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
     store_zero_auth_session(&store);
-    let llm = Arc::new(MeteredLlm::new(provider, billing, store));
-    (llm, tmp)
+    let mut llm = MeteredLlm::new(provider, billing, store);
+    llm.router_mode = false;
+    (Arc::new(llm), tmp)
 }
 
 /// Like `make_test_llm`, but backed by a stateful mock server so tests can
-/// configure low balances.
+/// configure low balances. Always operates in non-router mode.
 pub async fn make_test_llm_stateful(
     provider: Arc<dyn aura_claude::LlmProvider>,
     state: Arc<tokio::sync::Mutex<MockBillingState>>,
@@ -152,6 +151,7 @@ pub async fn make_test_llm_stateful(
     let tmp = tempfile::TempDir::new().unwrap();
     let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
     store_zero_auth_session(&store);
-    let llm = Arc::new(MeteredLlm::new(provider, billing, store));
-    (llm, tmp)
+    let mut llm = MeteredLlm::new(provider, billing, store);
+    llm.router_mode = false;
+    (Arc::new(llm), tmp)
 }

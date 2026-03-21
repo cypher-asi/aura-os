@@ -5,52 +5,49 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Tier grid */
+/* Preset amount buttons */
 
-.tierGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+.presetRow {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
 }
 
-.tierCard {
+.presetButton {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.tierCredits {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  background: transparent;
   color: var(--color-text-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.tierLabel {
-  font-size: var(--text-2xs);
-  color: var(--color-text-muted);
-  margin-top: var(--space-1);
-}
-
-.tierPrice {
   font-size: var(--text-sm);
   font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.presetButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.presetButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.presetSelected {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   color: var(--color-accent);
-  margin-top: var(--space-2);
 }
 
-/* Custom price inline */
+/* Purchase action */
 
-.customPrice {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text-muted);
-  white-space: nowrap;
+.purchaseAction {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4) var(--space-3);
 }
 
 /* Polling status */
@@ -165,22 +162,17 @@
   width: 140px;
 }
 
-.buyButton {
-  width: 100%;
-  margin-top: var(--space-2);
-}
-
 .checkoutErrorMargin {
   margin-bottom: var(--space-4);
 }
 
 @media (max-width: 640px) {
-  .tierGrid {
-    grid-template-columns: 1fr;
+  .presetRow {
+    flex-wrap: wrap;
   }
 
-  .customPrice {
-    width: 100%;
+  .presetButton {
+    flex: 0 0 calc(50% - var(--space-1));
   }
 
   .errorState {
