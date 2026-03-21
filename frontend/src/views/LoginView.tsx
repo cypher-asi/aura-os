@@ -6,6 +6,7 @@ import { useHostStore, type HostConnectionStatus } from "../stores/host-store";
 import { getHostDisplayLabel } from "../lib/host-config";
 import { ApiClientError } from "../api/client";
 import { HostSettingsModal } from "../components/HostSettingsModal";
+import { useUIModalStore } from "../stores/ui-modal-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { windowCommand } from "../lib/windowCommand";
 import { WindowControls } from "../components/WindowControls";
@@ -85,7 +86,7 @@ export function LoginView() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
+  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
   const [hostRefreshing, setHostRefreshing] = useState(false);
 
   function resetForm(): void {
@@ -191,7 +192,7 @@ export function LoginView() {
                     variant="ghost"
                     size="sm"
                     className={styles.mobileHostButton}
-                    onClick={() => setHostSettingsOpen(true)}
+                    onClick={openHostSettings}
                   >
                     <span className={styles.mobileHostButtonLabel}>Host</span>
                     <span
@@ -235,7 +236,7 @@ export function LoginView() {
                   {hostStatus.detail}
                 </Text>
                 <div className={`${styles.hostActions} ${isMobileLayout ? styles.hostActionsMobile : ""}`}>
-                  <Button variant="ghost" size="sm" onClick={() => setHostSettingsOpen(true)}>
+                  <Button variant="ghost" size="sm" onClick={openHostSettings}>
                     Change host
                   </Button>
                   <Button
@@ -305,7 +306,7 @@ export function LoginView() {
         </Panel>
       </div>
       {features.hostRetargeting && (
-        <HostSettingsModal isOpen={hostSettingsOpen} onClose={() => setHostSettingsOpen(false)} />
+        <HostSettingsModal isOpen={hostSettingsOpen} onClose={closeHostSettings} />
       )}
     </div>
   );
