@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Modal, Spinner, Text } from "@cypher-asi/zui";
-import { useHost } from "../context/HostContext";
-import { normalizeHostOrigin } from "../lib/host-config";
+import { useShallow } from "zustand/react/shallow";
+import { useHostStore } from "../stores/host-store";
+import { getHostDisplayLabel, getResolvedHostOrigin, normalizeHostOrigin } from "../lib/host-config";
 import styles from "./SettingsModal.module.css";
 
 export function HostSettingsModal({
@@ -11,7 +12,11 @@ export function HostSettingsModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { hostOrigin, hostLabel, status, resolvedOrigin, setHostOrigin, refreshStatus } = useHost();
+  const { hostOrigin, status, setHostOrigin, refreshStatus } = useHostStore(
+    useShallow((s) => ({ hostOrigin: s.hostOrigin, status: s.status, setHostOrigin: s.setHostOrigin, refreshStatus: s.refreshStatus })),
+  );
+  const hostLabel = getHostDisplayLabel();
+  const resolvedOrigin = getResolvedHostOrigin();
   const [value, setValue] = useState(hostOrigin ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);

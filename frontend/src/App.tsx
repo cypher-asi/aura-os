@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
 import { EventProvider } from "./context/EventContext";
 import { FollowProvider } from "./context/FollowContext";
-import { HostProvider } from "./context/HostContext";
 import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { HomeView } from "./views/HomeView";
@@ -27,10 +26,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <HostProvider>
-        <EventProvider>
-          <FollowProvider>
-              <Routes>
+      <EventProvider>
+        <FollowProvider>
+            <Routes>
                 <Route path="login" element={<LoginView />} />
                 <Route path="ide" element={<IdeView />} />
                 <Route element={<RequireAuth />}>
@@ -66,9 +64,8 @@ export default function App() {
                   </Route>
                 </Route>
               </Routes>
-            </FollowProvider>
-          </EventProvider>
-      </HostProvider>
+          </FollowProvider>
+        </EventProvider>
     </BrowserRouter>
   );
 }

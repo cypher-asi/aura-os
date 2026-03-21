@@ -2,7 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../stores/auth-store";
-import { useHost, type HostConnectionStatus } from "../context/HostContext";
+import { useHostStore, type HostConnectionStatus } from "../stores/host-store";
+import { getHostDisplayLabel } from "../lib/host-config";
 import { ApiClientError } from "../api/client";
 import { HostSettingsModal } from "../components/HostSettingsModal";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
@@ -71,7 +72,9 @@ function formatAuthError(err: unknown, hostLabel: string): string {
 
 export function LoginView() {
   const { login, register } = useAuth();
-  const { hostLabel, status, refreshStatus } = useHost();
+  const status = useHostStore((s) => s.status);
+  const refreshStatus = useHostStore((s) => s.refreshStatus);
+  const hostLabel = getHostDisplayLabel();
   const { features, isMobileLayout } = useAuraCapabilities();
   const navigate = useNavigate();
   const location = useLocation();
