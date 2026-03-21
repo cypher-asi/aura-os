@@ -313,7 +313,7 @@ impl DevLoopEngine {
             api_key: atp.api_key,
             system_prompt: &setup.system_prompt,
             initial_messages: vec![RichMessage::user(&setup.task_context)],
-            tools: engine_tool_definitions(),
+            tools: engine_tool_definitions().iter().cloned().map(Into::into).collect::<Vec<_>>().into(),
             config: &config,
             executor: &executor,
             event_tx: &loop_tx,
