@@ -161,7 +161,7 @@ export function AgentList() {
     [navigate],
   );
 
-  if (loading) {
+  if (loading && agents.length === 0) {
     return (
       <div className={styles.loading}>
         <Loader2 size={18} className={styles.spin} />
