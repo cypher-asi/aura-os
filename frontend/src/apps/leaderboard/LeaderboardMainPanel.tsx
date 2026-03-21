@@ -61,7 +61,7 @@ export function LeaderboardMainPanel() {
                   </div>
                   <div className={styles.metaCell}>
                     <span className={styles.metaValue} title={user.tokens.toLocaleString() + " tokens"}>
-                      {formatTokens(user.tokens)}
+                      {formatTokens(user.tokens)} tokens
                     </span>
                     <span className={styles.metaSep}>·</span>
                     <span className={styles.metaValue} title={`$${user.estimatedCostUsd.toFixed(4)}`}>

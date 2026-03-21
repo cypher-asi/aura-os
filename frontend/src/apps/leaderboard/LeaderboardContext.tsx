@@ -16,6 +16,8 @@ interface LeaderboardContextValue {
   loading: boolean;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const LeaderboardCtx = createContext<LeaderboardContextValue | null>(null);
 
 export function LeaderboardProvider({ children }: { children: ReactNode }) {
@@ -38,7 +40,9 @@ export function LeaderboardProvider({ children }: { children: ReactNode }) {
         setEntries(
           data.map((e) => ({
             id: e.profile_id,
-            name: e.display_name ?? "Unknown",
+            name: e.display_name && !UUID_RE.test(e.display_name)
+              ? e.display_name
+              : e.profile_type === "agent" ? "Unnamed Agent" : "Unknown",
             avatarUrl: e.avatar_url ?? undefined,
             profileId: e.profile_id,
             type: (e.profile_type === "agent" ? "agent" : "user") as "user" | "agent",
