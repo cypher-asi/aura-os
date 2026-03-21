@@ -1,8 +1,19 @@
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import styles from "./AppNavRail.module.css";
+
+const LAST_AGENT_KEY = "aura:lastAgentId";
+
+function resolveAppPath(app: { id: string; basePath: string }): string {
+  if (app.id === "agents") {
+    const lastId = localStorage.getItem(LAST_AGENT_KEY);
+    if (lastId) return `/agents/${lastId}`;
+  }
+  return app.basePath;
+}
 
 interface AppNavRailProps {
   layout?: "rail" | "bar";
@@ -13,6 +24,11 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
   const navigate = useNavigate();
   const primaryApps = apps.filter((app) => app.id !== "profile");
   const isBar = layout === "bar";
+
+  const handleAppClick = useCallback(
+    (app: { id: string; basePath: string }) => navigate(resolveAppPath(app)),
+    [navigate],
+  );
 
   return (
     <nav className={isBar ? styles.bar : styles.rail} aria-label="Primary navigation">
@@ -28,7 +44,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
             title={app.label}
             aria-label={app.label}
             className={isBar ? styles.barButton : styles.btn}
-            onClick={() => navigate(app.basePath)}
+            onClick={() => handleAppClick(app)}
           >
             {isBar ? app.label : undefined}
           </Button>
