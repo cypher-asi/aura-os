@@ -1,0 +1,151 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
+}
+
+.balanceRow {
+  text-align: center;
+}
+
+.balanceValue {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.balanceLabel {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* Tier grid */
+
+.tierGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.tierCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.tierCard:hover {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.tierCredits {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tierLabel {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.tierPrice {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-accent);
+  margin-top: var(--space-2);
+}
+
+/* Status / feedback */
+
+.pollingStatus {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.errorState {
+  font-size: var(--text-sm);
+  color: var(--color-error, #ef4444);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 20%, transparent);
+}
+
+.retryButton {
+  background: none;
+  border: 1px solid var(--color-error, #ef4444);
+  color: var(--color-error, #ef4444);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.retryButton:hover {
+  background: color-mix(in srgb, var(--color-error, #ef4444) 10%, transparent);
+}
+
+.loadingState {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Footer */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.footerEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.billingLink {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.billingLink:hover {
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .tierGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
