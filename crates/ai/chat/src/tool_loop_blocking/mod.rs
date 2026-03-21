@@ -35,20 +35,18 @@ pub(crate) struct BlockingContext<'a> {
     pub(crate) exploration: &'a ExplorationState,
 }
 
+pub(crate) use detection::{decrement_write_file_cooldowns, detect_all_blocked};
 #[allow(unused_imports)]
 pub(crate) use detection::{
-    collect_duplicate_write_paths, decrement_write_file_cooldowns, detect_all_blocked,
-    detect_blocked_commands, detect_blocked_exploration, detect_blocked_write_failures,
-    detect_blocked_writes, detect_write_file_cooldowns,
+    collect_duplicate_write_paths, detect_blocked_commands, detect_blocked_exploration,
+    detect_blocked_write_failures, detect_blocked_writes, detect_write_file_cooldowns,
 };
-#[allow(unused_imports)]
-pub(crate) use results::{BlockedResultContext, build_blocked_result, execute_with_blocked};
-#[allow(unused_imports)]
+pub(crate) use results::{BlockedResultContext, execute_with_blocked};
 pub(crate) use stall::{
-    apply_cmd_failure_tracking, detect_same_target_stall, detect_stall_fail_fast,
-    track_write_failures,
+    apply_cmd_failure_tracking, detect_stall_fail_fast, track_write_failures,
 };
 #[allow(unused_imports)]
+pub(crate) use stall::detect_same_target_stall;
 pub(crate) use tool_results::{
     build_tool_result_blocks, looks_truncated, summarize_write_file_input,
 };

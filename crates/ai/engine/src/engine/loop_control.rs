@@ -9,7 +9,7 @@ use super::types::*;
 use crate::events::EngineEvent;
 
 impl LoopRunContext {
-    async fn end_session(&self, engine: &DevLoopEngine) {
+    pub(super) async fn end_session(&self, engine: &DevLoopEngine) {
         if let Err(e) = engine.session_service.end_session(
             &self.project_id,
             &self.agent_instance_id,

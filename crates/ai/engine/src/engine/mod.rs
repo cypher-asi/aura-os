@@ -6,6 +6,8 @@ mod executor_agentic;
 mod executor_shell;
 mod loop_context;
 mod loop_control;
+mod loop_metrics;
+mod loop_session;
 pub mod loop_handle;
 pub(crate) mod orchestrator;
 pub mod parser;

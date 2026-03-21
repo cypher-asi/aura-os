@@ -106,50 +106,6 @@ fn walk_and_collect(
     current_size: &mut usize,
     max_bytes: usize,
 ) -> Result<(), EngineError> {
-    let entries = std::fs::read_dir(dir).map_err(|e| EngineError::Io(e.to_string()))?;
-
-    let mut entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
-    entries.sort_by_key(|e| e.file_name());
-
-    for entry in entries {
-        if *current_size >= max_bytes {
-            break;
-        }
-
-        let path = entry.path();
-        let file_name = entry.file_name().to_string_lossy().to_string();
-
-        if path.is_dir() {
-            if SKIP_DIRS.contains(&file_name.as_str()) {
-                continue;
-            }
-            walk_and_collect(base, &path, output, current_size, max_bytes)?;
-        } else if path.is_file() {
-            let extension = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or_default();
-
-            if !INCLUDE_EXTENSIONS.contains(&extension) {
-                continue;
-            }
-
-            let content =
-                std::fs::read_to_string(&path).map_err(|e| EngineError::Io(e.to_string()))?;
-
-            let relative = path
-                .strip_prefix(base)
-                .unwrap_or(&path)
-                .display()
-                .to_string();
-
-            let section = format!("--- {} ---\n{}\n\n", relative, content);
-            if *current_size + section.len() > max_bytes {
-                break;
-            }
-            output.push_str(&section);
-            *current_size += section.len();
-        }
-    }
-    Ok(())
+    let mut included = std::collections::HashSet::new();
+    file_walkers::walk_and_collect_filtered(base, dir, output, current_size, max_bytes, &mut included)
 }
