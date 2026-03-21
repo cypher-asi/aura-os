@@ -32,6 +32,8 @@ export function AgentList() {
   const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
   const [showEditor, setShowEditor] = useState(false);
 
+  useEffect(() => { fetchAgents(); }, [fetchAgents]);
+
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
   const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);

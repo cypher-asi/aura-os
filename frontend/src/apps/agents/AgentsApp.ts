@@ -2,7 +2,6 @@ import { Brain } from "lucide-react";
 import { AgentList } from "./AgentList";
 import { AgentMainPanel } from "./AgentMainPanel";
 import { AgentInfoPanel } from "./AgentInfoPanel";
-import { AgentAppProvider } from "./AgentAppProvider";
 import { useAgentStore, LAST_AGENT_ID_KEY } from "./stores";
 import type { AuraApp } from "../types";
 
@@ -15,7 +14,6 @@ export const AgentsApp: AuraApp = {
   MainPanel: AgentMainPanel,
   ResponsiveControls: AgentList,
   SidekickPanel: AgentInfoPanel,
-  Provider: AgentAppProvider,
   searchPlaceholder: "Search Agents...",
   onPrefetch: () => {
     const store = useAgentStore.getState();
