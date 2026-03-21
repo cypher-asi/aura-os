@@ -1,5 +1,6 @@
 pub(crate) mod debit;
 mod llm_provider;
+mod model_provider;
 mod preflight;
 
 #[cfg(test)]
