@@ -415,9 +415,34 @@ pub struct LeaderboardEntry {
     #[serde(default)]
     pub tokens_used: u64,
     #[serde(default)]
-    pub rank: u32,
+    pub estimated_cost_usd: f64,
+    #[serde(default)]
+    pub event_count: u64,
     #[serde(default)]
     pub profile_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlatformStats {
+    pub id: String,
+    pub date: String,
+    #[serde(default)]
+    pub daily_active_users: i32,
+    #[serde(default)]
+    pub total_users: i32,
+    #[serde(default)]
+    pub new_signups: i32,
+    #[serde(default)]
+    pub projects_created: i32,
+    #[serde(default)]
+    pub total_input_tokens: i64,
+    #[serde(default)]
+    pub total_output_tokens: i64,
+    #[serde(default)]
+    pub total_revenue_usd: f64,
+    #[serde(default)]
+    pub created_at: String,
 }
 
 // ---------------------------------------------------------------------------

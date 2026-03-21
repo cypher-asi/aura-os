@@ -62,4 +62,12 @@ impl NetworkClient {
         )
         .await
     }
+
+    pub async fn get_platform_stats(
+        &self,
+        jwt: &str,
+    ) -> Result<Option<PlatformStats>, NetworkError> {
+        self.get_authed(&format!("{}/api/stats", self.base_url), jwt)
+            .await
+    }
 }

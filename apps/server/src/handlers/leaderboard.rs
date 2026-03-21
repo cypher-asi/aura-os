@@ -3,7 +3,7 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use aura_core::OrgId;
-use aura_network::{LeaderboardEntry, MemberUsageStats, UsageStats};
+use aura_network::{LeaderboardEntry, MemberUsageStats, PlatformStats, UsageStats};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
@@ -26,7 +26,8 @@ pub struct LeaderboardEntryResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub avatar_url: Option<String>,
     pub tokens_used: u64,
-    pub rank: u32,
+    pub estimated_cost_usd: f64,
+    pub event_count: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub profile_type: Option<String>,
 }
@@ -38,7 +39,8 @@ impl From<LeaderboardEntry> for LeaderboardEntryResponse {
             display_name: e.display_name,
             avatar_url: e.avatar_url,
             tokens_used: e.tokens_used,
-            rank: e.rank,
+            estimated_cost_usd: e.estimated_cost_usd,
+            event_count: e.event_count,
             profile_type: e.profile_type,
         }
     }
@@ -161,4 +163,51 @@ pub async fn get_org_usage_members(
             .map(MemberUsageResponse::from)
             .collect(),
     ))
+}
+
+// ---------------------------------------------------------------------------
+// Platform Stats
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct PlatformStatsResponse {
+    pub id: String,
+    pub date: String,
+    pub daily_active_users: i32,
+    pub total_users: i32,
+    pub new_signups: i32,
+    pub projects_created: i32,
+    pub total_input_tokens: i64,
+    pub total_output_tokens: i64,
+    pub total_revenue_usd: f64,
+    pub created_at: String,
+}
+
+impl From<PlatformStats> for PlatformStatsResponse {
+    fn from(s: PlatformStats) -> Self {
+        Self {
+            id: s.id,
+            date: s.date,
+            daily_active_users: s.daily_active_users,
+            total_users: s.total_users,
+            new_signups: s.new_signups,
+            projects_created: s.projects_created,
+            total_input_tokens: s.total_input_tokens,
+            total_output_tokens: s.total_output_tokens,
+            total_revenue_usd: s.total_revenue_usd,
+            created_at: s.created_at,
+        }
+    }
+}
+
+pub async fn get_platform_stats(
+    State(state): State<AppState>,
+) -> ApiResult<Json<Option<PlatformStatsResponse>>> {
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let stats = client
+        .get_platform_stats(&jwt)
+        .await
+        .map_err(map_network_error)?;
+    Ok(Json(stats.map(PlatformStatsResponse::from)))
 }

@@ -283,6 +283,7 @@ fn social_routes() -> Router<AppState> {
             get(follows::check_follow),
         )
         .route("/api/leaderboard", get(leaderboard::get_leaderboard))
+        .route("/api/stats", get(leaderboard::get_platform_stats))
         .route(
             "/api/users/me/usage",
             get(leaderboard::get_personal_usage),
