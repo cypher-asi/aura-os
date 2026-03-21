@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FileCode, FileText } from "lucide-react";
-import type { ToolCallEntry } from "../hooks/use-chat-stream";
+import type { ToolCallEntry } from "../types/stream";
 import styles from "./FilePreviewCard.module.css";
 
 const LANG_MAP: Record<string, string> = {

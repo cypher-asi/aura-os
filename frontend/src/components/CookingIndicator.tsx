@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import type { ToolCallEntry } from "../hooks/use-chat-stream";
+import type { ToolCallEntry } from "../types/stream";
 import styles from "./CookingIndicator.module.css";
 
 const TOOL_PHASE_LABELS: Record<string, string> = {

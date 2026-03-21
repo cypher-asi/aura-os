@@ -23,9 +23,9 @@ export type {
   ArtifactRef,
   DisplayMessage,
   ToolCallEntry,
-} from "./use-stream-core";
+} from "../types/stream";
 
-import type { DisplayContentBlockUnion } from "./use-stream-core";
+import type { DisplayContentBlockUnion } from "../types/stream";
 
 interface UseChatStreamOptions {
   projectId: string | undefined;

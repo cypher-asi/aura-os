@@ -1,77 +1,27 @@
 import { useRef, useState, useCallback, useLayoutEffect, useEffect, useMemo } from "react";
-import type { MutableRefObject, Dispatch, SetStateAction } from "react";
+import type { MutableRefObject, SetStateAction } from "react";
 import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import type { ToolCallStartedInfo, ToolCallInfo, ToolResultInfo } from "../api/streams";
 import type { Message } from "../types";
 import { extractToolCalls, extractArtifactRefs } from "../utils/chat-history";
+import type {
+  DisplayContentBlockUnion,
+  DisplayMessage,
+  ToolCallEntry,
+  StreamRefs,
+  StreamSetters,
+} from "../types/stream";
 
-/* ------------------------------------------------------------------ */
-/*  Shared display types                                               */
-/* ------------------------------------------------------------------ */
-
-export interface DisplayContentBlock {
-  type: "text";
-  text: string;
-}
-
-export interface DisplayImageBlock {
-  type: "image";
-  media_type: string;
-  data: string;
-}
-
-export type DisplayContentBlockUnion = DisplayContentBlock | DisplayImageBlock;
-
-export interface ArtifactRef {
-  kind: "task" | "spec";
-  id: string;
-  title: string;
-}
-
-export interface DisplayMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  toolCalls?: ToolCallEntry[];
-  artifactRefs?: ArtifactRef[];
-  contentBlocks?: DisplayContentBlockUnion[];
-  thinkingText?: string;
-  thinkingDurationMs?: number | null;
-}
-
-export interface ToolCallEntry {
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
-  result?: string;
-  isError?: boolean;
-  pending: boolean;
-  started?: boolean;
-}
-
-/* ------------------------------------------------------------------ */
-/*  Ref / setter interfaces                                            */
-/* ------------------------------------------------------------------ */
-
-export interface StreamRefs {
-  streamBuffer: MutableRefObject<string>;
-  thinkingBuffer: MutableRefObject<string>;
-  thinkingStart: MutableRefObject<number | null>;
-  toolCalls: MutableRefObject<ToolCallEntry[]>;
-  needsSeparator: MutableRefObject<boolean>;
-  raf: MutableRefObject<number | null>;
-  thinkingRaf: MutableRefObject<number | null>;
-}
-
-export interface StreamSetters {
-  setStreamingText: Dispatch<SetStateAction<string>>;
-  setThinkingText: Dispatch<SetStateAction<string>>;
-  setThinkingDurationMs: Dispatch<SetStateAction<number | null>>;
-  setActiveToolCalls: Dispatch<SetStateAction<ToolCallEntry[]>>;
-  setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
-  setIsStreaming: Dispatch<SetStateAction<boolean>>;
-  setProgressText: Dispatch<SetStateAction<string>>;
-}
+export type {
+  DisplayContentBlock,
+  DisplayImageBlock,
+  DisplayContentBlockUnion,
+  ArtifactRef,
+  DisplayMessage,
+  ToolCallEntry,
+  StreamRefs,
+  StreamSetters,
+} from "../types/stream";
 
 /* ------------------------------------------------------------------ */
 /*  Module-level stream store                                          */

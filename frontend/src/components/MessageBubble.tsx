@@ -4,15 +4,13 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeHighlight from "rehype-highlight";
 import { FileText, Plus, CheckCircle2, XCircle, Search, Terminal, Trash2, FolderOpen, Wrench } from "lucide-react";
-import type { ToolCallEntry, ArtifactRef } from "../hooks/use-chat-stream";
+import type { ToolCallEntry, ArtifactRef, DisplayContentBlockUnion, DisplayMessage } from "../types/stream";
 import styles from "./ChatView.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 import fileStyles from "./FilePreviewCard.module.css";
 import { ResponseBlock } from "./ResponseBlock";
 import { CookingIndicator, getStreamingPhaseLabel } from "./CookingIndicator";
 import { FilePreviewCard } from "./FilePreviewCard";
-
-import type { DisplayContentBlockUnion } from "../hooks/use-chat-stream";
 
 /**
  * Split text into alternating prose / fenced-code segments so that
@@ -243,17 +241,6 @@ function SegmentedContent({
       })}
     </>
   );
-}
-
-interface DisplayMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  toolCalls?: ToolCallEntry[];
-  artifactRefs?: ArtifactRef[];
-  contentBlocks?: DisplayContentBlockUnion[];
-  thinkingText?: string;
-  thinkingDurationMs?: number | null;
 }
 
 interface Props {

@@ -14,7 +14,7 @@ import {
   handleStreamError,
   finalizeStream,
 } from "./use-stream-core";
-import type { DisplayMessage } from "./use-stream-core";
+import type { DisplayMessage } from "../types/stream";
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
