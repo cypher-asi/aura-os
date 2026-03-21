@@ -250,10 +250,16 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/orgs/:org_id/usage/members",
             get(leaderboard::get_org_usage_members),
         )
-        // Feed (proxied to aura-network)
+        // Feed & Posts (proxied to aura-network)
         .route("/api/feed", get(feed::list_feed))
+        .route("/api/posts", post(feed::create_post))
+        .route("/api/posts/:post_id", get(feed::get_post))
         .route(
-            "/api/activity/:event_id/comments",
+            "/api/profiles/:profile_id/posts",
+            get(feed::get_profile_posts),
+        )
+        .route(
+            "/api/posts/:post_id/comments",
             get(feed::list_comments).post(feed::add_comment),
         )
         .route(

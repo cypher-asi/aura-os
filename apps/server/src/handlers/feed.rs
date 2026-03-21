@@ -11,6 +11,8 @@ use crate::state::AppState;
 #[derive(Debug, Deserialize)]
 pub struct FeedQuery {
     pub filter: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -19,7 +21,25 @@ pub struct FeedEventResponse {
     pub profile_id: String,
     pub event_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub push_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commit_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
 }
@@ -30,7 +50,16 @@ impl From<NetworkFeedEvent> for FeedEventResponse {
             id: e.id,
             profile_id: e.profile_id,
             event_type: e.event_type,
+            post_type: e.post_type,
+            title: e.title,
+            summary: e.summary,
             metadata: e.metadata,
+            org_id: e.org_id,
+            project_id: e.project_id,
+            agent_id: e.agent_id,
+            user_id: e.user_id,
+            push_id: e.push_id,
+            commit_ids: e.commit_ids,
             created_at: e.created_at,
         }
     }
@@ -63,6 +92,14 @@ pub struct AddCommentRequest {
     pub content: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CreatePostRequest {
+    pub post_type: Option<String>,
+    pub title: String,
+    pub summary: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
 pub async fn list_feed(
     State(state): State<AppState>,
     Query(query): Query<FeedQuery>,
@@ -70,20 +107,59 @@ pub async fn list_feed(
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let events = client
-        .get_feed(query.filter.as_deref(), &jwt)
+        .get_feed(query.filter.as_deref(), query.limit, query.offset, &jwt)
         .await
         .map_err(map_network_error)?;
     Ok(Json(events.into_iter().map(FeedEventResponse::from).collect()))
 }
 
+pub async fn create_post(
+    State(state): State<AppState>,
+    Json(req): Json<CreatePostRequest>,
+) -> ApiResult<(StatusCode, Json<FeedEventResponse>)> {
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let post = client
+        .create_post(&req.title, req.summary.as_deref(), req.post_type.as_deref(), req.metadata.clone(), &jwt)
+        .await
+        .map_err(map_network_error)?;
+    Ok((StatusCode::CREATED, Json(FeedEventResponse::from(post))))
+}
+
+pub async fn get_post(
+    State(state): State<AppState>,
+    Path(post_id): Path<String>,
+) -> ApiResult<Json<FeedEventResponse>> {
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let post = client
+        .get_post(&post_id, &jwt)
+        .await
+        .map_err(map_network_error)?;
+    Ok(Json(FeedEventResponse::from(post)))
+}
+
+pub async fn get_profile_posts(
+    State(state): State<AppState>,
+    Path(profile_id): Path<String>,
+) -> ApiResult<Json<Vec<FeedEventResponse>>> {
+    let client = state.require_network_client()?;
+    let jwt = state.get_jwt()?;
+    let posts = client
+        .get_profile_posts(&profile_id, &jwt)
+        .await
+        .map_err(map_network_error)?;
+    Ok(Json(posts.into_iter().map(FeedEventResponse::from).collect()))
+}
+
 pub async fn list_comments(
     State(state): State<AppState>,
-    Path(event_id): Path<String>,
+    Path(post_id): Path<String>,
 ) -> ApiResult<Json<Vec<CommentResponse>>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let comments = client
-        .list_comments(&event_id, &jwt)
+        .list_comments(&post_id, &jwt)
         .await
         .map_err(map_network_error)?;
     Ok(Json(comments.into_iter().map(CommentResponse::from).collect()))
@@ -91,13 +167,13 @@ pub async fn list_comments(
 
 pub async fn add_comment(
     State(state): State<AppState>,
-    Path(event_id): Path<String>,
+    Path(post_id): Path<String>,
     Json(req): Json<AddCommentRequest>,
 ) -> ApiResult<(StatusCode, Json<CommentResponse>)> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let comment = client
-        .add_comment(&event_id, &req.content, &jwt)
+        .add_comment(&post_id, &req.content, &jwt)
         .await
         .map_err(map_network_error)?;
     Ok((StatusCode::CREATED, Json(CommentResponse::from(comment))))
