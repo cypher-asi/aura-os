@@ -7,10 +7,16 @@ import { SpecPreviewCard } from "./SpecPreviewCard";
 import { TaskCreatedIndicator } from "./TaskCreatedIndicator";
 import toolStyles from "../ToolCallBlock.module.css";
 
-function ToolCallBlock({ entry }: { entry: ToolCallEntry }) {
+export function ToolCallBlock({
+  entry,
+  defaultExpanded,
+}: {
+  entry: ToolCallEntry;
+  defaultExpanded?: boolean;
+}) {
   const isSpec = entry.name === "create_spec";
   const isTask = entry.name === "create_task";
-  const autoExpand = isSpec && !entry.started;
+  const autoExpand = defaultExpanded ?? (isSpec && !entry.started);
   const [expanded, setExpanded] = useState(autoExpand);
   const label = TOOL_LABELS[entry.name] || entry.name;
   const inputSummary = entry.started ? "" : summarizeInput(entry.name, entry.input);
