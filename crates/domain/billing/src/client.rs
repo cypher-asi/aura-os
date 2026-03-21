@@ -1,196 +1,167 @@
-use std::env;
-
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
-use aura_core::{CheckoutSessionResponse, CreditBalance, CreditTier, DebitResponse};
+use aura_core::{BillingAccount, CheckoutSessionResponse, CreditBalance, TransactionsResponse};
 
 use crate::error::BillingError;
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct CheckoutRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tier_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    credits: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    return_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    cancel_url: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsCheckoutResponse {
-    #[serde(alias = "checkoutUrl")]
-    checkout_url: String,
-    #[serde(alias = "sessionId")]
-    session_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsTiersResponse {
-    tiers: Vec<ZpsTier>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsTier {
-    id: String,
-    credits: u64,
-    #[serde(alias = "priceUsdCents")]
-    price_usd_cents: u64,
-    label: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct DebitRequest {
-    amount: u64,
-    reason: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    reference_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsDebitResponse {
-    success: bool,
-    balance: u64,
-    #[serde(alias = "transactionId")]
-    transaction_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsDebitErrorBody {
-    #[serde(default)]
-    error: String,
-    #[serde(default)]
-    available: Option<u64>,
-    #[serde(default)]
-    required: Option<u64>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsBalanceResponse {
-    balance: u64,
-    #[serde(default)]
-    purchases: Vec<ZpsPurchase>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ZpsPurchase {
-    id: String,
-    #[serde(alias = "tierId")]
-    tier_id: Option<String>,
-    credits: u64,
-    #[serde(alias = "amountCents")]
-    amount_cents: u64,
-    status: String,
-    #[serde(alias = "createdAt")]
-    created_at: String,
-}
 
 #[derive(Clone)]
 pub struct BillingClient {
     http: Client,
     base_url: String,
-    internal_token: String,
 }
 
 impl BillingClient {
     pub fn new() -> Self {
-        let base_url = env::var("BILLING_SERVER_URL")
-            .ok()
-            .filter(|s| !s.is_empty())
-            .unwrap_or_else(|| "https://billing.zero.tech".to_string());
-        let internal_token =
-            env::var("BILLING_INTERNAL_TOKEN").unwrap_or_default();
-
+        let base_url = std::env::var("Z_BILLING_URL")
+            .unwrap_or_else(|_| "https://z-billing.onrender.com".to_string());
         Self {
             http: Client::new(),
             base_url,
-            internal_token,
         }
-    }
-
-    pub async fn get_tiers(&self) -> Result<Vec<CreditTier>, BillingError> {
-        let url = format!("{}/api/credits/tiers", self.base_url);
-        debug!(%url, "Fetching credit tiers");
-
-        let resp = self.http.get(&url).send().await?;
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "Billing server error fetching tiers");
-            return Err(BillingError::ServerError {
-                status: status.as_u16(),
-                body,
-            });
-        }
-        let zps: ZpsTiersResponse = resp
-            .json()
-            .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))?;
-
-        Ok(zps
-            .tiers
-            .into_iter()
-            .map(|t| CreditTier {
-                id: t.id,
-                credits: t.credits,
-                price_usd_cents: t.price_usd_cents,
-                label: t.label,
-            })
-            .collect())
     }
 
     pub async fn get_balance(
         &self,
         access_token: &str,
     ) -> Result<CreditBalance, BillingError> {
-        let url = format!("{}/api/credits/balance", self.base_url);
+        let url = format!("{}/v1/credits/balance", self.base_url);
         debug!(%url, "Fetching credit balance");
 
         let resp = self
             .http
             .get(&url)
-            .bearer_auth(access_token)
+            .header("authorization", format!("Bearer {access_token}"))
             .send()
             .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "Billing server error fetching balance");
+            warn!(status = status.as_u16(), %body, "z-billing error fetching balance");
             return Err(BillingError::ServerError {
                 status: status.as_u16(),
                 body,
             });
         }
-        let zps: ZpsBalanceResponse = resp
-            .json()
+        resp.json()
             .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))?;
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
 
-        Ok(CreditBalance {
-            total_credits: zps.balance,
-            purchases: zps
-                .purchases
-                .into_iter()
-                .map(|p| aura_core::CreditPurchase {
-                    id: p.id,
-                    tier_id: p.tier_id,
-                    credits: p.credits,
-                    amount_cents: p.amount_cents,
-                    status: p.status,
-                    created_at: p
-                        .created_at
-                        .parse()
-                        .unwrap_or_else(|_| chrono::Utc::now()),
-                })
-                .collect(),
-        })
+    pub async fn create_purchase(
+        &self,
+        access_token: &str,
+        amount_usd: f64,
+    ) -> Result<CheckoutSessionResponse, BillingError> {
+        let url = format!("{}/v1/credits/purchase", self.base_url);
+        debug!(%url, amount_usd, "Creating purchase");
+
+        let resp = self
+            .http
+            .post(&url)
+            .header("authorization", format!("Bearer {access_token}"))
+            .json(&serde_json::json!({ "amount_usd": amount_usd }))
+            .send()
+            .await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            warn!(status = status.as_u16(), %body, "z-billing error creating purchase");
+            return Err(BillingError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        resp.json()
+            .await
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
+
+    pub async fn get_transactions(
+        &self,
+        access_token: &str,
+    ) -> Result<TransactionsResponse, BillingError> {
+        let url = format!("{}/v1/credits/transactions", self.base_url);
+        debug!(%url, "Fetching transactions");
+
+        let resp = self
+            .http
+            .get(&url)
+            .header("authorization", format!("Bearer {access_token}"))
+            .send()
+            .await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            warn!(status = status.as_u16(), %body, "z-billing error fetching transactions");
+            return Err(BillingError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        resp.json()
+            .await
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
+
+    pub async fn get_account(
+        &self,
+        access_token: &str,
+    ) -> Result<BillingAccount, BillingError> {
+        let url = format!("{}/v1/accounts/me", self.base_url);
+        debug!(%url, "Fetching billing account");
+
+        let resp = self
+            .http
+            .get(&url)
+            .header("authorization", format!("Bearer {access_token}"))
+            .send()
+            .await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            warn!(status = status.as_u16(), %body, "z-billing error fetching account");
+            return Err(BillingError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        resp.json()
+            .await
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
+    }
+
+    pub async fn ensure_has_credits(
+        &self,
+        access_token: &str,
+    ) -> Result<i64, BillingError> {
+        let balance = self.get_balance(access_token).await?;
+        if balance.balance_cents > 0 {
+            Ok(balance.balance_cents)
+        } else {
+            Err(BillingError::InsufficientCredits {
+                balance_cents: balance.balance_cents,
+            })
+        }
+    }
+
+    pub async fn get_tiers(&self) -> Result<serde_json::Value, BillingError> {
+        let url = format!("{}/v1/credits/tiers", self.base_url);
+        debug!(%url, "Fetching credit tiers");
+
+        let resp = self.http.get(&url).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            warn!(status = status.as_u16(), %body, "z-billing error fetching tiers");
+            return Err(BillingError::ServerError {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        resp.json()
+            .await
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
     }
 
     pub async fn create_checkout_session(
@@ -199,138 +170,351 @@ impl BillingClient {
         tier_id: Option<String>,
         credits: Option<u64>,
     ) -> Result<CheckoutSessionResponse, BillingError> {
-        let url = format!(
-            "{}/api/credits/checkout-session",
-            self.base_url
-        );
+        let url = format!("{}/v1/credits/checkout", self.base_url);
         debug!(%url, "Creating checkout session");
 
-        let body = CheckoutRequest {
-            tier_id,
-            credits,
-            return_url: None,
-            cancel_url: None,
-        };
+        let mut body = serde_json::Map::new();
+        if let Some(id) = tier_id {
+            body.insert("tier_id".into(), serde_json::Value::String(id));
+        }
+        if let Some(c) = credits {
+            body.insert("credits".into(), serde_json::Value::Number(c.into()));
+        }
 
         let resp = self
             .http
             .post(&url)
-            .bearer_auth(access_token)
+            .header("authorization", format!("Bearer {access_token}"))
             .json(&body)
             .send()
             .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            warn!(status = status.as_u16(), %body, "Billing server error creating checkout");
+            warn!(status = status.as_u16(), %body, "z-billing error creating checkout");
             return Err(BillingError::ServerError {
                 status: status.as_u16(),
                 body,
             });
         }
-        let zps: ZpsCheckoutResponse = resp
-            .json()
+        resp.json()
             .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))?;
-
-        Ok(CheckoutSessionResponse {
-            checkout_url: zps.checkout_url,
-            session_id: zps.session_id,
-        })
-    }
-
-    pub async fn debit_credits(
-        &self,
-        access_token: &str,
-        amount: u64,
-        reason: &str,
-        reference_id: Option<String>,
-        metadata: Option<serde_json::Value>,
-    ) -> Result<DebitResponse, BillingError> {
-        let url = format!("{}/api/credits/debit", self.base_url);
-        debug!(%url, amount, reason, "Debiting credits");
-
-        let body = DebitRequest {
-            amount,
-            reason: reason.to_string(),
-            reference_id,
-            metadata,
-        };
-
-        let resp = self
-            .http
-            .post(&url)
-            .bearer_auth(access_token)
-            .json(&body)
-            .send()
-            .await?;
-        let status = resp.status();
-        if !status.is_success() {
-            let raw = resp.text().await.unwrap_or_default();
-            if status.as_u16() == 400 {
-                if let Ok(err_body) = serde_json::from_str::<ZpsDebitErrorBody>(&raw) {
-                    if err_body.error == "INSUFFICIENT_CREDITS" {
-                        return Err(BillingError::InsufficientCredits {
-                            available: err_body.available.unwrap_or(0),
-                            required: err_body.required.unwrap_or(amount),
-                        });
-                    }
-                }
-            }
-            warn!(status = status.as_u16(), %raw, "Billing server error debiting credits");
-            return Err(BillingError::ServerError {
-                status: status.as_u16(),
-                body: raw,
-            });
-        }
-        let zps: ZpsDebitResponse = resp
-            .json()
-            .await
-            .map_err(|e| BillingError::Deserialize(e.to_string()))?;
-
-        Ok(DebitResponse {
-            success: zps.success,
-            balance: zps.balance,
-            transaction_id: zps.transaction_id,
-        })
-    }
-
-    pub async fn ensure_has_credits(
-        &self,
-        access_token: &str,
-    ) -> Result<u64, BillingError> {
-        self.ensure_has_credits_for(access_token, 1).await
-    }
-
-    /// Like `ensure_has_credits`, but checks that the balance can cover at
-    /// least `estimated_credits`. Avoids wasting an API call when the debit
-    /// will certainly fail.
-    pub async fn ensure_has_credits_for(
-        &self,
-        access_token: &str,
-        estimated_credits: u64,
-    ) -> Result<u64, BillingError> {
-        let balance = self.get_balance(access_token).await?;
-        let required = estimated_credits.max(1);
-        if balance.total_credits < required {
-            return Err(BillingError::InsufficientCredits {
-                available: balance.total_credits,
-                required,
-            });
-        }
-        Ok(balance.total_credits)
+            .map_err(|e| BillingError::Deserialize(e.to_string()))
     }
 
     pub fn verify_internal_token(&self, token: &str) -> bool {
-        if self.internal_token.is_empty() {
-            return false;
-        }
-        token == self.internal_token
+        let expected = std::env::var("AURA_NETWORK_INTERNAL_TOKEN")
+            .unwrap_or_default();
+        !expected.is_empty() && token == expected
     }
 }
 
 impl Default for BillingClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{routing::{get, post}, Json, Router};
+    use tokio::net::TcpListener;
+
+    async fn start_server(app: Router) -> (String, BillingClient) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.ok() });
+
+        let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+        std::env::set_var("Z_BILLING_URL", &url);
+        let client = BillingClient::new();
+        (url, client)
+    }
+
+    #[tokio::test]
+    async fn test_get_balance_success() {
+        let app = Router::new().route(
+            "/v1/credits/balance",
+            get(|| async {
+                Json(serde_json::json!({
+                    "balance_cents": 50000,
+                    "plan": "pro",
+                    "balance_formatted": "$500.00"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let bal = client.get_balance("tok").await.unwrap();
+        assert_eq!(bal.balance_cents, 50000);
+        assert_eq!(bal.plan, "pro");
+        assert_eq!(bal.balance_formatted, "$500.00");
+    }
+
+    #[tokio::test]
+    async fn test_get_balance_unauthorized() {
+        use axum::http::StatusCode;
+        let app = Router::new().route(
+            "/v1/credits/balance",
+            get(|| async { (StatusCode::UNAUTHORIZED, "unauthorized") }),
+        );
+        let (_url, client) = start_server(app).await;
+        let err = client.get_balance("bad-tok").await.unwrap_err();
+        match err {
+            BillingError::ServerError { status, .. } => assert_eq!(status, 401),
+            other => panic!("expected ServerError, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_create_purchase_success() {
+        let app = Router::new().route(
+            "/v1/credits/purchase",
+            post(|| async {
+                Json(serde_json::json!({
+                    "checkout_url": "https://checkout.example.com/sess_1",
+                    "session_id": "sess_1"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let resp = client.create_purchase("tok", 10.0).await.unwrap();
+        assert_eq!(resp.checkout_url, "https://checkout.example.com/sess_1");
+        assert_eq!(resp.session_id, "sess_1");
+    }
+
+    #[tokio::test]
+    async fn test_create_purchase_invalid_amount() {
+        use axum::http::StatusCode;
+        let app = Router::new().route(
+            "/v1/credits/purchase",
+            post(|| async { (StatusCode::BAD_REQUEST, "invalid amount") }),
+        );
+        let (_url, client) = start_server(app).await;
+        let err = client.create_purchase("tok", -5.0).await.unwrap_err();
+        match err {
+            BillingError::ServerError { status, .. } => assert_eq!(status, 400),
+            other => panic!("expected ServerError, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_transactions_success() {
+        let app = Router::new().route(
+            "/v1/credits/transactions",
+            get(|| async {
+                Json(serde_json::json!({
+                    "transactions": [
+                        {
+                            "id": "tx-1",
+                            "amount_cents": -500,
+                            "transaction_type": "usage",
+                            "balance_after_cents": 49500,
+                            "description": "LLM call",
+                            "created_at": "2026-03-01T00:00:00Z"
+                        }
+                    ],
+                    "has_more": true
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let resp = client.get_transactions("tok").await.unwrap();
+        assert_eq!(resp.transactions.len(), 1);
+        assert_eq!(resp.transactions[0].id, "tx-1");
+        assert_eq!(resp.transactions[0].amount_cents, -500);
+        assert!(resp.has_more);
+    }
+
+    #[tokio::test]
+    async fn test_get_transactions_empty() {
+        let app = Router::new().route(
+            "/v1/credits/transactions",
+            get(|| async {
+                Json(serde_json::json!({
+                    "transactions": [],
+                    "has_more": false
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let resp = client.get_transactions("tok").await.unwrap();
+        assert!(resp.transactions.is_empty());
+        assert!(!resp.has_more);
+    }
+
+    #[tokio::test]
+    async fn test_get_account_success() {
+        let app = Router::new().route(
+            "/v1/accounts/me",
+            get(|| async {
+                Json(serde_json::json!({
+                    "user_id": "u-123",
+                    "balance_cents": 100000,
+                    "balance_formatted": "$1,000.00",
+                    "lifetime_purchased_cents": 200000,
+                    "lifetime_granted_cents": 5000,
+                    "lifetime_used_cents": 105000,
+                    "plan": "pro",
+                    "auto_refill_enabled": true,
+                    "created_at": "2026-01-15T12:00:00Z"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let acct = client.get_account("tok").await.unwrap();
+        assert_eq!(acct.user_id, "u-123");
+        assert_eq!(acct.balance_cents, 100000);
+        assert_eq!(acct.plan, "pro");
+        assert!(acct.auto_refill_enabled);
+    }
+
+    #[tokio::test]
+    async fn test_ensure_has_credits_sufficient() {
+        let app = Router::new().route(
+            "/v1/credits/balance",
+            get(|| async {
+                Json(serde_json::json!({
+                    "balance_cents": 5000,
+                    "plan": "free",
+                    "balance_formatted": "$50.00"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let cents = client.ensure_has_credits("tok").await.unwrap();
+        assert_eq!(cents, 5000);
+    }
+
+    #[tokio::test]
+    async fn test_ensure_has_credits_zero() {
+        let app = Router::new().route(
+            "/v1/credits/balance",
+            get(|| async {
+                Json(serde_json::json!({
+                    "balance_cents": 0,
+                    "plan": "free",
+                    "balance_formatted": "$0.00"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let err = client.ensure_has_credits("tok").await.unwrap_err();
+        match err {
+            BillingError::InsufficientCredits { balance_cents } => {
+                assert_eq!(balance_cents, 0);
+            }
+            other => panic!("expected InsufficientCredits, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ensure_has_credits_negative() {
+        let app = Router::new().route(
+            "/v1/credits/balance",
+            get(|| async {
+                Json(serde_json::json!({
+                    "balance_cents": -200,
+                    "plan": "free",
+                    "balance_formatted": "-$2.00"
+                }))
+            }),
+        );
+        let (_url, client) = start_server(app).await;
+        let err = client.ensure_has_credits("tok").await.unwrap_err();
+        match err {
+            BillingError::InsufficientCredits { balance_cents } => {
+                assert_eq!(balance_cents, -200);
+            }
+            other => panic!("expected InsufficientCredits, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_new_reads_z_billing_url() {
+        let _guard = crate::testutil::ENV_LOCK.lock().unwrap();
+        std::env::set_var("Z_BILLING_URL", "https://custom.example.com");
+        let client = BillingClient::new();
+        assert_eq!(client.base_url, "https://custom.example.com");
+        std::env::remove_var("Z_BILLING_URL");
+        let client2 = BillingClient::new();
+        assert_eq!(client2.base_url, "https://z-billing.onrender.com");
+    }
+
+    #[test]
+    fn test_credit_balance_deserialize() {
+        let json = r#"{"balance_cents": 42000, "plan": "pro", "balance_formatted": "$420.00"}"#;
+        let bal: CreditBalance = serde_json::from_str(json).unwrap();
+        assert_eq!(bal.balance_cents, 42000);
+        assert_eq!(bal.plan, "pro");
+        assert_eq!(bal.balance_formatted, "$420.00");
+    }
+
+    #[test]
+    fn test_credit_transaction_deserialize() {
+        let json = r#"{
+            "id": "tx-99",
+            "amount_cents": -1500,
+            "transaction_type": "usage",
+            "balance_after_cents": 40500,
+            "description": "LLM opus call",
+            "created_at": "2026-03-20T10:00:00Z"
+        }"#;
+        let tx: aura_core::CreditTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.id, "tx-99");
+        assert_eq!(tx.amount_cents, -1500);
+        assert_eq!(tx.transaction_type, "usage");
+        assert_eq!(tx.balance_after_cents, 40500);
+    }
+
+    #[test]
+    fn test_transactions_response_deserialize() {
+        let json = r#"{
+            "transactions": [
+                {
+                    "id": "tx-1",
+                    "amount_cents": 10000,
+                    "transaction_type": "purchase",
+                    "balance_after_cents": 10000,
+                    "description": "Credit purchase",
+                    "created_at": "2026-03-01T00:00:00Z"
+                },
+                {
+                    "id": "tx-2",
+                    "amount_cents": -300,
+                    "transaction_type": "usage",
+                    "balance_after_cents": 9700,
+                    "description": "Haiku call",
+                    "created_at": "2026-03-02T00:00:00Z"
+                }
+            ],
+            "has_more": false
+        }"#;
+        let resp: TransactionsResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.transactions.len(), 2);
+        assert!(!resp.has_more);
+        assert_eq!(resp.transactions[0].transaction_type, "purchase");
+        assert_eq!(resp.transactions[1].amount_cents, -300);
+    }
+
+    #[test]
+    fn test_billing_account_deserialize() {
+        let json = r#"{
+            "user_id": "u-abc",
+            "balance_cents": 75000,
+            "balance_formatted": "$750.00",
+            "lifetime_purchased_cents": 200000,
+            "lifetime_granted_cents": 10000,
+            "lifetime_used_cents": 135000,
+            "plan": "enterprise",
+            "auto_refill_enabled": true,
+            "created_at": "2025-12-01T00:00:00Z"
+        }"#;
+        let acct: BillingAccount = serde_json::from_str(json).unwrap();
+        assert_eq!(acct.user_id, "u-abc");
+        assert_eq!(acct.balance_cents, 75000);
+        assert_eq!(acct.lifetime_purchased_cents, 200000);
+        assert!(acct.auto_refill_enabled);
+        assert_eq!(acct.plan, "enterprise");
     }
 }
