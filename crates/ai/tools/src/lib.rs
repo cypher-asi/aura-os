@@ -1,5 +1,5 @@
 use std::sync::{Arc, LazyLock};
-use aura_claude::ToolDefinition;
+use aura_provider::ToolDefinition;
 
 static AGENT_TOOLS: LazyLock<Arc<[ToolDefinition]>> = LazyLock::new(|| {
     chat_tool_definitions_inner().into()
