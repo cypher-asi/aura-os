@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import ReactMarkdown from "react-markdown";
 import { FileText, CheckCircle2, XCircle, Search, Terminal, Trash2, FolderOpen, Wrench } from "lucide-react";
+import { useMarkdownHtml } from "../../utils/markdown";
 import styles from "./SegmentedContent.module.css";
 
 type ContentSegment =
@@ -102,34 +102,23 @@ function InlineAutoBuildMarker({ seg }: { seg: Extract<ContentSegment, { kind: "
   );
 }
 
-export function SegmentedContent({
-  content,
-  remarkPlugins,
-  rehypePlugins,
-}: {
-  content: string;
-  remarkPlugins: Parameters<typeof ReactMarkdown>[0]["remarkPlugins"];
-  rehypePlugins: Parameters<typeof ReactMarkdown>[0]["rehypePlugins"];
-}) {
+function MarkdownBlock({ content }: { content: string }) {
+  const html = useMarkdownHtml(content);
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+export function SegmentedContent({ content }: { content: string }) {
   const segments = useMemo(() => splitContentByMarkers(content), [content]);
 
   if (!segments) {
-    return (
-      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-        {content}
-      </ReactMarkdown>
-    );
+    return <MarkdownBlock content={content} />;
   }
 
   return (
     <>
       {segments.map((seg, i) => {
         if (seg.kind === "text") {
-          return (
-            <ReactMarkdown key={i} remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-              {seg.content}
-            </ReactMarkdown>
-          );
+          return <MarkdownBlock key={i} content={seg.content} />;
         }
         if (seg.kind === "auto-build") {
           return <InlineAutoBuildMarker key={i} seg={seg} />;
