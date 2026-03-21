@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useLayoutEffect, type SetStateAction } from "react";
+import { Loader2 } from "lucide-react";
 import { useParams, useNavigate, Outlet } from "react-router-dom";
 import { api } from "../api/client";
 import type { Project, Spec, Task } from "../types";
@@ -124,7 +125,13 @@ export function ProjectLayout() {
     return () => unregister();
   }, [displayProject, initialSpecs, initialTasks, message, navigate, register, setProjectSafe, unregister]);
 
-  if (loading && !displayProject) return null;
+  if (loading && !displayProject) {
+    return (
+      <EmptyState>
+        <Loader2 size={20} className="spin" />
+      </EmptyState>
+    );
+  }
   if (!displayProject) {
     if (projects.length === 0) {
       return (
