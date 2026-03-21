@@ -104,6 +104,14 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
   }, [refreshProjects]);
 
   useEffect(() => {
+    for (const project of projects) {
+      if (!(project.project_id in agentsByProjectRef.current)) {
+        void refreshProjectAgents(project.project_id);
+      }
+    }
+  }, [projects, refreshProjectAgents]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (newProjectModalOpen) {
       window.sessionStorage.setItem(NEW_PROJECT_MODAL_STORAGE_KEY, "1");
