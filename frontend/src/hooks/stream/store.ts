@@ -27,11 +27,14 @@ export interface StreamEntry {
   activeToolCalls: ToolCallEntry[];
   timeline: TimelineItem[];
   progressText: string;
+  lastAccessedAt: number;
   /** Current React setters – null when the component is unmounted. */
   reactSetters: StreamSetters | null;
 }
 
 export const streamStore = new Map<string, StreamEntry>();
+const STREAM_STORE_MAX_ENTRIES = 40;
+const STREAM_STORE_IDLE_TTL_MS = 5 * 60 * 1000;
 
 export function storeKey(deps: unknown[]): string {
   return deps.filter(Boolean).join(":");
@@ -59,8 +62,37 @@ export function makeEntry(key: string): StreamEntry {
     activeToolCalls: [],
     timeline: [],
     progressText: "",
+    lastAccessedAt: Date.now(),
     reactSetters: null,
   };
+}
+
+export function touchEntry(entry: StreamEntry): void {
+  entry.lastAccessedAt = Date.now();
+}
+
+export function pruneStreamStore(preserveKey?: string): void {
+  const now = Date.now();
+
+  for (const [key, entry] of streamStore) {
+    if (key === preserveKey) continue;
+    if (entry.isStreaming) continue;
+    if (entry.reactSetters !== null) continue;
+    if (now - entry.lastAccessedAt > STREAM_STORE_IDLE_TTL_MS) {
+      streamStore.delete(key);
+    }
+  }
+
+  if (streamStore.size <= STREAM_STORE_MAX_ENTRIES) return;
+
+  const removable = [...streamStore.entries()]
+    .filter(([key, entry]) => key !== preserveKey && !entry.isStreaming && entry.reactSetters === null)
+    .sort((a, b) => a[1].lastAccessedAt - b[1].lastAccessedAt);
+
+  for (const [key] of removable) {
+    if (streamStore.size <= STREAM_STORE_MAX_ENTRIES) break;
+    streamStore.delete(key);
+  }
 }
 
 export function resolve<T>(action: SetStateAction<T>, prev: T): T {
@@ -76,34 +108,42 @@ export function resolve<T>(action: SetStateAction<T>, prev: T): T {
 export function createProxySetters(entry: StreamEntry): StreamSetters {
   return {
     setStreamingText(v) {
+      touchEntry(entry);
       entry.streamingText = resolve(v, entry.streamingText);
       entry.reactSetters?.setStreamingText(entry.streamingText);
     },
     setThinkingText(v) {
+      touchEntry(entry);
       entry.thinkingText = resolve(v, entry.thinkingText);
       entry.reactSetters?.setThinkingText(entry.thinkingText);
     },
     setThinkingDurationMs(v) {
+      touchEntry(entry);
       entry.thinkingDurationMs = resolve(v, entry.thinkingDurationMs);
       entry.reactSetters?.setThinkingDurationMs(entry.thinkingDurationMs);
     },
     setActiveToolCalls(v) {
+      touchEntry(entry);
       entry.activeToolCalls = resolve(v, entry.activeToolCalls);
       entry.reactSetters?.setActiveToolCalls(entry.activeToolCalls);
     },
     setMessages(v) {
+      touchEntry(entry);
       entry.messages = resolve(v, entry.messages);
       entry.reactSetters?.setMessages(entry.messages);
     },
     setIsStreaming(v) {
+      touchEntry(entry);
       entry.isStreaming = resolve(v, entry.isStreaming);
       entry.reactSetters?.setIsStreaming(entry.isStreaming);
     },
     setProgressText(v) {
+      touchEntry(entry);
       entry.progressText = resolve(v, entry.progressText);
       entry.reactSetters?.setProgressText(entry.progressText);
     },
     setTimeline(v) {
+      touchEntry(entry);
       entry.timeline = resolve(v, entry.timeline);
       entry.reactSetters?.setTimeline(entry.timeline);
     },

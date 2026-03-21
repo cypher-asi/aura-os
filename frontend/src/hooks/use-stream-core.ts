@@ -11,6 +11,8 @@ import {
   storeKey,
   makeEntry,
   createProxySetters,
+  touchEntry,
+  pruneStreamStore,
 } from "./stream/store";
 import type { StreamEntry } from "./stream/store";
 import {
@@ -60,7 +62,9 @@ export function useStreamCore(resetDeps: unknown[]) {
     if (!entry) {
       entry = makeEntry(key);
       streamStore.set(key, entry);
+      pruneStreamStore(key);
     }
+    touchEntry(entry);
     entryRef.current = { key, entry };
   }
   const entry = entryRef.current.entry;
@@ -102,6 +106,7 @@ export function useStreamCore(resetDeps: unknown[]) {
     setStreamingText, setThinkingText, setThinkingDurationMs,
     setActiveToolCalls, setMessages, setIsStreaming, setProgressText, setTimeline,
   };
+  touchEntry(entry);
 
   useLayoutEffect(() => {
     const e = entryRef.current!.entry;
@@ -126,9 +131,8 @@ export function useStreamCore(resetDeps: unknown[]) {
         cancelAnimationFrame(e.refs.thinkingRaf.current);
         e.refs.thinkingRaf.current = null;
       }
-      if (!e.isStreaming) {
-        streamStore.delete(e.key);
-      }
+      touchEntry(e);
+      pruneStreamStore(e.key);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, resetDeps);
@@ -136,6 +140,7 @@ export function useStreamCore(resetDeps: unknown[]) {
   const resetMessages = useCallback((msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => {
     const e = entryRef.current!.entry;
     if (e.isStreaming && !options?.allowWhileStreaming) return;
+    touchEntry(e);
     e.messages = msgs;
     setMessages(msgs);
   }, []);
