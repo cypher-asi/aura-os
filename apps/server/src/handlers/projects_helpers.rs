@@ -226,11 +226,7 @@ pub(super) async fn write_imported_files(
 pub(super) fn build_local_shadow(
     project_id: ProjectId,
     req: &CreateProjectRequest,
-    git_repo_url: Option<String>,
-    git_branch: Option<String>,
-    orbit_base_url: Option<String>,
-    orbit_owner: Option<String>,
-    orbit_repo: Option<String>,
+    orbit: OrbitRepoFields,
 ) -> Project {
     Project {
         project_id,
@@ -248,11 +244,11 @@ pub(super) fn build_local_shadow(
         specs_title: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
-        git_repo_url,
-        git_branch,
-        orbit_base_url,
-        orbit_owner,
-        orbit_repo,
+        git_repo_url: orbit.git_repo_url,
+        git_branch: orbit.git_branch,
+        orbit_base_url: orbit.orbit_base_url,
+        orbit_owner: orbit.orbit_owner,
+        orbit_repo: orbit.orbit_repo,
     }
 }
 

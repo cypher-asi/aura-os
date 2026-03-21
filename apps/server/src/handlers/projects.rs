@@ -88,15 +88,7 @@ async fn create_project_impl(
         let project_id = net_project.id.parse::<ProjectId>().map_err(|e| {
             ApiError::internal(format!("unparseable network project id '{}': {e}", net_project.id))
         })?;
-        let local_shadow = build_local_shadow(
-            project_id,
-            req,
-            orbit.git_repo_url,
-            orbit.git_branch,
-            orbit.orbit_base_url,
-            orbit.orbit_owner,
-            orbit.orbit_repo,
-        );
+        let local_shadow = build_local_shadow(project_id, req, orbit);
         let project = project_from_network(&net_project, Some(&local_shadow))?;
         ensure_local_shadow(state, &project);
         return Ok((StatusCode::CREATED, Json(project)));
