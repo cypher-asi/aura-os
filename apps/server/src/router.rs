@@ -23,7 +23,37 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .allow_headers(Any);
 
     let api_router = Router::new()
-        // Auth
+        .merge(auth_routes())
+        .merge(user_routes())
+        .merge(org_routes())
+        .merge(billing_routes())
+        .merge(project_routes())
+        .merge(spec_routes())
+        .merge(task_routes())
+        .merge(agent_routes())
+        .merge(social_routes())
+        .merge(system_routes())
+        .layer(cors)
+        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    match frontend_dir {
+        Some(dir) => {
+            let index = dir.join("index.html");
+            let serve = ServiceBuilder::new()
+                .layer(SetResponseHeaderLayer::overriding(
+                    axum::http::header::CACHE_CONTROL,
+                    HeaderValue::from_static("no-cache"),
+                ))
+                .service(ServeDir::new(&dir).not_found_service(ServeFile::new(index)));
+            api_router.fallback_service(serve)
+        }
+        None => api_router,
+    }
+}
+
+fn auth_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/session", get(auth::get_session))
@@ -31,13 +61,18 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/access-token", get(auth::get_access_token))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
-        // Users (proxied to aura-network)
+}
+
+fn user_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/users/me", get(users::get_me).put(users::update_me))
         .route("/api/users/:user_id", get(users::get_user))
         .route("/api/users/:user_id/profile", get(users::get_user_profile))
-        // Profiles (proxied to aura-network)
         .route("/api/profiles/:profile_id", get(users::get_profile))
-        // Orgs
+}
+
+fn org_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/orgs", get(orgs::list_orgs).post(orgs::create_org))
         .route(
             "/api/orgs/:org_id",
@@ -61,7 +96,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/orgs/:org_id/billing",
             put(orgs::set_billing).get(orgs::get_billing),
         )
-        // Credits / Billing
+}
+
+fn billing_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/api/orgs/:org_id/credits/tiers",
             get(billing::get_credit_tiers),
@@ -78,7 +116,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/webhooks/billing/fulfill",
             post(billing::handle_fulfillment),
         )
-        // Settings
         .route(
             "/api/settings/api-key",
             get(settings::get_api_key_info),
@@ -87,7 +124,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/settings/fee-schedule",
             get(pricing::get_fee_schedule).put(pricing::set_fee_schedule),
         )
-        // Projects
+}
+
+fn project_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/api/projects",
             post(projects::create_project).get(projects::list_projects),
@@ -107,13 +147,15 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             post(projects::archive_project),
         )
         .route("/api/list-directory", post(files::list_directory))
-        // Orbit (repos list/search; JWT auth)
         .route("/api/orbit/repos", get(orbit::list_orbit_repos))
         .route(
             "/api/projects/:project_id/orbit-collaborators",
             get(orbit::get_project_orbit_collaborators),
         )
-        // Specs
+}
+
+fn spec_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/projects/:project_id/specs", get(specs::list_specs))
         .route(
             "/api/projects/:project_id/specs/generate",
@@ -131,7 +173,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/specs/:spec_id",
             get(specs::get_spec),
         )
-        // Tasks
+}
+
+fn task_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/projects/:project_id/tasks", get(tasks::list_tasks))
         .route(
             "/api/projects/:project_id/specs/:spec_id/tasks",
@@ -161,7 +206,10 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/progress",
             get(tasks::get_progress),
         )
-        // User-level Agents
+}
+
+fn agent_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/api/agents",
             post(agents::create_agent).get(agents::list_agents),
@@ -172,7 +220,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
                 .put(agents::update_agent)
                 .delete(agents::delete_agent),
         )
-        // Agent-level messages (multi-project chat)
         .route(
             "/api/agents/:agent_id/messages",
             get(agents::list_agent_messages),
@@ -181,7 +228,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/agents/:agent_id/messages/stream",
             post(agents::send_agent_message_stream),
         )
-        // Project-level Agent Instances
         .route(
             "/api/projects/:project_id/agents",
             post(agents::create_agent_instance).get(agents::list_agent_instances),
@@ -192,7 +238,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
                 .put(agents::update_agent_instance)
                 .delete(agents::delete_agent_instance),
         )
-        // Messages (under agent instance)
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/messages",
             get(agents::list_messages),
@@ -201,7 +246,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/agents/:agent_instance_id/messages/stream",
             post(agents::send_message_stream),
         )
-        // Sessions (under agent instance)
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions",
             get(agents::list_sessions),
@@ -218,12 +262,14 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/messages",
             get(agents::list_session_messages),
         )
-        // Project-wide sessions
         .route(
             "/api/projects/:project_id/sessions",
             get(agents::list_project_sessions),
         )
-        // Follows (profile-based, proxied to aura-network)
+}
+
+fn social_routes() -> Router<AppState> {
+    Router::new()
         .route(
             "/api/follows",
             post(follows::follow).get(follows::list_follows),
@@ -236,7 +282,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/follows/check/:target_profile_id",
             get(follows::check_follow),
         )
-        // Leaderboard + Usage (proxied to aura-network)
         .route("/api/leaderboard", get(leaderboard::get_leaderboard))
         .route(
             "/api/users/me/usage",
@@ -250,7 +295,6 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/orgs/:org_id/usage/members",
             get(leaderboard::get_org_usage_members),
         )
-        // Feed & Posts (proxied to aura-network)
         .route("/api/feed", get(feed::list_feed))
         .route("/api/posts", post(feed::create_post))
         .route("/api/posts/:post_id", get(feed::get_post))
@@ -266,9 +310,11 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/comments/:comment_id",
             delete(feed::delete_comment),
         )
-        // Log entries
+}
+
+fn system_routes() -> Router<AppState> {
+    Router::new()
         .route("/api/log-entries", get(log::list_log_entries))
-        // Dev Loop
         .route(
             "/api/projects/:project_id/loop/start",
             post(dev_loop::start_loop),
@@ -285,27 +331,8 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
             "/api/projects/:project_id/loop/status",
             get(dev_loop::get_loop_status),
         )
-        // Terminal
         .route("/api/terminal", post(terminal::spawn_terminal).get(terminal::list_terminals))
         .route("/api/terminal/:id", delete(terminal::kill_terminal))
         .route("/ws/terminal/:id", get(terminal::ws_terminal))
-        // WebSocket
         .route("/ws/events", get(ws::ws_events))
-        .layer(cors)
-        .layer(TraceLayer::new_for_http())
-        .with_state(state);
-
-    match frontend_dir {
-        Some(dir) => {
-            let index = dir.join("index.html");
-            let serve = ServiceBuilder::new()
-                .layer(SetResponseHeaderLayer::overriding(
-                    axum::http::header::CACHE_CONTROL,
-                    HeaderValue::from_static("no-cache"),
-                ))
-                .service(ServeDir::new(&dir).not_found_service(ServeFile::new(index)));
-            api_router.fallback_service(serve)
-        }
-        None => api_router,
-    }
 }
