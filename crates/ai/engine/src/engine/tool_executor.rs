@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -44,6 +45,9 @@ pub(crate) struct EngineToolLoopExecutor {
     pub exploration_allowance: usize,
     pub task_phase: Arc<Mutex<TaskPhase>>,
     pub self_review_done: Arc<AtomicBool>,
+    /// Paths read via `read_file` since their last write. Invalidated when the
+    /// same path is written, so this set only contains post-write reads.
+    pub files_read: Arc<Mutex<HashSet<String>>>,
 }
 
 #[async_trait]
@@ -129,6 +133,9 @@ impl ToolExecutor for EngineToolLoopExecutor {
                             let mut ops = self.tracked_file_ops.lock().await;
                             track_file_op(&tc.name, &tc.input, &mut ops);
                         }
+                        if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                            self.files_read.lock().await.remove(&normalize_tool_path(path));
+                        }
                         executor_indices.push(i);
                     }
                 }
@@ -136,6 +143,11 @@ impl ToolExecutor for EngineToolLoopExecutor {
                     {
                         let mut ops = self.tracked_file_ops.lock().await;
                         track_file_op(&tc.name, &tc.input, &mut ops);
+                    }
+                    if tc.name == "read_file" {
+                        if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
+                            self.files_read.lock().await.insert(normalize_tool_path(path));
+                        }
                     }
                     executor_indices.push(i);
                 }
@@ -298,16 +310,25 @@ impl EngineToolLoopExecutor {
             return None;
         }
         let ops = self.tracked_file_ops.lock().await;
-        let modified_paths: Vec<&str> = ops
+        let modified: HashSet<String> = ops
             .iter()
             .filter_map(|op| match op {
                 FileOp::Create { path, .. }
                 | FileOp::Modify { path, .. }
-                | FileOp::SearchReplace { path, .. } => Some(path.as_str()),
+                | FileOp::SearchReplace { path, .. } => Some(normalize_tool_path(path)),
                 _ => None,
             })
             .collect();
-        if modified_paths.is_empty() {
+        if modified.is_empty() {
+            return None;
+        }
+        let reads = self.files_read.lock().await;
+        let unreviewed: Vec<&str> = modified
+            .iter()
+            .filter(|p| !reads.contains(p.as_str()))
+            .map(|p| p.as_str())
+            .collect();
+        if unreviewed.is_empty() {
             return None;
         }
         self.self_review_done.store(true, Ordering::Relaxed);
@@ -316,7 +337,7 @@ impl EngineToolLoopExecutor {
              to verify correctness:\n{}\n\nCheck: (a) changes match task requirements, \
              (b) no placeholder/stub code remains, (c) no debug code left behind.\n\
              Then call task_done again.",
-            modified_paths.join("\n")
+            unreviewed.join("\n")
         ))
     }
 
@@ -443,6 +464,10 @@ impl EngineToolLoopExecutor {
             });
         }
     }
+}
+
+fn normalize_tool_path(path: &str) -> String {
+    path.replace('\\', "/").trim_start_matches("./").to_string()
 }
 
 fn looks_like_compiler_errors(output: &str) -> bool {

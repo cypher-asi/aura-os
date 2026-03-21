@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
@@ -373,6 +374,7 @@ fn build_executor(
             }
         )),
         self_review_done: Arc::new(AtomicBool::new(false)),
+        files_read: Arc::new(Mutex::new(HashSet::new())),
     }
 }
 
@@ -537,35 +539,45 @@ enum TaskComplexity {
 
 fn classify_task_complexity(title: &str, description: &str) -> TaskComplexity {
     let combined = format!("{} {}", title, description).to_lowercase();
+    let mut score: i32 = 0;
 
-    let simple_patterns = [
-        "add dependency", "add dep ", "set up dependency",
-        "define enum", "define struct", "define type",
-        "add import", "update cargo.toml", "update package.json",
-        "rename ", "move file",
+    let simple_signals: &[(&str, i32)] = &[
+        ("add dependency", -3), ("add dep ", -3), ("set up dependency", -3),
+        ("define enum", -2), ("define struct", -2), ("define type", -2),
+        ("add import", -2), ("update cargo.toml", -2), ("update package.json", -2),
+        ("rename ", -1), ("move file", -1),
     ];
-    if simple_patterns.iter().any(|p| combined.contains(p)) {
-        return TaskComplexity::Simple;
+    let complex_signals: &[(&str, i32)] = &[
+        ("integration test", 3), ("end-to-end", 3), ("e2e test", 3),
+        ("refactor", 3), ("migrate", 3), ("rewrite", 3),
+        ("multi-file", 2), ("cross-crate", 2),
+        ("implement service", 3), ("implement api", 3),
+    ];
+
+    for &(pattern, weight) in simple_signals {
+        if combined.contains(pattern) {
+            score += weight;
+        }
     }
-
-    let complex_patterns = [
-        "integration test", "end-to-end", "e2e test",
-        "refactor", "migrate", "rewrite",
-        "multi-file", "cross-crate",
-        "implement service", "implement api",
-    ];
-    if complex_patterns.iter().any(|p| combined.contains(p)) {
-        return TaskComplexity::Complex;
+    for &(pattern, weight) in complex_signals {
+        if combined.contains(pattern) {
+            score += weight;
+        }
     }
 
     if description.len() > 1000 {
-        return TaskComplexity::Complex;
-    }
-    if description.len() < 200 {
-        return TaskComplexity::Simple;
+        score += 2;
+    } else if description.len() < 200 {
+        score -= 1;
     }
 
-    TaskComplexity::Standard
+    if score <= -2 {
+        TaskComplexity::Simple
+    } else if score >= 2 {
+        TaskComplexity::Complex
+    } else {
+        TaskComplexity::Standard
+    }
 }
 
 /// Conservative pre-check: skip simple tasks whose deliverables already exist

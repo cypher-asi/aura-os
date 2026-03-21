@@ -99,6 +99,7 @@ fn make_executor() -> EngineToolLoopExecutor {
             }
         )),
         self_review_done: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        files_read: Arc::new(Mutex::new(std::collections::HashSet::new())),
     }
 }
 
