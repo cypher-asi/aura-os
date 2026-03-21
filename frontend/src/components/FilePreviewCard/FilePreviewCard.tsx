@@ -94,7 +94,7 @@ export function FilePreviewCard({ entry }: FilePreviewCardProps) {
         <CodeView content={entry.result} language={lang} />
       ) : (
         !entry.pending ? null : (
-          <div className={styles.codeArea} style={{ minHeight: 40, position: "relative" }}>
+          <div className={`${styles.codeArea} ${styles.pendingCodeArea}`}>
             <div className={styles.pendingOverlay}>
               <div className={styles.spinner} />
             </div>

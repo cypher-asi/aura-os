@@ -40,7 +40,7 @@ export function TaskFilesSection({ fileOps }: { fileOps: { op: string; path: str
         })}
       </div>
       {!canOpenChangedFiles && (
-        <Text variant="muted" size="sm" style={{ padding: "var(--space-2) var(--space-3) 0" }}>
+        <Text variant="muted" size="sm" className={styles.filesHint}>
           Open changed files from a linked desktop workspace.
         </Text>
       )}

@@ -1,0 +1,13 @@
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dangerText {
+  color: var(--color-danger);
+}
+
+.secondaryText {
+  color: var(--color-text-secondary);
+}

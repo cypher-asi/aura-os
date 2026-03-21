@@ -89,7 +89,7 @@ export function AgentInfoPanel() {
           <img
             src={imageUrl}
             alt=""
-            style={{ display: "none" }}
+            className={styles.hidden}
             onError={() => setIconFailed(true)}
           />
         )}
@@ -154,7 +154,7 @@ export function AgentInfoPanel() {
         title="Delete Agent"
         size="sm"
         footer={
-          <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+          <div className={styles.deleteFooter}>
             <Button variant="ghost" onClick={closeDeleteConfirm} disabled={deleting}>Cancel</Button>
             <Button variant="danger" onClick={handleDelete} disabled={deleting}>
               {deleting ? <><Loader2 size={14} className={styles.spin} /> Deleting...</> : "Delete"}
@@ -166,7 +166,7 @@ export function AgentInfoPanel() {
           Are you sure you want to delete <strong>{a.name}</strong>? This cannot be undone.
         </Text>
         {deleteError && (
-          <Text size="xs" style={{ color: "var(--color-danger)", marginTop: "var(--space-2)" }}>
+          <Text size="xs" className={styles.deleteError}>
             {deleteError}
           </Text>
         )}

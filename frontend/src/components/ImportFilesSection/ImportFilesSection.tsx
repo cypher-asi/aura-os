@@ -1,4 +1,5 @@
 import { Button, Text } from "@cypher-asi/zui";
+import styles from "./ImportFilesSection.module.css";
 
 export function ImportFilesSection({
   importFolderInputRef,
@@ -14,22 +15,22 @@ export function ImportFilesSection({
   loading: boolean;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+    <div className={styles.container}>
       <input
         ref={importFolderInputRef}
         type="file"
         multiple
         onChange={(event) => onImportSelection(event.target.files)}
-        style={{ display: "none" }}
+        className={styles.hidden}
       />
       <input
         ref={importFilesInputRef}
         type="file"
         multiple
         onChange={(event) => onImportSelection(event.target.files)}
-        style={{ display: "none" }}
+        className={styles.hidden}
       />
-      <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap" }}>
+      <div className={styles.buttonRow}>
         <Button variant="secondary" onClick={() => importFolderInputRef.current?.click()} disabled={loading}>
           Open folder
         </Button>
@@ -38,7 +39,7 @@ export function ImportFilesSection({
         </Button>
       </div>
       {importSummary.count === 0 && (
-        <Text size="sm" style={{ color: "var(--color-warning)" }}>
+        <Text size="sm" className={styles.warningText}>
           Choose a folder or files to enable project creation.
         </Text>
       )}
@@ -46,25 +47,15 @@ export function ImportFilesSection({
         Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.
       </Text>
       {importSummary.count > 0 && (
-        <div
-          style={{
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-md)",
-            padding: "var(--space-3)",
-            background: "var(--color-bg-elevated)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-          }}
-        >
-          <Text size="sm" style={{ fontWeight: 600 }}>
+        <div className={styles.summaryCard}>
+          <Text size="sm" className={styles.boldLabel}>
             {importSummary.count} file{importSummary.count === 1 ? "" : "s"} selected
           </Text>
           <Text variant="muted" size="sm">
             {importSummary.sizeLabel}
           </Text>
           {importSummary.samplePaths.map((path) => (
-            <Text key={path} variant="muted" size="xs" style={{ wordBreak: "break-all" }}>
+            <Text key={path} variant="muted" size="xs" className={styles.breakAllText}>
               {path}
             </Text>
           ))}

@@ -45,7 +45,7 @@ function ProfilePanel() {
       >
         {profileEvents.length > 0 && (
           <div className={styles.recentSection}>
-            <Text size="xs" variant="muted" style={{ textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 500 }}>
+            <Text size="xs" variant="muted" className={styles.uppercaseLabel}>
               Recent Activity
             </Text>
             <div className={styles.recentList}>

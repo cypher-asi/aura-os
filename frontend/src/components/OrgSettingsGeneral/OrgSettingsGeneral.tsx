@@ -28,13 +28,13 @@ export function OrgSettingsGeneral({ teamName, onTeamNameChange, teamSaving, tea
               value={teamName}
               onChange={(e) => onTeamNameChange(e.target.value)}
               placeholder="My Team"
-              style={{ width: 200 }}
+              className={styles.inputWidth200}
             />
           </div>
         </div>
       </div>
       {(teamSaving || teamMessage) && (
-        <Text variant="muted" size="sm" style={{ marginTop: "var(--space-2)" }}>
+        <Text variant="muted" size="sm" className={styles.topMarginSm}>
           {teamSaving ? "Saving..." : teamMessage}
         </Text>
       )}

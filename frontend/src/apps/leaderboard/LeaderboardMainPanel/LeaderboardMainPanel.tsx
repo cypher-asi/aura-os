@@ -32,7 +32,7 @@ export function LeaderboardMainPanel() {
   );
 
   return (
-    <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
+    <Lane flex className={styles.borderLeft}>
       <div className={styles.container}>
         <div className={styles.chartWrap}>
           <div className={styles.chartInner}>
@@ -51,7 +51,7 @@ export function LeaderboardMainPanel() {
                     {user.avatarUrl && (
                       <img src={user.avatarUrl} alt="" className={styles.avatar} />
                     )}
-                    <Text size="sm" style={{ fontWeight: 500 }}>{user.name}</Text>
+                    <Text size="sm" className={styles.nameBold}>{user.name}</Text>
                     {user.type === "agent" && (
                       <span className={styles.typeBadge}>agent</span>
                     )}

@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { Bot, Loader2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAgents, LAST_AGENT_ID_KEY } from "../stores";
+import styles from "./AgentIndexRedirect.module.css";
 
 export function AgentIndexRedirect() {
   const { agents, status } = useAgents();
@@ -9,7 +10,7 @@ export function AgentIndexRedirect() {
 
   if (loading) {
     return (
-      <EmptyState icon={<Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} />}>
+      <EmptyState icon={<Loader2 size={32} className={styles.spinAnimation} />}>
         Loading agents...
       </EmptyState>
     );

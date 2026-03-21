@@ -1,0 +1,28 @@
+.loadingPad {
+  padding: var(--space-4);
+}
+
+.formColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionLabel {
+  margin-bottom: var(--space-1);
+}
+
+.sectionLabelTop {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.collaboratorList {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.dangerText {
+  color: var(--color-danger);
+}

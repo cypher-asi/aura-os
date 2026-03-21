@@ -5,6 +5,7 @@ import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { Folder, File, FolderOpen } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import styles from "./FileExplorer.module.css";
 
 interface FileExplorerProps {
   rootPath?: string;
@@ -105,7 +106,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "var(--space-8)" }}>
+      <div className={styles.loadingCenter}>
         <Spinner size="md" />
       </div>
     );
@@ -133,8 +134,8 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
 
   if (isMobileLayout) {
     return (
-      <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", width: "100%", overflowY: "auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", width: "100%", padding: "var(--space-2)" }}>
+      <div className={styles.mobileScrollContainer}>
+        <div className={styles.mobileFileList}>
           {renderMobileNodes({
             nodes: filteredData,
             features,
@@ -147,7 +148,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplor
   }
 
   return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", width: "100%" }}>
+    <div className={styles.explorerContainer}>
       <Explorer
         data={filteredData}
         expandOnSelect
@@ -176,35 +177,24 @@ function renderMobileNodes({
   return nodes.map((node) => {
     const isDir = Boolean(node.children?.length) || node.metadata?.is_dir === true;
     const canOpenFile = !isDir && (Boolean(onFileSelect) || features.ideIntegration);
-    const rowStyle = {
-      display: "flex",
-      alignItems: "center",
-      gap: "var(--space-2)",
-      width: "100%",
-      padding: "10px 12px",
-      paddingLeft: `${12 + depth * 16}px`,
-      borderRadius: "var(--radius-md)",
-      border: "1px solid var(--color-border-subtle)",
-      background: "var(--color-panel-solid)",
-      color: "inherit",
-      textAlign: "left" as const,
-    };
+    const depthPadding = { paddingLeft: `${12 + depth * 16}px` };
 
     const content = (
       <>
         {node.icon}
-        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span className={styles.truncatedLabel}>
           {node.label}
         </span>
       </>
     );
 
     return (
-      <div key={node.id} style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+      <div key={node.id} className={styles.mobileNodeGroup}>
         {canOpenFile ? (
           <button
             type="button"
-            style={{ ...rowStyle, cursor: "pointer" }}
+            className={styles.mobileRow}
+            style={{ ...depthPadding, cursor: "pointer" }}
             onClick={() => {
               if (onFileSelect) {
                 onFileSelect(node.id);
@@ -216,7 +206,7 @@ function renderMobileNodes({
             {content}
           </button>
         ) : (
-          <div style={rowStyle}>
+          <div className={styles.mobileRow} style={depthPadding}>
             {content}
           </div>
         )}

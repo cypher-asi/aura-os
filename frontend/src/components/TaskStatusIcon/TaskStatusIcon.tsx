@@ -43,7 +43,7 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             r={R}
             fill="none"
             strokeWidth={STROKE}
-            style={{ stroke: "var(--color-text-secondary)" }}
+            className={styles.strokeSecondary}
           />
         </svg>
       </span>
@@ -67,7 +67,7 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             strokeWidth={STROKE}
             strokeDasharray={`${CIRCUMFERENCE * 0.25} ${CIRCUMFERENCE * 0.75}`}
             strokeLinecap="round"
-            style={{ stroke: "var(--color-text-muted, #6b7280)" }}
+            className={styles.strokeMuted}
           />
         </svg>
       </span>
@@ -83,7 +83,7 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
             cy={CENTER}
             r={R}
             stroke="none"
-            style={{ fill: "var(--status-failed, #ff6b6b)" }}
+            className={styles.fillFailed}
           />
         </svg>
       </span>
@@ -99,7 +99,7 @@ export function TaskStatusIcon({ status }: TaskStatusIconProps) {
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ stroke: "var(--color-text-secondary)" }}
+          className={styles.strokeSecondary}
         />
       </svg>
     </span>

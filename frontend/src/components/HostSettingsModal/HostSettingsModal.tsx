@@ -75,15 +75,15 @@ export function HostSettingsModal({
 
         <div className={styles.infoGrid}>
           <Text variant="muted" size="sm" as="span">Current target</Text>
-          <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>{hostLabel}</Text>
+          <Text size="sm" as="span" className={styles.monoText}>{hostLabel}</Text>
           <Text variant="muted" size="sm" as="span">Resolved origin</Text>
-          <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>{resolvedOrigin || "—"}</Text>
+          <Text size="sm" as="span" className={styles.monoText}>{resolvedOrigin || "—"}</Text>
           <Text variant="muted" size="sm" as="span">Status</Text>
           <Text size="sm" as="span">{status.replace(/_/g, " ")}</Text>
         </div>
 
         <div>
-          <Text variant="muted" size="sm" as="div" style={{ marginBottom: "var(--space-1)" }}>
+          <Text variant="muted" size="sm" as="div" className={styles.marginBottomSm}>
             Custom host
           </Text>
           <Input
@@ -98,7 +98,7 @@ export function HostSettingsModal({
         </div>
 
         {error && (
-          <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
+          <Text variant="muted" size="sm" className={styles.dangerText}>
             {error}
           </Text>
         )}

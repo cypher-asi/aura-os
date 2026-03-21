@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import fileStyles from "../FilePreviewCard/FilePreviewCard.module.css";
+import toolStyles from "../ToolCallBlock.module.css";
 
 const COLLAPSED_SPEC_LINES = 20;
 
@@ -44,7 +45,7 @@ export function SpecPreviewCard({ entry }: { entry: ToolCallEntry }) {
         </button>
       )}
       {entry.isError && entry.result && (
-        <div style={{ color: "#f87171", fontSize: 11, padding: "4px 10px" }}>
+        <div className={toolStyles.inlineError}>
           {entry.result.slice(0, 200)}
         </div>
       )}

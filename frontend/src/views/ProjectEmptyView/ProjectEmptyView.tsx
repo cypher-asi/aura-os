@@ -9,6 +9,7 @@ import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { projectAgentRoute, projectFilesRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { AgentSelectorModal } from "../../components/AgentSelectorModal";
 import type { AgentInstance } from "../../types";
+import styles from "./ProjectEmptyView.module.css";
 
 interface ProjectEmptyViewProps {
   mode?: "project" | "agent";
@@ -45,22 +46,12 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
 
     return (
       <>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-5)",
-            padding: "var(--space-5)",
-            maxWidth: 720,
-            margin: "0 auto",
-            width: "100%",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <Text size="xs" variant="muted" style={{ letterSpacing: "0.12em", textTransform: "uppercase" }}>
+        <div className={styles.mobileLayout}>
+          <div className={styles.headerSection}>
+            <Text size="xs" variant="muted" className={styles.uppercaseLabel}>
               Project
             </Text>
-            <Text size="xl" style={{ fontWeight: 700 }}>
+            <Text size="xl" className={styles.titleBold}>
               {project.name}
             </Text>
             <Text variant="muted" size="sm">
@@ -70,19 +61,13 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
             </Text>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "var(--space-3)",
-            }}
-          >
+          <div className={styles.actionGrid}>
             {mode === "agent" ? (
               <Button
                 variant="primary"
                 icon={<Bot size={16} />}
                 onClick={() => setAgentSelectorOpen(true)}
-                style={{ justifyContent: "flex-start" }}
+                className={styles.actionButtonStart}
               >
                 Add Agent
               </Button>
@@ -91,7 +76,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
                 variant="secondary"
                 icon={<MessageSquare size={16} />}
                 onClick={() => navigate(projectAgentRoute(project.project_id))}
-                style={{ justifyContent: "flex-start" }}
+                className={styles.actionButtonStart}
               >
                 Open Agent
               </Button>
@@ -100,7 +85,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
               variant="secondary"
               icon={<CheckSquare size={16} />}
               onClick={() => navigate(projectWorkRoute(project.project_id))}
-              style={{ justifyContent: "flex-start" }}
+              className={styles.actionButtonStart}
             >
               Open Tasks
             </Button>
@@ -108,7 +93,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
               variant="secondary"
               icon={<FolderOpen size={16} />}
               onClick={() => navigate(projectFilesRoute(project.project_id))}
-              style={{ justifyContent: "flex-start" }}
+              className={styles.actionButtonStart}
             >
               Open Files
             </Button>

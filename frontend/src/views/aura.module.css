@@ -308,6 +308,83 @@
 }
 
 
+/* StatsDashboard */
+.dashboardPadding {
+  padding: var(--space-3);
+}
+
+.periodRow {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.periodButton {
+  padding: 2px 10px;
+  font-size: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sectionMargin {
+  margin: 0 0 var(--space-1);
+}
+
+.sectionMarginTop {
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.uppercaseLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statCard {
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+}
+
+.statCardValueColor {
+  color: var(--color-text-secondary);
+}
+
+.statCardLabel {
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+/* TaskFeed & LogPanel shared */
+.panelColumn {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.feedHeader {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.logPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Shared utility */
+.dangerText {
+  color: var(--color-danger);
+}
+
 @media (max-width: 900px) {
   .panels {
     flex-direction: column;

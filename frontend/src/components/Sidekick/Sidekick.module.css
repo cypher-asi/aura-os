@@ -16,6 +16,14 @@
   gap: var(--space-2);
 }
 
+.automationLabelBold {
+  font-weight: 600;
+}
+
+.automationAgentCount {
+  opacity: 0.7;
+}
+
 .automationControls {
   display: flex;
   align-items: center;
@@ -144,6 +152,17 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4);
+}
+
+.infoHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.infoBoldTitle {
+  font-weight: 600;
 }
 
 .infoGrid {
@@ -332,6 +351,10 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+}
+
+.logEmptyText {
+  text-align: center;
 }
 
 .logLine {

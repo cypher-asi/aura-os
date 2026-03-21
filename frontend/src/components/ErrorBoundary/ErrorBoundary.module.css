@@ -1,0 +1,38 @@
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-4, 16px);
+  gap: var(--space-3, 12px);
+  color: var(--color-text-muted, #888);
+  text-align: center;
+  overflow: auto;
+}
+
+.errorHeading {
+  color: var(--color-danger, #e55);
+}
+
+.errorTrace {
+  font-size: 11px;
+  max-width: 100%;
+  max-height: 200px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.retryButton {
+  padding: 6px 16px;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text, #ccc);
+  cursor: pointer;
+  font-size: 13px;
+}

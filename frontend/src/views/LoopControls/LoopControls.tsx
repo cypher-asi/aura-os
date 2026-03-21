@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ProjectId } from "../../types";
 import { Button, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square } from "lucide-react";
+import styles from "./LoopControls.module.css";
 
 interface LoopControlsProps {
   projectId: ProjectId;
@@ -29,7 +30,7 @@ export function LoopControls({
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+      <div className={styles.controlRow}>
         {!running && !paused && (
           <Button variant="filled" size="sm" icon={<Play size={14} />} onClick={onStart}>
             Start

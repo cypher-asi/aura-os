@@ -134,9 +134,9 @@ export function SessionPreview({ session }: { session: Session }) {
         className={styles.section}
       >
         <div className={styles.fileOpsList}>
-          {loading && <Text variant="muted" size="sm" style={{ padding: "0 var(--space-3)" }}>Loading...</Text>}
+          {loading && <Text variant="muted" size="sm" className={styles.inlinePadding}>Loading...</Text>}
           {!loading && tasks.length === 0 && (
-            <Text variant="muted" size="sm" style={{ padding: "0 var(--space-3)" }}>No tasks in this session</Text>
+            <Text variant="muted" size="sm" className={styles.inlinePadding}>No tasks in this session</Text>
           )}
           {tasks.map((task) => (
             <Item

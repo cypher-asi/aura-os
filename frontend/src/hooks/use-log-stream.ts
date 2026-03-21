@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, type RefObject } from "react";
+import React, { useEffect, useRef, useState, useCallback, type RefObject } from "react";
 import { useEventStore } from "../stores/event-store";
 import type { EngineEvent, EngineEventType } from "../types/events";
 import { formatTime } from "../utils/format";
@@ -101,6 +101,22 @@ function summariseLoopEvent(e: EngineEvent): string {
   }
 }
 
+function summariseTaskCompleted(e: EngineEvent): string {
+  const name = e.task_title || e.task_id;
+  const parts: string[] = [];
+  if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
+  if (e.input_tokens != null && e.output_tokens != null) {
+    parts.push(`${fmtTokens(e.input_tokens + e.output_tokens)} tokens`);
+    const taskCost = e.cost_usd != null
+      ? formatCost(e.cost_usd)
+      : formatCost(computeCost(e.input_tokens, e.output_tokens, e.model));
+    parts.push(`${taskCost} (est.)`);
+  }
+  if (e.parse_retries) parts.push(`${e.parse_retries} retries`);
+  if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} build fix${e.build_fix_attempts > 1 ? "es" : ""}`);
+  return parts.length > 0 ? `Completed: ${name} (${parts.join(", ")})` : `Completed: ${name}`;
+}
+
 function summariseTaskEvent(e: EngineEvent): string {
   switch (e.type) {
     case "task_started": {
@@ -111,23 +127,8 @@ function summariseTaskEvent(e: EngineEvent): string {
       }
       return `Started: ${name}`;
     }
-    case "task_completed": {
-      const name = e.task_title || e.task_id;
-      const parts: string[] = [];
-      if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
-      if (e.input_tokens != null && e.output_tokens != null) {
-        parts.push(`${fmtTokens(e.input_tokens + e.output_tokens)} tokens`);
-        const taskCost = e.cost_usd != null
-          ? formatCost(e.cost_usd)
-          : formatCost(computeCost(e.input_tokens, e.output_tokens, e.model));
-        parts.push(`${taskCost} (est.)`);
-      }
-      if (e.parse_retries) parts.push(`${e.parse_retries} retries`);
-      if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} build fix${e.build_fix_attempts > 1 ? "es" : ""}`);
-      return parts.length > 0
-        ? `Completed: ${name} (${parts.join(", ")})`
-        : `Completed: ${name}`;
-    }
+    case "task_completed":
+      return summariseTaskCompleted(e);
     case "task_failed": {
       const name = e.task_title || e.task_id;
       const parts: string[] = [];
@@ -290,106 +291,93 @@ interface UseLogStreamResult {
   connected: boolean;
 }
 
-export function useLogStream(): UseLogStreamResult {
-  const subscribe = useEventStore((s) => s.subscribe);
-  const connected = useEventStore((s) => s.connected);
-  const [entries, setEntries] = useState<LogEntry[]>([]);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const autoScrollRef = useRef(true);
-  const historyLoadedRef = useRef(false);
+const ALL_EVENT_TYPES: EngineEventType[] = [
+  "loop_started", "loop_paused", "loop_stopped", "loop_finished", "loop_iteration_summary",
+  "task_started", "task_completed", "task_failed", "task_retrying",
+  "task_became_ready", "tasks_became_ready", "task_output_delta",
+  "file_ops_applied", "follow_up_task_created",
+  "session_rolled_over", "log_line",
+  "spec_gen_started", "spec_gen_progress", "spec_gen_completed", "spec_gen_failed", "spec_saved",
+  "build_verification_skipped", "build_verification_started", "build_verification_passed", "build_verification_failed", "build_fix_attempt",
+  "test_verification_started", "test_verification_passed", "test_verification_failed", "test_fix_attempt",
+  "git_committed", "git_pushed", "network_event",
+];
 
+function eventToLogEntry(event: EngineEvent, ts?: Date): LogEntry {
+  return {
+    timestamp: formatTime(ts ?? new Date()),
+    type: event.type,
+    summary: summarise(event),
+    detail: event,
+  };
+}
+
+function mergeEntries(restored: LogEntry[], prev: LogEntry[]): LogEntry[] {
+  const combined = [...restored, ...prev];
+  return combined.length > LOG_MAX_LINES ? combined.slice(-LOG_MAX_LINES) : combined;
+}
+
+function useLogHistory(setEntries: React.Dispatch<React.SetStateAction<LogEntry[]>>): void {
+  const historyLoadedRef = useRef(false);
   useEffect(() => {
     if (historyLoadedRef.current) return;
     historyLoadedRef.current = true;
 
     api.getLogEntries(LOG_MAX_LINES).then((persisted) => {
       if (persisted.length === 0) return;
-      const restored: LogEntry[] = persisted.map((p) => ({
-        timestamp: formatTime(new Date(p.timestamp_ms)),
-        type: p.event.type,
-        summary: summarise(p.event),
-        detail: p.event,
-      }));
-      setEntries((prev) => {
-        const combined = [...restored, ...prev];
-        return combined.length > LOG_MAX_LINES
-          ? combined.slice(-LOG_MAX_LINES)
-          : combined;
-      });
-    }).catch(() => {
-      // Silently ignore load failures; live events still work
-    });
+      const restored = persisted.map((p) => eventToLogEntry(p.event, new Date(p.timestamp_ms)));
+      setEntries((prev) => mergeEntries(restored, prev));
+    }).catch(() => {});
 
     return () => { historyLoadedRef.current = false; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+function useLogSubscription(
+  setEntries: React.Dispatch<React.SetStateAction<LogEntry[]>>,
+): void {
+  const subscribe = useEventStore((s) => s.subscribe);
 
   const addEntry = useCallback((event: EngineEvent) => {
     setEntries((prev) => {
-      const entry: LogEntry = {
-        timestamp: formatTime(new Date()),
-        type: event.type,
-        summary: summarise(event),
-        detail: event,
-      };
-      const next = [...prev, entry];
+      const next = [...prev, eventToLogEntry(event)];
       return next.length > LOG_MAX_LINES ? next.slice(-LOG_MAX_LINES) : next;
     });
-  }, []);
+  }, [setEntries]);
 
   useEffect(() => {
-    const allTypes: EngineEventType[] = [
-      "loop_started",
-      "loop_paused",
-      "loop_stopped",
-      "loop_finished",
-      "loop_iteration_summary",
-      "task_started",
-      "task_completed",
-      "task_failed",
-      "task_retrying",
-      "task_became_ready",
-      "tasks_became_ready",
-      "task_output_delta",
-      "file_ops_applied",
-      "follow_up_task_created",
-      "session_rolled_over",
-      "log_line",
-      "spec_gen_started",
-      "spec_gen_progress",
-      "spec_gen_completed",
-      "spec_gen_failed",
-      "spec_saved",
-      "build_verification_skipped",
-      "build_verification_started",
-      "build_verification_passed",
-      "build_verification_failed",
-      "build_fix_attempt",
-      "test_verification_started",
-      "test_verification_passed",
-      "test_verification_failed",
-      "test_fix_attempt",
-      "git_committed",
-      "git_pushed",
-      "network_event",
-    ];
-    const unsubs = allTypes.map((type) =>
-      subscribe(type, (e) => addEntry(e)),
-    );
+    const unsubs = ALL_EVENT_TYPES.map((type) => subscribe(type, (e) => addEntry(e)));
     return () => unsubs.forEach((u) => u());
   }, [subscribe, addEntry]);
+}
+
+function useAutoScroll(
+  entries: LogEntry[],
+  contentRef: RefObject<HTMLDivElement | null>,
+): () => void {
+  const autoScrollRef = useRef(true);
 
   useEffect(() => {
     if (autoScrollRef.current && contentRef.current) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
-  }, [entries]);
+  }, [entries, contentRef]);
 
-  const handleScroll = useCallback(() => {
+  return useCallback(() => {
     const el = contentRef.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    autoScrollRef.current = atBottom;
-  }, []);
+    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  }, [contentRef]);
+}
+
+export function useLogStream(): UseLogStreamResult {
+  const connected = useEventStore((s) => s.connected);
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLogHistory(setEntries);
+  useLogSubscription(setEntries);
+  const handleScroll = useAutoScroll(entries, contentRef);
 
   return { entries, contentRef, handleScroll, connected };
 }

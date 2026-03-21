@@ -6,6 +6,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Button } from "@cypher-asi/zui";
 import { ArrowLeft } from "lucide-react";
 import { useProjectLayoutData } from "./useProjectLayoutData";
+import styles from "./ProjectLayout.module.css";
 
 export function ProjectLayout() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function ProjectLayout() {
     if (projects.length === 0) {
       return (
         <EmptyState>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+          <div className={styles.centeredColumn}>
             <strong>No project selected</strong>
             <span>Create a project to get started.</span>
           </div>
@@ -32,7 +33,7 @@ export function ProjectLayout() {
 
     return (
       <EmptyState>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-3)" }}>
+        <div className={styles.centeredColumn}>
           <strong>Project not found</strong>
           <span>Choose a project from navigation to continue.</span>
           <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={() => navigate("/projects")}>

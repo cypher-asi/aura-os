@@ -62,7 +62,7 @@ function SidekickLane() {
       storageKey="aura-sidekick-v2"
       header={SidekickTaskbar && <SidekickTaskbar />}
       taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
-      style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
+      className={styles.laneLeftBorder}
     >
       {apps.map((app) => {
         if (!app.SidekickPanel || !visitedAppIds.has(app.id)) return null;
@@ -94,7 +94,7 @@ function PreviewLane() {
       collapsible
       collapsed={!previewItem}
       header={PreviewHeaderComp && <PreviewHeaderComp />}
-      style={{ boxShadow: "-1px 0 0 0 var(--color-border)" }}
+      className={styles.laneLeftBorder}
     >
       {PreviewPanel && <PreviewPanel />}
     </Lane>
@@ -129,9 +129,9 @@ export function DesktopShell() {
           className="titlebar-drag"
           onDoubleClick={() => windowCommand("maximize")}
           icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
-          title={<span className="titlebar-center"><Link to="/projects" style={{ color: "inherit", textDecoration: "none" }}>AURA</Link></span>}
+          title={<span className="titlebar-center"><Link to="/projects" className={styles.titleLink}>AURA</Link></span>}
           actions={(
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            <div className={styles.titleActions}>
               {features.hostRetargeting && (
                 <Button
                   variant="ghost"

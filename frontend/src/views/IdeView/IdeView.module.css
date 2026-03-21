@@ -264,3 +264,11 @@
 .error {
   color: var(--color-danger, #f85149);
 }
+
+.dangerText {
+  color: var(--color-danger);
+}
+
+.flexSpacer {
+  flex: 1;
+}

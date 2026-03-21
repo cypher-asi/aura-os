@@ -40,6 +40,18 @@
   outline-offset: 1px;
 }
 
+.monoText {
+  font-family: var(--font-mono);
+}
+
+.marginBottomSm {
+  margin-bottom: var(--space-1);
+}
+
+.dangerText {
+  color: var(--color-danger);
+}
+
 .logoutSection {
   display: flex;
   align-items: center;

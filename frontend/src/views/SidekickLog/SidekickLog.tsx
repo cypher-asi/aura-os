@@ -177,7 +177,7 @@ export function SidekickLog({ searchQuery }: { searchQuery: string }) {
       >
         {filtered.length === 0 ? (
           <div className={styles.logEmpty}>
-            <Text variant="muted" size="sm" style={{ textAlign: "center" }}>
+            <Text variant="muted" size="sm" className={styles.logEmptyText}>
               {entries.length === 0
                 ? "Listening — events will appear when automation runs or specs are generated."
                 : "No events match the current filters."}

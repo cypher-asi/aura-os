@@ -20,7 +20,7 @@ export function TaskCreatedIndicator({ entry }: { entry: ToolCallEntry }) {
         <div className={toolStyles.taskIndicatorDesc}>{firstLine}</div>
       )}
       {entry.isError && entry.result && (
-        <div style={{ color: "#f87171", fontSize: 11, marginTop: 2 }}>
+        <div className={toolStyles.inlineErrorCompact}>
           {entry.result.slice(0, 200)}
         </div>
       )}

@@ -132,3 +132,8 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.pendingCodeArea {
+  min-height: 40px;
+  position: relative;
+}

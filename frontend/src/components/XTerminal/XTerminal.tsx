@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import type { UseTerminalReturn } from "../../hooks/use-terminal";
+import styles from "./XTerminal.module.css";
 
 interface XTerminalProps {
   terminal: UseTerminalReturn;
@@ -111,11 +112,8 @@ export function XTerminal({ terminal: hook, visible }: XTerminalProps) {
   return (
     <div
       ref={containerRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        display: visible ? "block" : "none",
-      }}
+      className={styles.container}
+      style={{ display: visible ? "block" : "none" }}
     />
   );
 }

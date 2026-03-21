@@ -84,7 +84,7 @@ export function LogPreview({ entry }: { entry: LogEntry }) {
         {pairs.map(([key, value]) => (
           <div key={key} className={styles.taskField}>
             <span className={styles.fieldLabel}>{key}</span>
-            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>{value}</Text>
+            <Text size="sm" className={styles.preWrapText}>{value}</Text>
           </div>
         ))}
         {pairs.length === 0 && (

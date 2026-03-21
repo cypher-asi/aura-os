@@ -31,9 +31,9 @@ export function ToolCallBlock({
   const renderBody = () => {
     if (entry.started) {
       return (
-        <div className={toolStyles.toolBodyWrap} style={{ maxHeight: 28, overflow: "hidden" }}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.startedWrap}`}>
           <div className={toolStyles.toolBody}>
-            <span style={{ fontSize: 11, color: "var(--color-text-muted, #888)" }}>
+            <span className={toolStyles.generatingHint}>
               Generating…
             </span>
           </div>
@@ -60,7 +60,7 @@ export function ToolCallBlock({
     }
     if (isTask) {
       return (
-        <div className={toolStyles.toolBodyWrap} style={{ maxHeight: "none" }}>
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.noMaxHeight}`}>
           <div className={toolStyles.toolBody}>
             <TaskCreatedIndicator entry={entry} />
           </div>
@@ -155,9 +155,8 @@ export function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
       {isBatch && !showAll ? (
         <button
           type="button"
-          className={toolStyles.toolHeader}
+          className={`${toolStyles.toolHeader} ${toolStyles.showAllButton}`}
           onClick={() => setShowAll(true)}
-          style={{ paddingLeft: 18, opacity: 0.7 }}
         >
           Show all {total} actions
         </button>

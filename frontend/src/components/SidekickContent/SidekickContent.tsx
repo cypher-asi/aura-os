@@ -23,9 +23,9 @@ function InfoPanel({ project, onClose }: { project: import("../types").Project; 
 
   return (
     <div className={styles.infoArea}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-4)" }}>
+      <div className={styles.infoHeader}>
         <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={14} />} onClick={onClose} />
-        <Text size="sm" style={{ fontWeight: 600 }}>Project Info</Text>
+        <Text size="sm" className={styles.infoBoldTitle}>Project Info</Text>
       </div>
       <div className={styles.infoGrid}>
         <Text variant="muted" size="sm" as="span">Status</Text>

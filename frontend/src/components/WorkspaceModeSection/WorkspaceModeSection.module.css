@@ -1,0 +1,27 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.labelBold {
+  font-weight: 600;
+}
+
+.optionButton {
+  text-align: left;
+  border-radius: var(--radius-md);
+  color: inherit;
+  padding: var(--space-3);
+  cursor: pointer;
+}
+
+.optionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.optionDescription {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}

@@ -15,3 +15,15 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.strokeSecondary {
+  stroke: var(--color-text-secondary);
+}
+
+.strokeMuted {
+  stroke: var(--color-text-muted, #6b7280);
+}
+
+.fillFailed {
+  fill: var(--status-failed, #ff6b6b);
+}

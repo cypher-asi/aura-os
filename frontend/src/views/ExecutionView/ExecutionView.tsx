@@ -39,7 +39,7 @@ export function ExecutionView() {
       />
 
       {error && (
-        <Text variant="muted" size="sm" align="center" style={{ color: "var(--color-danger)" }}>
+        <Text variant="muted" size="sm" align="center" className={styles.dangerText}>
           {error}
         </Text>
       )}

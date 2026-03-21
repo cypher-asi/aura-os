@@ -13,7 +13,7 @@ export function ProfileMainPanel() {
   const { filteredEvents, commitActivity, selectedEventId, selectEvent, getCommentsForEvent } = useProfile();
 
   return (
-    <Lane flex style={{ borderLeft: "1px solid var(--color-border)" }}>
+    <Lane flex className={styles.borderLeft}>
       <div className={styles.container}>
         <div className={styles.scrollArea}>
           {filteredEvents.length === 0 ? (

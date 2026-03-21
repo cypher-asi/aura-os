@@ -137,8 +137,8 @@ export function LogPanel() {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
   return (
-    <Panel variant="solid" border="solid" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--color-border)" }}>
+    <Panel variant="solid" border="solid" className={styles.panelColumn}>
+      <div className={styles.logPanelHeader}>
         <Heading level={5}>Log Output</Heading>
       </div>
       <div

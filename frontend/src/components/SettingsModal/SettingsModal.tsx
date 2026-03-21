@@ -26,7 +26,7 @@ export function SettingsModal({
 
             <div className={styles.infoGrid}>
               <Text variant="muted" size="sm" as="span">Status</Text>
-              <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>
+              <Text size="sm" as="span" className={styles.monoText}>
                 {info?.configured ? "Configured" : "Not configured"}
               </Text>
             </div>
@@ -45,7 +45,7 @@ export function SettingsModal({
 
                 <div className={styles.infoGrid}>
                   <Text variant="muted" size="sm" as="span">Version</Text>
-                  <Text size="sm" as="span" style={{ fontFamily: "var(--font-mono)" }}>
+                  <Text size="sm" as="span" className={styles.monoText}>
                     {currentVersion || "—"}
                   </Text>
                   <Text variant="muted" size="sm" as="span">Channel</Text>

@@ -34,10 +34,10 @@ function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
       <div className={styles.taskMeta}>
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Summary</span>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-2)" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          <div className={styles.summaryRow}>
+            <div className={styles.summaryContent}>
               {summaryText ? (
-                <Text variant="secondary" size="sm" style={{ whiteSpace: "pre-wrap" }} className={styles.specSummaryParagraph}>
+                <Text variant="secondary" size="sm" className={`${styles.preWrapText} ${styles.specSummaryParagraph}`}>
                   {summaryText}
                 </Text>
               ) : (
@@ -143,7 +143,7 @@ export function PreviewHeader() {
           onClick={goBackPreview}
         />
       )}
-      <Text size="sm" className={styles.previewTitle} style={{ fontWeight: 600 }}>
+      <Text size="sm" className={`${styles.previewTitle} ${styles.previewTitleBold}`}>
         {title}
       </Text>
       {displayItem.kind === "task" && <RunTaskButton task={displayItem.task} />}

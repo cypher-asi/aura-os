@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import styles from "./ErrorBoundary.module.css";
 
 interface Props {
   children: ReactNode;
@@ -30,50 +31,14 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          padding: "var(--space-4, 16px)",
-          gap: "var(--space-3, 12px)",
-          color: "var(--color-text-muted, #888)",
-          textAlign: "center",
-          overflow: "auto",
-        }}
-      >
-        <strong style={{ color: "var(--color-danger, #e55)" }}>
+      <div className={styles.errorContainer}>
+        <strong className={styles.errorHeading}>
           Something went wrong{this.props.name ? ` in ${this.props.name}` : ""}
         </strong>
-        <pre
-          style={{
-            fontSize: 11,
-            maxWidth: "100%",
-            maxHeight: 200,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            background: "rgba(255,255,255,0.04)",
-            padding: "8px 12px",
-            borderRadius: 4,
-          }}
-        >
+        <pre className={styles.errorTrace}>
           {error.message}
         </pre>
-        <button
-          onClick={this.handleReload}
-          style={{
-            padding: "6px 16px",
-            border: "1px solid var(--color-border, #333)",
-            borderRadius: 4,
-            background: "transparent",
-            color: "var(--color-text, #ccc)",
-            cursor: "pointer",
-            fontSize: 13,
-          }}
-        >
+        <button onClick={this.handleReload} className={styles.retryButton}>
           Retry
         </button>
       </div>

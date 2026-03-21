@@ -1,61 +1,38 @@
 import { useCallback } from "react";
-import { useLocation, useNavigate, useOutlet } from "react-router-dom";
+import { useNavigate, useOutlet } from "react-router-dom";
 import { Topbar, Drawer, Button, ButtonPlus } from "@cypher-asi/zui";
 import { ErrorBoundary } from "../ErrorBoundary";
 import {
-  ArrowLeft,
-  ChevronDown, CircleUserRound,
+  ArrowLeft, ChevronDown, CircleUserRound,
   Settings, Trophy, Building2,
 } from "lucide-react";
 import { PanelSearch } from "../PanelSearch";
 import { ProjectList } from "../ProjectList";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
-import { useAppStore } from "../../stores/app-store";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
-import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { useProjectContext } from "../../stores/project-action-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { getLastAgent } from "../../utils/storage";
-import {
-  getMobileProjectDestination,
-  getMobileShellMode,
-  getProjectIdFromPathname,
-  isProjectSubroute,
-  projectAgentRoute,
-  projectFilesRoute,
-  projectRootPath,
-  projectWorkRoute,
-} from "../../utils/mobileNavigation";
+import { projectAgentRoute, projectFilesRoute, projectRootPath, projectWorkRoute } from "../../utils/mobileNavigation";
+import { useMobileShellState } from "./useMobileShellState";
 import styles from "../AppShell/AppShell.module.css";
 
 function blurActiveElement() {
   const active = document.activeElement;
-  if (active instanceof HTMLElement) {
-    active.blur();
-  }
+  if (active instanceof HTMLElement) active.blur();
 }
 
 function ProjectNavigationDrawerContent() {
   const { query, setQuery } = useSidebarSearch();
   const { openNewProjectModal } = useProjectsList();
-
   return (
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerSearch}>
-        <PanelSearch
-          placeholder=""
-          value={query}
-          onChange={setQuery}
-          action={<ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />}
-        />
+        <PanelSearch placeholder="" value={query} onChange={setQuery} action={<ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />} />
       </div>
-      <div className={styles.mobileDrawerBody}>
-        <ProjectList />
-      </div>
+      <div className={styles.mobileDrawerBody}><ProjectList /></div>
     </div>
   );
 }
@@ -64,86 +41,77 @@ function AccountSheetContent() {
   const navigate = useNavigate();
   const { openAfterDrawerClose } = useMobileDrawerStore();
   const { openOrgSettings, openSettings } = useUIModalStore();
-
   return (
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerBody}>
         <div className={styles.mobileDrawerActions}>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<CircleUserRound size={16} />}
-            className={styles.mobileDrawerAction}
-            onClick={() => openAfterDrawerClose(() => navigate("/profile"))}
-          >
-            Profile
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Trophy size={16} />}
-            className={styles.mobileDrawerAction}
-            onClick={() => openAfterDrawerClose(() => navigate("/leaderboard"))}
-          >
-            Leaderboard
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Building2 size={16} />}
-            className={styles.mobileDrawerAction}
-            onClick={() => openAfterDrawerClose(openOrgSettings)}
-          >
-            Team settings
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Settings size={16} />}
-            className={styles.mobileDrawerAction}
-            onClick={() => openAfterDrawerClose(openSettings)}
-          >
-            App settings
-          </Button>
+          <Button variant="ghost" size="sm" icon={<CircleUserRound size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(() => navigate("/profile"))}>Profile</Button>
+          <Button variant="ghost" size="sm" icon={<Trophy size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(() => navigate("/leaderboard"))}>Leaderboard</Button>
+          <Button variant="ghost" size="sm" icon={<Building2 size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openOrgSettings)}>Team settings</Button>
+          <Button variant="ghost" size="sm" icon={<Settings size={16} />} className={styles.mobileDrawerAction} onClick={() => openAfterDrawerClose(openSettings)}>App settings</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewSheetContent() {
-  const activeApp = useAppStore((s) => s.activeApp);
-  const { PreviewPanel, PreviewHeader: PreviewHeaderComp } = activeApp;
-
-  if (!PreviewPanel) return null;
-
+function PreviewSheetContent({ PreviewPanel, PreviewHeader }: { PreviewPanel: React.ComponentType; PreviewHeader?: React.ComponentType }) {
   return (
     <div className={styles.mobileDrawerContent}>
-      {PreviewHeaderComp && (
-        <div className={styles.mobileContextHeader}>
-          <PreviewHeaderComp />
-        </div>
-      )}
-      <div className={styles.mobileDrawerBody}>
-        <PreviewPanel />
-      </div>
+      {PreviewHeader && <div className={styles.mobileContextHeader}><PreviewHeader /></div>}
+      <div className={styles.mobileDrawerBody}><PreviewPanel /></div>
     </div>
+  );
+}
+
+function MobileTopbar({ state }: { state: ReturnType<typeof useMobileShellState> }) {
+  const navigate = useNavigate();
+  const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
+  const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
+
+  return (
+    <Topbar
+      className={styles.mobileTopbar}
+      icon={
+        <div className={styles.mobileTopbarSlot}>
+          {state.showProjectBack && state.currentProjectId ? (
+            <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={18} />} aria-label="Back to project" onClick={() => navigate(projectRootPath(state.currentProjectId!))} />
+          ) : null}
+        </div>
+      }
+      title={
+        <span className={styles.mobileTopbarTitle}>
+          {state.showProjectTitle ? (
+            <button type="button" className={styles.mobileProjectTitleButton} onClick={() => setNavOpen(true)} aria-label={state.currentProject ? `Open project navigation for ${state.currentProject.name}` : "Open project navigation"}>
+              <span className={styles.mobileTopbarTitleText}>{state.currentProject?.name ?? "Project"}</span>
+              <ChevronDown size={14} />
+            </button>
+          ) : state.mobileTargetProject ? (
+            <button type="button" className={styles.mobileProjectTitleButton} onClick={() => setNavOpen(true)} aria-label={`Open project navigation for ${state.mobileTargetProject.name}`}>
+              <span className={styles.mobileTopbarTitleText}>{state.mobileTargetProject.name}</span>
+              <ChevronDown size={14} />
+            </button>
+          ) : (
+            <span className={styles.mobileTopbarTitleButton} aria-label="Aura">
+              <span className={styles.mobileTopbarTitleText}>AURA</span>
+            </span>
+          )}
+        </span>
+      }
+      actions={
+        <div className={styles.mobileTopbarActions}>
+          <Button variant="ghost" size="sm" iconOnly icon={<CircleUserRound size={18} />} aria-label="Open account" onClick={() => setAccountOpen(true)} />
+        </div>
+      }
+    />
   );
 }
 
 export function MobileShell() {
-  const activeApp = useAppStore((s) => s.activeApp);
-  const { isPhoneLayout } = useAuraCapabilities();
-  const projectContext = useProjectContext();
-  const { projects, mostRecentProject } = useProjectsList();
+  const state = useMobileShellState();
   const routeContent = useOutlet();
-  const location = useLocation();
   const navigate = useNavigate();
-  const {
-    MainPanel,
-    ResponsiveControls,
-    PreviewPanel,
-  } = activeApp;
+  const { MainPanel, ResponsiveControls, PreviewPanel, PreviewHeader: PreviewHeaderComp } = state.activeApp;
 
   const navOpen = useMobileDrawerStore((s) => s.navOpen);
   const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
@@ -157,205 +125,39 @@ export function MobileShell() {
 
   useMobileDrawerEffects(Boolean(PreviewPanel));
 
-  const currentProjectId = getProjectIdFromPathname(location.pathname);
-  const currentProject = projectContext?.project
-    ?? projects.find((project) => project.project_id === currentProjectId)
-    ?? null;
-  const mobileDestination = getMobileProjectDestination(location.pathname);
-  const lastAgent = getLastAgent();
-  const recentProjectId = lastAgent && projects.some((project) => project.project_id === lastAgent.projectId)
-    ? lastAgent.projectId
-    : mostRecentProject?.project_id ?? projects[0]?.project_id ?? null;
-  const mobileTargetProjectId = currentProjectId ?? recentProjectId;
-  const mobileTargetProject = projects.find((project) => project.project_id === mobileTargetProjectId) ?? null;
-  const hasResolvedCurrentProject = Boolean(currentProject);
-  const currentProjectRootPath = currentProjectId ? projectRootPath(currentProjectId) : null;
-  const isProjectRoute = Boolean(currentProjectId) && (
-    location.pathname === currentProjectRootPath
-      || isProjectSubroute(location.pathname, currentProjectId)
-  );
-  const mobileShellMode = getMobileShellMode(
-    location.pathname,
-    currentProjectId,
-    hasResolvedCurrentProject,
-  );
-  const isPrimaryProjectDestination = mobileDestination === "agent"
-    || mobileDestination === "tasks"
-    || mobileDestination === "files";
-  const showProjectTitle = mobileShellMode === "project"
-    && hasResolvedCurrentProject
-    && Boolean(currentProjectId)
-    && isProjectRoute;
-  const showProjectBack = hasResolvedCurrentProject
-    && Boolean(currentProjectId)
-    && isProjectRoute
-    && location.pathname !== currentProjectRootPath
-    && !isPrimaryProjectDestination;
-  const showProjectResponsiveControls = activeApp.id !== "projects";
-
   const handleMobilePrimaryNavigate = useCallback((id: MobileNavId) => {
-    if (id === "feed") {
-      navigate("/feed");
-      return;
-    }
-    if (!mobileTargetProjectId) {
-      navigate("/projects");
-      return;
-    }
-    if (id === "agent") {
-      navigate(projectAgentRoute(mobileTargetProjectId));
-      return;
-    }
-    if (id === "tasks") {
-      navigate(projectWorkRoute(mobileTargetProjectId));
-      return;
-    }
-    navigate(projectFilesRoute(mobileTargetProjectId));
-  }, [mobileTargetProjectId, navigate]);
+    if (id === "feed") { navigate("/feed"); return; }
+    if (!state.mobileTargetProjectId) { navigate("/projects"); return; }
+    if (id === "agent") { navigate(projectAgentRoute(state.mobileTargetProjectId)); return; }
+    if (id === "tasks") { navigate(projectWorkRoute(state.mobileTargetProjectId)); return; }
+    navigate(projectFilesRoute(state.mobileTargetProjectId));
+  }, [state.mobileTargetProjectId, navigate]);
 
   return (
     <>
       <div className={`${styles.mobileShell} ${overlayDrawerOpen ? styles.mobileShellDimmed : ""}`}>
-        <Topbar
-          className={styles.mobileTopbar}
-          icon={(
-            <div className={styles.mobileTopbarSlot}>
-              {showProjectBack && currentProjectId ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  iconOnly
-                  icon={<ArrowLeft size={18} />}
-                  aria-label="Back to project"
-                  onClick={() => navigate(projectRootPath(currentProjectId))}
-                />
-              ) : null}
-            </div>
-          )}
-          title={(
-            <span className={styles.mobileTopbarTitle}>
-              {showProjectTitle ? (
-                <button
-                  type="button"
-                  className={styles.mobileProjectTitleButton}
-                  onClick={() => setNavOpen(true)}
-                  aria-label={currentProject ? `Open project navigation for ${currentProject.name}` : "Open project navigation"}
-                >
-                  <span className={styles.mobileTopbarTitleText}>
-                    {currentProject?.name ?? "Project"}
-                  </span>
-                  <ChevronDown size={14} />
-                </button>
-              ) : mobileTargetProject ? (
-                <button
-                  type="button"
-                  className={styles.mobileProjectTitleButton}
-                  onClick={() => setNavOpen(true)}
-                  aria-label={`Open project navigation for ${mobileTargetProject.name}`}
-                >
-                  <span className={styles.mobileTopbarTitleText}>{mobileTargetProject.name}</span>
-                  <ChevronDown size={14} />
-                </button>
-              ) : (
-                <span className={styles.mobileTopbarTitleButton} aria-label="Aura">
-                  <span className={styles.mobileTopbarTitleText}>AURA</span>
-                </span>
-              )}
-            </span>
-          )}
-          actions={(
-            <div className={styles.mobileTopbarActions}>
-              <Button
-                variant="ghost"
-                size="sm"
-                iconOnly
-                icon={<CircleUserRound size={18} />}
-                aria-label="Open account"
-                onClick={() => setAccountOpen(true)}
-              />
-            </div>
-          )}
-        />
+        <MobileTopbar state={state} />
         <UpdateBanner />
-
         <div className={styles.mobileMain}>
-          {showProjectResponsiveControls && ResponsiveControls && (
-            <div className={styles.mobileResponsiveControls}>
-              <ResponsiveControls />
-            </div>
-          )}
-          <div className={styles.mobileMainPanel}>
-            <ErrorBoundary name="main">
-              <MainPanel>
-                {routeContent}
-              </MainPanel>
-            </ErrorBoundary>
-          </div>
+          {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
+          <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
         </div>
-
-        {!drawerOpen && (
-          <div className={styles.mobileBottomNav}>
-            <MobileBottomNav activeId={mobileDestination} onNavigate={handleMobilePrimaryNavigate} />
-          </div>
-        )}
+        {!drawerOpen && <div className={styles.mobileBottomNav}><MobileBottomNav activeId={state.mobileDestination} onNavigate={handleMobilePrimaryNavigate} /></div>}
       </div>
 
-      {overlayDrawerOpen && (
-        <button
-          type="button"
-          className={styles.mobileDrawerBackdrop}
-          aria-label="Close drawer"
-          onClick={closeDrawers}
-        />
-      )}
+      {overlayDrawerOpen && <button type="button" className={styles.mobileDrawerBackdrop} aria-label="Close drawer" onClick={closeDrawers} />}
 
-      <Drawer
-        side="left"
-        isOpen={navOpen}
-        onClose={() => {
-          blurActiveElement();
-          setNavOpen(false);
-        }}
-        title="Aura"
-        className={styles.mobileNavDrawer}
-        showMinimizedBar={false}
-        defaultSize={356}
-        maxSize={404}
-      >
+      <Drawer side="left" isOpen={navOpen} onClose={() => { blurActiveElement(); setNavOpen(false); }} title="Aura" className={styles.mobileNavDrawer} showMinimizedBar={false} defaultSize={356} maxSize={404}>
         {navOpen && <ProjectNavigationDrawerContent />}
       </Drawer>
 
       {PreviewPanel && (
-        <Drawer
-          side={isPhoneLayout ? "bottom" : "right"}
-          isOpen={previewOpen}
-          onClose={() => {
-            blurActiveElement();
-            setPreviewOpen(false);
-          }}
-          title="Preview"
-          className={isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet}
-          showMinimizedBar={false}
-          defaultSize={isPhoneLayout ? 420 : 360}
-          maxSize={isPhoneLayout ? 640 : 480}
-        >
-          <PreviewSheetContent />
+        <Drawer side={state.isPhoneLayout ? "bottom" : "right"} isOpen={previewOpen} onClose={() => { blurActiveElement(); setPreviewOpen(false); }} title="Preview" className={state.isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet} showMinimizedBar={false} defaultSize={state.isPhoneLayout ? 420 : 360} maxSize={state.isPhoneLayout ? 640 : 480}>
+          <PreviewSheetContent PreviewPanel={PreviewPanel} PreviewHeader={PreviewHeaderComp} />
         </Drawer>
       )}
 
-      <Drawer
-        side={isPhoneLayout ? "bottom" : "right"}
-        isOpen={accountOpen}
-        onClose={() => {
-          blurActiveElement();
-          setAccountOpen(false);
-        }}
-        title="Account"
-        className={isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet}
-        showMinimizedBar={false}
-        defaultSize={isPhoneLayout ? 320 : 360}
-        maxSize={isPhoneLayout ? 420 : 440}
-      >
+      <Drawer side={state.isPhoneLayout ? "bottom" : "right"} isOpen={accountOpen} onClose={() => { blurActiveElement(); setAccountOpen(false); }} title="Account" className={state.isPhoneLayout ? styles.mobileSheetDrawer : styles.mobileSideSheet} showMinimizedBar={false} defaultSize={state.isPhoneLayout ? 320 : 360} maxSize={state.isPhoneLayout ? 420 : 440}>
         <AccountSheetContent />
       </Drawer>
     </>

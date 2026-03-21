@@ -8,20 +8,20 @@ export function ConnectionDot() {
   if (!connected) {
     return (
       <span className={styles.connectionDot} title="Disconnected — reconnecting...">
-        <WifiOff size={12} style={{ color: "var(--color-danger, #e55)" }} />
+        <WifiOff size={12} className={styles.iconDanger} />
       </span>
     );
   }
   if (stale) {
     return (
       <span className={styles.connectionDot} title="Connected but no events received recently">
-        <Wifi size={12} style={{ color: "var(--color-warning, #ea0)" }} />
+        <Wifi size={12} className={styles.iconWarning} />
       </span>
     );
   }
   return (
     <span className={styles.connectionDot} title="Connected — receiving events">
-      <Wifi size={12} style={{ color: "var(--color-success, #4c9)" }} />
+      <Wifi size={12} className={styles.iconSuccess} />
     </span>
   );
 }

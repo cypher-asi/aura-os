@@ -19,10 +19,8 @@ export function PanelSearch({ placeholder = "", value, onChange, action }: Panel
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{
-          paddingLeft: "calc(var(--space-4, 16px) + 14px + var(--space-2, 8px))",
-          paddingRight: action ? "calc(var(--control-height-sm, 28px) + 2px)" : undefined,
-        }}
+        className={styles.searchInput}
+        style={action ? { paddingRight: "calc(var(--control-height-sm, 28px) + 2px)" } : undefined}
       />
       {action && <div className={styles.action}>{action}</div>}
     </div>

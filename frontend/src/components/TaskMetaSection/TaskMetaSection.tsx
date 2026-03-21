@@ -86,9 +86,9 @@ export function TaskMetaSection({
       {agentInstance && (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Assigned to</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span className={styles.agentInline}>
             {agentInstance.icon && (
-              <img src={agentInstance.icon} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+              <img src={agentInstance.icon} alt="" className={styles.agentAvatar} />
             )}
             <Text size="sm">{agentInstance.name}</Text>
           </span>
@@ -97,9 +97,9 @@ export function TaskMetaSection({
       {completedByAgent && (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Completed by</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span className={styles.agentInline}>
             {completedByAgent.icon && (
-              <img src={completedByAgent.icon} alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover" }} />
+              <img src={completedByAgent.icon} alt="" className={styles.agentAvatar} />
             )}
             <Text size="sm">{completedByAgent.name}</Text>
           </span>
@@ -122,17 +122,7 @@ export function TaskMetaSection({
           <span className={styles.fieldLabel}>Session</span>
           <button
             onClick={onViewSession}
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              color: "var(--color-text, #fff)",
-              fontSize: 13,
-              textAlign: "left",
-              textDecoration: "underline",
-              textUnderlineOffset: 2,
-            }}
+            className={styles.sessionLink}
           >
             {effectiveSessionId.slice(0, 8)}
           </button>

@@ -285,3 +285,11 @@
     width: 100%;
   }
 }
+
+.inputWidth200 {
+  width: 200px;
+}
+
+.topMarginSm {
+  margin-top: var(--space-2);
+}

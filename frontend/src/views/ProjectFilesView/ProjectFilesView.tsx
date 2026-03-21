@@ -5,6 +5,7 @@ import { FileExplorer } from "../../components/FileExplorer";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
+import styles from "./ProjectFilesView.module.css";
 
 export function ProjectFilesView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,24 +16,15 @@ export function ProjectFilesView() {
   const rootPath = getProjectWorkspaceRoot(project);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 0,
-        height: "100%",
-        flex: 1,
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ padding: "var(--space-3)", borderBottom: "1px solid var(--color-border)" }}>
+    <div className={styles.container}>
+      <div className={styles.searchHeader}>
         <PanelSearch
           placeholder=""
           value={searchQuery}
           onChange={setSearchQuery}
         />
       </div>
-      <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: "hidden" }}>
+      <div className={styles.explorerArea}>
         <FileExplorer rootPath={rootPath ?? undefined} searchQuery={searchQuery} />
       </div>
     </div>

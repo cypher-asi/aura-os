@@ -6,6 +6,7 @@ import { useNewProjectForm } from "../../hooks/use-new-project-form";
 import { WorkspaceModeSection } from "../WorkspaceModeSection";
 import { ImportFilesSection } from "../ImportFilesSection";
 import { OrbitRepoSection } from "../OrbitRepoSection";
+import styles from "./NewProjectModal.module.css";
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -48,7 +49,7 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      <div className={styles.formColumn}>
         <WorkspaceModeSection
           workspaceMode={form.workspaceMode}
           onSelect={form.setWorkspaceMode}
@@ -112,12 +113,12 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
         />
 
         {form.error && (
-          <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
+          <Text variant="muted" size="sm" className={styles.dangerText}>
             {form.error}
           </Text>
         )}
         {!form.error && form.submitBlocker && (
-          <Text variant="muted" size="sm" style={{ color: "var(--color-text-secondary)" }}>
+          <Text variant="muted" size="sm" className={styles.secondaryText}>
             {form.submitBlocker}
           </Text>
         )}

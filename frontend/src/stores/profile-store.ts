@@ -71,6 +71,60 @@ let _initialized = false;
 let _nextCommentId = 1;
 const _loadedCommentIds = new Set<string>();
 
+type ProfileSetter = (
+  partial: ProfileState | Partial<ProfileState> | ((state: ProfileState) => ProfileState | Partial<ProfileState>),
+) => void;
+
+function loadProfileFromNetwork(
+  set: ProfileSetter,
+  user: ReturnType<typeof useAuthStore.getState>["user"],
+): void {
+  api.users
+    .me()
+    .then((networkUser) => {
+      const networkName =
+        networkUser.display_name && !isUuid(networkUser.display_name)
+          ? networkUser.display_name
+          : undefined;
+
+      set((s) => ({
+        profile: {
+          ...s.profile,
+          id: networkUser.profile_id ?? s.profile.id,
+          networkUserId: networkUser.id ?? s.profile.networkUserId,
+          name: networkName ?? user?.display_name ?? s.profile.name,
+          bio: networkUser.bio ?? s.profile.bio,
+          location: networkUser.location ?? s.profile.location,
+          website: networkUser.website ?? s.profile.website,
+          avatarUrl: networkUser.avatar_url ?? s.profile.avatarUrl,
+          joinedDate: networkUser.created_at ?? s.profile.joinedDate,
+        },
+      }));
+
+      if (networkUser.profile_id) {
+        api.feed.getProfilePosts(networkUser.profile_id)
+          .then((netEvents) => set({ liveEvents: netEvents.map(networkEventToFeedEvent) }))
+          .catch(() => {});
+      }
+    })
+    .catch(() => {});
+}
+
+function loadProfileProjects(set: ProfileSetter): void {
+  api.listProjects()
+    .then((apiProjects) => {
+      set({
+        projects: apiProjects.map((p) => {
+          const repo = p.orbit_owner && p.orbit_repo
+            ? `${p.orbit_owner}/${p.orbit_repo}`
+            : (p.git_repo_url ?? "");
+          return { id: p.project_id, name: p.name, repo };
+        }),
+      });
+    })
+    .catch(() => {});
+}
+
 export const useProfileStore = create<ProfileState>()((set, get) => {
   const user = useAuthStore.getState().user;
   const zid = user?.primary_zid || "";
@@ -146,56 +200,9 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
         set((s) => ({ profile: { ...s.profile, handle: `@${zid}` } }));
       }
 
-      api.users
-        .me()
-        .then((networkUser) => {
-          const networkName =
-            networkUser.display_name && !isUuid(networkUser.display_name)
-              ? networkUser.display_name
-              : undefined;
-
-          set((s) => ({
-            profile: {
-              ...s.profile,
-              id: networkUser.profile_id ?? s.profile.id,
-              networkUserId: networkUser.id ?? s.profile.networkUserId,
-              name: networkName ?? user?.display_name ?? s.profile.name,
-              bio: networkUser.bio ?? s.profile.bio,
-              location: networkUser.location ?? s.profile.location,
-              website: networkUser.website ?? s.profile.website,
-              avatarUrl: networkUser.avatar_url ?? s.profile.avatarUrl,
-              joinedDate: networkUser.created_at ?? s.profile.joinedDate,
-            },
-          }));
-
-          if (networkUser.profile_id) {
-            api.feed
-              .getProfilePosts(networkUser.profile_id)
-              .then((netEvents) => {
-                set({ liveEvents: netEvents.map(networkEventToFeedEvent) });
-              })
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
-
-      api
-        .listProjects()
-        .then((apiProjects) => {
-          set({
-            projects: apiProjects.map((p) => {
-              const repo =
-                p.orbit_owner && p.orbit_repo
-                  ? `${p.orbit_owner}/${p.orbit_repo}`
-                  : (p.git_repo_url ?? "");
-              return { id: p.project_id, name: p.name, repo };
-            }),
-          });
-        })
-        .catch(() => {});
-
-      api.usage
-        .personal("all")
+      loadProfileFromNetwork(set, user);
+      loadProfileProjects(set);
+      api.usage.personal("all")
         .then((stats) => set({ totalTokenUsage: stats.total_tokens }))
         .catch(() => {});
     },

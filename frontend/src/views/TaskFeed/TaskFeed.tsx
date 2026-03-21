@@ -14,8 +14,8 @@ export function TaskFeed({ projectId }: TaskFeedProps) {
   const displayed = sorted.slice(0, 50);
 
   return (
-    <Panel variant="solid" border="solid" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ padding: "var(--space-3) var(--space-4)", borderBottom: "1px solid var(--color-border)" }}>
+    <Panel variant="solid" border="solid" className={styles.panelColumn}>
+      <div className={styles.feedHeader}>
         <Heading level={5}>Task Feed ({tasks.length})</Heading>
       </div>
       <div className={styles.feedList}>

@@ -4,3 +4,15 @@
   justify-content: center;
   opacity: 0.8;
 }
+
+.iconDanger {
+  color: var(--color-danger, #e55);
+}
+
+.iconWarning {
+  color: var(--color-warning, #ea0);
+}
+
+.iconSuccess {
+  color: var(--color-success, #4c9);
+}

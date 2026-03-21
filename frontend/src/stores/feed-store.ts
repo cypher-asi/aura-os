@@ -154,6 +154,44 @@ const _seenIds = new Set<string>();
 const _loadedCommentIds = new Set<string>();
 const _eventUnsubs: (() => void)[] = [];
 
+type FeedSetter = (
+  partial: FeedState | Partial<FeedState> | ((state: FeedState) => FeedState | Partial<FeedState>),
+) => void;
+
+function handleGitPushed(event: EngineEvent, set: FeedSetter): void {
+  if (event.type !== "git_pushed") return;
+  const feedEvent: FeedEvent = {
+    id: `git-push-${event.spec_id ?? Date.now()}`,
+    postType: "push",
+    title: event.summary ?? "Code pushed",
+    author: { name: "Agent", type: "agent" },
+    repo: event.repo ?? "",
+    branch: event.branch ?? "main",
+    commits: (event.commits ?? []).map((c) => ({ sha: c.sha, message: c.message })),
+    commitIds: (event.commits ?? []).map((c) => c.sha),
+    timestamp: new Date().toISOString(),
+    summary: event.summary,
+    eventType: "push",
+  };
+  if (_seenIds.has(feedEvent.id)) return;
+  _seenIds.add(feedEvent.id);
+  set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
+}
+
+function handleNetworkEvent(event: EngineEvent, set: FeedSetter): void {
+  if (event.type !== "network_event") return;
+  const payload = event.payload;
+  if (!payload) return;
+  const wsType = (payload.type as string) ?? "";
+  if (wsType !== "activity.new") return;
+  const data = payload.data as FeedEventDto | undefined;
+  if (!data || !data.id) return;
+  if (_seenIds.has(data.id)) return;
+  _seenIds.add(data.id);
+  const feedEvent = networkEventToFeedEvent(data);
+  set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
+}
+
 export const useFeedStore = create<FeedState>()((set, get) => ({
   liveEvents: null,
   userAvatarUrl: undefined,
@@ -221,49 +259,12 @@ export const useFeedStore = create<FeedState>()((set, get) => ({
 
     api.users
       .me()
-      .then((u) => {
-        if (u.avatar_url) set({ userAvatarUrl: u.avatar_url });
-      })
+      .then((u) => { if (u.avatar_url) set({ userAvatarUrl: u.avatar_url }); })
       .catch(() => {});
 
     const { subscribe } = useEventStore.getState();
-
-    const handleGitPushed = (event: EngineEvent) => {
-      if (event.type !== "git_pushed") return;
-      const feedEvent: FeedEvent = {
-        id: `git-push-${event.spec_id ?? Date.now()}`,
-        postType: "push",
-        title: event.summary ?? "Code pushed",
-        author: { name: "Agent", type: "agent" },
-        repo: event.repo ?? "",
-        branch: event.branch ?? "main",
-        commits: (event.commits ?? []).map((c) => ({ sha: c.sha, message: c.message })),
-        commitIds: (event.commits ?? []).map((c) => c.sha),
-        timestamp: new Date().toISOString(),
-        summary: event.summary,
-        eventType: "push",
-      };
-      if (_seenIds.has(feedEvent.id)) return;
-      _seenIds.add(feedEvent.id);
-      set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
-    };
-
-    const handleNetworkEvent = (event: EngineEvent) => {
-      if (event.type !== "network_event") return;
-      const payload = event.payload;
-      if (!payload) return;
-      const wsType = (payload.type as string) ?? "";
-      if (wsType !== "activity.new") return;
-      const data = payload.data as FeedEventDto | undefined;
-      if (!data || !data.id) return;
-      if (_seenIds.has(data.id)) return;
-      _seenIds.add(data.id);
-      const feedEvent = networkEventToFeedEvent(data);
-      set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
-    };
-
-    _eventUnsubs.push(subscribe("git_pushed", handleGitPushed));
-    _eventUnsubs.push(subscribe("network_event", handleNetworkEvent));
+    _eventUnsubs.push(subscribe("git_pushed", (e) => handleGitPushed(e, set)));
+    _eventUnsubs.push(subscribe("network_event", (e) => handleNetworkEvent(e, set)));
   },
 }));
 

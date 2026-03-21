@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { api, type OrbitCollaborator } from "../../api/client";
 import type { Project } from "../../types";
+import styles from "./ProjectSettingsModal.module.css";
 
 interface ProjectSettingsModalProps {
   target: Project | null;
@@ -87,12 +88,12 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
       }
     >
       {loading ? (
-        <div style={{ padding: "var(--space-4)" }}>
+        <div className={styles.loadingPad}>
           <Spinner size="md" />
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-          <Text variant="muted" size="sm" style={{ marginBottom: "var(--space-1)" }}>
+        <div className={styles.formColumn}>
+          <Text variant="muted" size="sm" className={styles.sectionLabel}>
             Git / Orbit
           </Text>
           <Input
@@ -107,13 +108,13 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
           />
           {project?.orbit_owner && project?.orbit_repo && (
             <>
-              <Text variant="muted" size="sm" style={{ marginTop: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+              <Text variant="muted" size="sm" className={styles.sectionLabelTop}>
                 Repo collaborators
               </Text>
               {collaboratorsLoading ? (
                 <Spinner size="sm" />
               ) : collaborators && collaborators.length > 0 ? (
-                <ul style={{ margin: 0, paddingLeft: "var(--space-4)", fontSize: "var(--font-size-sm)" }}>
+                <ul className={styles.collaboratorList}>
                   {collaborators.map((c, i) => (
                     <li key={c.user_id ?? c.username ?? i}>
                       {c.display_name ?? c.username ?? c.user_id ?? "—"} ({c.role})
@@ -128,7 +129,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
             </>
           )}
           {error && (
-            <Text variant="muted" size="sm" style={{ color: "var(--color-danger)" }}>
+            <Text variant="muted" size="sm" className={styles.dangerText}>
               {error}
             </Text>
           )}

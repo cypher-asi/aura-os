@@ -46,7 +46,7 @@ export function LeaderboardSidekickPanel() {
 
     return (
       <div className={styles.platformSection}>
-        <Text size="xs" variant="muted" style={{ textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 500 }}>
+        <Text size="xs" variant="muted" className={styles.uppercaseLabel}>
           Platform Stats
         </Text>
         <div className={styles.statsGrid}>
@@ -93,7 +93,7 @@ function StatTile({ value, label }: { value: string; label: string }) {
   return (
     <div className={styles.statTile}>
       <div className={styles.statTileValue}>{value}</div>
-      <Text size="xs" style={{ color: "var(--color-text-muted)", fontSize: 10 }}>{label}</Text>
+      <Text size="xs" className={styles.statTileLabel}>{label}</Text>
     </div>
   );
 }

@@ -109,7 +109,7 @@ export function OrgSettingsBilling({
                 value={billingEmail}
                 onChange={(e) => onBillingEmailChange(e.target.value)}
                 placeholder="billing@example.com"
-                style={{ width: 200 }}
+                className={billingStyles.inputWidth200}
               />
               <Button
                 variant="primary"
@@ -178,7 +178,7 @@ export function OrgSettingsBilling({
                 size="sm"
                 onClick={() => onBuyTier(tier.id)}
                 disabled={isPolling}
-                style={{ width: "100%", marginTop: "var(--space-2)" }}
+                className={billingStyles.buyButton}
               >
                 {isPolling ? "Processing..." : "Buy"}
               </Button>
@@ -189,7 +189,7 @@ export function OrgSettingsBilling({
 
       {/* Checkout Error */}
       {checkoutError && (
-        <div className={billingStyles.errorState} style={{ marginBottom: "var(--space-4)" }}>
+        <div className={`${billingStyles.errorState} ${billingStyles.checkoutErrorMargin}`}>
           {checkoutError}
         </div>
       )}
@@ -215,7 +215,7 @@ export function OrgSettingsBilling({
                   value={customCredits}
                   onChange={(e) => setCustomCredits(e.target.value)}
                   placeholder="e.g. 100000"
-                  style={{ width: 140 }}
+                  className={billingStyles.inputWidth140}
                 />
                 {customValid && (
                   <span className={billingStyles.customPrice}>

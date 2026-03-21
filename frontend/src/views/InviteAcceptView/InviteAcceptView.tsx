@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import { Text, Spinner } from "@cypher-asi/zui";
+import styles from "./InviteAcceptView.module.css";
 
 export function InviteAcceptView() {
   const { token } = useParams<{ token: string }>();
@@ -24,7 +25,7 @@ export function InviteAcceptView() {
   }, [token, navigate]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "var(--space-4)" }}>
+    <div className={styles.centeredLayout}>
       {status === "loading" && (
         <>
           <Spinner size="lg" />
@@ -35,7 +36,7 @@ export function InviteAcceptView() {
         <Text size="sm">Invite accepted! Redirecting...</Text>
       )}
       {status === "error" && (
-        <Text size="sm" style={{ color: "var(--color-danger)" }}>
+        <Text size="sm" className={styles.dangerText}>
           {errorMsg}
         </Text>
       )}

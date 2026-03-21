@@ -3,6 +3,7 @@ import { Input } from "@cypher-asi/zui";
 import { FolderOpen } from "lucide-react";
 import { api } from "../../api/client";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import styles from "./PathInput.module.css";
 
 interface PathInputProps {
   value: string;
@@ -29,35 +30,23 @@ export function PathInput({ value, onChange, placeholder, mode }: PathInputProps
   };
 
   return (
-    <div style={{ position: "relative", width: "100%" }}>
+    <div className={styles.wrapper}>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         mono
-        style={{ paddingRight: "var(--space-10)" }}
+        className={styles.inputPadded}
       />
       <button
         type="button"
         onClick={handleBrowse}
         disabled={picking || !features.linkedWorkspace}
         title={mode === "folder" ? "Browse for folder" : "Browse for file"}
+        className={styles.browseButton}
         style={{
-          position: "absolute",
-          right: "var(--space-2)",
-          top: "50%",
-          transform: "translateY(-50%)",
-          background: "none",
-          border: "none",
-          color: "var(--color-text-secondary)",
           cursor: picking || !features.linkedWorkspace ? "default" : "pointer",
           opacity: picking || !features.linkedWorkspace ? 0.4 : 0.6,
-          padding: "var(--space-1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "var(--radius-sm)",
-          transition: "opacity var(--transition-fast)",
         }}
         onMouseEnter={(e) => { if (!picking && features.linkedWorkspace) e.currentTarget.style.opacity = "1"; }}
         onMouseLeave={(e) => { if (!picking && features.linkedWorkspace) e.currentTarget.style.opacity = "0.6"; }}

@@ -194,6 +194,37 @@ function detectNotesPhase(buf: string): Phase {
   return "done";
 }
 
+function parseFileOpPhase(
+  buf: string,
+  objStart: number,
+  objEnd: number,
+): { phase: DetectedFileOp["phase"]; contentLength: number } {
+  const contentIdx = buf.indexOf(`"content"`, objStart);
+  const hasContentField = contentIdx !== -1 && (objEnd === -1 || contentIdx < objEnd);
+
+  let phase: DetectedFileOp["phase"] = "header";
+  let contentLength = 0;
+
+  if (hasContentField) {
+    const contentValStart = findValueStart(buf, contentIdx + `"content"`.length);
+    if (contentValStart !== -1 && buf[contentValStart] === '"') {
+      const contentEnd = findStringEnd(buf, contentValStart);
+      if (contentEnd === -1) {
+        phase = "content";
+        contentLength = buf.length - contentValStart - 1;
+      } else {
+        phase = objEnd !== -1 ? "done" : "content";
+        contentLength = contentEnd - contentValStart - 1;
+      }
+    } else {
+      phase = "content";
+    }
+  }
+
+  if (objEnd !== -1) phase = "done";
+  return { phase, contentLength };
+}
+
 function detectFileOps(buf: string): DetectedFileOp[] {
   const ops: DetectedFileOp[] = [];
   const marker = `"file_ops"`;
@@ -211,44 +242,12 @@ function detectFileOps(buf: string): DetectedFileOp[] {
 
     const op = extractFieldStr(buf, objStart, "op");
     const path = extractFieldStr(buf, objStart, "path");
-
-    if (!op && !path) {
-      i = objStart + 1;
-      continue;
-    }
+    if (!op && !path) { i = objStart + 1; continue; }
 
     const objEnd = findObjectEnd(buf, objStart);
-    const contentIdx = buf.indexOf(`"content"`, objStart);
-    const hasContentField = contentIdx !== -1 && (objEnd === -1 || contentIdx < objEnd);
+    const { phase, contentLength } = parseFileOpPhase(buf, objStart, objEnd);
 
-    let phase: DetectedFileOp["phase"] = "header";
-    let contentLength = 0;
-
-    if (hasContentField) {
-      const contentValStart = findValueStart(buf, contentIdx + `"content"`.length);
-      if (contentValStart !== -1 && buf[contentValStart] === '"') {
-        const contentEnd = findStringEnd(buf, contentValStart);
-        if (contentEnd === -1) {
-          phase = "content";
-          contentLength = buf.length - contentValStart - 1;
-        } else {
-          phase = objEnd !== -1 ? "done" : "content";
-          contentLength = contentEnd - contentValStart - 1;
-        }
-      } else {
-        phase = "content";
-      }
-    }
-
-    if (objEnd !== -1) phase = "done";
-
-    ops.push({
-      op: op ?? "unknown",
-      path: path ?? "unknown",
-      phase,
-      contentLength,
-    });
-
+    ops.push({ op: op ?? "unknown", path: path ?? "unknown", phase, contentLength });
     if (objEnd === -1) break;
     i = objEnd + 1;
   }

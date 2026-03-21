@@ -20,12 +20,12 @@ export function AutomationBar({ projectId }: AutomationBarProps) {
     <>
       <div className={styles.automationBar}>
         <div className={styles.automationLabel}>
-          <Text size="sm" style={{ fontWeight: 600 }}>
+          <Text size="sm" className={styles.automationLabelBold}>
             Automation
           </Text>
           <StatusBadge status={status} />
           {agentCount > 1 && (
-            <Text size="xs" style={{ opacity: 0.7 }}>{agentCount} agents</Text>
+            <Text size="xs" className={styles.automationAgentCount}>{agentCount} agents</Text>
           )}
         </div>
         <div className={styles.automationControls}>
