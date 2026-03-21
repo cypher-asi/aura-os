@@ -23,6 +23,11 @@ export interface ArtifactRef {
   title: string;
 }
 
+export type TimelineItem =
+  | { kind: "thinking" }
+  | { kind: "text"; content: string }
+  | { kind: "tool"; toolCallId: string };
+
 export interface DisplayMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -32,6 +37,7 @@ export interface DisplayMessage {
   contentBlocks?: DisplayContentBlockUnion[];
   thinkingText?: string;
   thinkingDurationMs?: number | null;
+  timeline?: TimelineItem[];
 }
 
 export interface ToolCallEntry {
