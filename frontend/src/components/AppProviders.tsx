@@ -1,6 +1,6 @@
 import { OrgProvider } from "../context/OrgContext";
 import { AppProvider } from "../context/AppContext";
-import { SidebarSearchProvider } from "../context/SidebarSearchContext";
+import { SidebarActionProvider } from "../context/SidebarActionContext";
 import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
 import { AgentAppProvider } from "../apps/agents/AgentAppProvider";
 import { FeedProvider } from "../apps/feed/FeedProvider";
@@ -12,7 +12,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <OrgProvider>
       <AppProvider apps={apps}>
-        <SidebarSearchProvider>
+        <SidebarActionProvider>
           <ProjectsProvider>
             <AgentAppProvider>
               <FeedProvider>
@@ -24,7 +24,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </FeedProvider>
             </AgentAppProvider>
           </ProjectsProvider>
-        </SidebarSearchProvider>
+        </SidebarActionProvider>
       </AppProvider>
     </OrgProvider>
   );

@@ -1,51 +1,26 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useEffect } from "react";
+import type { ReactNode } from "react";
+import { useAppUIStore } from "../stores/app-ui-store";
+import { useSidebarAction } from "./SidebarActionContext";
 import { useAppContext } from "./AppContext";
 
-interface SidebarSearchContextValue {
+type SidebarSearchValue = {
   query: string;
   setQuery: (q: string) => void;
   action: ReactNode;
   setAction: (appId: string, node: ReactNode | null) => void;
-}
+};
 
-const SidebarSearchCtx = createContext<SidebarSearchContextValue>({
-  query: "",
-  setQuery: () => {},
-  action: null,
-  setAction: () => {},
-});
-
-export function SidebarSearchProvider({ children }: { children: ReactNode }) {
-  const [query, setQueryRaw] = useState("");
-  const [actionsMap, setActionsMap] = useState<Record<string, ReactNode>>({});
+export function useSidebarSearch(): SidebarSearchValue {
   const { activeApp } = useAppContext();
+  const query = useAppUIStore((s) => s.sidebarQuery);
+  const setSidebarQuery = useAppUIStore((s) => s.setSidebarQuery);
+  const { action, setAction } = useSidebarAction();
 
   useEffect(() => {
-    setQueryRaw("");
-  }, [activeApp.id]);
+    setSidebarQuery("");
+  }, [activeApp.id, setSidebarQuery]);
 
-  const setQuery = useCallback((q: string) => setQueryRaw(q), []);
-  const setAction = useCallback((appId: string, node: ReactNode | null) => {
-    setActionsMap((prev) => {
-      if (node === null) {
-        const { [appId]: removedAction, ...rest } = prev;
-        void removedAction;
-        return rest;
-      }
-      return { ...prev, [appId]: node };
-    });
-  }, []);
-
-  const action = useMemo(() => actionsMap[activeApp.id] ?? null, [actionsMap, activeApp.id]);
-
-  return (
-    <SidebarSearchCtx.Provider value={{ query, setQuery, action, setAction }}>
-      {children}
-    </SidebarSearchCtx.Provider>
-  );
-}
-
-export function useSidebarSearch() {
-  return useContext(SidebarSearchCtx);
+  return { query, setQuery: setSidebarQuery, action, setAction };
 }
