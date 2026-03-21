@@ -454,9 +454,16 @@ fn compute_exploration_allowance(
         || combined.contains("migrate")
         || combined.contains("multi-file");
 
+    let is_test_task = combined.contains("unit test")
+        || combined.contains("write test")
+        || combined.contains("add test")
+        || combined.contains("integration test");
+
     let base: usize = match complexity {
         TaskComplexity::Simple => 8,
-        TaskComplexity::Standard => 12,
+        TaskComplexity::Standard => {
+            if is_test_task { 18 } else { 12 }
+        }
         TaskComplexity::Complex => {
             if is_refactoring { 22 } else { 18 }
         }
@@ -588,5 +595,12 @@ mod tests {
     fn compute_exploration_allowance_standard_medium_workspace() {
         let desc = "a".repeat(500);
         assert_eq!(compute_exploration_allowance("Add handler", &desc, 10), 14);
+    }
+
+    #[test]
+    fn compute_exploration_allowance_test_task_gets_higher_base() {
+        let desc = "a".repeat(500); // standard complexity by length
+        assert_eq!(compute_exploration_allowance("Write unit test for parser", &desc, 3), 18);
+        assert_eq!(compute_exploration_allowance("Add test for auth flow", &desc, 10), 20);
     }
 }
