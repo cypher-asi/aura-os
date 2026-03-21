@@ -6,7 +6,7 @@ import { FileText } from "lucide-react";
 import type { ArtifactRef, DisplayContentBlockUnion, DisplayMessage } from "../types/stream";
 import type { ToolCallEntry } from "../types/stream";
 import { stripEmojis, normalizeMidSentenceBreaks } from "../utils/text-normalize";
-import styles from "./ChatView.module.css";
+import styles from "./MessageBubble.module.css";
 import toolStyles from "./ToolCallBlock.module.css";
 import { ResponseBlock } from "./ResponseBlock";
 import { CookingIndicator, getStreamingPhaseLabel } from "./CookingIndicator";
