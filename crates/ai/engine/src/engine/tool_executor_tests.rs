@@ -69,9 +69,8 @@ fn make_executor() -> EngineToolLoopExecutor {
         tempfile::TempDir::new().unwrap().path(),
     ).unwrap());
     let project_service = Arc::new(aura_projects::ProjectService::new(store.clone()));
-    let pricing_service = Arc::new(aura_billing::PricingService::new(store.clone()));
     let task_service = Arc::new(aura_tasks::TaskService::new(
-        store.clone(), None, pricing_service,
+        store.clone(), None,
     ));
 
     EngineToolLoopExecutor {

@@ -216,7 +216,7 @@ pub fn build_test_app_from_store(
         None,
     ));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
-    let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone(), pricing_service.clone()));
+    let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
     let runtime_agent_state: aura_server::state::RuntimeAgentStateMap =
         Arc::new(Mutex::new(HashMap::new()));

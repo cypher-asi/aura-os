@@ -436,8 +436,8 @@ impl DevLoopEngine {
         &self, params: &BuildVerifyParams<'_>,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64, String), EngineError> {
         let BuildVerifyParams {
-            project, task, session, api_key, initial_execution,
-            baseline_test_failures, baseline_build_errors, workspace_cache,
+            project, task, session, initial_execution,
+            baseline_build_errors, ..
         } = params;
         let mut build_cmd = match self.resolve_build_command(project, session, task).await {
             Some(cmd) => cmd,

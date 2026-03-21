@@ -10,13 +10,6 @@ use aura_tasks::TaskService;
 
 use crate::chat_tool_executor::ChatToolExecutor;
 
-struct DummyCostCalculator;
-impl CostCalculator for DummyCostCalculator {
-    fn compute_task_cost(&self, _model: &str, _input_tokens: u64, _output_tokens: u64) -> f64 {
-        0.0
-    }
-}
-
 struct TestHarness {
     executor: ChatToolExecutor,
     project_id: ProjectId,
@@ -32,7 +25,6 @@ fn setup() -> TestHarness {
     let task_service = Arc::new(TaskService::new(
         Arc::clone(&store),
         None,
-        Arc::new(DummyCostCalculator),
     ));
 
     let project_dir = TempDir::new().expect("failed to create project temp dir");

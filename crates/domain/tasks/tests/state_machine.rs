@@ -110,11 +110,6 @@ mod integration {
     use aura_store::RocksStore;
     use aura_tasks::TaskService;
 
-    struct DummyCost;
-    impl CostCalculator for DummyCost {
-        fn compute_task_cost(&self, _: &str, _: u64, _: u64) -> f64 { 0.0 }
-    }
-
     struct TestCtx {
         task_service: Arc<TaskService>,
         storage_client: Arc<StorageClient>,
@@ -134,7 +129,6 @@ mod integration {
         let task_service = Arc::new(TaskService::new(
             store.clone(),
             Some(storage_client.clone()),
-            Arc::new(DummyCost),
         ));
 
         let jwt = store.get_jwt().unwrap();
@@ -233,7 +227,6 @@ mod integration {
         let svc = Arc::new(TaskService::new(
             store.clone(),
             Some(sc.clone()),
-            Arc::new(DummyCost),
         ));
 
         let jwt = store.get_jwt().unwrap();
@@ -283,7 +276,6 @@ mod integration {
         let svc = Arc::new(TaskService::new(
             store.clone(),
             Some(sc.clone()),
-            Arc::new(DummyCost),
         ));
 
         let jwt = store.get_jwt().unwrap();
@@ -357,7 +349,6 @@ mod integration {
         let svc = Arc::new(TaskService::new(
             store.clone(),
             Some(sc.clone()),
-            Arc::new(DummyCost),
         ));
 
         let jwt = store.get_jwt().unwrap();
@@ -411,7 +402,6 @@ mod integration {
         let svc = Arc::new(TaskService::new(
             store.clone(),
             Some(sc.clone()),
-            Arc::new(DummyCost),
         ));
 
         let jwt = store.get_jwt().unwrap();

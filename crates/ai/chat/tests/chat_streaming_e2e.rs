@@ -37,11 +37,9 @@ async fn setup(mock: Arc<MockLlmProvider>) -> TestHarness {
     let llm = Arc::new(aura_billing::MeteredLlm::new(mock, billing, store.clone()));
     let settings = Arc::new(SettingsService::new(store.clone()));
     let project_service = Arc::new(ProjectService::new(store.clone()));
-    let pricing_service = Arc::new(aura_billing::PricingService::new(store.clone()));
     let task_service = Arc::new(TaskService::new(
         store.clone(),
         Some(storage_client.clone()),
-        pricing_service,
     ));
     let spec_gen = Arc::new(SpecGenerationService::new(
         store.clone(),

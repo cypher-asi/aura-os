@@ -82,7 +82,7 @@ fn init_domain_services(
         core.llm.clone(),
         storage_client.clone(),
     ));
-    let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone(), core.pricing_service.clone()));
+    let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let agent_service = Arc::new(AgentService::new(
         store.clone(),
         network_client.clone(),
