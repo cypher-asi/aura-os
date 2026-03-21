@@ -145,79 +145,27 @@ fn extract_braced_block(lines: &[&str], start: usize) -> (String, usize) {
 }
 
 fn extract_trait_signatures(lines: &[&str], start: usize) -> (String, usize) {
-    let mut depth: i32 = 0;
-    let mut result = String::new();
-    let mut started = false;
-    let mut in_fn_body = false;
-    let mut fn_body_depth: i32 = 0;
-
-    for j in start..lines.len() {
-        let trimmed = lines[j].trim();
-
-        for ch in trimmed.chars() {
-            match ch {
-                '{' => { depth += 1; started = true; }
-                '}' => depth -= 1,
-                _ => {}
-            }
-        }
-
-        if in_fn_body {
-            fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
-            fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 {
-                in_fn_body = false;
-            }
-            if started && depth <= 0 {
-                result.push_str("}\n");
-                return (result, j);
-            }
-            continue;
-        }
-
-        if started && depth > 1
-            && (trimmed.starts_with("fn ")
-                || trimmed.starts_with("async fn ")
-                || trimmed.starts_with("pub fn ")
-                || trimmed.starts_with("pub async fn "))
-            && trimmed.contains('{')
-        {
-            let sig_part = match trimmed.find('{') {
-                Some(pos) => trimmed[..pos].trim(),
-                None => trimmed,
-            };
-            result.push_str("    ");
-            result.push_str(sig_part);
-            result.push_str(" { ... }\n");
-            fn_body_depth = trimmed.chars().filter(|&c| c == '{').count() as i32
-                - trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth > 0 {
-                in_fn_body = true;
-            }
-        } else {
-            result.push_str(trimmed);
-            result.push('\n');
-        }
-
-        if started && depth <= 0 {
-            return (result, j);
-        }
-    }
-    (result, lines.len().saturating_sub(1))
+    extract_method_signatures(lines, start, false)
 }
 
 fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
-    let mut depth: i32 = 0;
-    let mut result = String::new();
-    let mut started = false;
-    let mut in_fn_body = false;
-    let mut fn_body_depth: i32 = 0;
-    let mut has_pub_methods = false;
-
     let header = lines[start].trim();
     let is_trait_impl = header.contains(" for ");
 
-    // First pass: check if this impl has any pub methods (or is a trait impl)
+    if !impl_has_pub_methods(lines, start, is_trait_impl) && !is_trait_impl {
+        let end = skip_braced_block(lines, start);
+        return (String::new(), end);
+    }
+
+    extract_method_signatures(lines, start, true)
+}
+
+fn impl_has_pub_methods(lines: &[&str], start: usize, is_trait_impl: bool) -> bool {
+    let mut depth: i32 = 0;
+    let mut started = false;
+    let mut in_fn_body = false;
+    let mut fn_body_depth: i32 = 0;
+
     for j in start..lines.len() {
         let trimmed = lines[j].trim();
 
@@ -232,9 +180,7 @@ fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
         if in_fn_body {
             fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
             fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 {
-                in_fn_body = false;
-            }
+            if fn_body_depth <= 0 { in_fn_body = false; }
             if started && depth <= 0 { break; }
             continue;
         }
@@ -243,7 +189,7 @@ fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
             let is_fn = is_fn_start(trimmed);
             if is_fn {
                 if trimmed.starts_with("pub ") || is_trait_impl {
-                    has_pub_methods = true;
+                    return true;
                 }
                 if trimmed.contains('{') {
                     fn_body_depth = trimmed.chars().filter(|&c| c == '{').count() as i32
@@ -255,17 +201,22 @@ fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
 
         if started && depth <= 0 { break; }
     }
+    false
+}
 
-    if !has_pub_methods && !is_trait_impl {
-        let end = skip_braced_block(lines, start);
-        return (String::new(), end);
-    }
-
-    // Second pass: build the output with signatures only
-    depth = 0;
-    started = false;
-    in_fn_body = false;
-    fn_body_depth = 0;
+/// Shared extraction logic for trait and impl blocks.
+/// When `filter_impl_noise` is true, non-fn lines inside the block that don't
+/// look like associated types/consts are skipped (impl-block behaviour).
+fn extract_method_signatures(
+    lines: &[&str],
+    start: usize,
+    filter_impl_noise: bool,
+) -> (String, usize) {
+    let mut depth: i32 = 0;
+    let mut result = String::new();
+    let mut started = false;
+    let mut in_fn_body = false;
+    let mut fn_body_depth: i32 = 0;
 
     for j in start..lines.len() {
         let trimmed = lines[j].trim();
@@ -281,9 +232,7 @@ fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
         if in_fn_body {
             fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
             fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 {
-                in_fn_body = false;
-            }
+            if fn_body_depth <= 0 { in_fn_body = false; }
             if started && depth <= 0 {
                 result.push_str("}\n");
                 return (result, j);
@@ -305,16 +254,18 @@ fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
                 fn_body_depth = trimmed.chars().filter(|&c| c == '{').count() as i32
                     - trimmed.chars().filter(|&c| c == '}').count() as i32;
                 if fn_body_depth > 0 { in_fn_body = true; }
+                if started && depth <= 0 { return (result, j); }
                 continue;
             } else if is_fn {
                 result.push_str("    ");
                 result.push_str(trimmed);
                 result.push('\n');
+                if started && depth <= 0 { return (result, j); }
                 continue;
             }
         }
 
-        if started && depth >= 1 && !trimmed.is_empty()
+        if filter_impl_noise && started && depth >= 1 && !trimmed.is_empty()
             && !trimmed.starts_with("pub ")
             && !trimmed.starts_with("fn ")
             && !trimmed.starts_with("async fn ")
