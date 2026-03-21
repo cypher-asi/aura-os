@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuraCapabilities } from "./use-aura-capabilities";
 import { useSidekick } from "../stores/sidekick-store";
+import { useMobileDrawerStore } from "../stores/mobile-drawer-store";
+import { useUIModalStore } from "../stores/ui-modal-store";
 
 function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): string | null {
   if (!item) return null;
@@ -19,41 +21,20 @@ function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): st
   }
 }
 
-function blurActiveElement() {
-  const active = document.activeElement;
-  if (active instanceof HTMLElement) {
-    active.blur();
-  }
-}
-
-export interface MobileDrawerState {
-  navOpen: boolean;
-  setNavOpen: (open: boolean) => void;
-  previewOpen: boolean;
-  setPreviewOpen: (open: boolean) => void;
-  accountOpen: boolean;
-  setAccountOpen: (open: boolean) => void;
-  hostSettingsOpen: boolean;
-  setHostSettingsOpen: (open: boolean) => void;
-  drawerOpen: boolean;
-  overlayDrawerOpen: boolean;
-  closeDrawers: () => void;
-  openAfterDrawerClose: (callback: () => void) => void;
-}
-
 /**
- * Manages the mobile drawer states (nav, preview, account, host settings)
- * and auto-closes them on route change or when preview items change.
+ * Runs side-effects that auto-close mobile drawers on route change
+ * or when preview items change. Call once in MobileShell.
  */
-export function useMobileDrawers(hasPreviewPanel: boolean): MobileDrawerState {
+export function useMobileDrawerEffects(hasPreviewPanel: boolean): void {
   const { isMobileLayout } = useAuraCapabilities();
   const { previewItem } = useSidekick();
   const location = useLocation();
-  const [navOpen, setNavOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
   const lastPreviewKeyRef = useRef<string | null>(null);
+
+  const setNavOpen = useMobileDrawerStore((s) => s.setNavOpen);
+  const setPreviewOpen = useMobileDrawerStore((s) => s.setPreviewOpen);
+  const setAccountOpen = useMobileDrawerStore((s) => s.setAccountOpen);
+  const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
 
   useEffect(() => {
     if (!isMobileLayout) return;
@@ -61,10 +42,10 @@ export function useMobileDrawers(hasPreviewPanel: boolean): MobileDrawerState {
       setNavOpen(false);
       setPreviewOpen(false);
       setAccountOpen(false);
-      setHostSettingsOpen(false);
+      closeHostSettings();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [isMobileLayout, location.pathname]);
+  }, [isMobileLayout, location.pathname, setNavOpen, setPreviewOpen, setAccountOpen, closeHostSettings]);
 
   useEffect(() => {
     if (!isMobileLayout) return;
@@ -72,7 +53,7 @@ export function useMobileDrawers(hasPreviewPanel: boolean): MobileDrawerState {
       const frame = window.requestAnimationFrame(() => setPreviewOpen(false));
       return () => window.cancelAnimationFrame(frame);
     }
-  }, [hasPreviewPanel, isMobileLayout, previewItem]);
+  }, [hasPreviewPanel, isMobileLayout, previewItem, setPreviewOpen]);
 
   useEffect(() => {
     if (!isMobileLayout) return;
@@ -93,35 +74,5 @@ export function useMobileDrawers(hasPreviewPanel: boolean): MobileDrawerState {
       setPreviewOpen(true);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [hasPreviewPanel, isMobileLayout, previewItem]);
-
-  const drawerOpen = navOpen || previewOpen || accountOpen || hostSettingsOpen;
-  const overlayDrawerOpen = navOpen || previewOpen || accountOpen;
-
-  const closeDrawers = useCallback(() => {
-    blurActiveElement();
-    setNavOpen(false);
-    setPreviewOpen(false);
-    setAccountOpen(false);
-  }, []);
-
-  const openAfterDrawerClose = useCallback((callback: () => void) => {
-    closeDrawers();
-    window.setTimeout(callback, 180);
-  }, [closeDrawers]);
-
-  return {
-    navOpen,
-    setNavOpen,
-    previewOpen,
-    setPreviewOpen,
-    accountOpen,
-    setAccountOpen,
-    hostSettingsOpen,
-    setHostSettingsOpen,
-    drawerOpen,
-    overlayDrawerOpen,
-    closeDrawers,
-    openAfterDrawerClose,
-  };
+  }, [hasPreviewPanel, isMobileLayout, previewItem, setAccountOpen, setPreviewOpen]);
 }
