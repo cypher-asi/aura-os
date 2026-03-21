@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
-import { useOrg } from "../context/OrgContext";
+import { useShallow } from "zustand/react/shallow";
+import { useOrgStore } from "../stores/org-store";
 import { Building2, ChevronDown, Plus } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
 import { useClickOutside } from "../hooks/use-click-outside";
@@ -13,7 +14,9 @@ export function OrgSelector({
   onOpenSettings: () => void;
   variant?: "default" | "drawer";
 }) {
-  const { orgs, activeOrg, switchOrg, createOrg } = useOrg();
+  const { orgs, activeOrg, switchOrg, createOrg } = useOrgStore(
+    useShallow((s) => ({ orgs: s.orgs, activeOrg: s.activeOrg, switchOrg: s.switchOrg, createOrg: s.createOrg })),
+  );
   const { inputRef: newNameRef, initialFocusRef, autoFocus } = useModalInitialFocus<HTMLInputElement>();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);

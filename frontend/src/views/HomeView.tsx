@@ -1,9 +1,12 @@
 import { PageEmptyState } from "@cypher-asi/zui";
 import { Rocket } from "lucide-react";
-import { useOrg } from "../context/OrgContext";
+import { useShallow } from "zustand/react/shallow";
+import { useOrgStore } from "../stores/org-store";
 
 export function HomeView() {
-  const { activeOrg, isLoading } = useOrg();
+  const { activeOrg, isLoading } = useOrgStore(
+    useShallow((s) => ({ activeOrg: s.activeOrg, isLoading: s.isLoading })),
+  );
 
   return (
     <PageEmptyState

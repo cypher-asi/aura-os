@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useOrg } from "../context/OrgContext";
+import { useShallow } from "zustand/react/shallow";
+import { useOrgStore } from "../stores/org-store";
 import { useAuth } from "../stores/auth-store";
 import { api, ApiClientError } from "../api/client";
 import { Button, Modal, Navigator, Text } from "@cypher-asi/zui";
@@ -30,7 +31,16 @@ const NAV_ITEMS: NavigatorItemProps[] = [
 ];
 
 export function OrgSettingsPanel({ isOpen, onClose, initialSection }: Props) {
-  const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs, isLoading } = useOrg();
+  const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs, isLoading } = useOrgStore(
+    useShallow((s) => ({
+      activeOrg: s.activeOrg,
+      renameOrg: s.renameOrg,
+      members: s.members,
+      refreshMembers: s.refreshMembers,
+      refreshOrgs: s.refreshOrgs,
+      isLoading: s.isLoading,
+    })),
+  );
   const { user } = useAuth();
   const [section, setSection] = useState<Section>(initialSection ?? "general");
   const [retryingOrg, setRetryingOrg] = useState(false);

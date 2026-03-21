@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
-import { useOrg } from "../context/OrgContext";
+import { useOrgStore } from "../stores/org-store";
 import { api, ApiClientError } from "../api/client";
 import { useCheckoutPolling } from "../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "./CreditsBadge";
@@ -22,7 +22,7 @@ function formatUsd(cents: number): string {
 }
 
 export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
-  const { activeOrg } = useOrg();
+  const activeOrg = useOrgStore((s) => s.activeOrg);
   const orgId = activeOrg?.org_id;
 
   const [tiers, setTiers] = useState<CreditTier[]>([]);

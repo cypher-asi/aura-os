@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import type { ComponentType, ReactNode } from "react";
-import { OrgProvider } from "../context/OrgContext";
 import { AppProvider, useAppContext } from "../context/AppContext";
 import { ProjectsProvider } from "../apps/projects/ProjectsProvider";
 import { FeedProvider } from "../apps/feed/FeedProvider";
@@ -39,19 +38,17 @@ function LazyAppProvider({
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <OrgProvider>
-      <AppProvider apps={apps}>
-        <VisitTracker />
-        <ProjectsProvider>
-            <LazyAppProvider appId="feed" Provider={FeedProvider}>
-              <LazyAppProvider appId="leaderboard" Provider={LeaderboardProvider}>
-                <LazyAppProvider appId="profile" Provider={ProfileProvider}>
-                  {children}
-                </LazyAppProvider>
-              </LazyAppProvider>
+    <AppProvider apps={apps}>
+      <VisitTracker />
+      <ProjectsProvider>
+        <LazyAppProvider appId="feed" Provider={FeedProvider}>
+          <LazyAppProvider appId="leaderboard" Provider={LeaderboardProvider}>
+            <LazyAppProvider appId="profile" Provider={ProfileProvider}>
+              {children}
             </LazyAppProvider>
-          </ProjectsProvider>
-      </AppProvider>
-    </OrgProvider>
+          </LazyAppProvider>
+        </LazyAppProvider>
+      </ProjectsProvider>
+    </AppProvider>
   );
 }

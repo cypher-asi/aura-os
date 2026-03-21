@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { api, type OrbitRepo } from "../api/client";
-import { useOrg } from "../context/OrgContext";
+import { useOrgStore } from "../stores/org-store";
 import { useAuth } from "../stores/auth-store";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "./use-aura-capabilities";
@@ -119,7 +119,8 @@ export function useNewProjectForm(
   onClose: () => void,
   onCreated: (project: import("../types").Project) => void,
 ): NewProjectFormState {
-  const { activeOrg, isLoading: orgLoading } = useOrg();
+  const activeOrg = useOrgStore((s) => s.activeOrg);
+  const orgLoading = useOrgStore((s) => s.isLoading);
   const { user, isAuthenticated } = useAuth();
   const { projects } = useProjectsList();
   const { features } = useAuraCapabilities();

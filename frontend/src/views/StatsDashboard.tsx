@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../api/client";
-import { useOrg } from "../context/OrgContext";
+import { useOrgStore } from "../stores/org-store";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { Text } from "@cypher-asi/zui";
 import { EmptyState } from "../components/EmptyState";
@@ -23,7 +23,7 @@ interface UsageData {
 }
 
 export function StatsDashboard() {
-  const { activeOrg } = useOrg();
+  const activeOrg = useOrgStore((s) => s.activeOrg);
   const [period, setPeriod] = useState<Period>("month");
   const [personal, setPersonal] = useState<UsageData | null>(null);
   const [org, setOrg] = useState<UsageData | null>(null);

@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { api } from "../../api/client";
-import { useOrg } from "../../context/OrgContext";
+import { useOrgStore } from "../../stores/org-store";
 import type { AgentInstance, Project } from "../../types";
 import { ProjectsListContext, type ProjectsListContextValue } from "./ProjectsListContext.shared";
 
@@ -29,7 +29,7 @@ function dedupeProjects(projects: Project[]) {
 }
 
 export function ProjectsListProvider({ children }: { children: ReactNode }) {
-  const { activeOrg } = useOrg();
+  const activeOrg = useOrgStore((s) => s.activeOrg);
   const [projects, setProjects] = useState<Project[]>([]);
   const [agentsByProjectState, setAgentsByProjectState] = useState<Record<string, AgentInstance[]>>({});
   const [loadingAgentsByProject, setLoadingAgentsByProject] = useState<Record<string, boolean>>({});

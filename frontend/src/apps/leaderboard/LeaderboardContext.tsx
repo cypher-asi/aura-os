@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect } 
 import type { ReactNode } from "react";
 import type { TimePeriod, LeaderboardFilter, LeaderboardUser } from "./mockData";
 import { api } from "../../api/client";
-import { useOrg } from "../../context/OrgContext";
+import { useOrgStore } from "../../stores/org-store";
 
 interface LeaderboardContextValue {
   period: TimePeriod;
@@ -26,7 +26,7 @@ export function LeaderboardProvider({ children }: { children: ReactNode }) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [entries, setEntries] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const { activeOrg } = useOrg();
+  const activeOrg = useOrgStore((s) => s.activeOrg);
 
   const selectUser = useCallback((id: string | null) => setSelectedUserId(id), []);
 
