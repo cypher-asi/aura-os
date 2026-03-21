@@ -27,7 +27,7 @@ export function ProjectFilesView() {
     >
       <div style={{ padding: "var(--space-3)", borderBottom: "1px solid var(--color-border)" }}>
         <PanelSearch
-          placeholder="Search files..."
+          placeholder=""
           value={searchQuery}
           onChange={setSearchQuery}
         />

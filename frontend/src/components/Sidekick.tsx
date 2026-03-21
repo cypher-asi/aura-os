@@ -157,13 +157,7 @@ export function SidekickTaskbar() {
   );
 }
 
-const SEARCH_PLACEHOLDERS: Record<string, string> = {
-  specs: "Search specs...",
-  tasks: "Search tasks...",
-  log: "Search logs...",
-  sessions: "Search sessions...",
-  files: "Search files...",
-};
+const SEARCH_PLACEHOLDERS: Record<string, string> = {};
 
 export function SidekickContent() {
   const { activeTab, showInfo, toggleInfo } = useSidekick();
@@ -212,7 +206,7 @@ export function SidekickContent() {
     <div className={styles.sidekickBody}>
       {searchable && (
         <PanelSearch
-          placeholder={SEARCH_PLACEHOLDERS[activeTab] ?? "Search..."}
+          placeholder={SEARCH_PLACEHOLDERS[activeTab] ?? ""}
           value={searchQuery}
           onChange={setSearchQuery}
         />

@@ -3,7 +3,6 @@ import { ProfileList } from "./ProfileList";
 import { ProfileMainPanel } from "./ProfileMainPanel";
 import { ProfileSidekickPanel } from "./ProfileSidekickPanel";
 import { ProfileSidekickHeader } from "./ProfileSidekickHeader";
-import { ProfileProvider } from "./ProfileProvider";
 import type { AuraApp } from "../types";
 
 export const ProfileApp: AuraApp = {
@@ -16,6 +15,5 @@ export const ProfileApp: AuraApp = {
   ResponsiveControls: ProfileList,
   SidekickPanel: ProfileSidekickPanel,
   SidekickTaskbar: ProfileSidekickHeader,
-  Provider: ProfileProvider,
-  searchPlaceholder: "Search Projects...",
+  searchPlaceholder: "",
 };
