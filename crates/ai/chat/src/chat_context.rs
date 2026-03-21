@@ -116,6 +116,35 @@ fn append_config_previews(prompt: &mut String, folder: &std::path::Path) {
     }
 }
 
+fn build_summary_input(old_messages: &[RichMessage]) -> String {
+    let mut input = String::from(
+        "Summarize the following conversation concisely, preserving key decisions, \
+         tool calls made, and their outcomes. Focus on what was discussed, what was decided, \
+         and what actions were taken. Keep it under 500 words.\n\n"
+    );
+    for msg in old_messages {
+        let role = &msg.role;
+        let text = match &msg.content {
+            aura_claude::MessageContent::Text(t) => t.clone(),
+            aura_claude::MessageContent::Blocks(blocks) => {
+                blocks.iter().map(|b| match b {
+                    ContentBlock::Text { text } => text.clone(),
+                    ContentBlock::Image { .. } => "[Image]".to_string(),
+                    ContentBlock::ToolUse { name, .. } => format!("[Tool call: {name}]"),
+                    ContentBlock::ToolResult { content, .. } => {
+                        let preview: String = content.chars().take(100).collect();
+                        format!("[Tool result: {preview}...]")
+                    }
+                }).collect::<Vec<_>>().join(" ")
+            }
+        };
+        if !text.is_empty() {
+            input.push_str(&format!("{role}: {}\n", text.chars().take(500).collect::<String>()));
+        }
+    }
+    input
+}
+
 impl ChatService {
     fn is_tool_results_only(msg: &RichMessage) -> bool {
         msg.role == "user"
@@ -138,7 +167,7 @@ impl ChatService {
         use aura_claude::estimate_message_tokens;
 
         let max_context_tokens = self.llm_config.max_context_tokens;
-        let keep_recent_messages = self.llm_config.keep_recent_messages;
+        let keep_recent = self.llm_config.keep_recent_messages;
         let target_chat_tokens = self.llm_config.target_chat_tokens;
 
         let system_tokens = aura_claude::estimate_tokens(system_prompt);
@@ -149,59 +178,39 @@ impl ChatService {
             return messages;
         }
 
-        let utilization = total as f64 / max_context_tokens as f64;
+        let pct = ((total as f64 / max_context_tokens as f64) * 100.0) as u32;
 
-        if utilization <= 0.50 {
-            info!(
-                total_tokens = total,
-                target_chat_tokens,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Soft-target compaction: summarizing to stay under target_chat_tokens"
-            );
-            let compaction_keep = keep_recent_messages.min(6);
-            let split_at = Self::find_safe_split(&messages, compaction_keep);
-            return self.summarize_and_keep(api_key, &messages, split_at).await;
-        }
+        // (max_utilization_pct, keep_recent_cap)
+        const TIERS: &[(u32, usize)] = &[(50, 6), (75, 6), (90, 6)];
+        const AGGRESSIVE_KEEP: usize = 4;
 
-        if utilization <= 0.75 {
-            let compaction_keep = keep_recent_messages.min(6);
-            if total > target_chat_tokens * 2 {
-                info!(
-                    total_tokens = total,
-                    target_chat_tokens,
-                    utilization_pct = (utilization * 100.0) as u32,
-                    "Tier-1 compaction: summarizing (tokens far above soft target)"
-                );
-                let split_at = Self::find_safe_split(&messages, compaction_keep);
-                return self.summarize_and_keep(api_key, &messages, split_at).await;
+        for &(threshold_pct, keep_cap) in TIERS {
+            if pct <= threshold_pct {
+                let keep = keep_recent.min(keep_cap);
+                if threshold_pct == 75 && total <= target_chat_tokens * 2 {
+                    info!(total_tokens = total, utilization_pct = pct,
+                        "Compaction: truncating large tool results in older messages");
+                    return crate::compaction::compact_tool_results_in_history(messages, keep);
+                }
+                info!(total_tokens = total, utilization_pct = pct,
+                    "Compaction: summarizing older messages");
+                return self.apply_compaction(api_key, &messages, keep).await;
             }
-            info!(
-                total_tokens = total,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Tier-1 compaction: truncating large tool results in older messages"
-            );
-            return crate::compaction::compact_tool_results_in_history(messages, compaction_keep);
         }
 
-        if utilization <= 0.90 {
-            info!(
-                total_tokens = total,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Tier-2 compaction: summarizing older messages"
-            );
-            let compaction_keep = keep_recent_messages.min(6);
-            let split_at = Self::find_safe_split(&messages, compaction_keep);
-            return self.summarize_and_keep(api_key, &messages, split_at).await;
-        }
+        info!(total_tokens = total, utilization_pct = pct,
+            "Tier-3 compaction: aggressive summarization");
+        self.apply_compaction(api_key, &messages, AGGRESSIVE_KEEP).await
+    }
 
-        info!(
-            total_tokens = total,
-            utilization_pct = (utilization * 100.0) as u32,
-            "Tier-3 compaction: aggressive summarization"
-        );
-        let aggressive_keep = 4;
-        let split_at = Self::find_safe_split(&messages, aggressive_keep);
-        self.summarize_and_keep(api_key, &messages, split_at).await
+    async fn apply_compaction(
+        &self,
+        api_key: &str,
+        messages: &[RichMessage],
+        keep_recent: usize,
+    ) -> Vec<RichMessage> {
+        let split_at = Self::find_safe_split(messages, keep_recent);
+        self.summarize_and_keep(api_key, messages, split_at).await
     }
 
     fn find_safe_split(messages: &[RichMessage], keep_recent: usize) -> usize {
@@ -219,32 +228,7 @@ impl ChatService {
         split_at: usize,
     ) -> Vec<RichMessage> {
         let (old_messages, recent_messages) = messages.split_at(split_at);
-
-        let mut summary_input = String::from(
-            "Summarize the following conversation concisely, preserving key decisions, \
-             tool calls made, and their outcomes. Focus on what was discussed, what was decided, \
-             and what actions were taken. Keep it under 500 words.\n\n"
-        );
-        for msg in old_messages {
-            let role = &msg.role;
-            let text = match &msg.content {
-                aura_claude::MessageContent::Text(t) => t.clone(),
-                aura_claude::MessageContent::Blocks(blocks) => {
-                    blocks.iter().map(|b| match b {
-                        ContentBlock::Text { text } => text.clone(),
-                        ContentBlock::Image { .. } => "[Image]".to_string(),
-                        ContentBlock::ToolUse { name, .. } => format!("[Tool call: {name}]"),
-                        ContentBlock::ToolResult { content, .. } => {
-                            let preview: String = content.chars().take(100).collect();
-                            format!("[Tool result: {preview}...]")
-                        }
-                    }).collect::<Vec<_>>().join(" ")
-                }
-            };
-            if !text.is_empty() {
-                summary_input.push_str(&format!("{role}: {}\n", text.chars().take(500).collect::<String>()));
-            }
-        }
+        let summary_input = build_summary_input(old_messages);
 
         match self
             .llm
