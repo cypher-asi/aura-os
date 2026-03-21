@@ -13,23 +13,27 @@ interface AgentAppContextValue {
 }
 
 const AgentAppCtx = createContext<AgentAppContextValue | null>(null);
+let cachedAgents: Agent[] = [];
 
 export function AgentAppProvider({ children }: { children: ReactNode }) {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [agents, setAgents] = useState<Agent[]>(() => cachedAgents);
+  const [loading, setLoading] = useState(() => cachedAgents.length === 0);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
   const refresh = useCallback(() => {
-    setLoading(true);
+    if (cachedAgents.length === 0) {
+      setLoading(true);
+    }
     api.agents.list().then((list) => {
-      setAgents(list.sort((a, b) => a.name.localeCompare(b.name)));
+      const sorted = list.sort((a, b) => a.name.localeCompare(b.name));
+      cachedAgents = sorted;
+      setAgents(sorted);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(refresh);
-    return () => window.cancelAnimationFrame(frame);
+    void refresh();
   }, [refresh]);
 
   const value = useMemo(

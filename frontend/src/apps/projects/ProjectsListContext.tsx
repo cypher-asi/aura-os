@@ -104,12 +104,39 @@ export function ProjectsListProvider({ children }: { children: ReactNode }) {
   }, [refreshProjects]);
 
   useEffect(() => {
-    for (const project of projects) {
-      if (!(project.project_id in agentsByProjectRef.current)) {
-        void refreshProjectAgents(project.project_id);
+    const toFetch = projects.filter(p => !(p.project_id in agentsByProjectRef.current));
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+    const ids = toFetch.map(p => p.project_id);
+    setLoadingAgentsByProject(prev => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = true;
+      return next;
+    });
+
+    Promise.all(
+      toFetch.map(p =>
+        api.listAgentInstances(p.project_id)
+          .then(agents => ({ projectId: p.project_id, agents }))
+          .catch(() => ({ projectId: p.project_id, agents: [] as AgentInstance[] }))
+      )
+    ).then(results => {
+      if (cancelled) return;
+      const batch: Record<string, AgentInstance[]> = {};
+      for (const { projectId, agents } of results) {
+        batch[projectId] = agents;
       }
-    }
-  }, [projects, refreshProjectAgents]);
+      setAgentsByProject(prev => ({ ...prev, ...batch }));
+      setLoadingAgentsByProject(prev => {
+        const next = { ...prev };
+        for (const id of ids) next[id] = false;
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [projects, setAgentsByProject]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
