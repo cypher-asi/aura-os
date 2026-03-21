@@ -98,6 +98,7 @@ fn make_executor() -> EngineToolLoopExecutor {
                 plan: TaskPlan::empty(),
             }
         )),
+        self_review_done: Arc::new(std::sync::atomic::AtomicBool::new(false)),
     }
 }
 

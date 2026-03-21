@@ -147,6 +147,15 @@ CODE QUALITY:
 - Never use code comments as a thinking scratchpad. Do not leave reasoning
   comments like "// We need to handle the case where..." in source code.
 
+TEST GENERATION:
+- If you create new public functions, types, or modules, add at least basic
+  tests in a #[cfg(test)] module or alongside existing test files.
+- Follow the project's existing test patterns (check for tests/ directory,
+  inline test modules, test naming conventions).
+- Tests should cover the happy path and at least one error case.
+- For Rust: use #[test] or #[tokio::test] as appropriate.
+- For TypeScript: follow the existing test framework (vitest, jest, etc.).
+
 SCOPE: Stay strictly on-task.
 - ONLY implement what the task description asks for. Do NOT fix pre-existing bugs or code issues unrelated to your task.
 - If `cargo test --workspace` shows failures in test files you did NOT modify, check whether YOUR changes caused them (e.g., you changed a struct and tests that use it now fail). If so, fix them. If they are pre-existing and unrelated to your changes, IGNORE them.

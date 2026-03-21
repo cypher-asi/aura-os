@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use tokio::sync::{mpsc, Mutex};
 use tokio::task::JoinHandle;
@@ -318,6 +319,7 @@ impl DevLoopEngine {
                     TaskPhase::Exploring
                 }
             )),
+            self_review_done: Arc::new(AtomicBool::new(false)),
         };
 
         let params = configure_llm_params(

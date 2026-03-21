@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use async_trait::async_trait;
 use tokio::sync::Mutex;
@@ -42,6 +43,7 @@ pub(crate) struct EngineToolLoopExecutor {
     pub work_log_summary: String,
     pub exploration_allowance: usize,
     pub task_phase: Arc<Mutex<TaskPhase>>,
+    pub self_review_done: Arc<AtomicBool>,
 }
 
 #[async_trait]
@@ -227,6 +229,16 @@ impl EngineToolLoopExecutor {
     ) {
         self.extract_notes_and_follow_ups(tc).await;
 
+        if let Some(review_prompt) = self.check_self_review().await {
+            results.push(ToolCallResult {
+                tool_use_id: tc.id.clone(),
+                content: review_prompt,
+                is_error: true,
+                stop_loop: false,
+            });
+            return;
+        }
+
         let stub_rejected = self.check_stubs_and_reject().await;
 
         if let Some(stub_prompt) = stub_rejected {
@@ -266,6 +278,33 @@ impl EngineToolLoopExecutor {
                 fu_lock.push(FollowUpSuggestion { title, description: desc });
             }
         }
+    }
+
+    async fn check_self_review(&self) -> Option<String> {
+        if self.self_review_done.load(Ordering::Relaxed) {
+            return None;
+        }
+        let ops = self.tracked_file_ops.lock().await;
+        let modified_paths: Vec<&str> = ops
+            .iter()
+            .filter_map(|op| match op {
+                FileOp::Create { path, .. }
+                | FileOp::Modify { path, .. }
+                | FileOp::SearchReplace { path, .. } => Some(path.as_str()),
+                _ => None,
+            })
+            .collect();
+        if modified_paths.is_empty() {
+            return None;
+        }
+        self.self_review_done.store(true, Ordering::Relaxed);
+        Some(format!(
+            "SELF-REVIEW REQUIRED: Before completing, re-read the files you modified \
+             to verify correctness:\n{}\n\nCheck: (a) changes match task requirements, \
+             (b) no placeholder/stub code remains, (c) no debug code left behind.\n\
+             Then call task_done again.",
+            modified_paths.join("\n")
+        ))
     }
 
     async fn check_stubs_and_reject(&self) -> Option<String> {
