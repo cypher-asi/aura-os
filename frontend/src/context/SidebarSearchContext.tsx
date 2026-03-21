@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useAppUIStore } from "../stores/app-ui-store";
-import { useSidebarAction } from "./SidebarActionContext";
 import { useAppContext } from "./AppContext";
 
 type SidebarSearchValue = {
@@ -16,7 +15,8 @@ export function useSidebarSearch(): SidebarSearchValue {
   const { activeApp } = useAppContext();
   const storeQuery = useAppUIStore((s) => s.sidebarQuery);
   const setSidebarQuery = useAppUIStore((s) => s.setSidebarQuery);
-  const { action, setAction } = useSidebarAction();
+  const action = useAppUIStore((s) => s.sidebarActions[activeApp.id] ?? null);
+  const setAction = useAppUIStore((s) => s.setSidebarAction);
 
   const prevAppRef = useRef(activeApp.id);
   const appJustSwitched = prevAppRef.current !== activeApp.id;
