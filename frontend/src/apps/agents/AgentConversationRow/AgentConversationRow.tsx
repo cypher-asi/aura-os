@@ -1,5 +1,5 @@
 import { Bot } from "lucide-react";
-import { formatRelativeTime } from "../../../utils/format";
+import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
 import type { DisplayMessage } from "../../../types/stream";
 import styles from "./AgentConversationRow.module.css";
@@ -45,7 +45,7 @@ export function AgentConversationRow({
         <span className={styles.top}>
           <span className={styles.name}>{agent.name}</span>
           <span className={styles.time}>
-            {formatRelativeTime(agent.updated_at)}
+            {formatChatTime(agent.updated_at)}
           </span>
         </span>
         <span className={styles.preview}>{preview}</span>

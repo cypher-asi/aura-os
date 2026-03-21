@@ -34,7 +34,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 8px;
   flex-shrink: 0;
   background: var(--color-overlay-subtle);
   color: var(--color-text-secondary);
@@ -43,7 +43,7 @@
 .avatarImg {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
 }
 
@@ -73,8 +73,8 @@
 }
 
 .time {
-  font-size: var(--text-xs);
-  color: var(--color-text-secondary);
+  font-size: 10px;
+  color: var(--color-text-muted, var(--color-text-secondary));
   white-space: nowrap;
   flex-shrink: 0;
 }

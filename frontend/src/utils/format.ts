@@ -8,16 +8,18 @@ export function formatTime(date: Date): string {
 }
 
 const STRUCTURED_MD = /^(?:[-*+]\s|\d+\.\s|#{1,6}\s|\*\*)/;
+const BOLD_LABEL = /^\*\*(.+?)\*\*\s*$/;
 
 /**
  * Normalize text into a markdown bullet list.
  *
- * Lines that are already markdown (bullets, numbered items, headings, bold
- * labels like `**Section:**`) are preserved as-is.  Lines containing inline
- * code (backticks) are converted to a single bullet without sentence
- * splitting, since periods inside code would produce wrong breaks.
- * Plain-text lines are split at sentence boundaries so each idea gets its
- * own bullet.
+ * Standalone bold labels (`**Section:**`) are promoted to `### ` headings so
+ * they act as visual section dividers rather than `<p>` elements that fragment
+ * the surrounding `<ul>` lists.  Other structured markdown (bullets, numbered
+ * items, headings) is preserved as-is.  Lines containing inline code are
+ * converted to a single bullet without sentence splitting, since periods
+ * inside code would produce wrong breaks.  Plain-text lines are split at
+ * sentence boundaries so each idea gets its own bullet.
  */
 export function toBullets(text: string): string {
   const out: string[] = [];
@@ -25,6 +27,12 @@ export function toBullets(text: string): string {
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
+
+    const boldMatch = trimmed.match(BOLD_LABEL);
+    if (boldMatch) {
+      out.push(`### ${boldMatch[1]}`);
+      continue;
+    }
 
     if (STRUCTURED_MD.test(trimmed)) {
       out.push(line);
@@ -122,5 +130,36 @@ export function formatRelativeTime(iso: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+export function formatChatTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isToday) {
+    return date
+      .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+      .toLowerCase();
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate();
+
+  if (isYesterday) return "yesterday";
+
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
+  if (diffDays < 7) {
+    return date.toLocaleDateString("en-US", { weekday: "short" });
+  }
+
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
