@@ -70,31 +70,53 @@ export const profilesApi = {
   }>(`/api/profiles/${profileId}`),
 };
 
+export interface FeedEventDto {
+  id: string;
+  profile_id: string;
+  event_type: string;
+  post_type?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  metadata: Record<string, unknown> | null;
+  org_id?: string | null;
+  project_id?: string | null;
+  agent_id?: string | null;
+  user_id?: string | null;
+  push_id?: string | null;
+  commit_ids?: string[] | null;
+  created_at: string | null;
+}
+
+export interface CommentDto {
+  id: string;
+  activity_event_id: string;
+  profile_id: string;
+  content: string;
+  created_at: string | null;
+}
+
 export const feedApi = {
-  list: (filter?: string) =>
-    apiFetch<{
-      id: string;
-      profile_id: string;
-      event_type: string;
-      metadata: Record<string, unknown> | null;
-      created_at: string | null;
-    }[]>(filter ? `/api/feed?filter=${filter}` : "/api/feed"),
-  getComments: (eventId: string) =>
-    apiFetch<{
-      id: string;
-      activity_event_id: string;
-      profile_id: string;
-      content: string;
-      created_at: string | null;
-    }[]>(`/api/activity/${eventId}/comments`),
-  addComment: (eventId: string, content: string) =>
-    apiFetch<{
-      id: string;
-      activity_event_id: string;
-      profile_id: string;
-      content: string;
-      created_at: string | null;
-    }>(`/api/activity/${eventId}/comments`, {
+  list: (filter?: string, limit?: number, offset?: number) => {
+    const params = new URLSearchParams();
+    if (filter) params.set("filter", filter);
+    if (limit != null) params.set("limit", String(limit));
+    if (offset != null) params.set("offset", String(offset));
+    const qs = params.toString();
+    return apiFetch<FeedEventDto[]>(`/api/feed${qs ? `?${qs}` : ""}`);
+  },
+  createPost: (data: { title: string; summary?: string; post_type?: string; metadata?: Record<string, unknown> }) =>
+    apiFetch<FeedEventDto>("/api/posts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getPost: (postId: string) =>
+    apiFetch<FeedEventDto>(`/api/posts/${postId}`),
+  getProfilePosts: (profileId: string) =>
+    apiFetch<FeedEventDto[]>(`/api/profiles/${profileId}/posts`),
+  getComments: (postId: string) =>
+    apiFetch<CommentDto[]>(`/api/posts/${postId}/comments`),
+  addComment: (postId: string, content: string) =>
+    apiFetch<CommentDto>(`/api/posts/${postId}/comments`, {
       method: "POST",
       body: JSON.stringify({ content }),
     }),
