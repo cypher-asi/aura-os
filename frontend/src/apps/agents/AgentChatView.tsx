@@ -12,6 +12,12 @@ import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import styles from "../../components/ChatView.module.css";
 
+function debugSwitchLog(message: string, details: Record<string, unknown>) {
+  if (import.meta.env.DEV) {
+    console.debug(`[AgentChatView switch] ${message}`, details);
+  }
+}
+
 export function AgentChatView() {
   const { agentId } = useParams<{ agentId: string }>();
   const { agents, selectedAgent, selectAgent } = useAgentApp();
@@ -32,9 +38,12 @@ export function AgentChatView() {
 
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
+  const metadataLoadIdRef = useRef(0);
+  const historyLoadIdRef = useRef(0);
   const attachmentsRef = useRef(attachments);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll } = useAutoScroll(messageAreaRef, agentId);
@@ -43,32 +52,74 @@ export function AgentChatView() {
     if (agentId) {
       localStorage.setItem("aura:lastAgentId", agentId);
       requestAnimationFrame(() => inputBarRef.current?.focus());
-      const cachedAgent = agents.find((agent) => agent.agent_id === agentId);
-      if (cachedAgent) {
-        selectAgent(cachedAgent);
-      }
-      api.agents.get(agentId as never).then((a) => {
-        selectAgent(a);
-      }).catch(() => {});
     }
-  }, [agentId, agents, selectAgent]);
+  }, [agentId]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!agentId) return;
+    const cachedAgent = agents.find((agent) => agent.agent_id === agentId);
+    if (cachedAgent && selectedAgent?.agent_id !== agentId) {
+      selectAgent(cachedAgent);
+    }
+  }, [agentId, agents, selectedAgent?.agent_id, selectAgent]);
+
+  useEffect(() => {
+    if (!agentId) return;
+    const loadId = ++metadataLoadIdRef.current;
+    const controller = new AbortController();
+
+    api.agents
+      .get(agentId as never, { signal: controller.signal })
+      .then((agent) => {
+        if (loadId === metadataLoadIdRef.current) {
+          selectAgent(agent);
+        } else {
+          debugSwitchLog("discarded stale metadata response", { loadId, agentId });
+        }
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [agentId, selectAgent]);
+
+  useEffect(() => {
+    const loadId = ++historyLoadIdRef.current;
+    const controller = new AbortController();
 
     if (!agentId) {
-      resetMessages([]);
-      return;
+      setIsHistoryLoading(false);
+      resetMessages([], { allowWhileStreaming: true });
+      return () => {
+        controller.abort();
+      };
     }
-    api.agents
-      .listMessages(agentId as never)
-      .then((msgs) => {
-        if (cancelled) return;
-        resetMessages(buildDisplayMessages(msgs));
-      })
-      .catch(console.error);
 
-    return () => { cancelled = true; };
+    setIsHistoryLoading(true);
+    api.agents
+      .listMessages(agentId as never, { signal: controller.signal })
+      .then((msgs) => {
+        if (loadId !== historyLoadIdRef.current) {
+          debugSwitchLog("discarded stale history response", { loadId, agentId });
+          return;
+        }
+        resetMessages(buildDisplayMessages(msgs), { allowWhileStreaming: true });
+        setIsHistoryLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (loadId === historyLoadIdRef.current) {
+          setIsHistoryLoading(false);
+        }
+        console.error(error);
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, [agentId, resetMessages]);
 
   const handleRemoveAttachment = useCallback(
@@ -122,7 +173,9 @@ export function AgentChatView() {
                 <div className={styles.emptyState}>
                   <MessageSquare size={40} />
                   <Text variant="muted" size="sm">
-                    Send a message to chat with {agentName ?? "this agent"} across all linked projects
+                    {isHistoryLoading
+                      ? "Loading conversation..."
+                      : `Send a message to chat with ${agentName ?? "this agent"} across all linked projects`}
                   </Text>
                 </div>
               }

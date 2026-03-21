@@ -12,6 +12,12 @@ import { ChatInputBar } from "./ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
 import styles from "./ChatView.module.css";
 
+function debugSwitchLog(message: string, details: Record<string, unknown>) {
+  if (import.meta.env.DEV) {
+    console.debug(`[ChatView switch] ${message}`, details);
+  }
+}
+
 export function ChatView() {
   const { projectId, agentInstanceId } = useParams<{
     projectId: string;
@@ -36,26 +42,43 @@ export function ChatView() {
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [agentName, setAgentName] = useState<string | undefined>();
   const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const prevIsStreamingRef = useRef(false);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
+  const metadataLoadIdRef = useRef(0);
+  const historyLoadIdRef = useRef(0);
   const attachmentsRef = useRef(attachments);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll } = useAutoScroll(messageAreaRef, agentInstanceId);
 
   useEffect(() => {
     let frame: number | null = null;
+    const loadId = ++metadataLoadIdRef.current;
+    const controller = new AbortController();
+
     if (projectId && agentInstanceId) {
       setLastAgent(projectId, agentInstanceId);
       frame = window.requestAnimationFrame(() => inputBarRef.current?.focus());
-      api.getAgentInstance(projectId, agentInstanceId).then((inst) => {
-        setAgentName(inst.name);
-      }).catch(() => {});
+      api
+        .getAgentInstance(projectId, agentInstanceId, { signal: controller.signal })
+        .then((inst) => {
+          if (loadId === metadataLoadIdRef.current) {
+            setAgentName(inst.name);
+          } else {
+            debugSwitchLog("discarded stale metadata response", { loadId, projectId, agentInstanceId });
+          }
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+        });
     } else {
       frame = window.requestAnimationFrame(() => setAgentName(undefined));
     }
+
     return () => {
+      controller.abort();
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
   }, [projectId, agentInstanceId]);
@@ -111,28 +134,43 @@ export function ChatView() {
   }, [isStreaming, fetchActiveSessionContext]);
 
   useEffect(() => {
-    let cancelled = false;
+    const loadId = ++historyLoadIdRef.current;
+    const controller = new AbortController();
 
     if (!projectId || !agentInstanceId) {
+      setIsHistoryLoading(false);
       queueMicrotask(() => {
-        if (!cancelled) {
-          resetMessages([]);
+        if (loadId === historyLoadIdRef.current) {
+          resetMessages([], { allowWhileStreaming: true });
           setContextUsagePercent(null);
         }
       });
-      return;
+      return () => {
+        controller.abort();
+      };
     }
 
+    setIsHistoryLoading(true);
     api
-      .getMessages(projectId, agentInstanceId)
+      .getMessages(projectId, agentInstanceId, { signal: controller.signal })
       .then((msgs) => {
-        if (cancelled) return;
-        resetMessages(buildDisplayMessages(msgs));
+        if (loadId !== historyLoadIdRef.current) {
+          debugSwitchLog("discarded stale history response", { loadId, projectId, agentInstanceId });
+          return;
+        }
+        resetMessages(buildDisplayMessages(msgs), { allowWhileStreaming: true });
+        setIsHistoryLoading(false);
       })
-      .catch(console.error);
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (loadId === historyLoadIdRef.current) {
+          setIsHistoryLoading(false);
+        }
+        console.error(error);
+      });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [projectId, agentInstanceId, resetMessages]);
 
@@ -182,9 +220,15 @@ export function ChatView() {
               timeline={timeline}
               progressText={progressText}
               emptyState={
-                <EmptyState icon={<MessageSquare size={40} />}>
-                  {`Start chatting with ${agentName ?? "this agent"}.`}
-                </EmptyState>
+                isHistoryLoading ? (
+                  <EmptyState icon={<MessageSquare size={40} />}>
+                    Loading conversation...
+                  </EmptyState>
+                ) : (
+                  <EmptyState icon={<MessageSquare size={40} />}>
+                    {`Start chatting with ${agentName ?? "this agent"}.`}
+                  </EmptyState>
+                )
               }
             />
           </div>
