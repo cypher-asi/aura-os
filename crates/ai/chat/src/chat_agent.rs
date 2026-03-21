@@ -11,7 +11,7 @@ use aura_claude::ThinkingConfig;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
 use crate::chat_message_conversion::convert_messages_to_rich;
-use crate::chat_streaming::{ContentBlockAccumulator, forward_tool_loop_event};
+use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_tool_loop_event};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};

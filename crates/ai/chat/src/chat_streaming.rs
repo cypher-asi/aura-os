@@ -1,113 +1,19 @@
 use std::sync::{Arc, Mutex};
-
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::{error, info};
-
 use aura_core::*;
 use aura_claude::{ThinkingConfig, ToolDefinition};
-use aura_specs::SpecStreamEvent;
 use aura_tools::agent_tool_definitions;
-
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatAttachment, ChatService, ChatStreamEvent};
+use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_tool_loop_event, extract_user_text};
 use crate::chat_message_conversion::build_attachment_blocks;
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, SingleProjectResolver};
-use crate::tool_loop::{
-    run_tool_loop, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult,
-};
-
-pub(crate) type ContentBlockAccumulator = Arc<Mutex<Vec<ChatContentBlock>>>;
-
-/// Forward a tool-loop event to the chat stream and accumulate content blocks.
-///
-/// Uses `std::sync::Mutex` intentionally: the critical sections are sub-microsecond
-/// (single `Vec::push`) and never held across `.await` points, which is the
-/// recommended pattern per Tokio docs for short, synchronous locks.
-pub(crate) fn forward_tool_loop_event(
-    evt: ToolLoopEvent,
-    tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-    blocks: &ContentBlockAccumulator,
-) {
-    match evt {
-        ToolLoopEvent::Delta(text) => {
-            send_or_log(tx, ChatStreamEvent::Delta(text));
-        }
-        ToolLoopEvent::ThinkingDelta(text) => {
-            send_or_log(tx, ChatStreamEvent::ThinkingDelta(text));
-        }
-        ToolLoopEvent::ToolUseStarted { id, name } => {
-            send_or_log(tx, ChatStreamEvent::ToolCallStarted { id, name });
-        }
-        ToolLoopEvent::ToolUseDetected { id, name, input } => {
-            if let Ok(mut acc) = blocks.lock() {
-                acc.push(ChatContentBlock::ToolUse {
-                    id: id.clone(),
-                    name: name.clone(),
-                    input: input.clone(),
-                });
-            }
-            send_or_log(tx, ChatStreamEvent::ToolCall { id, name, input });
-        }
-        ToolLoopEvent::ToolResult {
-            tool_use_id,
-            tool_name,
-            content,
-            is_error,
-        } => {
-            if let Ok(mut acc) = blocks.lock() {
-                acc.push(ChatContentBlock::ToolResult {
-                    tool_use_id: tool_use_id.clone(),
-                    content: content.clone(),
-                    is_error: if is_error { Some(true) } else { None },
-                });
-            }
-            send_or_log(tx, ChatStreamEvent::ToolResult {
-                id: tool_use_id,
-                name: tool_name,
-                result: content,
-                is_error,
-            });
-        }
-        ToolLoopEvent::IterationTokenUsage {
-            input_tokens,
-            output_tokens,
-        } => {
-            send_or_log(tx, ChatStreamEvent::TokenUsage {
-                input_tokens,
-                output_tokens,
-            });
-        }
-        ToolLoopEvent::Error(msg) => {
-            send_or_log(tx, ChatStreamEvent::Error(msg));
-        }
-    }
-}
-
-fn extract_user_text(messages: &[Message]) -> String {
-    messages
-        .iter()
-        .filter(|m| m.role == ChatRole::User)
-        .map(|m| {
-            let block_text = m.content_blocks.as_ref().and_then(|blocks| {
-                let texts: Vec<&str> = blocks
-                    .iter()
-                    .filter_map(|b| match b {
-                        ChatContentBlock::Text { text } => Some(text.as_str()),
-                        _ => None,
-                    })
-                    .collect();
-                if texts.is_empty() { None } else { Some(texts.join("\n\n")) }
-            });
-            block_text.unwrap_or_else(|| m.content.clone())
-        })
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n\n")
-}
+use crate::tool_loop::{run_tool_loop, ToolExecutor, ToolLoopConfig, ToolLoopEvent, ToolLoopResult};
 
 impl ChatService {
     pub(crate) async fn handle_chat_with_tools(
@@ -308,7 +214,7 @@ impl ChatService {
         result
     }
 
-    fn update_instance_token_usage(
+    pub(crate) fn update_instance_token_usage(
         &self,
         _project_id: &ProjectId,
         _agent_instance_id: &AgentInstanceId,
@@ -445,108 +351,6 @@ impl ChatService {
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate title");
-            }
-        }
-    }
-
-    pub(crate) async fn handle_generate_specs(
-        &self,
-        project_id: &ProjectId,
-        agent_instance_id: &AgentInstanceId,
-        _agent_instance: &AgentInstance,
-        tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-        active_session_id: Option<&str>,
-    ) {
-        let send = |evt: ChatStreamEvent| {
-            send_or_log(tx, evt);
-        };
-
-        let (spec_tx, mut spec_rx) = mpsc::unbounded_channel::<SpecStreamEvent>();
-
-        let spec_gen = self.spec_gen.clone();
-        let pid = *project_id;
-        tokio::spawn(async move {
-            spec_gen.generate_specs_streaming(&pid, spec_tx).await;
-        });
-
-        let mut accumulated = String::new();
-        let mut spec_input_tokens: u64 = 0;
-        let mut spec_output_tokens: u64 = 0;
-
-        while let Some(evt) = spec_rx.recv().await {
-            match evt {
-                SpecStreamEvent::Delta(text) => {
-                    accumulated.push_str(&text);
-                    send_or_log(tx, ChatStreamEvent::Delta(text));
-                }
-                SpecStreamEvent::SpecSaved(spec) => {
-                    send_or_log(tx, ChatStreamEvent::SpecSaved(spec));
-                }
-                SpecStreamEvent::SpecsTitle(title) => {
-                    send_or_log(tx, ChatStreamEvent::SpecsTitle(title));
-                }
-                SpecStreamEvent::SpecsSummary(summary) => {
-                    send_or_log(tx, ChatStreamEvent::SpecsSummary(summary));
-                }
-                SpecStreamEvent::TaskSaved(task) => {
-                    send_or_log(tx, ChatStreamEvent::TaskSaved(task));
-                }
-                SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
-                    spec_input_tokens += input_tokens;
-                    spec_output_tokens += output_tokens;
-                    send_or_log(tx, ChatStreamEvent::TokenUsage {
-                        input_tokens: spec_input_tokens,
-                        output_tokens: spec_output_tokens,
-                    });
-                }
-                SpecStreamEvent::Error(msg) => {
-                    send_or_log(tx, ChatStreamEvent::Error(msg));
-                }
-                SpecStreamEvent::Complete(_) => {}
-                SpecStreamEvent::Progress(_) | SpecStreamEvent::Generating { .. } => {}
-            }
-        }
-
-        info!(
-            %project_id, %agent_instance_id,
-            spec_input_tokens, spec_output_tokens,
-            "Spec gen finished"
-        );
-        self.update_instance_token_usage(
-            project_id, agent_instance_id,
-            spec_input_tokens, spec_output_tokens, tx,
-        );
-
-        if !accumulated.is_empty() {
-            let assistant_msg = Message {
-                message_id: MessageId::new(),
-                agent_instance_id: *agent_instance_id,
-                project_id: *project_id,
-                role: ChatRole::Assistant,
-                content: accumulated.clone(),
-                content_blocks: None,
-                thinking: None,
-                thinking_duration_ms: None,
-                created_at: Utc::now(),
-            };
-            send(ChatStreamEvent::MessageSaved(assistant_msg));
-            self.save_message_to_storage(
-                project_id,
-                agent_instance_id,
-                "assistant",
-                &accumulated,
-                None,
-                None,
-                None,
-                Some(spec_input_tokens),
-                Some(spec_output_tokens),
-                active_session_id,
-            )
-            .await;
-
-            if let Some(sid) = active_session_id {
-                self.update_session_context_usage(sid, spec_input_tokens, spec_output_tokens)
-                    .await;
             }
         }
     }

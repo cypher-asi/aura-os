@@ -8,7 +8,7 @@ use aura_claude::ToolCall;
 
 use crate::channel_ext::send_or_log;
 use crate::chat::ChatStreamEvent;
-use crate::chat_streaming::ContentBlockAccumulator;
+use crate::chat_event_forwarding::ContentBlockAccumulator;
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 use crate::tool_loop::{ToolCallResult, ToolExecutor};
 
