@@ -71,27 +71,35 @@ pub(crate) fn check_context_compaction(
     }
 }
 
-pub(crate) fn handle_truncated_tool_calls(
-    iter: &IterationCompleted,
-    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
-    state: &mut LoopState,
-) {
-    let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-    if !iter.iter_text.is_empty() {
-        assistant_blocks.push(ContentBlock::Text { text: iter.iter_text.clone() });
+fn build_assistant_content_blocks(
+    tool_calls: &[ToolCall],
+    iter_text: &str,
+) -> Vec<ContentBlock> {
+    let mut blocks: Vec<ContentBlock> = Vec::new();
+    if !iter_text.is_empty() {
+        blocks.push(ContentBlock::Text { text: iter_text.to_string() });
     }
-    for tc in &iter.iter_tool_calls {
+    for tc in tool_calls {
         let input = if tc.name == "write_file" {
             summarize_write_file_input(&tc.input)
         } else {
             tc.input.clone()
         };
-        assistant_blocks.push(ContentBlock::ToolUse {
+        blocks.push(ContentBlock::ToolUse {
             id: tc.id.clone(),
             name: tc.name.clone(),
             input,
         });
     }
+    blocks
+}
+
+pub(crate) fn handle_truncated_tool_calls(
+    iter: &IterationCompleted,
+    event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
+    state: &mut LoopState,
+) {
+    let assistant_blocks = build_assistant_content_blocks(&iter.iter_tool_calls, &iter.iter_text);
     state.api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 
     let mut result_blocks: Vec<ContentBlock> = Vec::new();
@@ -123,22 +131,7 @@ pub(crate) fn push_assistant_tool_message(
     iter_text: &str,
     api_messages: &mut Vec<RichMessage>,
 ) {
-    let mut assistant_blocks: Vec<ContentBlock> = Vec::new();
-    if !iter_text.is_empty() {
-        assistant_blocks.push(ContentBlock::Text { text: iter_text.to_string() });
-    }
-    for tc in tool_calls {
-        let input = if tc.name == "write_file" {
-            summarize_write_file_input(&tc.input)
-        } else {
-            tc.input.clone()
-        };
-        assistant_blocks.push(ContentBlock::ToolUse {
-            id: tc.id.clone(),
-            name: tc.name.clone(),
-            input,
-        });
-    }
+    let assistant_blocks = build_assistant_content_blocks(tool_calls, iter_text);
     api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 }
 
