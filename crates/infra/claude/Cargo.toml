@@ -13,6 +13,8 @@ serde_json = "1"
 tracing = "0.1"
 thiserror = "1"
 bytes = "1"
+aura-provider = { path = "../provider" }
+futures-util = "0.3"
 
 [dev-dependencies]
 axum = "0.7"

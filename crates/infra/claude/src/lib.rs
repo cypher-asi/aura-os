@@ -1,4 +1,6 @@
+mod adapter;
 pub(crate) mod channel_ext;
+mod conversions;
 mod error;
 pub mod mock;
 mod retry;
@@ -6,6 +8,7 @@ mod sse;
 pub mod token_capture;
 pub mod types;
 
+pub use aura_provider::ModelProvider;
 pub use error::ClaudeClientError;
 pub use token_capture::{StreamTokenCapture, TokenCaptureHandle};
 pub use types::*;
