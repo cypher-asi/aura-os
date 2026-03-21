@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Link, useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { Server } from "lucide-react";
@@ -14,6 +14,7 @@ import { useAppStore } from "../stores/app-store";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useSidekick } from "../stores/sidekick-store";
 import { useAppUIStore } from "../stores/app-ui-store";
+import { useUIModalStore } from "../stores/ui-modal-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
@@ -104,36 +105,15 @@ function PreviewLane() {
   );
 }
 
-export function DesktopShell({
-  onOpenOrgSettings,
-  onBuyCredits,
-}: {
-  onOpenOrgSettings: () => void;
-  onBuyCredits: () => void;
-}) {
+export function DesktopShell() {
   const activeApp = useAppStore((s) => s.activeApp);
   const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
+  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
   const { MainPanel, PreviewPanel } = activeApp;
 
-  // #region agent log
-  const prevAppIdRef = useRef(activeApp.id);
-  const renderT = performance.now();
-  const appChanged = prevAppIdRef.current !== activeApp.id;
-  if (appChanged) {
-    fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'07b16f'},body:JSON.stringify({sessionId:'07b16f',location:'DesktopShell.tsx:render',message:'DesktopShell render NEW APP',data:{from:prevAppIdRef.current,to:activeApp.id,renderT},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    prevAppIdRef.current = activeApp.id;
-  }
-  useEffect(() => {
-    if (appChanged) {
-      const commitT = performance.now();
-      fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'07b16f'},body:JSON.stringify({sessionId:'07b16f',location:'DesktopShell.tsx:commit',message:'DesktopShell commit done',data:{app:activeApp.id,renderToCommitMs:commitT-renderT},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-    }
-  });
-  // #endregion
 
   useEffect(() => {
     const el = leftPanelRef.current;
@@ -163,7 +143,7 @@ export function DesktopShell({
                   iconOnly
                   icon={<Server size={16} />}
                   aria-label="Open host settings"
-                  onClick={() => setHostSettingsOpen(true)}
+                  onClick={openHostSettings}
                 />
               )}
               <WindowControls />
@@ -197,10 +177,7 @@ export function DesktopShell({
                 })}
               </Lane>
             </div>
-            <BottomTaskbar
-              onOpenOrgSettings={onOpenOrgSettings}
-              onBuyCredits={onBuyCredits}
-            />
+            <BottomTaskbar />
           </div>
 
           <ErrorBoundary name="main">
@@ -221,7 +198,7 @@ export function DesktopShell({
         isOpen={hostSettingsOpen}
         onClose={() => {
           blurActiveElement();
-          setHostSettingsOpen(false);
+          closeHostSettings();
         }}
       />
     </>
