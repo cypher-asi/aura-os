@@ -6,6 +6,7 @@ import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history"
 import type {
   DisplayContentBlockUnion,
   ToolCallEntry,
+  TimelineItem,
   StreamRefs,
   StreamSetters,
 } from "../../types/stream";
@@ -29,6 +30,12 @@ export function snapshotToolCalls(refs: StreamRefs): ToolCallEntry[] | undefined
     : undefined;
 }
 
+export function snapshotTimeline(refs: StreamRefs): TimelineItem[] | undefined {
+  return refs.timeline.current.length > 0
+    ? [...refs.timeline.current]
+    : undefined;
+}
+
 export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): void {
   setters.setStreamingText("");
   refs.streamBuffer.current = "";
@@ -38,6 +45,8 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   setters.setThinkingDurationMs(null);
   refs.toolCalls.current = [];
   setters.setActiveToolCalls([]);
+  refs.timeline.current = [];
+  setters.setTimeline([]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -54,6 +63,13 @@ export function handleThinkingDelta(
     refs.thinkingStart.current = Date.now();
   }
   refs.thinkingBuffer.current += text;
+
+  const tl = refs.timeline.current;
+  if (tl.length === 0 || tl[tl.length - 1].kind !== "thinking") {
+    tl.push({ kind: "thinking" });
+    setters.setTimeline([...tl]);
+  }
+
   if (refs.thinkingRaf.current === null) {
     refs.thinkingRaf.current = requestAnimationFrame(() => {
       refs.thinkingRaf.current = null;
@@ -77,10 +93,20 @@ export function handleTextDelta(
     refs.needsSeparator.current = false;
   }
   refs.streamBuffer.current += text;
+
+  const tl = refs.timeline.current;
+  const last = tl.length > 0 ? tl[tl.length - 1] : null;
+  if (last && last.kind === "text") {
+    last.content += text;
+  } else {
+    tl.push({ kind: "text", content: text });
+  }
+
   if (refs.raf.current === null) {
     refs.raf.current = requestAnimationFrame(() => {
       refs.raf.current = null;
       setters.setStreamingText(refs.streamBuffer.current);
+      setters.setTimeline(refs.timeline.current.map((i) => ({ ...i } as TimelineItem)));
     });
   }
 }
@@ -100,6 +126,9 @@ export function handleToolCallStarted(
   };
   refs.toolCalls.current = [...refs.toolCalls.current, entry];
   setters.setActiveToolCalls([...refs.toolCalls.current]);
+
+  refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+  setters.setTimeline([...refs.timeline.current]);
 }
 
 export function handleToolCall(
@@ -125,6 +154,9 @@ export function handleToolCall(
       pending: true,
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
+
+    refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+    setters.setTimeline([...refs.timeline.current]);
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 }
@@ -177,6 +209,7 @@ export function handleMessageSaved(
       artifactRefs: extractArtifactRefs(allBlocks),
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,
+      timeline: snapshotTimeline(refs),
     },
   ]);
   resetStreamBuffers(refs, setters);
@@ -204,6 +237,7 @@ export function handleStreamError(
       toolCalls: snapshotToolCalls(refs),
       thinkingText: savedThinking,
       thinkingDurationMs: savedThinkingDuration,
+      timeline: snapshotTimeline(refs),
     },
   ]);
   resetStreamBuffers(refs, setters);
@@ -226,12 +260,15 @@ export function finalizeStream(
         toolCalls: snapshotToolCalls(refs),
         thinkingText: savedThinking,
         thinkingDurationMs: savedThinkingDuration,
+        timeline: snapshotTimeline(refs),
       },
     ]);
     setters.setStreamingText("");
     refs.streamBuffer.current = "";
     refs.toolCalls.current = [];
     setters.setActiveToolCalls([]);
+    refs.timeline.current = [];
+    setters.setTimeline([]);
   }
   setters.setThinkingText("");
   refs.thinkingBuffer.current = "";

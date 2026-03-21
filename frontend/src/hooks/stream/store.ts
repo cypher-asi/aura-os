@@ -2,6 +2,7 @@ import type { SetStateAction } from "react";
 import type {
   DisplayMessage,
   ToolCallEntry,
+  TimelineItem,
   StreamRefs,
   StreamSetters,
 } from "../../types/stream";
@@ -24,6 +25,7 @@ export interface StreamEntry {
   thinkingText: string;
   thinkingDurationMs: number | null;
   activeToolCalls: ToolCallEntry[];
+  timeline: TimelineItem[];
   progressText: string;
   /** Current React setters – null when the component is unmounted. */
   reactSetters: StreamSetters | null;
@@ -46,6 +48,7 @@ export function makeEntry(key: string): StreamEntry {
       needsSeparator: { current: false },
       raf: { current: null },
       thinkingRaf: { current: null },
+      timeline: { current: [] },
     },
     abort: null,
     isStreaming: false,
@@ -54,6 +57,7 @@ export function makeEntry(key: string): StreamEntry {
     thinkingText: "",
     thinkingDurationMs: null,
     activeToolCalls: [],
+    timeline: [],
     progressText: "",
     reactSetters: null,
   };
@@ -98,6 +102,10 @@ export function createProxySetters(entry: StreamEntry): StreamSetters {
     setProgressText(v) {
       entry.progressText = resolve(v, entry.progressText);
       entry.reactSetters?.setProgressText(entry.progressText);
+    },
+    setTimeline(v) {
+      entry.timeline = resolve(v, entry.timeline);
+      entry.reactSetters?.setTimeline(entry.timeline);
     },
   };
 }

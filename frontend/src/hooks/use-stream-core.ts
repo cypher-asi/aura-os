@@ -3,6 +3,7 @@ import type { MutableRefObject } from "react";
 import type {
   DisplayMessage,
   ToolCallEntry,
+  TimelineItem,
   StreamSetters,
 } from "../types/stream";
 import {
@@ -15,6 +16,7 @@ import type { StreamEntry } from "./stream/store";
 import {
   snapshotThinking,
   snapshotToolCalls,
+  snapshotTimeline,
   resetStreamBuffers,
 } from "./stream/handlers";
 
@@ -25,6 +27,7 @@ export type {
   ArtifactRef,
   DisplayMessage,
   ToolCallEntry,
+  TimelineItem,
   StreamRefs,
   StreamSetters,
 } from "../types/stream";
@@ -32,6 +35,7 @@ export type {
 export {
   snapshotThinking,
   snapshotToolCalls,
+  snapshotTimeline,
   resetStreamBuffers,
   handleThinkingDelta,
   handleTextDelta,
@@ -73,6 +77,7 @@ export function useStreamCore(resetDeps: unknown[]) {
   const [thinkingText, setThinkingText] = useState(() => entry.thinkingText);
   const [thinkingDurationMs, setThinkingDurationMs] = useState<number | null>(() => entry.thinkingDurationMs);
   const [activeToolCalls, setActiveToolCalls] = useState<ToolCallEntry[]>(() => entry.activeToolCalls);
+  const [timeline, setTimeline] = useState<TimelineItem[]>(() => entry.timeline);
   const [progressText, setProgressText] = useState(() => entry.progressText);
 
   const isStreamingRef = useRef(entry.isStreaming);
@@ -95,7 +100,7 @@ export function useStreamCore(resetDeps: unknown[]) {
 
   entry.reactSetters = {
     setStreamingText, setThinkingText, setThinkingDurationMs,
-    setActiveToolCalls, setMessages, setIsStreaming, setProgressText,
+    setActiveToolCalls, setMessages, setIsStreaming, setProgressText, setTimeline,
   };
 
   useLayoutEffect(() => {
@@ -106,6 +111,7 @@ export function useStreamCore(resetDeps: unknown[]) {
     setThinkingText(e.thinkingText);
     setThinkingDurationMs(e.thinkingDurationMs);
     setActiveToolCalls(e.activeToolCalls);
+    setTimeline(e.timeline);
     setProgressText(e.progressText);
     isStreamingRef.current = e.isStreaming;
     thinkingDurationMsRef.current = e.thinkingDurationMs;
@@ -149,6 +155,7 @@ export function useStreamCore(resetDeps: unknown[]) {
           toolCalls: snapshotToolCalls(e.refs),
           thinkingText: snap.savedThinking,
           thinkingDurationMs: snap.savedThinkingDuration,
+          timeline: snapshotTimeline(e.refs),
         },
       ]);
     }
@@ -160,7 +167,7 @@ export function useStreamCore(resetDeps: unknown[]) {
 
   return {
     messages, isStreaming, streamingText, thinkingText, thinkingDurationMs,
-    activeToolCalls, progressText,
+    activeToolCalls, timeline, progressText,
     refs: entry.refs, setters, abortRef, isStreamingRef, thinkingDurationMsRef, rafRef: entry.refs.raf,
     setMessages: setters.setMessages, setIsStreaming: setters.setIsStreaming, setProgressText: setters.setProgressText,
     resetMessages, baseStopStreaming,

@@ -62,6 +62,7 @@ export interface StreamRefs {
   needsSeparator: MutableRefObject<boolean>;
   raf: MutableRefObject<number | null>;
   thinkingRaf: MutableRefObject<number | null>;
+  timeline: MutableRefObject<TimelineItem[]>;
 }
 
 export interface StreamSetters {
@@ -72,4 +73,5 @@ export interface StreamSetters {
   setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
   setProgressText: Dispatch<SetStateAction<string>>;
+  setTimeline: Dispatch<SetStateAction<TimelineItem[]>>;
 }
