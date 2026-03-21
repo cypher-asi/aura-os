@@ -6,10 +6,11 @@ use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_billing::testutil;
 use crate::tool_loop_blocking::{
     apply_cmd_failure_tracking, build_tool_result_blocks, collect_duplicate_write_paths,
-    detect_blocked_commands, detect_blocked_exploration, detect_blocked_reads,
+    detect_blocked_commands, detect_blocked_exploration,
     detect_blocked_write_failures, detect_blocked_writes, detect_same_target_stall,
     detect_write_file_cooldowns, looks_truncated, summarize_write_file_input,
 };
+use crate::tool_loop_read_guard::{self as read_guard, ReadGuardState};
 
 fn default_config(max_iterations: usize) -> ToolLoopConfig {
     ToolLoopConfig {
@@ -170,18 +171,18 @@ async fn test_tool_loop_hits_max_iterations() {
 
 #[test]
 fn test_detect_blocked_reads_allows_first_two() {
-    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut state = ReadGuardState::new();
     let calls = vec![
         ToolCall { id: "t1".into(), name: "read_file".into(), input: serde_json::json!({"path": "src/lib.rs"}) },
     ];
 
-    let blocked = detect_blocked_reads(&calls, &mut counts);
+    let blocked = read_guard::detect_blocked_reads(&calls, &mut state);
     assert!(blocked.is_empty(), "1st read should not be blocked");
-    assert_eq!(counts["src/lib.rs"], 1);
+    assert_eq!(state.full_reads["src/lib.rs"], 1);
 
-    let blocked = detect_blocked_reads(&calls, &mut counts);
+    let blocked = read_guard::detect_blocked_reads(&calls, &mut state);
     assert!(blocked.is_empty(), "2nd read should not be blocked");
-    assert_eq!(counts["src/lib.rs"], 2);
+    assert_eq!(state.full_reads["src/lib.rs"], 2);
 }
 
 #[test]
@@ -310,21 +311,21 @@ fn test_detect_same_target_stall_resets_on_success() {
 
 #[test]
 fn test_detect_blocked_reads_blocks_third() {
-    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut state = ReadGuardState::new();
     let calls = vec![
         ToolCall { id: "t1".into(), name: "read_file".into(), input: serde_json::json!({"path": "src/lib.rs"}) },
     ];
 
-    detect_blocked_reads(&calls, &mut counts);
-    detect_blocked_reads(&calls, &mut counts);
-    let blocked = detect_blocked_reads(&calls, &mut counts);
-    assert_eq!(blocked, vec![0], "3rd read of same file should be blocked");
-    assert_eq!(counts["src/lib.rs"], 3);
+    read_guard::detect_blocked_reads(&calls, &mut state);
+    read_guard::detect_blocked_reads(&calls, &mut state);
+    let blocked = read_guard::detect_blocked_reads(&calls, &mut state);
+    assert_eq!(blocked, vec![0], "3rd full read of same file should be blocked");
+    assert_eq!(state.full_reads["src/lib.rs"], 3);
 }
 
 #[test]
 fn test_detect_blocked_reads_different_files_independent() {
-    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut state = ReadGuardState::new();
     let calls_a = vec![
         ToolCall { id: "t1".into(), name: "read_file".into(), input: serde_json::json!({"path": "a.rs"}) },
     ];
@@ -332,17 +333,17 @@ fn test_detect_blocked_reads_different_files_independent() {
         ToolCall { id: "t2".into(), name: "read_file".into(), input: serde_json::json!({"path": "b.rs"}) },
     ];
 
-    detect_blocked_reads(&calls_a, &mut counts);
-    detect_blocked_reads(&calls_a, &mut counts);
-    detect_blocked_reads(&calls_b, &mut counts);
+    read_guard::detect_blocked_reads(&calls_a, &mut state);
+    read_guard::detect_blocked_reads(&calls_a, &mut state);
+    read_guard::detect_blocked_reads(&calls_b, &mut state);
 
-    assert_eq!(counts["a.rs"], 2);
-    assert_eq!(counts["b.rs"], 1);
+    assert_eq!(state.full_reads["a.rs"], 2);
+    assert_eq!(state.full_reads["b.rs"], 1);
 
-    let blocked_a = detect_blocked_reads(&calls_a, &mut counts);
+    let blocked_a = read_guard::detect_blocked_reads(&calls_a, &mut state);
     assert_eq!(blocked_a, vec![0], "3rd read of a.rs should be blocked");
 
-    let blocked_b = detect_blocked_reads(&calls_b, &mut counts);
+    let blocked_b = read_guard::detect_blocked_reads(&calls_b, &mut state);
     assert!(blocked_b.is_empty(), "2nd read of b.rs should not be blocked");
 }
 
