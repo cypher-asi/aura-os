@@ -201,6 +201,8 @@ pub enum EngineEvent {
         files_to_modify: Vec<String>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         files_to_create: Vec<String>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        key_decisions: Vec<String>,
     },
 
     BuildVerificationSkipped {

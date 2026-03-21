@@ -363,6 +363,7 @@ impl EngineToolLoopExecutor {
                         approach: plan.approach.clone(),
                         files_to_modify: plan.files_to_modify.clone(),
                         files_to_create: plan.files_to_create.clone(),
+                        key_decisions: plan.key_decisions.clone(),
                     },
                 );
                 results.push(ToolCallResult {
