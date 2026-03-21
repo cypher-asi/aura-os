@@ -10,7 +10,10 @@ import { buildDisplayMessages } from "../../utils/build-display-messages";
 import { ChatMessageList } from "../../components/ChatMessageList";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
+import type { DisplayMessage } from "../../types/stream";
 import styles from "../../components/ChatView.module.css";
+
+const historyCache = new Map<string, DisplayMessage[]>();
 
 function debugSwitchLog(message: string, details: Record<string, unknown>) {
   if (import.meta.env.DEV) {
@@ -74,7 +77,14 @@ export function AgentChatView() {
       };
     }
 
-    setIsHistoryLoading(true);
+    const cached = historyCache.get(agentId);
+    if (cached) {
+      resetMessages(cached, { allowWhileStreaming: true });
+      setIsHistoryLoading(false);
+    } else {
+      setIsHistoryLoading(true);
+    }
+
     api.agents
       .listMessages(agentId as never, { signal: controller.signal })
       .then((msgs) => {
@@ -82,7 +92,9 @@ export function AgentChatView() {
           debugSwitchLog("discarded stale history response", { loadId, agentId });
           return;
         }
-        resetMessages(buildDisplayMessages(msgs), { allowWhileStreaming: true });
+        const display = buildDisplayMessages(msgs);
+        historyCache.set(agentId, display);
+        resetMessages(display, { allowWhileStreaming: true });
         setIsHistoryLoading(false);
       })
       .catch((error: unknown) => {
