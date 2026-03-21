@@ -156,6 +156,7 @@ pub async fn run_tool_loop(
             cumulative_credits: 0,
             warning_30_sent: false,
             warning_60_sent: false,
+            warning_no_write_sent: false,
         },
         writes: WriteTrackingState {
             consecutive_write_tracker: HashMap::new(),

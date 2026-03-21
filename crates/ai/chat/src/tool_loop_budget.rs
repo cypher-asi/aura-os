@@ -18,6 +18,7 @@ pub(crate) struct BudgetState {
     pub(crate) cumulative_credits: u64,
     pub(crate) warning_30_sent: bool,
     pub(crate) warning_60_sent: bool,
+    pub(crate) warning_no_write_sent: bool,
 }
 
 pub(crate) fn inject_exploration_warnings(
@@ -101,6 +102,33 @@ pub(crate) fn check_budget_warnings(
     }
 
     None
+}
+
+/// Inject a strong warning when 40%+ of the credit budget has been spent
+/// without any write/edit calls succeeding. This catches death spirals
+/// where the agent endlessly explores without producing output.
+pub(crate) fn check_no_write_budget_warning(
+    budget_state: &mut BudgetState,
+    budget: u64,
+    had_any_write: bool,
+    api_messages: &mut Vec<RichMessage>,
+) {
+    if had_any_write || budget == 0 || budget_state.warning_no_write_sent {
+        return;
+    }
+    let utilization = budget_state.cumulative_credits as f64 / budget as f64;
+    if utilization >= 0.40 {
+        budget_state.warning_no_write_sent = true;
+        let warning = format!(
+            "[CRITICAL WARNING] You have used ~{:.0}% of the credit budget without making any \
+             writes. STOP exploring and START implementing immediately. Use the information you \
+             already have. If you are stuck on reading a file, try search_code instead, or \
+             write a skeleton and iterate with edit_file.",
+            utilization * 100.0,
+        );
+        info!(utilization_pct = (utilization * 100.0) as u32, "Injecting no-write budget warning");
+        api_messages.push(RichMessage::user(&warning));
+    }
 }
 
 pub(crate) fn update_exploration_counts(
