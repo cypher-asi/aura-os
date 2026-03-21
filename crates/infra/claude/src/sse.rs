@@ -186,7 +186,50 @@ impl SseParserState {
         Err(ClaudeClientError::Parse(msg))
     }
 
-    fn into_response(self) -> ToolStreamResponse {
+    fn dispatch_frame(
+        &mut self,
+        event_type: &str,
+        data_str: &str,
+        tx: &mpsc::UnboundedSender<ClaudeStreamEvent>,
+        start: std::time::Instant,
+    ) -> Result<(), ClaudeClientError> {
+        self.frames_parsed += 1;
+        match event_type {
+            "message_start" => self.handle_message_start(data_str),
+            "content_block_start" => self.handle_content_block_start(data_str, tx),
+            "content_block_delta" => self.handle_content_block_delta(data_str, tx),
+            "content_block_stop" => self.handle_content_block_stop(tx),
+            "message_delta" => self.handle_message_delta(data_str),
+            "message_stop" => {
+                debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
+            }
+            "error" => { self.handle_error(data_str, tx)?; }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn finalize(self, event_tx: &mpsc::UnboundedSender<ClaudeStreamEvent>, start: std::time::Instant) -> ToolStreamResponse {
+        send_or_log(event_tx, ClaudeStreamEvent::Done {
+            stop_reason: self.stop_reason.clone(),
+            input_tokens: self.input_tokens,
+            output_tokens: self.output_tokens,
+            cache_creation_input_tokens: self.cache_creation_input_tokens,
+            cache_read_input_tokens: self.cache_read_input_tokens,
+        });
+        info!(
+            stop_reason = %self.stop_reason,
+            input_tokens = self.input_tokens,
+            output_tokens = self.output_tokens,
+            cache_creation_input_tokens = self.cache_creation_input_tokens,
+            cache_read_input_tokens = self.cache_read_input_tokens,
+            response_len = self.accumulated_text.len(),
+            tool_call_count = self.tool_calls.len(),
+            chunks_received = self.chunks_received,
+            frames_parsed = self.frames_parsed,
+            elapsed_ms = start.elapsed().as_millis() as u64,
+            "Claude streaming complete"
+        );
         ToolStreamResponse {
             text: self.accumulated_text,
             tool_calls: self.tool_calls,
@@ -198,6 +241,19 @@ impl SseParserState {
             model_used: String::new(),
         }
     }
+}
+
+fn parse_frame_fields(frame: &str) -> (String, String) {
+    let mut event_type = String::new();
+    let mut data_str = String::new();
+    for line in frame.lines() {
+        if let Some(val) = line.strip_prefix("event: ") {
+            event_type = val.trim().to_string();
+        } else if let Some(val) = line.strip_prefix("data: ") {
+            data_str = val.trim().to_string();
+        }
+    }
+    (event_type, data_str)
 }
 
 /// Standalone SSE frame parser, decoupled from `reqwest::Response` for testability.
@@ -217,77 +273,21 @@ pub(crate) async fn parse_sse_events(
             e
         })?;
         state.chunks_received += 1;
+        line_buf.push_str(&String::from_utf8_lossy(&chunk).replace('\r', ""));
 
-        let chunk_str = String::from_utf8_lossy(&chunk);
-        line_buf.push_str(&chunk_str.replace('\r', ""));
-
-        while let Some(double_newline_pos) = line_buf.find("\n\n") {
-            let frame = line_buf[..double_newline_pos].to_string();
-            line_buf = line_buf[double_newline_pos + 2..].to_string();
-
-            let mut event_type = String::new();
-            let mut data_str = String::new();
-
-            for line in frame.lines() {
-                if let Some(val) = line.strip_prefix("event: ") {
-                    event_type = val.trim().to_string();
-                } else if let Some(val) = line.strip_prefix("data: ") {
-                    data_str = val.trim().to_string();
-                }
-            }
-
-            if event_type.is_empty() || data_str.is_empty() {
-                continue;
-            }
-
-            state.frames_parsed += 1;
-            match event_type.as_str() {
-                "message_start" => state.handle_message_start(&data_str),
-                "content_block_start" => state.handle_content_block_start(&data_str, event_tx),
-                "content_block_delta" => state.handle_content_block_delta(&data_str, event_tx),
-                "content_block_stop" => state.handle_content_block_stop(event_tx),
-                "message_delta" => state.handle_message_delta(&data_str),
-                "message_stop" => {
-                    debug!(elapsed_ms = start.elapsed().as_millis() as u64, "Claude stream completed");
-                }
-                "error" => {
-                    state.handle_error(&data_str, event_tx)?;
-                }
-                _ => {}
-            }
+        while let Some(pos) = line_buf.find("\n\n") {
+            let frame = line_buf[..pos].to_string();
+            line_buf = line_buf[pos + 2..].to_string();
+            let (event_type, data_str) = parse_frame_fields(&frame);
+            if event_type.is_empty() || data_str.is_empty() { continue; }
+            state.dispatch_frame(&event_type, &data_str, event_tx, start)?;
         }
     }
 
     if !line_buf.is_empty() {
         let preview: String = line_buf.chars().take(200).collect();
-        warn!(
-            leftover_bytes = line_buf.len(),
-            preview = %preview,
-            "SSE stream ended with unparsed data in buffer"
-        );
+        warn!(leftover_bytes = line_buf.len(), preview = %preview, "SSE stream ended with unparsed data in buffer");
     }
 
-    send_or_log(event_tx, ClaudeStreamEvent::Done {
-        stop_reason: state.stop_reason.clone(),
-        input_tokens: state.input_tokens,
-        output_tokens: state.output_tokens,
-        cache_creation_input_tokens: state.cache_creation_input_tokens,
-        cache_read_input_tokens: state.cache_read_input_tokens,
-    });
-
-    info!(
-        stop_reason = %state.stop_reason,
-        input_tokens = state.input_tokens,
-        output_tokens = state.output_tokens,
-        cache_creation_input_tokens = state.cache_creation_input_tokens,
-        cache_read_input_tokens = state.cache_read_input_tokens,
-        response_len = state.accumulated_text.len(),
-        tool_call_count = state.tool_calls.len(),
-        chunks_received = state.chunks_received,
-        frames_parsed = state.frames_parsed,
-        elapsed_ms = start.elapsed().as_millis() as u64,
-        "Claude streaming complete"
-    );
-
-    Ok(state.into_response())
+    Ok(state.finalize(event_tx, start))
 }
