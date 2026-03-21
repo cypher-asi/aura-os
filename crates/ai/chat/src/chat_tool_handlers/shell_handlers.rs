@@ -116,8 +116,6 @@ impl ChatToolExecutor {
 
         let glob_pattern = if pattern.contains('/') || pattern.contains('\\') {
             pattern.clone()
-        } else if pattern.starts_with("*.") || pattern.starts_with("**") {
-            format!("**/{pattern}")
         } else {
             format!("**/{pattern}")
         };

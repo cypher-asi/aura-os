@@ -23,7 +23,7 @@ pub struct ChatToolExecutor {
 pub struct ToolExecResult {
     pub content: String,
     pub is_error: bool,
-    pub saved_spec: Option<Spec>,
+    pub saved_spec: Option<Box<Spec>>,
     pub saved_task: Option<Box<Task>>,
 }
 
@@ -47,7 +47,7 @@ impl ToolExecResult {
         Self {
             content: pretty_json(&v),
             is_error: false,
-            saved_spec: Some(spec),
+            saved_spec: Some(Box::new(spec)),
             saved_task: None,
         }
     }

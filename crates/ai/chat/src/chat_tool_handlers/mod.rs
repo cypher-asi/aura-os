@@ -107,7 +107,6 @@ impl ChatToolExecutor {
             workspace_display_path: None,
             build_command: str_field(input, "build_command"),
             test_command: str_field(input, "test_command"),
-            ..Default::default()
         };
         match self.project_service.update_project_async(project_id, update).await {
             Ok(p) => ToolExecResult::ok(json!(p)),

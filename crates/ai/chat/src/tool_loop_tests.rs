@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use async_trait::async_trait;
-use aura_claude::ToolDefinition;
+use aura_claude::{ToolCall, ToolDefinition};
 use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_billing::testutil;
 use crate::tool_loop_blocking::{
@@ -33,8 +33,10 @@ fn default_config(max_iterations: usize) -> ToolLoopConfig {
     }
 }
 
+type ToolHandler = Box<dyn Fn(&[ToolCall]) -> Vec<ToolCallResult> + Send + Sync>;
+
 struct SimpleExecutor {
-    handler: Box<dyn Fn(&[ToolCall]) -> Vec<ToolCallResult> + Send + Sync>,
+    handler: ToolHandler,
 }
 
 #[async_trait]
@@ -1213,6 +1215,7 @@ mod blocking_tests {
 
 mod tool_result_tests {
     use super::*;
+    use aura_claude::ContentBlock;
 
     // -- build_tool_result_blocks --------------------------------------------
 

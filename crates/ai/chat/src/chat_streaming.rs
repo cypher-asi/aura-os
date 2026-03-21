@@ -70,7 +70,7 @@ impl ChatService {
 
         let thinking_start = std::time::Instant::now();
         let result = self.run_chat_tool_loop(
-            &api_key, &system, api_messages, &config, &executor, tx, &tool_blocks,
+            &api_key, &system, api_messages, &config, &executor, tx,
         ).await;
 
         self.update_instance_token_usage(
@@ -135,12 +135,12 @@ impl ChatService {
         config: &ToolLoopConfig,
         executor: &ForwardingToolExecutor<SingleProjectResolver>,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-        tool_blocks: &ContentBlockAccumulator,
     ) -> ToolLoopResult {
         let tools = agent_tool_definitions();
+        let tool_blocks = Arc::clone(&executor.blocks);
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
         let tx_clone = tx.clone();
-        let fwd_blocks = Arc::clone(tool_blocks);
+        let fwd_blocks = Arc::clone(&tool_blocks);
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = loop_rx.recv().await {
                 forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);

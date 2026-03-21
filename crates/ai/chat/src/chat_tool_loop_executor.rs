@@ -93,7 +93,7 @@ impl<R: ProjectResolver> ForwardingToolExecutor<R> {
                     title: spec.title.clone(),
                 });
             }
-            send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(spec.clone()));
+            send_or_log(&self.chat_tx, ChatStreamEvent::SpecSaved(Spec::clone(spec)));
         }
         if let Some(task) = &result.saved_task {
             if let Ok(mut acc) = self.blocks.lock() {

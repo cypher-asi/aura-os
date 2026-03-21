@@ -140,7 +140,7 @@ async fn read_file_rejects_path_escape() {
 async fn run_command_captures_output() {
     let h = setup();
 
-    let cmd = if cfg!(windows) { "echo hello" } else { "echo hello" };
+    let cmd = "echo hello";
     let result = h
         .executor
         .execute(
