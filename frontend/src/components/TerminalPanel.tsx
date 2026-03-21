@@ -2,7 +2,7 @@ import { useEffect, type MouseEvent } from "react";
 import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@cypher-asi/zui";
 import { useTerminal, type UseTerminalReturn } from "../hooks/use-terminal";
-import { useTerminalPanel, type TerminalInstance } from "../context/TerminalPanelContext";
+import { useTerminalPanel, type TerminalInstance } from "../stores/terminal-panel-store";
 import { XTerminal } from "./XTerminal";
 import styles from "./TerminalPanel.module.css";
 

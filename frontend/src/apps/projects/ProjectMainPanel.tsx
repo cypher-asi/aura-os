@@ -1,27 +1,28 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Outlet } from "react-router-dom";
 import { ConnectionTaskbar } from "../../components/ConnectionTaskbar";
 import { ResponsiveMainLane } from "../../components/ResponsiveMainLane";
 import { TerminalPanelHeader, TerminalPanelBody } from "../../components/TerminalPanel";
-import { TerminalPanelProvider } from "../../context/TerminalPanelContext";
+import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useProjectContext } from "../../context/ProjectContext";
 
 export function ProjectMainPanel({ children }: { children?: ReactNode }) {
   const ctx = useProjectContext();
   const cwd = ctx?.project?.linked_folder_path;
+  const setCwd = useTerminalPanelStore((s) => s.setCwd);
+
+  useEffect(() => { setCwd(cwd); }, [cwd, setCwd]);
 
   return (
-    <TerminalPanelProvider cwd={cwd}>
-      <ResponsiveMainLane
-        taskbar={(
-          <ConnectionTaskbar>
-            <TerminalPanelHeader />
-          </ConnectionTaskbar>
-        )}
-        footer={<TerminalPanelBody />}
-      >
-        {children ?? <Outlet />}
-      </ResponsiveMainLane>
-    </TerminalPanelProvider>
+    <ResponsiveMainLane
+      taskbar={(
+        <ConnectionTaskbar>
+          <TerminalPanelHeader />
+        </ConnectionTaskbar>
+      )}
+      footer={<TerminalPanelBody />}
+    >
+      {children ?? <Outlet />}
+    </ResponsiveMainLane>
   );
 }
