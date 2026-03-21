@@ -1,10 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
 import { Modal, Heading, Button, Spinner, Text } from "@cypher-asi/zui";
 import { LogOut } from "lucide-react";
-import { api } from "../../api/client";
 import { useAuth } from "../../stores/auth-store";
-import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import type { ApiKeyInfo } from "../../types";
+import { useSettingsData } from "./useSettingsData";
 import styles from "./SettingsModal.module.css";
 
 export function SettingsModal({
@@ -15,44 +12,8 @@ export function SettingsModal({
   onClose: () => void;
 }) {
   const { logout } = useAuth();
-  const { features } = useAuraCapabilities();
-  const [info, setInfo] = useState<ApiKeyInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">("stable");
-  const [currentVersion, setCurrentVersion] = useState("");
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const frame = window.requestAnimationFrame(() => setLoading(true));
-    const requests = [api.getApiKeyInfo().then(setInfo)];
-    if (features.nativeUpdater) {
-      requests.push(
-        api.getUpdateStatus().then((s) => {
-          setUpdateChannel(s.channel as "stable" | "nightly");
-          setCurrentVersion(s.current_version);
-        }),
-      );
-    } else {
-      window.requestAnimationFrame(() => setCurrentVersion(""));
-    }
-    Promise.all(requests)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-    return () => window.cancelAnimationFrame(frame);
-  }, [features.nativeUpdater, isOpen]);
-
-  const handleChannelChange = useCallback(
-    async (ch: "stable" | "nightly") => {
-      setUpdateChannel(ch);
-      try {
-        await api.setUpdateChannel(ch);
-      } catch {
-        setUpdateChannel(updateChannel);
-      }
-    },
-    [updateChannel],
-  );
+  const { info, loading, updateChannel, currentVersion, showUpdater, handleChannelChange } =
+    useSettingsData(isOpen);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="sm">
@@ -76,7 +37,7 @@ export function SettingsModal({
               </Text>
             )}
 
-            {features.nativeUpdater && (
+            {showUpdater && (
               <>
                 <div className={styles.divider} />
 

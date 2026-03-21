@@ -1,50 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
-import { api } from "../../api/client";
-import { useOrgStore } from "../../stores/org-store";
-import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { Text } from "@cypher-asi/zui";
+import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { EmptyState } from "../../components/EmptyState";
 import { formatCompact, formatCurrency } from "../../utils/format";
+import { useStatsDashboardData, PERIODS } from "./useStatsDashboardData";
 import styles from "../aura.module.css";
 
-type Period = "day" | "week" | "month" | "all";
-const PERIODS: { value: Period; label: string }[] = [
-  { value: "day", label: "Day" },
-  { value: "week", label: "Week" },
-  { value: "month", label: "Month" },
-  { value: "all", label: "All" },
-];
-
-interface UsageData {
-  total_tokens: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  total_cost_usd: number;
-}
-
 export function StatsDashboard() {
-  const activeOrg = useOrgStore((s) => s.activeOrg);
-  const [period, setPeriod] = useState<Period>("month");
-  const [personal, setPersonal] = useState<UsageData | null>(null);
-  const [org, setOrg] = useState<UsageData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchUsage = useCallback(() => {
-    setLoading(true);
-    const promises: Promise<void>[] = [
-      api.usage.personal(period).then(setPersonal).catch(() => setPersonal(null)),
-    ];
-    if (activeOrg) {
-      promises.push(
-        api.usage.org(activeOrg.org_id, period).then(setOrg).catch(() => setOrg(null)),
-      );
-    }
-    Promise.allSettled(promises).finally(() => setLoading(false));
-  }, [period, activeOrg]);
-
-  useEffect(() => {
-    fetchUsage();
-  }, [fetchUsage]);
+  const { period, setPeriod, personal, org, loading } = useStatsDashboardData();
 
   const showEmpty = useDelayedEmpty(!personal && !org, loading, 0);
   const noData = !personal && !org;

@@ -108,9 +108,13 @@ vi.mock("../../utils/mobileNavigation", () => ({
 vi.mock("../InlineRenameInput", () => ({
   InlineRenameInput: () => <div data-testid="rename-input" />,
 }));
-vi.mock("../ProjectModals", () => ({
+vi.mock("../DeleteProjectModal", () => ({
   DeleteProjectModal: () => null,
+}));
+vi.mock("../DeleteAgentInstanceModal", () => ({
   DeleteAgentInstanceModal: () => null,
+}));
+vi.mock("../ProjectSettingsModal", () => ({
   ProjectSettingsModal: () => null,
 }));
 vi.mock("../AgentSelectorModal", () => ({

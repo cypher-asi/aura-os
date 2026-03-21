@@ -7,7 +7,7 @@ import { Avatar } from "../../../components/Avatar";
 import { useProfile } from "../../../stores/profile-store";
 import { useAuth } from "../../../stores/auth-store";
 import { ProfileEditorModal } from "../ProfileEditorModal";
-import { timeAgo } from "../../feed/FeedMainPanel";
+import { timeAgo } from "../../../utils/format";
 import styles from "./ProfileSidekickPanel.module.css";
 
 function formatJoinedDate(iso: string): string {

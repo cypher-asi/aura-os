@@ -127,7 +127,8 @@ vi.mock("../Preview/Preview.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 
-import { TaskPreview, RunTaskButton } from "../TaskPreview";
+import { TaskPreview } from "../TaskPreview";
+import { RunTaskButton } from "../RunTaskButton";
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {

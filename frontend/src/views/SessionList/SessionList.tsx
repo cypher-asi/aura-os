@@ -1,8 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { api } from "../../api/client";
-import type { Session } from "../../types";
+import { useMemo } from "react";
 import { useSidekick } from "../../stores/sidekick-store";
-import { useProjectContext } from "../../stores/project-action-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
@@ -10,6 +7,7 @@ import type { ExplorerNode } from "@cypher-asi/zui";
 import { StatusBadge } from "../../components/StatusBadge";
 import { formatCostFromTokens, getCostEstimateLabel } from "../../utils/pricing";
 import { EmptyState } from "../../components/EmptyState";
+import { useSessionListData } from "./useSessionListData";
 import styles from "./SessionList.module.css";
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
@@ -25,32 +23,8 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
 }
 
 export function SessionList({ searchQuery }: { searchQuery: string }) {
-  const ctx = useProjectContext();
-  const projectId = ctx?.project.project_id;
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { sessions, sessionById, loading, selectedId, setSelectedId } = useSessionListData();
   const sidekick = useSidekick();
-
-  const fetchSessions = useCallback(() => {
-    if (!projectId) return;
-    api
-      .listProjectSessions(projectId)
-      .then(setSessions)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchSessions();
-    const interval = setInterval(fetchSessions, 5000);
-    return () => clearInterval(interval);
-  }, [fetchSessions]);
-
-  const sessionById = useMemo(
-    () => new Map(sessions.map((s) => [s.session_id, s])),
-    [sessions],
-  );
 
   const explorerData: ExplorerNode[] = useMemo(
     () =>

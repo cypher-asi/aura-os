@@ -57,6 +57,9 @@ vi.mock("../../stores/project-action-store", () => ({
 
 vi.mock("../TaskPreview", () => ({
   TaskPreview: ({ task }: { task: Task }) => <div data-testid="task-preview">{task.title}</div>,
+}));
+
+vi.mock("../RunTaskButton", () => ({
   RunTaskButton: ({ task }: { task: Task }) => <button data-testid="run-task-btn">{task.title}</button>,
 }));
 
@@ -64,7 +67,7 @@ vi.mock("../SessionPreview", () => ({
   SessionPreview: () => <div data-testid="session-preview" />,
 }));
 
-vi.mock("../LogDetail", () => ({
+vi.mock("../LogPreview", () => ({
   LogPreview: () => <div data-testid="log-preview" />,
 }));
 

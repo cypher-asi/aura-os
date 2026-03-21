@@ -3,7 +3,8 @@ import { PathInput } from "../PathInput";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useNewProjectForm } from "../../hooks/use-new-project-form";
-import { WorkspaceModeSection, ImportFilesSection } from "../WorkspaceModeSection";
+import { WorkspaceModeSection } from "../WorkspaceModeSection";
+import { ImportFilesSection } from "../ImportFilesSection";
 import { OrbitRepoSection } from "../OrbitRepoSection";
 
 interface NewProjectModalProps {

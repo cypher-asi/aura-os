@@ -1,130 +1,15 @@
-import { useEffect, useState, useCallback, useMemo, useLayoutEffect, type SetStateAction } from "react";
 import { Loader2 } from "lucide-react";
-import { useParams, useNavigate, Outlet } from "react-router-dom";
-import { api } from "../../api/client";
-import type { Project, Spec, Task } from "../../types";
-import type { EngineEvent } from "../../types/events";
-import { useProjectRegister } from "../../stores/project-action-store";
-import { useEventStore } from "../../stores/event-store";
+import { Outlet } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { EmptyState } from "../../components/EmptyState";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { Button } from "@cypher-asi/zui";
 import { ArrowLeft } from "lucide-react";
+import { useProjectLayoutData } from "./useProjectLayoutData";
 
 export function ProjectLayout() {
-  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { projects } = useProjectsList();
-  const cachedProject = useMemo(
-    () => projects.find((candidate) => candidate.project_id === projectId) ?? null,
-    [projectId, projects],
-  );
-
-  const [project, setProjectRaw] = useState<Project | null>(() => cachedProject);
-  const [initialSpecs, setInitialSpecs] = useState<Spec[]>([]);
-  const [initialTasks, setInitialTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(() => cachedProject == null);
-  const [message, setMessage] = useState("");
-  const { register, unregister } = useProjectRegister();
-  const subscribe = useEventStore((s) => s.subscribe);
-
-  const displayProject = useMemo(() => {
-    if (project && project.project_id === projectId) return project;
-    return cachedProject;
-  }, [project, projectId, cachedProject]);
-
-  const setProjectSafe = useCallback((update: SetStateAction<Project>) => {
-    if (typeof update === "function") {
-      setProjectRaw(prev => prev ? update(prev) : prev);
-    } else {
-      setProjectRaw(update);
-    }
-  }, []);
-
-  // Synchronously reset stale data when projectId changes (React set-state-during-render pattern)
-  const [prevProjectId, setPrevProjectId] = useState(projectId);
-  if (projectId !== prevProjectId) {
-    setPrevProjectId(projectId);
-    setInitialSpecs([]);
-    setInitialTasks([]);
-    if (!cachedProject) {
-      setLoading(true);
-    } else {
-      setLoading(false);
-    }
-  }
-
-  // Pick up cachedProject when it arrives after mount
-  const [prevCached, setPrevCached] = useState(cachedProject);
-  if (cachedProject !== prevCached) {
-    setPrevCached(cachedProject);
-    if (cachedProject && !project) {
-      setProjectRaw(cachedProject);
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!projectId) return;
-    let cancelled = false;
-
-    Promise.all([
-      api.getProject(projectId),
-      api.listSpecs(projectId).catch(() => [] as Spec[]),
-      api.listTasks(projectId).catch(() => [] as Task[]),
-    ])
-      .then(([proj, specs, tasks]) => {
-        if (cancelled) return;
-        setProjectRaw(proj);
-        setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
-        setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
-      })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [projectId]);
-
-  useEffect(() => {
-    if (!projectId) return;
-    return subscribe("spec_gen_completed", (e: EngineEvent) => {
-      if (e.project_id === projectId) {
-        api.getProject(projectId).then(setProjectRaw).catch(() => {});
-      }
-    });
-  }, [projectId, setProjectSafe, subscribe]);
-
-  useLayoutEffect(() => {
-    if (!displayProject) {
-      unregister();
-      return;
-    }
-
-    const handleArchive = async () => {
-      try {
-        await api.archiveProject(displayProject.project_id);
-        navigate("/projects");
-      } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Failed to archive");
-      }
-    };
-
-    const navigateToExecution = () => {
-      navigate(`/projects/${displayProject.project_id}/execution`);
-    };
-
-    register({
-      project: displayProject,
-      setProject: setProjectSafe,
-      message,
-      handleArchive,
-      navigateToExecution,
-      initialSpecs,
-      initialTasks,
-    });
-
-    return () => unregister();
-  }, [displayProject, initialSpecs, initialTasks, message, navigate, register, setProjectSafe, unregister]);
+  const { displayProject, loading, projects } = useProjectLayoutData();
 
   if (loading && !displayProject) {
     return (

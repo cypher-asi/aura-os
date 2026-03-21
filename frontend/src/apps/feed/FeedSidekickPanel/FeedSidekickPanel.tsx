@@ -7,7 +7,7 @@ import { FollowEditButton } from "../../../components/FollowEditButton";
 import { Avatar } from "../../../components/Avatar";
 import { useFeed } from "../../../stores/feed-store";
 import { useAuth } from "../../../stores/auth-store";
-import { timeAgo } from "../FeedMainPanel";
+import { timeAgo } from "../../../utils/format";
 import styles from "./FeedSidekickPanel.module.css";
 
 function ProfilePanel() {

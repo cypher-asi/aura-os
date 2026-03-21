@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from "react";
 import { ConnectionTaskbar } from "../ConnectionTaskbar";
 import { ResponsiveMainLane } from "../ResponsiveMainLane";
-import { TerminalPanelHeader, TerminalPanelBody } from "../TerminalPanel";
+import { TerminalPanelHeader } from "../TerminalPanelHeader";
+import { TerminalPanelBody } from "../TerminalPanelBody";
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useProjectContext } from "../../stores/project-action-store";
 

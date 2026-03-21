@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Spinner, Text } from "@cypher-asi/zui";
 import { Bot } from "lucide-react";
 import { EmptyState } from "../EmptyState";
-import { api } from "../../api/client";
-import type { Agent, AgentInstance } from "../../types";
+import type { AgentInstance } from "../../types";
 import { AgentEditorModal } from "../AgentEditorModal";
+import { useAgentSelectorData } from "./useAgentSelectorData";
 import styles from "./AgentSelectorModal.module.css";
 
 interface AgentSelectorModalProps {
@@ -15,55 +14,10 @@ interface AgentSelectorModalProps {
 }
 
 export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: AgentSelectorModalProps) {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [showEditor, setShowEditor] = useState(false);
-  const [failedIcons, setFailedIcons] = useState<Set<string>>(new Set());
-
-  const fetchAgents = useCallback(() => {
-    setLoading(true);
-    setError("");
-    api.agents
-      .list()
-      .then(setAgents)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load agents"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (isOpen) fetchAgents();
-  }, [isOpen, fetchAgents]);
-
-  const handleSelect = async (agent: Agent) => {
-    setCreating(agent.agent_id);
-    setError("");
-    try {
-      const instance = await api.createAgentInstance(projectId, agent.agent_id);
-      onCreated(instance);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create agent instance");
-    } finally {
-      setCreating(null);
-    }
-  };
-
-  const handleAgentSaved = (agent: Agent) => {
-    setShowEditor(false);
-    setAgents((prev) => {
-      const idx = prev.findIndex((a) => a.agent_id === agent.agent_id);
-      if (idx >= 0) return prev.map((a) => (a.agent_id === agent.agent_id ? agent : a));
-      return [...prev, agent];
-    });
-  };
-
-  const handleClose = () => {
-    setError("");
-    setCreating(null);
-    onClose();
-  };
+  const {
+    agents, loading, creating, error, showEditor, setShowEditor,
+    failedIcons, setFailedIcons, handleSelect, handleAgentSaved, handleClose,
+  } = useAgentSelectorData(isOpen, projectId, onCreated, onClose);
 
   return (
     <>

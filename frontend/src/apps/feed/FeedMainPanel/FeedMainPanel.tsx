@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
@@ -6,8 +5,6 @@ import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { useFeed } from "../../../stores/feed-store";
 import styles from "./FeedMainPanel.module.css";
-
-export { timeAgo } from "../../../components/ActivityCard";
 
 export function FeedMainPanel() {
   const { filteredEvents, commitActivity, selectedEventId, selectEvent, selectProfile, getCommentsForEvent } = useFeed();

@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useEffect, useRef, startTransition } from "react";
-import { MessageBubble, StreamingBubble } from "../MessageBubble";
+import { MessageBubble } from "../MessageBubble";
+import { StreamingBubble } from "../StreamingBubble";
 import { CookingIndicator } from "../CookingIndicator";
 import type { DisplayMessage } from "../../types/stream";
 import {

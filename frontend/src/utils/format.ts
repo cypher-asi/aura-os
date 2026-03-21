@@ -1,3 +1,11 @@
+export function fmtMs(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  const m = Math.floor(ms / 60_000);
+  const s = Math.round((ms % 60_000) / 1000);
+  return `${m}m ${s}s`;
+}
+
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", {
     hour12: false,
@@ -131,6 +139,17 @@ export function formatRelativeTime(iso: string): string {
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 7) return `${diffDay}d ago`;
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+export function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 export function formatChatTime(iso: string): string {

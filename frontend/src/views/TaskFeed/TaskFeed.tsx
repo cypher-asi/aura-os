@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
-import type { ProjectId, Task } from "../../types";
-import { api } from "../../api/client";
-import { useEventStore } from "../../stores/event-store";
-import { useLoopActive } from "../../hooks/use-loop-active";
+import type { ProjectId } from "../../types";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { Panel, Heading, Item } from "@cypher-asi/zui";
-import { titleSortKey } from "../../utils/collections";
 import { EmptyState } from "../../components/EmptyState";
+import { useTaskFeedData } from "./useTaskFeedData";
 import styles from "../aura.module.css";
 
 interface TaskFeedProps {
@@ -14,100 +10,7 @@ interface TaskFeedProps {
 }
 
 export function TaskFeed({ projectId }: TaskFeedProps) {
-  const subscribe = useEventStore((s) => s.subscribe);
-  const loopActive = useLoopActive(projectId);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.listTasks(projectId).then(setTasks).catch(console.error);
-    const interval = setInterval(() => {
-      api.listTasks(projectId).then(setTasks).catch(console.error);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [projectId]);
-
-  useEffect(() => {
-    const refetch = () => {
-      api.listTasks(projectId).then(setTasks).catch(console.error);
-    };
-    const unsubs = [
-      subscribe("task_started", (e) => {
-        setActiveTaskId(e.task_id || null);
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.task_id === e.task_id ? { ...t, status: "in_progress" as const } : t,
-          ),
-        );
-      }),
-      subscribe("task_completed", (e) => {
-        setActiveTaskId((curr) => (curr === e.task_id ? null : curr));
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.task_id === e.task_id ? { ...t, status: "done" as const } : t,
-          ),
-        );
-      }),
-      subscribe("task_failed", (e) => {
-        setActiveTaskId((curr) => (curr === e.task_id ? null : curr));
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.task_id === e.task_id ? { ...t, status: "failed" as const } : t,
-          ),
-        );
-      }),
-      subscribe("task_became_ready", (e) => {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.task_id === e.task_id ? { ...t, status: "ready" as const } : t,
-          ),
-        );
-      }),
-      subscribe("tasks_became_ready", (e) => {
-        if (!e.task_ids?.length) return;
-        const readySet = new Set(e.task_ids);
-        setTasks((prev) =>
-          prev.map((t) =>
-            readySet.has(t.task_id) ? { ...t, status: "ready" as const } : t,
-          ),
-        );
-      }),
-      subscribe("follow_up_task_created", (e) => {
-        if (e.task_id) refetch();
-      }),
-      subscribe("loop_stopped", () => {
-        setActiveTaskId(null);
-        refetch();
-      }),
-      subscribe("loop_paused", () => {
-        setActiveTaskId(null);
-        refetch();
-      }),
-      subscribe("loop_finished", () => {
-        setActiveTaskId(null);
-        refetch();
-      }),
-    ];
-    return () => unsubs.forEach((u) => u());
-  }, [subscribe, projectId]);
-
-  const sorted = [...tasks].sort((a, b) => {
-    const order: Record<string, number> = {
-      in_progress: 0,
-      ready: 1,
-      pending: 2,
-      blocked: 3,
-      done: 4,
-      failed: 5,
-    };
-    const statusDiff = (order[a.status] ?? 99) - (order[b.status] ?? 99);
-    if (statusDiff !== 0) return statusDiff;
-    const ka = titleSortKey(a.title);
-    const kb = titleSortKey(b.title);
-    if (ka !== kb) return ka - kb;
-    return a.order_index - b.order_index;
-  });
-
+  const { tasks, sorted, activeTaskId, loopActive } = useTaskFeedData(projectId);
   const displayed = sorted.slice(0, 50);
 
   return (
