@@ -27,7 +27,13 @@ async fn find_matching_project_agents(
     jwt: &str,
     agent_id_str: &str,
 ) -> Vec<aura_storage::StorageProjectAgent> {
-    let all_projects = projects::list_all_projects_from_network(state).await.unwrap_or_default();
+    let all_projects = match projects::list_all_projects_from_network(state).await {
+        Ok(p) => p,
+        Err((status, body)) => {
+            warn!(?status, ?body, "failed to list projects for agent matching");
+            return Vec::new();
+        }
+    };
     let pids: Vec<String> = all_projects.iter().map(|p| p.project_id.to_string()).collect();
     let futs: Vec<_> = pids.iter().map(|pid| storage.list_project_agents(pid, jwt)).collect();
     let results = join_all(futs).await;
@@ -167,9 +173,13 @@ async fn resolve_storage_anchor(
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
         return (None, Vec::new());
     };
-    let all_projects = projects::list_all_projects_from_network(state)
-        .await
-        .unwrap_or_default();
+    let all_projects = match projects::list_all_projects_from_network(state).await {
+        Ok(p) => p,
+        Err((status, body)) => {
+            warn!(?status, ?body, "failed to list projects for storage anchor resolution");
+            return (None, Vec::new());
+        }
+    };
     let agent_id_str = agent_id.to_string();
     let mut storage_anchor = None;
     let mut matched = Vec::new();
@@ -204,7 +214,10 @@ pub async fn list_messages(
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
-        .unwrap_or_default();
+        .unwrap_or_else(|e| {
+            warn!(agent_instance_id = %agent_instance_id, error = %e, "failed to list sessions");
+            Vec::new()
+        });
 
     let mut messages = Vec::new();
     for session in &sessions {

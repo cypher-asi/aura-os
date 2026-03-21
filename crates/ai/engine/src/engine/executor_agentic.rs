@@ -40,8 +40,13 @@ async fn fetch_codebase_context(
         workspace_cache,
     ).await {
         Ok(s) => s,
-        Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
-            .unwrap_or_default(),
+        Err(e) => {
+            tracing::warn!("cached file retrieval failed, falling back to basic read: {e}");
+            file_ops::read_relevant_files(&project.linked_folder_path, 50_000).unwrap_or_else(|e2| {
+                tracing::warn!("fallback read_relevant_files also failed: {e2}");
+                String::new()
+            })
+        }
     };
 
     let dep_api_context = if !workspace_map.is_empty() {
@@ -51,7 +56,10 @@ async fn fetch_codebase_context(
             &task.description,
             15_000,
             workspace_cache,
-        ).await.unwrap_or_default()
+        ).await.unwrap_or_else(|e| {
+            tracing::warn!("resolve_task_dep_api_context_cached failed: {e}");
+            String::new()
+        })
     } else {
         String::new()
     };
@@ -75,7 +83,10 @@ async fn resolve_completed_deps(
     if task.dependency_ids.is_empty() {
         return Vec::new();
     }
-    let all_project_tasks = task_service.list_tasks(project_id).await.unwrap_or_default();
+    let all_project_tasks = task_service.list_tasks(project_id).await.unwrap_or_else(|e| {
+        tracing::warn!("failed to list tasks for dependency resolution: {e}");
+        Vec::new()
+    });
     task.dependency_ids.iter()
         .filter_map(|dep_id| {
             all_project_tasks.iter()

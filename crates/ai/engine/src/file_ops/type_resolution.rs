@@ -88,7 +88,10 @@ pub async fn resolve_type_definitions_for_task_async(
         )
     })
     .await
-    .unwrap_or_default()
+    .unwrap_or_else(|e| {
+        tracing::warn!("spawn_blocking for type resolution panicked or was cancelled: {e}");
+        String::new()
+    })
 }
 
 /// Check whether a line is an `impl` block header for the given type name.
