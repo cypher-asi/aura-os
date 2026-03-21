@@ -32,22 +32,17 @@ export function OrbitRepoSection({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
       <Text variant="muted" size="sm" style={{ marginTop: "var(--space-2)" }}>
-        Orbit repo (optional)
+        Orbit repo
       </Text>
-      {!isAuthenticated && (
+      {!isAuthenticated ? (
         <Text variant="muted" size="sm" style={{ color: "var(--color-warning)" }}>
           Sign in to create a new repo or choose an existing one.
         </Text>
-      )}
-      <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
-        <input
-          type="radio"
-          checked={orbitRepoMode === "none"}
-          onChange={() => setOrbitRepoMode("none")}
-        />
-        <span>No Orbit repo</span>
-      </label>
-      {isAuthenticated && orbitOwner && (
+      ) : !orbitOwner ? (
+        <Text variant="muted" size="sm" style={{ color: "var(--color-warning)" }}>
+          No team found. Sign out and back in to create a default team.
+        </Text>
+      ) : (
         <>
           <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
             <input

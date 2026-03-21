@@ -20,7 +20,7 @@ function slugFromName(name: string): string {
     .replace(/[^a-z0-9-]/g, "");
 }
 
-export type OrbitRepoMode = "default" | "custom" | "existing" | "none";
+export type OrbitRepoMode = "default" | "custom" | "existing";
 export type WorkspaceMode = "linked" | "imported";
 
 export type ImportCandidate = {
@@ -130,7 +130,7 @@ export function useNewProjectForm(
   const [folderPath, setFolderPath] = useState("");
   const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
   const [orbitRepoName, setOrbitRepoName] = useState("");
-  const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("none");
+  const [orbitRepoMode, setOrbitRepoMode] = useState<OrbitRepoMode>("default");
   const [selectedOrbitRepo, setSelectedOrbitRepo] = useState<OrbitRepo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -193,12 +193,6 @@ export function useNewProjectForm(
     void saveNewProjectDraftFiles(importCandidates);
   }, [importCandidates, workspaceMode]);
 
-  useEffect(() => {
-    if (isOpen && !isAuthenticated) {
-      setOrbitRepoMode("none");
-    }
-  }, [isOpen, isAuthenticated]);
-
   const reset = useCallback(() => {
     setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
     setName("");
@@ -206,7 +200,7 @@ export function useNewProjectForm(
     setFolderPath("");
     setImportCandidates([]);
     setOrbitRepoName("");
-    setOrbitRepoMode("none");
+    setOrbitRepoMode("default");
     resetOrbitRepos();
     setSelectedOrbitRepo(null);
     setLoading(false);
@@ -265,15 +259,11 @@ export function useNewProjectForm(
         orbit_owner:
           orbitRepoMode === "existing" && selectedOrbitRepo
             ? selectedOrbitRepo.owner
-            : orbitRepoMode !== "none"
-              ? orbitOwner ?? undefined
-              : undefined,
+            : orbitOwner ?? undefined,
         orbit_repo:
           orbitRepoMode === "existing" && selectedOrbitRepo
             ? selectedOrbitRepo.name
-            : orbitRepoMode !== "none"
-              ? repoSlug
-              : undefined,
+            : repoSlug,
       };
 
       let project;
@@ -344,6 +334,7 @@ export function useNewProjectForm(
 
   const submitBlocker = useMemo(() => {
     if (orgLoading) return "Loading your team...";
+    if (!isAuthenticated) return "Sign in to create a project with an Orbit repo.";
     if (!resolvedOrgId) return "No team found. Log out and back in to create a default team.";
     if (!name.trim()) return "Project name is required.";
     if (workspaceMode === "linked") {
@@ -359,7 +350,7 @@ export function useNewProjectForm(
     return "";
   }, [
     features.linkedWorkspace, folderPath, importCandidates.length,
-    name, orbitRepoMode, orgLoading, resolvedOrgId, selectedOrbitRepo, workspaceMode,
+    isAuthenticated, name, orbitRepoMode, orgLoading, resolvedOrgId, selectedOrbitRepo, workspaceMode,
   ]);
   const canSubmit = !loading && !submitBlocker;
 

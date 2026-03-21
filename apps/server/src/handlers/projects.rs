@@ -342,6 +342,18 @@ async fn create_project_impl(
     network_folder: Option<String>,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
     if let Some(client) = &state.network_client {
+        let has_existing_repo = req
+            .git_repo_url
+            .as_ref()
+            .is_some_and(|u| !u.trim().is_empty());
+        let has_new_repo =
+            req.orbit_owner.is_some() && req.orbit_repo.is_some();
+        if !has_existing_repo && !has_new_repo {
+            return Err(ApiError::bad_request(
+                "An Orbit repo is required: provide orbit_owner and orbit_repo to create a new repo, or git_repo_url to use an existing one",
+            ));
+        }
+
         let jwt = state.get_jwt()?;
 
         let net_req = aura_network::CreateProjectRequest {
