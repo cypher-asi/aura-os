@@ -11,14 +11,14 @@ use aura_core::*;
 use aura_network::NetworkClient;
 use aura_store::RocksStore;
 
-fn parse_rfc3339_or_now(s: Option<&str>) -> DateTime<Utc> {
-    s.and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+fn parse_rfc3339_or_now(raw: Option<&str>) -> DateTime<Utc> {
+    raw.and_then(|v| DateTime::parse_from_rfc3339(v).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now)
 }
 
-fn net_or_local<T: Clone>(net_val: &Option<T>, local: Option<&Project>, f: fn(&Project) -> &Option<T>) -> Option<T> {
-    net_val.clone().or_else(|| local.and_then(|p| f(p).clone()))
+fn net_or_local<T: Clone>(net_val: &Option<T>, local: Option<&Project>, field: fn(&Project) -> &Option<T>) -> Option<T> {
+    net_val.clone().or_else(|| local.and_then(|p| field(p).clone()))
 }
 
 fn network_project_to_core(
