@@ -47,28 +47,7 @@ impl ChatToolExecutor {
         .await;
 
         match result {
-            Ok(Ok(output)) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let exit_code = output.status.code().unwrap_or(-1);
-
-                let truncated_stdout = truncate_output(&stdout, CMD_STDOUT_TRUNCATE_CHARS);
-                let truncated_stderr = truncate_output(&stderr, CMD_STDERR_TRUNCATE_CHARS);
-
-                let is_error = !output.status.success();
-                ToolExecResult {
-                    content: serde_json::to_string_pretty(&json!({
-                        "exit_code": exit_code,
-                        "stdout": truncated_stdout,
-                        "stderr": truncated_stderr,
-                        "command": command,
-                    }))
-                    .unwrap_or_default(),
-                    is_error,
-                    saved_spec: None,
-                    saved_task: None,
-                }
-            }
+            Ok(Ok(output)) => format_command_result(&output, &command),
             Ok(Err(e)) => ToolExecResult::err(format!("Failed to execute command: {e}")),
             Err(_) => ToolExecResult::err(format!(
                 "Command timed out after {timeout_secs} seconds"
@@ -117,23 +96,7 @@ impl ChatToolExecutor {
         .await
         .unwrap_or_default();
 
-        if matches.is_empty() {
-            let diagnostics = build_search_diagnostics(&pattern_clone, &abs, files_scanned);
-            ToolExecResult::ok(json!({
-                "pattern": pattern,
-                "match_count": 0,
-                "truncated": false,
-                "matches": [],
-                "diagnostics": diagnostics,
-            }))
-        } else {
-            ToolExecResult::ok(json!({
-                "pattern": pattern,
-                "match_count": matches.len(),
-                "truncated": matches.len() >= max_results,
-                "matches": matches
-            }))
-        }
+        build_search_result(&pattern, &pattern_clone, &abs, matches, max_results, files_scanned)
     }
 
     pub(crate) async fn find_files(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
@@ -175,6 +138,55 @@ impl ChatToolExecutor {
             "pattern": pattern,
             "file_count": found.len(),
             "files": found
+        }))
+    }
+}
+
+fn format_command_result(output: &std::process::Output, command: &str) -> ToolExecResult {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let exit_code = output.status.code().unwrap_or(-1);
+
+    let truncated_stdout = truncate_output(&stdout, CMD_STDOUT_TRUNCATE_CHARS);
+    let truncated_stderr = truncate_output(&stderr, CMD_STDERR_TRUNCATE_CHARS);
+
+    ToolExecResult {
+        content: serde_json::to_string_pretty(&json!({
+            "exit_code": exit_code,
+            "stdout": truncated_stdout,
+            "stderr": truncated_stderr,
+            "command": command,
+        }))
+        .unwrap_or_default(),
+        is_error: !output.status.success(),
+        saved_spec: None,
+        saved_task: None,
+    }
+}
+
+fn build_search_result(
+    pattern: &str,
+    pattern_for_diag: &str,
+    abs: &Path,
+    matches: Vec<Value>,
+    max_results: usize,
+    files_scanned: usize,
+) -> ToolExecResult {
+    if matches.is_empty() {
+        let diagnostics = build_search_diagnostics(pattern_for_diag, abs, files_scanned);
+        ToolExecResult::ok(json!({
+            "pattern": pattern,
+            "match_count": 0,
+            "truncated": false,
+            "matches": [],
+            "diagnostics": diagnostics,
+        }))
+    } else {
+        ToolExecResult::ok(json!({
+            "pattern": pattern,
+            "match_count": matches.len(),
+            "truncated": matches.len() >= max_results,
+            "matches": matches
         }))
     }
 }
