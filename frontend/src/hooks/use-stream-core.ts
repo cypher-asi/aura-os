@@ -9,7 +9,6 @@ import {
   ensureEntry,
   createSetters,
   pruneStreamStore,
-  getStreamEntry,
   getIsStreaming,
   streamMetaMap,
 } from "./stream/store";
