@@ -8,22 +8,24 @@
   background: transparent;
   cursor: pointer;
   text-align: left;
-  color: inherit;
+  color: var(--color-text-secondary);
   font: inherit;
-  border-radius: var(--radius-md);
-  transition: background 0.1s ease;
+  border-radius: 0;
+  transition: background-color 150ms ease, color 150ms ease;
 }
 
 .row:hover {
-  background: var(--color-bg-hover);
+  background: var(--color-overlay-subtle);
+  color: var(--color-text-secondary);
 }
 
 .selected {
-  background: var(--color-bg-selected);
+  background: var(--color-overlay-medium);
+  color: var(--color-text-primary);
 }
 
 .selected:hover {
-  background: var(--color-bg-selected);
+  background: var(--color-overlay-heavy);
 }
 
 .avatar {
@@ -34,7 +36,7 @@
   height: 36px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: var(--color-bg-hover);
+  background: var(--color-overlay-subtle);
   color: var(--color-text-secondary);
 }
 
@@ -67,6 +69,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  color: var(--color-text-primary);
 }
 
 .time {
