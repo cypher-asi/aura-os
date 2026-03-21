@@ -1,5 +1,6 @@
 pub(crate) mod build_fix;
 mod build_fix_types;
+mod error_signatures;
 mod executor;
 mod executor_agentic;
 mod executor_shell;
