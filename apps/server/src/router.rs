@@ -202,10 +202,6 @@ fn task_routes() -> Router<AppState> {
             "/api/projects/:project_id/tasks/:task_id/output",
             get(tasks::get_task_output),
         )
-        .route(
-            "/api/projects/:project_id/progress",
-            get(tasks::get_progress),
-        )
 }
 
 fn agent_routes() -> Router<AppState> {

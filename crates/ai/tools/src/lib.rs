@@ -340,7 +340,6 @@ fn project_tool_definitions() -> Vec<ToolDefinition> {
     vec![
         compact_tool("get_project", "Get the current project's details (name, folder, status, etc.).", serde_json::json!({"type":"object","properties":{},"required":[]})),
         compact_tool("update_project", "Update the current project's name, description, build_command, or test_command. Commands must be valid shell commands with no extra text.", serde_json::json!({"type":"object","properties":{"name":{"type":"string"},"description":{"type":"string"},"build_command":{"type":"string"},"test_command":{"type":"string"}},"required":[]})),
-        compact_tool("get_progress", "Get task progress summary for the project (counts by status).", serde_json::json!({"type":"object","properties":{},"required":[]})),
     ]
 }
 

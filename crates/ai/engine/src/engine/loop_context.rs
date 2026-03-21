@@ -393,8 +393,11 @@ impl LoopRunContext {
         &mut self,
         engine: &DevLoopEngine,
     ) -> Result<LoopOutcome, EngineError> {
-        let progress = engine.task_service.get_project_progress(&self.project_id).await?;
-        let outcome_str = if progress.blocked_tasks > 0 || progress.failed_tasks > 0 {
+        let tasks = engine.task_service.list_tasks(&self.project_id).await?;
+        let has_blocked_or_failed = tasks.iter().any(|t| {
+            t.status == aura_core::TaskStatus::Blocked || t.status == aura_core::TaskStatus::Failed
+        });
+        let outcome_str = if has_blocked_or_failed {
             "all_tasks_blocked"
         } else {
             "all_tasks_complete"

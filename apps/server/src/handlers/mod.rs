@@ -11,7 +11,6 @@ pub mod orbit;
 pub mod orgs;
 pub mod pricing;
 pub mod projects;
-pub(crate) mod repo_metrics;
 pub mod settings;
 pub mod specs;
 pub mod sse;

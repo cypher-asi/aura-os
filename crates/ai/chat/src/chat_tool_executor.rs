@@ -139,8 +139,6 @@ impl ChatToolExecutor {
             // ── Search ─────────────────────────────────────────────
             "search_code" => self.search_code(project_id, &input).await,
             "find_files" => self.find_files(project_id, &input).await,
-            // ── Progress ───────────────────────────────────────────
-            "get_progress" => self.get_progress(project_id).await,
             _ => ToolExecResult::err(format!("Unknown tool: {tool_name}")),
         }
     }

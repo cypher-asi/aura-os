@@ -114,11 +114,4 @@ impl ChatToolExecutor {
             Err(e) => ToolExecResult::err(format!("{e:?}")),
         }
     }
-
-    pub(crate) async fn get_progress(&self, project_id: &ProjectId) -> ToolExecResult {
-        match self.task_service.get_project_progress(project_id).await {
-            Ok(p) => ToolExecResult::ok(json!(p)),
-            Err(e) => ToolExecResult::err(format!("{e:?}")),
-        }
-    }
 }
