@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { api } from "../api/client";
 import type { Spec } from "../types";
 import type { EngineEvent } from "../types/events";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../stores/project-action-store";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
@@ -18,7 +18,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const sidekick = useSidekick();
   const sidekickRef = useRef(sidekick);
   const ctxRef = useRef(ctx);
@@ -27,6 +27,12 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     sidekickRef.current = sidekick;
     ctxRef.current = ctx;
   }, [ctx, sidekick]);
+
+  useEffect(() => {
+    if (ctx?.initialSpecs) {
+      setLocalSpecs(ctx.initialSpecs);
+    }
+  }, [ctx?.initialSpecs]);
   const mergedSpecs = useMemo(() => {
     const merged = mergeById(localSpecs, sidekick.specs, "spec_id");
     if (sidekick.deletedSpecIds.length === 0) return merged;

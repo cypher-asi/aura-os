@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import type { Spec, Task, TaskStatus } from "../types";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { useProjectContext } from "../stores/project-action-store";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useSidekick } from "../stores/sidekick-store";
 import { useDelayedEmpty } from "../hooks/use-delayed-empty";
 import { useLoopActive } from "../hooks/use-loop-active";
@@ -18,12 +18,20 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
   const sidekick = useSidekick();
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const loopActive = useLoopActive(projectId);
   const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
-  const [localSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
+  const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [localTasks, setLocalTasks] = useState<Task[]>(() => ctx?.initialTasks ?? []);
   const [loading] = useState(false);
+
+  useEffect(() => {
+    if (ctx?.initialSpecs) setLocalSpecs(ctx.initialSpecs);
+  }, [ctx?.initialSpecs]);
+
+  useEffect(() => {
+    if (ctx?.initialTasks) setLocalTasks(ctx.initialTasks);
+  }, [ctx?.initialTasks]);
 
   const sidekickRef = useRef(sidekick);
   sidekickRef.current = sidekick;
