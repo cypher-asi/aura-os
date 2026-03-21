@@ -4,7 +4,7 @@ import { Lane } from "../../components/Lane";
 import { CommitGrid } from "../../components/CommitGrid";
 import { ActivityCard } from "../../components/ActivityCard";
 import { EmptyState } from "../../components/EmptyState";
-import { useFeed } from "./FeedProvider";
+import { useFeed } from "../../stores/feed-store";
 import styles from "./FeedMainPanel.module.css";
 
 export { timeAgo } from "../../components/ActivityCard";
@@ -17,7 +17,9 @@ export function FeedMainPanel() {
       <div className={styles.container}>
         <div className={styles.scrollArea}>
           {filteredEvents.length === 0 ? (
-            <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
+            <div className={styles.emptyWrapper}>
+              <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
+            </div>
           ) : (
             <>
               <div className={styles.commitGridWrapper}>

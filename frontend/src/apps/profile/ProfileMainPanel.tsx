@@ -1,12 +1,15 @@
+import { useEffect } from "react";
 import { GitCommitVertical } from "lucide-react";
 import { Lane } from "../../components/Lane";
 import { CommitGrid } from "../../components/CommitGrid";
 import { ActivityCard } from "../../components/ActivityCard";
 import { EmptyState } from "../../components/EmptyState";
-import { useProfile } from "./ProfileProvider";
+import { useProfile, useProfileStore } from "../../stores/profile-store";
 import styles from "./ProfileMainPanel.module.css";
 
 export function ProfileMainPanel() {
+  const init = useProfileStore((s) => s.init);
+  useEffect(() => { init(); }, [init]);
   const { filteredEvents, commitActivity, selectedEventId, selectEvent, getCommentsForEvent } = useProfile();
 
   return (
@@ -14,7 +17,9 @@ export function ProfileMainPanel() {
       <div className={styles.container}>
         <div className={styles.scrollArea}>
           {filteredEvents.length === 0 ? (
-            <EmptyState icon={<GitCommitVertical size={32} />}>No activity yet</EmptyState>
+            <div className={styles.emptyWrapper}>
+              <EmptyState icon={<GitCommitVertical size={32} />}>No activity yet</EmptyState>
+            </div>
           ) : (
             <>
             <div className={styles.commitGridWrapper}>

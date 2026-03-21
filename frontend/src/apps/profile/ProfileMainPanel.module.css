@@ -35,6 +35,14 @@
   gap: var(--space-1);
 }
 
+.emptyWrapper {
+  max-width: 480px;
+  width: 100%;
+  height: 100%;
+  margin-left: max(0px, calc(50vw - 240px - var(--left-panel-width, 248px) - 1px - var(--space-5)));
+  margin-right: auto;
+}
+
 @media (max-width: 900px) {
   .scrollArea {
     padding: var(--space-3);
@@ -42,7 +50,8 @@
   }
 
   .commitGridWrapper,
-  .feedList {
+  .feedList,
+  .emptyWrapper {
     max-width: 560px;
     margin-left: auto;
     margin-right: auto;
@@ -64,5 +73,9 @@
     max-width: none;
     width: 100%;
     gap: 2px;
+  }
+
+  .emptyWrapper {
+    max-width: none;
   }
 }
