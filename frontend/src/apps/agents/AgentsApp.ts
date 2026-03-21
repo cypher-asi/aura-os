@@ -3,10 +3,8 @@ import { AgentList } from "./AgentList";
 import { AgentMainPanel } from "./AgentMainPanel";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentAppProvider } from "./AgentAppProvider";
-import { useAgentStore } from "./stores";
+import { useAgentStore, LAST_AGENT_ID_KEY } from "./stores";
 import type { AuraApp } from "../types";
-
-const LAST_AGENT_KEY = "aura:lastAgentId";
 
 export const AgentsApp: AuraApp = {
   id: "agents",
@@ -22,7 +20,7 @@ export const AgentsApp: AuraApp = {
   onPrefetch: () => {
     const store = useAgentStore.getState();
     store.fetchAgents().catch(() => {});
-    const lastId = localStorage.getItem(LAST_AGENT_KEY);
+    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
     if (lastId) store.prefetchHistory(lastId);
   },
 };

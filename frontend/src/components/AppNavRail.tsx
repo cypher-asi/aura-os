@@ -3,13 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { LAST_AGENT_ID_KEY } from "../apps/agents/stores";
 import styles from "./AppNavRail.module.css";
-
-const LAST_AGENT_KEY = "aura:lastAgentId";
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
   if (app.id === "agents") {
-    const lastId = localStorage.getItem(LAST_AGENT_KEY);
+    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
     if (lastId) return `/agents/${lastId}`;
   }
   return app.basePath;

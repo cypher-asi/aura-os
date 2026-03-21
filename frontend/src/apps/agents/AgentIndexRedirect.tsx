@@ -1,12 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { Bot, Loader2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
-import { useAgents } from "./stores";
+import { useAgents, LAST_AGENT_ID_KEY } from "./stores";
 
 export function AgentIndexRedirect() {
   const { agents, status } = useAgents();
   const loading = status === "loading";
-  const lastId = localStorage.getItem("aura:lastAgentId");
+  const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
 
   if (lastId) {
     return <Navigate to={`/agents/${lastId}`} replace />;

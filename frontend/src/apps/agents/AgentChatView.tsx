@@ -8,7 +8,7 @@ import { ChatMessageList } from "../../components/ChatMessageList";
 import { ChatInputBar } from "../../components/ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatInputBar";
 import styles from "../../components/ChatView.module.css";
-import { useAgentStore, useAgentHistory, useSelectedAgent } from "./stores";
+import { useAgentStore, useAgentHistory, useSelectedAgent, LAST_AGENT_ID_KEY } from "./stores";
 
 function HistoryEmptyState({
   status,
@@ -78,7 +78,7 @@ export function AgentChatView() {
     if (!agentId) return;
     useAgentStore.getState().fetchHistory(agentId);
     setSelectedAgent(agentId);
-    localStorage.setItem("aura:lastAgentId", agentId);
+    localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
     requestAnimationFrame(() => inputBarRef.current?.focus());
   }, [agentId, setSelectedAgent]);
 

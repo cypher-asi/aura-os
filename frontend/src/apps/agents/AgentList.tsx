@@ -7,7 +7,7 @@ import { Bot, Loader2, Trash2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import { AgentEditorModal } from "../../components/AgentEditorModal";
 import { api, ApiClientError } from "../../api/client";
-import { useAgents, useSelectedAgent, useAgentStore } from "./stores";
+import { useAgents, useSelectedAgent, useAgentStore, LAST_AGENT_ID_KEY } from "./stores";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
 import type { Agent } from "../../types";
 import styles from "./AgentList.module.css";
@@ -48,7 +48,7 @@ export function AgentList() {
 
   useEffect(() => {
     if (status !== "ready") return;
-    const lastId = localStorage.getItem("aura:lastAgentId");
+    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
     if (lastId && !agentId) {
       useAgentStore.getState().prefetchHistory(lastId);
     }
