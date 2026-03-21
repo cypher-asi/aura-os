@@ -192,6 +192,17 @@ pub enum EngineEvent {
         spec: Spec,
     },
 
+    PlanSubmitted {
+        project_id: ProjectId,
+        agent_instance_id: AgentInstanceId,
+        task_id: TaskId,
+        approach: String,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        files_to_modify: Vec<String>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        files_to_create: Vec<String>,
+    },
+
     BuildVerificationSkipped {
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,

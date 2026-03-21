@@ -64,7 +64,8 @@ fn event_project_id(event: &EngineEvent) -> Option<aura_core::ProjectId> {
         | EngineEvent::TestVerificationFailed { project_id, .. }
         | EngineEvent::TestFixAttempt { project_id, .. }
         | EngineEvent::GitCommitted { project_id, .. }
-        | EngineEvent::GitPushed { project_id, .. } => Some(*project_id),
+        | EngineEvent::GitPushed { project_id, .. }
+        | EngineEvent::PlanSubmitted { project_id, .. } => Some(*project_id),
         EngineEvent::TaskOutputDelta { project_id, .. } => Some(*project_id),
         EngineEvent::LogLine { .. } | EngineEvent::NetworkEvent { .. } => None,
     }
