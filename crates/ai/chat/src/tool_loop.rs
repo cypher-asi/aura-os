@@ -59,6 +59,48 @@ pub(crate) struct LoopState {
 }
 
 impl LoopState {
+    fn new(
+        initial_messages: Vec<RichMessage>,
+        config: &ToolLoopConfig,
+        build_baseline: Option<BuildBaseline>,
+    ) -> Self {
+        Self {
+            api_messages: initial_messages,
+            total_text: String::new(),
+            total_thinking: String::new(),
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            file_read_cache: HashMap::new(),
+            consecutive_cmd_failures: 0,
+            read_guard: ReadGuardState::new(),
+            had_any_write: false,
+            exploration: ExplorationState {
+                total_calls: 0,
+                allowance: config.exploration_allowance.unwrap_or(DEFAULT_EXPLORATION_ALLOWANCE),
+                warning_mild_sent: false,
+                warning_strong_sent: false,
+            },
+            budget: BudgetState {
+                cumulative_credits: 0,
+                warning_30_sent: false,
+                warning_60_sent: false,
+                warning_no_write_sent: false,
+            },
+            writes: WriteTrackingState {
+                consecutive_write_tracker: HashMap::new(),
+                file_write_failures: HashMap::new(),
+                cooldowns: HashMap::new(),
+                last_target_signature: None,
+                no_progress_streak: 0,
+            },
+            build: BuildState {
+                auto_build_cooldown: 0,
+                baseline: build_baseline,
+                plan_checkpoint_sent: false,
+            },
+        }
+    }
+
     pub(crate) fn build_result(
         &self,
         iterations_run: usize,
@@ -139,41 +181,7 @@ pub async fn run_tool_loop(
     event_tx: &mpsc::UnboundedSender<ToolLoopEvent>,
 ) -> ToolLoopResult {
     let build_baseline = executor.capture_build_baseline().await;
-    let mut state = LoopState {
-        api_messages: initial_messages,
-        total_text: String::new(),
-        total_thinking: String::new(),
-        total_input_tokens: 0,
-        total_output_tokens: 0,
-        file_read_cache: HashMap::new(),
-        consecutive_cmd_failures: 0,
-        read_guard: ReadGuardState::new(),
-        had_any_write: false,
-        exploration: ExplorationState {
-            total_calls: 0,
-            allowance: config.exploration_allowance.unwrap_or(DEFAULT_EXPLORATION_ALLOWANCE),
-            warning_mild_sent: false,
-            warning_strong_sent: false,
-        },
-        budget: BudgetState {
-            cumulative_credits: 0,
-            warning_30_sent: false,
-            warning_60_sent: false,
-            warning_no_write_sent: false,
-        },
-        writes: WriteTrackingState {
-            consecutive_write_tracker: HashMap::new(),
-            file_write_failures: HashMap::new(),
-            cooldowns: HashMap::new(),
-            last_target_signature: None,
-            no_progress_streak: 0,
-        },
-        build: BuildState {
-            auto_build_cooldown: 0,
-            baseline: build_baseline,
-            plan_checkpoint_sent: false,
-        },
-    };
+    let mut state = LoopState::new(initial_messages, config, build_baseline);
 
     for iteration in 0..config.max_iterations {
         info!(iteration, billing_reason = config.billing_reason, "tool_loop_iteration start");
@@ -360,78 +368,58 @@ async fn process_tool_calls(
 // Compaction and sanitization helpers
 // ---------------------------------------------------------------------------
 
+/// Compaction tier: (min_utilization, keep_recent, tool_result_config, also_compact_text).
+const COMPACTION_TIERS: [(f64, usize, &compaction::CompactConfig, bool); 4] = [
+    (0.85, 2, &compaction::HISTORY,    true),
+    (0.70, 3, &compaction::AGGRESSIVE, true),
+    (0.60, 4, &compaction::AGGRESSIVE, false),
+    (0.30, 5, &compaction::MICRO,      false),
+];
+
 fn check_context_compaction(
     config: &ToolLoopConfig,
     iteration_input_tokens: u64,
     duplicate_stall_active: bool,
     api_messages: &mut Vec<RichMessage>,
 ) {
-    if let Some(max_ctx) = config.max_context_tokens {
-        let utilization = iteration_input_tokens as f64 / max_ctx as f64;
+    let Some(max_ctx) = config.max_context_tokens else { return };
+    let utilization = iteration_input_tokens as f64 / max_ctx as f64;
+    info!(
+        input_tokens = iteration_input_tokens,
+        max_context = max_ctx,
+        utilization_pct = (utilization * 100.0) as u32,
+        message_count = api_messages.len(),
+        "context_compaction check"
+    );
+
+    for &(threshold, keep_recent, cfg, also_text) in &COMPACTION_TIERS {
+        if utilization > threshold {
+            info!(
+                input_tokens = iteration_input_tokens,
+                max_context = max_ctx,
+                utilization_pct = (utilization * 100.0) as u32,
+                threshold_pct = (threshold * 100.0) as u32,
+                keep_recent,
+                "Context compaction triggered"
+            );
+            compaction::compact_older_tool_results_tiered(api_messages, keep_recent, cfg);
+            if also_text {
+                compaction::compact_older_message_text_tiered(api_messages, keep_recent, cfg);
+            }
+            break;
+        }
+    }
+
+    if duplicate_stall_active && utilization > 0.45 {
         info!(
             input_tokens = iteration_input_tokens,
             max_context = max_ctx,
             utilization_pct = (utilization * 100.0) as u32,
-            message_count = api_messages.len(),
-            "context_compaction check"
+            "Duplicate-write stall active, compacting non-tool text as well"
         );
-        if utilization > 0.85 {
-            info!(
-                input_tokens = iteration_input_tokens,
-                max_context = max_ctx,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Context >85% full, emergency compaction (keep last 2)"
-            );
-            compaction::compact_older_tool_results_tiered(
-                api_messages, 2, &compaction::HISTORY,
-            );
-            compaction::compact_older_message_text_tiered(
-                api_messages, 2, &compaction::HISTORY,
-            );
-        } else if utilization > 0.70 {
-            info!(
-                input_tokens = iteration_input_tokens,
-                max_context = max_ctx,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Context >70% full, aggressive compaction (keep last 3)"
-            );
-            compaction::compact_older_tool_results_tiered(
-                api_messages, 3, &compaction::AGGRESSIVE,
-            );
-            compaction::compact_older_message_text_tiered(
-                api_messages, 3, &compaction::AGGRESSIVE,
-            );
-        } else if utilization > 0.60 {
-            info!(
-                input_tokens = iteration_input_tokens,
-                max_context = max_ctx,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Context >60% full, moderate compaction (keep last 4)"
-            );
-            compaction::compact_older_tool_results(api_messages, 4);
-        } else if utilization > 0.30 {
-            info!(
-                input_tokens = iteration_input_tokens,
-                max_context = max_ctx,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Context >30% full, early compaction (keep last 5)"
-            );
-            compaction::compact_older_tool_results_tiered(
-                api_messages, 5, &compaction::MICRO,
-            );
-        }
-
-        if duplicate_stall_active && utilization > 0.45 {
-            info!(
-                input_tokens = iteration_input_tokens,
-                max_context = max_ctx,
-                utilization_pct = (utilization * 100.0) as u32,
-                "Duplicate-write stall active, compacting non-tool text as well"
-            );
-            compaction::compact_older_message_text_tiered(
-                api_messages, 4, &compaction::AGGRESSIVE,
-            );
-        }
+        compaction::compact_older_message_text_tiered(
+            api_messages, 4, &compaction::AGGRESSIVE,
+        );
     }
 }
 

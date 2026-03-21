@@ -28,8 +28,12 @@ pub const HISTORY: CompactConfig = CompactConfig {
     keep_tail: 200,
 };
 
-/// Head/tail truncation with an omission marker in the middle.
-pub fn truncate(content: &str, cfg: &CompactConfig) -> String {
+/// Core head/tail truncation with a caller-supplied omission marker.
+fn truncate_with_marker(
+    content: &str,
+    cfg: &CompactConfig,
+    marker_fn: impl FnOnce(usize) -> String,
+) -> String {
     if content.len() <= cfg.threshold {
         return content.to_string();
     }
@@ -43,27 +47,26 @@ pub fn truncate(content: &str, cfg: &CompactConfig) -> String {
         .rev()
         .collect();
     let omitted = content.len() - cfg.keep_head - cfg.keep_tail;
-    format!("{head}\n[...{omitted} chars omitted...]\n{tail}")
+    let marker = marker_fn(omitted);
+    format!("{head}{marker}{tail}")
+}
+
+/// Head/tail truncation with an omission marker in the middle.
+pub fn truncate(content: &str, cfg: &CompactConfig) -> String {
+    truncate_with_marker(content, cfg, |omitted| {
+        format!("\n[...{omitted} chars omitted...]\n")
+    })
 }
 
 /// Microcompact: moderate truncation for tool results sent to the LLM.
 pub fn microcompact(content: &str) -> String {
-    if content.len() <= MICRO.threshold {
-        return content.to_string();
-    }
-    let head: String = content.chars().take(MICRO.keep_head).collect();
-    let tail: String = content
-        .chars()
-        .rev()
-        .take(MICRO.keep_tail)
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .collect();
-    let omitted = content.len() - MICRO.keep_head - MICRO.keep_tail;
-    format!(
-        "{head}\n\n[... {omitted} characters omitted — use read_file with start_line/end_line for specific sections, or re-run the command if you need the full output ...]\n\n{tail}"
-    )
+    truncate_with_marker(content, &MICRO, |omitted| {
+        format!(
+            "\n\n[... {omitted} characters omitted \
+             — use read_file with start_line/end_line for specific sections, \
+             or re-run the command if you need the full output ...]\n\n"
+        )
+    })
 }
 
 /// Smart compaction: for `read_file` results that look like Rust source,
@@ -105,46 +108,29 @@ fn smart_compact_inner(tool_name: &str, content: &str, is_error: bool) -> String
     }
 }
 
-/// Aggressive smart compaction: tries signature extraction, falls back to
-/// aggressive head/tail truncation.
-fn aggressive_smart_compact(content: &str) -> String {
-    if content.len() <= AGGRESSIVE.threshold {
-        return content.to_string();
+/// Try to compact Rust source by extracting public signatures.
+/// Returns `None` when the content isn't Rust or signatures wouldn't shrink enough.
+fn try_signature_compact(content: &str) -> Option<String> {
+    if !aura_core::rust_signatures::looks_like_rust(content) {
+        return None;
     }
-    if aura_core::rust_signatures::looks_like_rust(content) {
-        let sigs = aura_core::rust_signatures::extract_signatures(content);
-        if !sigs.is_empty() && sigs.len() < content.len() / 2 {
-            return format!(
-                "[Compacted to signatures ({} -> {} chars)]\n{}",
-                content.len(),
-                sigs.len(),
-                sigs,
-            );
-        }
+    let sigs = aura_core::rust_signatures::extract_signatures(content);
+    if sigs.is_empty() || sigs.len() >= content.len() / 2 {
+        return None;
     }
-    truncate(content, &AGGRESSIVE)
+    Some(format!(
+        "[Compacted to signatures ({} -> {} chars)]\n{}",
+        content.len(),
+        sigs.len(),
+        sigs,
+    ))
 }
 
 /// Retroactively compact tool results in older messages when the context
 /// window is under pressure. Skips the last `keep_recent` messages to
-/// avoid losing fresh context.
+/// avoid losing fresh context.  Uses `AGGRESSIVE` thresholds.
 pub fn compact_older_tool_results(messages: &mut [RichMessage], keep_recent: usize) {
-    let len = messages.len();
-    let cutoff = len.saturating_sub(keep_recent);
-    for msg in &mut messages[..cutoff] {
-        if msg.role != "user" {
-            continue;
-        }
-        if let MessageContent::Blocks(blocks) = &mut msg.content {
-            for block in blocks.iter_mut() {
-                if let ContentBlock::ToolResult { content, .. } = block {
-                    if content.len() > AGGRESSIVE.threshold {
-                        *content = aggressive_smart_compact(content);
-                    }
-                }
-            }
-        }
-    }
+    compact_older_tool_results_tiered(messages, keep_recent, &AGGRESSIVE);
 }
 
 /// Like `compact_older_tool_results` but uses a caller-supplied `CompactConfig`
@@ -164,19 +150,8 @@ pub fn compact_older_tool_results_tiered(
             for block in blocks.iter_mut() {
                 if let ContentBlock::ToolResult { content, .. } = block {
                     if content.len() > cfg.threshold {
-                        if aura_core::rust_signatures::looks_like_rust(content) {
-                            let sigs = aura_core::rust_signatures::extract_signatures(content);
-                            if !sigs.is_empty() && sigs.len() < content.len() / 2 {
-                                *content = format!(
-                                    "[Compacted to signatures ({} -> {} chars)]\n{}",
-                                    content.len(),
-                                    sigs.len(),
-                                    sigs,
-                                );
-                                continue;
-                            }
-                        }
-                        *content = truncate(content, cfg);
+                        *content = try_signature_compact(content)
+                            .unwrap_or_else(|| truncate(content, cfg));
                     }
                 }
             }
