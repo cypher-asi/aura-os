@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { startTransition, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
@@ -25,7 +25,9 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
   const isBar = layout === "bar";
 
   const handleAppClick = useCallback(
-    (app: { id: string; basePath: string }) => navigate(resolveAppPath(app)),
+    (app: { id: string; basePath: string }) => {
+      startTransition(() => navigate(resolveAppPath(app)));
+    },
     [navigate],
   );
 
