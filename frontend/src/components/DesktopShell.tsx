@@ -39,7 +39,7 @@ function SidebarSearchInput() {
   );
 }
 
-function SidekickLaneInner() {
+function SidekickLane() {
   const { activeApp } = useAppContext();
   const { SidekickPanel, SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
 
@@ -60,11 +60,6 @@ function SidekickLaneInner() {
       <SidekickPanel />
     </Lane>
   );
-}
-
-function SidekickLane() {
-  const { activeApp } = useAppContext();
-  return <SidekickLaneInner key={activeApp.id} />;
 }
 
 function PreviewLane() {
