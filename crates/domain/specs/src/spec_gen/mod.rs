@@ -43,6 +43,25 @@ pub(crate) const SPEC_OVERVIEW_MAX_TOKENS: u32 = 256;
 pub(crate) const SPEC_SUMMARY_MAX_TOKENS: u32 = 512;
 pub(crate) const SPEC_SUMMARY_MAX_WORDS: usize = 85;
 
+fn load_requirements(project_id: &ProjectId, project: &Project) -> Result<String, SpecGenError> {
+    let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
+    if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
+        let msg = if req_path.is_empty() {
+            "No requirements document configured".to_string()
+        } else {
+            format!("Requirements file not found: {req_path}")
+        };
+        error!(%project_id, "Requirements unavailable: {}", msg);
+        return Err(SpecGenError::RequirementsFileNotFound(msg));
+    }
+    let content = std::fs::read_to_string(req_path).map_err(|e| {
+        error!(%project_id, path = %req_path, error = %e, "Failed to read requirements file");
+        e
+    })?;
+    info!(%project_id, bytes = content.len(), "Requirements file loaded");
+    Ok(content)
+}
+
 pub struct SpecGenerationService {
     pub(crate) store: Arc<RocksStore>,
     pub(crate) project_service: Arc<ProjectService>,
@@ -104,25 +123,9 @@ impl SpecGenerationService {
         })?;
 
         Self::emit(&progress, "Reading requirements document");
-
-        let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
-        if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
-            let msg = if req_path.is_empty() {
-                "No requirements document configured".to_string()
-            } else {
-                format!("Requirements file not found: {req_path}")
-            };
-            error!(%project_id, "Requirements unavailable: {}", msg);
-            return Err(SpecGenError::RequirementsFileNotFound(msg));
-        }
-        let requirements_content = std::fs::read_to_string(req_path).map_err(|e| {
-            error!(%project_id, path = %req_path, error = %e, "Failed to read requirements file");
-            e
-        })?;
-        info!(%project_id, bytes = requirements_content.len(), "Requirements file loaded");
+        let requirements_content = load_requirements(project_id, &project)?;
 
         Self::emit(&progress, "Decrypting API key");
-
         let api_key = self.settings.get_decrypted_api_key().map_err(|e| {
             error!(%project_id, error = %e, "Failed to get API key");
             SpecGenError::Settings(e)
@@ -134,39 +137,24 @@ impl SpecGenerationService {
 
         let llm_response = self
             .llm
-            .complete(
-                &api_key,
-                SPEC_GENERATION_SYSTEM_PROMPT,
-                &requirements_content,
-                MAX_TOKENS,
-                "aura_spec_gen",
-                None,
-            )
+            .complete(&api_key, SPEC_GENERATION_SYSTEM_PROMPT, &requirements_content, MAX_TOKENS, "aura_spec_gen", None)
             .await
             .map_err(|e| {
                 error!(%project_id, error = %e, "LLM call failed");
                 SpecGenError::from(e)
             })?;
-        let response = llm_response.text;
-
-        info!(%project_id, response_len = response.len(), "LLM response received");
+        info!(%project_id, response_len = llm_response.text.len(), "LLM response received");
 
         Self::emit(&progress, "Parsing AI response");
-
-        let raw_specs = parse_claude_response(&response).map_err(|e| {
+        let raw_specs = parse_claude_response(&llm_response.text).map_err(|e| {
             error!(%project_id, error = %e, "Failed to parse Claude response");
-            debug!(%project_id, response_preview = &response[..response.len().min(1000)], "Raw Claude response");
+            debug!(%project_id, response_preview = &llm_response.text[..llm_response.text.len().min(1000)], "Raw Claude response");
             e
         })?;
         info!(%project_id, count = raw_specs.len(), "Parsed specs from Claude response");
 
         let new_specs = raw_to_specs(project_id, raw_specs);
-
-        Self::emit(
-            &progress,
-            &format!("Saving {} specs to database", new_specs.len()),
-        );
-
+        Self::emit(&progress, &format!("Saving {} specs to database", new_specs.len()));
         self.save_specs(project_id, &new_specs).await?;
         info!(%project_id, count = new_specs.len(), "Specs saved to database");
 

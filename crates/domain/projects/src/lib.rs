@@ -11,37 +11,26 @@ use aura_core::*;
 use aura_network::NetworkClient;
 use aura_store::RocksStore;
 
+fn parse_rfc3339_or_now(s: Option<&str>) -> DateTime<Utc> {
+    s.and_then(|v| DateTime::parse_from_rfc3339(v).ok())
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(Utc::now)
+}
+
+fn net_or_local<T: Clone>(net_val: &Option<T>, local: Option<&Project>, f: fn(&Project) -> &Option<T>) -> Option<T> {
+    net_val.clone().or_else(|| local.and_then(|p| f(p).clone()))
+}
+
 fn network_project_to_core(
     net: &aura_network::NetworkProject,
     local: Option<&Project>,
 ) -> Project {
-    let project_id = net
-        .id
-        .parse::<ProjectId>()
-        .unwrap_or_else(|_| ProjectId::new());
-    let org_id = net
-        .org_id
-        .parse::<OrgId>()
-        .unwrap_or_else(|_| OrgId::new());
-    let created_at = net
-        .created_at
-        .as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now);
-    let updated_at = net
-        .updated_at
-        .as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_else(Utc::now);
+    let project_id = net.id.parse::<ProjectId>().unwrap_or_else(|_| ProjectId::new());
+    let org_id = net.org_id.parse::<OrgId>().unwrap_or_else(|_| OrgId::new());
 
-    let folder = net.folder.clone().unwrap_or_default();
     debug!(
-        project_id = %net.id,
-        name = %net.name,
+        project_id = %net.id, name = %net.name,
         network_folder = ?net.folder,
-        resolved_folder = %folder,
         "network_project_to_core"
     );
 
@@ -49,47 +38,61 @@ fn network_project_to_core(
         project_id,
         org_id,
         name: net.name.clone(),
-        description: net
-            .description
-            .clone()
-            .or_else(|| local.map(|project| project.description.clone()))
+        description: net.description.clone()
+            .or_else(|| local.map(|p| p.description.clone()))
             .unwrap_or_default(),
         linked_folder_path: local
-            .map(|project| project.linked_folder_path.clone())
+            .map(|p| p.linked_folder_path.clone())
             .unwrap_or_else(|| net.folder.clone().unwrap_or_default()),
-        workspace_source: local.and_then(|project| project.workspace_source.clone()),
-        workspace_display_path: local.and_then(|project| project.workspace_display_path.clone()),
-        requirements_doc_path: local.and_then(|project| project.requirements_doc_path.clone()),
-        current_status: local
-            .map(|project| project.current_status)
-            .unwrap_or(ProjectStatus::Active),
-        build_command: local.and_then(|project| project.build_command.clone()),
-        test_command: local.and_then(|project| project.test_command.clone()),
-        specs_summary: local.and_then(|project| project.specs_summary.clone()),
-        specs_title: local.and_then(|project| project.specs_title.clone()),
-        created_at,
-        updated_at,
-        git_repo_url: net
-            .git_repo_url
-            .clone()
-            .or_else(|| local.and_then(|project| project.git_repo_url.clone())),
-        git_branch: net
-            .git_branch
-            .clone()
-            .or_else(|| local.and_then(|project| project.git_branch.clone())),
-        orbit_base_url: net
-            .orbit_base_url
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_base_url.clone())),
-        orbit_owner: net
-            .orbit_owner
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_owner.clone())),
-        orbit_repo: net
-            .orbit_repo
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_repo.clone())),
+        workspace_source: local.and_then(|p| p.workspace_source.clone()),
+        workspace_display_path: local.and_then(|p| p.workspace_display_path.clone()),
+        requirements_doc_path: local.and_then(|p| p.requirements_doc_path.clone()),
+        current_status: local.map(|p| p.current_status).unwrap_or(ProjectStatus::Active),
+        build_command: local.and_then(|p| p.build_command.clone()),
+        test_command: local.and_then(|p| p.test_command.clone()),
+        specs_summary: local.and_then(|p| p.specs_summary.clone()),
+        specs_title: local.and_then(|p| p.specs_title.clone()),
+        created_at: parse_rfc3339_or_now(net.created_at.as_deref()),
+        updated_at: parse_rfc3339_or_now(net.updated_at.as_deref()),
+        git_repo_url: net_or_local(&net.git_repo_url, local, |p| &p.git_repo_url),
+        git_branch: net_or_local(&net.git_branch, local, |p| &p.git_branch),
+        orbit_base_url: net_or_local(&net.orbit_base_url, local, |p| &p.orbit_base_url),
+        orbit_owner: net_or_local(&net.orbit_owner, local, |p| &p.orbit_owner),
+        orbit_repo: net_or_local(&net.orbit_repo, local, |p| &p.orbit_repo),
     }
+}
+
+const TRAILING_PHRASES: &[&str] = &[
+    " in order to ", " so that ", " which will ", " that will ",
+    " to confirm ", " to verify ", " to check ", " to ensure ",
+    " to validate ", " to test ", " to see ", " to make sure ",
+    " to run ", " to build ", " to compile ",
+    " for confirming ", " for verifying ", " for checking ",
+];
+
+const NON_COMMAND_VERBS: &[&str] = &[
+    "confirm", "verify", "check", "ensure", "validate", "test", "see",
+    "make", "run", "build", "compile", "show", "prove", "demonstrate",
+    "try", "attempt",
+];
+
+fn strip_trailing_phrase(cmd: &str, lower: &str) -> Option<String> {
+    for phrase in TRAILING_PHRASES {
+        if let Some(idx) = lower.find(phrase) {
+            return Some(cmd[..idx].trim_end().to_string());
+        }
+    }
+    None
+}
+
+fn strip_trailing_to_verb(cmd: &str, lower: &str) -> Option<String> {
+    if let Some(idx) = lower.rfind(" to ") {
+        let first_word = lower[idx + 4..].split_whitespace().next().unwrap_or("");
+        if NON_COMMAND_VERBS.contains(&first_word) {
+            return Some(cmd[..idx].trim_end().to_string());
+        }
+    }
+    None
 }
 
 fn sanitize_shell_command(cmd: &str) -> String {
@@ -97,62 +100,10 @@ fn sanitize_shell_command(cmd: &str) -> String {
     if trimmed.is_empty() {
         return trimmed.to_string();
     }
-
-    let trailing_phrases: &[&str] = &[
-        " in order to ",
-        " so that ",
-        " which will ",
-        " that will ",
-        " to confirm ",
-        " to verify ",
-        " to check ",
-        " to ensure ",
-        " to validate ",
-        " to test ",
-        " to see ",
-        " to make sure ",
-        " to run ",
-        " to build ",
-        " to compile ",
-        " for confirming ",
-        " for verifying ",
-        " for checking ",
-    ];
-
     let lower = trimmed.to_lowercase();
-    for phrase in trailing_phrases {
-        if let Some(idx) = lower.find(phrase) {
-            return trimmed[..idx].trim_end().to_string();
-        }
-    }
-
-    if let Some(idx) = lower.rfind(" to ") {
-        let after = &lower[idx + 4..];
-        let first_word = after.split_whitespace().next().unwrap_or("");
-        let non_command_verbs = [
-            "confirm",
-            "verify",
-            "check",
-            "ensure",
-            "validate",
-            "test",
-            "see",
-            "make",
-            "run",
-            "build",
-            "compile",
-            "show",
-            "prove",
-            "demonstrate",
-            "try",
-            "attempt",
-        ];
-        if non_command_verbs.contains(&first_word) {
-            return trimmed[..idx].trim_end().to_string();
-        }
-    }
-
-    trimmed.to_string()
+    strip_trailing_phrase(trimmed, &lower)
+        .or_else(|| strip_trailing_to_verb(trimmed, &lower))
+        .unwrap_or_else(|| trimmed.to_string())
 }
 
 fn rewrite_server_commands(cmd: &str) -> String {
