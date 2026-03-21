@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use tokio::sync::{mpsc, Mutex};
+use tokio::task::JoinHandle;
 
 use aura_core::*;
 use aura_claude::{RichMessage, ThinkingConfig};
@@ -15,6 +16,220 @@ use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
+
+struct CodebaseContext {
+    codebase_snapshot: String,
+    dep_api_context: String,
+    type_defs_context: String,
+}
+
+async fn fetch_codebase_context(
+    project: &Project,
+    task: &Task,
+    spec: &Spec,
+    workspace_cache: &WorkspaceCache,
+    workspace_map: &str,
+) -> CodebaseContext {
+    let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
+        &project.linked_folder_path,
+        &task.title,
+        &task.description,
+        50_000,
+        workspace_cache,
+    ).await {
+        Ok(s) => s,
+        Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
+            .unwrap_or_default(),
+    };
+
+    let dep_api_context = if !workspace_map.is_empty() {
+        file_ops::resolve_task_dep_api_context_cached(
+            &project.linked_folder_path,
+            &task.title,
+            &task.description,
+            15_000,
+            workspace_cache,
+        ).await.unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let type_defs_context = file_ops::resolve_type_definitions_for_task_async(
+        &project.linked_folder_path,
+        &task.title,
+        &task.description,
+        &spec.markdown_contents,
+        10_000,
+    ).await;
+
+    CodebaseContext { codebase_snapshot, dep_api_context, type_defs_context }
+}
+
+async fn resolve_completed_deps(
+    task_service: &aura_tasks::TaskService,
+    project_id: &ProjectId,
+    task: &Task,
+) -> Vec<Task> {
+    if task.dependency_ids.is_empty() {
+        return Vec::new();
+    }
+    let all_project_tasks = task_service.list_tasks(project_id).await.unwrap_or_default();
+    task.dependency_ids.iter()
+        .filter_map(|dep_id| {
+            all_project_tasks.iter()
+                .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
+                .cloned()
+        })
+        .collect()
+}
+
+fn build_full_task_context(
+    mut task_context: String,
+    workspace_map: &str,
+    type_defs: &str,
+    codebase_snapshot: &str,
+    dep_api: &str,
+) -> String {
+    if !workspace_map.is_empty() {
+        task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
+    }
+    if !type_defs.is_empty() {
+        task_context.push_str(&format!("\n# Type Definitions Referenced in Task\n{}\n", type_defs));
+    }
+    if !codebase_snapshot.is_empty() {
+        task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
+    }
+    if !dep_api.is_empty() {
+        task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api));
+    }
+    cap_task_context(&mut task_context, MAX_TASK_CONTEXT_CHARS);
+    task_context
+}
+
+struct ToolLoopParams {
+    max_iterations: usize,
+    max_tokens: u32,
+    thinking: Option<ThinkingConfig>,
+    stream_timeout: std::time::Duration,
+    max_context_tokens: Option<u64>,
+    credit_budget: Option<u64>,
+    exploration_allowance: usize,
+    model_override: Option<String>,
+}
+
+fn configure_llm_params(
+    complexity: TaskComplexity,
+    llm_config: &LlmConfig,
+    engine_config: &EngineConfig,
+    exploration_allowance: usize,
+    member_count: usize,
+) -> ToolLoopParams {
+    let thinking_budget = match complexity {
+        TaskComplexity::Simple => 2_000.min(llm_config.thinking_budget),
+        TaskComplexity::Standard => compute_thinking_budget(
+            llm_config.thinking_budget, member_count,
+        ),
+        TaskComplexity::Complex => compute_thinking_budget(
+            llm_config.thinking_budget, member_count,
+        ).max(12_000),
+    };
+    let max_tokens = match complexity {
+        TaskComplexity::Simple => llm_config.task_execution_max_tokens.min(8_192),
+        _ => llm_config.task_execution_max_tokens,
+    };
+    let max_iterations = match complexity {
+        TaskComplexity::Simple => engine_config.max_agentic_iterations.min(15),
+        _ => engine_config.max_agentic_iterations,
+    };
+    let model_override = match complexity {
+        TaskComplexity::Simple => Some(resolve_simple_model()),
+        _ => None,
+    };
+
+    ToolLoopParams {
+        max_iterations,
+        max_tokens,
+        thinking: Some(ThinkingConfig::enabled(thinking_budget)),
+        stream_timeout: std::time::Duration::from_secs(llm_config.stream_timeout_secs),
+        max_context_tokens: Some(llm_config.max_context_tokens),
+        credit_budget: engine_config.max_task_credits,
+        exploration_allowance,
+        model_override,
+    }
+}
+
+fn spawn_delta_forwarder(
+    engine_tx: &mpsc::UnboundedSender<EngineEvent>,
+    pid: ProjectId,
+    aiid: AgentInstanceId,
+    task_id: TaskId,
+) -> (JoinHandle<()>, mpsc::UnboundedSender<ToolLoopEvent>) {
+    let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
+    let engine_tx = engine_tx.clone();
+    let forwarder = tokio::spawn(async move {
+        while let Some(evt) = loop_rx.recv().await {
+            match evt {
+                ToolLoopEvent::Delta(text) => {
+                    send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
+                        project_id: pid,
+                        agent_instance_id: aiid,
+                        task_id,
+                        delta: text,
+                    });
+                }
+                ToolLoopEvent::Error(msg) => {
+                    send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
+                        project_id: pid,
+                        agent_instance_id: aiid,
+                        task_id,
+                        delta: format!("\n[error] {msg}\n"),
+                    });
+                }
+                _ => {}
+            }
+        }
+    });
+    (forwarder, loop_tx)
+}
+
+async fn finalize_tool_loop_result(
+    result: aura_chat::ToolLoopResult,
+    tracked_file_ops: Arc<Mutex<Vec<FileOp>>>,
+    notes: Arc<Mutex<String>>,
+    follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>>,
+) -> Result<TaskExecution, EngineError> {
+    if result.insufficient_credits {
+        return Err(EngineError::InsufficientCredits);
+    }
+    if let Some(ref err) = result.llm_error {
+        return Err(EngineError::LlmError(err.clone()));
+    }
+    if result.timed_out {
+        return Err(EngineError::LlmError("LLM streaming timed out".into()));
+    }
+
+    let tracked_file_ops = tracked_file_ops.lock().await.clone();
+    let mut notes = notes.lock().await.clone();
+    let follow_ups = follow_ups.lock().await.clone();
+
+    if notes.is_empty() {
+        if !result.text.is_empty() {
+            notes = result.text;
+        } else {
+            notes = "Task completed via agentic tool-use loop".to_string();
+        }
+    }
+
+    Ok(TaskExecution {
+        notes,
+        file_ops: tracked_file_ops,
+        follow_up_tasks: follow_ups,
+        input_tokens: result.total_input_tokens,
+        output_tokens: result.total_output_tokens,
+        parse_retries: 0,
+        files_already_applied: true,
+    })
+}
 
 impl DevLoopEngine {
     pub(crate) async fn execute_task_agentic(
@@ -31,70 +246,19 @@ impl DevLoopEngine {
         let spec = self.load_spec(project_id, &task.spec_id).await?;
 
         let exploration_allowance = compute_exploration_allowance(
-            &task.title,
-            &task.description,
-            workspace_cache.member_count,
+            &task.title, &task.description, workspace_cache.member_count,
         );
-
         let workspace_map = &workspace_cache.workspace_map_text;
         let workspace_info = if workspace_map.is_empty() { None } else { Some(workspace_map.as_str()) };
         let system_prompt = agentic_execution_system_prompt(&project, agent, workspace_info, exploration_allowance);
 
-        let codebase_snapshot = match file_ops::retrieve_task_relevant_files_cached(
-            &project.linked_folder_path,
-            &task.title,
-            &task.description,
-            50_000,
-            workspace_cache,
-        ).await {
-            Ok(s) => s,
-            Err(_) => file_ops::read_relevant_files(&project.linked_folder_path, 50_000)
-                .unwrap_or_default(),
-        };
-
-        let dep_api_context = if !workspace_map.is_empty() {
-            file_ops::resolve_task_dep_api_context_cached(
-                &project.linked_folder_path,
-                &task.title,
-                &task.description,
-                15_000,
-                workspace_cache,
-            ).await.unwrap_or_default()
-        } else {
-            String::new()
-        };
-
-        let type_defs_context = file_ops::resolve_type_definitions_for_task_async(
-            &project.linked_folder_path,
-            &task.title,
-            &task.description,
-            &spec.markdown_contents,
-            10_000,
-        ).await;
-
-        let completed_deps: Vec<Task> = if task.dependency_ids.is_empty() {
-            Vec::new()
-        } else {
-            let all_project_tasks = self.task_service.list_tasks(project_id).await.unwrap_or_default();
-            task.dependency_ids.iter()
-                .filter_map(|dep_id| {
-                    all_project_tasks.iter()
-                        .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
-                        .cloned()
-                })
-                .collect()
-        };
+        let ctx = fetch_codebase_context(&project, task, &spec, workspace_cache, workspace_map).await;
+        let completed_deps = resolve_completed_deps(&self.task_service, project_id, task).await;
 
         let complexity = classify_task_complexity(&task.title, &task.description);
         if complexity == TaskComplexity::Simple {
-            if let Some(skip_reason) = check_already_completed(
-                &project, task, &completed_deps,
-            ).await {
-                tracing::info!(
-                    task_id = %task.task_id,
-                    reason = %skip_reason,
-                    "Skipping redundant simple task"
-                );
+            if let Some(skip_reason) = check_already_completed(&project, task, &completed_deps).await {
+                tracing::info!(task_id = %task.task_id, reason = %skip_reason, "Skipping redundant simple task");
                 return Ok(TaskExecution {
                     notes: format!("Task skipped as redundant: {}", skip_reason),
                     file_ops: Vec::new(),
@@ -108,24 +272,12 @@ impl DevLoopEngine {
         }
 
         let work_log_summary = build_work_log_summary(work_log);
-
-        let mut task_context = build_agentic_task_context(
+        let base_context = build_agentic_task_context(
             &project, &spec, task, session, &completed_deps, &work_log_summary, exploration_allowance,
         );
-        if !workspace_map.is_empty() {
-            task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
-        }
-        if !type_defs_context.is_empty() {
-            task_context.push_str(&format!("\n# Type Definitions Referenced in Task\n{}\n", type_defs_context));
-        }
-        if !codebase_snapshot.is_empty() {
-            task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
-        }
-        if !dep_api_context.is_empty() {
-            task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api_context));
-        }
-
-        cap_task_context(&mut task_context, MAX_TASK_CONTEXT_CHARS);
+        let task_context = build_full_task_context(
+            base_context, workspace_map, &ctx.type_defs_context, &ctx.codebase_snapshot, &ctx.dep_api_context,
+        );
 
         let tools = engine_tool_definitions();
         let api_messages: Vec<RichMessage> = vec![RichMessage::user(&task_context)];
@@ -140,10 +292,8 @@ impl DevLoopEngine {
 
         let executor = EngineToolLoopExecutor {
             inner: ChatToolExecutor::new(
-                self.store.clone(),
-                self.storage_client.clone(),
-                self.project_service.clone(),
-                self.task_service.clone(),
+                self.store.clone(), self.storage_client.clone(),
+                self.project_service.clone(), self.task_service.clone(),
             ),
             project_id: pid,
             project: project.clone(),
@@ -162,114 +312,32 @@ impl DevLoopEngine {
             exploration_allowance,
         };
 
-        let thinking_budget = match complexity {
-            TaskComplexity::Simple => 2_000.min(self.llm_config.thinking_budget),
-            TaskComplexity::Standard => compute_thinking_budget(
-                self.llm_config.thinking_budget,
-                workspace_cache.member_count,
-            ),
-            TaskComplexity::Complex => compute_thinking_budget(
-                self.llm_config.thinking_budget,
-                workspace_cache.member_count,
-            ).max(12_000),
-        };
-        let max_tokens = match complexity {
-            TaskComplexity::Simple => self.llm_config.task_execution_max_tokens.min(8_192),
-            _ => self.llm_config.task_execution_max_tokens,
-        };
-        let max_iterations = match complexity {
-            TaskComplexity::Simple => self.engine_config.max_agentic_iterations.min(15),
-            _ => self.engine_config.max_agentic_iterations,
-        };
-
-        let model_override = match complexity {
-            TaskComplexity::Simple => Some(resolve_simple_model()),
-            _ => None,
-        };
-
+        let params = configure_llm_params(
+            complexity, &self.llm_config, &self.engine_config,
+            exploration_allowance, workspace_cache.member_count,
+        );
         let config = ToolLoopConfig {
-            max_iterations,
-            max_tokens,
-            thinking: Some(ThinkingConfig::enabled(thinking_budget)),
-            stream_timeout: std::time::Duration::from_secs(self.llm_config.stream_timeout_secs),
+            max_iterations: params.max_iterations,
+            max_tokens: params.max_tokens,
+            thinking: params.thinking,
+            stream_timeout: params.stream_timeout,
             billing_reason: "aura_task",
-            max_context_tokens: Some(self.llm_config.max_context_tokens),
-            credit_budget: self.engine_config.max_task_credits,
-            exploration_allowance: Some(exploration_allowance),
-            model_override,
+            max_context_tokens: params.max_context_tokens,
+            credit_budget: params.credit_budget,
+            exploration_allowance: Some(params.exploration_allowance),
+            model_override: params.model_override,
         };
 
-        let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
-        let engine_tx = self.event_tx.clone();
-        let forwarder = tokio::spawn(async move {
-            while let Some(evt) = loop_rx.recv().await {
-                match evt {
-                    ToolLoopEvent::Delta(text) => {
-                        send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
-                            project_id: pid,
-                            agent_instance_id: aiid,
-                            task_id,
-                            delta: text,
-                        });
-                    }
-                    ToolLoopEvent::Error(msg) => {
-                        send_or_log(&engine_tx, EngineEvent::TaskOutputDelta {
-                            project_id: pid,
-                            agent_instance_id: aiid,
-                            task_id,
-                            delta: format!("\n[error] {msg}\n"),
-                        });
-                    }
-                    _ => {}
-                }
-            }
-        });
+        let (forwarder, loop_tx) = spawn_delta_forwarder(&self.event_tx, pid, aiid, task_id);
 
         let result = run_tool_loop(
-            self.llm.clone(),
-            api_key,
-            &system_prompt,
-            api_messages,
-            tools,
-            &config,
-            &executor,
-            &loop_tx,
-        )
-        .await;
+            self.llm.clone(), api_key, &system_prompt, api_messages,
+            tools, &config, &executor, &loop_tx,
+        ).await;
         drop(loop_tx);
         let _ = forwarder.await;
 
-        if result.insufficient_credits {
-            return Err(EngineError::InsufficientCredits);
-        }
-        if let Some(ref err) = result.llm_error {
-            return Err(EngineError::LlmError(err.clone()));
-        }
-        if result.timed_out {
-            return Err(EngineError::LlmError("LLM streaming timed out".into()));
-        }
-
-        let tracked_file_ops = tracked_file_ops.lock().await.clone();
-        let mut notes = notes.lock().await.clone();
-        let follow_ups = follow_ups.lock().await.clone();
-
-        if notes.is_empty() {
-            if !result.text.is_empty() {
-                notes = result.text;
-            } else {
-                notes = "Task completed via agentic tool-use loop".to_string();
-            }
-        }
-
-        Ok(TaskExecution {
-            notes,
-            file_ops: tracked_file_ops,
-            follow_up_tasks: follow_ups,
-            input_tokens: result.total_input_tokens,
-            output_tokens: result.total_output_tokens,
-            parse_retries: 0,
-            files_already_applied: true,
-        })
+        finalize_tool_loop_result(result, tracked_file_ops, notes, follow_ups).await
     }
 }
 
@@ -373,7 +441,6 @@ fn classify_task_complexity(title: &str, description: &str) -> TaskComplexity {
         return TaskComplexity::Complex;
     }
 
-    // Longer descriptions generally indicate more complex tasks
     if description.len() > 1000 {
         return TaskComplexity::Complex;
     }
@@ -454,22 +521,14 @@ fn compute_exploration_allowance(
         || combined.contains("migrate")
         || combined.contains("multi-file");
 
-    let is_test_task = combined.contains("unit test")
-        || combined.contains("write test")
-        || combined.contains("add test")
-        || combined.contains("integration test");
-
     let base: usize = match complexity {
         TaskComplexity::Simple => 8,
-        TaskComplexity::Standard => {
-            if is_test_task { 18 } else { 12 }
-        }
+        TaskComplexity::Standard => 12,
         TaskComplexity::Complex => {
             if is_refactoring { 22 } else { 18 }
         }
     };
 
-    // Scale with workspace size
     if member_count >= 15 {
         base + 4
     } else if member_count >= 8 {
@@ -595,12 +654,5 @@ mod tests {
     fn compute_exploration_allowance_standard_medium_workspace() {
         let desc = "a".repeat(500);
         assert_eq!(compute_exploration_allowance("Add handler", &desc, 10), 14);
-    }
-
-    #[test]
-    fn compute_exploration_allowance_test_task_gets_higher_base() {
-        let desc = "a".repeat(500); // standard complexity by length
-        assert_eq!(compute_exploration_allowance("Write unit test for parser", &desc, 3), 18);
-        assert_eq!(compute_exploration_allowance("Add test for auth flow", &desc, 10), 20);
     }
 }
