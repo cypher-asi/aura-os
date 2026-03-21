@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { Topbar, Drawer, Button, ButtonPlus } from "@cypher-asi/zui";
+import { ErrorBoundary } from "./ErrorBoundary";
 import {
   ArrowLeft, Brain, Building2, CheckSquare,
   ChevronDown, CircleUserRound, FolderOpen,
@@ -9,7 +10,7 @@ import {
 import { PanelSearch } from "./PanelSearch";
 import { ProjectList } from "./ProjectList";
 import { UpdateBanner } from "./UpdateBanner";
-import { useAppContext } from "../context/AppContext";
+import { useAppStore } from "../stores/app-store";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { useMobileDrawers } from "../hooks/use-mobile-drawers";
@@ -149,7 +150,7 @@ function MobileBottomNav({
 }
 
 function PreviewSheetContent() {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const { PreviewPanel, PreviewHeader: PreviewHeaderComp } = activeApp;
 
   if (!PreviewPanel) return null;
@@ -175,7 +176,7 @@ export function MobileShell({
   onOpenOrgSettings: () => void;
   onOpenSettings: () => void;
 }) {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const { isPhoneLayout } = useAuraCapabilities();
   const projectContext = useProjectContext();
   const { projects, mostRecentProject } = useProjectsList();
@@ -323,9 +324,11 @@ export function MobileShell({
             </div>
           )}
           <div className={styles.mobileMainPanel}>
-            <MainPanel>
-              {routeContent}
-            </MainPanel>
+            <ErrorBoundary name="main">
+              <MainPanel>
+                {routeContent}
+              </MainPanel>
+            </ErrorBoundary>
           </div>
         </div>
 

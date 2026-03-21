@@ -5,17 +5,19 @@ import { Server } from "lucide-react";
 import { Lane } from "./Lane";
 import { AppNavRail } from "./AppNavRail";
 import { BottomTaskbar } from "./BottomTaskbar";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { HostSettingsModal } from "./HostSettingsModal";
 import { UpdateBanner } from "./UpdateBanner";
 import { PanelSearch } from "./PanelSearch";
 import { WindowControls } from "./WindowControls";
-import { useAppContext } from "../context/AppContext";
+import { useAppStore } from "../stores/app-store";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useSidekick } from "../stores/sidekick-store";
 import { useAppUIStore } from "../stores/app-ui-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
+import { dbg } from "../lib/dbg";
 import styles from "./AppShell.module.css";
 
 function blurActiveElement() {
@@ -27,7 +29,7 @@ function blurActiveElement() {
 
 function SidebarSearchInput() {
   const { query, setQuery, action } = useSidebarSearch();
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
 
   return (
     <PanelSearch
@@ -40,9 +42,13 @@ function SidebarSearchInput() {
 }
 
 function SidekickLane() {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const { SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
+
+  // #region agent log
+  dbg('SidekickLane:render', 'SidekickLane render', {activeApp:activeApp.id,visitedCount:visitedAppIds.size});
+  // #endregion
 
   const hasAnySidekick = apps.some(
     (app) => app.SidekickPanel && (visitedAppIds.has(app.id) || app.id === activeApp.id),
@@ -77,7 +83,7 @@ function SidekickLane() {
 }
 
 function PreviewLane() {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const { PreviewPanel, PreviewHeader: PreviewHeaderComp } = activeApp;
   const { previewItem } = useSidekick();
 
@@ -105,13 +111,29 @@ export function DesktopShell({
   onOpenOrgSettings: () => void;
   onBuyCredits: () => void;
 }) {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
   const { MainPanel, PreviewPanel } = activeApp;
+
+  // #region agent log
+  const prevAppIdRef = useRef(activeApp.id);
+  const renderT = performance.now();
+  const appChanged = prevAppIdRef.current !== activeApp.id;
+  if (appChanged) {
+    fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'07b16f'},body:JSON.stringify({sessionId:'07b16f',location:'DesktopShell.tsx:render',message:'DesktopShell render NEW APP',data:{from:prevAppIdRef.current,to:activeApp.id,renderT},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    prevAppIdRef.current = activeApp.id;
+  }
+  useEffect(() => {
+    if (appChanged) {
+      const commitT = performance.now();
+      fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'07b16f'},body:JSON.stringify({sessionId:'07b16f',location:'DesktopShell.tsx:commit',message:'DesktopShell commit done',data:{app:activeApp.id,renderToCommitMs:commitT-renderT},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    }
+  });
+  // #endregion
 
   useEffect(() => {
     const el = leftPanelRef.current;
@@ -181,9 +203,17 @@ export function DesktopShell({
             />
           </div>
 
-          <MainPanel>{routeContent}</MainPanel>
-          <SidekickLane />
-          {PreviewPanel && <PreviewLane />}
+          <ErrorBoundary name="main">
+            <MainPanel>{routeContent}</MainPanel>
+          </ErrorBoundary>
+          <ErrorBoundary name="sidekick">
+            <SidekickLane />
+          </ErrorBoundary>
+          {PreviewPanel && (
+            <ErrorBoundary name="preview">
+              <PreviewLane />
+            </ErrorBoundary>
+          )}
         </div>
       </div>
 

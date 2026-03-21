@@ -5,7 +5,8 @@ import { api } from "../api/client";
 import type { Project, Spec, Task } from "../types";
 import type { EngineEvent } from "../types/events";
 import { useProjectRegister } from "../stores/project-action-store";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { EmptyState } from "../components/EmptyState";
 import { useProjectsList } from "../apps/projects/useProjectsList";
 import { Button } from "@cypher-asi/zui";
@@ -26,7 +27,7 @@ export function ProjectLayout() {
   const [loading, setLoading] = useState(() => cachedProject == null);
   const [message, setMessage] = useState("");
   const { register, unregister } = useProjectRegister();
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
 
   const displayProject = useMemo(() => {
     if (project && project.project_id === projectId) return project;
@@ -157,5 +158,9 @@ export function ProjectLayout() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <ErrorBoundary name="project-view">
+      <Outlet />
+    </ErrorBoundary>
+  );
 }
