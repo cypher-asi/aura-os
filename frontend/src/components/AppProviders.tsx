@@ -30,9 +30,10 @@ function LazyAppProvider({
   Provider: ComponentType<{ children: ReactNode }>;
   children: ReactNode;
 }): ReactNode {
+  const { activeApp } = useAppContext();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const activated = useRef(false);
-  if (visitedAppIds.has(appId)) activated.current = true;
+  if (visitedAppIds.has(appId) || activeApp.id === appId) activated.current = true;
   if (!activated.current) return <>{children}</>;
   return <Provider>{children}</Provider>;
 }

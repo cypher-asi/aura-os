@@ -149,7 +149,7 @@ export function DesktopShell({
                 header={<SidebarSearchInput />}
               >
                 {apps.map((app) => {
-                  if (!visitedAppIds.has(app.id)) return null;
+                  if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
                   return (
                     <div
                       key={app.id}
