@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::time::{Duration, Instant};
 
 use axum::extract::{Path, State};
 use axum::response::sse::{Event, KeepAlive, Sse};
@@ -20,6 +21,8 @@ use crate::handlers::projects;
 use crate::state::AppState;
 
 use super::conversions::{get_user_id, storage_message_to_message};
+
+const AGENT_MSG_CACHE_TTL: Duration = Duration::from_secs(30);
 
 async fn find_matching_project_agents(
     state: &AppState,
@@ -90,7 +93,42 @@ async fn fetch_all_sessions(
 }
 
 /// Aggregate agent-level messages from aura-storage only (all project-agents for this agent_id -> sessions -> messages).
+/// Results are cached with a short TTL to avoid the expensive fan-out on repeated loads.
 pub async fn aggregate_agent_messages_from_storage(
+    state: &AppState,
+    agent_id: &AgentId,
+) -> Vec<Message> {
+    let key = agent_id.to_string();
+
+    {
+        let cache = state.agent_message_cache.lock().await;
+        if let Some((ts, msgs)) = cache.get(&key) {
+            if ts.elapsed() < AGENT_MSG_CACHE_TTL {
+                return msgs.clone();
+            }
+        }
+    }
+
+    let messages = fetch_agent_messages_uncached(state, agent_id).await;
+
+    {
+        let mut cache = state.agent_message_cache.lock().await;
+        cache.insert(key, (Instant::now(), messages.clone()));
+    }
+
+    messages
+}
+
+/// Invalidate cached messages for an agent so the next read fetches fresh data.
+pub fn invalidate_agent_message_cache(state: &AppState, agent_id: &AgentId) {
+    let key = agent_id.to_string();
+    let cache = state.agent_message_cache.clone();
+    tokio::spawn(async move {
+        cache.lock().await.remove(&key);
+    });
+}
+
+async fn fetch_agent_messages_uncached(
     state: &AppState,
     agent_id: &AgentId,
 ) -> Vec<Message> {
@@ -134,8 +172,9 @@ pub async fn send_agent_message_stream(
         }
     };
 
+    invalidate_agent_message_cache(&state, &agent_id);
     let (storage_anchor, projects) = resolve_storage_anchor(&state, &agent_id).await;
-    let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
+    let messages = fetch_agent_messages_uncached(&state, &agent_id).await;
 
     let (tx, rx) = mpsc::unbounded_channel::<ChatStreamEvent>();
 

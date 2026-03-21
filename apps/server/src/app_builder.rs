@@ -226,5 +226,6 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         orbit_base_url: env_opt("ORBIT_BASE_URL").map(|s| s.trim_end_matches('/').to_string()),
         internal_service_token: env_opt("INTERNAL_SERVICE_TOKEN"),
         runtime_agent_state: domain.runtime_agent_state,
+        agent_message_cache: Arc::new(Mutex::new(HashMap::new())),
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Instant;
 
 use axum::http::StatusCode;
 use axum::Json;
@@ -32,6 +33,9 @@ pub type TaskStepBuffers = Arc<std::sync::Mutex<HashMap<TaskId, (Vec<serde_json:
 
 /// Tracks all active agent loops across projects.
 pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
+
+/// TTL-cached aggregate messages per agent template, keyed by AgentId string.
+pub type AgentMessageCache = Arc<Mutex<HashMap<String, (Instant, Vec<aura_core::Message>)>>>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -70,6 +74,8 @@ pub struct AppState {
     pub internal_service_token: Option<String>,
     /// In-memory runtime state for agent instances (current_task_id, current_session_id).
     pub runtime_agent_state: RuntimeAgentStateMap,
+    /// TTL cache for aggregated agent messages (avoids expensive fan-out on every load).
+    pub agent_message_cache: AgentMessageCache,
 }
 
 impl AppState {
