@@ -107,7 +107,7 @@ pub async fn stop_loop(
     let instances_to_remove: Vec<AgentInstanceId> = reg
         .iter()
         .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-        .filter(|(aiid, _)| params.agent_instance_id.map_or(true, |t| **aiid == t))
+        .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
         .map(|(aiid, _)| *aiid)
         .collect();
 

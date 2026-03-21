@@ -76,7 +76,7 @@ pub async fn get_session(
             }
             _ => map_storage_error(e),
         })?;
-    let session = storage_session_to_session(ss, None).map_err(|e| ApiError::internal(e))?;
+    let session = storage_session_to_session(ss, None).map_err(ApiError::internal)?;
     Ok(Json(session))
 }
 

@@ -25,7 +25,7 @@ impl ChatToolExecutor {
             .get_spec(&spec_id.to_string(), &jwt)
             .await
             .map_err(|e| ToolExecResult::err(format!("aura-storage: {e}")))?;
-        Spec::try_from(ss).map_err(|e| ToolExecResult::err(e))
+        Spec::try_from(ss).map_err(ToolExecResult::err)
     }
 
     /// Resolve a `spec_id` field that may be a UUID, a title prefix like "01",

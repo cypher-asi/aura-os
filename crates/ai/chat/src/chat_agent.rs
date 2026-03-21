@@ -66,7 +66,7 @@ impl ChatService {
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let send = |evt: ChatStreamEvent| {
-            send_or_log(&tx, evt);
+            send_or_log(tx, evt);
         };
 
         let api_key = match self.settings.get_decrypted_api_key() {
@@ -77,7 +77,7 @@ impl ChatService {
             }
         };
 
-        send_or_log(&tx, ChatStreamEvent::Progress("Building context...".to_string()));
+        send_or_log(tx, ChatStreamEvent::Progress("Building context...".to_string()));
 
         let system = build_multi_project_system_prompt(agent, projects);
 
@@ -90,7 +90,7 @@ impl ChatService {
         api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
         api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
 
-        send_or_log(&tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
+        send_or_log(tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
 
         let tools = multi_project_tool_definitions();
 
@@ -125,6 +125,7 @@ impl ChatService {
             credit_budget,
             exploration_allowance: None,
             model_override: None,
+            auto_build_cooldown: None,
         };
 
         let thinking_start = std::time::Instant::now();

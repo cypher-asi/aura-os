@@ -85,16 +85,16 @@ pub(crate) async fn run_single_iteration(
             Ok(Some(evt)) => match evt {
                 ClaudeStreamEvent::Delta(text) => {
                     iter_text.push_str(&text);
-                    send_or_log(&event_tx, ToolLoopEvent::Delta(text));
+                    send_or_log(event_tx, ToolLoopEvent::Delta(text));
                 }
                 ClaudeStreamEvent::ToolUseStarted { id, name } => {
-                    send_or_log(&event_tx, ToolLoopEvent::ToolUseStarted {
+                    send_or_log(event_tx, ToolLoopEvent::ToolUseStarted {
                         id: id.clone(),
                         name: name.clone(),
                     });
                 }
                 ClaudeStreamEvent::ToolUse { id, name, input } => {
-                    send_or_log(&event_tx, ToolLoopEvent::ToolUseDetected {
+                    send_or_log(event_tx, ToolLoopEvent::ToolUseDetected {
                         id: id.clone(),
                         name: name.clone(),
                         input: input.clone(),
@@ -103,13 +103,13 @@ pub(crate) async fn run_single_iteration(
                 }
                 ClaudeStreamEvent::ThinkingDelta(text) => {
                     state.total_thinking.push_str(&text);
-                    send_or_log(&event_tx, ToolLoopEvent::ThinkingDelta(text));
+                    send_or_log(event_tx, ToolLoopEvent::ThinkingDelta(text));
                 }
                 ClaudeStreamEvent::Done { stop_reason, .. } => {
                     info!(iteration, stop_reason = %stop_reason, tool_calls = iter_tool_calls.len(), "Tool loop iteration done");
                 }
                 ClaudeStreamEvent::Error(msg) => {
-                    send_or_log(&event_tx, ToolLoopEvent::Error(msg));
+                    send_or_log(event_tx, ToolLoopEvent::Error(msg));
                     stream_error_forwarded = true;
                 }
             },
@@ -123,7 +123,7 @@ pub(crate) async fn run_single_iteration(
     };
 
     if iter_timed_out {
-        send_or_log(&event_tx, ToolLoopEvent::Error("LLM streaming timed out".to_string()));
+        send_or_log(event_tx, ToolLoopEvent::Error("LLM streaming timed out".to_string()));
         append_text(&mut state.total_text, &iter_text);
         return IterationOutcome::EarlyReturn(state.build_result(iteration + 1, true, false, None));
     }
@@ -152,15 +152,15 @@ pub(crate) async fn handle_stream_result(
             let error_msg = format!("{e}");
             if !stream_error_forwarded {
                 if e.is_insufficient_credits() {
-                    send_or_log(&event_tx, ToolLoopEvent::Error(
+                    send_or_log(event_tx, ToolLoopEvent::Error(
                         "Insufficient credits — please top up to continue.".to_string(),
                     ));
                 } else if is_billing {
-                    send_or_log(&event_tx, ToolLoopEvent::Error(
+                    send_or_log(event_tx, ToolLoopEvent::Error(
                         format!("Billing error — stopping to prevent unbilled usage: {e}"),
                     ));
                 } else if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                    send_or_log(&event_tx, ToolLoopEvent::Error(error_msg.clone()));
+                    send_or_log(event_tx, ToolLoopEvent::Error(error_msg.clone()));
                 }
             }
             append_text(&mut state.total_text, &iter_text);
@@ -173,7 +173,7 @@ pub(crate) async fn handle_stream_result(
             error!(iteration, error = %e, "Stream task panicked or was cancelled");
             let error_msg = format!("Stream task error: {e}");
             if iter_text.is_empty() && iter_tool_calls.is_empty() {
-                send_or_log(&event_tx, ToolLoopEvent::Error(error_msg.clone()));
+                send_or_log(event_tx, ToolLoopEvent::Error(error_msg.clone()));
             }
             append_text(&mut state.total_text, &iter_text);
             return IterationOutcome::EarlyReturn(

@@ -53,7 +53,7 @@ pub(crate) fn detect_stall_fail_fast(
             streak = writes.no_progress_streak,
             "Fail-fast triggered due to same-target no-progress stall"
         );
-        send_or_log(&event_tx, ToolLoopEvent::Error(recovery.clone()));
+        send_or_log(event_tx, ToolLoopEvent::Error(recovery.clone()));
         api_messages.push(RichMessage::user(&recovery));
         return true;
     }

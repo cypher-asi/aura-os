@@ -111,7 +111,7 @@ pub async fn transition_task(
         .get_task(&task_id.to_string(), &jwt)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
-    let task = storage_task_to_task(updated).map_err(|e| ApiError::internal(e))?;
+    let task = storage_task_to_task(updated).map_err(ApiError::internal)?;
     Ok(Json(task))
 }
 
@@ -156,7 +156,7 @@ pub async fn retry_task(
         .get_task(&task_id.to_string(), &jwt)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
-    let task = storage_task_to_task(updated).map_err(|e| ApiError::internal(e))?;
+    let task = storage_task_to_task(updated).map_err(ApiError::internal)?;
     Ok(Json(task))
 }
 

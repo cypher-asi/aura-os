@@ -184,10 +184,7 @@ impl ProjectService {
             .map_err(ProjectError::Store)?;
         let mut projects = Vec::new();
         for (_key, value) in entries {
-            match serde_json::from_slice::<Project>(&value) {
-                Ok(project) => projects.push(project),
-                Err(_) => {}
-            }
+            if let Ok(project) = serde_json::from_slice::<Project>(&value) { projects.push(project) }
         }
         Ok(projects)
     }

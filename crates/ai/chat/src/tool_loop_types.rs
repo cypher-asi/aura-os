@@ -26,6 +26,9 @@ pub struct ToolLoopConfig {
     /// Override the LLM model for this loop (e.g. use a lighter model for
     /// simple tasks). `None` uses the provider's default.
     pub model_override: Option<String>,
+    /// Number of write-bearing iterations to skip between automatic build
+    /// checks. `None` defaults to 2. Engine tasks use 1 for tighter feedback.
+    pub auto_build_cooldown: Option<usize>,
 }
 
 // ---------------------------------------------------------------------------

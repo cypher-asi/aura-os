@@ -31,8 +31,8 @@ pub fn encode_message_content(
     thinking: Option<&str>,
     thinking_duration_ms: Option<u64>,
 ) -> String {
-    let has_blocks = content_blocks.map_or(false, |b| !b.is_empty());
-    let has_thinking = thinking.map_or(false, |t| !t.is_empty());
+    let has_blocks = content_blocks.is_some_and(|b| !b.is_empty());
+    let has_thinking = thinking.is_some_and(|t| !t.is_empty());
 
     if !has_blocks && !has_thinking {
         return text.to_string();

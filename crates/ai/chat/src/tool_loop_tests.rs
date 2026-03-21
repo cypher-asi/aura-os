@@ -27,6 +27,7 @@ fn default_config(max_iterations: usize) -> ToolLoopConfig {
         credit_budget: None,
         exploration_allowance: None,
         model_override: None,
+        auto_build_cooldown: None,
     }
 }
 

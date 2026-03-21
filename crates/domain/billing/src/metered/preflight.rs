@@ -40,11 +40,9 @@ impl MeteredLlm {
                 }
                 Err(_) => return Err(MeteredLlmError::InsufficientCredits),
             }
-        } else {
-            if let Err(_) = self.billing.ensure_has_credits_for(&token, required).await {
-                self.credits_exhausted.store(true, Ordering::SeqCst);
-                return Err(MeteredLlmError::InsufficientCredits);
-            }
+        } else if let Err(_) = self.billing.ensure_has_credits_for(&token, required).await {
+            self.credits_exhausted.store(true, Ordering::SeqCst);
+            return Err(MeteredLlmError::InsufficientCredits);
         }
 
         *self.last_preflight_ok.lock().await = Some(Instant::now());

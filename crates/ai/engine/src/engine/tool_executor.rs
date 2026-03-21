@@ -327,7 +327,7 @@ impl EngineToolLoopExecutor {
         }
         let base_path = Path::new(&self.project.linked_folder_path);
         let ops = self.tracked_file_ops.lock().await;
-        let stub_reports = file_ops::detect_stub_patterns(base_path, &*ops);
+        let stub_reports = file_ops::detect_stub_patterns(base_path, &ops);
         if stub_reports.is_empty() {
             return None;
         }

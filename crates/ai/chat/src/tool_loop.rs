@@ -34,6 +34,7 @@ use crate::tool_loop_streaming::{
 
 pub(crate) struct BuildState {
     pub(crate) auto_build_cooldown: usize,
+    pub(crate) auto_build_reset: usize,
     pub(crate) baseline: Option<BuildBaseline>,
     pub(crate) plan_checkpoint_sent: bool,
 }
@@ -95,6 +96,7 @@ impl LoopState {
             },
             build: BuildState {
                 auto_build_cooldown: 0,
+                auto_build_reset: config.auto_build_cooldown.unwrap_or(2),
                 baseline: build_baseline,
                 plan_checkpoint_sent: false,
             },
@@ -197,7 +199,7 @@ pub async fn run_tool_loop(
 
         state.total_input_tokens += iter.input_tokens;
         state.total_output_tokens += iter.output_tokens;
-        send_or_log(&event_tx, ToolLoopEvent::IterationTokenUsage {
+        send_or_log(event_tx, ToolLoopEvent::IterationTokenUsage {
             input_tokens: state.total_input_tokens,
             output_tokens: state.total_output_tokens,
         });
@@ -455,7 +457,7 @@ fn handle_truncated_tool_calls(
              to fill in one section at a time.",
             tc.name
         );
-        send_or_log(&event_tx, ToolLoopEvent::ToolResult {
+        send_or_log(event_tx, ToolLoopEvent::ToolResult {
             tool_use_id: tc.id.clone(),
             tool_name: tc.name.clone(),
             content: msg.clone(),
@@ -519,7 +521,7 @@ async fn maybe_run_auto_build(
 ) {
     if build.auto_build_cooldown == 0 {
         if let Some(build_result) = executor.auto_build_check().await {
-            build.auto_build_cooldown = 2;
+            build.auto_build_cooldown = build.auto_build_reset;
             let status = if build_result.success { "PASSED" } else { "FAILED" };
             let output = if let Some(ref baseline) = build.baseline {
                 baseline.annotate(&build_result.output)

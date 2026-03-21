@@ -376,6 +376,7 @@ fn build_tool_loop_config(params: ToolLoopParams) -> ToolLoopConfig {
         credit_budget: params.credit_budget,
         exploration_allowance: Some(params.exploration_allowance),
         model_override: params.model_override,
+        auto_build_cooldown: Some(1),
     }
 }
 

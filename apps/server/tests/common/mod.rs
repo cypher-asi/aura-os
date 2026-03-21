@@ -69,7 +69,7 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
         .route(
             "/api/projects",
             get(move |Query(q): Query<std::collections::HashMap<String, String>>| async move {
-                if q.get("org_id").is_some() {
+                if q.contains_key("org_id") {
                     Json(vec![serde_json::json!({
                         "id": ProjectId::new().to_string(),
                         "name": "Test Project",

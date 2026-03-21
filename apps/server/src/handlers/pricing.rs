@@ -19,6 +19,6 @@ pub async fn set_fee_schedule(
     let saved = state
         .pricing_service
         .set_fee_schedule(entries)
-        .map_err(|e| ApiError::bad_request(e))?;
+        .map_err(ApiError::bad_request)?;
     Ok(Json(saved))
 }

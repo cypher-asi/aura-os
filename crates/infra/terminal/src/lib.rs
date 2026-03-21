@@ -10,6 +10,12 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TerminalId(pub Uuid);
 
+impl Default for TerminalId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TerminalId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())

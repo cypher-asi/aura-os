@@ -95,7 +95,7 @@ pub(crate) fn check_budget_warnings(
             budget_state.cumulative_credits, next_estimate, budget,
             "Credit budget would be exceeded, stopping tool loop"
         );
-        send_or_log(&event_tx, ToolLoopEvent::Error(
+        send_or_log(event_tx, ToolLoopEvent::Error(
             "Stopping: credit budget for this session would be exceeded.".to_string(),
         ));
         return Some(None);

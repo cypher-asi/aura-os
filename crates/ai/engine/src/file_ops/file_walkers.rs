@@ -96,7 +96,7 @@ pub(crate) fn collect_keyword_matching_files(
             let matches = keywords.iter().any(|kw| {
                 let kw_lower = kw.to_lowercase();
                 fname_lower.contains(&kw_lower)
-                    || kw_lower.contains(&fname_lower.trim_end_matches(".rs"))
+                    || kw_lower.contains(fname_lower.trim_end_matches(".rs"))
             });
             if matches {
                 results.push((rel, path));

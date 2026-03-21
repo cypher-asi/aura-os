@@ -171,7 +171,7 @@ impl ChatService {
         let target_chat_tokens = self.llm_config.target_chat_tokens;
 
         let system_tokens = aura_claude::estimate_tokens(system_prompt);
-        let total_msg_tokens: u64 = messages.iter().map(|m| estimate_message_tokens(m)).sum();
+        let total_msg_tokens: u64 = messages.iter().map(estimate_message_tokens).sum();
         let total = system_tokens + total_msg_tokens;
 
         if total <= target_chat_tokens || messages.len() <= 4 {

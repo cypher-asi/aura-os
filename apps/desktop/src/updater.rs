@@ -261,10 +261,9 @@ fn newest_file_in(dir: &std::path::Path) -> Option<std::path::PathBuf> {
         .filter_map(|e| e.ok())
         .filter(|e| {
             e.path().is_file()
-                && !e
+                && e
                     .path()
-                    .extension()
-                    .is_some_and(|ext| ext == "sig")
+                    .extension().is_none_or(|ext| ext != "sig")
         })
         .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
         .map(|e| e.path())

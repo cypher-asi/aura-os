@@ -111,7 +111,7 @@ fn handle_task_output_delta(
         bufs.entry(task_id).or_default().push_str(delta);
     }
     *delta_count += 1;
-    if *delta_count % LIVE_OUTPUT_FLUSH_INTERVAL == 0 {
+    if (*delta_count).is_multiple_of(LIVE_OUTPUT_FLUSH_INTERVAL) {
         flush_live_output(store, task_output_buffers);
     }
     let entry = delta_broadcast_buf.entry(task_id)
@@ -223,7 +223,7 @@ fn flush_buffered_events(
     ready_broadcast_buf: &mut ReadyBroadcastBuf,
 ) {
     for (task_id, (pid, aiid, text)) in delta_broadcast_buf.drain() {
-        broadcast_or_log(&broadcast_tx, EngineEvent::TaskOutputDelta {
+        broadcast_or_log(broadcast_tx, EngineEvent::TaskOutputDelta {
             project_id: pid,
             agent_instance_id: aiid,
             task_id,
@@ -233,7 +233,7 @@ fn flush_buffered_events(
     if !ready_broadcast_buf.is_empty() {
         let (pid, aiid, _) = ready_broadcast_buf[0];
         let task_ids: Vec<aura_core::TaskId> = ready_broadcast_buf.drain(..).map(|(_, _, tid)| tid).collect();
-        broadcast_or_log(&broadcast_tx, EngineEvent::TasksBecameReady {
+        broadcast_or_log(broadcast_tx, EngineEvent::TasksBecameReady {
             project_id: pid,
             agent_instance_id: aiid,
             task_ids,

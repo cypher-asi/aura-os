@@ -17,7 +17,7 @@ pub(crate) fn build_tool_result_blocks(
     let mut result_blocks: Vec<ContentBlock> = Vec::new();
 
     for (tc, result) in tool_calls.iter().zip(results) {
-        send_or_log(&event_tx, ToolLoopEvent::ToolResult {
+        send_or_log(event_tx, ToolLoopEvent::ToolResult {
             tool_use_id: result.tool_use_id.clone(),
             tool_name: tc.name.clone(),
             content: result.content.clone(),

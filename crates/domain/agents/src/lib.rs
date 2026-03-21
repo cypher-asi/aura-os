@@ -343,7 +343,7 @@ pub fn merge_agent_instance(
                     .as_deref()
                     .and_then(|s| s.parse().ok())
             })
-            .unwrap_or_else(AgentId::new),
+            .unwrap_or_default(),
         name: agent
             .map(|a| a.name.clone())
             .unwrap_or_else(|| spa.name.clone().unwrap_or_default()),

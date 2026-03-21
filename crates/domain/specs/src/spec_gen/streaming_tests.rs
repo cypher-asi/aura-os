@@ -49,7 +49,7 @@ fn parse_title_and_summary_single_line_title() {
     let input = "TITLE: Only Title";
     let (title, summary) = parse_title_and_summary(input, 100);
     assert_eq!(title, Some("Only Title".to_string()));
-    assert!(summary.is_empty() || summary == "");
+    assert!(summary.is_empty() || summary.is_empty());
 }
 
 // -----------------------------------------------------------------------

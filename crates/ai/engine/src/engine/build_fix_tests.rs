@@ -222,10 +222,8 @@ fn normalize_different_errors_produce_different_sigs() {
 #[test]
 fn stagnation_detected_after_three_consecutive_identical_sigs() {
     let sig = normalize_error_signature("error[E0308]: mismatched types\n  --> src/lib.rs:1:1\n");
-    let prior = vec![
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() },
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() },
-    ];
+    let prior = [BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() },
+        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() }];
     let consecutive = prior.iter().rev().take_while(|a| a.error_signature == sig).count();
     assert!(consecutive >= 2, "should detect stagnation (3 total: 2 prior + current)");
 }
@@ -234,10 +232,8 @@ fn stagnation_detected_after_three_consecutive_identical_sigs() {
 fn stagnation_not_triggered_with_interleaved_different_error() {
     let sig_a = normalize_error_signature("error[E0308]: mismatched types\n");
     let sig_b = normalize_error_signature("error[E0599]: no method named `foo`\n");
-    let prior = vec![
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_a.clone(), files_changed: vec![], changes_summary: String::new() },
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_b.clone(), files_changed: vec![], changes_summary: String::new() },
-    ];
+    let prior = [BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_a.clone(), files_changed: vec![], changes_summary: String::new() },
+        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_b.clone(), files_changed: vec![], changes_summary: String::new() }];
     let consecutive = prior.iter().rev().take_while(|a| a.error_signature == sig_a).count();
     assert_eq!(consecutive, 0, "different last error breaks the streak");
 }

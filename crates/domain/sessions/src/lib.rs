@@ -89,7 +89,7 @@ impl SessionService {
                 .create_session(&agent_instance_id.to_string(), &jwt, &req)
                 .await?;
             let mut session = storage_session_to_session(ss, None)
-                .map_err(|e| SessionError::Parse(e))?;
+                .map_err(SessionError::Parse)?;
             session.active_task_id = active_task_id;
             session.user_id = user_id;
             session.model = model;
@@ -213,7 +213,7 @@ impl SessionService {
 
         if let Some(ref storage) = self.storage_client {
             let jwt = self.get_jwt()?;
-            let status_str = serde_json::to_value(&status)
+            let status_str = serde_json::to_value(status)
                 .ok()
                 .and_then(|v| v.as_str().map(String::from))
                 .unwrap_or_else(|| "completed".to_string());
@@ -246,7 +246,7 @@ impl SessionService {
             match storage.get_session(&session_id.to_string(), &jwt).await {
                 Ok(ss) => {
                     return storage_session_to_session(ss, None)
-                        .map_err(|e| SessionError::Parse(e));
+                        .map_err(SessionError::Parse);
                 }
                 Err(aura_storage::StorageError::Server { status: 404, .. }) => {
                     return Err(SessionError::NotFound);
