@@ -8,6 +8,9 @@ use crate::error::EngineError;
 
 pub mod stub_detection;
 pub mod task_relevance;
+pub mod task_keywords;
+pub mod file_walkers;
+pub mod type_resolution;
 pub mod validation;
 pub mod workspace_map;
 
@@ -16,7 +19,7 @@ pub use task_relevance::*;
 pub use validation::*;
 pub use workspace_map::*;
 
-use task_relevance::is_impl_for_type;
+use type_resolution::is_impl_for_type;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Replacement {
