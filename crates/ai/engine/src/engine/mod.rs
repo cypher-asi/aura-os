@@ -9,6 +9,7 @@ mod loop_control;
 pub mod loop_handle;
 pub(crate) mod orchestrator;
 pub mod parser;
+pub(crate) mod planning;
 pub(crate) mod prompts;
 pub(crate) mod shell;
 mod test_fix;

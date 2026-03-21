@@ -12,6 +12,7 @@ use super::build_fix::{
     infer_default_build_command,
     classify_build_errors, error_category_guidance, parse_error_references,
 };
+use super::planning::{TaskPhase, TaskPlan};
 use super::prompts::build_stub_fix_prompt;
 use super::types::{track_file_op, FollowUpSuggestion};
 use crate::build_verify;
@@ -40,6 +41,7 @@ pub(crate) struct EngineToolLoopExecutor {
     pub completed_deps: Vec<Task>,
     pub work_log_summary: String,
     pub exploration_allowance: usize,
+    pub task_phase: Arc<Mutex<TaskPhase>>,
 }
 
 #[async_trait]
@@ -111,9 +113,23 @@ impl ToolExecutor for EngineToolLoopExecutor {
 
     async fn execute(&self, tool_calls: &[ToolCall]) -> Vec<ToolCallResult> {
         let mut executor_indices: Vec<usize> = Vec::new();
+        let mut gated_indices: Vec<usize> = Vec::new();
+
         for (i, tc) in tool_calls.iter().enumerate() {
             match tc.name.as_str() {
-                "task_done" | "get_task_context" => {}
+                "task_done" | "get_task_context" | "submit_plan" => {}
+                "write_file" | "edit_file" | "delete_file" => {
+                    let phase = self.task_phase.lock().await;
+                    if matches!(*phase, TaskPhase::Exploring) {
+                        gated_indices.push(i);
+                    } else {
+                        {
+                            let mut ops = self.tracked_file_ops.lock().await;
+                            track_file_op(&tc.name, &tc.input, &mut ops);
+                        }
+                        executor_indices.push(i);
+                    }
+                }
                 _ => {
                     {
                         let mut ops = self.tracked_file_ops.lock().await;
@@ -137,13 +153,27 @@ impl ToolExecutor for EngineToolLoopExecutor {
         let mut results = Vec::with_capacity(tool_calls.len());
         let mut stop = false;
 
-        for tc in tool_calls {
+        for (i, tc) in tool_calls.iter().enumerate() {
+            if gated_indices.contains(&i) {
+                results.push(ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: "ERROR: You must call submit_plan before making file changes. \
+                              Explore the codebase, form your approach, then submit your plan."
+                        .to_string(),
+                    is_error: true,
+                    stop_loop: false,
+                });
+                continue;
+            }
             match tc.name.as_str() {
                 "task_done" => {
                     self.handle_task_done(tc, &mut results, &mut stop).await;
                 }
                 "get_task_context" => {
                     self.handle_get_context(tc, &mut results);
+                }
+                "submit_plan" => {
+                    self.handle_submit_plan(tc, &mut results).await;
                 }
                 _ => {
                     self.handle_delegated_tool(tc, &mut exec_result_iter, &mut results);
@@ -261,6 +291,50 @@ impl EngineToolLoopExecutor {
             ),
         });
         Some(build_stub_fix_prompt(&stub_reports))
+    }
+
+    async fn handle_submit_plan(&self, tc: &ToolCall, results: &mut Vec<ToolCallResult>) {
+        let plan = TaskPlan::from_tool_input(&tc.input);
+        match plan.validate() {
+            Ok(()) => {
+                let context_string = plan.as_context_string();
+                {
+                    let mut phase = self.task_phase.lock().await;
+                    *phase = TaskPhase::Implementing { plan: plan.clone() };
+                }
+                send_or_log(
+                    &self.engine_event_tx,
+                    EngineEvent::PlanSubmitted {
+                        project_id: self.project_id,
+                        agent_instance_id: self.agent_instance_id,
+                        task_id: self.task_id,
+                        approach: plan.approach.clone(),
+                        files_to_modify: plan.files_to_modify.clone(),
+                        files_to_create: plan.files_to_create.clone(),
+                    },
+                );
+                results.push(ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: format!(
+                        "Plan accepted. Proceeding to implementation.\n\n\
+                         YOUR PLAN (reference during implementation):\n{}\n\n\
+                         Now implement according to this plan. Start with the most \
+                         foundational changes first.",
+                        context_string
+                    ),
+                    is_error: false,
+                    stop_loop: false,
+                });
+            }
+            Err(reason) => {
+                results.push(ToolCallResult {
+                    tool_use_id: tc.id.clone(),
+                    content: format!("Plan rejected: {reason}. Revise and resubmit."),
+                    is_error: true,
+                    stop_loop: false,
+                });
+            }
+        }
     }
 
     fn handle_get_context(&self, tc: &ToolCall, results: &mut Vec<ToolCallResult>) {

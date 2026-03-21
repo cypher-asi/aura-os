@@ -90,10 +90,12 @@ You have tools to explore the codebase, make changes, and verify your work.
 Workflow:
 1. Use get_task_context if you need to review the task details
 2. Briefly explore (hard limit: ~{exploration_allowance} exploration calls before blocking) using read_file, search_code, find_files, list_files. NEVER re-read a file -- read it once fully or use search_code.
-3. Form a plan, then make changes using write_file (new files) or edit_file (targeted edits)
-4. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
-5. Fix any errors iteratively
-6. When done, call task_done with your notes
+3. Call submit_plan with your implementation strategy BEFORE any file changes
+4. Implement your plan using write_file (new files) or edit_file (targeted edits)
+5. Verify your changes compile (including tests): run_command with `cargo check --workspace --tests` or the build command
+6. Fix any errors iteratively
+7. Before calling task_done, re-read your modified files to verify correctness
+8. Call task_done with your notes
 
 Build command: {build_cmd}
 Test command: {test_cmd}

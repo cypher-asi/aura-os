@@ -9,6 +9,7 @@ use aura_chat::{ChatToolExecutor, ToolLoopConfig, ToolLoopEvent, run_tool_loop};
 use aura_tools::engine_tool_definitions;
 
 use super::orchestrator::DevLoopEngine;
+use super::planning::{TaskPhase, TaskPlan};
 use super::prompts::*;
 use super::tool_executor::EngineToolLoopExecutor;
 use super::types::*;
@@ -310,6 +311,13 @@ impl DevLoopEngine {
             completed_deps,
             work_log_summary,
             exploration_allowance,
+            task_phase: Arc::new(Mutex::new(
+                if complexity == TaskComplexity::Simple {
+                    TaskPhase::Implementing { plan: TaskPlan::empty() }
+                } else {
+                    TaskPhase::Exploring
+                }
+            )),
         };
 
         let params = configure_llm_params(

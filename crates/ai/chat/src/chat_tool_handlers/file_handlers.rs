@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde_json::{json, Value};
 
 use aura_core::*;
@@ -7,6 +9,111 @@ use crate::tool_loop_blocking::looks_truncated;
 use super::str_field;
 
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
+
+fn normalize_line_endings(content: &str, uses_crlf: bool) -> String {
+    let normalized = content.replace("\r\n", "\n");
+    if uses_crlf {
+        normalized.replace('\n', "\r\n")
+    } else {
+        normalized
+    }
+}
+
+fn format_line_range(content: &str, start_line: Option<usize>, end_line: Option<usize>, rel: &str) -> ToolExecResult {
+    let lines: Vec<&str> = content.lines().collect();
+    let total = lines.len();
+    let start = start_line.unwrap_or(1).max(1) - 1;
+    let end = end_line.unwrap_or(total).min(total);
+    if start >= total {
+        return ToolExecResult::err(format!(
+            "start_line {} is beyond end of file ({} lines)",
+            start + 1, total,
+        ));
+    }
+    let selected: Vec<String> = lines[start..end]
+        .iter()
+        .enumerate()
+        .map(|(i, line)| format!("{:>5}| {}", start + i + 1, line))
+        .collect();
+    ToolExecResult::ok(json!({
+        "path": rel,
+        "start_line": start + 1,
+        "end_line": end,
+        "total_lines": total,
+        "content": selected.join("\n"),
+    }))
+}
+
+async fn validate_write_size(abs: &Path, content: &str, rel: &str) -> Result<(), ToolExecResult> {
+    if !abs.exists() {
+        return Ok(());
+    }
+    if let Ok(meta) = tokio::fs::metadata(abs).await {
+        let cur_size = meta.len() as usize;
+        if cur_size > 500 && content.len() < cur_size / 10 {
+            return Err(ToolExecResult::err(format!(
+                "REJECTED: Content is {} bytes for a {cur_size}-byte file (<10%). \
+                 Your output was likely truncated. File is unchanged on disk. \
+                 Break the write into smaller parts: write a skeleton first, \
+                 then use edit_file to fill in sections. \
+                 Or run `git checkout -- {rel}` if the file was previously corrupted.",
+                content.len()
+            )));
+        }
+        if cur_size > 200 && content.len() < cur_size / 2 && looks_truncated(content) {
+            return Err(ToolExecResult::err(format!(
+                "REJECTED: Content appears truncated ({} bytes for a {cur_size}-byte file, \
+                 with unbalanced delimiters). File is unchanged. Use edit_file for \
+                 targeted changes instead of rewriting the full file.",
+                content.len()
+            )));
+        }
+    }
+    Ok(())
+}
+
+async fn verify_post_write(abs: &Path, content: &str, rel: &str) -> Result<(), ToolExecResult> {
+    match tokio::fs::metadata(abs).await {
+        Ok(meta) if meta.len() as usize != content.len() => {
+            Err(ToolExecResult::err(format!(
+                "Post-write verification failed for {rel}: wrote {} bytes but \
+                 file on disk is {} bytes. The file may be corrupted.",
+                content.len(), meta.len()
+            )))
+        }
+        _ => Ok(()),
+    }
+}
+
+fn perform_replacement(
+    content: &str,
+    norm_old: &str,
+    norm_new: &str,
+    replace_all: bool,
+    rel: &str,
+) -> Result<(String, usize), ToolExecResult> {
+    let occurrence_count = content.matches(norm_old).count();
+
+    if occurrence_count == 0 {
+        match fuzzy_search_replace(content, norm_old, norm_new) {
+            Some(c) => Ok((c, 1)),
+            None => Err(ToolExecResult::err(format!(
+                "old_text not found in {rel}. Make sure it matches the file content exactly, \
+                 including whitespace. Use read_file to see current content."
+            ))),
+        }
+    } else if !replace_all && occurrence_count > 1 {
+        Err(ToolExecResult::err(format!(
+            "old_text matches {occurrence_count} locations in {rel}. \
+             Provide more surrounding context to make the match unique, \
+             or set replace_all to true."
+        )))
+    } else if replace_all {
+        Ok((content.replace(norm_old, norm_new), occurrence_count))
+    } else {
+        Ok((content.replacen(norm_old, norm_new, 1), 1))
+    }
+}
 
 impl ChatToolExecutor {
     pub(crate) async fn read_file(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
@@ -31,28 +138,7 @@ impl ChatToolExecutor {
             Ok(content) => {
                 let content = content.replace("\r\n", "\n");
                 if start_line.is_some() || end_line.is_some() {
-                    let lines: Vec<&str> = content.lines().collect();
-                    let total = lines.len();
-                    let start = start_line.unwrap_or(1).max(1) - 1;
-                    let end = end_line.unwrap_or(total).min(total);
-                    if start >= total {
-                        return ToolExecResult::err(format!(
-                            "start_line {} is beyond end of file ({} lines)",
-                            start + 1, total,
-                        ));
-                    }
-                    let selected: Vec<String> = lines[start..end]
-                        .iter()
-                        .enumerate()
-                        .map(|(i, line)| format!("{:>5}| {}", start + i + 1, line))
-                        .collect();
-                    ToolExecResult::ok(json!({
-                        "path": rel,
-                        "start_line": start + 1,
-                        "end_line": end,
-                        "total_lines": total,
-                        "content": selected.join("\n"),
-                    }))
+                    format_line_range(&content, start_line, end_line, &rel)
                 } else {
                     ToolExecResult::ok(json!({ "path": rel, "content": content }))
                 }
@@ -85,38 +171,12 @@ impl ChatToolExecutor {
             false
         };
 
-        let content = {
-            let normalized = content.replace("\r\n", "\n");
-            if existing_uses_crlf {
-                normalized.replace('\n', "\r\n")
-            } else {
-                normalized
-            }
-        };
+        let content = normalize_line_endings(&content, existing_uses_crlf);
 
-        if abs.exists() {
-            if let Ok(meta) = tokio::fs::metadata(&abs).await {
-                let cur_size = meta.len() as usize;
-                if cur_size > 500 && content.len() < cur_size / 10 {
-                    return ToolExecResult::err(format!(
-                        "REJECTED: Content is {} bytes for a {cur_size}-byte file (<10%). \
-                         Your output was likely truncated. File is unchanged on disk. \
-                         Break the write into smaller parts: write a skeleton first, \
-                         then use edit_file to fill in sections. \
-                         Or run `git checkout -- {rel}` if the file was previously corrupted.",
-                        content.len()
-                    ));
-                }
-                if cur_size > 200 && content.len() < cur_size / 2 && looks_truncated(&content) {
-                    return ToolExecResult::err(format!(
-                        "REJECTED: Content appears truncated ({} bytes for a {cur_size}-byte file, \
-                         with unbalanced delimiters). File is unchanged. Use edit_file for \
-                         targeted changes instead of rewriting the full file.",
-                        content.len()
-                    ));
-                }
-            }
+        if let Err(e) = validate_write_size(&abs, &content, &rel).await {
+            return e;
         }
+
         if let Some(parent) = abs.parent() {
             if let Err(e) = tokio::fs::create_dir_all(parent).await {
                 return ToolExecResult::err(format!("Failed to create directories: {e}"));
@@ -133,15 +193,8 @@ impl ChatToolExecutor {
         match tokio::fs::write(&abs, &content).await {
             Ok(()) => {
                 let line_count = content.lines().count();
-                match tokio::fs::metadata(&abs).await {
-                    Ok(meta) if meta.len() as usize != content.len() => {
-                        return ToolExecResult::err(format!(
-                            "Post-write verification failed for {rel}: wrote {} bytes but \
-                             file on disk is {} bytes. The file may be corrupted.",
-                            content.len(), meta.len()
-                        ));
-                    }
-                    _ => {}
+                if let Err(e) = verify_post_write(&abs, &content, &rel).await {
+                    return e;
                 }
                 let mut message = format!(
                     "Successfully wrote {} lines ({} bytes) to {}. \
@@ -241,31 +294,13 @@ impl ChatToolExecutor {
         };
 
         let uses_crlf = raw_content.contains("\r\n");
-
         let content = raw_content.replace("\r\n", "\n");
         let norm_old = old_text.replace("\r\n", "\n");
         let norm_new = new_text.replace("\r\n", "\n");
 
-        let occurrence_count = content.matches(&norm_old).count();
-
-        let (new_content, replacements) = if occurrence_count == 0 {
-            match fuzzy_search_replace(&content, &norm_old, &norm_new) {
-                Some(c) => (c, 1usize),
-                None => return ToolExecResult::err(format!(
-                    "old_text not found in {rel}. Make sure it matches the file content exactly, \
-                     including whitespace. Use read_file to see current content."
-                )),
-            }
-        } else if !replace_all && occurrence_count > 1 {
-            return ToolExecResult::err(format!(
-                "old_text matches {occurrence_count} locations in {rel}. \
-                 Provide more surrounding context to make the match unique, \
-                 or set replace_all to true."
-            ));
-        } else if replace_all {
-            (content.replace(&norm_old, &norm_new), occurrence_count)
-        } else {
-            (content.replacen(&norm_old, &norm_new, 1), 1)
+        let (new_content, replacements) = match perform_replacement(&content, &norm_old, &norm_new, replace_all, &rel) {
+            Ok(r) => r,
+            Err(e) => return e,
         };
 
         if raw_content.len() > 200 && new_content.len() < raw_content.len() / 5 {
@@ -276,11 +311,7 @@ impl ChatToolExecutor {
             ));
         }
 
-        let final_content = if uses_crlf {
-            new_content.replace('\n', "\r\n")
-        } else {
-            new_content
-        };
+        let final_content = normalize_line_endings(&new_content, uses_crlf);
 
         match tokio::fs::write(&abs, &final_content).await {
             Ok(()) => ToolExecResult::ok(json!({

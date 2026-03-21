@@ -216,6 +216,37 @@ fn engine_tool_definitions_inner() -> Vec<ToolDefinition> {
                 "required": []
             }),
         ),
+        tool(
+            "submit_plan",
+            "Submit your implementation plan before making any file changes. \
+             You MUST call this after exploration and before any write_file/edit_file \
+             calls. The plan is validated and becomes your reference during implementation.",
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "approach": {
+                        "type": "string",
+                        "description": "Your implementation strategy (2-4 sentences)"
+                    },
+                    "files_to_modify": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Existing files you will edit"
+                    },
+                    "files_to_create": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "New files you will create"
+                    },
+                    "key_decisions": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Key design decisions and why"
+                    }
+                },
+                "required": ["approach", "files_to_modify", "files_to_create"]
+            }),
+        ),
     ]);
     tools
 }
