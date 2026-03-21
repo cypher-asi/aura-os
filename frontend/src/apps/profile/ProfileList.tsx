@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { useProfile } from "./ProfileProvider";
+import { useProfile } from "../../stores/profile-store";
 import { ALL_PROFILE_PROJECTS_ID, getProfileSelectorItems } from "./profileSelectors";
 import styles from "./ProfileList.module.css";
 

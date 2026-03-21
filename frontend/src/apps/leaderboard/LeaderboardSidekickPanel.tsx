@@ -4,7 +4,7 @@ import { User, Bot, BarChart3 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
-import { useLeaderboard } from "./LeaderboardContext";
+import { useLeaderboard, useLeaderboardStore } from "../../stores/leaderboard-store";
 import { useAuth } from "../../stores/auth-store";
 import { formatTokens, formatCurrency } from "../../utils/format";
 import { api } from "../../api/client";
@@ -21,6 +21,8 @@ interface PlatformStats {
 }
 
 export function LeaderboardSidekickPanel() {
+  const init = useLeaderboardStore((s) => s.init);
+  useEffect(() => { init(); }, [init]);
   const { selectedUserId, entries } = useLeaderboard();
   const { user: authUser } = useAuth();
   const user = useMemo(

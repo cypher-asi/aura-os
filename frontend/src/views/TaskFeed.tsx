@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ProjectId, Task } from "../types";
 import { api } from "../api/client";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useLoopActive } from "../hooks/use-loop-active";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
 import { Panel, Heading, Item } from "@cypher-asi/zui";
@@ -14,7 +14,7 @@ interface TaskFeedProps {
 }
 
 export function TaskFeed({ projectId }: TaskFeedProps) {
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const loopActive = useLoopActive(projectId);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);

@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from "react";
-import { Outlet } from "react-router-dom";
 import { ConnectionTaskbar } from "../../components/ConnectionTaskbar";
 import { ResponsiveMainLane } from "../../components/ResponsiveMainLane";
 import { TerminalPanelHeader, TerminalPanelBody } from "../../components/TerminalPanel";
@@ -22,7 +21,7 @@ export function ProjectMainPanel({ children }: { children?: ReactNode }) {
       )}
       footer={<TerminalPanelBody />}
     >
-      {children ?? <Outlet />}
+      {children}
     </ResponsiveMainLane>
   );
 }

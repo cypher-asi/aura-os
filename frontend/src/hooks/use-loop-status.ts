@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 
 /**
  * Tracks which project/agent instance is currently automating via loop events.
@@ -9,7 +9,7 @@ export function useLoopStatus(currentAgentInstanceId?: string): {
   automatingProjectId: string | null;
   automatingAgentInstanceId: string | null;
 } {
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const [automatingProjectId, setAutomatingProjectId] = useState<string | null>(null);
   const [automatingAgentInstanceId, setAutomatingAgentInstanceId] = useState<string | null>(null);
   const agentInstanceIdRef = useRef(currentAgentInstanceId);

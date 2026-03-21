@@ -9,7 +9,7 @@ import { useEffect, useRef, useCallback } from "react";
 export function useAutoScroll(
   ref: React.RefObject<HTMLElement | null>,
   resetKey?: unknown,
-): { handleScroll: () => void } {
+): { handleScroll: () => void; scrollToBottom: () => void } {
   const autoScrollRef = useRef(true);
   const prevScrollHeightRef = useRef(0);
   // Guards against programmatic scrollTop assignments firing the onScroll
@@ -96,5 +96,13 @@ export function useAutoScroll(
     autoScrollRef.current = atBottom;
   }, [ref]);
 
-  return { handleScroll };
+  const scrollToBottom = useCallback(() => {
+    autoScrollRef.current = true;
+    const el = ref.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [ref]);
+
+  return { handleScroll, scrollToBottom };
 }

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { useSidekick } from "../stores/sidekick-store";
@@ -21,6 +21,7 @@ import {
   projectFilesRoute,
   projectWorkRoute,
 } from "../utils/mobileNavigation";
+
 import styles from "./ProjectList.module.css";
 
 function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
@@ -62,7 +63,6 @@ export function ProjectList() {
   const {
     projects,
     loadingProjects,
-    refreshProjects,
     agentsByProject,
     setAgentsByProject,
     refreshProjectAgents,
@@ -84,13 +84,6 @@ export function ProjectList() {
     return () => setAction("projects", null);
   }, [openNewProjectModal, setAction]);
 
-  const prevProjectIdRef = useRef(projectId);
-  useEffect(() => {
-    if (prevProjectIdRef.current && !projectId) {
-      void refreshProjects();
-    }
-    prevProjectIdRef.current = projectId;
-  }, [projectId, refreshProjects]);
 
   useEffect(() => {
     if (!projectId) return;

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
-import type { BuildStep, TestStep } from "../context/EventContext";
+import type { BuildStep, TestStep } from "../stores/event-store";
 import type { Task } from "../types";
 
 /**

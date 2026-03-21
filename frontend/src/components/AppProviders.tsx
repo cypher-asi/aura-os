@@ -1,51 +1,31 @@
-import { useEffect, useRef } from "react";
-import type { ComponentType, ReactNode } from "react";
-import { AppProvider, useAppContext } from "../context/AppContext";
-import { FeedProvider } from "../apps/feed/FeedProvider";
-import { LeaderboardProvider } from "../apps/leaderboard/LeaderboardContext";
-import { ProfileProvider } from "../apps/profile/ProfileProvider";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { syncActiveApp, useAppStore } from "../stores/app-store";
 import { useAppUIStore } from "../stores/app-ui-store";
-import { apps } from "../apps/registry";
 
-function VisitTracker(): null {
-  const { activeApp } = useAppContext();
+function AppSync(): null {
+  const { pathname } = useLocation();
   const markAppVisited = useAppUIStore((s) => s.markAppVisited);
 
   useEffect(() => {
-    markAppVisited(activeApp.id);
-  }, [activeApp.id, markAppVisited]);
+    syncActiveApp(pathname);
+    markAppVisited(useAppStore.getState().activeApp.id);
+  }, [pathname, markAppVisited]);
+
+  const activeAppId = useAppStore((s) => s.activeApp.id);
+
+  useEffect(() => {
+    markAppVisited(activeAppId);
+  }, [activeAppId, markAppVisited]);
 
   return null;
 }
 
-function LazyAppProvider({
-  appId,
-  Provider,
-  children,
-}: {
-  appId: string;
-  Provider: ComponentType<{ children: ReactNode }>;
-  children: ReactNode;
-}): ReactNode {
-  const { activeApp } = useAppContext();
-  const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
-  const activated = useRef(false);
-  if (visitedAppIds.has(appId) || activeApp.id === appId) activated.current = true;
-  if (!activated.current) return <>{children}</>;
-  return <Provider>{children}</Provider>;
-}
-
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <AppProvider apps={apps}>
-      <VisitTracker />
-      <LazyAppProvider appId="feed" Provider={FeedProvider}>
-        <LazyAppProvider appId="leaderboard" Provider={LeaderboardProvider}>
-          <LazyAppProvider appId="profile" Provider={ProfileProvider}>
-            {children}
-          </LazyAppProvider>
-        </LazyAppProvider>
-      </LazyAppProvider>
-    </AppProvider>
+    <>
+      <AppSync />
+      {children}
+    </>
   );
 }

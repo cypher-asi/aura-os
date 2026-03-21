@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import type { ProjectId, AgentInstance, Session } from "../types";
 import { api } from "../api/client";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useSidekick } from "../stores/sidekick-store";
 import { useClickOutside } from "../hooks/use-click-outside";
 import { StatusBadge } from "../components/StatusBadge";
@@ -10,7 +10,7 @@ import { ChevronDown } from "lucide-react";
 import { formatRelativeTime } from "../utils/format";
 
 interface AgentEventSubscriptionParams {
-  subscribe: ReturnType<typeof useEventContext>["subscribe"];
+  subscribe: ReturnType<typeof useEventStore.getState>["subscribe"];
   projectId: ProjectId;
   isForProject: (event: { project_id?: string }) => boolean;
   selectedAgent: AgentInstance | null;
@@ -60,7 +60,8 @@ interface AgentStatusBarProps {
 }
 
 export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
-  const { connected, subscribe } = useEventContext();
+  const connected = useEventStore((s) => s.connected);
+  const subscribe = useEventStore((s) => s.subscribe);
   const sidekick = useSidekick();
   const [agents, setAgents] = useState<AgentInstance[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);

@@ -83,10 +83,10 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
   if (!hasContent && !hasToolCalls && !hasContentBlocks && !hasThinking && !hasArtifactRefs) return null;
 
   const renderUserContent = () => {
-    if (hasContentBlocks) {
+    if (hasContentBlocks && message.contentBlocks) {
       return (
         <div className={styles.userMessageBlocks}>
-          {message.contentBlocks!.map((block, i) =>
+          {message.contentBlocks.map((block, i) =>
             block.type === "text" ? (
               FILE_PREFIX_RE.test(block.text) ? (
                 <FileAttachmentBlock key={i} text={block.text} />
@@ -133,23 +133,23 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
               />
             ) : (
               <>
-                {hasThinking && (
+                {hasThinking && message.thinkingText && (
                   <ThinkingRow
-                    text={message.thinkingText!}
+                    text={message.thinkingText}
                     isStreaming={false}
                     durationMs={message.thinkingDurationMs}
                   />
                 )}
-                {hasToolCalls && (
-                  <ToolCallsList entries={message.toolCalls!} />
+                {hasToolCalls && message.toolCalls && (
+                  <ToolCallsList entries={message.toolCalls} />
                 )}
                 {hasContent && (
                   <SegmentedContent content={normalizedContent} />
                 )}
               </>
             )}
-            {hasArtifactRefs && (
-              <ArtifactRefsList refs={message.artifactRefs!} />
+            {hasArtifactRefs && message.artifactRefs && (
+              <ArtifactRefsList refs={message.artifactRefs} />
             )}
           </div>
         )}

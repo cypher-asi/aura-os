@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 
 interface TaskStatusState {
   liveStatus: string | null;
@@ -14,7 +14,7 @@ interface TaskStatusState {
  * and failure reason for a given task. Resets when the taskId changes.
  */
 export function useTaskStatus(taskId: string): TaskStatusState {
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);

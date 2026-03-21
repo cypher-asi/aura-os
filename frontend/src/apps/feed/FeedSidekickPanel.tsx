@@ -5,7 +5,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { EntityCard } from "../../components/EntityCard";
 import { FollowEditButton } from "../../components/FollowEditButton";
 import { Avatar } from "../../components/Avatar";
-import { useFeed } from "./FeedProvider";
+import { useFeed } from "../../stores/feed-store";
 import { useAuth } from "../../stores/auth-store";
 import { timeAgo } from "./FeedMainPanel";
 import styles from "./FeedSidekickPanel.module.css";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Bot, Building2, Globe, UserCheck } from "lucide-react";
-import type { FeedFilter } from "./FeedProvider";
+import type { FeedFilter } from "../../stores/feed-store";
 
 export const FEED_FILTERS: { id: FeedFilter; label: string; icon: ReactNode }[] = [
   { id: "my-agents", label: "My Agents", icon: <Bot size={14} /> },

@@ -24,7 +24,19 @@ interface UseAgentChatStreamOptions {
   onSpecSaved?: (spec: Spec) => void;
 }
 
-export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions) {
+interface UseAgentChatStreamResult {
+  streamKey: string;
+  sendMessage: (
+    content: string,
+    action?: string | null,
+    selectedModel?: string | null,
+    attachments?: ChatAttachment[],
+  ) => Promise<void>;
+  stopStreaming: () => void;
+  resetMessages: (msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => void;
+}
+
+export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions): UseAgentChatStreamResult {
   const core = useStreamCore([agentId]);
   const { refs, setters, abortRef } = core;
 

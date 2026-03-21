@@ -7,7 +7,7 @@ import { ExecutionView } from "./ExecutionView";
 import { TaskFeed } from "./TaskFeed";
 import { LogPanel } from "./LogPanel";
 import { useProjectContext } from "../stores/project-action-store";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { useSidekick } from "../stores/sidekick-store";
 import { TaskStatusIcon } from "../components/TaskStatusIcon";
@@ -15,7 +15,8 @@ import type { Spec, Task } from "../types";
 import styles from "./ProjectWorkView.module.css";
 
 function ExecutionSummary({ projectId }: { projectId: string }) {
-  const { connected, subscribe } = useEventContext();
+  const connected = useEventStore((s) => s.connected);
+  const subscribe = useEventStore((s) => s.subscribe);
   const [loopRunning, setLoopRunning] = useState(false);
   const [loopPaused, setLoopPaused] = useState(false);
   const [error, setError] = useState("");

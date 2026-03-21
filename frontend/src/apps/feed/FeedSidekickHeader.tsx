@@ -1,6 +1,6 @@
 import { Button } from "@cypher-asi/zui";
 import { X } from "lucide-react";
-import { useFeed } from "./FeedProvider";
+import { useFeed } from "../../stores/feed-store";
 import styles from "./FeedSidekickHeader.module.css";
 
 export function FeedSidekickHeader() {

@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button, Text, ModalConfirm } from "@cypher-asi/zui";
 import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { useSidekick } from "../stores/sidekick-store";
 import { StatusBadge } from "./StatusBadge";
 import type { ProjectId } from "../types";
@@ -16,7 +16,8 @@ interface AutomationBarProps {
 }
 
 export function AutomationBar({ projectId }: AutomationBarProps) {
-  const { subscribe, connected } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
+  const connected = useEventStore((s) => s.connected);
   const { setActiveTab } = useSidekick();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const [activeAgents, setActiveAgents] = useState<string[]>([]);

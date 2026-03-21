@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { FolderOpen, Globe } from "lucide-react";
-import type { ProfileProject } from "./ProfileProvider";
+import type { ProfileProject } from "../../stores/profile-store";
 
 export const ALL_PROFILE_PROJECTS_ID = "__all__";
 

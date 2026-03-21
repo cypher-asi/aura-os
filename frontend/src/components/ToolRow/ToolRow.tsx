@@ -131,7 +131,7 @@ export function ToolCallsList({ entries }: { entries: ToolCallEntry[] }) {
   const isBatch = dominantName !== null && total > 3;
 
   const batchLabel = () => {
-    const label = TOOL_LABELS[dominantName!] || dominantName!;
+    const label = TOOL_LABELS[dominantName ?? ""] || dominantName ?? "";
     if (allDone) {
       return <><strong>{total}</strong> {label.toLowerCase()} actions completed</>;
     }

@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useAppUIStore } from "../stores/app-ui-store";
-import { useAppContext } from "./AppContext";
+import { useAppStore } from "../stores/app-store";
 
 type SidebarSearchValue = {
   query: string;
@@ -12,7 +12,7 @@ type SidebarSearchValue = {
 };
 
 export function useSidebarSearch(): SidebarSearchValue {
-  const { activeApp } = useAppContext();
+  const activeApp = useAppStore((s) => s.activeApp);
   const storeQuery = useAppUIStore((s) => s.sidebarQuery);
   const setSidebarQuery = useAppUIStore((s) => s.setSidebarQuery);
   const action = useAppUIStore((s) => s.sidebarActions[activeApp.id] ?? null);

@@ -32,11 +32,11 @@ export function TaskOutputSection({
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const copyRawOutput = useCallback(() => {
-    navigator.clipboard.writeText(streamBuf).then(() => {
+    void navigator.clipboard.writeText(streamBuf).then(() => {
       setCopied(true);
       if (copiedTimer.current) clearTimeout(copiedTimer.current);
       copiedTimer.current = setTimeout(() => setCopied(false), 1500);
-    });
+    }).catch(() => {});
   }, [streamBuf]);
 
   if (activity.length === 0) return null;

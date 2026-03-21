@@ -80,10 +80,11 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
         }
       }),
       subscribe("spec_saved", (e: EngineEvent) => {
-        if (e.project_id === projectId && e.spec) {
+        const spec = e.spec;
+        if (e.project_id === projectId && spec) {
           setLocalSpecs((prev) => {
-            if (prev.some((s) => s.spec_id === e.spec!.spec_id)) return prev;
-            return [...prev, e.spec!].sort((a, b) => a.order_index - b.order_index);
+            if (prev.some((s) => s.spec_id === spec.spec_id)) return prev;
+            return [...prev, spec].sort((a, b) => a.order_index - b.order_index);
           });
         }
       }),

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ProjectId } from "../types";
 import { api } from "../api/client";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 
 /**
  * Returns whether the automation loop has active agents for the project.
@@ -9,7 +9,7 @@ import { useEventContext } from "../context/EventContext";
  * stale (e.g. "ready") so we don't show spinners after restart or loop error.
  */
 export function useLoopActive(projectId: ProjectId | undefined): boolean {
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const [loopActive, setLoopActive] = useState(false);
 
   const fetchStatus = useCallback(async () => {

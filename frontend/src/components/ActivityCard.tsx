@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState } from "react";
 import { MessageSquare } from "lucide-react";
-import type { FeedEvent, FeedComment } from "../apps/feed/FeedProvider";
+import type { FeedEvent, FeedComment } from "../stores/feed-store";
 import { Avatar } from "./Avatar";
 import styles from "./ActivityCard.module.css";
 

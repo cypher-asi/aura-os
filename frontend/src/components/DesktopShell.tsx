@@ -18,7 +18,6 @@ import { useUIModalStore } from "../stores/ui-modal-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
-import { dbg } from "../lib/dbg";
 import styles from "./AppShell.module.css";
 
 function blurActiveElement() {
@@ -47,9 +46,6 @@ function SidekickLane() {
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const { SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
 
-  // #region agent log
-  dbg('SidekickLane:render', 'SidekickLane render', {activeApp:activeApp.id,visitedCount:visitedAppIds.size});
-  // #endregion
 
   const hasAnySidekick = apps.some(
     (app) => app.SidekickPanel && (visitedAppIds.has(app.id) || app.id === activeApp.id),

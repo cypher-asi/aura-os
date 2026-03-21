@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useEventContext } from "../context/EventContext";
+import { useEffect, useRef, useState, useCallback, type RefObject } from "react";
+import { useEventStore } from "../stores/event-store";
 import type { EngineEvent, EngineEventType } from "../types/events";
 import { formatTime } from "../utils/format";
 import { LOG_MAX_LINES } from "../constants";
@@ -283,8 +283,16 @@ function summarise(e: EngineEvent): string {
 
 export { EVENT_LABELS };
 
-export function useLogStream() {
-  const { subscribe, connected } = useEventContext();
+interface UseLogStreamResult {
+  entries: LogEntry[];
+  contentRef: RefObject<HTMLDivElement | null>;
+  handleScroll: () => void;
+  connected: boolean;
+}
+
+export function useLogStream(): UseLogStreamResult {
+  const subscribe = useEventStore((s) => s.subscribe);
+  const connected = useEventStore((s) => s.connected);
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);

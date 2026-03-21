@@ -5,4 +5,4 @@ import { LeaderboardApp } from "./leaderboard/LeaderboardApp";
 import { ProfileApp } from "./profile/ProfileApp";
 import type { AuraApp } from "./types";
 
-export const apps: AuraApp[] = [ProjectsApp, AgentsApp, FeedApp, LeaderboardApp, ProfileApp];
+export const apps: AuraApp[] = [AgentsApp, ProjectsApp, FeedApp, LeaderboardApp, ProfileApp];

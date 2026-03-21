@@ -8,7 +8,14 @@ const POLL_INTERVAL_MS = 3_000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1_000;
 const STATUS_SETTLE_TIMEOUT_MS = 15_000;
 
-export function useCheckoutPolling(orgId: string | undefined) {
+interface UseCheckoutPollingResult {
+  status: CheckoutPollingStatus;
+  settledBalance: CreditBalance | null;
+  startPolling: (previousBalance: number) => void;
+  reset: () => void;
+}
+
+export function useCheckoutPolling(orgId: string | undefined): UseCheckoutPollingResult {
   const [status, setStatus] = useState<CheckoutPollingStatus>("idle");
   const [settledBalance, setSettledBalance] = useState<CreditBalance | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);

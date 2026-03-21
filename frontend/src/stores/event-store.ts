@@ -59,8 +59,12 @@ export const useEventStore = create<EventState>()((set, get) => ({
   taskOutputs: {},
 
   subscribe: (type, callback) => {
-    if (!subscribers.has(type)) subscribers.set(type, new Set());
-    subscribers.get(type)!.add(callback);
+    let set = subscribers.get(type);
+    if (!set) {
+      set = new Set();
+      subscribers.set(type, set);
+    }
+    set.add(callback);
     return () => {
       subscribers.get(type)?.delete(callback);
     };
@@ -204,8 +208,12 @@ function handleEngineEvent(event: EngineEvent) {
  * Kept outside the store since it drives useSyncExternalStore-style subscriptions.
  */
 export function subscribeTaskOutput(taskId: string, listener: TaskOutputListener): () => void {
-  if (!taskOutputListeners.has(taskId)) taskOutputListeners.set(taskId, new Set());
-  taskOutputListeners.get(taskId)!.add(listener);
+  let set = taskOutputListeners.get(taskId);
+  if (!set) {
+    set = new Set();
+    taskOutputListeners.set(taskId, set);
+  }
+  set.add(listener);
   return () => {
     taskOutputListeners.get(taskId)?.delete(listener);
   };

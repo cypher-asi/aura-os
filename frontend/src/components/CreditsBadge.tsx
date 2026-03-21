@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 
 import { useOrgStore } from "../stores/org-store";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { api } from "../api/client";
 import styles from "./CreditsBadge.module.css";
 
@@ -20,7 +20,7 @@ interface Props {
 
 export function CreditsBadge({ onClick }: Props) {
   const activeOrg = useOrgStore((s) => s.activeOrg);
-  const { subscribe } = useEventContext();
+  const subscribe = useEventStore((s) => s.subscribe);
   const [credits, setCredits] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const orgId = activeOrg?.org_id ?? null;

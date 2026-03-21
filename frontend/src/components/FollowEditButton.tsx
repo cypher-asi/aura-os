@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pencil, UserPlus, UserCheck, UserMinus } from "lucide-react";
-import { useFollow } from "../context/FollowContext";
+import { useFollowStore } from "../stores/follow-store";
 import styles from "./FollowEditButton.module.css";
 
 interface FollowEditButtonProps {
@@ -10,7 +10,8 @@ interface FollowEditButtonProps {
 }
 
 export function FollowEditButton({ isOwner, targetProfileId, onEdit }: FollowEditButtonProps) {
-  const { isFollowing, toggleFollow } = useFollow();
+  const isFollowing = useFollowStore((s) => s.isFollowing);
+  const toggleFollow = useFollowStore((s) => s.toggleFollow);
   const [hover, setHover] = useState(false);
 
   if (isOwner) {

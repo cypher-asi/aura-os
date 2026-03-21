@@ -144,6 +144,10 @@
   min-width: 0;
 }
 
+.notesContent .markdown > h3:first-child {
+  margin-top: 0;
+}
+
 .fileOpsList {
   display: flex;
   flex-direction: column;

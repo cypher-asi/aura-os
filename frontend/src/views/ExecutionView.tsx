@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import { AgentStatusBar } from "./AgentStatusBar";
 import { TaskFeed } from "./TaskFeed";
 import { LogPanel } from "./LogPanel";
@@ -11,7 +11,8 @@ import styles from "./aura.module.css";
 
 export function ExecutionView() {
   const { projectId } = useParams<{ projectId: string }>();
-  const { connected, subscribe } = useEventContext();
+  const connected = useEventStore((s) => s.connected);
+  const subscribe = useEventStore((s) => s.subscribe);
   const [loopRunning, setLoopRunning] = useState(false);
   const [loopPaused, setLoopPaused] = useState(false);
   const [error, setError] = useState("");

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Modal, Input, Textarea, Button } from "@cypher-asi/zui";
-import type { UserProfileData } from "./ProfileProvider";
+import type { UserProfileData } from "../../stores/profile-store";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import styles from "../../components/AgentEditorModal.module.css";
 

@@ -1,6 +1,6 @@
 import { Button } from "@cypher-asi/zui";
 import { X } from "lucide-react";
-import { useProfile } from "./ProfileProvider";
+import { useProfile } from "../../stores/profile-store";
 import styles from "./ProfileSidekickHeader.module.css";
 
 export function ProfileSidekickHeader() {

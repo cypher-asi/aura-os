@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { Wifi, WifiOff } from "lucide-react";
-import { useEventContext } from "../context/EventContext";
+import { useEventStore } from "../stores/event-store";
 import styles from "./ConnectionDot.module.css";
 
 export function ConnectionDot() {
-  const { connected, getLastEventAt } = useEventContext();
+  const connected = useEventStore((s) => s.connected);
   const [stale, setStale] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
@@ -14,11 +14,11 @@ export function ConnectionDot() {
       return () => window.cancelAnimationFrame(frame);
     }
     intervalRef.current = setInterval(() => {
-      const ts = getLastEventAt();
+      const ts = useEventStore.getState().lastEventAt;
       setStale(ts !== null && Date.now() - ts > 10_000);
     }, 2_000);
     return () => clearInterval(intervalRef.current);
-  }, [connected, getLastEventAt]);
+  }, [connected]);
 
   if (!connected) {
     return (

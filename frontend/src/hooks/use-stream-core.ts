@@ -1,7 +1,8 @@
 import { useRef, useCallback, useLayoutEffect, useMemo } from "react";
-import type { MutableRefObject } from "react";
+import type { MutableRefObject, SetStateAction } from "react";
 import type {
   DisplayMessage,
+  StreamRefs as StreamRefsType,
   StreamSetters,
 } from "../types/stream";
 import {
@@ -53,19 +54,35 @@ export { getIsStreaming, getThinkingDurationMs } from "./stream/store";
 /*  Core hook — lifecycle only, no React state                         */
 /* ------------------------------------------------------------------ */
 
-export function useStreamCore(resetDeps: unknown[]) {
+export interface StreamCoreResult {
+  key: string;
+  refs: StreamRefsType;
+  setters: StreamSetters;
+  abortRef: MutableRefObject<AbortController | null>;
+  setMessages: (action: SetStateAction<DisplayMessage[]>) => void;
+  setIsStreaming: (action: SetStateAction<boolean>) => void;
+  setProgressText: (action: SetStateAction<string>) => void;
+  resetMessages: (msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => void;
+  baseStopStreaming: () => void;
+}
+
+export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
   const key = storeKey(resetDeps);
 
+  const prevKeyRef = useRef(key);
+  const keyChanged = prevKeyRef.current !== key;
+  prevKeyRef.current = key;
+
   const metaRef = useRef<{ key: string; meta: StreamMeta } | null>(null);
-  if (!metaRef.current || metaRef.current.key !== key) {
+  if (!metaRef.current || keyChanged) {
     const meta = ensureEntry(key);
     pruneStreamStore(key);
     metaRef.current = { key, meta };
   }
   const meta = metaRef.current.meta;
 
-  const settersRef = useRef<StreamSetters>(null!);
-  if (!settersRef.current || metaRef.current.key !== key) {
+  const settersRef = useRef<StreamSetters | null>(null);
+  if (!settersRef.current || keyChanged) {
     settersRef.current = createSetters(key);
   }
   const setters = settersRef.current;

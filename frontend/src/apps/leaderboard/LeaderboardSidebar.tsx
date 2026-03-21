@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { useLeaderboard } from "./LeaderboardContext";
+import { useLeaderboard } from "../../stores/leaderboard-store";
 import type { LeaderboardFilter } from "./mockData";
 import { LEADERBOARD_FILTERS } from "./leaderboardFilters";
 import styles from "./LeaderboardSidebar.module.css";

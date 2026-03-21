@@ -8,7 +8,7 @@ import { Loader2, Play } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../api/client";
 import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../stores/project-action-store";
-import { useEventContext, useTaskOutput } from "../context/EventContext";
+import { useEventStore, useTaskOutput } from "../stores/event-store";
 import { useLoopActive } from "../hooks/use-loop-active";
 import { useTaskStatus } from "../hooks/use-task-status";
 import { useTaskAgentInstances } from "../hooks/use-task-agent-instances";
@@ -88,7 +88,7 @@ export function RunTaskButton({ task }: { task: import("../types").Task }) {
 }
 
 export function TaskPreview({ task }: { task: import("../types").Task }) {
-  const { seedTaskOutput } = useEventContext();
+  const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectContext();
   const sidekick = useSidekick();

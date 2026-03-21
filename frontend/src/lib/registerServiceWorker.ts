@@ -1,4 +1,4 @@
-export function registerServiceWorker() {
+export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || typeof window === "undefined" || !("serviceWorker" in navigator)) {
     return;
   }

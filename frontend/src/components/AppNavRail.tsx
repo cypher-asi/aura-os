@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
-import { useAppContext } from "../context/AppContext";
+import { useAppStore } from "../stores/app-store";
 import { LAST_AGENT_ID_KEY } from "../apps/agents/stores";
 import styles from "./AppNavRail.module.css";
 
@@ -19,7 +19,8 @@ interface AppNavRailProps {
 }
 
 export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
-  const { apps, activeApp } = useAppContext();
+  const apps = useAppStore((s) => s.apps);
+  const activeApp = useAppStore((s) => s.activeApp);
   const navigate = useNavigate();
   const primaryApps = apps.filter((app) => app.id !== "profile");
   const isBar = layout === "bar";
