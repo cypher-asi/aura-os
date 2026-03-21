@@ -14,7 +14,7 @@ import styles from "../../components/ChatView.module.css";
 
 function debugSwitchLog(message: string, details: Record<string, unknown>) {
   if (import.meta.env.DEV) {
-    console.debug(`[AgentChatView switch] ${message}`, details);
+    console.debug(`[AgentChatView] ${message}`, details);
   }
 }
 
@@ -38,11 +38,10 @@ export function AgentChatView() {
 
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(() => Boolean(agentId));
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
-  const metadataLoadIdRef = useRef(0);
   const historyLoadIdRef = useRef(0);
   const attachmentsRef = useRef(attachments);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
@@ -62,29 +61,6 @@ export function AgentChatView() {
       selectAgent(cachedAgent);
     }
   }, [agentId, agents, selectedAgent?.agent_id, selectAgent]);
-
-  useEffect(() => {
-    if (!agentId) return;
-    const loadId = ++metadataLoadIdRef.current;
-    const controller = new AbortController();
-
-    api.agents
-      .get(agentId as never, { signal: controller.signal })
-      .then((agent) => {
-        if (loadId === metadataLoadIdRef.current) {
-          selectAgent(agent);
-        } else {
-          debugSwitchLog("discarded stale metadata response", { loadId, agentId });
-        }
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [agentId, selectAgent]);
 
   useEffect(() => {
     const loadId = ++historyLoadIdRef.current;
