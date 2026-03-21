@@ -108,6 +108,31 @@ pub async fn ws_terminal(
     ws.on_upgrade(move |socket| handle_terminal_ws(socket, state, tid))
 }
 
+/// Returns true if the connection should close.
+fn handle_ws_client_message(state: &AppState, id: TerminalId, msg: WsClientMsg) -> bool {
+    match msg.msg_type.as_str() {
+        "input" => {
+            if let Some(data) = msg.data {
+                if let Ok(bytes) = B64.decode(&data) {
+                    if let Err(e) = state.terminal_manager.write_input(id, &bytes) {
+                        warn!(%id, "Write to PTY failed: {e}");
+                        return true;
+                    }
+                }
+            }
+        }
+        "resize" => {
+            if let (Some(cols), Some(rows)) = (msg.cols, msg.rows) {
+                if let Err(e) = state.terminal_manager.resize(id, cols, rows) {
+                    warn!(%id, "Resize PTY failed: {e}");
+                }
+            }
+        }
+        _ => {}
+    }
+    false
+}
+
 async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: TerminalId) {
     info!(%id, "Terminal WebSocket connected");
 
@@ -115,60 +140,30 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
         Ok(r) => r,
         Err(e) => {
             warn!(%id, "Failed to take reader: {e}");
-            let _ = socket
-                .send(Message::Text(
-                    serde_json::json!({"type": "exit", "code": -1}).to_string(),
-                ))
-                .await;
+            let _ = socket.send(Message::Text(serde_json::json!({"type": "exit", "code": -1}).to_string())).await;
             return;
         }
     };
 
     let (output_tx, mut output_rx) = mpsc::channel::<Vec<u8>>(256);
     let (exit_tx, mut exit_rx) = mpsc::channel::<i32>(1);
-
-    tokio::task::spawn_blocking(move || {
-        read_pty_loop(reader, output_tx, exit_tx);
-    });
+    tokio::task::spawn_blocking(move || { read_pty_loop(reader, output_tx, exit_tx); });
 
     loop {
         tokio::select! {
             Some(data) = output_rx.recv() => {
-                let encoded = B64.encode(&data);
-                let msg = serde_json::json!({"type": "output", "data": encoded});
-                if socket.send(Message::Text(msg.to_string())).await.is_err() {
-                    break;
-                }
+                let msg = serde_json::json!({"type": "output", "data": B64.encode(&data)});
+                if socket.send(Message::Text(msg.to_string())).await.is_err() { break; }
             }
             Some(code) = exit_rx.recv() => {
-                let msg = serde_json::json!({"type": "exit", "code": code});
-                let _ = socket.send(Message::Text(msg.to_string())).await;
+                let _ = socket.send(Message::Text(serde_json::json!({"type": "exit", "code": code}).to_string())).await;
                 break;
             }
             ws_msg = socket.recv() => {
                 match ws_msg {
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(msg) = serde_json::from_str::<WsClientMsg>(&text) {
-                            match msg.msg_type.as_str() {
-                                "input" => {
-                                    if let Some(data) = msg.data {
-                                        if let Ok(bytes) = B64.decode(&data) {
-                                            if let Err(e) = state.terminal_manager.write_input(id, &bytes) {
-                                                warn!(%id, "Write to PTY failed: {e}");
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                "resize" => {
-                                    if let (Some(cols), Some(rows)) = (msg.cols, msg.rows) {
-                                        if let Err(e) = state.terminal_manager.resize(id, cols, rows) {
-                                            warn!(%id, "Resize PTY failed: {e}");
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
+                            if handle_ws_client_message(&state, id, msg) { break; }
                         }
                     }
                     Some(Ok(Message::Close(_))) | None => break,
