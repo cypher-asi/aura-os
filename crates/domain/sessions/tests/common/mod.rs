@@ -99,8 +99,13 @@ pub async fn start_mock_storage() -> (String, SessionDb) {
         )
         .with_state(db.clone());
 
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let url = format!("http://{}", listener.local_addr().unwrap());
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("test TCP listener should bind");
+    let url = format!(
+        "http://{}",
+        listener.local_addr().expect("listener should have local address"),
+    );
     tokio::spawn(async move { axum::serve(listener, app).await.ok() });
     (url, db)
 }
@@ -129,6 +134,8 @@ pub fn store_test_jwt(store: &aura_store::RocksStore) {
         created_at: Utc::now(),
         validated_at: Utc::now(),
     })
-    .unwrap();
-    store.put_setting("zero_auth_session", &session).unwrap();
+    .expect("test session should serialize");
+    store
+        .put_setting("zero_auth_session", &session)
+        .expect("test JWT should be stored");
 }

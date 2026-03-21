@@ -402,8 +402,10 @@ mod tests {
 
     #[tokio::test]
     async fn should_rollover_at_threshold() {
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let tmp = tempfile::TempDir::new().expect("temp dir should be created");
+        let store = Arc::new(
+            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
+        );
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let below = Session {
@@ -439,8 +441,10 @@ mod tests {
 
     #[tokio::test]
     async fn create_session_returns_active_session() {
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let tmp = tempfile::TempDir::new().expect("temp dir should be created");
+        let store = Arc::new(
+            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
+        );
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let pid = ProjectId::new();
@@ -448,7 +452,7 @@ mod tests {
         let session = svc
             .create_session(&aid, &pid, None, "initial context".into(), None, None)
             .await
-            .unwrap();
+            .expect("session creation should succeed");
 
         assert_eq!(session.status, SessionStatus::Active);
         assert_eq!(session.summary_of_previous_context, "initial context");
@@ -470,8 +474,10 @@ mod tests {
 
         let (llm, _tmp_llm) = aura_billing::testutil::make_test_llm(mock.clone()).await;
 
-        let tmp = tempfile::TempDir::new().unwrap();
-        let store = Arc::new(aura_store::RocksStore::open(tmp.path()).unwrap());
+        let tmp = tempfile::TempDir::new().expect("temp dir should be created");
+        let store = Arc::new(
+            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
+        );
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let summary = svc
@@ -481,7 +487,7 @@ mod tests {
                 "User: How do I set up auth?\nAssistant: Use JWT tokens.",
             )
             .await
-            .unwrap();
+            .expect("summary generation should succeed");
 
         assert_eq!(summary, "The user discussed authentication and database setup.");
         assert_eq!(mock.call_count(), 1);
