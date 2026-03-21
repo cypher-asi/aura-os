@@ -10,12 +10,21 @@ import { buildDisplayMessages } from "../utils/build-display-messages";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInputBar } from "./ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "./ChatInputBar";
+import type { DisplayMessage } from "../types/stream";
 import styles from "./ChatView.module.css";
 
 function debugSwitchLog(message: string, details: Record<string, unknown>) {
   if (import.meta.env.DEV) {
     console.debug(`[ChatView switch] ${message}`, details);
   }
+}
+
+type CachedHistory = { messages: DisplayMessage[]; fetchedAt: number };
+const HISTORY_CACHE_TTL_MS = 30_000;
+const historyCache = new Map<string, CachedHistory>();
+
+function chatCacheKey(projectId: string, agentInstanceId: string): string {
+  return `${projectId}:${agentInstanceId}`;
 }
 
 export function ChatView() {
@@ -42,9 +51,10 @@ export function ChatView() {
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [agentName, setAgentName] = useState<string | undefined>();
   const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(
-    () => Boolean(projectId && agentInstanceId),
-  );
+  const [isHistoryLoading, setIsHistoryLoading] = useState(() => {
+    if (!projectId || !agentInstanceId) return false;
+    return !historyCache.has(chatCacheKey(projectId, agentInstanceId));
+  });
 
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const prevIsStreamingRef = useRef(false);
@@ -162,7 +172,22 @@ export function ChatView() {
       });
     };
 
-    setIsHistoryLoading(true);
+    const cacheKey = chatCacheKey(projectId, agentInstanceId);
+    const cached = historyCache.get(cacheKey);
+    const now = Date.now();
+    const cacheIsFresh = cached != null && now - cached.fetchedAt < HISTORY_CACHE_TTL_MS;
+
+    if (cached) {
+      const el = messageAreaRef.current;
+      if (el) el.style.visibility = "hidden";
+      resetMessages(cached.messages, { allowWhileStreaming: true });
+      setIsHistoryLoading(false);
+      reveal();
+      if (cacheIsFresh) return () => { controller.abort(); };
+    } else {
+      setIsHistoryLoading(true);
+    }
+
     api
       .getMessages(projectId, agentInstanceId, { signal: controller.signal })
       .then((msgs) => {
@@ -170,10 +195,12 @@ export function ChatView() {
           debugSwitchLog("discarded stale history response", { loadId, projectId, agentInstanceId });
           return;
         }
-        if (messageAreaRef.current) messageAreaRef.current.style.visibility = "hidden";
-        resetMessages(buildDisplayMessages(msgs), { allowWhileStreaming: true });
+        const displayMessages = buildDisplayMessages(msgs);
+        historyCache.set(cacheKey, { messages: displayMessages, fetchedAt: Date.now() });
+        if (!cached && messageAreaRef.current) messageAreaRef.current.style.visibility = "hidden";
+        resetMessages(displayMessages, { allowWhileStreaming: true });
         setIsHistoryLoading(false);
-        reveal();
+        if (!cached) reveal();
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -197,6 +224,9 @@ export function ChatView() {
   const handleSend = useCallback(
     (content: string, action?: string, atts?: AttachmentItem[]) => {
       setInput("");
+      if (projectId && agentInstanceId) {
+        historyCache.delete(chatCacheKey(projectId, agentInstanceId));
+      }
       const toSend = atts ?? attachmentsRef.current;
       const apiAttachments = toSend.length > 0
         ? toSend.map((a) => ({
@@ -209,7 +239,7 @@ export function ChatView() {
       sendMessage(content, action ?? null, null, apiAttachments);
       setAttachments([]);
     },
-    [sendMessage],
+    [sendMessage, projectId, agentInstanceId],
   );
 
   if (!agentInstanceId) {

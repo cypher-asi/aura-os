@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, AlertCircle } from "lucide-react";
 import { useAgentChatStream } from "../../hooks/use-agent-chat-stream";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
 import { ChatMessageList } from "../../components/ChatMessageList";
@@ -10,10 +10,44 @@ import type { ChatInputBarHandle, AttachmentItem } from "../../components/ChatIn
 import styles from "../../components/ChatView.module.css";
 import { useAgentStore, useAgentHistory, useSelectedAgent } from "./stores";
 
+function HistoryEmptyState({
+  status,
+  error,
+  agentName,
+}: {
+  status: "idle" | "loading" | "ready" | "error";
+  error: string | null;
+  agentName: string | undefined;
+}) {
+  if (status === "error" && error) {
+    return (
+      <div className={styles.emptyState}>
+        <AlertCircle size={40} />
+        <Text variant="muted" size="sm">{error}</Text>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.emptyState}>
+      <MessageSquare size={40} />
+      <Text variant="muted" size="sm">
+        {status === "loading"
+          ? "Loading conversation..."
+          : `Send a message to chat with ${agentName ?? "this agent"} across all linked projects`}
+      </Text>
+    </div>
+  );
+}
+
 export function AgentChatView() {
   const { agentId } = useParams<{ agentId: string }>();
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
-  const { messages: historyMessages, status: historyStatus } = useAgentHistory(agentId);
+  const {
+    messages: historyMessages,
+    status: historyStatus,
+    error: historyError,
+  } = useAgentHistory(agentId);
 
   const {
     messages,
@@ -88,9 +122,6 @@ export function AgentChatView() {
     return null;
   }
 
-  const agentName = selectedAgent?.name;
-  const isHistoryLoading = historyStatus === "loading";
-
   return (
     <div className={styles.container}>
       <div className={styles.chatArea}>
@@ -110,14 +141,11 @@ export function AgentChatView() {
               timeline={timeline}
               progressText={progressText}
               emptyState={
-                <div className={styles.emptyState}>
-                  <MessageSquare size={40} />
-                  <Text variant="muted" size="sm">
-                    {isHistoryLoading
-                      ? "Loading conversation..."
-                      : `Send a message to chat with ${agentName ?? "this agent"} across all linked projects`}
-                  </Text>
-                </div>
+                <HistoryEmptyState
+                  status={historyStatus}
+                  error={historyError}
+                  agentName={selectedAgent?.name}
+                />
               }
             />
           </div>
@@ -130,7 +158,7 @@ export function AgentChatView() {
           onSend={handleSend}
           onStop={stopStreaming}
           isStreaming={isStreaming}
-          agentName={agentName}
+          agentName={selectedAgent?.name}
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onRemoveAttachment={handleRemoveAttachment}
