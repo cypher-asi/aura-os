@@ -8,9 +8,13 @@ pub(crate) const DEFAULT_EXPLORATION_ALLOWANCE: usize = 12;
 /// tools are blocked for that path.
 pub(crate) const MAX_WRITE_FAILURES_PER_FILE: usize = 3;
 
-/// Maximum times the same file can be read before further reads are blocked,
-/// preventing infinite re-read loops.
+/// Maximum full reads of the same file before further full reads are blocked.
 pub(crate) const MAX_READS_PER_FILE: usize = 3;
+
+/// Maximum range reads (start_line/end_line) of the same file, tracked
+/// separately from full reads so compaction-advised partial reads don't
+/// exhaust the full-read budget.
+pub(crate) const MAX_RANGE_READS_PER_FILE: usize = 5;
 
 /// Hard limit on consecutive `run_command` failures before the tool is blocked
 /// entirely for the remainder of the loop.
