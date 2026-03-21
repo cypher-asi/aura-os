@@ -30,6 +30,14 @@
   overflow: hidden;
 }
 
+.panelActive {
+  display: contents;
+}
+
+.panelHidden {
+  display: none;
+}
+
 .mobileShell {
   height: 100%;
   display: flex;

@@ -318,12 +318,12 @@ export function MobileShell({
 
         <div className={styles.mobileMain}>
           {showProjectResponsiveControls && ResponsiveControls && (
-            <div key={`${activeApp.id}-responsive-controls`} className={styles.mobileResponsiveControls}>
+            <div className={styles.mobileResponsiveControls}>
               <ResponsiveControls />
             </div>
           )}
           <div className={styles.mobileMainPanel}>
-            <MainPanel key={`${activeApp.id}-main-panel`}>
+            <MainPanel>
               {routeContent}
             </MainPanel>
           </div>

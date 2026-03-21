@@ -12,6 +12,7 @@ import { WindowControls } from "./WindowControls";
 import { useAppContext } from "../context/AppContext";
 import { useSidebarSearch } from "../context/SidebarSearchContext";
 import { useSidekick } from "../context/SidekickContext";
+import { useAppUIStore } from "../stores/app-ui-store";
 import { useAuraCapabilities } from "../hooks/use-aura-capabilities";
 import { apps } from "../apps/registry";
 import { windowCommand } from "../lib/windowCommand";
@@ -97,6 +98,7 @@ export function DesktopShell({
 }) {
   const { activeApp } = useAppContext();
   const { features } = useAuraCapabilities();
+  const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
@@ -151,14 +153,17 @@ export function DesktopShell({
                 storageKey="aura-sidebar"
                 header={<SidebarSearchInput />}
               >
-                {apps.map((app) => (
-                  <div
-                    key={app.id}
-                    style={{ display: app.id === activeApp.id ? "contents" : "none" }}
-                  >
-                    <app.LeftPanel />
-                  </div>
-                ))}
+                {apps.map((app) => {
+                  if (!visitedAppIds.has(app.id)) return null;
+                  return (
+                    <div
+                      key={app.id}
+                      className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
+                    >
+                      <app.LeftPanel />
+                    </div>
+                  );
+                })}
               </Lane>
             </div>
             <BottomTaskbar
