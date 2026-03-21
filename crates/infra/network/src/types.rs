@@ -364,9 +364,27 @@ pub struct FollowRequest {
 pub struct NetworkFeedEvent {
     pub id: String,
     pub profile_id: String,
+    #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
     pub event_type: String,
     #[serde(default)]
+    pub post_type: Option<String>,
+    #[serde(default)]
+    pub title: Option<String>,
+    #[serde(default)]
+    pub summary: Option<String>,
+    #[serde(default)]
     pub metadata: Option<serde_json::Value>,
+    #[serde(default)]
+    pub agent_id: Option<String>,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub push_id: Option<String>,
+    #[serde(default)]
+    pub commit_ids: Option<Vec<String>>,
     #[serde(default)]
     pub created_at: Option<String>,
 }
