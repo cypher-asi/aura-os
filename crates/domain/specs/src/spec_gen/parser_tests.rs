@@ -10,7 +10,7 @@ fn parse_valid_json_array() {
         {"title": "Auth module", "purpose": "Handle login", "markdown": "# Auth\nLogin flow"},
         {"title": "DB layer", "purpose": "Persistence", "markdown": "# DB\nSchema"}
     ]"##;
-    let specs = parse_claude_response(input).unwrap();
+    let specs = parse_claude_response(input).expect("valid JSON array should parse");
     assert_eq!(specs.len(), 2);
     assert_eq!(specs[0].title, "Auth module");
     assert_eq!(specs[1].title, "DB layer");
@@ -27,7 +27,7 @@ Here are the specs:
 
 Let me know if you need changes.
 "##;
-    let specs = parse_claude_response(input).unwrap();
+    let specs = parse_claude_response(input).expect("fenced JSON should parse");
     assert_eq!(specs.len(), 1);
     assert_eq!(specs[0].title, "API");
 }
@@ -35,7 +35,7 @@ Let me know if you need changes.
 #[test]
 fn parse_empty_array_returns_error() {
     let input = "[]";
-    let err = parse_claude_response(input).unwrap_err();
+    let err = parse_claude_response(input).expect_err("empty array should produce an error");
     let msg = format!("{err}");
     assert!(msg.contains("empty"), "expected empty error, got: {msg}");
 }
@@ -43,7 +43,7 @@ fn parse_empty_array_returns_error() {
 #[test]
 fn parse_empty_title_returns_error() {
     let input = r##"[{"title": "", "purpose": "x", "markdown": "# Content"}]"##;
-    let err = parse_claude_response(input).unwrap_err();
+    let err = parse_claude_response(input).expect_err("empty title should produce an error");
     let msg = format!("{err}");
     assert!(msg.contains("empty title"), "expected title error, got: {msg}");
 }
@@ -51,7 +51,7 @@ fn parse_empty_title_returns_error() {
 #[test]
 fn parse_empty_markdown_returns_error() {
     let input = r##"[{"title": "Spec", "purpose": "x", "markdown": "  "}]"##;
-    let err = parse_claude_response(input).unwrap_err();
+    let err = parse_claude_response(input).expect_err("empty markdown should produce an error");
     let msg = format!("{err}");
     assert!(msg.contains("empty markdown"), "expected markdown error, got: {msg}");
 }
@@ -71,7 +71,7 @@ fn incremental_parser_single_object() {
     let mut parser = IncrementalSpecParser::new();
     let objects = parser.feed(r#"[{"title":"A","purpose":"p","markdown":"m"}]"#);
     assert_eq!(objects.len(), 1);
-    let parsed: RawSpecOutput = serde_json::from_str(&objects[0]).unwrap();
+    let parsed: RawSpecOutput = serde_json::from_str(&objects[0]).expect("parsed object should deserialize");
     assert_eq!(parsed.title, "A");
 }
 
@@ -91,7 +91,7 @@ fn incremental_parser_handles_braces_in_strings() {
         r#"[{"title":"T","purpose":"p","markdown":"code: { x } end"}]"#,
     );
     assert_eq!(objects.len(), 1);
-    let parsed: RawSpecOutput = serde_json::from_str(&objects[0]).unwrap();
+    let parsed: RawSpecOutput = serde_json::from_str(&objects[0]).expect("parsed object should deserialize");
     assert!(parsed.markdown.contains("{ x }"));
 }
 
@@ -270,6 +270,6 @@ fn parse_tasks_sets_project_and_spec_ids() {
 #[test]
 fn fenced_json_without_lang_tag() {
     let input = "Here:\n```\n[{\"title\":\"T\",\"purpose\":\"p\",\"markdown\":\"content\"}]\n```";
-    let specs = parse_claude_response(input).unwrap();
+    let specs = parse_claude_response(input).expect("bare fenced JSON should parse");
     assert_eq!(specs.len(), 1);
 }

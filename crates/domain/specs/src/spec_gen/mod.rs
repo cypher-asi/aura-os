@@ -109,12 +109,12 @@ impl SpecGenerationService {
         self.generate_specs_with_progress(project_id, None).await
     }
 
-    pub async fn generate_specs_with_progress(
+    async fn load_requirements_and_key(
         &self,
         project_id: &ProjectId,
-        progress: Option<ProgressTx>,
-    ) -> Result<Vec<Spec>, SpecGenError> {
-        Self::emit(&progress, "Loading project");
+        progress: &Option<ProgressTx>,
+    ) -> Result<(String, String), SpecGenError> {
+        Self::emit(progress, "Loading project");
         info!(%project_id, "Loading project for spec generation");
 
         let project = self.project_service.get_project_async(project_id).await.map_err(|e| {
@@ -122,15 +122,25 @@ impl SpecGenerationService {
             e
         })?;
 
-        Self::emit(&progress, "Reading requirements document");
+        Self::emit(progress, "Reading requirements document");
         let requirements_content = load_requirements(project_id, &project)?;
 
-        Self::emit(&progress, "Decrypting API key");
+        Self::emit(progress, "Decrypting API key");
         let api_key = self.settings.get_decrypted_api_key().map_err(|e| {
             error!(%project_id, error = %e, "Failed to get API key");
             SpecGenError::Settings(e)
         })?;
         debug!(%project_id, "API key decrypted successfully");
+
+        Ok((requirements_content, api_key))
+    }
+
+    pub async fn generate_specs_with_progress(
+        &self,
+        project_id: &ProjectId,
+        progress: Option<ProgressTx>,
+    ) -> Result<Vec<Spec>, SpecGenError> {
+        let (requirements_content, api_key) = self.load_requirements_and_key(project_id, &progress).await?;
 
         Self::emit(&progress, "Calling Claude to generate specs — this may take a minute");
         info!(%project_id, max_tokens = MAX_TOKENS, "Sending request to Claude API");
