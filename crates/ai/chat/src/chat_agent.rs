@@ -11,7 +11,10 @@ use aura_claude::ThinkingConfig;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
 use crate::chat_message_conversion::convert_messages_to_rich;
-use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_with_text_accumulation, flush_text_buffer};
+use crate::chat_event_forwarding::{
+    ContentBlockAccumulator, forward_with_text_accumulation, flush_text_buffer,
+    build_partial_snapshot_content, PARTIAL_SNAPSHOT_INTERVAL_MS,
+};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
@@ -156,21 +159,46 @@ impl ChatService {
 
         let forwarder = tokio::spawn(async move {
             let mut text_buffer = String::new();
+            let mut thinking_buffer = String::new();
+            let mut thinking_start: Option<std::time::Instant> = None;
+            let mut last_snapshot = std::time::Instant::now();
+            let mut pending_saves: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+
             while let Some(evt) = loop_rx.recv().await {
-                if let ToolLoopEvent::IterationComplete { .. } = &evt {
+                if let ToolLoopEvent::ThinkingDelta(ref t) = evt {
+                    if thinking_start.is_none() {
+                        thinking_start = Some(std::time::Instant::now());
+                    }
+                    thinking_buffer.push_str(t);
+                }
+
+                let should_snapshot = match &evt {
+                    ToolLoopEvent::IterationComplete { .. }
+                    | ToolLoopEvent::ToolUseDetected { .. }
+                    | ToolLoopEvent::ToolResult { .. } => true,
+                    ToolLoopEvent::Delta(_) | ToolLoopEvent::ThinkingDelta(_) => {
+                        last_snapshot.elapsed().as_millis() >= PARTIAL_SNAPSHOT_INTERVAL_MS
+                    }
+                    _ => false,
+                };
+
+                forward_with_text_accumulation(evt, &tx_clone, &fwd_blocks, &mut text_buffer);
+
+                if should_snapshot {
                     if let (Some(ref storage), Some(ref jwt), Some(ref mid)) =
                         (&storage_for_fwd, &jwt_for_fwd, &msg_id_for_fwd)
                     {
-                        let blocks_snapshot = inc_blocks.lock()
-                            .map(|b| b.clone())
-                            .unwrap_or_default();
-                        if !blocks_snapshot.is_empty() {
-                            let encoded = crate::message_metadata::encode_message_content(
-                                "",
-                                Some(&blocks_snapshot),
-                                None,
-                                None,
-                            );
+                        let thinking = if thinking_buffer.is_empty() {
+                            None
+                        } else {
+                            Some(thinking_buffer.as_str())
+                        };
+                        let thinking_ms =
+                            thinking_start.map(|s| s.elapsed().as_millis() as u64);
+
+                        if let Some(encoded) = build_partial_snapshot_content(
+                            &text_buffer, &inc_blocks, thinking, thinking_ms,
+                        ) {
                             let req = aura_storage::UpdateMessageRequest {
                                 content: Some(encoded),
                                 input_tokens: None,
@@ -179,17 +207,20 @@ impl ChatService {
                             let storage = Arc::clone(storage);
                             let jwt = jwt.clone();
                             let mid = mid.clone();
-                            tokio::spawn(async move {
+                            pending_saves.push(tokio::spawn(async move {
                                 if let Err(e) = storage.update_message(&mid, &jwt, &req).await {
                                     warn!(error = %e, "Incremental agent message save failed");
                                 }
-                            });
+                            }));
+                            last_snapshot = std::time::Instant::now();
                         }
                     }
                 }
-                forward_with_text_accumulation(evt, &tx_clone, &fwd_blocks, &mut text_buffer);
             }
             flush_text_buffer(&fwd_blocks, &mut text_buffer);
+            for h in pending_saves {
+                let _ = h.await;
+            }
         });
 
         let result = run_tool_loop(ToolLoopInput {

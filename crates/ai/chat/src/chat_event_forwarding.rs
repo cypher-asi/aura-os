@@ -124,6 +124,50 @@ pub(crate) fn forward_with_text_accumulation(
     forward_tool_loop_event(evt, tx, blocks);
 }
 
+/// Minimum interval between throttled partial-snapshot saves.
+pub(crate) const PARTIAL_SNAPSHOT_INTERVAL_MS: u128 = 2_000;
+
+/// Build an encoded content string for a partial (interrupt-safe) snapshot.
+///
+/// Appends any unflushed `text_buffer` as a trailing `Text` content block so
+/// that a chat interrupted mid-stream still has the assistant's partial reply
+/// and tool-call blocks available in storage for history reload.
+///
+/// Returns `None` when there is nothing meaningful to persist.
+pub(crate) fn build_partial_snapshot_content(
+    text_buffer: &str,
+    blocks: &ContentBlockAccumulator,
+    thinking: Option<&str>,
+    thinking_duration_ms: Option<u64>,
+) -> Option<String> {
+    let mut snapshot_blocks = blocks
+        .lock()
+        .map(|b| b.clone())
+        .unwrap_or_default();
+
+    if !text_buffer.is_empty() {
+        snapshot_blocks.push(ChatContentBlock::Text {
+            text: text_buffer.to_string(),
+        });
+    }
+
+    let has_blocks = !snapshot_blocks.is_empty();
+    let has_thinking = thinking.is_some_and(|t| !t.is_empty());
+
+    if !has_blocks && !has_thinking {
+        return None;
+    }
+
+    let encoded = crate::message_metadata::encode_message_content(
+        "",
+        if has_blocks { Some(&snapshot_blocks) } else { None },
+        thinking,
+        thinking_duration_ms,
+    );
+
+    Some(encoded)
+}
+
 pub(crate) fn extract_user_text(messages: &[Message]) -> String {
     messages
         .iter()
@@ -561,5 +605,85 @@ mod tests {
         let result = extract_user_text(&[msg]);
         assert!(result.contains("block one"));
         assert!(result.contains("block two"));
+    }
+
+    // ── build_partial_snapshot_content ─────────────────────────────
+
+    #[test]
+    fn partial_snapshot_none_when_empty() {
+        let blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
+        assert!(build_partial_snapshot_content("", &blocks, None, None).is_none());
+    }
+
+    #[test]
+    fn partial_snapshot_text_buffer_only() {
+        let blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
+        let encoded = build_partial_snapshot_content("hello world", &blocks, None, None).unwrap();
+        let decoded = crate::message_metadata::decode_message_content(&encoded);
+        assert_eq!(decoded.text, "");
+        let cb = decoded.content_blocks.unwrap();
+        assert_eq!(cb.len(), 1);
+        assert!(matches!(&cb[0], ChatContentBlock::Text { text } if text == "hello world"));
+    }
+
+    #[test]
+    fn partial_snapshot_blocks_and_text_buffer() {
+        let blocks: ContentBlockAccumulator = Arc::new(Mutex::new(vec![
+            ChatContentBlock::ToolUse {
+                id: "t1".into(),
+                name: "read_file".into(),
+                input: json!({"path": "a.rs"}),
+            },
+        ]));
+        let encoded = build_partial_snapshot_content("trailing", &blocks, None, None).unwrap();
+        let decoded = crate::message_metadata::decode_message_content(&encoded);
+        let cb = decoded.content_blocks.unwrap();
+        assert_eq!(cb.len(), 2);
+        assert!(matches!(&cb[0], ChatContentBlock::ToolUse { id, .. } if id == "t1"));
+        assert!(matches!(&cb[1], ChatContentBlock::Text { text } if text == "trailing"));
+    }
+
+    #[test]
+    fn partial_snapshot_thinking_only() {
+        let blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
+        let encoded =
+            build_partial_snapshot_content("", &blocks, Some("deep thoughts"), Some(1500)).unwrap();
+        let decoded = crate::message_metadata::decode_message_content(&encoded);
+        assert_eq!(decoded.thinking.as_deref(), Some("deep thoughts"));
+        assert_eq!(decoded.thinking_duration_ms, Some(1500));
+        assert!(decoded.content_blocks.is_none());
+    }
+
+    #[test]
+    fn partial_snapshot_full_state() {
+        let blocks: ContentBlockAccumulator = Arc::new(Mutex::new(vec![
+            ChatContentBlock::Text { text: "first segment".into() },
+            ChatContentBlock::ToolUse {
+                id: "t1".into(),
+                name: "run".into(),
+                input: json!({}),
+            },
+            ChatContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "ok".into(),
+                is_error: None,
+            },
+        ]));
+        let encoded = build_partial_snapshot_content(
+            "second segment",
+            &blocks,
+            Some("hmm"),
+            Some(500),
+        )
+        .unwrap();
+        let decoded = crate::message_metadata::decode_message_content(&encoded);
+        let cb = decoded.content_blocks.unwrap();
+        assert_eq!(cb.len(), 4);
+        assert!(matches!(&cb[0], ChatContentBlock::Text { text } if text == "first segment"));
+        assert!(matches!(&cb[1], ChatContentBlock::ToolUse { .. }));
+        assert!(matches!(&cb[2], ChatContentBlock::ToolResult { .. }));
+        assert!(matches!(&cb[3], ChatContentBlock::Text { text } if text == "second segment"));
+        assert_eq!(decoded.thinking.as_deref(), Some("hmm"));
+        assert_eq!(decoded.thinking_duration_ms, Some(500));
     }
 }

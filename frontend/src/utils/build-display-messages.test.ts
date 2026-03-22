@@ -154,4 +154,36 @@ describe("buildDisplayMessages", () => {
     const result = buildDisplayMessages(msgs);
     expect(result).toHaveLength(1);
   });
+
+  it("keeps interrupted assistant message with content_blocks but empty content", () => {
+    const blocks: ChatContentBlock[] = [
+      { type: "tool_use", id: "t1", name: "read_file", input: { path: "a.ts" } },
+      { type: "tool_result", tool_use_id: "t1", content: "file contents" },
+      { type: "text", text: "partial response" },
+    ];
+    const msgs: Message[] = [
+      makeMsg({ message_id: "1", role: "assistant", content: "", content_blocks: blocks }),
+    ];
+    const result = buildDisplayMessages(msgs);
+    expect(result).toHaveLength(1);
+    expect(result[0].toolCalls).toHaveLength(1);
+    expect(result[0].contentBlocks).toHaveLength(1);
+    expect(result[0].contentBlocks![0]).toEqual({ type: "text", text: "partial response" });
+  });
+
+  it("keeps assistant message with only thinking_duration_ms set", () => {
+    const msgs: Message[] = [
+      makeMsg({ message_id: "1", role: "assistant", content: "", thinking_duration_ms: 1200 }),
+    ];
+    const result = buildDisplayMessages(msgs);
+    expect(result).toHaveLength(1);
+  });
+
+  it("still filters empty user messages even with thinking_duration_ms", () => {
+    const msgs: Message[] = [
+      makeMsg({ message_id: "1", role: "user", content: "", thinking_duration_ms: 1200 }),
+    ];
+    const result = buildDisplayMessages(msgs);
+    expect(result).toHaveLength(0);
+  });
 });
