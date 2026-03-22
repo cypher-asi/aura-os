@@ -1,5 +1,9 @@
 import { useEffect, useRef, useCallback } from "react";
 
+const BOTTOM_THRESHOLD_PX = 40;
+const SETTLING_TIMEOUT_MS = 1500;
+const USER_SCROLL_ESCAPE_PX = 80;
+
 /**
  * Sets `el.scrollTop` to `target` and guards the resulting scroll event so
  * it isn't misread as a user-initiated scroll (which would disable
@@ -29,7 +33,10 @@ export function useAutoScroll(
   resetKey?: unknown,
 ): { handleScroll: () => void; scrollToBottom: () => void } {
   const autoScrollRef = useRef(true);
+  const settlingRef = useRef(false);
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevScrollHeightRef = useRef(0);
+  const lastScrollTopRef = useRef(0);
   const programmaticScrollRef = useRef(false);
   const scrollRafRef = useRef<number | null>(null);
   const pendingTargetRef = useRef<number | null>(null);
@@ -39,6 +46,15 @@ export function useAutoScroll(
     if (!el) return;
 
     autoScrollRef.current = true;
+    settlingRef.current = true;
+    lastScrollTopRef.current = el.scrollTop;
+    if (settleTimerRef.current !== null) {
+      clearTimeout(settleTimerRef.current);
+    }
+    settleTimerRef.current = setTimeout(() => {
+      settlingRef.current = false;
+      settleTimerRef.current = null;
+    }, SETTLING_TIMEOUT_MS);
 
     const syncHeight = () => {
       prevScrollHeightRef.current = el.scrollHeight;
@@ -76,6 +92,7 @@ export function useAutoScroll(
     mutationObs.observe(el, {
       childList: true,
       subtree: true,
+      characterData: true,
     });
 
     let lastWidth = el.clientWidth;
@@ -108,6 +125,10 @@ export function useAutoScroll(
       if (scrollRafRef.current !== null) {
         cancelAnimationFrame(scrollRafRef.current);
       }
+      if (settleTimerRef.current !== null) {
+        clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
       mutationObs.disconnect();
       resizeObs.disconnect();
     };
@@ -117,8 +138,22 @@ export function useAutoScroll(
     if (programmaticScrollRef.current) return;
     const el = ref.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
+    const delta = el.scrollTop - lastScrollTopRef.current;
+    if (settlingRef.current) {
+      // During startup/conversation switch, ignore virtualizer settling jitter.
+      // But if the user scrolls up intentionally, exit settling and respect it.
+      if (!atBottom && delta <= -USER_SCROLL_ESCAPE_PX) {
+        settlingRef.current = false;
+        autoScrollRef.current = false;
+      } else if (atBottom) {
+        settlingRef.current = false;
+      }
+      lastScrollTopRef.current = el.scrollTop;
+      return;
+    }
     autoScrollRef.current = atBottom;
+    lastScrollTopRef.current = el.scrollTop;
   }, [ref]);
 
   const scrollToBottom = useCallback(() => {
