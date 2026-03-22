@@ -2,6 +2,7 @@ import { Gem } from "lucide-react";
 import { LeaderboardSidebar } from "./LeaderboardSidebar";
 import { LeaderboardMainPanel } from "./LeaderboardMainPanel";
 import { LeaderboardSidekickPanel } from "./LeaderboardSidekickPanel";
+import { useLeaderboardStore } from "../../stores/leaderboard-store";
 import type { AuraApp } from "../types";
 
 export const LeaderboardApp: AuraApp = {
@@ -13,4 +14,7 @@ export const LeaderboardApp: AuraApp = {
   MainPanel: LeaderboardMainPanel,
   ResponsiveControls: LeaderboardSidebar,
   SidekickPanel: LeaderboardSidekickPanel,
+  onPrefetch: () => {
+    useLeaderboardStore.getState().init();
+  },
 };

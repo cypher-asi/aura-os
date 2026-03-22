@@ -12,7 +12,6 @@ export const ProfileApp: AuraApp = {
   basePath: "/profile",
   LeftPanel: ProfileList,
   MainPanel: ProfileMainPanel,
-  ResponsiveControls: ProfileList,
   SidekickPanel: ProfileSidekickPanel,
   SidekickTaskbar: ProfileSidekickHeader,
   searchPlaceholder: "Filter Projects...",
