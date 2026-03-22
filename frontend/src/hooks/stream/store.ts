@@ -70,6 +70,8 @@ function makeRefs(): StreamRefs {
     needsSeparator: { current: false },
     raf: { current: null },
     thinkingRaf: { current: null },
+    toolCallRaf: { current: null },
+    toolInputBuffers: { current: new Map() },
     timeline: { current: [] },
   };
 }

@@ -62,6 +62,8 @@ export interface StreamRefs {
   needsSeparator: MutableRefObject<boolean>;
   raf: MutableRefObject<number | null>;
   thinkingRaf: MutableRefObject<number | null>;
+  toolCallRaf: MutableRefObject<number | null>;
+  toolInputBuffers: MutableRefObject<Map<string, string>>;
   timeline: MutableRefObject<TimelineItem[]>;
 }
 

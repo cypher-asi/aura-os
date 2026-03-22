@@ -1,6 +1,6 @@
 import type { MutableRefObject } from "react";
 import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import type { ToolCallStartedInfo, ToolCallInfo, ToolResultInfo } from "../../api/streams";
+import type { ToolCallStartedInfo, ToolCallDeltaInfo, ToolCallInfo, ToolResultInfo } from "../../api/streams";
 import type { Message } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
@@ -45,6 +45,11 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   setters.setThinkingDurationMs(null);
   refs.toolCalls.current = [];
   setters.setActiveToolCalls([]);
+  refs.toolInputBuffers.current.clear();
+  if (refs.toolCallRaf.current !== null) {
+    cancelAnimationFrame(refs.toolCallRaf.current);
+    refs.toolCallRaf.current = null;
+  }
   refs.timeline.current = [];
   setters.setTimeline([]);
   setters.setProgressText("");
@@ -134,6 +139,51 @@ export function handleToolCallStarted(
 
   refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
   setters.setTimeline([...refs.timeline.current]);
+}
+
+function tryParseToolInput(buf: string): Record<string, unknown> | null {
+  for (const suffix of ["", '"}',"'}", '"}]']) {
+    try {
+      return JSON.parse(buf + suffix) as Record<string, unknown>;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
+export function handleToolCallDelta(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  info: ToolCallDeltaInfo,
+): void {
+  const buffers = refs.toolInputBuffers.current;
+  const prev = buffers.get(info.id) ?? "";
+  buffers.set(info.id, prev + info.partialInput);
+
+  if (refs.toolCallRaf.current === null) {
+    refs.toolCallRaf.current = requestAnimationFrame(() => {
+      refs.toolCallRaf.current = null;
+      let changed = false;
+
+      for (const [id, buf] of buffers) {
+        const parsed = tryParseToolInput(buf);
+        if (!parsed) continue;
+
+        const idx = refs.toolCalls.current.findIndex((tc) => tc.id === id);
+        if (idx === -1) continue;
+
+        const existing = refs.toolCalls.current[idx];
+        const mergedInput: Record<string, unknown> = { ...existing.input, ...parsed };
+        refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
+          tc.id === id ? { ...tc, input: mergedInput } : tc,
+        );
+        changed = true;
+      }
+
+      if (changed) {
+        setters.setActiveToolCalls([...refs.toolCalls.current]);
+      }
+    });
+  }
 }
 
 export function handleToolCall(
