@@ -10,7 +10,6 @@ import { SettingsView } from "./views/SettingsView";
 import { ExecutionView } from "./views/ExecutionView";
 import { LoginView } from "./views/LoginView";
 import { InviteAcceptView } from "./views/InviteAcceptView";
-import { AgentChatView } from "./apps/agents/AgentChatView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { IdeView } from "./views/IdeView";
 import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
@@ -47,7 +46,7 @@ export default function App() {
             </Route>
 
             <Route path="agents" element={<AgentIndexRedirect />} />
-            <Route path="agents/:agentId" element={<AgentChatView />} />
+            <Route path="agents/:agentId" element={null} />
 
             <Route path="leaderboard" element={null} />
             <Route path="feed" element={null} />

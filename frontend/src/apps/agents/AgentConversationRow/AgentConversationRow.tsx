@@ -1,38 +1,29 @@
 import { Bot } from "lucide-react";
-import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
-import type { DisplayMessage } from "../../../types/stream";
 import styles from "./AgentConversationRow.module.css";
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/[*_~`#>]+/g, "")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/\n+/g, " ")
-    .trim();
+function summarizeAgent(agent: Agent): string {
+  const summary = agent.personality?.trim() || agent.system_prompt?.trim() || "";
+  if (!summary) {
+    return "Open this agent to review its role, skills, and instructions.";
+  }
+  return summary.replace(/\s+/g, " ").slice(0, 96);
 }
 
 interface AgentConversationRowProps {
   agent: Agent;
-  lastMessage: DisplayMessage | undefined;
   isSelected: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onMouseOver: (e: React.MouseEvent) => void;
 }
 
 export function AgentConversationRow({
   agent,
-  lastMessage,
   isSelected,
   onClick,
   onContextMenu,
-  onMouseOver,
 }: AgentConversationRowProps) {
-  const preview = lastMessage
-    ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(lastMessage.content)}`
-    : agent.role;
+  const preview = summarizeAgent(agent);
 
   return (
     <button
@@ -40,7 +31,6 @@ export function AgentConversationRow({
       className={`${styles.row} ${isSelected ? styles.selected : ""}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      onMouseOver={onMouseOver}
     >
       <span className={styles.avatar}>
         {agent.icon ? (
@@ -53,9 +43,7 @@ export function AgentConversationRow({
       <span className={styles.body}>
         <span className={styles.top}>
           <span className={styles.name}>{agent.name}</span>
-          <span className={styles.time}>
-            {formatChatTime(agent.updated_at)}
-          </span>
+          <span className={styles.role}>{agent.role || "Agent"}</span>
         </span>
         <span className={styles.preview}>{preview}</span>
       </span>

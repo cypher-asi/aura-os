@@ -8,8 +8,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { api, ApiClientError } from "../../../api/client";
-import { useAgents, useSelectedAgent, useAgentStore, useSortedAgents, LAST_AGENT_ID_KEY } from "../stores";
-import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
+import { useAgents, useSelectedAgent, useAgentStore, useSortedAgents } from "../stores";
 import { useSidebarSearch } from "../../../context/SidebarSearchContext";
 
 import type { Agent } from "../../../types";
@@ -52,17 +51,6 @@ export function AgentList() {
     return () => setAction("agents", null);
   }, [setAction]);
 
-  useEffect(() => {
-    if (status !== "ready") return;
-    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
-    if (lastId && !agentId) {
-      useChatHistoryStore.getState().prefetchHistory(
-        agentHistoryKey(lastId),
-        () => api.agents.listMessages(lastId),
-      );
-    }
-  }, [status, agentId]);
-
   const agentMap = useMemo(
     () => new Map(agents.map((a) => [a.agent_id, a])),
     [agents],
@@ -94,19 +82,6 @@ export function AgentList() {
       navigate(`/agents/${agent.agent_id}`);
     },
     [fetchAgents, navigate],
-  );
-
-  const handleHoverPrefetch = useCallback(
-    (e: React.MouseEvent) => {
-      const target = (e.target as HTMLElement).closest("button[id]");
-      if (target) {
-        useChatHistoryStore.getState().prefetchHistory(
-          agentHistoryKey(target.id),
-          () => api.agents.listMessages(target.id),
-        );
-      }
-    },
-    [],
   );
 
   const handleContextMenu = useCallback(
@@ -158,12 +133,14 @@ export function AgentList() {
   }, [deleteTarget, agentId, setSelectedAgent, navigate]);
 
   const sortedAgents = useSortedAgents();
-  const entries = useChatHistoryStore((s) => s.entries);
 
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return sortedAgents;
     const q = searchQuery.toLowerCase();
-    return sortedAgents.filter((a) => a.name.toLowerCase().includes(q));
+    return sortedAgents.filter((a) => {
+      const haystack = `${a.name} ${a.role} ${a.personality} ${a.system_prompt}`.toLowerCase();
+      return haystack.includes(q);
+    });
   }, [sortedAgents, searchQuery]);
 
   if (loading && agents.length === 0) {
@@ -189,23 +166,16 @@ export function AgentList() {
 
   return (
     <div className={styles.list}>
-      <div onContextMenu={handleContextMenu} onMouseOver={handleHoverPrefetch}>
-        {filteredAgents.map((agent) => {
-          const entry = entries[agentHistoryKey(agent.agent_id)];
-          const msgs = entry?.messages;
-          const lastMessage = msgs?.length ? msgs[msgs.length - 1] : undefined;
-          return (
-            <AgentConversationRow
-              key={agent.agent_id}
-              agent={agent}
-              lastMessage={lastMessage}
-              isSelected={agent.agent_id === agentId}
-              onClick={() => navigate(`/agents/${agent.agent_id}`)}
-              onContextMenu={handleContextMenu}
-              onMouseOver={handleHoverPrefetch}
-            />
-          );
-        })}
+      <div onContextMenu={handleContextMenu}>
+        {filteredAgents.map((agent) => (
+          <AgentConversationRow
+            key={agent.agent_id}
+            agent={agent}
+            isSelected={agent.agent_id === agentId}
+            onClick={() => navigate(`/agents/${agent.agent_id}`)}
+            onContextMenu={handleContextMenu}
+          />
+        ))}
       </div>
 
       {ctxMenu &&
