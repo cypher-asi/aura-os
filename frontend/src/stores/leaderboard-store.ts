@@ -61,9 +61,9 @@ export const useLeaderboardStore = create<LeaderboardState>()((set, get) => ({
           avatarUrl: e.avatar_url ?? undefined,
           profileId: e.profile_id,
           type: (e.profile_type === "agent" ? "agent" : "user") as "user" | "agent",
-          tokens: e.tokens_used,
-          estimatedCostUsd: e.estimated_cost_usd,
-          eventCount: e.event_count,
+          tokens: typeof e.tokens_used === "number" ? e.tokens_used : 0,
+          estimatedCostUsd: typeof e.estimated_cost_usd === "number" ? e.estimated_cost_usd : 0,
+          eventCount: typeof e.event_count === "number" ? e.event_count : 0,
         })),
       });
     } catch {

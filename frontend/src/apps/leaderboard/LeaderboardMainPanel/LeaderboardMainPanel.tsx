@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Lane } from "../../../components/Lane";
-import { useLeaderboard } from "../../../stores/leaderboard-store";
+import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
 import { useFollowStore } from "../../../stores/follow-store";
 import { formatTokens, formatCurrency } from "../../../utils/format";
 import styles from "./LeaderboardMainPanel.module.css";
 
 export function LeaderboardMainPanel() {
+  const init = useLeaderboardStore((s) => s.init);
+  useEffect(() => { init(); }, [init]);
   const { filter, selectedUserId, selectUser, entries } = useLeaderboard();
   const followedProfileIds = useFollowStore((s) => s.followedProfileIds);
 

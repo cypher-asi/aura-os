@@ -6,6 +6,39 @@
   position: relative;
 }
 
+.mobileFilterBar {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 0 14px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 560px;
+  scrollbar-width: none;
+}
+
+.mobileFilterBar::-webkit-scrollbar {
+  display: none;
+}
+
+.mobileFilterChip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.mobileFilterChipActive {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 18%, var(--color-border));
+  background: color-mix(in srgb, var(--color-bg-secondary, #181818) 84%, white 16%);
+}
+
 .scrollArea {
   flex: 1;
   overflow-y: auto;
@@ -62,6 +95,17 @@
   .scrollArea {
     padding: 10px;
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .mobileFilterBar {
+    gap: 8px;
+    padding: 2px 0 12px;
+  }
+
+  .mobileFilterChip {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .commitGridWrapper {

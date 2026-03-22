@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { FeedEvent, FeedComment } from "./feed-store";
 import { networkEventToFeedEvent, networkCommentToFeedComment } from "./feed-store";
 import { useAuthStore } from "./auth-store";
+import { useOrgStore } from "./org-store";
 import { api } from "../api/client";
 
 export interface UserProfileData {
@@ -110,8 +111,8 @@ function loadProfileFromNetwork(
     .catch(() => {});
 }
 
-function loadProfileProjects(set: ProfileSetter): void {
-  api.listProjects()
+function loadProfileProjects(set: ProfileSetter, orgId?: string | null): void {
+  api.listProjects(orgId ?? undefined)
     .then((apiProjects) => {
       set({
         projects: apiProjects.map((p) => {
@@ -201,7 +202,7 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
       }
 
       loadProfileFromNetwork(set, user);
-      loadProfileProjects(set);
+      loadProfileProjects(set, useOrgStore.getState().activeOrg?.org_id);
       api.usage.personal("all")
         .then((stats) => set({ totalTokenUsage: stats.total_tokens }))
         .catch(() => {});
@@ -229,6 +230,15 @@ useProfileStore.subscribe((state, prev) => {
       }
     })
     .catch(() => {});
+});
+
+let _prevProfileOrgId: string | null = null;
+useOrgStore.subscribe((state) => {
+  if (!_initialized) return;
+  const orgId = state.activeOrg?.org_id ?? null;
+  if (orgId === _prevProfileOrgId) return;
+  _prevProfileOrgId = orgId;
+  loadProfileProjects(useProfileStore.setState, orgId);
 });
 
 /* ── derived selectors ── */
