@@ -16,6 +16,7 @@ import {
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,
+  handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
   handleStreamError,
@@ -275,6 +276,73 @@ describe("stream/handlers", () => {
       expect(refs.toolCalls.current).toHaveLength(1);
       expect(refs.toolCalls.current[0].input).toEqual({ cmd: "ls" });
       expect(refs.toolCalls.current[0].started).toBe(false);
+    });
+  });
+
+  describe("handleToolCallSnapshot", () => {
+    it("merges snapshot input into existing started entry by id", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "create_spec",
+        input: { title: "Spec 1" },
+      });
+
+      expect(refs.toolCalls.current).toHaveLength(1);
+      expect(refs.toolCalls.current[0]).toMatchObject({
+        id: "tc1",
+        name: "create_spec",
+        started: true,
+      });
+      expect(refs.toolCalls.current[0].input).toEqual({ title: "Spec 1" });
+      expect(setters.calls.setActiveToolCalls).toBeDefined();
+    });
+
+    it("supports incremental snapshot growth for create_spec markdown", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "create_spec",
+        input: { title: "Spec 1", markdown_contents: "Hello" },
+      });
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc1",
+        name: "create_spec",
+        input: { markdown_contents: "Hello world" },
+      });
+
+      expect(refs.toolCalls.current).toHaveLength(1);
+      expect(refs.toolCalls.current[0].input).toEqual({
+        title: "Spec 1",
+        markdown_contents: "Hello world",
+      });
+    });
+
+    it("creates a pending started entry when snapshot arrives before started event", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCallSnapshot(refs, setters, {
+        id: "tc2",
+        name: "create_spec",
+        input: { title: "Early snapshot" },
+      });
+
+      expect(refs.toolCalls.current).toHaveLength(1);
+      expect(refs.toolCalls.current[0]).toMatchObject({
+        id: "tc2",
+        name: "create_spec",
+        pending: true,
+        started: true,
+      });
+      expect(refs.timeline.current).toHaveLength(1);
+      expect(refs.timeline.current[0]).toMatchObject({ kind: "tool", toolCallId: "tc2" });
     });
   });
 
