@@ -67,13 +67,13 @@ export function handleThinkingDelta(
   const tl = refs.timeline.current;
   if (tl.length === 0 || tl[tl.length - 1].kind !== "thinking") {
     tl.push({ kind: "thinking" });
-    setters.setTimeline([...tl]);
   }
 
   if (refs.thinkingRaf.current === null) {
     refs.thinkingRaf.current = requestAnimationFrame(() => {
       refs.thinkingRaf.current = null;
       setters.setThinkingText(refs.thinkingBuffer.current);
+      setters.setTimeline([...refs.timeline.current]);
     });
   }
 }
