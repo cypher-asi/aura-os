@@ -62,7 +62,12 @@ const specs = [
 
 async function mockAuthenticatedMobileApp(
   page: import("@playwright/test").Page,
-  options: { orgsUnavailable?: boolean; withAgentInstance?: boolean; projects?: Record<string, unknown>[] } = {},
+  options: {
+    orgsUnavailable?: boolean;
+    withAgentInstance?: boolean;
+    projects?: Record<string, unknown>[];
+    agentInstances?: Record<string, unknown>[];
+  } = {},
 ) {
   const agentInstance = {
     agent_instance_id: "agent-inst-1",
@@ -111,7 +116,7 @@ async function mockAuthenticatedMobileApp(
   ];
 
   await mockAuthenticatedApp(page, {
-    agentInstances: options.withAgentInstance === false ? [] : [agentInstance],
+    agentInstances: options.withAgentInstance === false ? [] : (options.agentInstances ?? [agentInstance]),
     agents,
     tasks,
     specs,
@@ -204,16 +209,76 @@ test("mobile project navigation opens shared agent, work, and files routes", asy
   await expect(page.getByText("No linked workspace")).toHaveCount(0);
 });
 
+test("mobile project agent tab surfaces the active project agent and switches instances", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page, {
+    agentInstances: [
+      {
+        agent_instance_id: "agent-inst-1",
+        project_id: "proj-1",
+        agent_id: "agent-1",
+        name: "Builder Bot",
+        role: "Engineer",
+        personality: "Helpful",
+        system_prompt: "Build features carefully.",
+        skills: [],
+        icon: null,
+        status: "idle",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+      {
+        agent_instance_id: "agent-inst-2",
+        project_id: "proj-1",
+        agent_id: "agent-2",
+        name: "Research Bot",
+        role: "Analyst",
+        personality: "Curious",
+        system_prompt: "Research carefully.",
+        skills: [],
+        icon: null,
+        status: "working",
+        current_task_id: null,
+        current_session_id: null,
+        total_input_tokens: 0,
+        total_output_tokens: 0,
+        created_at: "2026-03-17T01:00:00.000Z",
+        updated_at: "2026-03-17T01:00:00.000Z",
+      },
+    ],
+  });
+
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
+
+  const projectAgentSelect = page.getByLabel("Project agent");
+  await expect(projectAgentSelect).toHaveValue("agent-inst-1");
+  await projectAgentSelect.selectOption("agent-inst-2");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-2$/);
+  await expect(projectAgentSelect).toHaveValue("agent-inst-2");
+});
+
 test("mobile global app switcher opens feed, leaderboard, and profile", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
 
   await openAppSwitcher(page);
   await expect(page.getByRole("button", { name: "Projects" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Agent library" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Feed" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Leaderboard" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Profile" })).toBeVisible();
 
+  await page.getByRole("button", { name: "Agent library" }).click();
+  await expect(page).toHaveURL(/\/agents\/agent-1$/);
+  await expect(page.getByText("Builder Bot")).toBeVisible();
+  await expect(page.getByText("Helpful")).toBeVisible();
+  await expect(page.getByPlaceholder("Add a follow-up")).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toHaveCount(0);
+
+  await openAppSwitcher(page);
   await page.getByRole("button", { name: "Feed" }).click();
   await expect(page).toHaveURL(/\/feed$/);
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
@@ -227,7 +292,8 @@ test("mobile global app switcher opens feed, leaderboard, and profile", async ({
   await openAppSwitcher(page);
   await page.getByRole("button", { name: "Profile" }).click();
   await expect(page).toHaveURL(/\/profile$/);
-  await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "All activity" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Demo Project" })).toBeVisible();
 });
 
 test("mobile global surfaces use the app switcher to return to project mode", async ({ page }) => {

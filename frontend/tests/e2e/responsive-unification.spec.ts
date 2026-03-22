@@ -221,8 +221,14 @@ test("profile remains reachable directly with shared content across form factors
   await mockAuthenticatedApp(page);
   await page.goto("/profile");
 
-  await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
+  if (factor === "desktop") {
+    await expect(page.getByRole("treeitem", { name: "All" })).toBeVisible();
+    await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "All activity" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Demo Project" })).toBeVisible();
+    await expect(page.getByRole("treeitem", { name: "All" })).toHaveCount(0);
+  }
   await expectGlobalAppChrome(page, factor);
 });
 
