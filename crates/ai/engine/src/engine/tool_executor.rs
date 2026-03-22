@@ -43,7 +43,6 @@ pub(crate) struct EngineToolLoopExecutor {
     pub stub_fix_attempts: Arc<Mutex<u32>>,
     pub completed_deps: Vec<Task>,
     pub work_log_summary: String,
-    pub exploration_allowance: usize,
     pub task_phase: Arc<Mutex<TaskPhase>>,
     pub self_review_done: Arc<AtomicBool>,
     /// Paths read via `read_file` since their last write. Invalidated when the
@@ -420,7 +419,6 @@ impl EngineToolLoopExecutor {
             &self.session,
             &self.completed_deps,
             &self.work_log_summary,
-            self.exploration_allowance,
         );
         results.push(ToolCallResult {
             tool_use_id: tc.id.clone(),

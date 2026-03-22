@@ -1,7 +1,7 @@
 use tokio::sync::mpsc;
 use tracing::{error, info, warn};
 
-use aura_claude::{ClaudeStreamEvent, ToolCall, ToolStreamResponse};
+use aura_claude::{ClaudeStreamEvent, ThinkingConfig, ToolCall, ToolStreamResponse};
 use aura_billing::{MeteredLlmError, MeteredStreamRequest};
 
 use crate::chat_sanitize;
@@ -53,8 +53,15 @@ pub(crate) async fn run_single_iteration(
     let msgs_owned = state.api_messages.clone();
     let tools_owned = ctx.tools.to_vec();
     let max_tokens = ctx.config.max_tokens;
-    let thinking = ctx.config.thinking.clone();
     let reason = ctx.config.billing_reason;
+
+    let thinking = ctx.config.thinking.as_ref().map(|base| {
+        if iteration > 2 {
+            ThinkingConfig::enabled((base.budget_tokens as f64 * 0.6).max(1_024.0) as u32)
+        } else {
+            base.clone()
+        }
+    });
 
     let model_override = ctx.config.model_override.clone();
     let stream_handle = tokio::spawn(async move {

@@ -5,6 +5,7 @@ use aura_billing::MeteredLlm;
 use aura_claude::RichMessage;
 
 use crate::channel_ext::send_or_log;
+use crate::tool_loop_helpers::push_or_replace_warning;
 use crate::tool_loop_types::{ToolLoopEvent, ToolLoopResult};
 
 pub(crate) struct ExplorationState {
@@ -36,7 +37,7 @@ pub(crate) fn inject_exploration_warnings(
             exploration.total_calls, exploration.allowance,
         );
         info!(total_exploration = exploration.total_calls, allowance = exploration.allowance, "Injecting strong exploration warning");
-        api_messages.push(RichMessage::user(&warning));
+        push_or_replace_warning(api_messages, "[EXPLORATION WARNING]", &warning);
     } else if exploration.total_calls >= mild_threshold && !exploration.warning_mild_sent {
         exploration.warning_mild_sent = true;
         let warning = format!(
@@ -45,7 +46,7 @@ pub(crate) fn inject_exploration_warnings(
             exploration.total_calls, exploration.allowance,
         );
         info!(total_exploration = exploration.total_calls, allowance = exploration.allowance, "Injecting exploration warning");
-        api_messages.push(RichMessage::user(&warning));
+        push_or_replace_warning(api_messages, "[EXPLORATION WARNING]", &warning);
     }
 }
 
@@ -76,7 +77,7 @@ pub(crate) fn check_budget_warnings(
             utilization * 100.0,
         );
         info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 60% budget warning");
-        api_messages.push(RichMessage::user(&warning));
+        push_or_replace_warning(api_messages, "[BUDGET WARNING]", &warning);
     } else if utilization >= 0.30 && !budget_state.warning_30_sent {
         budget_state.warning_30_sent = true;
         let warning = format!(
@@ -86,7 +87,7 @@ pub(crate) fn check_budget_warnings(
             utilization * 100.0,
         );
         info!(utilization_pct = (utilization * 100.0) as u32, "Injecting 30% budget warning");
-        api_messages.push(RichMessage::user(&warning));
+        push_or_replace_warning(api_messages, "[BUDGET WARNING]", &warning);
     }
 
     let next_estimate = llm.estimate_credits(billing_model, iter_input_tokens, 0);
@@ -127,7 +128,7 @@ pub(crate) fn check_no_write_budget_warning(
             utilization * 100.0,
         );
         info!(utilization_pct = (utilization * 100.0) as u32, "Injecting no-write budget warning");
-        api_messages.push(RichMessage::user(&warning));
+        push_or_replace_warning(api_messages, "[CRITICAL WARNING]", &warning);
     }
 }
 

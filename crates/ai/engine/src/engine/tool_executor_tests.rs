@@ -91,7 +91,6 @@ fn make_executor() -> EngineToolLoopExecutor {
         stub_fix_attempts: Arc::new(Mutex::new(0)),
         completed_deps: vec![],
         work_log_summary: String::new(),
-        exploration_allowance: 12,
         task_phase: Arc::new(Mutex::new(
             TaskPhase::Implementing {
                 plan: TaskPlan::empty(),

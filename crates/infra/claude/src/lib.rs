@@ -32,7 +32,7 @@ pub(crate) const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub(crate) const ANTHROPIC_BETA: &str = "prompt-caching-2024-07-31";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
-pub const MID_MODEL: &str = "claude-opus-4-6";
+pub const MID_MODEL: &str = "claude-sonnet-4-5";
 
 /// Ordered fallback chain: when the primary model is overloaded, try these in order.
 pub(crate) const FALLBACK_MODELS: &[&str] = &["claude-opus-4-6", "claude-sonnet-4-5", "claude-haiku-4-5-20251001"];
@@ -277,6 +277,42 @@ async fn parse_messages_response(
     Ok(LlmResponse { text, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens })
 }
 
+/// Place a rolling `cache_control: ephemeral` breakpoint on the last user
+/// message's last content block.  This lets Anthropic cache the entire prefix
+/// (system + tools + all messages up to this point) between iterations,
+/// reducing input-token cost by 50-80% on subsequent calls.
+fn inject_message_cache_breakpoint(body: &mut serde_json::Value) {
+    let Some(messages) = body.get_mut("messages").and_then(|m| m.as_array_mut()) else {
+        return;
+    };
+    for msg in messages.iter_mut().rev() {
+        if msg.get("role").and_then(|r| r.as_str()) != Some("user") {
+            continue;
+        }
+        let Some(content) = msg.get_mut("content") else { continue };
+        if content.is_array() {
+            if let Some(last_block) = content.as_array_mut().and_then(|a| a.last_mut()) {
+                if let Some(obj) = last_block.as_object_mut() {
+                    obj.insert(
+                        "cache_control".into(),
+                        serde_json::json!({"type": "ephemeral"}),
+                    );
+                }
+            }
+            return;
+        }
+        if content.is_string() {
+            let text = content.as_str().unwrap_or("").to_string();
+            *content = serde_json::json!([{
+                "type": "text",
+                "text": text,
+                "cache_control": {"type": "ephemeral"}
+            }]);
+            return;
+        }
+    }
+}
+
 fn cached_system_blocks(text: &str) -> serde_json::Value {
     serde_json::json!([{
         "type": "text",
@@ -368,9 +404,10 @@ impl LlmProvider for ClaudeClient {
             "Sending tool-use streaming Claude API request"
         );
 
-        let body = serde_json::to_value(&request).map_err(|e| {
+        let mut body = serde_json::to_value(&request).map_err(|e| {
             ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
         })?;
+        inject_message_cache_breakpoint(&mut body);
         self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await
     }
 

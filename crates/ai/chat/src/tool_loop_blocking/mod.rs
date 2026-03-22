@@ -48,5 +48,6 @@ pub(crate) use stall::{
 #[allow(unused_imports)]
 pub(crate) use stall::detect_same_target_stall;
 pub(crate) use tool_results::{
-    build_tool_result_blocks, looks_truncated, summarize_write_file_input,
+    build_tool_result_blocks, looks_truncated, summarize_edit_file_input,
+    summarize_write_file_input,
 };

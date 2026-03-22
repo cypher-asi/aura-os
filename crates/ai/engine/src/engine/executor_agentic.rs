@@ -188,7 +188,7 @@ async fn prepare_agentic_task(
 
     let work_log_summary = build_work_log_summary(work_log);
     let base_context = build_agentic_task_context(
-        &project, &spec, task, session, &completed_deps, &work_log_summary, exploration_allowance,
+        &project, &spec, task, session, &completed_deps, &work_log_summary,
     );
     let task_context = build_full_task_context(
         base_context, workspace_map, &ctx.type_defs_context, &ctx.codebase_snapshot, &ctx.dep_api_context,
@@ -230,7 +230,6 @@ fn build_executor(
         stub_fix_attempts: Arc::new(Mutex::new(0)),
         completed_deps: setup.completed_deps.clone(),
         work_log_summary: setup.work_log_summary.clone(),
-        exploration_allowance: setup.exploration_allowance,
         task_phase: Arc::new(Mutex::new(
             if setup.complexity == TaskComplexity::Simple {
                 TaskPhase::Implementing { plan: TaskPlan::empty() }

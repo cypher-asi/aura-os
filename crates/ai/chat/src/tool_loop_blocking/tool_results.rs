@@ -139,6 +139,43 @@ pub(crate) fn summarize_write_file_input(input: &serde_json::Value) -> serde_jso
     })
 }
 
+pub(crate) fn summarize_edit_file_input(input: &serde_json::Value) -> serde_json::Value {
+    const THRESHOLD: usize = 500;
+    const KEEP_HEAD: usize = 120;
+    const KEEP_TAIL: usize = 60;
+
+    let mut result = serde_json::Map::new();
+    if let Some(path) = input.get("path") {
+        result.insert("path".into(), path.clone());
+    }
+    if let Some(ra) = input.get("replace_all") {
+        result.insert("replace_all".into(), ra.clone());
+    }
+
+    for key in &["old_text", "new_text"] {
+        if let Some(val) = input.get(key).and_then(|v| v.as_str()) {
+            let summarized = if val.len() > THRESHOLD {
+                let head: String = val.chars().take(KEEP_HEAD).collect();
+                let tail: String = val
+                    .chars()
+                    .rev()
+                    .take(KEEP_TAIL)
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .collect();
+                let omitted = val.len() - KEEP_HEAD - KEEP_TAIL;
+                format!("{head}\n[...{omitted} chars omitted...]\n{tail}")
+            } else {
+                val.to_string()
+            };
+            result.insert(key.to_string(), serde_json::Value::String(summarized));
+        }
+    }
+
+    serde_json::Value::Object(result)
+}
+
 /// Heuristic check for truncated file content: unbalanced braces/brackets
 /// or content that ends mid-line without a newline.
 pub(crate) fn looks_truncated(content: &str) -> bool {

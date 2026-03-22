@@ -4,18 +4,24 @@ use super::*;
 fn compact_older_message_text_tiered_truncates_old_text_blocks() {
     let long_text = "x".repeat(5000);
     let mut messages = vec![
+        RichMessage::user("initial context"),
         RichMessage::assistant_text(&long_text),
         RichMessage::assistant_text("recent"),
     ];
 
     compact_older_message_text_tiered(&mut messages, 1, &AGGRESSIVE);
 
-    let older_text = match &messages[0].content {
+    let initial = match &messages[0].content {
+        MessageContent::Text(t) => t.clone(),
+        _ => String::new(),
+    };
+    assert_eq!(initial, "initial context", "messages[0] should be protected");
+    let older_text = match &messages[1].content {
         MessageContent::Text(t) => t.clone(),
         _ => String::new(),
     };
     assert!(older_text.contains("omitted"), "older text should be truncated");
-    let recent_text = match &messages[1].content {
+    let recent_text = match &messages[2].content {
         MessageContent::Text(t) => t.clone(),
         _ => String::new(),
     };
@@ -133,6 +139,7 @@ fn smart_compact_error_large_content_truncated_aggressively() {
 fn compact_older_tool_results_skips_last_n_messages() {
     let big_content = "x".repeat(10_000);
     let mut messages = vec![
+        RichMessage::user("initial context"),
         RichMessage::tool_results(vec![ContentBlock::ToolResult {
             tool_use_id: "t1".into(), content: big_content.clone(), is_error: None,
         }]),
@@ -146,16 +153,16 @@ fn compact_older_tool_results_skips_last_n_messages() {
 
     compact_older_tool_results(&mut messages, 2);
 
-    let c0 = match &messages[0].content {
+    let c1 = match &messages[1].content {
         MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.len(), _ => 0 },
         _ => 0,
     };
-    let c2 = match &messages[2].content {
+    let c3 = match &messages[3].content {
         MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.len(), _ => 0 },
         _ => 0,
     };
-    assert!(c0 < big_content.len(), "old message should be compacted");
-    assert_eq!(c2, big_content.len(), "recent message should be untouched");
+    assert!(c1 < big_content.len(), "old message should be compacted");
+    assert_eq!(c3, big_content.len(), "recent message should be untouched");
 }
 
 #[test]
@@ -216,6 +223,7 @@ fn compact_older_tool_results_small_results_untouched() {
 fn compact_older_tool_results_tiered_uses_custom_thresholds() {
     let content = "z".repeat(5_000);
     let mut messages = vec![
+        RichMessage::user("initial context"),
         RichMessage::tool_results(vec![ContentBlock::ToolResult {
             tool_use_id: "t1".into(), content: content.clone(), is_error: None,
         }]),
@@ -224,7 +232,7 @@ fn compact_older_tool_results_tiered_uses_custom_thresholds() {
 
     compact_older_tool_results_tiered(&mut messages, 1, &AGGRESSIVE);
 
-    let compacted = match &messages[0].content {
+    let compacted = match &messages[1].content {
         MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.clone(), _ => String::new() },
         _ => String::new(),
     };
@@ -235,6 +243,7 @@ fn compact_older_tool_results_tiered_uses_custom_thresholds() {
 fn compact_tool_results_in_history_uses_history_config() {
     let big = "h".repeat(5_000);
     let messages = vec![
+        RichMessage::user("initial context"),
         RichMessage::tool_results(vec![ContentBlock::ToolResult {
             tool_use_id: "t1".into(), content: big.clone(), is_error: None,
         }]),
@@ -243,7 +252,7 @@ fn compact_tool_results_in_history_uses_history_config() {
 
     let result = compact_tool_results_in_history(messages, 1);
 
-    let compacted = match &result[0].content {
+    let compacted = match &result[1].content {
         MessageContent::Blocks(b) => match &b[0] { ContentBlock::ToolResult { content, .. } => content.clone(), _ => String::new() },
         _ => String::new(),
     };

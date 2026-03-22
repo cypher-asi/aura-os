@@ -7,7 +7,6 @@ pub(crate) fn build_agentic_task_context(
     session: &Session,
     completed_deps: &[Task],
     work_log_summary: &str,
-    exploration_allowance: usize,
 ) -> String {
     let mut ctx = String::new();
     ctx.push_str(&format!("# Project: {}\n{}\n\n", project.name, project.description));
@@ -43,14 +42,11 @@ pub(crate) fn build_agentic_task_context(
         ));
     }
 
-    ctx.push_str(&format!(
-        "Briefly explore the codebase to confirm the current state (hard limit: ~{} exploration calls \
-         before reads are blocked), then form a plan and begin implementing. NEVER read the same file \
-         twice. Do not exhaustively read every file -- focus on files you need to modify. Prefer \
-         targeted reads (with start_line/end_line) over full-file reads when you only need a specific section.\n\n\
-         Context budget: ~200K tokens available for this session. Budget your exploration accordingly.\n",
-        exploration_allowance
-    ));
+    ctx.push_str(
+        "Briefly explore the codebase, then form a plan and begin implementing. \
+         Focus on files you need to modify. Prefer targeted reads (with start_line/end_line) \
+         over full-file reads when you only need a specific section.\n\n",
+    );
 
     let title_lower = task.title.to_lowercase();
     let desc_lower = task.description.to_lowercase();

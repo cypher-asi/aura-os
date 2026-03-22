@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use aura_claude::{ContentBlock, RichMessage, ToolCall};
+use aura_claude::{ContentBlock, MessageContent, RichMessage, ToolCall};
 
 use crate::compaction;
 use crate::chat_sanitize;
 use crate::channel_ext::send_or_log;
 use crate::tool_loop::{BuildState, LoopState, ToolExecutor, ToolLoopConfig, ToolLoopEvent};
-use crate::tool_loop_blocking::summarize_write_file_input;
+use crate::tool_loop_blocking::{summarize_edit_file_input, summarize_write_file_input};
 use crate::tool_loop_budget::ExplorationState;
 use crate::tool_loop_streaming::IterationCompleted;
 
@@ -17,11 +17,12 @@ use crate::tool_loop_streaming::IterationCompleted;
 // Compaction and sanitization helpers
 // ---------------------------------------------------------------------------
 
-const COMPACTION_TIERS: [(f64, usize, &compaction::CompactConfig, bool); 4] = [
+const COMPACTION_TIERS: [(f64, usize, &compaction::CompactConfig, bool); 5] = [
     (0.85, 2, &compaction::HISTORY,    true),
     (0.70, 3, &compaction::AGGRESSIVE, true),
     (0.60, 4, &compaction::AGGRESSIVE, false),
     (0.30, 5, &compaction::MICRO,      false),
+    (0.15, 8, &compaction::MICRO,      false),
 ];
 
 pub(crate) fn check_context_compaction(
@@ -80,10 +81,10 @@ fn build_assistant_content_blocks(
         blocks.push(ContentBlock::Text { text: iter_text.to_string() });
     }
     for tc in tool_calls {
-        let input = if tc.name == "write_file" {
-            summarize_write_file_input(&tc.input)
-        } else {
-            tc.input.clone()
+        let input = match tc.name.as_str() {
+            "write_file" => summarize_write_file_input(&tc.input),
+            "edit_file" => summarize_edit_file_input(&tc.input),
+            _ => tc.input.clone(),
         };
         blocks.push(ContentBlock::ToolUse {
             id: tc.id.clone(),
@@ -135,6 +136,28 @@ pub(crate) fn push_assistant_tool_message(
     api_messages.push(RichMessage::assistant_blocks(assistant_blocks));
 }
 
+/// Replace an existing standalone warning user message (matched by `prefix`) with
+/// updated content, or append a new one if no prior warning of this type exists.
+/// This prevents warning messages from accumulating as separate entries.
+pub(crate) fn push_or_replace_warning(
+    api_messages: &mut Vec<RichMessage>,
+    prefix: &str,
+    content: &str,
+) {
+    for msg in api_messages.iter_mut().rev() {
+        if msg.role != "user" {
+            continue;
+        }
+        if let MessageContent::Text(text) = &mut msg.content {
+            if text.starts_with(prefix) {
+                *text = content.to_string();
+                return;
+            }
+        }
+    }
+    api_messages.push(RichMessage::user(content));
+}
+
 // ---------------------------------------------------------------------------
 // Build and exploration post-processing
 // ---------------------------------------------------------------------------
@@ -142,14 +165,16 @@ pub(crate) fn push_assistant_tool_message(
 pub(crate) fn maybe_emit_checkpoint(build: &mut BuildState, api_messages: &mut Vec<RichMessage>) {
     if !build.plan_checkpoint_sent {
         build.plan_checkpoint_sent = true;
-        api_messages.push(RichMessage::user(
+        push_or_replace_warning(
+            api_messages,
+            "[IMPLEMENTATION CHECKPOINT]",
             "[IMPLEMENTATION CHECKPOINT] You just made your first write. Before continuing, verify:\n\
              1. Exact struct/type definitions for types you reference\n\
              2. Method signatures for functions you call\n\
              3. Required imports\n\
              If any of these are uncertain, use one more read_file or search_code call to confirm \
-             before proceeding with further writes."
-        ));
+             before proceeding with further writes.",
+        );
     }
 }
 
@@ -169,7 +194,7 @@ pub(crate) async fn maybe_run_auto_build(
             };
             let msg = format!("[AUTO-BUILD] Build check {status}:\n{output}");
             info!(success = build_result.success, "Auto-build check after write batch");
-            api_messages.push(RichMessage::user(&msg));
+            push_or_replace_warning(api_messages, "[AUTO-BUILD]", &msg);
         }
     }
 }
