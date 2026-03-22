@@ -10,7 +10,8 @@ use crate::tool_loop_blocking::{
     apply_cmd_failure_tracking, build_tool_result_blocks, collect_duplicate_write_paths,
     detect_blocked_commands, detect_blocked_exploration,
     detect_blocked_write_failures, detect_blocked_writes, detect_same_target_stall,
-    detect_write_file_cooldowns, looks_truncated, summarize_write_file_input,
+    detect_write_file_cooldowns, looks_truncated, summarize_edit_file_input,
+    summarize_write_file_input,
 };
 use crate::tool_loop_read_guard::{self as read_guard, ReadGuardState};
 

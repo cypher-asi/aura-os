@@ -208,7 +208,7 @@ export function useNewProjectForm(
   const { projects } = useProjectsList();
   const { features } = useAuraCapabilities();
 
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("imported");
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("linked");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folderPath, setFolderPath] = useState("");

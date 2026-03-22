@@ -59,19 +59,19 @@ describe("BuyCreditsModal", () => {
 
   it("renders preset buttons", () => {
     renderModal();
-    expect(screen.getByText("$5")).toBeInTheDocument();
-    expect(screen.getByText("$10")).toBeInTheDocument();
     expect(screen.getByText("$25")).toBeInTheDocument();
     expect(screen.getByText("$50")).toBeInTheDocument();
+    expect(screen.getByText("$100")).toBeInTheDocument();
+    expect(screen.getByText("$250")).toBeInTheDocument();
   });
 
   it("calls handlePurchase with preset amount", async () => {
     const user = userEvent.setup();
     renderModal();
 
-    await user.click(screen.getByText("$25"));
-    await user.click(screen.getByText("Purchase $25"));
-    expect(mockHandlePurchase).toHaveBeenCalledWith(25);
+    await user.click(screen.getByText("$50"));
+    await user.click(screen.getByText("Purchase $50"));
+    expect(mockHandlePurchase).toHaveBeenCalledWith(50);
   });
 
   it("shows Billing Settings link", () => {
@@ -79,8 +79,8 @@ describe("BuyCreditsModal", () => {
     expect(screen.getByText("Billing Settings")).toBeInTheDocument();
   });
 
-  it("disables purchase when no amount selected", () => {
+  it("defaults to $100 preset selected", () => {
     renderModal();
-    expect(screen.getByText("Select an amount")).toBeDisabled();
+    expect(screen.getByText("Purchase $100")).toBeInTheDocument();
   });
 });

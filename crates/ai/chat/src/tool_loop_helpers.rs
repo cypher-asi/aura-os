@@ -139,11 +139,16 @@ pub(crate) fn push_assistant_tool_message(
 /// Replace an existing standalone warning user message (matched by `prefix`) with
 /// updated content, or append a new one if no prior warning of this type exists.
 /// This prevents warning messages from accumulating as separate entries.
+/// `content` must start with `prefix` so the replacement is findable on the next call.
 pub(crate) fn push_or_replace_warning(
     api_messages: &mut Vec<RichMessage>,
     prefix: &str,
     content: &str,
 ) {
+    debug_assert!(
+        content.starts_with(prefix),
+        "push_or_replace_warning: content must start with prefix for future matching"
+    );
     for msg in api_messages.iter_mut().rev() {
         if msg.role != "user" {
             continue;
@@ -230,4 +235,48 @@ pub(crate) fn sanitize_after_compaction(messages: &mut Vec<RichMessage>) {
     let msgs = chat_sanitize::sanitize_tool_use_results(msgs);
     let msgs = chat_sanitize::merge_consecutive_same_role_pub(msgs);
     *messages = msgs;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push_or_replace_warning_appends_when_no_match() {
+        let mut msgs = vec![RichMessage::user("hello")];
+        push_or_replace_warning(&mut msgs, "[WARN]", "[WARN] something");
+        assert_eq!(msgs.len(), 2);
+        match &msgs[1].content {
+            MessageContent::Text(t) => assert_eq!(t, "[WARN] something"),
+            _ => panic!("expected text"),
+        }
+    }
+
+    #[test]
+    fn push_or_replace_warning_replaces_existing_by_prefix() {
+        let mut msgs = vec![
+            RichMessage::user("[WARN] old value"),
+            RichMessage::assistant_text("reply"),
+            RichMessage::user("unrelated"),
+        ];
+        push_or_replace_warning(&mut msgs, "[WARN]", "[WARN] new value");
+        assert_eq!(msgs.len(), 3, "should not append a new message");
+        match &msgs[0].content {
+            MessageContent::Text(t) => assert_eq!(t, "[WARN] new value"),
+            _ => panic!("expected text"),
+        }
+    }
+
+    #[test]
+    fn push_or_replace_warning_skips_non_text_content() {
+        let mut msgs = vec![
+            RichMessage::tool_results(vec![ContentBlock::ToolResult {
+                tool_use_id: "t1".into(),
+                content: "[WARN] inside tool result".into(),
+                is_error: None,
+            }]),
+        ];
+        push_or_replace_warning(&mut msgs, "[WARN]", "[WARN] new");
+        assert_eq!(msgs.len(), 2, "should append since tool_result content doesn't match");
+    }
 }

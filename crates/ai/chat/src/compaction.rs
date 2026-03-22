@@ -142,6 +142,7 @@ pub fn compact_older_tool_results_tiered(
 ) {
     let len = messages.len();
     let cutoff = len.saturating_sub(keep_recent);
+    // Skip messages[0] (initial task context) to preserve the cache anchor.
     let start = 1.min(cutoff);
     for msg in &mut messages[start..cutoff] {
         if msg.role != "user" {
@@ -169,6 +170,7 @@ pub fn compact_older_message_text_tiered(
 ) {
     let len = messages.len();
     let cutoff = len.saturating_sub(keep_recent);
+    // Skip messages[0] (initial task context) to preserve the cache anchor.
     let start = 1.min(cutoff);
     for msg in &mut messages[start..cutoff] {
         match &mut msg.content {
@@ -197,6 +199,7 @@ pub fn compact_tool_results_in_history(
     keep_recent: usize,
 ) -> Vec<RichMessage> {
     let cutoff = messages.len().saturating_sub(keep_recent);
+    // Skip messages[0] (initial task context) to preserve the cache anchor.
     let start = 1.min(cutoff);
     for msg in &mut messages[start..cutoff] {
         if msg.role != "user" {

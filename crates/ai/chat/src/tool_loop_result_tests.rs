@@ -131,6 +131,48 @@ fn test_summarize_write_file_input_long_content_truncated() {
     assert!(summarized.contains("line 49"));
 }
 
+// -- summarize_edit_file_input --------------------------------------------
+
+#[test]
+fn test_summarize_edit_file_input_short_content_unchanged() {
+    let input = serde_json::json!({
+        "path": "a.rs",
+        "old_text": "fn foo() {}",
+        "new_text": "fn bar() {}",
+        "replace_all": false
+    });
+    let summary = summarize_edit_file_input(&input);
+    assert_eq!(summary["path"].as_str().unwrap(), "a.rs");
+    assert_eq!(summary["old_text"].as_str().unwrap(), "fn foo() {}");
+    assert_eq!(summary["new_text"].as_str().unwrap(), "fn bar() {}");
+    assert_eq!(summary["replace_all"], false);
+}
+
+#[test]
+fn test_summarize_edit_file_input_long_content_truncated() {
+    let long_text = "x".repeat(600);
+    let input = serde_json::json!({
+        "path": "big.rs",
+        "old_text": long_text,
+        "new_text": "short replacement"
+    });
+    let summary = summarize_edit_file_input(&input);
+    let old = summary["old_text"].as_str().unwrap();
+    assert!(old.contains("chars omitted"), "long old_text should be truncated");
+    assert_eq!(summary["new_text"].as_str().unwrap(), "short replacement");
+    assert_eq!(summary["path"].as_str().unwrap(), "big.rs");
+}
+
+#[test]
+fn test_summarize_edit_file_input_missing_optional_fields() {
+    let input = serde_json::json!({"path": "x.rs"});
+    let summary = summarize_edit_file_input(&input);
+    assert_eq!(summary["path"].as_str().unwrap(), "x.rs");
+    assert!(summary.get("old_text").is_none());
+    assert!(summary.get("new_text").is_none());
+    assert!(summary.get("replace_all").is_none());
+}
+
 // -- looks_truncated -----------------------------------------------------
 
 #[test]

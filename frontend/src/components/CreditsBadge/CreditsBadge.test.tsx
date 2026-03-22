@@ -68,7 +68,7 @@ describe("CreditsBadge", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("$50.00")).toBeInTheDocument();
+      expect(screen.getByText("5,000 Z")).toBeInTheDocument();
     });
   });
 
@@ -103,7 +103,7 @@ describe("CreditsBadge", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("$2.00")).toBeInTheDocument();
+      expect(screen.getByText("200 Z")).toBeInTheDocument();
     });
   });
 

@@ -87,7 +87,7 @@ vi.mock("../../apps/projects/useProjectsList", () => ({
 }));
 
 vi.mock("../../utils/storage", () => ({
-  getLastAgent: () => null,
+  getLastAgentEntry: () => null,
 }));
 
 vi.mock("../../utils/mobileNavigation", () => ({

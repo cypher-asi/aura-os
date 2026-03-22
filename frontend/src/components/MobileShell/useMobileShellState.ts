@@ -3,7 +3,7 @@ import { useAppStore } from "../../stores/app-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
-import { getLastAgent } from "../../utils/storage";
+import { getLastAgentEntry } from "../../utils/storage";
 import {
   getMobileProjectDestination,
   getMobileShellMode,
@@ -25,7 +25,7 @@ export function useMobileShellState() {
     ?? null;
   const mobileDestination = getMobileProjectDestination(location.pathname);
 
-  const lastAgent = getLastAgent();
+  const lastAgent = getLastAgentEntry();
   const recentProjectId = lastAgent && projects.some((p) => p.project_id === lastAgent.projectId)
     ? lastAgent.projectId
     : mostRecentProject?.project_id ?? projects[0]?.project_id ?? null;

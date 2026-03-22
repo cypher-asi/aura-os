@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn drain_spec_events_ignores_progress_generating_complete() {
+    async fn drain_spec_events_forwards_progress_and_generating_ignores_complete() {
         let (spec_tx, mut spec_rx) = mpsc::unbounded_channel();
         let (chat_tx, mut chat_rx) = mpsc::unbounded_channel();
 
@@ -301,11 +301,15 @@ mod tests {
         let (accumulated, _blocks, _, _) = drain_spec_events(&mut spec_rx, &chat_tx).await;
         assert!(accumulated.is_empty());
 
-        let mut event_count = 0;
-        while let Ok(_) = chat_rx.try_recv() {
-            event_count += 1;
+        let mut progress_events = vec![];
+        while let Ok(evt) = chat_rx.try_recv() {
+            if let ChatStreamEvent::Progress(stage) = evt {
+                progress_events.push(stage);
+            }
         }
-        assert_eq!(event_count, 0, "Progress/Generating/Complete should not forward to chat");
+        assert_eq!(progress_events.len(), 2, "Progress and Generating should forward as Progress events");
+        assert_eq!(progress_events[0], "loading...");
+        assert_eq!(progress_events[1], "Generating spec...");
     }
 
     #[tokio::test]

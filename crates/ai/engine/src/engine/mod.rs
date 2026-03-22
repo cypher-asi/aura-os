@@ -18,7 +18,6 @@ pub(crate) mod prompts;
 pub(crate) mod shell;
 mod test_fix;
 pub(crate) mod tool_executor;
-pub(crate) mod harness_adapter;
 mod tool_executor_helpers;
 mod verify_fix_common;
 pub mod types;
