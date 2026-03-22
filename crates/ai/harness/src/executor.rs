@@ -1,7 +1,8 @@
 //! Tool execution trait and result types.
 
 use async_trait::async_trait;
-use aura_provider::ToolCall;
+
+use crate::types::ToolCall;
 
 /// The result of executing a single tool call.
 pub struct ToolCallResult {

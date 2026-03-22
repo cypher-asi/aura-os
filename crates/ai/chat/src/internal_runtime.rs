@@ -90,11 +90,17 @@ impl chat_types::ToolExecutor for ExecutorAdapter {
         &self,
         tool_calls: &[aura_claude::ToolCall],
     ) -> Vec<chat_types::ToolCallResult> {
-        let provider_calls: Vec<aura_provider::ToolCall> =
-            tool_calls.iter().map(|tc| tc.clone().into()).collect();
+        let harness_calls: Vec<aura_harness::ToolCall> = tool_calls
+            .iter()
+            .map(|tc| aura_harness::ToolCall {
+                id: tc.id.clone(),
+                name: tc.name.clone(),
+                input: tc.input.clone(),
+            })
+            .collect();
 
         self.inner
-            .execute(&provider_calls)
+            .execute(&harness_calls)
             .await
             .into_iter()
             .map(|r| chat_types::ToolCallResult {
@@ -125,26 +131,85 @@ impl chat_types::ToolExecutor for ExecutorAdapter {
 }
 
 // ---------------------------------------------------------------------------
-// Type conversions (provider-agnostic -> Claude wire types)
+// Type conversions (harness boundary types -> Claude wire types)
 // ---------------------------------------------------------------------------
 
-fn convert_messages(messages: Vec<aura_provider::Message>) -> Vec<aura_claude::RichMessage> {
-    messages.into_iter().map(Into::into).collect()
+fn convert_messages(messages: Vec<aura_harness::Message>) -> Vec<aura_claude::RichMessage> {
+    messages.into_iter().map(convert_message).collect()
+}
+
+fn convert_message(msg: aura_harness::Message) -> aura_claude::RichMessage {
+    let role = match msg.role {
+        aura_harness::Role::User => "user",
+        aura_harness::Role::Assistant => "assistant",
+    };
+    aura_claude::RichMessage {
+        role: role.to_string(),
+        content: convert_message_content(msg.content),
+    }
+}
+
+fn convert_message_content(content: aura_harness::MessageContent) -> aura_claude::MessageContent {
+    match content {
+        aura_harness::MessageContent::Text(t) => aura_claude::MessageContent::Text(t),
+        aura_harness::MessageContent::Blocks(blocks) => {
+            aura_claude::MessageContent::Blocks(blocks.into_iter().map(convert_block).collect())
+        }
+    }
+}
+
+fn convert_block(block: aura_harness::ContentBlock) -> aura_claude::ContentBlock {
+    match block {
+        aura_harness::ContentBlock::Text { text } => aura_claude::ContentBlock::Text { text },
+        aura_harness::ContentBlock::Image { source } => aura_claude::ContentBlock::Image {
+            source: aura_claude::ImageSource {
+                source_type: source.source_type,
+                media_type: source.media_type,
+                data: source.data,
+            },
+        },
+        aura_harness::ContentBlock::ToolUse { id, name, input } => {
+            aura_claude::ContentBlock::ToolUse { id, name, input }
+        }
+        aura_harness::ContentBlock::ToolResult {
+            tool_use_id,
+            content,
+            is_error,
+        } => aura_claude::ContentBlock::ToolResult {
+            tool_use_id,
+            content,
+            is_error,
+        },
+    }
 }
 
 fn convert_tools(
-    tools: Arc<[aura_provider::ToolDefinition]>,
+    tools: Arc<[aura_harness::ToolDefinition]>,
 ) -> Arc<[aura_claude::ToolDefinition]> {
     let claude_tools: Vec<aura_claude::ToolDefinition> =
-        tools.iter().cloned().map(Into::into).collect();
+        tools.iter().map(convert_tool_def).collect();
     claude_tools.into()
+}
+
+fn convert_tool_def(td: &aura_harness::ToolDefinition) -> aura_claude::ToolDefinition {
+    aura_claude::ToolDefinition {
+        name: td.name.clone(),
+        description: td.description.clone(),
+        input_schema: td.input_schema.clone(),
+        cache_control: td.cache_control.as_ref().map(|cc| aura_claude::CacheControl {
+            cache_type: cc.cache_type.clone(),
+        }),
+    }
 }
 
 fn convert_config(config: &aura_harness::TurnConfig) -> ToolLoopConfig {
     ToolLoopConfig {
         max_iterations: config.max_iterations,
         max_tokens: config.max_tokens,
-        thinking: config.thinking.clone().map(Into::into),
+        thinking: config.thinking.as_ref().map(|tc| aura_claude::ThinkingConfig {
+            thinking_type: tc.thinking_type.clone(),
+            budget_tokens: tc.budget_tokens,
+        }),
         stream_timeout: config.stream_timeout,
         billing_reason: "agent_runtime",
         max_context_tokens: config.max_context_tokens,

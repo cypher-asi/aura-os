@@ -5,10 +5,9 @@ use std::time::Duration;
 
 use tokio::sync::mpsc;
 
-use aura_provider::{Message, ThinkingConfig, ToolDefinition};
-
 use crate::events::RuntimeEvent;
 use crate::executor::ToolExecutor;
+use crate::types::{Message, ThinkingConfig, ToolDefinition};
 
 /// Configuration for a single agent turn.
 pub struct TurnConfig {

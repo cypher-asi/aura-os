@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-03-22T12:16:54.896201900+00:00",
+  "project_id": "0daee58e-29c6-4ed8-a67a-7d276c8cdd13",
+  "outcome": "stopped",
+  "total_duration_ms": 12494,
+  "tasks_completed": 0,
+  "tasks_failed": 0,
+  "tasks_retried": 0,
+  "total_input_tokens": 0,
+  "total_output_tokens": 0,
+  "estimated_cost_usd": -0.0,
+  "sessions_used": 1,
+  "total_parse_retries": 0,
+  "total_build_fix_attempts": 0,
+  "duplicate_error_bailouts": 0,
+  "tasks": []
+}
