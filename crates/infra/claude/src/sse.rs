@@ -111,6 +111,19 @@ impl SseParserState {
                             self.current_tool_json.push_str(json);
                             match parse_best_effort_json_snapshot(&self.current_tool_json) {
                                 Some(input) => {
+                                    if self.current_tool_name == "create_spec"
+                                        || self.current_tool_name == "update_spec"
+                                    {
+                                        let has_md = input.get("markdown_contents")
+                                            .and_then(|v| v.as_str())
+                                            .is_some_and(|s| !s.is_empty());
+                                        debug!(
+                                            tool = %self.current_tool_name,
+                                            buf_len = self.current_tool_json.len(),
+                                            has_markdown_contents = has_md,
+                                            "spec tool snapshot emitted"
+                                        );
+                                    }
                                     send_or_log(tx, ClaudeStreamEvent::ToolInputSnapshot {
                                         id: self.current_tool_id.clone(),
                                         name: self.current_tool_name.clone(),
