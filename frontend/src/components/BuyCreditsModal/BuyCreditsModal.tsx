@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import styles from "./BuyCreditsModal.module.css";
@@ -9,7 +9,7 @@ interface Props {
   onOpenBilling?: () => void;
 }
 
-const PRESETS = [5, 10, 25, 50];
+const PRESETS = [25, 50, 100, 250];
 const MIN_USD = 1;
 const MAX_USD = 1000;
 
@@ -20,8 +20,15 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     loadBalance, handlePurchase, balance,
   } = useBuyCreditsData(isOpen);
 
-  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(100);
   const [customAmount, setCustomAmount] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedPreset(100);
+      setCustomAmount("");
+    }
+  }, [isOpen]);
 
   const customNum = parseFloat(customAmount);
   const customValid = !isNaN(customNum) && customNum >= MIN_USD && customNum <= MAX_USD;
