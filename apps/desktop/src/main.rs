@@ -158,6 +158,7 @@ fn spawn_server(
                 .route("/api/pick-file", axum_post(handlers::pick_file))
                 .route("/api/open-path", axum_post(handlers::open_path))
                 .route("/api/read-file", axum_post(handlers::read_file))
+                .route("/api/file-preview", axum_get(handlers::preview_file))
                 .route("/api/write-file", axum_post(handlers::write_file))
                 .route(
                     "/api/open-ide",

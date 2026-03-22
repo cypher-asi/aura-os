@@ -5,12 +5,12 @@
 }
 
 .mobileScrollContainer {
-  display: flex;
+  display: block;
   flex: 1;
   min-height: 0;
-  height: 100%;
   width: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .mobileFileList {
@@ -19,6 +19,7 @@
   gap: var(--space-1);
   width: 100%;
   padding: var(--space-2);
+  padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
 }
 
 .explorerContainer {
@@ -45,6 +46,7 @@
 .mobileRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   width: 100%;
   padding: 10px 12px;
@@ -53,4 +55,21 @@
   background: var(--color-panel-solid);
   color: inherit;
   text-align: left;
+}
+
+.mobileRowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.mobileRowMeta {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }

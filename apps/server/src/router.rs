@@ -147,6 +147,8 @@ fn project_routes() -> Router<AppState> {
             post(projects::archive_project),
         )
         .route("/api/list-directory", post(files::list_directory))
+        .route("/api/read-file", post(files::read_file))
+        .route("/api/file-preview", get(files::preview_file))
         .route("/api/orbit/repos", get(orbit::list_orbit_repos))
         .route(
             "/api/projects/:project_id/orbit-collaborators",

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use axum::extract::State as AxumState;
+use axum::extract::{Query, State as AxumState};
+use axum::http::{header, StatusCode};
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use tao::event_loop::EventLoopProxy;
 use tracing::{debug, info, warn};
@@ -39,6 +41,11 @@ pub struct ReadFileRequest {
     path: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct FilePreviewQuery {
+    path: String,
+}
+
 pub async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     if !target.exists() {
@@ -58,6 +65,53 @@ pub async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Val
             warn!(path = %req.path, error = %e, "failed to read file");
             Json(serde_json::json!({ "ok": false, "error": e.to_string() }))
         }
+    }
+}
+
+pub async fn preview_file(Query(query): Query<FilePreviewQuery>) -> Response {
+    let target = std::path::Path::new(&query.path);
+    if !target.exists() {
+        warn!(path = %query.path, "preview_file: path does not exist");
+        return (StatusCode::NOT_FOUND, "path not found").into_response();
+    }
+    if !target.is_file() {
+        warn!(path = %query.path, "preview_file: path is not a file");
+        return (StatusCode::BAD_REQUEST, "path is not a file").into_response();
+    }
+
+    match std::fs::read(target) {
+        Ok(bytes) => (
+            [
+                (header::CONTENT_TYPE, preview_content_type(target)),
+                (header::CACHE_CONTROL, "no-store"),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(e) => {
+            warn!(path = %query.path, error = %e, "failed to preview file");
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+fn preview_content_type(path: &std::path::Path) -> &'static str {
+    let ext = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.to_ascii_lowercase());
+
+    match ext.as_deref() {
+        Some("pdf") => "application/pdf",
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("md") | Some("txt") | Some("rs") | Some("ts") | Some("tsx") | Some("js")
+        | Some("jsx") | Some("json") | Some("yaml") | Some("yml") | Some("toml")
+        | Some("css") | Some("html") => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
     }
 }
 
