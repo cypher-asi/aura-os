@@ -62,27 +62,61 @@
   background: transparent;
 }
 
-/* ── Chevron indicator ── */
+/* ── Checkbox icon (CSS-drawn) ── */
 
-.toolChevron {
-  display: flex;
-  align-items: center;
+.taskCheck {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--color-text-muted, #666);
   flex-shrink: 0;
-  opacity: 0.5;
-  transition: transform 0.2s ease;
+  position: relative;
+  box-sizing: border-box;
 }
 
-.toolChevronExpanded {
-  transform: rotate(90deg);
+/* Active: filled inner square */
+.taskActive .taskCheck {
+  border-color: var(--color-text, #ddd);
 }
 
-.taskActive .toolChevron {
-  opacity: 0.8;
+.taskActive .taskCheck::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: var(--color-text, #ddd);
 }
 
 .taskActive .toolName {
   font-weight: 600;
   color: var(--color-text, #fff);
+}
+
+/* Done: square with X */
+.taskDone .taskCheck {
+  border-color: var(--color-text-muted, #666);
+}
+
+.taskDone .taskCheck::before,
+.taskDone .taskCheck::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 7px;
+  height: 1.5px;
+  background: var(--color-text-muted, #666);
+  border-radius: 1px;
+}
+
+.taskDone .taskCheck::before {
+  transform: rotate(45deg);
+}
+
+.taskDone .taskCheck::after {
+  transform: rotate(-45deg);
 }
 
 .taskDone .toolName {
@@ -93,8 +127,48 @@
   color: var(--color-text-muted, #666);
 }
 
+/* Error: square with X in red */
+.taskError .taskCheck {
+  border-color: #f87171;
+}
+
+.taskError .taskCheck::before,
+.taskError .taskCheck::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 7px;
+  height: 1.5px;
+  background: #f87171;
+  border-radius: 1px;
+}
+
+.taskError .taskCheck::before {
+  transform: rotate(45deg);
+}
+
+.taskError .taskCheck::after {
+  transform: rotate(-45deg);
+}
+
 .taskError .toolName {
   color: #f87171;
+}
+
+/* ── Expand chevron (far right) ── */
+
+.toolChevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.toolChevronExpanded {
+  transform: rotate(90deg);
 }
 
 /* ── Shared item parts ── */

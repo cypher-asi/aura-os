@@ -100,13 +100,14 @@ export function ToolCallBlock({
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
-          <ChevronRight size={12} />
-        </span>
+        <span className={toolStyles.taskCheck} />
         <span className={toolStyles.toolName}>{label}</span>
         {inputSummary && (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
         )}
+        <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
+          <ChevronRight size={12} />
+        </span>
       </button>
       {renderBody()}
     </div>
