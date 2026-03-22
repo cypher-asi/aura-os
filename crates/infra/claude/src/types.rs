@@ -203,6 +203,10 @@ pub enum ClaudeStreamEvent {
         id: String,
         name: String,
     },
+    ToolInputDelta {
+        id: String,
+        partial_json: String,
+    },
     ToolUse {
         id: String,
         name: String,

@@ -109,6 +109,10 @@ impl SseParserState {
                     "input_json_delta" => {
                         if let Some(json) = delta.get("partial_json").and_then(|t| t.as_str()) {
                             self.current_tool_json.push_str(json);
+                            send_or_log(tx, ClaudeStreamEvent::ToolInputDelta {
+                                id: self.current_tool_id.clone(),
+                                partial_json: json.to_string(),
+                            });
                         }
                     }
                     _ => {}
