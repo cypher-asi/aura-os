@@ -48,14 +48,14 @@ impl LinkRuntime {
     /// | Variable              | Fallback                      |
     /// |-----------------------|-------------------------------|
     /// | `ANTHROPIC_API_KEY`   | `AURA_API_KEY`, then empty    |
-    /// | `AURA_MODEL`          | `claude-opus-4-6-20250514`    |
+    /// | `AURA_MODEL`          | `claude-opus-4-6`             |
     /// | `AURA_AUTH_TOKEN`     | `None`                        |
     pub fn from_env() -> anyhow::Result<Self> {
         let api_key = std::env::var("ANTHROPIC_API_KEY")
             .or_else(|_| std::env::var("AURA_API_KEY"))
             .unwrap_or_default();
         let model =
-            std::env::var("AURA_MODEL").unwrap_or_else(|_| "claude-opus-4-6-20250514".to_string());
+            std::env::var("AURA_MODEL").unwrap_or_else(|_| "claude-opus-4-6".to_string());
         let auth_token = std::env::var("AURA_AUTH_TOKEN").ok();
         Ok(Self {
             api_key,

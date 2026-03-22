@@ -35,7 +35,7 @@ fn link_runtime_from_env_succeeds_without_env_vars() {
 fn link_runtime_new_stores_credentials() {
     let _rt = LinkRuntime::new(
         "test-key".into(),
-        "claude-opus-4-6-20250514".into(),
+        "claude-opus-4-6".into(),
         Some("token".into()),
     );
 }
