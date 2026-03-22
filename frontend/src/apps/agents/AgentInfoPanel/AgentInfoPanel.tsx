@@ -135,7 +135,7 @@ export function AgentInfoPanel() {
           <div className={styles.section}>
             <Text size="xs" variant="muted" weight="medium">System Prompt</Text>
             <Text size="sm" className={styles.prompt}>
-              {a.system_prompt.slice(0, 300)}{a.system_prompt.length > 300 ? "…" : ""}
+              {a.system_prompt}
             </Text>
           </div>
         )}

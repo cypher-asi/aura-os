@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
-import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import type { Agent } from "../../../types";
 import type { DisplayMessage } from "../../../types/stream";
 
@@ -63,15 +62,10 @@ export function useSelectedAgent(): SelectedAgentSlice {
   );
 }
 
-/** Agents sorted by most-recent message first, falling back to updated_at. */
+/** Agents sorted by most-recent updates. */
 export function useSortedAgents(): Agent[] {
   const agents = useAgentStore((s) => s.agents);
-  const entries = useChatHistoryStore((s) => s.entries);
   return useMemo(() => {
-    return [...agents].sort((a, b) => {
-      const tA = entries[agentHistoryKey(a.agent_id)]?.lastMessageAt ?? a.updated_at;
-      const tB = entries[agentHistoryKey(b.agent_id)]?.lastMessageAt ?? b.updated_at;
-      return tB.localeCompare(tA);
-    });
-  }, [agents, entries]);
+    return [...agents].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  }, [agents]);
 }
