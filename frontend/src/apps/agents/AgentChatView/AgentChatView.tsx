@@ -11,7 +11,7 @@ export function AgentChatView() {
   const historyKey = agentId ? agentHistoryKey(agentId) : undefined;
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { messages: historyMessages, status: historyStatus, error: historyError } = useChatHistory(historyKey);
-  const showHistoryLoading = (historyStatus === "loading" || historyStatus === "idle") && historyMessages.length > 0;
+  const showHistoryLoading = historyStatus === "loading" || historyStatus === "idle";
 
   const {
     streamKey,
@@ -25,6 +25,7 @@ export function AgentChatView() {
 
   useEffect(() => {
     if (!agentId) return;
+    resetMessagesRef.current([], { allowWhileStreaming: true });
     useChatHistoryStore.getState().fetchHistory(
       agentHistoryKey(agentId),
       () => api.agents.listMessages(agentId),
@@ -34,9 +35,9 @@ export function AgentChatView() {
   }, [agentId, setSelectedAgent]);
 
   useEffect(() => {
-    if (historyMessages.length === 0) return;
+    if (historyStatus !== "ready") return;
     resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages]);
+  }, [historyMessages, historyStatus]);
 
   if (!agentId) return null;
 

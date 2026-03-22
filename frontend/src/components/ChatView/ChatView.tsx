@@ -108,9 +108,9 @@ export function ChatView() {
 
   // Sync history messages to stream store
   useEffect(() => {
-    if (historyMessages.length === 0) return;
+    if (historyStatus !== "ready") return;
     resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages]);
+  }, [historyMessages, historyStatus]);
 
   const wrappedSend = useCallback(
     (...args: Parameters<typeof sendMessage>) => {
