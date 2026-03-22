@@ -275,8 +275,7 @@ impl ChatService {
         api_messages = self
             .manage_context_window(&api_key, &system, api_messages)
             .await;
-        api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
-        api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
+        api_messages = crate::chat_sanitize::validate_and_repair_messages(api_messages);
 
         Some((api_key, system, api_messages, stored_messages))
     }
