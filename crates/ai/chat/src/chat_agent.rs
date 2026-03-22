@@ -11,7 +11,7 @@ use aura_claude::ThinkingConfig;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
 use crate::chat_message_conversion::convert_messages_to_rich;
-use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_tool_loop_event};
+use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_with_text_accumulation, flush_text_buffer};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
@@ -143,9 +143,11 @@ impl ChatService {
         let tx_clone = tx.clone();
         let fwd_blocks = Arc::clone(&tool_blocks);
         let forwarder = tokio::spawn(async move {
+            let mut text_buffer = String::new();
             while let Some(evt) = loop_rx.recv().await {
-                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
+                forward_with_text_accumulation(evt, &tx_clone, &fwd_blocks, &mut text_buffer);
             }
+            flush_text_buffer(&fwd_blocks, &mut text_buffer);
         });
 
         let result = run_tool_loop(ToolLoopInput {

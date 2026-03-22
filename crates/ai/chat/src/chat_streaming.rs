@@ -7,7 +7,7 @@ use aura_claude::ThinkingConfig;
 use aura_tools::agent_tool_definitions;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatAttachment, ChatService, ChatStreamEvent};
-use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_tool_loop_event};
+use crate::chat_event_forwarding::{ContentBlockAccumulator, forward_with_text_accumulation, flush_text_buffer};
 use crate::chat_message_conversion::build_attachment_blocks;
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
@@ -157,6 +157,7 @@ impl ChatService {
         let _session_id_for_fwd = active_session_id.map(String::from);
 
         let forwarder = tokio::spawn(async move {
+            let mut text_buffer = String::new();
             while let Some(evt) = loop_rx.recv().await {
                 if let ToolLoopEvent::IterationComplete { .. } = &evt {
                     if let (Some(ref storage), Some(ref jwt), Some(ref mid)) =
@@ -188,8 +189,9 @@ impl ChatService {
                         }
                     }
                 }
-                forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
+                forward_with_text_accumulation(evt, &tx_clone, &fwd_blocks, &mut text_buffer);
             }
+            flush_text_buffer(&fwd_blocks, &mut text_buffer);
         });
         let result = run_tool_loop(ToolLoopInput {
             llm: self.llm.clone(),
