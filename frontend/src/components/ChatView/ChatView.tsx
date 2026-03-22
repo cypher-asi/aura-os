@@ -126,7 +126,7 @@ export function ChatView() {
       onSend={wrappedSend}
       onStop={stopStreaming}
       agentName={agentName}
-      isLoading={historyStatus === "loading"}
+      isLoading={historyStatus === "loading" || historyStatus === "idle"}
       contextUsagePercent={projectId && agentInstanceId ? contextUsagePercent : undefined}
       scrollResetKey={agentInstanceId}
     />
