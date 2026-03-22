@@ -6,7 +6,7 @@ import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
-import { mergeById } from "../../utils/collections";
+import { mergeById, compareSpecs } from "../../utils/collections";
 
 interface TaskListData {
   specs: Spec[];
@@ -110,7 +110,7 @@ export function useTaskListData(): TaskListData {
     return () => unsubs.forEach((u) => u());
   }, [subscribe, updateTaskStatus, refetchTasks]);
 
-  const specs = useMemo(() => mergeById(sidekick.specs, localSpecs, "spec_id"), [localSpecs, sidekick.specs]);
+  const specs = useMemo(() => mergeById(sidekick.specs, localSpecs, "spec_id").sort(compareSpecs), [localSpecs, sidekick.specs]);
   const tasks = useMemo(() => mergeById(sidekick.tasks, localTasks, "task_id"), [localTasks, sidekick.tasks]);
 
   return { specs, tasks, liveTaskIds, loopActive, loading, sidekick };

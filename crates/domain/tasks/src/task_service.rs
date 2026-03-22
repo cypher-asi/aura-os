@@ -327,7 +327,10 @@ impl TaskService {
             .into_iter()
             .filter_map(|s| {
                 let sid: SpecId = s.id.parse().ok()?;
-                Some((sid, s.order_index.unwrap_or(0) as u32))
+                let title_order = s.title.as_deref()
+                    .and_then(|t| t.trim().split(':').next())
+                    .and_then(|p| p.trim().parse::<u32>().ok());
+                Some((sid, title_order.unwrap_or(s.order_index.unwrap_or(0) as u32)))
             })
             .collect();
 

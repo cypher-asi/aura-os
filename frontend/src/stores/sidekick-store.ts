@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";
+import { compareSpecs } from "../utils/collections";
 
 export type SidekickTab = "specs" | "tasks" | "stats" | "sessions" | "log" | "files";
 
@@ -155,7 +156,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     }
     const newHistory = patchSpecInHistory(previewHistory, spec.spec_id, spec);
     set({
-      specs: next.sort((a, b) => a.order_index - b.order_index),
+      specs: next.sort(compareSpecs),
       previewItem: newPreview,
       previewHistory: newHistory,
     });

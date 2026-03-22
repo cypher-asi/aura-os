@@ -1,6 +1,8 @@
 pub(crate) mod parser;
 mod streaming;
 
+pub use parser::order_index_from_spec_title;
+
 use std::sync::Arc;
 
 use serde::Serialize;

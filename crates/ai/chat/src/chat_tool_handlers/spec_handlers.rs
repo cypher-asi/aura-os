@@ -2,6 +2,7 @@ use chrono::Utc;
 use serde_json::{json, Value};
 
 use aura_core::*;
+use aura_specs::order_index_from_spec_title;
 
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 use super::str_field;
@@ -99,7 +100,8 @@ impl ChatToolExecutor {
         let markdown = str_field(input, "markdown_contents").unwrap_or_default();
 
         let existing = self.list_specs_from_storage(project_id).await.unwrap_or_default();
-        let order = existing.iter().map(|s| s.order_index).max().unwrap_or(0) + 1;
+        let order = order_index_from_spec_title(&title)
+            .unwrap_or_else(|| existing.iter().map(|s| s.order_index).max().unwrap_or(0) + 1);
 
         let (storage, jwt) = match self.storage_and_jwt() {
             Ok(v) => v,

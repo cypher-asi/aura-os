@@ -16,6 +16,19 @@ export function titleSortKey(title: string): number {
   return parseInt(m[1], 10) * 100_000 + parseInt(m[2], 10);
 }
 
+/** Mirrors the backend `order_index_from_spec_title` – extracts the leading "NN:" number. */
+export function orderIndexFromTitle(title: string): number | undefined {
+  const m = title.match(/^\s*(\d+)\s*:/);
+  return m ? parseInt(m[1], 10) : undefined;
+}
+
+/** Sort specs by title prefix number (e.g. "03:" → 3), falling back to order_index. */
+export function compareSpecs(a: { title: string; order_index: number }, b: { title: string; order_index: number }): number {
+  const oa = orderIndexFromTitle(a.title) ?? a.order_index;
+  const ob = orderIndexFromTitle(b.title) ?? b.order_index;
+  return oa - ob;
+}
+
 export function mergeById<T extends { order_index: number }>(
   local: T[],
   remote: T[],

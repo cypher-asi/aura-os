@@ -15,7 +15,7 @@ pub struct RawSpecOutput {
 
 /// Parses a leading "NN:" or "N:" from a spec title (e.g. "05: Requirements..." or "1: Core Domain").
 /// Returns the logical spec number for use as order_index so display order matches the intended numbering.
-pub(crate) fn order_index_from_spec_title(title: &str) -> Option<u32> {
+pub fn order_index_from_spec_title(title: &str) -> Option<u32> {
     let t = title.trim();
     let colon = t.find(':')?;
     let prefix = t.get(..colon)?;

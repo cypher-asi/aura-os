@@ -7,6 +7,7 @@ import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useSidekickStore } from "../../stores/sidekick-store";
+import { compareSpecs } from "../../utils/collections";
 
 interface ProjectLayoutData {
   displayProject: Project | null;
@@ -75,7 +76,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
       .then(([proj, specs, tasks]) => {
         if (cancelled) return;
         setProjectRaw(proj);
-        setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
+        setInitialSpecs(specs.sort(compareSpecs));
         setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
       })
       .catch(() => {})
@@ -103,7 +104,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
         api.listSpecs(projectId).catch(() => [] as Spec[]),
         api.listTasks(projectId).catch(() => [] as Task[]),
       ]).then(([specs, tasks]) => {
-        setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
+        setInitialSpecs(specs.sort(compareSpecs));
         setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
       });
     }
