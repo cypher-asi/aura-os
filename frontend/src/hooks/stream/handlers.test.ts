@@ -117,7 +117,7 @@ describe("stream/handlers", () => {
 
     it("returns a copy of timeline", () => {
       const refs = makeRefs();
-      refs.timeline.current = [{ kind: "thinking" }];
+      refs.timeline.current = [{ kind: "thinking", id: "t1" }];
 
       const snap = snapshotTimeline(refs)!;
       expect(snap).toHaveLength(1);
@@ -132,7 +132,7 @@ describe("stream/handlers", () => {
       refs.thinkingBuffer.current = "thinking";
       refs.thinkingStart.current = Date.now();
       refs.toolCalls.current = [{ id: "tc", name: "n", input: {}, pending: true }];
-      refs.timeline.current = [{ kind: "thinking" }];
+      refs.timeline.current = [{ kind: "thinking", id: "t1" }];
 
       const setters = makeSetters();
       resetStreamBuffers(refs, setters);
@@ -217,7 +217,7 @@ describe("stream/handlers", () => {
       handleTextDelta(refs, setters, null, "hello");
 
       expect(refs.timeline.current).toHaveLength(1);
-      expect(refs.timeline.current[0]).toEqual({ kind: "text", content: "hello" });
+      expect(refs.timeline.current[0]).toMatchObject({ kind: "text", content: "hello" });
     });
 
     it("merges consecutive text items", () => {
@@ -250,7 +250,7 @@ describe("stream/handlers", () => {
       handleToolCallStarted(refs, setters, { id: "tc1", name: "create_spec" });
 
       expect(refs.timeline.current).toHaveLength(1);
-      expect(refs.timeline.current[0]).toEqual({ kind: "tool", toolCallId: "tc1" });
+      expect(refs.timeline.current[0]).toMatchObject({ kind: "tool", toolCallId: "tc1" });
     });
   });
 

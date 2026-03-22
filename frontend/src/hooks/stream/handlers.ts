@@ -49,6 +49,11 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   setters.setTimeline([]);
 }
 
+let _tlId = 0;
+function nextTimelineId(): string {
+  return `tl-${++_tlId}`;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Stream event handlers                                              */
 /* ------------------------------------------------------------------ */
@@ -66,7 +71,7 @@ export function handleThinkingDelta(
 
   const tl = refs.timeline.current;
   if (tl.length === 0 || tl[tl.length - 1].kind !== "thinking") {
-    tl.push({ kind: "thinking" });
+    tl.push({ kind: "thinking", id: nextTimelineId() });
   }
 
   if (refs.thinkingRaf.current === null) {
@@ -99,7 +104,7 @@ export function handleTextDelta(
   if (last && last.kind === "text") {
     last.content += text;
   } else {
-    tl.push({ kind: "text", content: text });
+    tl.push({ kind: "text", content: text, id: nextTimelineId() });
   }
 
   if (refs.raf.current === null) {
@@ -127,7 +132,7 @@ export function handleToolCallStarted(
   refs.toolCalls.current = [...refs.toolCalls.current, entry];
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
-  refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+  refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
   setters.setTimeline([...refs.timeline.current]);
 }
 
@@ -155,7 +160,7 @@ export function handleToolCall(
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
 
-    refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
     setters.setTimeline([...refs.timeline.current]);
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);

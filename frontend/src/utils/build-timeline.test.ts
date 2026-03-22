@@ -8,7 +8,7 @@ describe("buildTimelineFromBlocks", () => {
 
   it("prepends a thinking item when thinking text is present", () => {
     const result = buildTimelineFromBlocks([], "I'm thinking...");
-    expect(result).toEqual([{ kind: "thinking" }]);
+    expect(result).toMatchObject([{ kind: "thinking" }]);
   });
 
   it("does not prepend thinking for empty string", () => {
@@ -22,7 +22,7 @@ describe("buildTimelineFromBlocks", () => {
       { type: "text", text: "World" },
     ];
     const result = buildTimelineFromBlocks(blocks, undefined);
-    expect(result).toEqual([
+    expect(result).toMatchObject([
       { kind: "text", content: "Hello" },
       { kind: "text", content: "World" },
     ]);
@@ -33,7 +33,7 @@ describe("buildTimelineFromBlocks", () => {
       { type: "tool_use", id: "call-1", name: "read_file" },
     ];
     const result = buildTimelineFromBlocks(blocks, undefined);
-    expect(result).toEqual([{ kind: "tool", toolCallId: "call-1" }]);
+    expect(result).toMatchObject([{ kind: "tool", toolCallId: "call-1" }]);
   });
 
   it("skips tool_result blocks", () => {
@@ -57,7 +57,9 @@ describe("buildTimelineFromBlocks", () => {
       { type: "tool_use", id: "call-1", name: "read_file" },
     ];
     const result = buildTimelineFromBlocks(blocks, undefined, "fallback content");
-    expect(result).toContainEqual({ kind: "text", content: "fallback content" });
+    expect(result).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "text", content: "fallback content" })]),
+    );
   });
 
   it("does not add fallback when text blocks exist", () => {
@@ -66,7 +68,7 @@ describe("buildTimelineFromBlocks", () => {
     ];
     const result = buildTimelineFromBlocks(blocks, undefined, "fallback");
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({ kind: "text", content: "real text" });
+    expect(result[0]).toMatchObject({ kind: "text", content: "real text" });
   });
 
   it("handles text block with undefined text as empty string", () => {
@@ -74,7 +76,7 @@ describe("buildTimelineFromBlocks", () => {
       { type: "text" },
     ];
     const result = buildTimelineFromBlocks(blocks, undefined);
-    expect(result).toEqual([{ kind: "text", content: "" }]);
+    expect(result).toMatchObject([{ kind: "text", content: "" }]);
   });
 
   it("orders thinking before blocks", () => {
@@ -83,9 +85,9 @@ describe("buildTimelineFromBlocks", () => {
       { type: "tool_use", id: "t1", name: "fn" },
     ];
     const result = buildTimelineFromBlocks(blocks, "thought");
-    expect(result[0]).toEqual({ kind: "thinking" });
-    expect(result[1]).toEqual({ kind: "text", content: "Hello" });
-    expect(result[2]).toEqual({ kind: "tool", toolCallId: "t1" });
+    expect(result[0]).toMatchObject({ kind: "thinking" });
+    expect(result[1]).toMatchObject({ kind: "text", content: "Hello" });
+    expect(result[2]).toMatchObject({ kind: "tool", toolCallId: "t1" });
   });
 
   it("skips image and other block types", () => {

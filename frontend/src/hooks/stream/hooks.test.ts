@@ -138,7 +138,7 @@ describe("stream/hooks", () => {
 
     it("returns timeline from store", () => {
       ensureEntry("k1");
-      createSetters("k1").setTimeline([{ kind: "thinking" }]);
+      createSetters("k1").setTimeline([{ kind: "thinking", id: "t1" }]);
 
       const { result } = renderHook(() => useTimeline("k1"));
       expect(result.current).toHaveLength(1);

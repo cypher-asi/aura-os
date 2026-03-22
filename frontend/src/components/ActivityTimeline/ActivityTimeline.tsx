@@ -34,11 +34,11 @@ export function ActivityTimeline({
 
   return (
     <div className={styles.timeline}>
-      {timeline.map((item, i) => {
+      {timeline.map((item) => {
         if (item.kind === "thinking") {
           if (!thinkingText) return null;
           return (
-            <div key="thinking" className={styles.timelineItem}>
+            <div key={item.id} className={styles.timelineItem}>
               <ThinkingRow
                 text={thinkingText}
                 isStreaming={isThinkingPhaseActive}
@@ -52,7 +52,7 @@ export function ActivityTimeline({
           const entry = toolCallMap.get(item.toolCallId);
           if (!entry) return null;
           return (
-            <div key={`tool-${item.toolCallId}`} className={styles.timelineItem}>
+            <div key={item.id} className={styles.timelineItem}>
               <ToolCallBlock entry={entry} defaultExpanded={entry.pending} />
             </div>
           );
@@ -60,7 +60,7 @@ export function ActivityTimeline({
 
         const normalized = normalizeMidSentenceBreaks(stripEmojis(item.content));
         return (
-          <div key={`text-${i}`} className={styles.timelineItem}>
+          <div key={item.id} className={styles.timelineItem}>
             <SegmentedContent content={normalized} />
           </div>
         );
