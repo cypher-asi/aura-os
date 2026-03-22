@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import styles from "./ResponseBlock.module.css";
 
 interface ResponseBlockProps {
@@ -38,8 +38,8 @@ export function ResponseBlock({
     <div className={`${styles.block} ${className ?? ""}`}>
       <button className={styles.header} onClick={toggle} type="button">
         {header}
-        <span className={styles.chevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+          <ChevronRight size={14} />
         </span>
       </button>
       <div

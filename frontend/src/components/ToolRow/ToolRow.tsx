@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS } from "../../constants/tools";
 import { summarizeInput, formatResult } from "../../utils/format";
@@ -99,7 +100,9 @@ export function ToolCallBlock({
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className={toolStyles.taskCheck} />
+        <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
+          <ChevronRight size={12} />
+        </span>
         <span className={toolStyles.toolName}>{label}</span>
         {inputSummary && (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>

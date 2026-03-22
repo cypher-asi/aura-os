@@ -32,6 +32,11 @@
   margin-left: auto;
   flex-shrink: 0;
   opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
 }
 
 .bodyWrap {
