@@ -34,7 +34,8 @@
 .presetCard {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
+  height: var(--control-height-md);
+  padding: 0 var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,6 +75,17 @@
 .customRow {
   display: flex;
   gap: var(--space-2);
+  height: var(--control-height-md);
+}
+
+.customRow input {
+  height: 100%;
+}
+
+/* Purchase button */
+
+.purchaseButton {
+  width: 100%;
 }
 
 /* Status / feedback */

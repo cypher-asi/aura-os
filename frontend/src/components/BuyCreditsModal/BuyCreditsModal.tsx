@@ -110,6 +110,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
         <Button
           variant="primary"
+          className={styles.purchaseButton}
           onClick={handlePurchaseClick}
           disabled={effectiveAmount === null || isPolling}
         >
