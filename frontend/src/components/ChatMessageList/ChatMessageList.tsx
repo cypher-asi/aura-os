@@ -64,6 +64,7 @@ export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessag
             data-index={virtualRow.index}
             ref={virtualizer.measureElement}
             style={{
+              display: "flex",
               position: "absolute",
               top: 0,
               left: 0,
