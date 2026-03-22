@@ -47,6 +47,7 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   setters.setActiveToolCalls([]);
   refs.timeline.current = [];
   setters.setTimeline([]);
+  setters.setProgressText("");
 }
 
 let _tlId = 0;
@@ -63,7 +64,6 @@ export function handleThinkingDelta(
   setters: StreamSetters,
   text: string,
 ): void {
-  setters.setProgressText("");
   if (refs.thinkingStart.current === null) {
     refs.thinkingStart.current = Date.now();
   }
@@ -89,7 +89,6 @@ export function handleTextDelta(
   closureThinkingDurationMs: number | null,
   text: string,
 ): void {
-  setters.setProgressText("");
   if (refs.thinkingStart.current !== null && closureThinkingDurationMs === null) {
     setters.setThinkingDurationMs(Date.now() - refs.thinkingStart.current);
   }
@@ -121,7 +120,6 @@ export function handleToolCallStarted(
   setters: StreamSetters,
   info: ToolCallStartedInfo,
 ): void {
-  setters.setProgressText("");
   const entry: ToolCallEntry = {
     id: info.id,
     name: info.name,
@@ -141,14 +139,30 @@ export function handleToolCall(
   setters: StreamSetters,
   info: ToolCallInfo,
 ): void {
-  setters.setProgressText("");
-  const existingIdx = refs.toolCalls.current.findIndex(
-    (tc) => tc.id === info.id && tc.started,
-  );
+  const existingIdx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
   if (existingIdx !== -1) {
+    const existing = refs.toolCalls.current[existingIdx];
+    const existingMarkdown = typeof existing.input.markdown_contents === "string"
+      ? (existing.input.markdown_contents as string)
+      : "";
+    const incomingMarkdown = typeof info.input.markdown_contents === "string"
+      ? (info.input.markdown_contents as string)
+      : undefined;
+    let mergedMarkdown = existingMarkdown;
+    if (incomingMarkdown !== undefined) {
+      if (!existingMarkdown || incomingMarkdown.startsWith(existingMarkdown) || incomingMarkdown.length >= existingMarkdown.length) {
+        mergedMarkdown = incomingMarkdown;
+      } else {
+        mergedMarkdown = existingMarkdown + incomingMarkdown;
+      }
+    }
+    const mergedInput: Record<string, unknown> = { ...existing.input, ...info.input };
+    if (incomingMarkdown !== undefined) {
+      mergedInput.markdown_contents = mergedMarkdown;
+    }
     refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-      tc.id === info.id && tc.started
-        ? { ...tc, input: info.input, started: false }
+      tc.id === info.id
+        ? { ...tc, name: info.name, input: mergedInput, started: false }
         : tc,
     );
   } else {
@@ -279,6 +293,7 @@ export function finalizeStream(
   refs.thinkingBuffer.current = "";
   refs.thinkingStart.current = null;
   setters.setThinkingDurationMs(null);
+  setters.setProgressText("");
   setters.setIsStreaming(false);
   abortRef.current = null;
 }

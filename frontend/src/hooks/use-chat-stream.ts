@@ -95,7 +95,9 @@ function pushPendingSpec(
     created_at: now,
     updated_at: now,
   });
-  pendingSpecIdsRef.current.push(pendingId);
+  if (!pendingSpecIdsRef.current.includes(pendingId)) {
+    pendingSpecIdsRef.current.push(pendingId);
+  }
 }
 
 function pushPendingTask(

@@ -63,6 +63,20 @@ function patchTaskInHistory(
   return changed ? next : history;
 }
 
+function patchSpecInHistory(
+  history: PreviewItem[],
+  specId: string,
+  patch: Partial<Spec> | Spec,
+): PreviewItem[] {
+  let changed = false;
+  const next = history.map((item) => {
+    if (item.kind !== "spec" || item.spec.spec_id !== specId) return item;
+    changed = true;
+    return { kind: "spec" as const, spec: { ...item.spec, ...patch } };
+  });
+  return changed ? next : history;
+}
+
 const titleListeners = new Set<AgentInstanceUpdateListener>();
 
 export const useSidekickStore = create<SidekickState>()((set, get) => ({
@@ -130,12 +144,21 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   pushSpec: (spec) => {
-    const { specs } = get();
+    const { specs, previewItem, previewHistory } = get();
     const exists = specs.some((s) => s.spec_id === spec.spec_id);
     const next = exists
       ? specs.map((s) => (s.spec_id === spec.spec_id ? spec : s))
       : [...specs, spec];
-    set({ specs: next.sort((a, b) => a.order_index - b.order_index) });
+    let newPreview = previewItem;
+    if (previewItem?.kind === "spec" && previewItem.spec.spec_id === spec.spec_id) {
+      newPreview = { kind: "spec", spec };
+    }
+    const newHistory = patchSpecInHistory(previewHistory, spec.spec_id, spec);
+    set({
+      specs: next.sort((a, b) => a.order_index - b.order_index),
+      previewItem: newPreview,
+      previewHistory: newHistory,
+    });
   },
 
   removeSpec: (specId) => {
