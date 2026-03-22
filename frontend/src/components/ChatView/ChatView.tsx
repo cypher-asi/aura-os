@@ -121,6 +121,7 @@ export function ChatView() {
 
   const rawLoading = historyStatus === "loading" || historyStatus === "idle";
   const deferredLoading = useDelayedLoading(rawLoading);
+  const historyResolved = historyStatus === "ready" || historyStatus === "error";
 
   if (!agentInstanceId) return null;
 
@@ -132,6 +133,7 @@ export function ChatView() {
       onStop={stopStreaming}
       agentName={agentName}
       isLoading={deferredLoading}
+      historyResolved={historyResolved}
       contextUsagePercent={projectId && agentInstanceId ? contextUsagePercent : undefined}
       scrollResetKey={agentInstanceId}
     />

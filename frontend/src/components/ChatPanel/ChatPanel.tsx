@@ -19,6 +19,8 @@ export interface ChatPanelProps {
   onStop: () => void;
   agentName?: string;
   isLoading?: boolean;
+  /** When false, suppresses the empty-state text so it doesn't flash before history arrives. */
+  historyResolved?: boolean;
   errorMessage?: string | null;
   emptyMessage?: string;
   contextUsagePercent?: number | null;
@@ -31,6 +33,7 @@ export function ChatPanel({
   onStop,
   agentName,
   isLoading,
+  historyResolved = true,
   errorMessage,
   emptyMessage,
   contextUsagePercent,
@@ -72,7 +75,7 @@ export function ChatPanel({
     [onSend, scrollToBottom],
   );
 
-  let emptyState;
+  let emptyState: React.ReactNode = null;
   if (errorMessage) {
     emptyState = (
       <div className={styles.emptyState}>
@@ -87,7 +90,7 @@ export function ChatPanel({
         <Text variant="muted" size="sm">Loading conversation...</Text>
       </div>
     );
-  } else {
+  } else if (historyResolved) {
     emptyState = (
       <div className={styles.emptyState}>
         <MessageSquare size={40} />
