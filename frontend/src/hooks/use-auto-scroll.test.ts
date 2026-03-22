@@ -61,6 +61,7 @@ describe("useAutoScroll", () => {
   }
 
   beforeEach(() => {
+    vi.useFakeTimers();
     origMO = globalThis.MutationObserver;
     origRO = globalThis.ResizeObserver;
     origRAF = globalThis.requestAnimationFrame;
@@ -86,6 +87,7 @@ describe("useAutoScroll", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     globalThis.MutationObserver = origMO;
     globalThis.ResizeObserver = origRO;
     globalThis.requestAnimationFrame = origRAF;
@@ -175,6 +177,7 @@ describe("useAutoScroll", () => {
     const el = makeEl({ scrollTop: 200 });
     const ref = { current: el };
     renderHook(() => useAutoScroll(ref));
+    flushRafs();
     expect(el.scrollTop).toBe(1000);
   });
 
@@ -296,8 +299,66 @@ describe("useAutoScroll", () => {
     const ref = { current: el };
     const { result } = renderHook(() => useAutoScroll(ref));
     flushRafs();
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
 
     // 1000 - 559 - 400 = 41 >= 40
+    (el as any).scrollTop = 559;
+    act(() => result.current.handleScroll());
+
+    (el as any).scrollHeight = 1200;
+    act(() => latestMO().trigger());
+    flushRafs();
+    expect(el.scrollTop).toBe(559);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Initial settling window
+  // ---------------------------------------------------------------------------
+
+  it("keeps auto-scroll pinned during settling for small upward deltas", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { result } = renderHook(() => useAutoScroll(ref));
+    flushRafs();
+
+    // Small upward adjustment during virtualizer settling should be ignored.
+    (el as any).scrollTop = 559;
+    act(() => result.current.handleScroll());
+
+    (el as any).scrollHeight = 1200;
+    act(() => latestMO().trigger());
+    flushRafs();
+    expect(el.scrollTop).toBe(1200);
+  });
+
+  it("exits settling and respects user intent on strong upward scroll", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { result } = renderHook(() => useAutoScroll(ref));
+    flushRafs();
+
+    // Strong upward move should immediately disable auto-scroll.
+    (el as any).scrollTop = 100;
+    act(() => result.current.handleScroll());
+
+    (el as any).scrollHeight = 1400;
+    act(() => latestMO().trigger());
+    flushRafs();
+    expect(el.scrollTop).toBe(100);
+  });
+
+  it("falls back to normal at-bottom detection after settling timeout", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { result } = renderHook(() => useAutoScroll(ref));
+    flushRafs();
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    // Outside settling, 41px from bottom disables auto-scroll.
     (el as any).scrollTop = 559;
     act(() => result.current.handleScroll());
 
@@ -360,6 +421,7 @@ describe("useAutoScroll", () => {
     renderHook(() => useAutoScroll(ref));
     flushRafs();
     const before = nextRafId;
+    (ref.current as any).scrollHeight = 1100;
 
     act(() => {
       latestMO().trigger();
@@ -375,12 +437,14 @@ describe("useAutoScroll", () => {
     renderHook(() => useAutoScroll(ref));
     flushRafs();
 
+    (ref.current as any).scrollHeight = 1100;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBe(1);
 
     flushRafs();
     expect(rafQueue.size).toBe(0);
 
+    (ref.current as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBe(1);
   });
@@ -486,6 +550,7 @@ describe("useAutoScroll", () => {
     flushRafs();
 
     // Schedule a mutation RAF, then unmount before it fires
+    (el as any).scrollHeight = 1300;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBeGreaterThan(0);
 
