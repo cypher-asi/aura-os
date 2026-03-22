@@ -134,6 +134,7 @@ export function AgentInfoPanel() {
 
       {isOwnAgent && (
         <SidekickActions
+          onEdit={() => setShowEditor(true)}
           onDelete={openDeleteConfirm}
         />
       )}
