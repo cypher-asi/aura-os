@@ -98,12 +98,7 @@ impl<R: ProjectResolver> ForwardingToolExecutor<R> {
             }
             send_or_log(&self.chat_tx, ChatStreamEvent::TaskSaved(task.clone()));
         }
-        ToolCallResult {
-            tool_use_id: tc.id.clone(),
-            content: result.content.clone(),
-            is_error: result.is_error,
-            stop_loop: false,
-        }
+        result.to_call_result(tc.id.clone())
     }
 }
 

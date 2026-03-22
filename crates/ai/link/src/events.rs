@@ -2,8 +2,13 @@
 
 /// Events emitted by an [`AgentRuntime`](crate::AgentRuntime) during execution.
 ///
-/// These are the canonical event types that consumers (e.g. the chat streaming
-/// layer) subscribe to for real-time progress updates.
+/// `RuntimeEvent` is a **stable, app-level** event vocabulary that decouples
+/// downstream consumers (chat streaming, engine task output) from the harness's
+/// `aura_agent::AgentLoopEvent` wire format.  The mapping from `AgentLoopEvent`
+/// to `RuntimeEvent` lives in [`link_runtime::forward_events`](crate::link_runtime).
+///
+/// If consumers are ever refactored to map directly from `AgentLoopEvent`, this
+/// intermediate type can be removed.
 #[derive(Debug, Clone)]
 pub enum RuntimeEvent {
     /// A chunk of assistant text output.

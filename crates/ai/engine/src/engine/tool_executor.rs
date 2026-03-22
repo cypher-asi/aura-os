@@ -491,18 +491,11 @@ impl EngineToolLoopExecutor {
                 },
             );
 
-            let content = if tc.name == "run_command" && result.is_error {
-                self.enrich_compiler_output(&result.content)
-            } else {
-                result.content
-            };
-
-            results.push(ToolCallResult {
-                tool_use_id: tc.id.clone(),
-                content,
-                is_error: result.is_error,
-                stop_loop: false,
-            });
+            let mut call_result = result.into_call_result(tc.id.clone());
+            if tc.name == "run_command" && call_result.is_error {
+                call_result.content = self.enrich_compiler_output(&call_result.content);
+            }
+            results.push(call_result);
         }
     }
 }

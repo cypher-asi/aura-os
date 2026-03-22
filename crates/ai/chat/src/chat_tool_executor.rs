@@ -4,6 +4,7 @@ use serde_json::{json, Value};
 use tracing::info;
 
 use aura_core::*;
+use aura_link::ToolCallResult;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
 
@@ -75,6 +76,24 @@ impl ToolExecResult {
             is_error: true,
             saved_spec: None,
             saved_task: None,
+        }
+    }
+
+    pub fn to_call_result(&self, tool_use_id: String) -> ToolCallResult {
+        ToolCallResult {
+            tool_use_id,
+            content: self.content.clone(),
+            is_error: self.is_error,
+            stop_loop: false,
+        }
+    }
+
+    pub fn into_call_result(self, tool_use_id: String) -> ToolCallResult {
+        ToolCallResult {
+            tool_use_id,
+            content: self.content,
+            is_error: self.is_error,
+            stop_loop: false,
         }
     }
 }
