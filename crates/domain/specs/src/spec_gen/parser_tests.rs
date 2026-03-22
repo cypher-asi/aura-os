@@ -373,3 +373,52 @@ fn best_effort_partial_resets_after_complete_object() {
     assert_eq!(partial.title, "B");
     assert!(partial.markdown.starts_with("# St"));
 }
+
+// -----------------------------------------------------------------------
+// repair_partial_json
+// -----------------------------------------------------------------------
+
+#[test]
+fn repair_dangling_backslash_in_string() {
+    let repaired = repair_partial_json("{\"title\": \"line1\\");
+    let val: serde_json::Value = serde_json::from_str(&repaired).expect("should parse");
+    assert_eq!(val["title"], "line1");
+}
+
+#[test]
+fn repair_double_backslash_at_end() {
+    let repaired = repair_partial_json("{\"title\": \"path\\\\");
+    let val: serde_json::Value = serde_json::from_str(&repaired).expect("should parse");
+    assert_eq!(val["title"], "path\\");
+}
+
+#[test]
+fn repair_newline_escape_in_markdown() {
+    let input = "{\"title\": \"Spec\", \"markdown\": \"# Head\\nBody text";
+    let repaired = repair_partial_json(input);
+    let val: serde_json::Value = serde_json::from_str(&repaired).expect("should parse");
+    assert!(val["markdown"].as_str().unwrap().contains("Head"));
+}
+
+#[test]
+fn repair_trailing_comma() {
+    let repaired = repair_partial_json(r#"{"title": "A","#);
+    let val: serde_json::Value = serde_json::from_str(&repaired).expect("should parse");
+    assert_eq!(val["title"], "A");
+}
+
+#[test]
+fn repair_empty_returns_empty() {
+    assert_eq!(repair_partial_json(""), "");
+    assert_eq!(repair_partial_json("  "), "");
+}
+
+#[test]
+fn best_effort_partial_with_dangling_backslash() {
+    let mut parser = IncrementalSpecParser::new();
+    let input = "[{\"title\": \"Auth\", \"purpose\": \"handle auth\", \"markdown\": \"# Auth\\n## Details\\";
+    parser.feed(input);
+    let partial = parser.best_effort_partial().expect("should produce partial despite dangling backslash");
+    assert_eq!(partial.title, "Auth");
+    assert!(partial.markdown.contains("Details"));
+}

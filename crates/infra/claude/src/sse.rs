@@ -109,12 +109,21 @@ impl SseParserState {
                     "input_json_delta" => {
                         if let Some(json) = delta.get("partial_json").and_then(|t| t.as_str()) {
                             self.current_tool_json.push_str(json);
-                            if let Some(input) = parse_best_effort_json_snapshot(&self.current_tool_json) {
-                                send_or_log(tx, ClaudeStreamEvent::ToolInputSnapshot {
-                                    id: self.current_tool_id.clone(),
-                                    name: self.current_tool_name.clone(),
-                                    input,
-                                });
+                            match parse_best_effort_json_snapshot(&self.current_tool_json) {
+                                Some(input) => {
+                                    send_or_log(tx, ClaudeStreamEvent::ToolInputSnapshot {
+                                        id: self.current_tool_id.clone(),
+                                        name: self.current_tool_name.clone(),
+                                        input,
+                                    });
+                                }
+                                None => {
+                                    debug!(
+                                        tool = %self.current_tool_name,
+                                        buf_len = self.current_tool_json.len(),
+                                        "best-effort JSON snapshot parse returned None"
+                                    );
+                                }
                             }
                             send_or_log(tx, ClaudeStreamEvent::ToolInputDelta {
                                 id: self.current_tool_id.clone(),
@@ -310,6 +319,11 @@ fn parse_best_effort_json_snapshot(buf: &str) -> Option<serde_json::Value> {
         candidate.pop();
     }
     if in_string {
+        if escaped {
+            // Buffer ends mid-escape (e.g. trailing `\` from a `\n` sequence).
+            // Drop the dangling backslash so the closing `"` isn't consumed as `\"`.
+            candidate.pop();
+        }
         candidate.push('"');
     }
     candidate.push_str(&"]".repeat(open_brackets));
@@ -352,4 +366,60 @@ pub(crate) async fn parse_sse_events(
     }
 
     Ok(state.finalize(event_tx, start))
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use super::parse_best_effort_json_snapshot;
+
+    #[test]
+    fn complete_json_parses() {
+        let val = parse_best_effort_json_snapshot(r#"{"title": "Spec"}"#).unwrap();
+        assert_eq!(val["title"], "Spec");
+    }
+
+    #[test]
+    fn partial_string_value_is_closed() {
+        let val = parse_best_effort_json_snapshot(r#"{"title": "My Sp"#).unwrap();
+        assert_eq!(val["title"], "My Sp");
+    }
+
+    #[test]
+    fn partial_markdown_with_newline_escape() {
+        let input = "{\"title\": \"Spec\", \"markdown_contents\": \"# Heading\\nBody";
+        let val = parse_best_effort_json_snapshot(input).unwrap();
+        assert_eq!(val["title"], "Spec");
+        assert!(val["markdown_contents"].as_str().unwrap().contains("Heading"));
+    }
+
+    #[test]
+    fn dangling_backslash_is_stripped() {
+        let input = "{\"title\": \"Spec\", \"markdown_contents\": \"line1\\";
+        let val = parse_best_effort_json_snapshot(input).unwrap();
+        assert_eq!(val["markdown_contents"], "line1");
+    }
+
+    #[test]
+    fn double_backslash_at_end_is_complete_escape() {
+        let input = "{\"markdown_contents\": \"path\\\\";
+        let val = parse_best_effort_json_snapshot(input).unwrap();
+        assert_eq!(val["markdown_contents"], "path\\");
+    }
+
+    #[test]
+    fn trailing_comma_stripped() {
+        let val = parse_best_effort_json_snapshot(r#"{"title": "Spec","#).unwrap();
+        assert_eq!(val["title"], "Spec");
+    }
+
+    #[test]
+    fn empty_string_returns_none() {
+        assert!(parse_best_effort_json_snapshot("").is_none());
+        assert!(parse_best_effort_json_snapshot("  ").is_none());
+    }
+
+    #[test]
+    fn key_without_value_returns_none() {
+        assert!(parse_best_effort_json_snapshot(r#"{"title": "ok", "markd"#).is_none());
+    }
 }

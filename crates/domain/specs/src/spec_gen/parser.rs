@@ -162,6 +162,9 @@ fn repair_partial_json(buf: &str) -> String {
         candidate.pop();
     }
     if in_str {
+        if escaped {
+            candidate.pop(); // drop dangling backslash from incomplete escape
+        }
         candidate.push('"');
     }
     candidate.push_str(&"]".repeat(open_brackets));
