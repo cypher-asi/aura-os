@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use chrono::Utc;
 use tokio::sync::mpsc;
-use tracing::info;
+use tracing::{info, warn};
 
 use aura_core::*;
 use aura_claude::ThinkingConfig;
@@ -137,14 +137,56 @@ impl ChatService {
             auto_build_cooldown: None,
         };
 
+        let initial_message_id: Option<String> = self
+            .create_initial_assistant_message(
+                anchor_project_id, anchor_instance_id, active_session_id,
+            )
+            .await;
+
         let thinking_start = std::time::Instant::now();
 
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
         let tx_clone = tx.clone();
         let fwd_blocks = Arc::clone(&tool_blocks);
+
+        let storage_for_fwd: Option<Arc<aura_storage::StorageClient>> = self.storage_client.clone();
+        let jwt_for_fwd: Option<String> = self.get_jwt();
+        let msg_id_for_fwd: Option<String> = initial_message_id.clone();
+        let inc_blocks = Arc::clone(&tool_blocks);
+
         let forwarder = tokio::spawn(async move {
             let mut text_buffer = String::new();
             while let Some(evt) = loop_rx.recv().await {
+                if let ToolLoopEvent::IterationComplete { .. } = &evt {
+                    if let (Some(ref storage), Some(ref jwt), Some(ref mid)) =
+                        (&storage_for_fwd, &jwt_for_fwd, &msg_id_for_fwd)
+                    {
+                        let blocks_snapshot = inc_blocks.lock()
+                            .map(|b| b.clone())
+                            .unwrap_or_default();
+                        if !blocks_snapshot.is_empty() {
+                            let encoded = crate::message_metadata::encode_message_content(
+                                "",
+                                Some(&blocks_snapshot),
+                                None,
+                                None,
+                            );
+                            let req = aura_storage::UpdateMessageRequest {
+                                content: Some(encoded),
+                                input_tokens: None,
+                                output_tokens: None,
+                            };
+                            let storage = Arc::clone(storage);
+                            let jwt = jwt.clone();
+                            let mid = mid.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = storage.update_message(&mid, &jwt, &req).await {
+                                    warn!(error = %e, "Incremental agent message save failed");
+                                }
+                            });
+                        }
+                    }
+                }
                 forward_with_text_accumulation(evt, &tx_clone, &fwd_blocks, &mut text_buffer);
             }
             flush_text_buffer(&fwd_blocks, &mut text_buffer);
@@ -195,7 +237,25 @@ impl ChatService {
             };
             send(ChatStreamEvent::MessageSaved(assistant_msg));
 
-            if active_session_id.is_some() {
+            let encoded_content = crate::message_metadata::encode_message_content(
+                &result.text,
+                content_blocks.as_deref(),
+                thinking.as_deref(),
+                thinking_duration_ms,
+            );
+
+            if let Some(ref mid) = initial_message_id {
+                if let (Some(ref storage), Some(jwt)) = (&self.storage_client, self.get_jwt()) {
+                    let req = aura_storage::UpdateMessageRequest {
+                        content: Some(encoded_content),
+                        input_tokens: Some(result.total_input_tokens),
+                        output_tokens: Some(result.total_output_tokens),
+                    };
+                    if let Err(e) = storage.update_message(mid, &jwt, &req).await {
+                        warn!(error = %e, "Final agent assistant message update failed");
+                    }
+                }
+            } else if active_session_id.is_some() {
                 self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
                     project_id: anchor_project_id,
                     agent_instance_id: anchor_instance_id,

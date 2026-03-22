@@ -299,7 +299,7 @@ impl ChatService {
         (msg, thinking, thinking_duration_ms)
     }
 
-    async fn create_initial_assistant_message(
+    pub(crate) async fn create_initial_assistant_message(
         &self,
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
