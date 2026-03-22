@@ -4,12 +4,21 @@ import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
 import { useAppStore } from "../../stores/app-store";
 import { LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
+import { getLastProject, getLastAgent } from "../../utils/storage";
 import styles from "./AppNavRail.module.css";
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
   if (app.id === "agents") {
     const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
     if (lastId) return `/agents/${lastId}`;
+  }
+  if (app.id === "projects") {
+    const projectId = getLastProject();
+    if (projectId) {
+      const agentInstanceId = getLastAgent(projectId);
+      if (agentInstanceId) return `/projects/${projectId}/agents/${agentInstanceId}`;
+      return `/projects/${projectId}/agent`;
+    }
   }
   return app.basePath;
 }
