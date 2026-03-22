@@ -1,4 +1,4 @@
-import { LAST_AGENT_KEY } from "../constants";
+import { LAST_AGENT_KEY, LAST_PROJECT_KEY } from "../constants";
 
 type LastAgentMap = Record<string, string>;
 
@@ -18,10 +18,25 @@ export function getLastAgent(projectId: string): string | null {
   return getMap()[projectId] ?? null;
 }
 
+export function getLastAgentEntry(): { projectId: string; agentInstanceId: string } | null {
+  const entries = Object.entries(getMap());
+  if (entries.length === 0) return null;
+  const [projectId, agentInstanceId] = entries[entries.length - 1];
+  return { projectId, agentInstanceId };
+}
+
 export function setLastAgent(projectId: string, agentInstanceId: string): void {
   const map = getMap();
   map[projectId] = agentInstanceId;
   localStorage.setItem(LAST_AGENT_KEY, JSON.stringify(map));
+}
+
+export function getLastProject(): string | null {
+  return localStorage.getItem(LAST_PROJECT_KEY);
+}
+
+export function setLastProject(projectId: string): void {
+  localStorage.setItem(LAST_PROJECT_KEY, projectId);
 }
 
 export function clearLastAgentIf(match: { projectId?: string; agentInstanceId?: string }): void {
