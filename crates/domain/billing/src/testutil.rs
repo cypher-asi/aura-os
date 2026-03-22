@@ -69,7 +69,9 @@ pub struct MockBillingState {
 
 impl MockBillingState {
     pub fn new(initial_balance_cents: i64) -> Self {
-        Self { balance_cents: initial_balance_cents }
+        Self {
+            balance_cents: initial_balance_cents,
+        }
     }
 }
 
@@ -117,6 +119,7 @@ pub fn store_zero_auth_session(store: &RocksStore) {
         zero_wallet: "w1".into(),
         wallets: vec![],
         access_token: "test-token".into(),
+        is_zero_pro: false,
         created_at: chrono::Utc::now(),
         validated_at: chrono::Utc::now(),
     })

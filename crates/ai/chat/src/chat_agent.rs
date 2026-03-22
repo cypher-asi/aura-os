@@ -16,7 +16,7 @@ use crate::chat_message_conversion::convert_messages_to_rich;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
-use crate::internal_runtime::{
+use crate::runtime_conversions::{
     map_runtime_event_to_chat_event, rich_messages_to_harness, tool_defs_to_harness,
     tool_loop_config_to_turn_config, turn_result_to_tool_loop_result, ChatToolExecutorAdapter,
 };

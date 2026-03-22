@@ -5,23 +5,23 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tracing::info;
 
+use aura_agents::{AgentInstanceService, AgentService};
+use aura_auth::AuthService;
+use aura_billing::{BillingClient, MeteredLlm, PricingService};
+use aura_chat::{ChatService, ChatServiceDeps};
+use aura_claude::ClaudeClient;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
 use aura_orbit::OrbitClient;
-use aura_storage::StorageClient;
-use aura_terminal::TerminalManager;
-use aura_agents::{AgentService, AgentInstanceService};
-use aura_auth::AuthService;
-use aura_chat::{ChatService, ChatServiceDeps};
-use aura_claude::ClaudeClient;
 use aura_orgs::OrgService;
-use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
-use aura_specs::SpecGenerationService;
-use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
+use aura_specs::SpecGenerationService;
+use aura_storage::StorageClient;
 use aura_store::RocksStore;
+use aura_tasks::{TaskExtractionService, TaskService};
+use aura_terminal::TerminalManager;
 
 use crate::loop_log::LoopLogWriter;
 use crate::state::{AppState, TaskOutputBuffers, TaskStepBuffers};
@@ -49,9 +49,17 @@ fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
         store.clone(),
     ));
     let runtime: Arc<dyn aura_harness::AgentRuntime> = Arc::new(
-        aura_chat::InternalRuntime::new(llm.clone(), settings_service.clone()),
+        aura_harness::HarnessRuntime::from_env().expect("failed to create HarnessRuntime"),
     );
-    CoreServices { org_service, auth_service, settings_service, pricing_service, billing_client, llm, runtime }
+    CoreServices {
+        org_service,
+        auth_service,
+        settings_service,
+        pricing_service,
+        billing_client,
+        llm,
+        runtime,
+    }
 }
 
 struct DomainServices {
@@ -72,7 +80,10 @@ fn init_domain_services(
     storage_client: &Option<Arc<StorageClient>>,
     core: &CoreServices,
 ) -> DomainServices {
-    let project_service = Arc::new(ProjectService::new_with_network(network_client.clone(), store.clone()));
+    let project_service = Arc::new(ProjectService::new_with_network(
+        network_client.clone(),
+        store.clone(),
+    ));
     let spec_gen_service = Arc::new(SpecGenerationService::new(
         store.clone(),
         project_service.clone(),
@@ -87,10 +98,7 @@ fn init_domain_services(
         storage_client.clone(),
     ));
     let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
-    let agent_service = Arc::new(AgentService::new(
-        store.clone(),
-        network_client.clone(),
-    ));
+    let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
     let runtime_agent_state: crate::state::RuntimeAgentStateMap =
         Arc::new(Mutex::new(HashMap::new()));
     let agent_instance_service = Arc::new(AgentInstanceService::new(
@@ -101,8 +109,12 @@ fn init_domain_services(
     ));
     let llm_config = aura_core::LlmConfig::from_env();
     let session_service = Arc::new(
-        SessionService::new(store.clone(), llm_config.context_rollover_threshold, llm_config.max_context_tokens)
-            .with_storage_client(storage_client.clone()),
+        SessionService::new(
+            store.clone(),
+            llm_config.context_rollover_threshold,
+            llm_config.max_context_tokens,
+        )
+        .with_storage_client(storage_client.clone()),
     );
     let chat_service = Arc::new(ChatService::new(ChatServiceDeps {
         store: store.clone(),
@@ -115,9 +127,15 @@ fn init_domain_services(
         runtime: core.runtime.clone(),
     }));
     DomainServices {
-        project_service, spec_gen_service, task_extraction_service,
-        task_service, agent_service, agent_instance_service,
-        session_service, chat_service, runtime_agent_state,
+        project_service,
+        spec_gen_service,
+        task_extraction_service,
+        task_service,
+        agent_service,
+        agent_instance_service,
+        session_service,
+        chat_service,
+        runtime_agent_state,
     }
 }
 
@@ -185,11 +203,20 @@ fn init_event_infrastructure(
     let loop_log = Arc::new(LoopLogWriter::new(loop_log_dir));
 
     super::spawn_event_rebroadcast(
-        event_rx, event_broadcast.clone(), store.clone(),
-        storage_client.clone(), task_output_buffers.clone(),
-        task_step_buffers.clone(), loop_log,
+        event_rx,
+        event_broadcast.clone(),
+        store.clone(),
+        storage_client.clone(),
+        task_output_buffers.clone(),
+        task_step_buffers.clone(),
+        loop_log,
     );
-    EventInfrastructure { event_tx, event_broadcast, task_output_buffers, task_step_buffers }
+    EventInfrastructure {
+        event_tx,
+        event_broadcast,
+        task_output_buffers,
+        task_step_buffers,
+    }
 }
 
 fn env_opt(key: &str) -> Option<String> {
@@ -197,7 +224,10 @@ fn env_opt(key: &str) -> Option<String> {
 }
 
 pub fn build_app_state(db_path: &Path) -> AppState {
-    let data_dir = db_path.parent().map(Path::to_path_buf).unwrap_or_else(|| Path::new(".").to_path_buf());
+    let data_dir = db_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
     let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
@@ -208,25 +238,39 @@ pub fn build_app_state(db_path: &Path) -> AppState {
 
     spawn_health_checks(&storage_client, &network_client);
     if let Some(ref client) = network_client {
-        super::network_bridge::spawn_network_ws_bridge(client.clone(), store.clone(), infra.event_broadcast.clone());
+        super::network_bridge::spawn_network_ws_bridge(
+            client.clone(),
+            store.clone(),
+            infra.event_broadcast.clone(),
+        );
     }
 
     AppState {
-        data_dir, store,
-        org_service: core.org_service, auth_service: core.auth_service,
-        settings_service: core.settings_service, pricing_service: core.pricing_service,
+        data_dir,
+        store,
+        org_service: core.org_service,
+        auth_service: core.auth_service,
+        settings_service: core.settings_service,
+        pricing_service: core.pricing_service,
         billing_client: core.billing_client,
-        project_service: domain.project_service, spec_gen_service: domain.spec_gen_service,
-        task_extraction_service: domain.task_extraction_service, task_service: domain.task_service,
-        agent_service: domain.agent_service, agent_instance_service: domain.agent_instance_service,
-        session_service: domain.session_service, chat_service: domain.chat_service,
+        project_service: domain.project_service,
+        spec_gen_service: domain.spec_gen_service,
+        task_extraction_service: domain.task_extraction_service,
+        task_service: domain.task_service,
+        agent_service: domain.agent_service,
+        agent_instance_service: domain.agent_instance_service,
+        session_service: domain.session_service,
+        chat_service: domain.chat_service,
         llm: core.llm,
-        event_tx: infra.event_tx, event_broadcast: infra.event_broadcast,
+        event_tx: infra.event_tx,
+        event_broadcast: infra.event_broadcast,
         loop_registry: Arc::new(Mutex::new(HashMap::new())),
         write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
-        task_output_buffers: infra.task_output_buffers, task_step_buffers: infra.task_step_buffers,
+        task_output_buffers: infra.task_output_buffers,
+        task_step_buffers: infra.task_step_buffers,
         terminal_manager: Arc::new(TerminalManager::new()),
-        network_client, storage_client,
+        network_client,
+        storage_client,
         orbit_client: Arc::new(OrbitClient::new()),
         orbit_base_url: env_opt("ORBIT_BASE_URL").map(|s| s.trim_end_matches('/').to_string()),
         internal_service_token: env_opt("INTERNAL_SERVICE_TOKEN"),

@@ -1,27 +1,24 @@
-use std::sync::{Arc, Mutex};
-use chrono::Utc;
-use tokio::sync::mpsc;
-use tracing::{error, info};
-use aura_core::*;
-use aura_claude::ThinkingConfig;
-use aura_harness::RuntimeEvent;
-use aura_tools::agent_tool_definitions;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatAttachment, ChatService, ChatStreamEvent};
-use crate::chat_event_forwarding::{
-    ContentBlockAccumulator, flush_text_buffer,
-};
-use crate::chat_message_conversion::build_attachment_blocks;
-use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::chat_context::build_chat_system_prompt;
+use crate::chat_event_forwarding::{flush_text_buffer, ContentBlockAccumulator};
+use crate::chat_message_conversion::build_attachment_blocks;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, SingleProjectResolver};
-use crate::internal_runtime::{
-    rich_messages_to_harness, tool_defs_to_harness, tool_loop_config_to_turn_config,
-    turn_result_to_tool_loop_result, map_runtime_event_to_chat_event,
-    ChatToolExecutorAdapter,
+use crate::constants::DEFAULT_STREAM_TIMEOUT;
+use crate::runtime_conversions::{
+    map_runtime_event_to_chat_event, rich_messages_to_harness, tool_defs_to_harness,
+    tool_loop_config_to_turn_config, turn_result_to_tool_loop_result, ChatToolExecutorAdapter,
 };
 use crate::tool_loop::{ToolLoopConfig, ToolLoopResult};
+use aura_claude::ThinkingConfig;
+use aura_core::*;
+use aura_harness::RuntimeEvent;
+use aura_tools::agent_tool_definitions;
+use chrono::Utc;
+use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc;
+use tracing::{error, info};
 
 pub(crate) struct ChatLoopContext<'a> {
     pub(crate) project_id: &'a ProjectId,
@@ -62,28 +59,44 @@ impl ChatService {
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
         active_session_id: Option<&str>,
     ) {
-        let (api_key, system, api_messages, stored_messages) =
-            match self.prepare_chat_context(project_id, agent_instance_id, agent_instance, tx).await {
-                Some(v) => v,
-                None => return,
-            };
+        let (api_key, system, api_messages, stored_messages) = match self
+            .prepare_chat_context(project_id, agent_instance_id, agent_instance, tx)
+            .await
+        {
+            Some(v) => v,
+            None => return,
+        };
 
-        self.maybe_generate_attachment_overview(&stored_messages, project_id, tx).await;
-        send_or_log(tx, ChatStreamEvent::Progress("Waiting for response...".to_string()));
+        self.maybe_generate_attachment_overview(&stored_messages, project_id, tx)
+            .await;
+        send_or_log(
+            tx,
+            ChatStreamEvent::Progress("Waiting for response...".to_string()),
+        );
 
         let tool_blocks: ContentBlockAccumulator = Arc::new(Mutex::new(Vec::new()));
         let executor = self.build_forwarding_executor(project_id, tx, &tool_blocks);
         let config = self.build_chat_tool_config().await;
 
         let thinking_start = std::time::Instant::now();
-        let result = self.run_chat_tool_loop(
-            &api_key, &system, api_messages, &config, executor, tx,
-            &tool_blocks,
-        ).await;
+        let result = self
+            .run_chat_tool_loop(
+                &api_key,
+                &system,
+                api_messages,
+                &config,
+                executor,
+                tx,
+                &tool_blocks,
+            )
+            .await;
 
         self.update_instance_token_usage(
-            project_id, agent_instance_id,
-            result.total_input_tokens, result.total_output_tokens, tx,
+            project_id,
+            agent_instance_id,
+            result.total_input_tokens,
+            result.total_output_tokens,
+            tx,
         );
         info!(
             %project_id, %agent_instance_id,
@@ -93,11 +106,16 @@ impl ChatService {
         );
 
         let chat_ctx = ChatLoopContext {
-            project_id, agent_instance_id, agent_instance,
-            api_key: &api_key, stored_messages: &stored_messages,
-            tx, active_session_id,
+            project_id,
+            agent_instance_id,
+            agent_instance,
+            api_key: &api_key,
+            stored_messages: &stored_messages,
+            tx,
+            active_session_id,
         };
-        self.save_assistant_message(&chat_ctx, result, tool_blocks, thinking_start).await;
+        self.save_assistant_message(&chat_ctx, result, tool_blocks, thinking_start)
+            .await;
     }
 
     fn build_forwarding_executor(
@@ -113,7 +131,9 @@ impl ChatService {
                 self.project_service.clone(),
                 self.task_service.clone(),
             ),
-            resolver: SingleProjectResolver { project_id: *project_id },
+            resolver: SingleProjectResolver {
+                project_id: *project_id,
+            },
             chat_tx: tx.clone(),
             blocks: Arc::clone(tool_blocks),
         }
@@ -145,8 +165,12 @@ impl ChatService {
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
         shared_blocks: &ContentBlockAccumulator,
     ) -> ToolLoopResult {
-        let tools: Arc<[aura_claude::ToolDefinition]> =
-            agent_tool_definitions().iter().cloned().map(Into::into).collect::<Vec<_>>().into();
+        let tools: Arc<[aura_claude::ToolDefinition]> = agent_tool_definitions()
+            .iter()
+            .cloned()
+            .map(Into::into)
+            .collect::<Vec<_>>()
+            .into();
 
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<RuntimeEvent>();
         let tx_clone = tx.clone();
@@ -173,7 +197,13 @@ impl ChatService {
                         });
                     }
                 }
-                if let RuntimeEvent::ToolResult { tool_use_id, content, is_error, .. } = &evt {
+                if let RuntimeEvent::ToolResult {
+                    tool_use_id,
+                    content,
+                    is_error,
+                    ..
+                } = &evt
+                {
                     if let Ok(mut acc) = fwd_blocks.lock() {
                         acc.push(ChatContentBlock::ToolResult {
                             tool_use_id: tool_use_id.clone(),
@@ -189,9 +219,8 @@ impl ChatService {
             flush_text_buffer(&fwd_blocks, &mut text_buffer);
         });
 
-        let adapter: Arc<dyn aura_harness::ToolExecutor> = Arc::new(
-            ChatToolExecutorAdapter { inner: executor },
-        );
+        let adapter: Arc<dyn aura_harness::ToolExecutor> =
+            Arc::new(ChatToolExecutorAdapter { inner: executor });
         let request = aura_harness::TurnRequest {
             system_prompt: system.to_string(),
             messages: rich_messages_to_harness(api_messages),
@@ -237,17 +266,29 @@ impl ChatService {
             }
         };
 
-        send_or_log(tx, ChatStreamEvent::Progress("Loading conversation...".to_string()));
+        send_or_log(
+            tx,
+            ChatStreamEvent::Progress("Loading conversation...".to_string()),
+        );
 
-        let stored_messages = match self.list_messages_async(project_id, agent_instance_id).await {
+        let stored_messages = match self
+            .list_messages_async(project_id, agent_instance_id)
+            .await
+        {
             Ok(m) => m,
             Err(e) => {
-                send_or_log(tx, ChatStreamEvent::Error(format!("Failed to load messages: {e}")));
+                send_or_log(
+                    tx,
+                    ChatStreamEvent::Error(format!("Failed to load messages: {e}")),
+                );
                 return None;
             }
         };
 
-        send_or_log(tx, ChatStreamEvent::Progress("Building context...".to_string()));
+        send_or_log(
+            tx,
+            ChatStreamEvent::Progress("Building context...".to_string()),
+        );
 
         let custom_prompt = agent_instance.system_prompt.clone();
         let system = match self.project_service.get_project_async(project_id).await {
@@ -269,8 +310,11 @@ impl ChatService {
             }
         };
 
-        let mut api_messages = crate::chat_message_conversion::convert_messages_to_rich(&stored_messages);
-        api_messages = self.manage_context_window(&api_key, &system, api_messages).await;
+        let mut api_messages =
+            crate::chat_message_conversion::convert_messages_to_rich(&stored_messages);
+        api_messages = self
+            .manage_context_window(&api_key, &system, api_messages)
+            .await;
         api_messages = crate::chat_sanitize::sanitize_orphan_tool_results(api_messages);
         api_messages = crate::chat_sanitize::sanitize_tool_use_results(api_messages);
 
@@ -296,8 +340,14 @@ impl ChatService {
         content_blocks: Option<&[ChatContentBlock]>,
         thinking_start: std::time::Instant,
     ) -> (Message, Option<String>, Option<u64>) {
-        let thinking = if result.thinking.is_empty() { None } else { Some(result.thinking.clone()) };
-        let thinking_duration_ms = thinking.as_ref().map(|_| thinking_start.elapsed().as_millis() as u64);
+        let thinking = if result.thinking.is_empty() {
+            None
+        } else {
+            Some(result.thinking.clone())
+        };
+        let thinking_duration_ms = thinking
+            .as_ref()
+            .map(|_| thinking_start.elapsed().as_millis() as u64);
         let msg = Message {
             message_id: MessageId::new(),
             agent_instance_id: *agent_instance_id,
@@ -324,13 +374,20 @@ impl ChatService {
             Err(arc) => arc.lock().unwrap_or_else(|e| e.into_inner()).clone(),
         };
         let has_tool_calls = !accumulated_blocks.is_empty();
-        let content_blocks = if has_tool_calls { Some(accumulated_blocks) } else { None };
+        let content_blocks = if has_tool_calls {
+            Some(accumulated_blocks)
+        } else {
+            None
+        };
 
         if !result.text.is_empty() || has_tool_calls {
             let assistant_reply = result.text.clone();
             let (assistant_msg, thinking, thinking_duration_ms) = Self::build_assistant_message(
-                ctx.project_id, ctx.agent_instance_id, &result,
-                content_blocks.as_deref(), thinking_start,
+                ctx.project_id,
+                ctx.agent_instance_id,
+                &result,
+                content_blocks.as_deref(),
+                thinking_start,
             );
             send_or_log(ctx.tx, ChatStreamEvent::MessageSaved(assistant_msg));
 
@@ -399,8 +456,12 @@ impl ChatService {
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let ChatMessageParams {
-            project_id, agent_instance_id, agent_instance,
-            content, action, attachments,
+            project_id,
+            agent_instance_id,
+            agent_instance,
+            content,
+            action,
+            attachments,
         } = params;
 
         let send = |evt: ChatStreamEvent| {
@@ -413,7 +474,10 @@ impl ChatService {
 
         let active_session_id = self
             .prepare_session_and_save_user_message(
-                project_id, agent_instance_id, content, content_blocks.as_deref(),
+                project_id,
+                agent_instance_id,
+                content,
+                content_blocks.as_deref(),
             )
             .await;
         let Some(ref _session_id) = active_session_id else {
@@ -427,15 +491,23 @@ impl ChatService {
         match action {
             Some("generate_specs") => {
                 self.handle_generate_specs(
-                    project_id, agent_instance_id, agent_instance, &tx,
+                    project_id,
+                    agent_instance_id,
+                    agent_instance,
+                    &tx,
                     active_session_id.as_deref(),
-                ).await;
+                )
+                .await;
             }
             _ => {
                 self.handle_chat_with_tools(
-                    project_id, agent_instance_id, agent_instance, &tx,
+                    project_id,
+                    agent_instance_id,
+                    agent_instance,
+                    &tx,
                     active_session_id.as_deref(),
-                ).await;
+                )
+                .await;
             }
         }
 
@@ -450,7 +522,13 @@ impl ChatService {
         content_blocks: Option<&[ChatContentBlock]>,
         thinking_start: std::time::Instant,
     ) -> (Message, Option<String>, Option<u64>) {
-        Self::build_assistant_message(project_id, agent_instance_id, result, content_blocks, thinking_start)
+        Self::build_assistant_message(
+            project_id,
+            agent_instance_id,
+            result,
+            content_blocks,
+            thinking_start,
+        )
     }
 
     pub async fn send_agent_message_streaming(
@@ -459,8 +537,14 @@ impl ChatService {
         tx: mpsc::UnboundedSender<ChatStreamEvent>,
     ) {
         let AgentMessageParams {
-            agent_id, agent, projects, storage_messages,
-            content, action: _action, attachments, storage_anchor,
+            agent_id,
+            agent,
+            projects,
+            storage_messages,
+            content,
+            action: _action,
+            attachments,
+            storage_anchor,
         } = params;
         let send = |evt: ChatStreamEvent| {
             send_or_log(&tx, evt);
@@ -471,13 +555,17 @@ impl ChatService {
         let now = Utc::now();
         let content_blocks = build_attachment_blocks(content, attachments);
 
-        let (anchor_project_id, anchor_instance_id) = storage_anchor
-            .unwrap_or((ProjectId::nil(), AgentInstanceId::nil()));
+        let (anchor_project_id, anchor_instance_id) =
+            storage_anchor.unwrap_or((ProjectId::nil(), AgentInstanceId::nil()));
 
         let active_session_id = if !anchor_instance_id.as_uuid().is_nil() {
             self.prepare_session_and_save_user_message(
-                &anchor_project_id, &anchor_instance_id, content, content_blocks.as_deref(),
-            ).await
+                &anchor_project_id,
+                &anchor_instance_id,
+                content,
+                content_blocks.as_deref(),
+            )
+            .await
         } else {
             None
         };
