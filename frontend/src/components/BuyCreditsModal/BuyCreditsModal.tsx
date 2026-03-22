@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import styles from "./BuyCreditsModal.module.css";
@@ -20,6 +20,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     loadBalance, handlePurchase, balance,
   } = useBuyCreditsData(isOpen);
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedPreset, setSelectedPreset] = useState<number | null>(100);
   const [customAmount, setCustomAmount] = useState("");
 
@@ -27,6 +28,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     if (isOpen) {
       setSelectedPreset(100);
       setCustomAmount("");
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [isOpen]);
 
@@ -96,6 +98,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
         <div className={styles.customRow}>
           <Input
+            ref={inputRef}
             size="sm"
             type="number"
             min={MIN_USD}
