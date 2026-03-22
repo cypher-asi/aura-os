@@ -128,14 +128,7 @@
 .footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.footerEnd {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: flex-start;
 }
 
 .billingLink {

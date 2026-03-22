@@ -55,18 +55,11 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
   const footer = (
     <div className={styles.footer}>
-      <div>
-        {onOpenBilling && (
-          <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
-            Billing Settings
-          </button>
-        )}
-      </div>
-      <div className={styles.footerEnd}>
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
+      {onOpenBilling && (
+        <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
+          Billing Settings
+        </button>
+      )}
     </div>
   );
 
