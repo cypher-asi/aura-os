@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use tokio::sync::{mpsc, Mutex};
@@ -267,8 +265,7 @@ fn build_executor(
         } else {
             TaskPhase::Exploring
         })),
-        self_review_done: Arc::new(AtomicBool::new(false)),
-        files_read: Arc::new(Mutex::new(HashSet::new())),
+        self_review: Arc::new(Mutex::new(aura_link::self_review::SelfReviewGuard::new())),
     }
 }
 

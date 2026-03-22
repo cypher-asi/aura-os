@@ -1,9 +1,5 @@
 use aura_link::ToolCall;
 
-pub(super) fn normalize_tool_path(path: &str) -> String {
-    path.replace('\\', "/").trim_start_matches("./").to_string()
-}
-
 pub(super) fn looks_like_compiler_errors(output: &str) -> bool {
     let has_rust_errors = output.contains("error[E") && output.contains("-->");
     let has_generic_errors = output.contains("error:") && output.contains("-->");

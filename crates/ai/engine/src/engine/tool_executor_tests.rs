@@ -89,8 +89,7 @@ fn make_executor() -> EngineToolLoopExecutor {
         task_phase: Arc::new(Mutex::new(TaskPhase::Implementing {
             plan: TaskPlan::empty(),
         })),
-        self_review_done: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        files_read: Arc::new(Mutex::new(std::collections::HashSet::new())),
+        self_review: Arc::new(Mutex::new(aura_link::self_review::SelfReviewGuard::new())),
     }
 }
 

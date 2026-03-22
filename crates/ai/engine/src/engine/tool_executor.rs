@@ -1,6 +1,4 @@
-use std::collections::HashSet;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -8,6 +6,7 @@ use tokio::sync::Mutex;
 
 use aura_chat::{ChatToolExecutor, ToolExecResult};
 use aura_core::*;
+use aura_link::self_review::SelfReviewGuard;
 use aura_link::{AutoBuildResult, BuildBaseline, ToolCall, ToolCallResult, ToolExecutor};
 
 use super::build_fix::{
@@ -16,9 +15,7 @@ use super::build_fix::{
 };
 use super::planning::{TaskPhase, TaskPlan};
 use super::prompts::build_stub_fix_prompt;
-use super::tool_executor_helpers::{
-    format_tool_arg_hint, looks_like_compiler_errors, normalize_tool_path,
-};
+use super::tool_executor_helpers::{format_tool_arg_hint, looks_like_compiler_errors};
 use super::types::{track_file_op, FollowUpSuggestion};
 use crate::build_verify;
 use crate::channel_ext::send_or_log;
@@ -46,10 +43,7 @@ pub(crate) struct EngineToolLoopExecutor {
     pub completed_deps: Vec<Task>,
     pub work_log_summary: String,
     pub task_phase: Arc<Mutex<TaskPhase>>,
-    pub self_review_done: Arc<AtomicBool>,
-    /// Paths read via `read_file` since their last write. Invalidated when the
-    /// same path is written, so this set only contains post-write reads.
-    pub files_read: Arc<Mutex<HashSet<String>>>,
+    pub self_review: Arc<Mutex<SelfReviewGuard>>,
 }
 
 #[async_trait]
@@ -150,10 +144,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
                             track_file_op(&tc.name, &tc.input, &mut ops);
                         }
                         if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
-                            self.files_read
-                                .lock()
-                                .await
-                                .remove(&normalize_tool_path(path));
+                            self.self_review.lock().await.record_write(path);
                         }
                         executor_indices.push(i);
                     }
@@ -165,10 +156,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
                     }
                     if tc.name == "read_file" {
                         if let Some(path) = tc.input.get("path").and_then(|v| v.as_str()) {
-                            self.files_read
-                                .lock()
-                                .await
-                                .insert(normalize_tool_path(path));
+                            self.self_review.lock().await.record_read(path);
                         }
                     }
                     executor_indices.push(i);
@@ -340,32 +328,7 @@ impl EngineToolLoopExecutor {
     }
 
     async fn check_self_review(&self) -> Option<String> {
-        if self.self_review_done.load(Ordering::Relaxed) {
-            return None;
-        }
-        let ops = self.tracked_file_ops.lock().await;
-        let modified: HashSet<String> = ops
-            .iter()
-            .filter_map(|op| match op {
-                FileOp::Create { path, .. }
-                | FileOp::Modify { path, .. }
-                | FileOp::SearchReplace { path, .. } => Some(normalize_tool_path(path)),
-                _ => None,
-            })
-            .collect();
-        if modified.is_empty() {
-            return None;
-        }
-        let reads = self.files_read.lock().await;
-        let unreviewed: Vec<&str> = modified
-            .iter()
-            .filter(|p| !reads.contains(p.as_str()))
-            .map(|p| p.as_str())
-            .collect();
-        if unreviewed.is_empty() {
-            return None;
-        }
-        self.self_review_done.store(true, Ordering::Relaxed);
+        let unreviewed = self.self_review.lock().await.check_review_needed()?;
         Some(format!(
             "SELF-REVIEW REQUIRED: Before completing, re-read the files you modified \
              to verify correctness:\n{}\n\nCheck: (a) changes match task requirements, \

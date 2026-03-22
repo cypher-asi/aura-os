@@ -17,8 +17,11 @@ mod runtime;
 mod turn_types;
 mod types;
 
+pub use aura_agent::build;
 pub use aura_agent::compaction;
+pub use aura_agent::planning;
 pub use aura_agent::policy;
+pub use aura_agent::self_review;
 pub use error::RuntimeError;
 pub use events::RuntimeEvent;
 pub use executor::{AutoBuildResult, BuildBaseline, ToolCallResult, ToolExecutor};
