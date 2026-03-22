@@ -86,6 +86,7 @@
 
 .purchaseButton {
   width: 100%;
+  font-weight: 400;
 }
 
 /* Status / feedback */
