@@ -82,10 +82,13 @@ export function ChatView() {
     let cancelled = false;
     if (prevIsStreamingRef.current && !isStreaming) {
       void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
+      if (historyKey) {
+        useChatHistoryStore.getState().invalidateHistory(historyKey);
+      }
     }
     prevIsStreamingRef.current = isStreaming;
     return () => { cancelled = true; };
-  }, [isStreaming, fetchActiveSessionContext]);
+  }, [isStreaming, fetchActiveSessionContext, historyKey]);
 
   // Load chat history via shared store
   useEffect(() => {

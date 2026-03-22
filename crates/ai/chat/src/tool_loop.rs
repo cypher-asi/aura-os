@@ -241,6 +241,9 @@ pub async fn run_tool_loop(input: ToolLoopInput<'_>) -> ToolLoopResult {
         }
 
         let should_stop = process_tool_calls(&iter, executor, ctx.event_tx, &mut state).await;
+
+        send_or_log(ctx.event_tx, ToolLoopEvent::IterationComplete { iteration });
+
         if should_stop {
             return state.build_result(iteration + 1, false, false, None);
         }

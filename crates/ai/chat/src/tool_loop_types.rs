@@ -253,6 +253,9 @@ pub enum ToolLoopEvent {
         input_tokens: u64,
         output_tokens: u64,
     },
+    IterationComplete {
+        iteration: usize,
+    },
     Error(String),
 }
 

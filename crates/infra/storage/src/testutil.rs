@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use chrono::Utc;
@@ -319,6 +319,22 @@ async fn list_messages(
     Json(msgs)
 }
 
+async fn update_message(
+    Path(message_id): Path<String>,
+    State(db): State<SharedDb>,
+    Json(req): Json<UpdateMessageRequest>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    if let Some(msg) = db.messages.iter_mut().find(|m| m.id == message_id) {
+        if let Some(v) = req.content { msg.content = Some(v); }
+        if let Some(v) = req.input_tokens { msg.input_tokens = Some(v); }
+        if let Some(v) = req.output_tokens { msg.output_tokens = Some(v); }
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Project Agent handlers
 // ---------------------------------------------------------------------------
@@ -439,6 +455,7 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             "/api/sessions/:session_id/messages",
             post(create_message).get(list_messages),
         )
+        .route("/api/messages/:message_id", put(update_message))
         // Project Agents
         .route(
             "/api/projects/:project_id/agents",

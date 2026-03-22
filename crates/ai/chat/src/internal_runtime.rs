@@ -198,6 +198,9 @@ fn map_loop_event(evt: ToolLoopEvent) -> RuntimeEvent {
             input_tokens,
             output_tokens,
         },
+        ToolLoopEvent::IterationComplete { iteration } => {
+            RuntimeEvent::IterationComplete { iteration }
+        }
         ToolLoopEvent::Error(s) => RuntimeEvent::Error(s),
     }
 }

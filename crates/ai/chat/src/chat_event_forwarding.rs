@@ -69,6 +69,9 @@ pub(crate) fn forward_tool_loop_event(
                 output_tokens,
             });
         }
+        ToolLoopEvent::IterationComplete { .. } => {
+            // Handled by the forwarder in chat_streaming to trigger incremental saves.
+        }
         ToolLoopEvent::Error(msg) => {
             send_or_log(tx, ChatStreamEvent::Error(msg));
         }

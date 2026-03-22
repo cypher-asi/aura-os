@@ -44,6 +44,11 @@ pub enum RuntimeEvent {
         /// Output tokens generated.
         output_tokens: u64,
     },
+    /// A tool-loop iteration completed (all tool calls in this round finished).
+    IterationComplete {
+        /// Zero-based iteration index.
+        iteration: usize,
+    },
     /// An error occurred during the turn.
     Error(String),
 }

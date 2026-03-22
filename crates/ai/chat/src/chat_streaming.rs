@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use chrono::Utc;
 use tokio::sync::mpsc;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use aura_core::*;
 use aura_claude::ThinkingConfig;
 use aura_tools::agent_tool_definitions;
@@ -67,9 +67,14 @@ impl ChatService {
         let executor = self.build_forwarding_executor(project_id, tx, &tool_blocks);
         let config = self.build_chat_tool_config().await;
 
+        let initial_message_id = self
+            .create_initial_assistant_message(project_id, agent_instance_id, active_session_id)
+            .await;
+
         let thinking_start = std::time::Instant::now();
         let result = self.run_chat_tool_loop(
             &api_key, &system, api_messages, &config, &executor, tx,
+            &tool_blocks, initial_message_id.as_deref(), active_session_id,
         ).await;
 
         self.update_instance_token_usage(
@@ -88,7 +93,7 @@ impl ChatService {
             api_key: &api_key, stored_messages: &stored_messages,
             tx, active_session_id,
         };
-        self.save_assistant_message(&chat_ctx, result, tool_blocks, thinking_start).await;
+        self.save_assistant_message(&chat_ctx, result, tool_blocks, thinking_start, initial_message_id).await;
     }
 
     fn build_forwarding_executor(
@@ -134,6 +139,9 @@ impl ChatService {
         config: &ToolLoopConfig,
         executor: &ForwardingToolExecutor<SingleProjectResolver>,
         tx: &mpsc::UnboundedSender<ChatStreamEvent>,
+        shared_blocks: &ContentBlockAccumulator,
+        initial_message_id: Option<&str>,
+        active_session_id: Option<&str>,
     ) -> ToolLoopResult {
         let tools: Arc<[aura_claude::ToolDefinition]> =
             agent_tool_definitions().iter().cloned().map(Into::into).collect::<Vec<_>>().into();
@@ -141,8 +149,45 @@ impl ChatService {
         let (loop_tx, mut loop_rx) = mpsc::unbounded_channel::<ToolLoopEvent>();
         let tx_clone = tx.clone();
         let fwd_blocks = Arc::clone(&tool_blocks);
+
+        let storage_for_fwd = self.storage_client.clone();
+        let jwt_for_fwd = self.get_jwt();
+        let msg_id_for_fwd = initial_message_id.map(String::from);
+        let inc_blocks = Arc::clone(shared_blocks);
+        let _session_id_for_fwd = active_session_id.map(String::from);
+
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = loop_rx.recv().await {
+                if let ToolLoopEvent::IterationComplete { .. } = &evt {
+                    if let (Some(ref storage), Some(ref jwt), Some(ref mid)) =
+                        (&storage_for_fwd, &jwt_for_fwd, &msg_id_for_fwd)
+                    {
+                        let blocks_snapshot = inc_blocks.lock()
+                            .map(|b| b.clone())
+                            .unwrap_or_default();
+                        if !blocks_snapshot.is_empty() {
+                            let encoded = crate::message_metadata::encode_message_content(
+                                "",
+                                Some(&blocks_snapshot),
+                                None,
+                                None,
+                            );
+                            let req = aura_storage::UpdateMessageRequest {
+                                content: Some(encoded),
+                                input_tokens: None,
+                                output_tokens: None,
+                            };
+                            let storage = Arc::clone(storage);
+                            let jwt = jwt.clone();
+                            let mid = mid.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = storage.update_message(&mid, &jwt, &req).await {
+                                    warn!(error = %e, "Incremental message save failed");
+                                }
+                            });
+                        }
+                    }
+                }
                 forward_tool_loop_event(evt, &tx_clone, &fwd_blocks);
             }
         });
@@ -252,12 +297,52 @@ impl ChatService {
         (msg, thinking, thinking_duration_ms)
     }
 
+    async fn create_initial_assistant_message(
+        &self,
+        project_id: &ProjectId,
+        agent_instance_id: &AgentInstanceId,
+        active_session_id: Option<&str>,
+    ) -> Option<String> {
+        let storage = self.storage_client.as_ref()?;
+        let jwt = self.get_jwt()?;
+
+        let owned_session_id;
+        let sid = match active_session_id {
+            Some(id) => id,
+            None => match self.find_active_session_id(agent_instance_id).await {
+                Some(id) => {
+                    owned_session_id = id;
+                    &owned_session_id
+                }
+                None => return None,
+            },
+        };
+
+        let req = aura_storage::CreateMessageRequest {
+            project_agent_id: agent_instance_id.to_string(),
+            project_id: project_id.to_string(),
+            role: "assistant".to_string(),
+            content: String::new(),
+            input_tokens: None,
+            output_tokens: None,
+        };
+
+        match storage.create_message(sid, &jwt, &req).await {
+            Ok(msg) => Some(msg.id),
+            Err(e) => {
+                warn!(error = %e, "Failed to create initial assistant message");
+                None
+            }
+        }
+    }
+
     async fn save_assistant_message(
         &self,
         ctx: &ChatLoopContext<'_>,
         result: ToolLoopResult,
         tool_blocks: ContentBlockAccumulator,
         thinking_start: std::time::Instant,
+        initial_message_id: Option<String>,
     ) {
         let accumulated_blocks = match Arc::try_unwrap(tool_blocks) {
             Ok(mutex) => mutex.into_inner().unwrap_or_default(),
@@ -273,19 +358,40 @@ impl ChatService {
                 content_blocks.as_deref(), thinking_start,
             );
             send_or_log(ctx.tx, ChatStreamEvent::MessageSaved(assistant_msg));
-            self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
-                project_id: ctx.project_id,
-                agent_instance_id: ctx.agent_instance_id,
-                role: "assistant",
-                content: &assistant_reply,
-                content_blocks: content_blocks.as_deref(),
-                thinking: thinking.as_deref(),
+
+            let encoded_content = crate::message_metadata::encode_message_content(
+                &assistant_reply,
+                content_blocks.as_deref(),
+                thinking.as_deref(),
                 thinking_duration_ms,
-                input_tokens: Some(result.total_input_tokens),
-                output_tokens: Some(result.total_output_tokens),
-                session_id: ctx.active_session_id,
-            })
-            .await;
+            );
+
+            if let Some(ref mid) = initial_message_id {
+                if let (Some(storage), Some(jwt)) = (&self.storage_client, self.get_jwt()) {
+                    let req = aura_storage::UpdateMessageRequest {
+                        content: Some(encoded_content),
+                        input_tokens: Some(result.total_input_tokens),
+                        output_tokens: Some(result.total_output_tokens),
+                    };
+                    if let Err(e) = storage.update_message(mid, &jwt, &req).await {
+                        warn!(error = %e, "Final assistant message update failed");
+                    }
+                }
+            } else {
+                self.save_message_to_storage(crate::chat_persistence::SaveMessageParams {
+                    project_id: ctx.project_id,
+                    agent_instance_id: ctx.agent_instance_id,
+                    role: "assistant",
+                    content: &assistant_reply,
+                    content_blocks: content_blocks.as_deref(),
+                    thinking: thinking.as_deref(),
+                    thinking_duration_ms,
+                    input_tokens: Some(result.total_input_tokens),
+                    output_tokens: Some(result.total_output_tokens),
+                    session_id: ctx.active_session_id,
+                })
+                .await;
+            }
 
             if let Some(sid) = ctx.active_session_id {
                 self.update_session_context_usage(

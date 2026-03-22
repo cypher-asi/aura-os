@@ -4,6 +4,7 @@ import type { Spec, Task, TaskStatus } from "../../types";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { mergeById } from "../../utils/collections";
 
@@ -53,6 +54,17 @@ export function useTaskListData(): TaskListData {
       setLocalTasks(t.sort((a, b) => a.order_index - b.order_index));
     }).catch(console.error);
   }, []);
+
+  const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);
+  const prevStreamIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const wasStreaming = prevStreamIdRef.current != null;
+    prevStreamIdRef.current = streamingId;
+    if (wasStreaming && streamingId == null) {
+      refetchTasks();
+    }
+  }, [streamingId, refetchTasks]);
 
   useEffect(() => {
     const unsubs = [

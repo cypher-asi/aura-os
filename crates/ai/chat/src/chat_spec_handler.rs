@@ -12,6 +12,7 @@ struct SpecSaveContext<'a> {
     project_id: &'a ProjectId,
     agent_instance_id: &'a AgentInstanceId,
     content: &'a str,
+    content_blocks: Option<&'a [ChatContentBlock]>,
     input_tokens: u64,
     output_tokens: u64,
     tx: &'a mpsc::UnboundedSender<ChatStreamEvent>,
@@ -35,7 +36,7 @@ impl ChatService {
             spec_gen.generate_specs_streaming(&pid, spec_tx).await;
         });
 
-        let (accumulated, spec_input_tokens, spec_output_tokens) =
+        let (accumulated, content_blocks, spec_input_tokens, spec_output_tokens) =
             drain_spec_events(&mut spec_rx, tx).await;
 
         info!(
@@ -49,8 +50,10 @@ impl ChatService {
         );
 
         if !accumulated.is_empty() {
+            let blocks = if content_blocks.is_empty() { None } else { Some(content_blocks) };
             self.save_spec_assistant_message(SpecSaveContext {
                 project_id, agent_instance_id, content: &accumulated,
+                content_blocks: blocks.as_deref(),
                 input_tokens: spec_input_tokens, output_tokens: spec_output_tokens,
                 tx, active_session_id,
             }).await;
@@ -64,7 +67,7 @@ impl ChatService {
             project_id: *ctx.project_id,
             role: ChatRole::Assistant,
             content: ctx.content.to_string(),
-            content_blocks: None,
+            content_blocks: ctx.content_blocks.map(|b| b.to_vec()),
             thinking: None,
             thinking_duration_ms: None,
             created_at: Utc::now(),
@@ -75,7 +78,7 @@ impl ChatService {
             agent_instance_id: ctx.agent_instance_id,
             role: "assistant",
             content: ctx.content,
-            content_blocks: None,
+            content_blocks: ctx.content_blocks,
             thinking: None,
             thinking_duration_ms: None,
             input_tokens: Some(ctx.input_tokens),
@@ -92,8 +95,9 @@ impl ChatService {
 pub(crate) async fn drain_spec_events(
     spec_rx: &mut mpsc::UnboundedReceiver<SpecStreamEvent>,
     tx: &mpsc::UnboundedSender<ChatStreamEvent>,
-) -> (String, u64, u64) {
+) -> (String, Vec<ChatContentBlock>, u64, u64) {
     let mut accumulated = String::new();
+    let mut content_blocks = Vec::new();
     let mut input_tokens: u64 = 0;
     let mut output_tokens: u64 = 0;
 
@@ -104,6 +108,10 @@ pub(crate) async fn drain_spec_events(
                 send_or_log(tx, ChatStreamEvent::Delta(text));
             }
             SpecStreamEvent::SpecSaved(spec) => {
+                content_blocks.push(ChatContentBlock::SpecRef {
+                    spec_id: spec.spec_id.to_string(),
+                    title: spec.title.clone(),
+                });
                 send_or_log(tx, ChatStreamEvent::SpecSaved(spec));
             }
             SpecStreamEvent::SpecsTitle(title) => {
@@ -113,6 +121,10 @@ pub(crate) async fn drain_spec_events(
                 send_or_log(tx, ChatStreamEvent::SpecsSummary(summary));
             }
             SpecStreamEvent::TaskSaved(task) => {
+                content_blocks.push(ChatContentBlock::TaskRef {
+                    task_id: task.task_id.to_string(),
+                    title: task.title.clone(),
+                });
                 send_or_log(tx, ChatStreamEvent::TaskSaved(task));
             }
             SpecStreamEvent::TokenUsage { input_tokens: it, output_tokens: ot } => {
@@ -130,7 +142,7 @@ pub(crate) async fn drain_spec_events(
         }
     }
 
-    (accumulated, input_tokens, output_tokens)
+    (accumulated, content_blocks, input_tokens, output_tokens)
 }
 
 #[cfg(test)]
@@ -185,7 +197,7 @@ mod tests {
         spec_tx.send(SpecStreamEvent::Delta("World".into())).unwrap();
         drop(spec_tx);
 
-        let (accumulated, input_tokens, output_tokens) =
+        let (accumulated, _blocks, input_tokens, output_tokens) =
             drain_spec_events(&mut spec_rx, &chat_tx).await;
 
         assert_eq!(accumulated, "Hello World");
@@ -210,7 +222,7 @@ mod tests {
         spec_tx.send(SpecStreamEvent::TokenUsage { input_tokens: 200, output_tokens: 80 }).unwrap();
         drop(spec_tx);
 
-        let (_, input_tokens, output_tokens) =
+        let (_, _blocks, input_tokens, output_tokens) =
             drain_spec_events(&mut spec_rx, &chat_tx).await;
 
         assert_eq!(input_tokens, 300);
@@ -236,7 +248,10 @@ mod tests {
         spec_tx.send(SpecStreamEvent::SpecSaved(spec)).unwrap();
         drop(spec_tx);
 
-        drain_spec_events(&mut spec_rx, &chat_tx).await;
+        let (_accumulated, blocks, _it, _ot) = drain_spec_events(&mut spec_rx, &chat_tx).await;
+
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(&blocks[0], ChatContentBlock::SpecRef { .. }));
 
         let mut found = false;
         while let Ok(evt) = chat_rx.try_recv() {
@@ -277,7 +292,7 @@ mod tests {
         spec_tx.send(SpecStreamEvent::Complete(vec![])).unwrap();
         drop(spec_tx);
 
-        let (accumulated, _, _) = drain_spec_events(&mut spec_rx, &chat_tx).await;
+        let (accumulated, _blocks, _, _) = drain_spec_events(&mut spec_rx, &chat_tx).await;
         assert!(accumulated.is_empty());
 
         let mut event_count = 0;
@@ -326,7 +341,10 @@ mod tests {
         spec_tx.send(SpecStreamEvent::TaskSaved(Box::new(task))).unwrap();
         drop(spec_tx);
 
-        drain_spec_events(&mut spec_rx, &chat_tx).await;
+        let (_accumulated, blocks, _it, _ot) = drain_spec_events(&mut spec_rx, &chat_tx).await;
+
+        assert_eq!(blocks.len(), 1);
+        assert!(matches!(&blocks[0], ChatContentBlock::TaskRef { .. }));
 
         let mut found = false;
         while let Ok(evt) = chat_rx.try_recv() {

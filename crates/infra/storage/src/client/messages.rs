@@ -19,6 +19,21 @@ impl StorageClient {
         .await
     }
 
+    pub async fn update_message(
+        &self,
+        message_id: &str,
+        jwt: &str,
+        req: &UpdateMessageRequest,
+    ) -> Result<(), StorageError> {
+        validate_url_id(message_id, "message_id")?;
+        self.put_authed_no_response(
+            &format!("{}/api/messages/{}", self.base_url, message_id),
+            jwt,
+            req,
+        )
+        .await
+    }
+
     pub async fn list_messages(
         &self,
         session_id: &str,
