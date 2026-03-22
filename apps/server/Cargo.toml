@@ -18,7 +18,6 @@ aura-tasks = { path = "../../crates/domain/tasks" }
 aura-sessions = { path = "../../crates/domain/sessions" }
 aura-specs = { path = "../../crates/domain/specs" }
 aura-chat = { path = "../../crates/ai/chat" }
-aura-provider = { path = "../../crates/infra/provider" }
 aura-harness = { path = "../../crates/ai/harness" }
 aura-engine = { path = "../../crates/ai/engine" }
 aura-terminal = { path = "../../crates/infra/terminal" }

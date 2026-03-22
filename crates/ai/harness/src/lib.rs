@@ -26,3 +26,6 @@ pub use types::{
     CacheControl, ContentBlock, ImageSource, Message, MessageContent, Role, ThinkingConfig,
     ToolCall, ToolDefinition,
 };
+
+#[cfg(test)]
+mod tests;

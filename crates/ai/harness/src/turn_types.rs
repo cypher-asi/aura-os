@@ -55,6 +55,7 @@ pub struct TotalUsage {
 }
 
 /// The result of a completed agent turn.
+#[derive(Debug)]
 pub struct TurnResult {
     /// The final assistant text response.
     pub text: String,
