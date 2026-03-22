@@ -14,10 +14,15 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
   const [expanded, setExpanded] = useState(isStreaming);
   const contentRef = useRef<HTMLDivElement>(null);
   const prevStreamingRef = useRef(isStreaming);
+  const [animate, setAnimate] = useState(true);
 
   useEffect(() => {
     if (prevStreamingRef.current && !isStreaming) {
-      const frame = window.requestAnimationFrame(() => setExpanded(false));
+      setAnimate(false);
+      const frame = window.requestAnimationFrame(() => {
+        setExpanded(false);
+        requestAnimationFrame(() => setAnimate(true));
+      });
       prevStreamingRef.current = isStreaming;
       return () => window.cancelAnimationFrame(frame);
     }
@@ -41,6 +46,7 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
       expanded={expanded}
       onExpandedChange={setExpanded}
       maxExpandedHeight={300}
+      animate={animate}
       className={styles.thinkingBlock}
       header={
         <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>

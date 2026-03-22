@@ -45,6 +45,10 @@
   transition: max-height 0.3s ease;
 }
 
+.bodyWrapInstant {
+  transition: none;
+}
+
 .bodyExpanded {
   max-height: 320px;
 }

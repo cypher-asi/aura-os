@@ -11,6 +11,8 @@ interface ResponseBlockProps {
   className?: string;
   contentClassName?: string;
   maxExpandedHeight?: number;
+  /** When false, expand/collapse happens instantly (no CSS transition). */
+  animate?: boolean;
 }
 
 export function ResponseBlock({
@@ -22,6 +24,7 @@ export function ResponseBlock({
   className,
   contentClassName,
   maxExpandedHeight = 320,
+  animate = true,
 }: ResponseBlockProps) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
 
@@ -43,7 +46,7 @@ export function ResponseBlock({
         </span>
       </button>
       <div
-        className={`${styles.bodyWrap} ${expanded ? styles.bodyExpanded : ""}`}
+        className={`${styles.bodyWrap} ${expanded ? styles.bodyExpanded : ""} ${!animate ? styles.bodyWrapInstant : ""}`}
         style={expanded ? { maxHeight: maxExpandedHeight } : undefined}
       >
         <div className={`${styles.content} ${contentClassName ?? ""}`}>
