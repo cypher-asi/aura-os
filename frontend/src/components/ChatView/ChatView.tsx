@@ -6,12 +6,14 @@ import { useChatStream } from "../../hooks/use-chat-stream";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { ChatPanel } from "../ChatPanel";
 import { useChatHistoryStore, useChatHistory, projectChatHistoryKey } from "../../stores/chat-history-store";
+import { useProjectsListStore } from "../../stores/projects-list-store";
 import styles from "./ChatView.module.css";
+
+const EMPTY_PROJECT_AGENTS: readonly [] = [];
 
 export function ChatView() {
   const navigate = useNavigate();
@@ -20,7 +22,13 @@ export function ChatView() {
     agentInstanceId: string;
   }>();
   const { isMobileLayout } = useAuraCapabilities();
-  const { agentsByProject, loadingAgentsByProject, refreshProjectAgents } = useProjectsList();
+  const projectAgents = useProjectsListStore((state) => (
+    projectId ? state.agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS : EMPTY_PROJECT_AGENTS
+  ));
+  const isLoadingProjectAgents = useProjectsListStore((state) => (
+    projectId ? Boolean(state.loadingAgentsByProject[projectId]) : false
+  ));
+  const refreshProjectAgents = useProjectsListStore((state) => state.refreshProjectAgents);
 
   const historyKey = projectId && agentInstanceId
     ? projectChatHistoryKey(projectId, agentInstanceId)
@@ -43,15 +51,13 @@ export function ChatView() {
   const resetMessagesRef = useRef(resetMessages);
   useEffect(() => { resetMessagesRef.current = resetMessages; }, [resetMessages]);
 
-  const projectAgents = projectId ? (agentsByProject[projectId] ?? []) : [];
   const selectedProjectAgent = projectAgents.find((agent) => agent.agent_instance_id === agentInstanceId) ?? null;
-  const isLoadingProjectAgents = projectId ? Boolean(loadingAgentsByProject[projectId]) : false;
 
   useEffect(() => {
     if (!projectId) return;
-    if (agentsByProject[projectId]) return;
+    if (projectAgents.length > 0 || isLoadingProjectAgents) return;
     void refreshProjectAgents(projectId).catch(() => {});
-  }, [agentsByProject, projectId, refreshProjectAgents]);
+  }, [isLoadingProjectAgents, projectAgents.length, projectId, refreshProjectAgents]);
 
   // Fetch agent instance metadata (name)
   useEffect(() => {

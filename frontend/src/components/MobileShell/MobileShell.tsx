@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useNavigate, useOutlet } from "react-router-dom";
 import { Topbar, Drawer, Button, ButtonPlus, Text } from "@cypher-asi/zui";
+import { useShallow } from "zustand/react/shallow";
 import { ErrorBoundary } from "../ErrorBoundary";
 import {
   ArrowLeft, ChevronDown, CircleUserRound,
@@ -11,9 +12,9 @@ import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
+import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { HostSettingsModal } from "../HostSettingsModal";
@@ -36,13 +37,19 @@ function blurActiveElement() {
 
 function ProjectNavigationDrawerContent() {
   const { query, setQuery } = useSidebarSearch();
-  const { openNewProjectModal, projects, recentProjects } = useProjectsList();
+  const { openNewProjectModal, projects } = useProjectsListStore(
+    useShallow((state) => ({
+      openNewProjectModal: state.openNewProjectModal,
+      projects: state.projects,
+    })),
+  );
   const navigate = useNavigate();
   const location = useMobileShellState().location;
   const sidekick = useSidekick();
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
+  const recentProjects = useMemo(() => getRecentProjects(projects), [projects]);
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -344,7 +351,18 @@ function MobileTopbar({ state }: { state: ReturnType<typeof useMobileShellState>
       icon={
         <div className={styles.mobileTopbarSlot}>
           {state.showProjectBack && state.currentProjectId ? (
-            <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={18} />} aria-label="Back to project" onClick={() => navigate(projectRootPath(state.currentProjectId!))} />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<ArrowLeft size={18} />}
+              aria-label="Back to project"
+              onClick={() => {
+                if (state.currentProjectId) {
+                  navigate(projectRootPath(state.currentProjectId));
+                }
+              }}
+            />
           ) : (
             <button
               type="button"

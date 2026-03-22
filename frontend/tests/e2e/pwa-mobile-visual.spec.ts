@@ -220,7 +220,7 @@ test("capture mobile work, files, and account sheet", async ({ page, browserName
     fullPage: true,
   });
 
-  await page.goto("/projects");
+  await page.goto("/projects/proj-1/agents/agent-inst-1");
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
   await page.getByRole("button", { name: "Open account" }).click();
   await expect(page.getByRole("button", { name: "Team settings" })).toBeVisible();

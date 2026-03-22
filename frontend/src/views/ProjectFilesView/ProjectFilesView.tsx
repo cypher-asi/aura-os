@@ -8,10 +8,10 @@ import { api } from "../../api/client";
 import { PanelSearch } from "../../components/PanelSearch";
 import { FileExplorer } from "../../components/FileExplorer";
 import { useProjectContext } from "../../stores/project-action-store";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { filenameFromPath, langFromPath } from "../../ide/lang";
 import { resolveApiUrl } from "../../lib/host-config";
+import { useProjectsListStore } from "../../stores/projects-list-store";
 import { getProjectWorkspaceDisplay, getProjectWorkspaceLabel, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
 import styles from "./ProjectFilesView.module.css";
 
@@ -26,8 +26,10 @@ export function ProjectFilesView() {
   const { isMobileLayout } = useAuraCapabilities();
   const ctx = useProjectContext();
   const { projectId } = useParams<{ projectId: string }>();
-  const { projects } = useProjectsList();
-  const project = ctx?.project ?? projects.find((candidate) => candidate.project_id === projectId) ?? null;
+  const listedProject = useProjectsListStore((state) => (
+    projectId ? state.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
+  ));
+  const project = ctx?.project ?? listedProject;
   const rootPath = getProjectWorkspaceRoot(project);
   const workspaceSourceLabel = getProjectWorkspaceLabel(project);
   const workspaceDisplay = getProjectWorkspaceDisplay(project);

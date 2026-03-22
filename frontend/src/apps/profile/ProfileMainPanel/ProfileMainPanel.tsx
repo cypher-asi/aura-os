@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { GitCommitVertical } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { Lane } from "../../../components/Lane";
 import { CommitGrid } from "../../../components/CommitGrid";
 import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
-import { useProfile, useProfileStore } from "../../../stores/profile-store";
+import {
+  buildFilteredProfileEvents,
+  buildProfileCommitActivity,
+  getProfileCommentsForEvent,
+  useProfileEvents,
+  useProfileStore,
+} from "../../../stores/profile-store";
 import styles from "./ProfileMainPanel.module.css";
 
 export function ProfileMainPanel() {
@@ -16,12 +23,28 @@ export function ProfileMainPanel() {
     projects,
     selectedProject,
     setSelectedProject,
-    filteredEvents,
-    commitActivity,
     selectedEventId,
     selectEvent,
-    getCommentsForEvent,
-  } = useProfile();
+    comments,
+  } = useProfileStore(
+    useShallow((state) => ({
+      projects: state.projects,
+      selectedProject: state.selectedProject,
+      setSelectedProject: state.setSelectedProject,
+      selectedEventId: state.selectedEventId,
+      selectEvent: state.selectEvent,
+      comments: state.comments,
+    })),
+  );
+  const events = useProfileEvents();
+  const filteredEvents = useMemo(
+    () => buildFilteredProfileEvents(events, projects, selectedProject),
+    [events, projects, selectedProject],
+  );
+  const commitActivity = useMemo(
+    () => buildProfileCommitActivity(events, projects, selectedProject),
+    [events, projects, selectedProject],
+  );
 
   return (
     <Lane flex className={styles.borderLeft}>
@@ -69,7 +92,7 @@ export function ProfileMainPanel() {
                   event={evt}
                   isLast={i === filteredEvents.length - 1}
                   isSelected={selectedEventId === evt.id}
-                  comments={getCommentsForEvent(evt.id)}
+                  comments={getProfileCommentsForEvent(comments, evt.id)}
                   onSelect={selectEvent}
                 />
               ))}
