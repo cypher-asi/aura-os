@@ -474,7 +474,6 @@ dependencies = [
  "aura-harness",
  "aura-network",
  "aura-projects",
- "aura-provider",
  "aura-sessions",
  "aura-settings",
  "aura-storage",

@@ -16,7 +16,6 @@ aura-tasks = { path = "../../domain/tasks" }
 aura-agents = { path = "../../domain/agents" }
 aura-sessions = { path = "../../domain/sessions" }
 aura-chat = { path = "../chat" }
-aura-provider = { path = "../../infra/provider" }
 aura-harness = { path = "../harness" }
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
