@@ -1,13 +1,15 @@
 use crate::chat::ChatService;
-use crate::tool_loop::ToolLoopResult;
 use aura_core::*;
+use aura_link::{TotalUsage, TurnResult};
 
-fn make_result(text: &str, thinking: &str) -> ToolLoopResult {
-    ToolLoopResult {
+fn make_result(text: &str, thinking: &str) -> TurnResult {
+    TurnResult {
         text: text.into(),
         thinking: thinking.into(),
-        total_input_tokens: 100,
-        total_output_tokens: 50,
+        usage: TotalUsage {
+            input_tokens: 100,
+            output_tokens: 50,
+        },
         iterations_run: 1,
         timed_out: false,
         insufficient_credits: false,

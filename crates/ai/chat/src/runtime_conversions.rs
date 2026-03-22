@@ -6,13 +6,9 @@
 
 use std::sync::Arc;
 
-use async_trait::async_trait;
-
-use aura_link::{RuntimeEvent, TurnConfig, TurnResult};
+use aura_link::RuntimeEvent;
 
 use crate::chat::ChatStreamEvent;
-use crate::tool_loop::{ToolLoopConfig, ToolLoopResult};
-use crate::tool_loop_types::{self as chat_types};
 
 // ===========================================================================
 // Claude → Link conversions
@@ -91,104 +87,6 @@ fn tool_def_to_link(td: &aura_claude::ToolDefinition) -> aura_link::ToolDefiniti
             .map(|cc| aura_link::CacheControl {
                 cache_type: cc.cache_type.clone(),
             }),
-    }
-}
-
-pub fn tool_loop_config_to_turn_config(config: &ToolLoopConfig) -> TurnConfig {
-    TurnConfig {
-        max_iterations: config.max_iterations,
-        max_tokens: config.max_tokens,
-        thinking: config
-            .thinking
-            .as_ref()
-            .map(|tc| aura_link::ThinkingConfig {
-                thinking_type: tc.thinking_type.clone(),
-                budget_tokens: tc.budget_tokens,
-            }),
-        stream_timeout: config.stream_timeout,
-        max_context_tokens: config.max_context_tokens,
-        model_override: config.model_override.clone(),
-        exploration_allowance: config.exploration_allowance,
-        auto_build_cooldown: config.auto_build_cooldown,
-        credit_budget: config.credit_budget,
-        billing_reason: Some(config.billing_reason.to_string()),
-    }
-}
-
-pub fn turn_result_to_tool_loop_result(result: TurnResult) -> ToolLoopResult {
-    ToolLoopResult {
-        text: result.text,
-        thinking: result.thinking,
-        total_input_tokens: result.usage.input_tokens,
-        total_output_tokens: result.usage.output_tokens,
-        iterations_run: result.iterations_run,
-        timed_out: result.timed_out,
-        insufficient_credits: result.insufficient_credits,
-        llm_error: result.llm_error,
-    }
-}
-
-// ===========================================================================
-// ChatToolExecutorAdapter — wraps a chat-crate ToolExecutor for the link
-// ===========================================================================
-
-/// Bridges a chat-crate [`ToolExecutor`](chat_types::ToolExecutor) to the
-/// link [`ToolExecutor`](aura_link::ToolExecutor) so that existing
-/// `ForwardingToolExecutor` / `EngineToolLoopExecutor` can be passed through
-/// `TurnRequest`.
-pub struct ChatToolExecutorAdapter<T: chat_types::ToolExecutor + 'static> {
-    /// The inner chat-crate tool executor.
-    pub inner: T,
-}
-
-#[async_trait]
-impl<T: chat_types::ToolExecutor + 'static> aura_link::ToolExecutor
-    for ChatToolExecutorAdapter<T>
-{
-    async fn execute(
-        &self,
-        tool_calls: &[aura_link::ToolCall],
-    ) -> Vec<aura_link::ToolCallResult> {
-        let claude_calls: Vec<aura_claude::ToolCall> = tool_calls
-            .iter()
-            .map(|tc| aura_claude::ToolCall {
-                id: tc.id.clone(),
-                name: tc.name.clone(),
-                input: tc.input.clone(),
-            })
-            .collect();
-
-        self.inner
-            .execute(&claude_calls)
-            .await
-            .into_iter()
-            .map(|r| aura_link::ToolCallResult {
-                tool_use_id: r.tool_use_id,
-                content: r.content,
-                is_error: r.is_error,
-                stop_loop: r.stop_loop,
-            })
-            .collect()
-    }
-
-    async fn auto_build_check(&self) -> Option<aura_link::AutoBuildResult> {
-        self.inner
-            .auto_build_check()
-            .await
-            .map(|r| aura_link::AutoBuildResult {
-                success: r.success,
-                output: r.output,
-                error_count: 0,
-            })
-    }
-
-    async fn capture_build_baseline(&self) -> Option<aura_link::BuildBaseline> {
-        self.inner
-            .capture_build_baseline()
-            .await
-            .map(|r| aura_link::BuildBaseline {
-                error_signatures: r.error_signatures,
-            })
     }
 }
 

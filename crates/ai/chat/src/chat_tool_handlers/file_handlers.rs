@@ -6,7 +6,34 @@ use aura_core::*;
 
 use super::str_field;
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
-use crate::tool_loop_blocking::looks_truncated;
+
+/// Heuristic: unbalanced braces/brackets or content that ends mid-line.
+fn looks_truncated(content: &str) -> bool {
+    if content.len() < 200 {
+        return false;
+    }
+    let mut brace_depth: i64 = 0;
+    let mut bracket_depth: i64 = 0;
+    let mut paren_depth: i64 = 0;
+    for ch in content.chars() {
+        match ch {
+            '{' => brace_depth += 1,
+            '}' => brace_depth -= 1,
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth -= 1,
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            _ => {}
+        }
+    }
+    let significantly_unbalanced =
+        brace_depth.abs() > 2 || bracket_depth.abs() > 2 || paren_depth.abs() > 2;
+    let ends_abruptly = !content.ends_with('\n')
+        && !content.ends_with('}')
+        && !content.ends_with(';')
+        && !content.ends_with('\r');
+    significantly_unbalanced || ends_abruptly
+}
 
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
 

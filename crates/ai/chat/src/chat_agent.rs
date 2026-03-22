@@ -5,9 +5,8 @@ use chrono::Utc;
 use tokio::sync::mpsc;
 use tracing::info;
 
-use aura_claude::ThinkingConfig;
 use aura_core::*;
-use aura_link::RuntimeEvent;
+use aura_link::{RuntimeEvent, TurnConfig, TurnResult};
 
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
@@ -16,11 +15,7 @@ use crate::chat_message_conversion::convert_messages_to_rich;
 use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
-use crate::runtime_conversions::{
-    rich_messages_to_link, tool_defs_to_link, tool_loop_config_to_turn_config,
-    turn_result_to_tool_loop_result, ChatToolExecutorAdapter,
-};
-use crate::tool_loop::{ToolLoopConfig, ToolLoopResult};
+use crate::runtime_conversions::{rich_messages_to_link, tool_defs_to_link};
 use aura_tools::multi_project_tool_definitions;
 
 fn build_multi_project_system_prompt(agent: &Agent, projects: &[Project]) -> String {
@@ -144,12 +139,15 @@ impl ChatService {
 
         let credit_budget = self.llm.current_balance().await.map(|b| b / 2);
 
-        let config = ToolLoopConfig {
+        let config = TurnConfig {
             max_iterations: ChatToolExecutor::max_iterations(),
             max_tokens: self.llm_config.chat_max_tokens,
-            thinking: Some(ThinkingConfig::enabled(self.llm_config.thinking_budget)),
+            thinking: Some(aura_link::ThinkingConfig {
+                thinking_type: "enabled".to_string(),
+                budget_tokens: self.llm_config.thinking_budget,
+            }),
             stream_timeout: DEFAULT_STREAM_TIMEOUT,
-            billing_reason: "aura_chat",
+            billing_reason: Some("aura_chat".to_string()),
             max_context_tokens: Some(self.llm_config.max_context_tokens),
             credit_budget,
             exploration_allowance: None,
@@ -173,14 +171,13 @@ impl ChatService {
             flush_text_buffer(&fwd_blocks, &mut text_buffer);
         });
 
-        let adapter: Arc<dyn aura_link::ToolExecutor> =
-            Arc::new(ChatToolExecutorAdapter { inner: executor });
+        let adapter: Arc<dyn aura_link::ToolExecutor> = Arc::new(executor);
         let request = aura_link::TurnRequest {
             system_prompt: system.to_string(),
             messages: rich_messages_to_link(api_messages),
             tools: tool_defs_to_link(tools),
             executor: adapter,
-            config: tool_loop_config_to_turn_config(&config),
+            config,
             event_tx: Some(event_tx),
             auth_token: self.get_jwt(),
         };
@@ -188,15 +185,17 @@ impl ChatService {
         let turn_result = self.runtime.execute_turn(request).await;
         let _ = forwarder.await;
 
-        let result: ToolLoopResult = match turn_result {
-            Ok(r) => turn_result_to_tool_loop_result(r),
+        let result: TurnResult = match turn_result {
+            Ok(r) => r,
             Err(e) => {
                 send_or_log(tx, ChatStreamEvent::Error(format!("Runtime error: {e}")));
-                ToolLoopResult {
+                TurnResult {
                     text: String::new(),
                     thinking: String::new(),
-                    total_input_tokens: 0,
-                    total_output_tokens: 0,
+                    usage: aura_link::TotalUsage {
+                        input_tokens: 0,
+                        output_tokens: 0,
+                    },
                     iterations_run: 0,
                     timed_out: false,
                     insufficient_credits: false,
@@ -207,8 +206,8 @@ impl ChatService {
 
         info!(
             ?agent_id,
-            result.total_input_tokens,
-            result.total_output_tokens,
+            result.usage.input_tokens,
+            result.usage.output_tokens,
             llm_error = result.llm_error.as_deref().unwrap_or(""),
             "Agent chat loop finished"
         );
@@ -255,8 +254,8 @@ impl ChatService {
                     content_blocks: content_blocks.as_deref(),
                     thinking: thinking.as_deref(),
                     thinking_duration_ms,
-                    input_tokens: Some(result.total_input_tokens),
-                    output_tokens: Some(result.total_output_tokens),
+                    input_tokens: Some(result.usage.input_tokens),
+                    output_tokens: Some(result.usage.output_tokens),
                     session_id: active_session_id,
                 })
                 .await;

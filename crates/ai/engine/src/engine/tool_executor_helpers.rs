@@ -1,4 +1,4 @@
-use aura_claude::ToolCall;
+use aura_link::ToolCall;
 
 pub(super) fn normalize_tool_path(path: &str) -> String {
     path.replace('\\', "/").trim_start_matches("./").to_string()

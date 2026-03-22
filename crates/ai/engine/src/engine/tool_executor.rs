@@ -6,11 +6,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 
-use aura_chat::{
-    AutoBuildResult, BuildBaseline, ChatToolExecutor, ToolCallResult, ToolExecResult, ToolExecutor,
-};
-use aura_claude::ToolCall;
+use aura_chat::{ChatToolExecutor, ToolExecResult};
 use aura_core::*;
+use aura_link::{AutoBuildResult, BuildBaseline, ToolCall, ToolCallResult, ToolExecutor};
 
 use super::build_fix::{
     classify_build_errors, error_category_guidance, infer_default_build_command,
@@ -96,6 +94,7 @@ impl ToolExecutor for EngineToolLoopExecutor {
                 Some(AutoBuildResult {
                     success: result.success,
                     output,
+                    error_count: 0,
                 })
             }
             Err(e) => {

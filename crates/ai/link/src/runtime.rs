@@ -15,8 +15,8 @@ use crate::turn_types::{TurnRequest, TurnResult};
 /// [`LinkRuntime`](crate::LinkRuntime), which wraps
 /// `aura-agent::AgentLoop`.
 ///
-/// `aura-chat::InternalRuntime` still exists only for legacy integration tests
-/// that have not yet migrated to `LinkRuntime`.
+/// Integration tests use mock `AgentRuntime` implementations with canned
+/// responses rather than the full `LinkRuntime` stack.
 #[async_trait]
 pub trait AgentRuntime: Send + Sync {
     /// Execute a complete agent turn.

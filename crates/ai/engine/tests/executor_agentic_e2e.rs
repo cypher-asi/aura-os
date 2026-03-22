@@ -13,6 +13,37 @@ mod tests {
     use aura_core::*;
     use aura_engine::{DevLoopEngine, EngineEvent, LoopOutcome};
 
+    #[derive(Default)]
+    struct CannedTurnRuntime;
+
+    #[async_trait::async_trait]
+    impl aura_link::AgentRuntime for CannedTurnRuntime {
+        async fn execute_turn(
+            &self,
+            request: aura_link::TurnRequest,
+        ) -> Result<aura_link::TurnResult, aura_link::RuntimeError> {
+            let tool_calls = vec![aura_link::ToolCall {
+                id: "auto_done".into(),
+                name: "task_done".into(),
+                input: serde_json::json!({"notes": "Auto-completed by test runtime"}),
+            }];
+            let _results = request.executor.execute(&tool_calls).await;
+
+            Ok(aura_link::TurnResult {
+                text: "Task completed by test runtime.".into(),
+                thinking: String::new(),
+                usage: aura_link::TotalUsage {
+                    input_tokens: 100,
+                    output_tokens: 50,
+                },
+                iterations_run: 1,
+                timed_out: false,
+                insufficient_credits: false,
+                llm_error: None,
+            })
+        }
+    }
+
     use aura_agents::AgentInstanceService;
     use aura_projects::{CreateProjectInput, ProjectService};
     use aura_sessions::SessionService;
@@ -67,7 +98,7 @@ mod tests {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
-            aura_chat::InternalRuntime::new(llm.clone(), settings.clone()),
+            CannedTurnRuntime::default(),
         );
         let engine = Arc::new(
             DevLoopEngine::new(
@@ -303,7 +334,7 @@ mod tests {
         std::fs::create_dir_all(&project_dir).unwrap();
 
         let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
-            aura_chat::InternalRuntime::new(llm.clone(), settings.clone()),
+            CannedTurnRuntime::default(),
         );
         let engine = Arc::new(
             DevLoopEngine::new(

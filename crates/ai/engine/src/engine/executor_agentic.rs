@@ -4,13 +4,10 @@ use std::sync::Arc;
 
 use tokio::sync::{mpsc, Mutex};
 
-use aura_chat::{
-    rich_messages_to_link, tool_defs_to_link, tool_loop_config_to_turn_config,
-    turn_result_to_tool_loop_result, ChatToolExecutor, ChatToolExecutorAdapter, ToolLoopConfig,
-};
-use aura_claude::{RichMessage, ThinkingConfig};
+use aura_chat::{rich_messages_to_link, tool_defs_to_link, ChatToolExecutor};
+use aura_claude::RichMessage;
 use aura_core::*;
-use aura_link::RuntimeEvent;
+use aura_link::{RuntimeEvent, TurnConfig, TurnResult};
 use aura_tools::engine_tool_definitions;
 
 use super::agentic_context::{
@@ -28,24 +25,13 @@ use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{FileOp, WorkspaceCache};
 
-pub(crate) struct ToolLoopParams {
-    pub(crate) max_iterations: usize,
-    pub(crate) max_tokens: u32,
-    pub(crate) thinking: Option<ThinkingConfig>,
-    pub(crate) stream_timeout: std::time::Duration,
-    pub(crate) max_context_tokens: Option<u64>,
-    pub(crate) credit_budget: Option<u64>,
-    pub(crate) exploration_allowance: usize,
-    pub(crate) model_override: Option<String>,
-}
-
-pub(crate) fn configure_llm_params(
+pub(crate) fn configure_turn_config(
     complexity: TaskComplexity,
     llm_config: &LlmConfig,
     engine_config: &EngineConfig,
     exploration_allowance: usize,
     member_count: usize,
-) -> ToolLoopParams {
+) -> TurnConfig {
     let thinking_budget = match complexity {
         TaskComplexity::Simple => 2_000.min(llm_config.thinking_budget),
         TaskComplexity::Standard => {
@@ -68,15 +54,20 @@ pub(crate) fn configure_llm_params(
         _ => None,
     };
 
-    ToolLoopParams {
+    TurnConfig {
         max_iterations,
         max_tokens,
-        thinking: Some(ThinkingConfig::enabled(thinking_budget)),
+        thinking: Some(aura_link::ThinkingConfig {
+            thinking_type: "enabled".to_string(),
+            budget_tokens: thinking_budget,
+        }),
         stream_timeout: std::time::Duration::from_secs(llm_config.stream_timeout_secs),
+        billing_reason: Some("aura_task".to_string()),
         max_context_tokens: Some(llm_config.max_context_tokens),
         credit_budget: engine_config.max_task_credits,
-        exploration_allowance,
+        exploration_allowance: Some(exploration_allowance),
         model_override,
+        auto_build_cooldown: Some(1),
     }
 }
 
@@ -130,8 +121,8 @@ fn spawn_runtime_event_forwarder(
     (forwarder, event_tx)
 }
 
-async fn finalize_tool_loop_result(
-    result: aura_chat::ToolLoopResult,
+async fn finalize_turn_result(
+    result: TurnResult,
     tracked_file_ops: Arc<Mutex<Vec<FileOp>>>,
     notes: Arc<Mutex<String>>,
     follow_ups: Arc<Mutex<Vec<FollowUpSuggestion>>>,
@@ -162,8 +153,8 @@ async fn finalize_tool_loop_result(
         notes,
         file_ops: tracked_file_ops,
         follow_up_tasks: follow_ups,
-        input_tokens: result.total_input_tokens,
-        output_tokens: result.total_output_tokens,
+        input_tokens: result.usage.input_tokens,
+        output_tokens: result.usage.output_tokens,
         parse_retries: 0,
         files_already_applied: true,
     })
@@ -280,20 +271,6 @@ fn build_executor(
     }
 }
 
-pub(crate) fn build_tool_loop_config(params: ToolLoopParams) -> ToolLoopConfig {
-    ToolLoopConfig {
-        max_iterations: params.max_iterations,
-        max_tokens: params.max_tokens,
-        thinking: params.thinking,
-        stream_timeout: params.stream_timeout,
-        billing_reason: "aura_task",
-        max_context_tokens: params.max_context_tokens,
-        credit_budget: params.credit_budget,
-        exploration_allowance: Some(params.exploration_allowance),
-        model_override: params.model_override,
-        auto_build_cooldown: Some(1),
-    }
-}
 
 pub(crate) struct AgenticTaskParams<'a> {
     pub project_id: &'a ProjectId,
@@ -350,14 +327,13 @@ impl DevLoopEngine {
             notes.clone(),
             follow_ups.clone(),
         );
-        let llm_params = configure_llm_params(
+        let config = configure_turn_config(
             setup.complexity,
             &self.llm_config,
             &self.engine_config,
             setup.exploration_allowance,
             atp.workspace_cache.member_count,
         );
-        let config = build_tool_loop_config(llm_params);
 
         let pid = *atp.project_id;
         let aiid = atp.session.agent_instance_id;
@@ -371,14 +347,13 @@ impl DevLoopEngine {
             .collect::<Vec<_>>()
             .into();
 
-        let adapter: Arc<dyn aura_link::ToolExecutor> =
-            Arc::new(ChatToolExecutorAdapter { inner: executor });
+        let adapter: Arc<dyn aura_link::ToolExecutor> = Arc::new(executor);
         let request = aura_link::TurnRequest {
             system_prompt: setup.system_prompt,
             messages: rich_messages_to_link(vec![RichMessage::user(&setup.task_context)]),
             tools: tool_defs_to_link(tools),
             executor: adapter,
-            config: tool_loop_config_to_turn_config(&config),
+            config,
             event_tx: Some(event_tx),
             auth_token: self.store.get_jwt(),
         };
@@ -387,7 +362,7 @@ impl DevLoopEngine {
         let _ = forwarder.await;
 
         let result = match turn_result {
-            Ok(r) => turn_result_to_tool_loop_result(r),
+            Ok(r) => r,
             Err(e) => {
                 return Err(match e {
                     aura_link::RuntimeError::InsufficientCredits => {
@@ -398,7 +373,7 @@ impl DevLoopEngine {
             }
         };
 
-        finalize_tool_loop_result(result, tracked_file_ops, notes, follow_ups).await
+        finalize_turn_result(result, tracked_file_ops, notes, follow_ups).await
     }
 }
 
@@ -408,59 +383,32 @@ mod tests {
     use aura_core::{EngineConfig, LlmConfig};
 
     #[test]
-    fn test_configure_llm_params_simple_caps_max_tokens() {
+    fn test_configure_turn_config_simple_caps_max_tokens() {
         let llm = LlmConfig::default();
         let engine = EngineConfig::default();
-        let params = configure_llm_params(TaskComplexity::Simple, &llm, &engine, 8, 3);
-        assert!(params.max_tokens <= 8_192);
-        assert!(params.max_iterations <= 15);
-        assert!(params.model_override.is_some());
+        let config = configure_turn_config(TaskComplexity::Simple, &llm, &engine, 8, 3);
+        assert!(config.max_tokens <= 8_192);
+        assert!(config.max_iterations <= 15);
+        assert!(config.model_override.is_some());
     }
 
     #[test]
-    fn test_configure_llm_params_complex_uses_full_budget() {
+    fn test_configure_turn_config_complex_uses_full_budget() {
         let llm = LlmConfig::default();
         let engine = EngineConfig::default();
-        let params = configure_llm_params(TaskComplexity::Complex, &llm, &engine, 18, 3);
-        assert_eq!(params.max_tokens, llm.task_execution_max_tokens);
-        assert_eq!(params.max_iterations, engine.max_agentic_iterations);
-        assert!(params.model_override.is_none());
+        let config = configure_turn_config(TaskComplexity::Complex, &llm, &engine, 18, 3);
+        assert_eq!(config.max_tokens, llm.task_execution_max_tokens);
+        assert_eq!(config.max_iterations, engine.max_agentic_iterations);
+        assert!(config.model_override.is_none());
     }
 
     #[test]
-    fn test_build_tool_loop_config_maps_all_fields() {
-        let params = ToolLoopParams {
-            max_iterations: 10,
-            max_tokens: 4096,
-            thinking: None,
-            stream_timeout: std::time::Duration::from_secs(30),
-            max_context_tokens: Some(50_000),
-            credit_budget: Some(100),
-            exploration_allowance: 12,
-            model_override: None,
-        };
-        let config = build_tool_loop_config(params);
-        assert_eq!(config.max_iterations, 10);
-        assert_eq!(config.max_tokens, 4096);
+    fn test_configure_turn_config_maps_all_fields() {
+        let llm = LlmConfig::default();
+        let engine = EngineConfig::default();
+        let config = configure_turn_config(TaskComplexity::Standard, &llm, &engine, 12, 3);
         assert_eq!(config.exploration_allowance, Some(12));
-        assert_eq!(config.credit_budget, Some(100));
-        assert_eq!(config.billing_reason, "aura_task");
-    }
-
-    #[test]
-    fn test_build_tool_loop_config_auto_build_cooldown() {
-        let params = ToolLoopParams {
-            max_iterations: 5,
-            max_tokens: 1024,
-            thinking: None,
-            stream_timeout: std::time::Duration::from_secs(60),
-            max_context_tokens: None,
-            credit_budget: None,
-            exploration_allowance: 8,
-            model_override: Some("fast-model".to_string()),
-        };
-        let config = build_tool_loop_config(params);
+        assert_eq!(config.billing_reason.as_deref(), Some("aura_task"));
         assert_eq!(config.auto_build_cooldown, Some(1));
-        assert_eq!(config.model_override, Some("fast-model".to_string()));
     }
 }

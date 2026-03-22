@@ -3,14 +3,13 @@ use std::collections::HashSet;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use aura_claude::ToolCall;
 use aura_core::*;
+use aura_link::{ToolCall, ToolCallResult, ToolExecutor};
 
 use crate::channel_ext::send_or_log;
 use crate::chat::ChatStreamEvent;
 use crate::chat_event_forwarding::ContentBlockAccumulator;
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
-use crate::tool_loop::{ToolCallResult, ToolExecutor};
 
 // ---------------------------------------------------------------------------
 // Project resolution strategies
@@ -19,19 +18,17 @@ use crate::tool_loop::{ToolCallResult, ToolExecutor};
 /// Resolve the project ID for a tool call. Implementations define how a tool
 /// call is associated with a project.
 pub(crate) trait ProjectResolver: Send + Sync {
-    fn resolve(&self, tc: &ToolCall) -> Result<ProjectId, &'static str>;
+    fn resolve(&self, input: &serde_json::Value) -> Result<ProjectId, &'static str>;
 
-    /// Whether `create_task` calls must run sequentially to preserve order.
     fn sequential_create_task(&self) -> bool;
 }
 
-/// Single-project resolver: all calls target a fixed project ID.
 pub(crate) struct SingleProjectResolver {
     pub(crate) project_id: ProjectId,
 }
 
 impl ProjectResolver for SingleProjectResolver {
-    fn resolve(&self, _tc: &ToolCall) -> Result<ProjectId, &'static str> {
+    fn resolve(&self, _input: &serde_json::Value) -> Result<ProjectId, &'static str> {
         Ok(self.project_id)
     }
 
@@ -40,16 +37,13 @@ impl ProjectResolver for SingleProjectResolver {
     }
 }
 
-/// Multi-project resolver: the project ID is extracted from the tool input
-/// and validated against a set of allowed IDs.
 pub(crate) struct MultiProjectResolver {
     pub(crate) allowed_project_ids: HashSet<String>,
 }
 
 impl ProjectResolver for MultiProjectResolver {
-    fn resolve(&self, tc: &ToolCall) -> Result<ProjectId, &'static str> {
-        let pid_str = tc
-            .input
+    fn resolve(&self, input: &serde_json::Value) -> Result<ProjectId, &'static str> {
+        let pid_str = input
             .get("project_id")
             .and_then(|v| v.as_str())
             .unwrap_or("");
@@ -135,7 +129,7 @@ impl<R: ProjectResolver> ToolExecutor for ForwardingToolExecutor<R> {
                     .iter()
                     .map(|&i| {
                         let tc = &tool_calls[i];
-                        let pid = self.resolver.resolve(tc);
+                        let pid = self.resolver.resolve(&tc.input);
                         async move {
                             match pid {
                                 Ok(pid) => {
@@ -154,7 +148,7 @@ impl<R: ProjectResolver> ToolExecutor for ForwardingToolExecutor<R> {
 
             for &i in &sequential_indices {
                 let tc = &tool_calls[i];
-                let result = match self.resolver.resolve(tc) {
+                let result = match self.resolver.resolve(&tc.input) {
                     Ok(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,
                     Err(msg) => ToolExecResult::err_static(msg),
                 };
@@ -166,7 +160,7 @@ impl<R: ProjectResolver> ToolExecutor for ForwardingToolExecutor<R> {
             let futures: Vec<_> = tool_calls
                 .iter()
                 .map(|tc| {
-                    let pid = self.resolver.resolve(tc);
+                    let pid = self.resolver.resolve(&tc.input);
                     async move {
                         match pid {
                             Ok(pid) => self.inner.execute(&pid, &tc.name, tc.input.clone()).await,

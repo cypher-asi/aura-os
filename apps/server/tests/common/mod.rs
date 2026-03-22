@@ -16,7 +16,6 @@ use aura_agents::{AgentInstanceService, AgentService};
 use aura_auth::AuthService;
 use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_chat::{ChatService, ChatServiceDeps};
-use aura_claude::ClaudeClient;
 use aura_core::*;
 use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
@@ -30,6 +29,31 @@ use aura_specs::SpecGenerationService;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
 use aura_tasks::{TaskExtractionService, TaskService};
+
+/// Minimal AgentRuntime for server integration tests that only exercise
+/// HTTP routing, not the agentic tool loop.
+struct NoopRuntime;
+
+#[async_trait::async_trait]
+impl aura_link::AgentRuntime for NoopRuntime {
+    async fn execute_turn(
+        &self,
+        _request: aura_link::TurnRequest,
+    ) -> Result<aura_link::TurnResult, aura_link::RuntimeError> {
+        Ok(aura_link::TurnResult {
+            text: String::new(),
+            thinking: String::new(),
+            usage: aura_link::TotalUsage {
+                input_tokens: 0,
+                output_tokens: 0,
+            },
+            iterations_run: 0,
+            timed_out: false,
+            insufficient_credits: false,
+            llm_error: None,
+        })
+    }
+}
 
 pub fn store_zero_auth_session(store: &RocksStore) {
     let session = serde_json::to_vec(&ZeroAuthSession {
@@ -205,9 +229,8 @@ pub fn build_test_app_from_store(
 ) -> (Router, AppState) {
     let settings_service = Arc::new(SettingsService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
-    let claude_client: Arc<ClaudeClient> = Arc::new(ClaudeClient::new());
     let llm = Arc::new(MeteredLlm::new(
-        claude_client.clone(),
+        Arc::new(aura_claude::ClaudeClient::new()),
         billing_client.clone(),
         store.clone(),
     ));
@@ -247,10 +270,7 @@ pub fn build_test_app_from_store(
         llm_config.context_rollover_threshold,
         llm_config.max_context_tokens,
     ));
-    let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(aura_chat::InternalRuntime::new(
-        llm.clone(),
-        settings_service.clone(),
-    ));
+    let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(NoopRuntime);
     let chat_service = Arc::new(ChatService::new(ChatServiceDeps {
         store: store.clone(),
         settings: settings_service.clone(),
