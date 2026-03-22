@@ -11,6 +11,7 @@
 mod error;
 mod events;
 mod executor;
+mod harness_runtime;
 mod runtime;
 mod turn_types;
 mod types;
@@ -18,6 +19,7 @@ mod types;
 pub use error::RuntimeError;
 pub use events::RuntimeEvent;
 pub use executor::{AutoBuildResult, BuildBaseline, ToolCallResult, ToolExecutor};
+pub use harness_runtime::HarnessRuntime;
 pub use runtime::AgentRuntime;
 pub use turn_types::{TotalUsage, TurnConfig, TurnRequest, TurnResult};
 pub use types::{

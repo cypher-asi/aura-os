@@ -68,6 +68,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayref"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -287,13 +293,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "aura-agent"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core 0.1.0",
+ "aura-executor",
+ "aura-kernel",
+ "aura-reasoner",
+ "futures-util",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "aura-agents"
 version = "0.1.0"
 dependencies = [
- "aura-core",
+ "aura-core 0.2.0",
  "aura-network",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "chrono",
  "serde_json",
  "thiserror 1.0.69",
@@ -304,8 +329,8 @@ dependencies = [
 name = "aura-auth"
 version = "0.1.0"
 dependencies = [
- "aura-core",
- "aura-store",
+ "aura-core 0.2.0",
+ "aura-store 0.2.0",
  "chrono",
  "reqwest 0.11.27",
  "serde",
@@ -320,10 +345,10 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-provider",
  "aura-settings",
- "aura-store",
+ "aura-store 0.2.0",
  "axum",
  "chrono",
  "futures-util",
@@ -343,16 +368,16 @@ dependencies = [
  "async-trait",
  "aura-billing",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-harness",
  "aura-projects",
  "aura-provider",
  "aura-settings",
  "aura-specs",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "aura-tasks",
- "aura-tools",
+ "aura-tools 0.2.0",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -388,6 +413,20 @@ dependencies = [
 [[package]]
 name = "aura-core"
 version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake3",
+ "bytes",
+ "hex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
+name = "aura-core"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "serde",
@@ -431,7 +470,7 @@ dependencies = [
  "aura-billing",
  "aura-chat",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-harness",
  "aura-network",
  "aura-projects",
@@ -439,9 +478,9 @@ dependencies = [
  "aura-sessions",
  "aura-settings",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "aura-tasks",
- "aura-tools",
+ "aura-tools 0.2.0",
  "chrono",
  "futures",
  "regex",
@@ -455,10 +494,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-executor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core 0.1.0",
+ "bytes",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "aura-harness"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
+ "aura-agent",
+ "aura-reasoner",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -478,10 +532,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-kernel"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core 0.1.0",
+ "aura-executor",
+ "aura-reasoner",
+ "aura-store 0.1.0",
+ "aura-tools 0.1.0",
+ "bytes",
+ "dashmap",
+ "futures-util",
+ "hex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "aura-network"
 version = "0.1.0"
 dependencies = [
- "aura-core",
+ "aura-core 0.2.0",
  "chrono",
  "reqwest 0.11.27",
  "serde",
@@ -508,8 +585,8 @@ dependencies = [
 name = "aura-orgs"
 version = "0.1.0"
 dependencies = [
- "aura-core",
- "aura-store",
+ "aura-core 0.2.0",
+ "aura-store 0.2.0",
  "chrono",
  "serde_json",
  "thiserror 1.0.69",
@@ -520,9 +597,9 @@ dependencies = [
 name = "aura-projects"
 version = "0.1.0"
 dependencies = [
- "aura-core",
+ "aura-core 0.2.0",
  "aura-network",
- "aura-store",
+ "aura-store 0.2.0",
  "chrono",
  "serde_json",
  "thiserror 1.0.69",
@@ -543,6 +620,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-reasoner"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core 0.1.0",
+ "bytes",
+ "futures-util",
+ "pin-project-lite",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+]
+
+[[package]]
 name = "aura-server"
 version = "0.1.0"
 dependencies = [
@@ -551,7 +647,7 @@ dependencies = [
  "aura-billing",
  "aura-chat",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-engine",
  "aura-harness",
  "aura-network",
@@ -563,10 +659,10 @@ dependencies = [
  "aura-settings",
  "aura-specs",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "aura-tasks",
  "aura-terminal",
- "aura-tools",
+ "aura-tools 0.2.0",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -595,9 +691,9 @@ version = "0.1.0"
 dependencies = [
  "aura-billing",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "axum",
  "chrono",
  "serde_json",
@@ -611,8 +707,8 @@ dependencies = [
 name = "aura-settings"
 version = "0.1.0"
 dependencies = [
- "aura-core",
- "aura-store",
+ "aura-core 0.2.0",
+ "aura-store 0.2.0",
  "chrono",
  "serde",
  "serde_json",
@@ -626,11 +722,11 @@ version = "0.1.0"
 dependencies = [
  "aura-billing",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-projects",
  "aura-settings",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "chrono",
  "serde",
  "serde_json",
@@ -643,7 +739,7 @@ dependencies = [
 name = "aura-storage"
 version = "0.1.0"
 dependencies = [
- "aura-core",
+ "aura-core 0.2.0",
  "axum",
  "chrono",
  "reqwest 0.11.27",
@@ -659,7 +755,21 @@ dependencies = [
 name = "aura-store"
 version = "0.1.0"
 dependencies = [
- "aura-core",
+ "anyhow",
+ "aura-core 0.1.0",
+ "bytes",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "aura-store"
+version = "0.2.0"
+dependencies = [
+ "aura-core 0.2.0",
  "chrono",
  "rocksdb",
  "serde",
@@ -676,10 +786,10 @@ version = "0.1.0"
 dependencies = [
  "aura-billing",
  "aura-claude",
- "aura-core",
+ "aura-core 0.2.0",
  "aura-settings",
  "aura-storage",
- "aura-store",
+ "aura-store 0.2.0",
  "chrono",
  "serde",
  "serde_json",
@@ -691,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "aura-terminal"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "dirs 5.0.1",
@@ -707,6 +817,27 @@ dependencies = [
 [[package]]
 name = "aura-tools"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core 0.1.0",
+ "aura-executor",
+ "aura-reasoner",
+ "bytes",
+ "glob",
+ "regex",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "aura-tools"
+version = "0.2.0"
 dependencies = [
  "aura-provider",
  "serde_json",
@@ -909,6 +1040,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60d4bd9d1db2c6bdf285e223a7fa369d5ce98ec767dec949c6ca62863ce61757"
 dependencies = [
  "core2",
+]
+
+[[package]]
+name = "blake3"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2468ef7d57b3fb7e16b576e8377cdbde2320c60e1491e961d11da40fc4f02a2d"
+dependencies = [
+ "arrayref",
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "cpufeatures",
 ]
 
 [[package]]
@@ -1149,6 +1294,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "constant_time_eq"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
+
+[[package]]
 name = "cookie"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1316,6 +1467,20 @@ checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
 dependencies = [
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
 ]
 
 [[package]]
@@ -2253,6 +2418,12 @@ dependencies = [
  "crunchy",
  "zerocopy",
 ]
+
+[[package]]
+name = "hashbrown"
+version = "0.14.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
 name = "hashbrown"
@@ -5161,6 +5332,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]
