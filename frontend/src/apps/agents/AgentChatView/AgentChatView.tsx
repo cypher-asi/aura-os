@@ -11,6 +11,7 @@ export function AgentChatView() {
   const historyKey = agentId ? agentHistoryKey(agentId) : undefined;
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { messages: historyMessages, status: historyStatus, error: historyError } = useChatHistory(historyKey);
+  const showHistoryLoading = (historyStatus === "loading" || historyStatus === "idle") && historyMessages.length > 0;
 
   const {
     streamKey,
@@ -41,12 +42,11 @@ export function AgentChatView() {
 
   return (
     <ChatPanel
-      key={agentId}
       streamKey={streamKey}
       onSend={sendMessage}
       onStop={stopStreaming}
       agentName={selectedAgent?.name}
-      isLoading={historyStatus === "loading" || historyStatus === "idle"}
+      isLoading={showHistoryLoading}
       errorMessage={historyStatus === "error" ? (historyError ?? "Failed to load conversation") : null}
       emptyMessage="Send a message"
       scrollResetKey={agentId}
