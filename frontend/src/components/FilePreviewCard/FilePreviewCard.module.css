@@ -1,6 +1,6 @@
 .card {
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
   margin-top: 4px;
   font-size: 12px;
@@ -11,7 +11,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: #000;
   border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
 }
 
@@ -40,7 +40,7 @@
   flex-shrink: 0;
   padding: 1px 6px;
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 .codeArea {
@@ -74,7 +74,7 @@
   padding: 4px 10px;
   border: none;
   border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
-  background: rgba(255, 255, 255, 0.02);
+  background: #000;
   color: var(--color-text-muted, #888);
   font-size: 11px;
   cursor: pointer;
@@ -82,7 +82,7 @@
 }
 
 .toggleBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* Diff view */
