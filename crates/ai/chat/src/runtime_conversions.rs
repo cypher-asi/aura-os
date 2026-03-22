@@ -1,70 +1,70 @@
-//! Bidirectional type conversions between Claude wire types and the harness
+//! Bidirectional type conversions between Claude wire types and the link
 //! boundary types.
 //!
 //! These helpers are used by `chat_streaming.rs` and `chat_agent.rs` to bridge
-//! the existing Claude-typed data into [`aura_harness::TurnRequest`] form.
+//! the existing Claude-typed data into [`aura_link::TurnRequest`] form.
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use aura_harness::{RuntimeEvent, TurnConfig, TurnResult};
+use aura_link::{RuntimeEvent, TurnConfig, TurnResult};
 
 use crate::chat::ChatStreamEvent;
 use crate::tool_loop::{ToolLoopConfig, ToolLoopResult};
 use crate::tool_loop_types::{self as chat_types};
 
 // ===========================================================================
-// Claude → Harness conversions
+// Claude → Link conversions
 // ===========================================================================
 
-pub fn rich_messages_to_harness(
+pub fn rich_messages_to_link(
     messages: Vec<aura_claude::RichMessage>,
-) -> Vec<aura_harness::Message> {
-    messages.into_iter().map(rich_message_to_harness).collect()
+) -> Vec<aura_link::Message> {
+    messages.into_iter().map(rich_message_to_link).collect()
 }
 
-fn rich_message_to_harness(msg: aura_claude::RichMessage) -> aura_harness::Message {
+fn rich_message_to_link(msg: aura_claude::RichMessage) -> aura_link::Message {
     let role = if msg.role == "assistant" {
-        aura_harness::Role::Assistant
+        aura_link::Role::Assistant
     } else {
-        aura_harness::Role::User
+        aura_link::Role::User
     };
-    aura_harness::Message {
+    aura_link::Message {
         role,
-        content: message_content_to_harness(msg.content),
+        content: message_content_to_link(msg.content),
     }
 }
 
-fn message_content_to_harness(
+fn message_content_to_link(
     content: aura_claude::MessageContent,
-) -> aura_harness::MessageContent {
+) -> aura_link::MessageContent {
     match content {
-        aura_claude::MessageContent::Text(t) => aura_harness::MessageContent::Text(t),
+        aura_claude::MessageContent::Text(t) => aura_link::MessageContent::Text(t),
         aura_claude::MessageContent::Blocks(blocks) => {
-            aura_harness::MessageContent::Blocks(blocks.into_iter().map(block_to_harness).collect())
+            aura_link::MessageContent::Blocks(blocks.into_iter().map(block_to_link).collect())
         }
     }
 }
 
-fn block_to_harness(block: aura_claude::ContentBlock) -> aura_harness::ContentBlock {
+fn block_to_link(block: aura_claude::ContentBlock) -> aura_link::ContentBlock {
     match block {
-        aura_claude::ContentBlock::Text { text } => aura_harness::ContentBlock::Text { text },
-        aura_claude::ContentBlock::Image { source } => aura_harness::ContentBlock::Image {
-            source: aura_harness::ImageSource {
+        aura_claude::ContentBlock::Text { text } => aura_link::ContentBlock::Text { text },
+        aura_claude::ContentBlock::Image { source } => aura_link::ContentBlock::Image {
+            source: aura_link::ImageSource {
                 source_type: source.source_type,
                 media_type: source.media_type,
                 data: source.data,
             },
         },
         aura_claude::ContentBlock::ToolUse { id, name, input } => {
-            aura_harness::ContentBlock::ToolUse { id, name, input }
+            aura_link::ContentBlock::ToolUse { id, name, input }
         }
         aura_claude::ContentBlock::ToolResult {
             tool_use_id,
             content,
             is_error,
-        } => aura_harness::ContentBlock::ToolResult {
+        } => aura_link::ContentBlock::ToolResult {
             tool_use_id,
             content,
             is_error,
@@ -72,23 +72,23 @@ fn block_to_harness(block: aura_claude::ContentBlock) -> aura_harness::ContentBl
     }
 }
 
-pub fn tool_defs_to_harness(
+pub fn tool_defs_to_link(
     tools: Arc<[aura_claude::ToolDefinition]>,
-) -> Arc<[aura_harness::ToolDefinition]> {
-    let harness_tools: Vec<aura_harness::ToolDefinition> =
-        tools.iter().map(tool_def_to_harness).collect();
-    harness_tools.into()
+) -> Arc<[aura_link::ToolDefinition]> {
+    let link_tools: Vec<aura_link::ToolDefinition> =
+        tools.iter().map(tool_def_to_link).collect();
+    link_tools.into()
 }
 
-fn tool_def_to_harness(td: &aura_claude::ToolDefinition) -> aura_harness::ToolDefinition {
-    aura_harness::ToolDefinition {
+fn tool_def_to_link(td: &aura_claude::ToolDefinition) -> aura_link::ToolDefinition {
+    aura_link::ToolDefinition {
         name: td.name.clone(),
         description: td.description.clone(),
         input_schema: td.input_schema.clone(),
         cache_control: td
             .cache_control
             .as_ref()
-            .map(|cc| aura_harness::CacheControl {
+            .map(|cc| aura_link::CacheControl {
                 cache_type: cc.cache_type.clone(),
             }),
     }
@@ -101,7 +101,7 @@ pub fn tool_loop_config_to_turn_config(config: &ToolLoopConfig) -> TurnConfig {
         thinking: config
             .thinking
             .as_ref()
-            .map(|tc| aura_harness::ThinkingConfig {
+            .map(|tc| aura_link::ThinkingConfig {
                 thinking_type: tc.thinking_type.clone(),
                 budget_tokens: tc.budget_tokens,
             }),
@@ -129,11 +129,11 @@ pub fn turn_result_to_tool_loop_result(result: TurnResult) -> ToolLoopResult {
 }
 
 // ===========================================================================
-// ChatToolExecutorAdapter — wraps a chat-crate ToolExecutor for the harness
+// ChatToolExecutorAdapter — wraps a chat-crate ToolExecutor for the link
 // ===========================================================================
 
 /// Bridges a chat-crate [`ToolExecutor`](chat_types::ToolExecutor) to the
-/// harness [`ToolExecutor`](aura_harness::ToolExecutor) so that existing
+/// link [`ToolExecutor`](aura_link::ToolExecutor) so that existing
 /// `ForwardingToolExecutor` / `EngineToolLoopExecutor` can be passed through
 /// `TurnRequest`.
 pub struct ChatToolExecutorAdapter<T: chat_types::ToolExecutor + 'static> {
@@ -142,13 +142,13 @@ pub struct ChatToolExecutorAdapter<T: chat_types::ToolExecutor + 'static> {
 }
 
 #[async_trait]
-impl<T: chat_types::ToolExecutor + 'static> aura_harness::ToolExecutor
+impl<T: chat_types::ToolExecutor + 'static> aura_link::ToolExecutor
     for ChatToolExecutorAdapter<T>
 {
     async fn execute(
         &self,
-        tool_calls: &[aura_harness::ToolCall],
-    ) -> Vec<aura_harness::ToolCallResult> {
+        tool_calls: &[aura_link::ToolCall],
+    ) -> Vec<aura_link::ToolCallResult> {
         let claude_calls: Vec<aura_claude::ToolCall> = tool_calls
             .iter()
             .map(|tc| aura_claude::ToolCall {
@@ -162,7 +162,7 @@ impl<T: chat_types::ToolExecutor + 'static> aura_harness::ToolExecutor
             .execute(&claude_calls)
             .await
             .into_iter()
-            .map(|r| aura_harness::ToolCallResult {
+            .map(|r| aura_link::ToolCallResult {
                 tool_use_id: r.tool_use_id,
                 content: r.content,
                 is_error: r.is_error,
@@ -171,22 +171,22 @@ impl<T: chat_types::ToolExecutor + 'static> aura_harness::ToolExecutor
             .collect()
     }
 
-    async fn auto_build_check(&self) -> Option<aura_harness::AutoBuildResult> {
+    async fn auto_build_check(&self) -> Option<aura_link::AutoBuildResult> {
         self.inner
             .auto_build_check()
             .await
-            .map(|r| aura_harness::AutoBuildResult {
+            .map(|r| aura_link::AutoBuildResult {
                 success: r.success,
                 output: r.output,
                 error_count: 0,
             })
     }
 
-    async fn capture_build_baseline(&self) -> Option<aura_harness::BuildBaseline> {
+    async fn capture_build_baseline(&self) -> Option<aura_link::BuildBaseline> {
         self.inner
             .capture_build_baseline()
             .await
-            .map(|r| aura_harness::BuildBaseline {
+            .map(|r| aura_link::BuildBaseline {
                 error_signatures: r.error_signatures,
             })
     }

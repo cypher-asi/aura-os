@@ -247,7 +247,7 @@ pub fn build_test_app_from_store(
         llm_config.context_rollover_threshold,
         llm_config.max_context_tokens,
     ));
-    let runtime: Arc<dyn aura_harness::AgentRuntime> = Arc::new(aura_chat::InternalRuntime::new(
+    let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(aura_chat::InternalRuntime::new(
         llm.clone(),
         settings_service.clone(),
     ));

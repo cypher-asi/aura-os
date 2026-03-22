@@ -367,7 +367,7 @@ dependencies = [
  "aura-billing",
  "aura-claude",
  "aura-core 0.2.0",
- "aura-harness",
+ "aura-link",
  "aura-projects",
  "aura-settings",
  "aura-specs",
@@ -468,7 +468,7 @@ dependencies = [
  "aura-chat",
  "aura-claude",
  "aura-core 0.2.0",
- "aura-harness",
+ "aura-link",
  "aura-network",
  "aura-projects",
  "aura-sessions",
@@ -498,20 +498,6 @@ dependencies = [
  "aura-core 0.1.0",
  "bytes",
  "tracing",
-]
-
-[[package]]
-name = "aura-harness"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "aura-agent",
- "aura-reasoner",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
 ]
 
 [[package]]
@@ -545,6 +531,20 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+]
+
+[[package]]
+name = "aura-link"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-agent",
+ "aura-reasoner",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -640,7 +640,7 @@ dependencies = [
  "aura-claude",
  "aura-core 0.2.0",
  "aura-engine",
- "aura-harness",
+ "aura-link",
  "aura-network",
  "aura-orbit",
  "aura-orgs",

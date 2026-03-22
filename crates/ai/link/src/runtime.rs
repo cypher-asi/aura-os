@@ -12,11 +12,11 @@ use crate::turn_types::{TurnRequest, TurnResult};
 /// stop condition is reached.
 ///
 /// The current production implementation is
-/// [`HarnessRuntime`](crate::HarnessRuntime), which wraps
+/// [`LinkRuntime`](crate::LinkRuntime), which wraps
 /// `aura-agent::AgentLoop`.
 ///
 /// `aura-chat::InternalRuntime` still exists only for legacy integration tests
-/// that have not yet migrated to `HarnessRuntime`.
+/// that have not yet migrated to `LinkRuntime`.
 #[async_trait]
 pub trait AgentRuntime: Send + Sync {
     /// Execute a complete agent turn.

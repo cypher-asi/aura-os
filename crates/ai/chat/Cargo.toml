@@ -10,7 +10,7 @@ aura-store = { path = "../../infra/store" }
 aura-storage = { path = "../../infra/storage" }
 aura-settings = { path = "../../domain/settings" }
 aura-claude = { path = "../../infra/claude" }
-aura-harness = { path = "../harness" }
+aura-link = { path = "../link" }
 aura-tools = { path = "../tools" }
 aura-projects = { path = "../../domain/projects" }
 aura-tasks = { path = "../../domain/tasks" }

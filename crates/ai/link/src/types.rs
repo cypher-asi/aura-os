@@ -1,4 +1,4 @@
-//! Boundary types for the harness abstraction layer.
+//! Boundary types for the link abstraction layer.
 //!
 //! These are self-contained type definitions that mirror the conversation
 //! primitives needed by [`AgentRuntime`](crate::AgentRuntime) and

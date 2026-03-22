@@ -99,7 +99,7 @@ mod tests {
         );
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
-        let runtime: Arc<dyn aura_harness::AgentRuntime> = Arc::new(
+        let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
             aura_chat::InternalRuntime::new(llm.clone(), settings.clone()),
         );
         let engine = Arc::new(

@@ -1,4 +1,4 @@
-//! Phase 7 validation tests — verify that all harness boundary types are
+//! Phase 7 validation tests — verify that all link boundary types are
 //! complete, constructible, and (where applicable) serde-round-trippable.
 
 use std::sync::Arc;
@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 
-use aura_harness::{
-    AutoBuildResult, BuildBaseline, CacheControl, ContentBlock, HarnessRuntime, ImageSource,
+use aura_link::{
+    AutoBuildResult, BuildBaseline, CacheControl, ContentBlock, LinkRuntime, ImageSource,
     Message, MessageContent, Role, RuntimeError, RuntimeEvent, ThinkingConfig, ToolCall,
     ToolCallResult, ToolDefinition, ToolExecutor, TotalUsage, TurnConfig, TurnRequest, TurnResult,
 };
@@ -23,17 +23,17 @@ impl ToolExecutor for NoopExecutor {
     }
 }
 
-// ── HarnessRuntime::from_env ──────────────────────────────────────────
+// ── LinkRuntime::from_env ──────────────────────────────────────────
 
 #[test]
-fn harness_runtime_from_env_succeeds_without_env_vars() {
-    let rt = HarnessRuntime::from_env();
+fn link_runtime_from_env_succeeds_without_env_vars() {
+    let rt = LinkRuntime::from_env();
     assert!(rt.is_ok(), "from_env() should not panic even with no env vars set");
 }
 
 #[test]
-fn harness_runtime_new_stores_credentials() {
-    let _rt = HarnessRuntime::new(
+fn link_runtime_new_stores_credentials() {
+    let _rt = LinkRuntime::new(
         "test-key".into(),
         "claude-opus-4-6-20250514".into(),
         Some("token".into()),

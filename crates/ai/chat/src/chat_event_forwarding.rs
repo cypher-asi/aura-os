@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
 use aura_core::*;
-use aura_harness::RuntimeEvent;
+use aura_link::RuntimeEvent;
 
 use crate::channel_ext::send_or_log;
 use crate::chat::ChatStreamEvent;

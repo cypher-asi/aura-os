@@ -42,7 +42,7 @@ pub struct DevLoopEngine {
     pub(crate) storage_client: Option<Arc<StorageClient>>,
     pub(crate) network_client: Option<Arc<NetworkClient>>,
     pub(crate) internal_service_token: Option<String>,
-    pub(crate) runtime: Arc<dyn aura_harness::AgentRuntime>,
+    pub(crate) runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 impl DevLoopEngine {
@@ -56,7 +56,7 @@ impl DevLoopEngine {
         agent_instance_service: Arc<AgentInstanceService>,
         session_service: Arc<SessionService>,
         event_tx: mpsc::UnboundedSender<EngineEvent>,
-        runtime: Arc<dyn aura_harness::AgentRuntime>,
+        runtime: Arc<dyn aura_link::AgentRuntime>,
     ) -> Self {
         let pricing_service = PricingService::new(store.clone());
         Self {

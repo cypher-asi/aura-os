@@ -1,12 +1,12 @@
 //! Regression tests for the `AgentRuntime` behavioral contract.
 //!
 //! These tests exercise the behavioral contract that consumers depend on
-//! using a `SimulatingRuntime` that mimics `HarnessRuntime` / `AgentLoop`
+//! using a `SimulatingRuntime` that mimics `LinkRuntime` / `AgentLoop`
 //! without any network or LLM dependency.
 //!
 //! Each test maps to a scenario from the old `tool_loop_*_tests.rs` suite
 //! to ensure no behavioral regressions as the codebase migrates to the
-//! harness abstraction.
+//! link abstraction.
 
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use tokio::sync::{mpsc, Mutex};
 
-use aura_harness::{
+use aura_link::{
     AgentRuntime, Message, RuntimeError, RuntimeEvent, ToolCall, ToolCallResult, ToolExecutor,
     TotalUsage, TurnConfig, TurnRequest, TurnResult,
 };
@@ -32,7 +32,7 @@ enum SimulatedStep {
 /// A deterministic [`AgentRuntime`] that replays a sequence of simulated model
 /// responses, calling the executor for tool-call steps and respecting
 /// `stop_loop`, `max_iterations`, and the event channel — the same behavioral
-/// contract that `HarnessRuntime` (via `AgentLoop`) fulfills.
+/// contract that `LinkRuntime` (via `AgentLoop`) fulfills.
 struct SimulatingRuntime {
     steps: Mutex<VecDeque<SimulatedStep>>,
 }

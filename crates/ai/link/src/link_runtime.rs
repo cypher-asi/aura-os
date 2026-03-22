@@ -1,5 +1,5 @@
-//! `HarnessRuntime` — default [`AgentRuntime`] implementation wrapping
-//! `aura-agent::AgentLoop` from the external aura-harness workspace.
+//! `LinkRuntime` — default [`AgentRuntime`] implementation wrapping
+//! `aura-agent::AgentLoop` from the external harness workspace.
 //!
 //! This module is the **only** place in `aura-app` that imports from the
 //! external `aura-agent` / `aura-reasoner` crates.  All other code interacts
@@ -19,21 +19,21 @@ use crate::turn_types::{TotalUsage, TurnRequest, TurnResult};
 use crate::types;
 
 // ---------------------------------------------------------------------------
-// HarnessRuntime
+// LinkRuntime
 // ---------------------------------------------------------------------------
 
 /// Default [`AgentRuntime`] that delegates to `aura_agent::AgentLoop`.
 ///
 /// Holds the credentials and model name needed to construct an
-/// `AnthropicProvider` per turn.  All type conversions between the harness
+/// `AnthropicProvider` per turn.  All type conversions between the link
 /// boundary types and the external crate types live in this module.
-pub struct HarnessRuntime {
+pub struct LinkRuntime {
     api_key: String,
     model: String,
     auth_token: Option<String>,
 }
 
-impl HarnessRuntime {
+impl LinkRuntime {
     /// Create a runtime with explicit credentials.
     pub fn new(api_key: String, model: String, auth_token: Option<String>) -> Self {
         Self {
@@ -109,7 +109,7 @@ impl HarnessRuntime {
 }
 
 #[async_trait]
-impl AgentRuntime for HarnessRuntime {
+impl AgentRuntime for LinkRuntime {
     async fn execute_turn(&self, request: TurnRequest) -> Result<TurnResult, RuntimeError> {
         let provider = self.build_provider()?;
 
@@ -191,7 +191,7 @@ impl aura_agent::AgentToolExecutor for ExecutorAdapter {
         &self,
         tool_calls: &[aura_agent::ToolCallInfo],
     ) -> Vec<aura_agent::ToolCallResult> {
-        let harness_calls: Vec<types::ToolCall> = tool_calls
+        let link_calls: Vec<types::ToolCall> = tool_calls
             .iter()
             .map(|tc| types::ToolCall {
                 id: tc.id.clone(),
@@ -201,7 +201,7 @@ impl aura_agent::AgentToolExecutor for ExecutorAdapter {
             .collect();
 
         self.inner
-            .execute(&harness_calls)
+            .execute(&link_calls)
             .await
             .into_iter()
             .map(|r| aura_agent::ToolCallResult {
@@ -312,7 +312,7 @@ fn forward_events(
 }
 
 // ===========================================================================
-// Type Conversions: harness → aura-reasoner
+// Type Conversions: link → aura-reasoner
 // ===========================================================================
 
 fn convert_message(msg: &types::Message) -> aura_reasoner::Message {
@@ -375,7 +375,7 @@ fn convert_tool_def(tool: &types::ToolDefinition) -> aura_reasoner::ToolDefiniti
 }
 
 // ===========================================================================
-// Type Conversions: aura-agent → harness
+// Type Conversions: aura-agent → link
 // ===========================================================================
 
 fn convert_loop_result(r: aura_agent::AgentLoopResult) -> TurnResult {

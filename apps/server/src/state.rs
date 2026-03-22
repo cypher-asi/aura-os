@@ -80,7 +80,7 @@ pub struct AppState {
     /// When true, non-Pro users are blocked from API access.
     pub require_zero_pro: bool,
     /// Provider-agnostic agent runtime for executing agentic turns.
-    pub runtime: Arc<dyn aura_harness::AgentRuntime>,
+    pub runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 impl AppState {

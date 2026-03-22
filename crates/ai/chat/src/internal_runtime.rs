@@ -1,11 +1,11 @@
 //! Deprecated [`AgentRuntime`] implementation backed by the in-process tool loop.
 //!
-//! **Production code now uses `aura_harness::HarnessRuntime`.**
+//! **Production code now uses `aura_link::LinkRuntime`.**
 //!
 //! `InternalRuntime` is kept only because integration tests in `aura-engine`
 //! and `aura-server` rely on `MockLlmProvider` → `MeteredLlm` → `run_tool_loop()`
 //! to exercise the full request pipeline. It will be removed once those tests
-//! are migrated to use `HarnessRuntime` with mock HTTP backends.
+//! are migrated to use `LinkRuntime` with mock HTTP backends.
 //!
 //! Public conversion helpers that are still used by production code
 //! (`chat_streaming.rs`, `chat_agent.rs`) have been moved to
@@ -17,7 +17,7 @@ use async_trait::async_trait;
 use tokio::sync::mpsc;
 
 use aura_billing::MeteredLlm;
-use aura_harness::{AgentRuntime, RuntimeError, RuntimeEvent, TotalUsage, TurnRequest, TurnResult};
+use aura_link::{AgentRuntime, RuntimeError, RuntimeEvent, TotalUsage, TurnRequest, TurnResult};
 use aura_settings::SettingsService;
 
 use crate::tool_loop::{
@@ -27,7 +27,7 @@ use crate::tool_loop_types::{self as chat_types};
 
 /// In-process agent runtime that delegates to [`run_tool_loop`].
 ///
-/// **Deprecated**: production uses `aura_harness::HarnessRuntime`.
+/// **Deprecated**: production uses `aura_link::LinkRuntime`.
 /// Kept for integration tests only.
 pub struct InternalRuntime {
     llm: Arc<MeteredLlm>,
@@ -87,11 +87,11 @@ impl AgentRuntime for InternalRuntime {
 }
 
 // ---------------------------------------------------------------------------
-// Executor adapter (harness ToolExecutor -> chat ToolExecutor)
+// Executor adapter (link ToolExecutor -> chat ToolExecutor)
 // ---------------------------------------------------------------------------
 
 struct ExecutorAdapter {
-    inner: Arc<dyn aura_harness::ToolExecutor>,
+    inner: Arc<dyn aura_link::ToolExecutor>,
 }
 
 #[async_trait]
@@ -100,9 +100,9 @@ impl chat_types::ToolExecutor for ExecutorAdapter {
         &self,
         tool_calls: &[aura_claude::ToolCall],
     ) -> Vec<chat_types::ToolCallResult> {
-        let harness_calls: Vec<aura_harness::ToolCall> = tool_calls
+        let link_calls: Vec<aura_link::ToolCall> = tool_calls
             .iter()
-            .map(|tc| aura_harness::ToolCall {
+            .map(|tc| aura_link::ToolCall {
                 id: tc.id.clone(),
                 name: tc.name.clone(),
                 input: tc.input.clone(),
@@ -110,7 +110,7 @@ impl chat_types::ToolExecutor for ExecutorAdapter {
             .collect();
 
         self.inner
-            .execute(&harness_calls)
+            .execute(&link_calls)
             .await
             .into_iter()
             .map(|r| chat_types::ToolCallResult {
@@ -143,17 +143,17 @@ impl chat_types::ToolExecutor for ExecutorAdapter {
 }
 
 // ---------------------------------------------------------------------------
-// Type conversions (harness boundary types -> Claude wire types)
+// Type conversions (link boundary types -> Claude wire types)
 // ---------------------------------------------------------------------------
 
-fn convert_messages(messages: Vec<aura_harness::Message>) -> Vec<aura_claude::RichMessage> {
+fn convert_messages(messages: Vec<aura_link::Message>) -> Vec<aura_claude::RichMessage> {
     messages.into_iter().map(convert_message).collect()
 }
 
-fn convert_message(msg: aura_harness::Message) -> aura_claude::RichMessage {
+fn convert_message(msg: aura_link::Message) -> aura_claude::RichMessage {
     let role = match msg.role {
-        aura_harness::Role::User => "user",
-        aura_harness::Role::Assistant => "assistant",
+        aura_link::Role::User => "user",
+        aura_link::Role::Assistant => "assistant",
     };
     aura_claude::RichMessage {
         role: role.to_string(),
@@ -161,29 +161,29 @@ fn convert_message(msg: aura_harness::Message) -> aura_claude::RichMessage {
     }
 }
 
-fn convert_message_content(content: aura_harness::MessageContent) -> aura_claude::MessageContent {
+fn convert_message_content(content: aura_link::MessageContent) -> aura_claude::MessageContent {
     match content {
-        aura_harness::MessageContent::Text(t) => aura_claude::MessageContent::Text(t),
-        aura_harness::MessageContent::Blocks(blocks) => {
+        aura_link::MessageContent::Text(t) => aura_claude::MessageContent::Text(t),
+        aura_link::MessageContent::Blocks(blocks) => {
             aura_claude::MessageContent::Blocks(blocks.into_iter().map(convert_block).collect())
         }
     }
 }
 
-fn convert_block(block: aura_harness::ContentBlock) -> aura_claude::ContentBlock {
+fn convert_block(block: aura_link::ContentBlock) -> aura_claude::ContentBlock {
     match block {
-        aura_harness::ContentBlock::Text { text } => aura_claude::ContentBlock::Text { text },
-        aura_harness::ContentBlock::Image { source } => aura_claude::ContentBlock::Image {
+        aura_link::ContentBlock::Text { text } => aura_claude::ContentBlock::Text { text },
+        aura_link::ContentBlock::Image { source } => aura_claude::ContentBlock::Image {
             source: aura_claude::ImageSource {
                 source_type: source.source_type,
                 media_type: source.media_type,
                 data: source.data,
             },
         },
-        aura_harness::ContentBlock::ToolUse { id, name, input } => {
+        aura_link::ContentBlock::ToolUse { id, name, input } => {
             aura_claude::ContentBlock::ToolUse { id, name, input }
         }
-        aura_harness::ContentBlock::ToolResult {
+        aura_link::ContentBlock::ToolResult {
             tool_use_id,
             content,
             is_error,
@@ -195,13 +195,13 @@ fn convert_block(block: aura_harness::ContentBlock) -> aura_claude::ContentBlock
     }
 }
 
-fn convert_tools(tools: Arc<[aura_harness::ToolDefinition]>) -> Arc<[aura_claude::ToolDefinition]> {
+fn convert_tools(tools: Arc<[aura_link::ToolDefinition]>) -> Arc<[aura_claude::ToolDefinition]> {
     let claude_tools: Vec<aura_claude::ToolDefinition> =
         tools.iter().map(convert_tool_def).collect();
     claude_tools.into()
 }
 
-fn convert_tool_def(td: &aura_harness::ToolDefinition) -> aura_claude::ToolDefinition {
+fn convert_tool_def(td: &aura_link::ToolDefinition) -> aura_claude::ToolDefinition {
     aura_claude::ToolDefinition {
         name: td.name.clone(),
         description: td.description.clone(),
@@ -215,7 +215,7 @@ fn convert_tool_def(td: &aura_harness::ToolDefinition) -> aura_claude::ToolDefin
     }
 }
 
-fn convert_config(config: &aura_harness::TurnConfig) -> ToolLoopConfig {
+fn convert_config(config: &aura_link::TurnConfig) -> ToolLoopConfig {
     ToolLoopConfig {
         max_iterations: config.max_iterations,
         max_tokens: config.max_tokens,

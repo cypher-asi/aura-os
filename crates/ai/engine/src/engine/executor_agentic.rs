@@ -5,12 +5,12 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 
 use aura_chat::{
-    rich_messages_to_harness, tool_defs_to_harness, tool_loop_config_to_turn_config,
+    rich_messages_to_link, tool_defs_to_link, tool_loop_config_to_turn_config,
     turn_result_to_tool_loop_result, ChatToolExecutor, ChatToolExecutorAdapter, ToolLoopConfig,
 };
 use aura_claude::{RichMessage, ThinkingConfig};
 use aura_core::*;
-use aura_harness::RuntimeEvent;
+use aura_link::RuntimeEvent;
 use aura_tools::engine_tool_definitions;
 
 use super::agentic_context::{
@@ -371,12 +371,12 @@ impl DevLoopEngine {
             .collect::<Vec<_>>()
             .into();
 
-        let adapter: Arc<dyn aura_harness::ToolExecutor> =
+        let adapter: Arc<dyn aura_link::ToolExecutor> =
             Arc::new(ChatToolExecutorAdapter { inner: executor });
-        let request = aura_harness::TurnRequest {
+        let request = aura_link::TurnRequest {
             system_prompt: setup.system_prompt,
-            messages: rich_messages_to_harness(vec![RichMessage::user(&setup.task_context)]),
-            tools: tool_defs_to_harness(tools),
+            messages: rich_messages_to_link(vec![RichMessage::user(&setup.task_context)]),
+            tools: tool_defs_to_link(tools),
             executor: adapter,
             config: tool_loop_config_to_turn_config(&config),
             event_tx: Some(event_tx),
@@ -390,7 +390,7 @@ impl DevLoopEngine {
             Ok(r) => turn_result_to_tool_loop_result(r),
             Err(e) => {
                 return Err(match e {
-                    aura_harness::RuntimeError::InsufficientCredits => {
+                    aura_link::RuntimeError::InsufficientCredits => {
                         EngineError::InsufficientCredits
                     }
                     other => EngineError::LlmError(other.to_string()),

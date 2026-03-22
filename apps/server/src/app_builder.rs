@@ -33,7 +33,7 @@ struct CoreServices {
     pricing_service: Arc<PricingService>,
     billing_client: Arc<BillingClient>,
     llm: Arc<MeteredLlm>,
-    runtime: Arc<dyn aura_harness::AgentRuntime>,
+    runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
@@ -48,8 +48,8 @@ fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
         billing_client.clone(),
         store.clone(),
     ));
-    let runtime: Arc<dyn aura_harness::AgentRuntime> = Arc::new(
-        aura_harness::HarnessRuntime::from_env().expect("failed to create HarnessRuntime"),
+    let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
+        aura_link::LinkRuntime::from_env().expect("failed to create LinkRuntime"),
     );
     CoreServices {
         org_service,

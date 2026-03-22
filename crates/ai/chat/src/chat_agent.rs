@@ -7,7 +7,7 @@ use tracing::info;
 
 use aura_claude::ThinkingConfig;
 use aura_core::*;
-use aura_harness::RuntimeEvent;
+use aura_link::RuntimeEvent;
 
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
@@ -17,7 +17,7 @@ use crate::chat_tool_executor::ChatToolExecutor;
 use crate::chat_tool_loop_executor::{ForwardingToolExecutor, MultiProjectResolver};
 use crate::constants::DEFAULT_STREAM_TIMEOUT;
 use crate::runtime_conversions::{
-    rich_messages_to_harness, tool_defs_to_harness, tool_loop_config_to_turn_config,
+    rich_messages_to_link, tool_defs_to_link, tool_loop_config_to_turn_config,
     turn_result_to_tool_loop_result, ChatToolExecutorAdapter,
 };
 use crate::tool_loop::{ToolLoopConfig, ToolLoopResult};
@@ -173,12 +173,12 @@ impl ChatService {
             flush_text_buffer(&fwd_blocks, &mut text_buffer);
         });
 
-        let adapter: Arc<dyn aura_harness::ToolExecutor> =
+        let adapter: Arc<dyn aura_link::ToolExecutor> =
             Arc::new(ChatToolExecutorAdapter { inner: executor });
-        let request = aura_harness::TurnRequest {
+        let request = aura_link::TurnRequest {
             system_prompt: system.to_string(),
-            messages: rich_messages_to_harness(api_messages),
-            tools: tool_defs_to_harness(tools),
+            messages: rich_messages_to_link(api_messages),
+            tools: tool_defs_to_link(tools),
             executor: adapter,
             config: tool_loop_config_to_turn_config(&config),
             event_tx: Some(event_tx),

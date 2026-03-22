@@ -4,7 +4,7 @@ members = [
     "crates/infra/claude",
     "crates/infra/provider",
     "crates/domain/billing",
-    "crates/ai/harness",
+    "crates/ai/link",
     "crates/ai/tools",
     "crates/domain/orgs",
     "crates/domain/projects",
