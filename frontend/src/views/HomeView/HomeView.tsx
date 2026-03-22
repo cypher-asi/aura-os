@@ -3,17 +3,18 @@ import { PageEmptyState } from "@cypher-asi/zui";
 import { Rocket } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { getLastAgent } from "../../utils/storage";
 import { projectAgentRoute } from "../../utils/mobileNavigation";
 import { useOrgStore } from "../../stores/org-store";
+import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
 
 export function HomeView() {
   const { isMobileLayout } = useAuraCapabilities();
-  const { projects, mostRecentProject } = useProjectsList();
+  const projects = useProjectsListStore((s) => s.projects);
   const { activeOrg, isLoading } = useOrgStore(
     useShallow((s) => ({ activeOrg: s.activeOrg, isLoading: s.isLoading })),
   );
+  const mostRecentProject = getMostRecentProject(projects);
 
   const lastAgent = getLastAgent();
   const targetProject = (

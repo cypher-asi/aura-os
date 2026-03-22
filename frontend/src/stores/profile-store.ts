@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { create } from "zustand";
 import type { FeedEvent, FeedComment } from "./feed-store";
 import { networkEventToFeedEvent, networkCommentToFeedComment } from "./feed-store";
@@ -66,6 +66,49 @@ function repoActivityForProject(events: FeedEvent[], repo: string): Record<strin
     activity[hourKey] = (activity[hourKey] ?? 0) + evt.commits.length;
   }
   return activity;
+}
+
+export function buildProfileEvents(
+  liveEvents: FeedEvent[],
+  profileName: string,
+  profileAvatarUrl?: string,
+): FeedEvent[] {
+  return [...liveEvents]
+    .map((evt) => {
+      if (profileAvatarUrl && evt.author.type === "user") {
+        return { ...evt, author: { ...evt.author, name: profileName || evt.author.name, avatarUrl: profileAvatarUrl } };
+      }
+      return evt;
+    })
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export function buildFilteredProfileEvents(
+  events: FeedEvent[],
+  projects: ProfileProject[],
+  selectedProject: string | null,
+): FeedEvent[] {
+  if (!selectedProject) return events;
+  const project = projects.find((item) => item.id === selectedProject);
+  if (!project) return events;
+  return events.filter((event) => event.repo === project.repo);
+}
+
+export function buildProfileCommitActivity(
+  events: FeedEvent[],
+  projects: ProfileProject[],
+  selectedProject: string | null,
+): Record<string, number> {
+  if (!selectedProject) return commitActivityFromEvents(events);
+  const project = projects.find((item) => item.id === selectedProject);
+  if (!project) return commitActivityFromEvents(events);
+  return repoActivityForProject(events, project.repo);
+}
+
+export function getProfileCommentsForEvent(comments: FeedComment[], eventId: string): FeedComment[] {
+  return comments
+    .filter((comment) => comment.eventId === eventId)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 let _initialized = false;
@@ -248,15 +291,10 @@ export function useProfileEvents(): FeedEvent[] {
   const profileName = useProfileStore((s) => s.profile.name);
   const profileAvatarUrl = useProfileStore((s) => s.profile.avatarUrl);
 
-  const events = [...liveEvents]
-    .map((evt) => {
-      if (profileAvatarUrl && evt.author.type === "user") {
-        return { ...evt, author: { ...evt.author, name: profileName || evt.author.name, avatarUrl: profileAvatarUrl } };
-      }
-      return evt;
-    })
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  return events;
+  return useMemo(
+    () => buildProfileEvents(liveEvents, profileName, profileAvatarUrl),
+    [liveEvents, profileAvatarUrl, profileName],
+  );
 }
 
 export function useProfileFilteredEvents(): FeedEvent[] {
@@ -264,10 +302,10 @@ export function useProfileFilteredEvents(): FeedEvent[] {
   const selectedProject = useProfileStore((s) => s.selectedProject);
   const projects = useProfileStore((s) => s.projects);
 
-  if (!selectedProject) return events;
-  const project = projects.find((p) => p.id === selectedProject);
-  if (!project) return events;
-  return events.filter((e) => e.repo === project.repo);
+  return useMemo(
+    () => buildFilteredProfileEvents(events, projects, selectedProject),
+    [events, projects, selectedProject],
+  );
 }
 
 export function useProfileCommitActivity(): Record<string, number> {
@@ -275,18 +313,18 @@ export function useProfileCommitActivity(): Record<string, number> {
   const selectedProject = useProfileStore((s) => s.selectedProject);
   const projects = useProfileStore((s) => s.projects);
 
-  if (!selectedProject) return commitActivityFromEvents(events);
-  const project = projects.find((p) => p.id === selectedProject);
-  if (!project) return commitActivityFromEvents(events);
-  return repoActivityForProject(events, project.repo);
+  return useMemo(
+    () => buildProfileCommitActivity(events, projects, selectedProject),
+    [events, projects, selectedProject],
+  );
 }
 
 export function useProfileCommentsForEvent(eventId: string | null): FeedComment[] {
   const comments = useProfileStore((s) => s.comments);
-  if (!eventId) return [];
-  return comments
-    .filter((c) => c.eventId === eventId)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return useMemo(
+    () => (eventId ? getProfileCommentsForEvent(comments, eventId) : []),
+    [comments, eventId],
+  );
 }
 
 /**
@@ -310,10 +348,7 @@ export function useProfile() {
   const commitActivity = useProfileCommitActivity();
 
   const getCommentsForEvent = useCallback(
-    (eventId: string) =>
-      comments
-        .filter((c) => c.eventId === eventId)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+    (eventId: string) => getProfileCommentsForEvent(comments, eventId),
     [comments],
   );
 

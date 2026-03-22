@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getLastAgent } from "../../utils/storage";
-import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
+import { useProjectsListStore } from "../../stores/projects-list-store";
 import { ProjectEmptyView } from "../ProjectEmptyView";
 
 export function ProjectAgentRedirectView() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
-  const { agentsByProject, refreshProjectAgents } = useProjectsList();
+  const cachedAgents = useProjectsListStore((state) => (
+    projectId ? state.agentsByProject[projectId] : undefined
+  ));
+  const refreshProjectAgents = useProjectsListStore((state) => state.refreshProjectAgents);
   const [emptyProjectId, setEmptyProjectId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,7 +20,6 @@ export function ProjectAgentRedirectView() {
     let cancelled = false;
 
     const resolveTarget = async () => {
-      const cachedAgents = agentsByProject[projectId];
       const agents = cachedAgents ?? await refreshProjectAgents(projectId);
       if (cancelled) return;
 
@@ -45,7 +47,7 @@ export function ProjectAgentRedirectView() {
     return () => {
       cancelled = true;
     };
-  }, [agentsByProject, navigate, projectId, refreshProjectAgents]);
+  }, [cachedAgents, navigate, projectId, refreshProjectAgents]);
 
   if (projectId && emptyProjectId === projectId) {
     return <ProjectEmptyView mode="agent" />;
