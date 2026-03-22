@@ -46,7 +46,7 @@ export function AgentChatView() {
       onSend={sendMessage}
       onStop={stopStreaming}
       agentName={selectedAgent?.name}
-      isLoading={historyStatus === "loading"}
+      isLoading={historyStatus === "loading" || historyStatus === "idle"}
       errorMessage={historyStatus === "error" ? (historyError ?? "Failed to load conversation") : null}
       emptyMessage="Send a message"
       scrollResetKey={agentId}
