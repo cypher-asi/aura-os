@@ -1,14 +1,12 @@
+import { useMemo } from "react";
 import type { ToolCallEntry, TimelineItem } from "../../types/stream";
-import { stripEmojis, normalizeMidSentenceBreaks } from "../../utils/text-normalize";
 import { getStreamingPhaseLabel } from "../../utils/streaming";
 import { CookingIndicator } from "../CookingIndicator";
-import { SegmentedContent } from "../SegmentedContent";
-import { ThinkingRow } from "../ThinkingRow";
-import { ToolCallsList } from "../ToolRow";
 import { ActivityTimeline } from "../ActivityTimeline";
 import styles from "../MessageBubble/MessageBubble.module.css";
 
 interface StreamingBubbleProps {
+  isStreaming: boolean;
   text: string;
   toolCalls?: ToolCallEntry[];
   thinkingText?: string;
@@ -18,16 +16,19 @@ interface StreamingBubbleProps {
 }
 
 function StreamingIndicator({
+  isStreaming,
   text,
   thinkingText,
   toolCalls,
   progressText,
 }: {
+  isStreaming: boolean;
   text: string;
   thinkingText?: string;
   toolCalls?: ToolCallEntry[];
   progressText?: string;
 }) {
+  if (!isStreaming) return null;
   const label = getStreamingPhaseLabel({
     streamingText: text,
     thinkingText,
@@ -35,42 +36,51 @@ function StreamingIndicator({
     progressText,
   });
 
-  return <CookingIndicator label={label ?? "Cooking..."} />;
+  if (!label) return null;
+  return <CookingIndicator label={label} />;
 }
 
-export function StreamingBubble({ text, toolCalls, thinkingText, thinkingDurationMs, timeline, progressText }: StreamingBubbleProps) {
-  const hasTimeline = timeline && timeline.length > 0;
-  const isThinking = Boolean(thinkingText) && !text;
+export function StreamingBubble({
+  isStreaming,
+  text,
+  toolCalls,
+  thinkingText,
+  thinkingDurationMs,
+  timeline,
+  progressText,
+}: StreamingBubbleProps) {
+  const timelineForRender = useMemo<TimelineItem[]>(() => {
+    if (timeline && timeline.length > 0) return timeline;
+
+    const synthetic: TimelineItem[] = [];
+    if (thinkingText) synthetic.push({ kind: "thinking", id: "live-thinking" });
+    if (toolCalls && toolCalls.length > 0) {
+      for (const tc of toolCalls) {
+        synthetic.push({ kind: "tool", toolCallId: tc.id, id: `live-tool-${tc.id}` });
+      }
+    }
+    if (text) synthetic.push({ kind: "text", content: text, id: "live-text" });
+    return synthetic;
+  }, [timeline, thinkingText, toolCalls, text]);
+
   return (
     <div className={`${styles.message} ${styles.messageAssistant}`}>
       <div className={`${styles.bubble} ${styles.bubbleAssistant}`}>
         <div className={styles.markdown}>
-          {hasTimeline ? (
-            <ActivityTimeline
-              timeline={timeline}
-              thinkingText={thinkingText}
-              thinkingDurationMs={thinkingDurationMs}
-              toolCalls={toolCalls}
-              isStreaming
-            />
-          ) : (
-            <>
-              {thinkingText && (
-                <ThinkingRow
-                  text={thinkingText}
-                  isStreaming={isThinking}
-                  durationMs={thinkingDurationMs}
-                />
-              )}
-              {toolCalls && toolCalls.length > 0 && (
-                <ToolCallsList entries={toolCalls} />
-              )}
-              {text && (
-                <SegmentedContent content={normalizeMidSentenceBreaks(stripEmojis(text))} />
-              )}
-            </>
-          )}
-          <StreamingIndicator text={text} thinkingText={thinkingText} toolCalls={toolCalls} progressText={progressText} />
+          <ActivityTimeline
+            timeline={timelineForRender}
+            thinkingText={thinkingText}
+            thinkingDurationMs={thinkingDurationMs}
+            toolCalls={toolCalls}
+            isStreaming={isStreaming}
+          />
+          <StreamingIndicator
+            isStreaming={isStreaming}
+            text={text}
+            thinkingText={thinkingText}
+            toolCalls={toolCalls}
+            progressText={progressText}
+          />
         </div>
       </div>
     </div>

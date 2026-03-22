@@ -31,6 +31,8 @@ export function useAutoScroll(
   const autoScrollRef = useRef(true);
   const prevScrollHeightRef = useRef(0);
   const programmaticScrollRef = useRef(false);
+  const scrollRafRef = useRef<number | null>(null);
+  const pendingTargetRef = useRef<number | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -42,20 +44,38 @@ export function useAutoScroll(
       prevScrollHeightRef.current = el.scrollHeight;
     };
 
+    const scheduleScroll = (target: number) => {
+      pendingTargetRef.current = target;
+      if (scrollRafRef.current !== null) return;
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        const nextTarget = pendingTargetRef.current;
+        pendingTargetRef.current = null;
+        if (nextTarget == null) return;
+        if (autoScrollRef.current) {
+          guardedScroll(el, nextTarget, programmaticScrollRef);
+        }
+        syncHeight();
+      });
+    };
+
     const scrollIfNeeded = () => {
-      if (autoScrollRef.current) {
-        guardedScroll(el, el.scrollHeight, programmaticScrollRef);
-      }
+      scheduleScroll(el.scrollHeight);
     };
 
     const mutationObs = new MutationObserver(() => {
-      scrollIfNeeded();
+      const oldSH = prevScrollHeightRef.current;
+      const newSH = el.scrollHeight;
+      if (newSH === oldSH) return;
+      if (autoScrollRef.current && newSH > oldSH) {
+        scheduleScroll(newSH);
+        return;
+      }
       syncHeight();
     });
     mutationObs.observe(el, {
       childList: true,
       subtree: true,
-      characterData: true,
     });
 
     let lastWidth = el.clientWidth;
@@ -85,6 +105,9 @@ export function useAutoScroll(
     syncHeight();
 
     return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
       mutationObs.disconnect();
       resizeObs.disconnect();
     };

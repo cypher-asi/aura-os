@@ -2,7 +2,6 @@ import { type ReactNode, type RefObject, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
-import { CookingIndicator } from "../CookingIndicator";
 
 import {
   useStreamMessages,
@@ -76,11 +75,9 @@ export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessag
           </div>
         ))}
       </div>
-      {isStreaming && !streamingText && !thinkingText && activeToolCalls.length === 0 && (
-        <CookingIndicator label={progressText || "Cooking..."} />
-      )}
-      {(streamingText || thinkingText || activeToolCalls.length > 0) && (
+      {(isStreaming || streamingText || thinkingText || activeToolCalls.length > 0) && (
         <StreamingBubble
+          isStreaming={isStreaming}
           text={streamingText}
           toolCalls={activeToolCalls}
           thinkingText={thinkingText}

@@ -29,9 +29,6 @@ export function ActivityTimeline({
     return map;
   }, [toolCalls]);
 
-  const isThinkingPhaseActive =
-    isStreaming && !timeline.some((i) => i.kind !== "thinking");
-
   return (
     <div className={styles.timeline}>
       {timeline.map((item) => {
@@ -41,7 +38,7 @@ export function ActivityTimeline({
             <div key={item.id}>
               <ThinkingRow
                 text={thinkingText}
-                isStreaming={isThinkingPhaseActive}
+                isStreaming={isStreaming}
                 durationMs={thinkingDurationMs}
               />
             </div>
