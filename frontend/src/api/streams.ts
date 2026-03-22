@@ -47,9 +47,10 @@ export interface ToolCallStartedInfo {
   name: string;
 }
 
-export interface ToolCallDeltaInfo {
+export interface ToolCallSnapshotInfo {
   id: string;
-  partialInput: string;
+  name: string;
+  input: Record<string, unknown>;
 }
 
 export interface ChatStreamCallbacks {
@@ -57,7 +58,7 @@ export interface ChatStreamCallbacks {
   onThinkingDelta?: (text: string) => void;
   onProgress?: (stage: string) => void;
   onToolCallStarted?: (info: ToolCallStartedInfo) => void;
-  onToolCallDelta?: (info: ToolCallDeltaInfo) => void;
+  onToolCallSnapshot?: (info: ToolCallSnapshotInfo) => void;
   onToolCall?: (info: ToolCallInfo) => void;
   onToolResult?: (info: ToolResultInfo) => void;
   onSpecSaved?: (spec: Spec) => void;
@@ -115,7 +116,7 @@ export function generateSpecsStream(
 
 type ChatStreamEvent =
   | "delta" | "thinking_delta" | "progress"
-  | "tool_call_started" | "tool_call_delta" | "tool_call" | "tool_result"
+  | "tool_call_started" | "tool_call_snapshot" | "tool_call" | "tool_result"
   | "spec_saved" | "specs_title" | "specs_summary"
   | "task_saved" | "message_saved" | "agent_instance_updated"
   | "token_usage" | "error" | "done";
@@ -140,10 +141,11 @@ function createChatStreamHandler(cb: ChatStreamCallbacks): SSECallbacks<ChatStre
             name: d.name as string,
           });
           break;
-        case "tool_call_delta":
-          cb.onToolCallDelta?.({
+        case "tool_call_snapshot":
+          cb.onToolCallSnapshot?.({
             id: d.id as string,
-            partialInput: d.partial_input as string,
+            name: d.name as string,
+            input: d.input as Record<string, unknown>,
           });
           break;
         case "tool_call":

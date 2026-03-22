@@ -41,7 +41,7 @@ export {
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,
-  handleToolCallDelta,
+  handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
   handleMessageSaved,
@@ -106,10 +106,6 @@ export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
       if (meta.refs.thinkingRaf.current !== null) {
         cancelAnimationFrame(meta.refs.thinkingRaf.current);
         meta.refs.thinkingRaf.current = null;
-      }
-      if (meta.refs.toolCallRaf.current !== null) {
-        cancelAnimationFrame(meta.refs.toolCallRaf.current);
-        meta.refs.toolCallRaf.current = null;
       }
       meta.lastAccessedAt = Date.now();
       pruneStreamStore(key);
