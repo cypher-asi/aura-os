@@ -185,6 +185,69 @@ fn spawn_server(
     ready_rx
 }
 
+fn set_square_corners(_window: &tao::window::Window) {
+    #[cfg(target_os = "windows")]
+    {
+        use tao::platform::windows::WindowExtWindows;
+        use windows::Win32::Graphics::Dwm::{
+            DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWM_WINDOW_CORNER_PREFERENCE,
+        };
+        use windows::Win32::Foundation::HWND;
+
+        let hwnd = HWND(_window.hwnd() as *mut std::ffi::c_void);
+        let preference = DWM_WINDOW_CORNER_PREFERENCE(1); // DWMWCP_DONOTROUND
+        let _ = unsafe {
+            DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_WINDOW_CORNER_PREFERENCE,
+                &preference as *const _ as *const _,
+                std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>() as u32,
+            )
+        };
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use tao::platform::macos::WindowExtMacOS;
+
+        unsafe {
+            let ns_window = _window.ns_window() as *mut objc::runtime::Object;
+            let content_view: *mut objc::runtime::Object = objc::msg_send![ns_window, contentView];
+            let _: () = objc::msg_send![content_view, setWantsLayer: true];
+            let layer: *mut objc::runtime::Object = objc::msg_send![content_view, layer];
+            let _: () = objc::msg_send![layer, setCornerRadius: 0.0_f64];
+            let _: () = objc::msg_send![layer, setMasksToBounds: true];
+        }
+    }
+
+    // Linux: frameless windows don't have app-controllable corner rounding.
+    // Any rounding from the compositor (e.g. Mutter, KWin) cannot be overridden.
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn square_corners_uses_donotround_preference() {
+        use windows::Win32::Graphics::Dwm::DWM_WINDOW_CORNER_PREFERENCE;
+
+        let pref = DWM_WINDOW_CORNER_PREFERENCE(1);
+        assert_eq!(pref.0, 1, "DWMWCP_DONOTROUND must be 1");
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn dwm_corner_preference_size_is_four_bytes() {
+        use windows::Win32::Graphics::Dwm::DWM_WINDOW_CORNER_PREFERENCE;
+
+        assert_eq!(
+            std::mem::size_of::<DWM_WINDOW_CORNER_PREFERENCE>(),
+            4,
+            "DWM_WINDOW_CORNER_PREFERENCE must be 4 bytes for DwmSetWindowAttribute"
+        );
+    }
+}
+
 fn create_main_window(
     event_loop: &tao::event_loop::EventLoop<UserEvent>,
     icon_data: &IconData,
@@ -197,6 +260,9 @@ fn create_main_window(
         .with_inner_size(tao::dpi::LogicalSize::new(1280.0, 800.0))
         .build(event_loop)
         .expect("failed to build window");
+
+    set_square_corners(&window);
+
     let id = window.id();
     info!("window created");
     (window, id)
