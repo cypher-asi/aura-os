@@ -354,14 +354,9 @@ pub fn merge_agent_instance(
         icon: agent
             .and_then(|a| a.icon.clone())
             .or_else(|| spa.icon.clone()),
-        harness: agent
-            .map(|a| a.harness)
-            .unwrap_or_else(|| {
-                match spa.harness.as_deref() {
-                    Some("local") => HarnessMode::Local,
-                    _ => HarnessMode::Swarm,
-                }
-            }),
+        machine_type: agent
+            .map(|a| a.machine_type.clone())
+            .unwrap_or_else(|| "local".to_string()),
         status: spa
             .status
             .as_deref()
