@@ -190,11 +190,14 @@ fn maybe_spawn_local_harness() {
         "Local harness not running — spawning from source"
     );
 
-    let bind_addr = host_port.clone();
+    let addr: std::net::SocketAddr = host_port
+        .parse()
+        .unwrap_or_else(|_| std::net::SocketAddr::from(([127, 0, 0, 1], 8080)));
+
     match std::process::Command::new("cargo")
         .args(["run", "--release", "--", "run", "--ui", "none"])
         .current_dir(&harness_dir)
-        .env("BIND_ADDR", &bind_addr)
+        .env("BIND_ADDR", &host_port)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped())
@@ -203,7 +206,6 @@ fn maybe_spawn_local_harness() {
         Ok(child) => {
             info!(pid = child.id(), "aura-harness child process spawned");
 
-            let health_url = format!("{harness_url}/health");
             let deadline =
                 std::time::Instant::now() + std::time::Duration::from_secs(60);
             loop {
@@ -212,9 +214,11 @@ fn maybe_spawn_local_harness() {
                     warn!("Timed out waiting for local harness to become ready");
                     break;
                 }
-                if reqwest::blocking::get(&health_url)
-                    .map(|r| r.status().is_success())
-                    .unwrap_or(false)
+                if std::net::TcpStream::connect_timeout(
+                    &addr,
+                    std::time::Duration::from_millis(200),
+                )
+                .is_ok()
                 {
                     info!("Local harness is ready at {harness_url}");
                     break;
