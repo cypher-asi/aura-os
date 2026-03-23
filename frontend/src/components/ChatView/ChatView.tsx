@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Bot, ChevronDown } from "lucide-react";
 import { api } from "../../api/client";
@@ -6,14 +6,11 @@ import { useChatStream } from "../../hooks/use-chat-stream";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { setLastAgent, setLastProject } from "../../utils/storage";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { ChatPanel } from "../ChatPanel";
 import { useChatHistoryStore, useChatHistory, projectChatHistoryKey } from "../../stores/chat-history-store";
-import { useProjectsListStore } from "../../stores/projects-list-store";
+import { useProjectAgentState } from "./useProjectAgentState";
 import styles from "./ChatView.module.css";
-
-const EMPTY_PROJECT_AGENTS: readonly [] = [];
 
 export function ChatView() {
   const navigate = useNavigate();
@@ -22,13 +19,13 @@ export function ChatView() {
     agentInstanceId: string;
   }>();
   const { isMobileLayout } = useAuraCapabilities();
-  const projectAgents = useProjectsListStore((state) => (
-    projectId ? state.agentsByProject[projectId] ?? EMPTY_PROJECT_AGENTS : EMPTY_PROJECT_AGENTS
-  ));
-  const isLoadingProjectAgents = useProjectsListStore((state) => (
-    projectId ? Boolean(state.loadingAgentsByProject[projectId]) : false
-  ));
-  const refreshProjectAgents = useProjectsListStore((state) => state.refreshProjectAgents);
+  const {
+    projectAgents,
+    isLoadingProjectAgents,
+    selectedProjectAgent,
+    agentDisplayName,
+    contextUsagePercent,
+  } = useProjectAgentState({ projectId, agentInstanceId });
 
   const historyKey = projectId && agentInstanceId
     ? projectChatHistoryKey(projectId, agentInstanceId)
@@ -44,83 +41,24 @@ export function ChatView() {
   } = useChatStream({ projectId, agentInstanceId });
   const isStreaming = useIsStreaming(streamKey);
 
-  const [agentName, setAgentName] = useState<string | undefined>();
-  const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
-
-  const metadataLoadIdRef = useRef(0);
   const resetMessagesRef = useRef(resetMessages);
   useEffect(() => { resetMessagesRef.current = resetMessages; }, [resetMessages]);
 
-  const selectedProjectAgent = projectAgents.find((agent) => agent.agent_instance_id === agentInstanceId) ?? null;
-
-  useEffect(() => {
-    if (!projectId) return;
-    if (projectAgents.length > 0 || isLoadingProjectAgents) return;
-    void refreshProjectAgents(projectId).catch(() => {});
-  }, [isLoadingProjectAgents, projectAgents.length, projectId, refreshProjectAgents]);
-
-  // Fetch agent instance metadata (name)
-  useEffect(() => {
-    const loadId = ++metadataLoadIdRef.current;
-    const controller = new AbortController();
-
-    if (projectId && agentInstanceId) {
-      setLastProject(projectId);
-      setAgentName(undefined);
-      setLastAgent(projectId, agentInstanceId);
-      api
-        .getAgentInstance(projectId, agentInstanceId, { signal: controller.signal })
-        .then((inst) => {
-          if (loadId === metadataLoadIdRef.current) setAgentName(inst.name);
-        })
-        .catch((err: unknown) => {
-          if (err instanceof DOMException && err.name === "AbortError") return;
-        });
-    } else {
-      setAgentName(undefined);
-    }
-
-    return () => { controller.abort(); };
-  }, [projectId, agentInstanceId]);
-
-  // Fetch context usage
-  const fetchActiveSessionContext = useCallback(async () => {
-    if (!projectId || !agentInstanceId) return null;
-    try {
-      const sessions = await api.listSessions(projectId, agentInstanceId);
-      const active = sessions.find((s) => s.status === "active");
-      if (active != null && typeof active.context_usage_estimate === "number") {
-        return Math.round(active.context_usage_estimate * 100);
-      }
-    } catch { /* ignore */ }
-    return null;
-  }, [projectId, agentInstanceId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
-    return () => { cancelled = true; };
-  }, [fetchActiveSessionContext]);
-
   const prevIsStreamingRef = useRef(false);
   useEffect(() => {
-    let cancelled = false;
     if (prevIsStreamingRef.current && !isStreaming) {
-      void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
       if (historyKey) {
         useChatHistoryStore.getState().invalidateHistory(historyKey);
       }
     }
     prevIsStreamingRef.current = isStreaming;
-    return () => { cancelled = true; };
-  }, [isStreaming, fetchActiveSessionContext, historyKey]);
+  }, [isStreaming, historyKey]);
 
   // Load chat history via shared store
   useEffect(() => {
     if (!projectId || !agentInstanceId) {
       queueMicrotask(() => {
         resetMessagesRef.current([], { allowWhileStreaming: true });
-        setContextUsagePercent(null);
       });
       return;
     }
@@ -183,7 +121,7 @@ export function ChatView() {
               <Bot size={16} aria-hidden="true" />
               <div className={styles.projectAgentSummaryCopy}>
                 <span className={styles.projectAgentName}>
-                  {selectedProjectAgent?.name ?? agentName ?? (isLoadingProjectAgents ? "Loading project agent..." : "Project agent")}
+                  {agentDisplayName ?? (isLoadingProjectAgents ? "Loading project agent..." : "Project agent")}
                 </span>
                 <span className={styles.projectAgentSummaryHint}>
                   {selectedProjectAgent?.role ?? "Chat in this project's agent context."}
@@ -198,7 +136,7 @@ export function ChatView() {
         streamKey={streamKey}
         onSend={wrappedSend}
         onStop={stopStreaming}
-        agentName={selectedProjectAgent?.name ?? agentName}
+        agentName={agentDisplayName}
         isLoading={deferredLoading}
         historyResolved={historyResolved}
         contextUsagePercent={projectId && agentInstanceId ? contextUsagePercent : undefined}
