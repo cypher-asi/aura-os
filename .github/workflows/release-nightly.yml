@@ -58,7 +58,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          BASE=$(grep '^version' aura-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          BASE=$(grep '^version' apps/desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           SHORT_SHA=$(git rev-parse --short HEAD)
           NIGHTLY="${BASE}-nightly.${SHORT_SHA}"
           echo "version=${NIGHTLY}" >> "$GITHUB_OUTPUT"
@@ -68,8 +68,8 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" aura-desktop/Cargo.toml
-          rm -f aura-desktop/Cargo.toml.bak
+          sed -i.bak "s/^version = \".*\"/version = \"${VERSION}\"/" apps/desktop/Cargo.toml
+          rm -f apps/desktop/Cargo.toml.bak
 
       - name: Install cargo-packager
         run: cargo install cargo-packager --locked
@@ -83,13 +83,13 @@ jobs:
       - name: Build release binary
         env:
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
-        run: cargo build --release --package aura-desktop
+        run: cargo build --release --package aura-os-desktop
 
       - name: Package installer
         env:
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
-        run: cargo packager --release --package aura-desktop
+        run: cargo packager --release --package aura-os-desktop
 
       - name: Collect artifacts
         id: artifacts
@@ -118,7 +118,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          BASE=$(grep '^version' aura-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          BASE=$(grep '^version' apps/desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "version=${BASE}-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
@@ -157,7 +157,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          BASE=$(grep '^version' aura-desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          BASE=$(grep '^version' apps/desktop/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "version=${BASE}-nightly.${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
@@ -193,10 +193,10 @@ jobs:
           MANIFEST
           }
 
-          generate_manifest "windows" "x86_64" "aura-desktop_${VERSION}_x64-setup.nsis.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-desktop_${VERSION}_aarch64.dmg" "dmg"
-          generate_manifest "macos" "x86_64" "aura-desktop_${VERSION}_x64.dmg" "dmg"
-          generate_manifest "linux" "x86_64" "aura-desktop_${VERSION}_amd64.AppImage" "appimage"
+          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.nsis.exe" "nsis"
+          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.dmg" "dmg"
+          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x64.dmg" "dmg"
+          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_amd64.AppImage" "appimage"
 
       - name: Commit and push manifests
         run: |

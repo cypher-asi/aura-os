@@ -54,7 +54,7 @@ trap cleanup EXIT INT TERM
   cd "$ROOT"
   export AURA_SERVER_HOST="${BACKEND_HOST}"
   export AURA_SERVER_PORT="${BACKEND_PORT}"
-  cargo run -p aura-server
+  cargo run -p aura-os-server
 ) &
 SERVER_PID=$!
 
