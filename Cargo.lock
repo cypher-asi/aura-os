@@ -304,6 +304,7 @@ dependencies = [
  "aura-executor",
  "aura-kernel",
  "aura-reasoner",
+ "aura-runtime",
  "base64 0.22.1",
  "futures-util",
  "regex",
@@ -365,6 +366,8 @@ dependencies = [
  "async-trait",
  "aura-core",
  "bytes",
+ "serde_json",
+ "thiserror 1.0.69",
  "tracing",
 ]
 
@@ -373,19 +376,15 @@ name = "aura-kernel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "aura-core",
  "aura-executor",
  "aura-reasoner",
  "aura-store",
- "aura-tools",
  "bytes",
- "dashmap",
- "futures-util",
  "hex",
  "serde_json",
+ "thiserror 1.0.69",
  "tokio",
- "tokio-util",
  "tracing",
 ]
 
@@ -518,18 +517,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aura-os-orbit"
-version = "0.1.0"
-dependencies = [
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tracing",
- "urlencoding",
-]
-
-[[package]]
 name = "aura-os-orgs"
 version = "0.1.0"
 dependencies = [
@@ -556,18 +543,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aura-os-provider"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "futures-util",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
-]
-
-[[package]]
 name = "aura-os-server"
 version = "0.1.0"
 dependencies = [
@@ -577,11 +552,9 @@ dependencies = [
  "aura-os-core",
  "aura-os-link",
  "aura-os-network",
- "aura-os-orbit",
  "aura-os-orgs",
  "aura-os-projects",
  "aura-os-sessions",
- "aura-os-settings",
  "aura-os-storage",
  "aura-os-store",
  "aura-os-tasks",
@@ -620,27 +593,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "aura-os-settings"
-version = "0.1.0"
-dependencies = [
- "aura-os-core",
- "aura-os-store",
- "chrono",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "aura-os-specs"
-version = "0.1.0"
-dependencies = [
  "tokio",
  "tracing",
 ]
@@ -724,6 +676,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "aura-runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "aura-core",
+ "aura-executor",
+ "aura-kernel",
+ "aura-reasoner",
+ "aura-store",
+ "aura-tools",
+ "bytes",
+ "dashmap",
+ "futures-util",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "aura-store"
 version = "0.1.0"
 dependencies = [
@@ -752,6 +726,7 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "toml",
  "tracing",
  "walkdir",
 ]
