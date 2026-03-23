@@ -87,17 +87,23 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
 
 pub async fn list_directory(Json(req): Json<ListDirectoryRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
-    if !target.exists() {
-        warn!(path = %req.path, "list_directory: path does not exist");
-        return Json(serde_json::json!({ "ok": false, "error": "path not found" }));
-    }
+    let meta = match tokio::fs::metadata(target).await {
+        Ok(m) => m,
+        Err(_) => {
+            warn!(path = %req.path, "list_directory: path does not exist");
+            return Json(serde_json::json!({ "ok": false, "error": "path not found" }));
+        }
+    };
 
-    if !target.is_dir() {
+    if !meta.is_dir() {
         warn!(path = %req.path, "list_directory: path is not a directory");
         return Json(serde_json::json!({ "ok": false, "error": "path is not a directory" }));
     }
 
-    let entries = walk_directory(target, 0, 20);
+    let target_owned = target.to_path_buf();
+    let entries = tokio::task::spawn_blocking(move || walk_directory(&target_owned, 0, 20))
+        .await
+        .unwrap_or_default();
     debug!(path = %req.path, count = entries.len(), "listed directory");
     Json(serde_json::json!({ "ok": true, "entries": entries }))
 }

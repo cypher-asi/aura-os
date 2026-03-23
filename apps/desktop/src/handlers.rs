@@ -41,15 +41,18 @@ pub struct ReadFileRequest {
 
 pub async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
-    if !target.exists() {
-        warn!(path = %req.path, "read_file: path does not exist");
-        return Json(serde_json::json!({ "ok": false, "error": "path not found" }));
-    }
-    if !target.is_file() {
+    let meta = match tokio::fs::metadata(target).await {
+        Ok(m) => m,
+        Err(_) => {
+            warn!(path = %req.path, "read_file: path does not exist");
+            return Json(serde_json::json!({ "ok": false, "error": "path not found" }));
+        }
+    };
+    if !meta.is_file() {
         warn!(path = %req.path, "read_file: path is not a file");
         return Json(serde_json::json!({ "ok": false, "error": "path is not a file" }));
     }
-    match std::fs::read_to_string(&req.path) {
+    match tokio::fs::read_to_string(&req.path).await {
         Ok(content) => {
             debug!(path = %req.path, bytes = content.len(), "read file");
             Json(serde_json::json!({ "ok": true, "content": content, "path": req.path }))
@@ -70,12 +73,12 @@ pub struct WriteFileRequest {
 pub async fn write_file(Json(req): Json<WriteFileRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     if let Some(parent) = target.parent() {
-        if !parent.exists() {
+        if !tokio::fs::try_exists(parent).await.unwrap_or(false) {
             warn!(path = %req.path, "write_file: parent directory does not exist");
             return Json(serde_json::json!({ "ok": false, "error": "parent directory not found" }));
         }
     }
-    match std::fs::write(&req.path, &req.content) {
+    match tokio::fs::write(&req.path, &req.content).await {
         Ok(_) => {
             debug!(path = %req.path, bytes = req.content.len(), "wrote file");
             Json(serde_json::json!({ "ok": true, "path": req.path }))

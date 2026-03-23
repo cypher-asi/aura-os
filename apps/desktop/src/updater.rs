@@ -149,20 +149,24 @@ async fn download_and_verify(manifest: &UpdateManifest) -> Result<std::path::Pat
     let cache_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("aura-updates");
-    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("failed to create cache dir: {e}"))?;
+    tokio::fs::create_dir_all(&cache_dir)
+        .await
+        .map_err(|e| format!("failed to create cache dir: {e}"))?;
 
     let filename = manifest.url.rsplit('/').next().unwrap_or("update-package");
     let pkg_path = cache_dir.join(filename);
-    std::fs::write(&pkg_path, &bytes)
+    tokio::fs::write(&pkg_path, &bytes)
+        .await
         .map_err(|e| format!("failed to write update package: {e}"))?;
 
     let sig_path = cache_dir.join(format!("{filename}.sig"));
-    std::fs::write(&sig_path, &manifest.signature)
+    tokio::fs::write(&sig_path, &manifest.signature)
+        .await
         .map_err(|e| format!("failed to write signature: {e}"))?;
 
     if let Err(e) = verify_signature(&pkg_path, &manifest.signature) {
-        std::fs::remove_file(&pkg_path).ok();
-        std::fs::remove_file(&sig_path).ok();
+        tokio::fs::remove_file(&pkg_path).await.ok();
+        tokio::fs::remove_file(&sig_path).await.ok();
         return Err(format!("signature verification failed: {e}"));
     }
 
