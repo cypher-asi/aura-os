@@ -8,7 +8,6 @@ pub(crate) mod follows;
 pub(crate) mod leaderboard;
 pub(crate) mod log;
 pub(crate) mod orgs;
-pub(crate) mod pricing;
 pub(crate) mod projects;
 mod projects_helpers;
 pub(crate) mod specs;

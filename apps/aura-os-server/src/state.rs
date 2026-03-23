@@ -8,7 +8,7 @@ use tokio::sync::{broadcast, Mutex};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
-use aura_os_billing::{BillingClient, PricingService};
+use aura_os_billing::BillingClient;
 use aura_os_core::{AgentInstanceId, ProjectId, ZeroAuthSession};
 use aura_os_link::SwarmClient;
 use aura_os_network::NetworkClient;
@@ -31,7 +31,6 @@ pub(crate) struct AppState {
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
     pub auth_service: Arc<AuthService>,
-    pub pricing_service: Arc<PricingService>,
     pub billing_client: Arc<BillingClient>,
     pub project_service: Arc<ProjectService>,
     pub task_service: Arc<TaskService>,

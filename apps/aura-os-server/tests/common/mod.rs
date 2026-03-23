@@ -14,7 +14,7 @@ use tokio::sync::{broadcast, Mutex};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
-use aura_os_billing::{BillingClient, PricingService};
+use aura_os_billing::BillingClient;
 use aura_os_core::*;
 use aura_os_link::SwarmClient;
 use aura_os_network::NetworkClient;
@@ -207,7 +207,6 @@ pub fn build_test_app_from_store(
         network_client.clone(),
         store.clone(),
     ));
-    let pricing_service = Arc::new(PricingService::new(store.clone()));
     let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
     let runtime_agent_state: aura_os_agents::RuntimeAgentStateMap =
@@ -237,7 +236,6 @@ pub fn build_test_app_from_store(
         data_dir,
         org_service,
         auth_service,
-        pricing_service,
         billing_client,
         project_service,
         task_service,

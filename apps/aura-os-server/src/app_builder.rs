@@ -7,7 +7,7 @@ use tracing::info;
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
-use aura_os_billing::{BillingClient, PricingService};
+use aura_os_billing::BillingClient;
 use aura_os_link::SwarmClient;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
@@ -66,7 +66,6 @@ fn env_opt(key: &str) -> Option<String> {
 struct CoreServices {
     org_service: Arc<OrgService>,
     auth_service: Arc<AuthService>,
-    pricing_service: Arc<PricingService>,
     billing_client: Arc<BillingClient>,
 }
 
@@ -74,7 +73,6 @@ fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
     CoreServices {
         org_service: Arc::new(OrgService::new(store.clone())),
         auth_service: Arc::new(AuthService::new(store.clone())),
-        pricing_service: Arc::new(PricingService::new(store.clone())),
         billing_client: Arc::new(BillingClient::new()),
     }
 }
@@ -156,7 +154,6 @@ pub(crate) fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         store,
         org_service: core.org_service,
         auth_service: core.auth_service,
-        pricing_service: core.pricing_service,
         billing_client: core.billing_client,
         project_service: domain.project_service,
         task_service: domain.task_service,

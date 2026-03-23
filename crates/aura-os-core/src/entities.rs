@@ -310,22 +310,6 @@ pub struct OrgBilling {
     pub plan: String,
 }
 
-/// A single row in the fee schedule: per-model token pricing effective from a given date.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FeeScheduleEntry {
-    pub model: String,
-    pub input_cost_per_million: f64,
-    pub output_cost_per_million: f64,
-    /// ISO 8601 date (e.g. "2026-02-01"). The rate applies from this date onward
-    /// until superseded by a later entry for the same model.
-    pub effective_date: String,
-}
-
-/// Abstracts cost computation so domain crates (tasks, sessions) don't
-/// depend directly on the billing crate's `PricingService`.
-pub trait CostCalculator: Send + Sync {
-    fn compute_task_cost(&self, model: &str, input_tokens: u64, output_tokens: u64) -> f64;
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreditBalance {
