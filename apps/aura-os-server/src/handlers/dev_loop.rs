@@ -4,7 +4,7 @@ use axum::Json;
 use serde::Deserialize;
 use tracing::info;
 
-use aura_os_core::{AgentInstanceId, ProjectId, TaskId};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, TaskId};
 use aura_os_link::{HarnessInbound, SessionConfig};
 
 use crate::dto::LoopStatusResponse;
@@ -50,7 +50,17 @@ pub(crate) async fn start_loop(
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let harness = state.harness_for(state.default_harness);
+    let harness_mode = if let Some(aiid) = params.agent_instance_id {
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &aiid)
+            .await
+            .map(|inst| inst.harness_mode())
+            .unwrap_or(HarnessMode::Local)
+    } else {
+        HarnessMode::Local
+    };
+    let harness = state.harness_for(harness_mode);
     let session = harness
         .open_session(SessionConfig {
             agent_id: Some(agent_instance_id.to_string()),
@@ -214,7 +224,17 @@ pub(crate) async fn run_single_task(
 ) -> ApiResult<StatusCode> {
     super::billing::require_credits(&state).await?;
 
-    let harness = state.harness_for(state.default_harness);
+    let harness_mode = if let Some(aiid) = params.agent_instance_id {
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &aiid)
+            .await
+            .map(|inst| inst.harness_mode())
+            .unwrap_or(HarnessMode::Local)
+    } else {
+        HarnessMode::Local
+    };
+    let harness = state.harness_for(harness_mode);
     let session = harness
         .open_session(SessionConfig {
             agent_id: params.agent_instance_id.map(|id| id.to_string()),
