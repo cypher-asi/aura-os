@@ -51,10 +51,6 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         system_prompt: net.system_prompt.clone().unwrap_or_default(),
         skills: net.skills.clone().unwrap_or_default(),
         icon: net.icon.clone(),
-        harness: match net.harness.as_deref() {
-            Some("local") => aura_os_core::HarnessMode::Local,
-            _ => aura_os_core::HarnessMode::Swarm,
-        },
         machine_type: net.machine_type.clone().unwrap_or_else(|| "local".to_string()),
         network_agent_id: net.id.parse().ok(),
         profile_id,

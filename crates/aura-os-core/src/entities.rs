@@ -154,8 +154,6 @@ pub struct Agent {
     pub skills: Vec<String>,
     #[serde(default)]
     pub icon: Option<String>,
-    #[serde(default)]
-    pub harness: HarnessMode,
     #[serde(default = "default_machine_type")]
     pub machine_type: String,
     #[serde(default)]
@@ -164,6 +162,12 @@ pub struct Agent {
     pub profile_id: Option<ProfileId>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl Agent {
+    pub fn harness_mode(&self) -> HarnessMode {
+        HarnessMode::from_machine_type(&self.machine_type)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
