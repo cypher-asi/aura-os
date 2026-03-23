@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::http::HeaderValue;
@@ -9,7 +10,8 @@ use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 use aura_os_core::{AgentId, AgentInstanceId, HarnessMode, Message, ProjectId};
-use aura_os_link::{HarnessInbound, SessionConfig, UserMessage};
+use aura_os_link::{HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
+use aura_os_storage::StorageClient;
 
 use crate::dto::SendMessageRequest;
 use crate::error::{ApiError, ApiResult};
@@ -17,6 +19,184 @@ use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
 
 use super::conversions::storage_message_to_message;
+
+// ---------------------------------------------------------------------------
+// Chat persistence helpers
+// ---------------------------------------------------------------------------
+
+#[derive(Clone)]
+struct ChatPersistCtx {
+    storage: Arc<StorageClient>,
+    jwt: String,
+    session_id: String,
+    project_agent_id: String,
+    project_id: String,
+}
+
+async fn resolve_chat_session(
+    storage: &StorageClient,
+    jwt: &str,
+    project_agent_id: &str,
+    project_id: &str,
+) -> Option<String> {
+    if let Ok(sessions) = storage.list_sessions(project_agent_id, jwt).await {
+        if let Some(session) = sessions.last() {
+            return Some(session.id.clone());
+        }
+    }
+    let req = aura_os_storage::CreateSessionRequest {
+        project_id: project_id.to_string(),
+        org_id: None,
+        status: Some("active".to_string()),
+        context_usage_estimate: None,
+        summary_of_previous_context: None,
+    };
+    match storage.create_session(project_agent_id, jwt, &req).await {
+        Ok(session) => Some(session.id),
+        Err(e) => {
+            warn!(error = %e, "Failed to create chat session in storage");
+            None
+        }
+    }
+}
+
+fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
+    let ctx = ctx.clone();
+    let content = content.to_string();
+    tokio::spawn(async move {
+        let req = aura_os_storage::CreateMessageRequest {
+            project_agent_id: ctx.project_agent_id,
+            project_id: ctx.project_id,
+            role: "user".to_string(),
+            content,
+            org_id: None,
+            created_by: None,
+            content_blocks: None,
+            input_tokens: None,
+            output_tokens: None,
+            thinking: None,
+            thinking_duration_ms: None,
+        };
+        if let Err(e) = ctx.storage.create_message(&ctx.session_id, &ctx.jwt, &req).await {
+            warn!(error = %e, "Failed to persist user chat message");
+        }
+    });
+}
+
+fn spawn_chat_persist_task(
+    rx: tokio::sync::broadcast::Receiver<HarnessOutbound>,
+    ctx: ChatPersistCtx,
+) {
+    tokio::spawn(async move {
+        let mut rx = rx;
+        let mut text_buf = String::new();
+        let mut thinking_buf = String::new();
+
+        loop {
+            match rx.recv().await {
+                Ok(evt) => {
+                    let json = serde_json::to_value(&evt).unwrap_or_default();
+                    let event_type = json
+                        .get("type")
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("");
+
+                    match event_type {
+                        "text_delta" => {
+                            if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
+                                text_buf.push_str(text);
+                            }
+                        }
+                        "thinking_delta" => {
+                            if let Some(t) = json.get("thinking").and_then(|t| t.as_str()) {
+                                thinking_buf.push_str(t);
+                            }
+                        }
+                        "assistant_message_end" => {
+                            let input_tokens = json
+                                .get("usage")
+                                .and_then(|u| u.get("input_tokens"))
+                                .and_then(|v| v.as_i64());
+                            let output_tokens = json
+                                .get("usage")
+                                .and_then(|u| u.get("output_tokens"))
+                                .and_then(|v| v.as_i64());
+
+                            let msg_req = aura_os_storage::CreateMessageRequest {
+                                project_agent_id: ctx.project_agent_id.clone(),
+                                project_id: ctx.project_id.clone(),
+                                role: "assistant".to_string(),
+                                content: text_buf,
+                                org_id: None,
+                                created_by: None,
+                                content_blocks: None,
+                                input_tokens,
+                                output_tokens,
+                                thinking: if thinking_buf.is_empty() {
+                                    None
+                                } else {
+                                    Some(thinking_buf)
+                                },
+                                thinking_duration_ms: None,
+                            };
+                            if let Err(e) = ctx
+                                .storage
+                                .create_message(&ctx.session_id, &ctx.jwt, &msg_req)
+                                .await
+                            {
+                                warn!(error = %e, "Failed to persist assistant chat message");
+                            } else {
+                                info!(
+                                    session_id = %ctx.session_id,
+                                    "Persisted assistant chat message"
+                                );
+                            }
+                            break;
+                        }
+                        "error" => break,
+                        _ => {}
+                    }
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    warn!(skipped = n, "Chat persistence receiver lagged");
+                }
+            }
+        }
+    });
+}
+
+async fn setup_project_chat_persistence(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: &AgentInstanceId,
+) -> Option<ChatPersistCtx> {
+    let storage = state.storage_client.as_ref()?.clone();
+    let jwt = state.get_jwt().ok()?;
+    let pai = agent_instance_id.to_string();
+    let pid = project_id.to_string();
+    let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
+    Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
+}
+
+async fn setup_agent_chat_persistence(
+    state: &AppState,
+    agent_id: &AgentId,
+) -> Option<ChatPersistCtx> {
+    let storage = state.storage_client.as_ref()?.clone();
+    let jwt = state.get_jwt().ok()?;
+    let matching =
+        find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let project_agent = matching.first()?;
+    let pai = project_agent.id.clone();
+    let pid = project_agent.project_id.clone().unwrap_or_default();
+    if pid.is_empty() {
+        warn!(%agent_id, "No project_id for agent; skipping chat persistence");
+        return None;
+    }
+    let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
+    Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
+}
 
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
@@ -182,6 +362,7 @@ async fn open_harness_chat_stream(
     harness_mode: HarnessMode,
     session_config: SessionConfig,
     user_content: String,
+    persist_ctx: Option<ChatPersistCtx>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
@@ -189,11 +370,27 @@ async fn open_harness_chat_stream(
     let (is_new, rx, commands_tx) =
         get_or_create_chat_session(state, session_key, harness_mode, session_config).await?;
 
+    // Subscribe the persistence receiver *before* sending the user message so
+    // we don't miss early harness events in a fast-response scenario.
+    let persist_rx = if persist_ctx.is_some() {
+        Some(rx.resubscribe())
+    } else {
+        None
+    };
+
+    if let Some(ref ctx) = persist_ctx {
+        persist_user_message(ctx, &user_content);
+    }
+
     commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: user_content,
         }))
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
+
+    if let (Some(ctx), Some(prx)) = (persist_ctx, persist_rx) {
+        spawn_chat_persist_task(prx, ctx);
+    }
 
     let prefix: Vec<Result<Event, Infallible>> = if is_new {
         let progress_event = Event::default()
@@ -234,6 +431,8 @@ pub(crate) async fn send_agent_message_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent: {e}")))?;
 
+    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id).await;
+
     let jwt = state.get_jwt().ok();
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
@@ -243,7 +442,7 @@ pub(crate) async fn send_agent_message_stream(
     };
 
     let session_key = format!("agent:{agent_id}");
-    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content).await
+    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, persist_ctx).await
 }
 
 pub(crate) async fn list_messages(
@@ -283,6 +482,9 @@ pub(crate) async fn send_message_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
 
+    let persist_ctx =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id).await;
+
     let jwt = state.get_jwt().ok();
     let config = SessionConfig {
         system_prompt: Some(instance.system_prompt.clone()),
@@ -292,5 +494,5 @@ pub(crate) async fn send_message_stream(
     };
 
     let session_key = format!("instance:{agent_instance_id}");
-    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content).await
+    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, persist_ctx).await
 }
