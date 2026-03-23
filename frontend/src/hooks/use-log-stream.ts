@@ -5,7 +5,7 @@ import { EventType } from "../types/aura-events";
 import { formatTime } from "../utils/format";
 import { LOG_MAX_LINES } from "../constants";
 import { api } from "../api/client";
-import { computeCost, formatCost } from "../utils/pricing";
+import { formatCost } from "../utils/format";
 
 export interface LogEntry {
   timestamp: string;
@@ -99,10 +99,11 @@ function summariseLoopEvent(e: AuraEvent): string {
       }
       if (c.total_input_tokens != null && c.total_output_tokens != null) {
         const tokens = fmtTokens(c.total_input_tokens + c.total_output_tokens);
-        const cost = c.total_cost_usd != null
-          ? formatCost(c.total_cost_usd)
-          : formatCost(computeCost(c.total_input_tokens, c.total_output_tokens));
-        parts.push(`${tokens} tokens, ${cost} (est.)`);
+        if (c.total_cost_usd != null) {
+          parts.push(`${tokens} tokens, ${formatCost(c.total_cost_usd)}`);
+        } else {
+          parts.push(`${tokens} tokens`);
+        }
       }
       if (c.tasks_retried) parts.push(`${c.tasks_retried} retries`);
       if (c.sessions_used && c.sessions_used > 1) parts.push(`${c.sessions_used} sessions`);
@@ -129,10 +130,9 @@ function summariseTaskCompleted(c: AuraEventContent<EventType.TaskCompleted>): s
   if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms));
   if (c.input_tokens != null && c.output_tokens != null) {
     parts.push(`${fmtTokens(c.input_tokens + c.output_tokens)} tokens`);
-    const taskCost = c.cost_usd != null
-      ? formatCost(c.cost_usd)
-      : formatCost(computeCost(c.input_tokens, c.output_tokens, c.model));
-    parts.push(`${taskCost} (est.)`);
+    if (c.cost_usd != null) {
+      parts.push(formatCost(c.cost_usd));
+    }
   }
   if (c.parse_retries) parts.push(`${c.parse_retries} retries`);
   if (c.build_fix_attempts) parts.push(`${c.build_fix_attempts} build fix${c.build_fix_attempts > 1 ? "es" : ""}`);

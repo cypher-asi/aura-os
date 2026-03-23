@@ -4,8 +4,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Button, Text } from "@cypher-asi/zui";
 import { RotateCcw } from "lucide-react";
 import { TaskStatusIcon } from "../TaskStatusIcon";
-import { toBullets, formatTokens, formatModelName } from "../../utils/format";
-import { formatCostFromTokens, getCostEstimateLabel } from "../../utils/pricing";
+import { toBullets, formatTokens } from "../../utils/format";
 import type { Task, AgentInstance } from "../../types";
 import styles from "../Preview/Preview.module.css";
 
@@ -137,7 +136,7 @@ export function TaskMetaSection({
       {task.model && (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Model</span>
-          <Text size="sm">{formatModelName(task.model)}</Text>
+          <Text size="sm">{task.model}</Text>
         </div>
       )}
       {(task.total_input_tokens > 0 || task.total_output_tokens > 0) && (
@@ -148,10 +147,6 @@ export function TaskMetaSection({
               {formatTokens(task.total_input_tokens + task.total_output_tokens)} total
               <Text variant="muted" size="sm" as="span"> ({formatTokens(task.total_input_tokens)} in / {formatTokens(task.total_output_tokens)} out)</Text>
             </Text>
-          </div>
-          <div className={styles.taskField} title={getCostEstimateLabel()}>
-            <span className={styles.fieldLabel}>Cost</span>
-            <Text size="sm">{formatCostFromTokens(task.total_input_tokens, task.total_output_tokens, task.model ?? undefined)}</Text>
           </div>
         </>
       )}

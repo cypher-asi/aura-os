@@ -7,8 +7,7 @@ import { api } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { TaskStatusIcon } from "../TaskStatusIcon";
-import { formatRelativeTime, formatTokens, formatModelName } from "../../utils/format";
-import { formatCostFromTokens, getCostEstimateLabel } from "../../utils/pricing";
+import { formatRelativeTime, formatTokens } from "../../utils/format";
 import { StatusBadge } from "../StatusBadge";
 import type { Task, Session } from "../../types";
 import styles from "../Preview/Preview.module.css";
@@ -78,13 +77,9 @@ export function SessionPreview({ session }: { session: Session }) {
         {session.model && (
           <div className={styles.taskField}>
             <Text variant="muted" size="sm">Model</Text>
-            <Text size="sm">{formatModelName(session.model)}</Text>
+            <Text size="sm">{session.model}</Text>
           </div>
         )}
-        <div className={styles.taskField} title={getCostEstimateLabel()}>
-          <Text variant="muted" size="sm">Cost</Text>
-          <Text size="sm">{formatCostFromTokens(session.total_input_tokens, session.total_output_tokens, session.model ?? undefined)}</Text>
-        </div>
         <div className={styles.taskField}>
           <Text variant="muted" size="sm">Duration</Text>
           <Text size="sm">
