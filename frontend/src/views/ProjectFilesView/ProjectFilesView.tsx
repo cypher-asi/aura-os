@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, Spinner, Text } from "@cypher-asi/zui";
 import { X } from "lucide-react";
 import { useParams } from "react-router-dom";
-import { api } from "../../api/client";
 import { PanelSearch } from "../../components/PanelSearch";
 import { FileExplorer } from "../../components/FileExplorer";
 import { useProjectContext } from "../../stores/project-action-store";
@@ -13,16 +12,12 @@ import { filenameFromPath, langFromPath } from "../../ide/lang";
 import { resolveApiUrl } from "../../lib/host-config";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { getProjectWorkspaceDisplay, getProjectWorkspaceLabel, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
+import { useMobileFilePreview } from "./useMobileFilePreview";
 import styles from "./ProjectFilesView.module.css";
 
 type MobilePreviewKind = "markdown" | "text" | "image" | "pdf" | "unsupported";
 
 export function ProjectFilesView() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [previewContent, setPreviewContent] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
   const { isMobileLayout } = useAuraCapabilities();
   const ctx = useProjectContext();
   const { projectId } = useParams<{ projectId: string }>();
@@ -36,6 +31,37 @@ export function ProjectFilesView() {
   const workspaceSourceDescription = project?.workspace_source === "imported"
     ? "Preview imported project files on mobile."
     : "Preview readable files from the linked workspace.";
+  const projectKey = project?.project_id ?? rootPath ?? "project-files";
+
+  return (
+    <ProjectFilesContent
+      key={projectKey}
+      isMobileLayout={isMobileLayout}
+      rootPath={rootPath}
+      workspaceSourceLabel={workspaceSourceLabel}
+      workspaceDisplay={workspaceDisplay}
+      workspaceSourceDescription={workspaceSourceDescription}
+    />
+  );
+}
+
+interface ProjectFilesContentProps {
+  isMobileLayout: boolean;
+  rootPath: string | null;
+  workspaceSourceLabel: string;
+  workspaceDisplay: string | null;
+  workspaceSourceDescription: string;
+}
+
+function ProjectFilesContent({
+  isMobileLayout,
+  rootPath,
+  workspaceSourceLabel,
+  workspaceDisplay,
+  workspaceSourceDescription,
+}: ProjectFilesContentProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const selectedFileKind = useMemo<MobilePreviewKind | null>(
     () => (selectedFilePath ? getMobilePreviewKind(selectedFilePath) : null),
     [selectedFilePath],
@@ -45,55 +71,15 @@ export function ProjectFilesView() {
     ? resolveApiUrl(`/api/file-preview?path=${encodeURIComponent(selectedFilePath)}`)
     : null;
   const selectedFileLanguage = selectedFilePath ? langFromPath(selectedFilePath) ?? "plain text" : null;
-
-  useEffect(() => {
-    setSelectedFilePath(null);
-    setPreviewContent(null);
-    setPreviewError(null);
-    setPreviewLoading(false);
-  }, [project?.project_id]);
-
-  useEffect(() => {
-    if (!isMobileLayout || !selectedFilePath || !selectedFileKind) {
-      return;
-    }
-
-    if (selectedFileKind === "image" || selectedFileKind === "pdf" || selectedFileKind === "unsupported") {
-      setPreviewLoading(false);
-      setPreviewContent(null);
-      setPreviewError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setPreviewLoading(true);
-    setPreviewContent(null);
-    setPreviewError(null);
-
-    api.readFile(selectedFilePath)
-      .then((response) => {
-        if (cancelled) return;
-        if (response.ok && response.content != null) {
-          setPreviewContent(response.content);
-          return;
-        }
-        setPreviewError(response.error ?? "Preview unavailable");
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPreviewError(String(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setPreviewLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isMobileLayout, selectedFileKind, selectedFilePath]);
+  const {
+    previewContent,
+    previewError,
+    previewLoading,
+  } = useMobileFilePreview({
+    enabled: isMobileLayout,
+    filePath: selectedFilePath,
+    previewKind: selectedFileKind,
+  });
 
   return (
     <div className={styles.container}>
