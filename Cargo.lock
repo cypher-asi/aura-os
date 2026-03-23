@@ -302,12 +302,16 @@ dependencies = [
  "aura-executor",
  "aura-kernel",
  "aura-reasoner",
+ "base64 0.22.1",
  "futures-util",
+ "regex",
  "serde",
  "serde_json",
+ "thiserror 1.0.69",
  "tokio",
  "tokio-util",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -542,10 +546,15 @@ dependencies = [
  "async-trait",
  "aura-agent",
  "aura-reasoner",
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

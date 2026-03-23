@@ -1,14 +1,21 @@
 #![warn(missing_docs)]
-//! Agentic execution link — abstractions for running LLM agent turns.
+//! Agentic execution link — abstractions for running LLM agent turns
+//! and the [`SwarmClient`] HTTP client for the automaton management API.
 //!
-//! This crate defines the [`AgentRuntime`] trait (the seam where different
-//! execution backends plug in) and supporting types like [`ToolExecutor`],
-//! [`TurnRequest`], [`TurnResult`], and [`RuntimeEvent`].
+//! ## Legacy runtime surface (will be removed)
 //!
-//! Conversation and tool types are re-exported from the harness crates
-//! (`aura-reasoner`, `aura-agent`) so consumers get the canonical definitions
-//! without pulling in provider crates directly.
+//! The [`AgentRuntime`] trait, [`LinkRuntime`], [`ToolExecutor`],
+//! [`TurnRequest`] / [`TurnResult`], and [`RuntimeEvent`] types are kept
+//! temporarily for backward compatibility with the `aura-chat` and
+//! `aura-engine` crates.  They will be deleted once those crates are removed.
+//!
+//! ## SwarmClient
+//!
+//! [`SwarmClient`] is the new, thin HTTP client that talks to the Swarm
+//! automaton daemon.  All new code should use this instead of the legacy
+//! runtime types.
 
+// ── Legacy modules (backward compat, will be removed) ────────────────
 mod error;
 mod events;
 mod executor;
@@ -32,6 +39,13 @@ pub use types::{
     tool_result_as_str, tool_result_text_mut, CacheControl, ContentBlock, ImageSource, Message,
     MessageContent, Role, ThinkingConfig, ToolCall, ToolDefinition, ToolResultContent,
 };
+
+// ── Swarm client ─────────────────────────────────────────────────────
+mod swarm_client;
+mod swarm_types;
+
+pub use swarm_client::SwarmClient;
+pub use swarm_types::{AutomatonEvent, AutomatonInfo, AutomatonStatus, InstallRequest, InstallResponse};
 
 #[cfg(test)]
 mod tests;
