@@ -13,7 +13,6 @@ use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
-use aura_os_settings::SettingsService;
 use aura_os_storage::StorageClient;
 use aura_os_store::{RocksStore, StoreError};
 use aura_os_tasks::TaskService;
@@ -67,7 +66,6 @@ fn env_opt(key: &str) -> Option<String> {
 struct CoreServices {
     org_service: Arc<OrgService>,
     auth_service: Arc<AuthService>,
-    settings_service: Arc<SettingsService>,
     pricing_service: Arc<PricingService>,
     billing_client: Arc<BillingClient>,
 }
@@ -76,7 +74,6 @@ fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
     CoreServices {
         org_service: Arc::new(OrgService::new(store.clone())),
         auth_service: Arc::new(AuthService::new(store.clone())),
-        settings_service: Arc::new(SettingsService::new(store.clone())),
         pricing_service: Arc::new(PricingService::new(store.clone())),
         billing_client: Arc::new(BillingClient::new()),
     }
@@ -159,7 +156,6 @@ pub(crate) fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         store,
         org_service: core.org_service,
         auth_service: core.auth_service,
-        settings_service: core.settings_service,
         pricing_service: core.pricing_service,
         billing_client: core.billing_client,
         project_service: domain.project_service,

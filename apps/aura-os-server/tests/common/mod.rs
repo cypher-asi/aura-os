@@ -23,7 +23,6 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_server::state::AppState;
 use aura_os_sessions::SessionService;
-use aura_os_settings::SettingsService;
 use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
@@ -201,7 +200,6 @@ pub fn build_test_app_from_store(
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
 ) -> (Router, AppState) {
-    let settings_service = Arc::new(SettingsService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
@@ -239,7 +237,6 @@ pub fn build_test_app_from_store(
         data_dir,
         org_service,
         auth_service,
-        settings_service,
         pricing_service,
         billing_client,
         project_service,

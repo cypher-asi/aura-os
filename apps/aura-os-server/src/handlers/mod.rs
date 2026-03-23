@@ -11,7 +11,6 @@ pub(crate) mod orgs;
 pub(crate) mod pricing;
 pub(crate) mod projects;
 mod projects_helpers;
-pub(crate) mod settings;
 pub(crate) mod specs;
 pub(crate) mod sse;
 pub(crate) mod tasks;

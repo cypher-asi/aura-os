@@ -9,7 +9,6 @@ members = [
     "crates/aura-os-orgs",
     "crates/aura-os-projects",
     "crates/aura-os-sessions",
-    "crates/aura-os-settings",
     "crates/aura-os-storage",
     "crates/aura-os-store",
     "crates/aura-os-tasks",

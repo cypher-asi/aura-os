@@ -11,7 +11,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
     agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orgs, pricing,
-    projects, settings, specs, tasks, terminal, users, ws,
+    projects, specs, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -116,7 +116,6 @@ fn billing_routes() -> Router<AppState> {
             get(billing::get_transactions),
         )
         .route("/api/orgs/:org_id/account", get(billing::get_account))
-        .route("/api/settings/api-key", get(settings::get_api_key_info))
         .route(
             "/api/settings/fee-schedule",
             get(pricing::get_fee_schedule).put(pricing::set_fee_schedule),

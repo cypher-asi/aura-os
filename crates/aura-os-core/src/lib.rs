@@ -26,4 +26,4 @@ pub use prompts::{
     SESSION_SUMMARY_SYSTEM_PROMPT, SPEC_GENERATION_SYSTEM_PROMPT, SPEC_OVERVIEW_SYSTEM_PROMPT,
     SPEC_SUMMARY_SYSTEM_PROMPT, TASK_EXTRACTION_SYSTEM_PROMPT, TITLE_GEN_SYSTEM_PROMPT,
 };
-pub use settings::{ApiKeyInfo, SettingsEntry, SettingsValue};
+pub use settings::{SettingsEntry, SettingsValue};

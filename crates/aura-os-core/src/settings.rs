@@ -14,8 +14,3 @@ pub struct SettingsEntry {
 pub enum SettingsValue {
     PlainText(String),
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApiKeyInfo {
-    pub configured: bool,
-}

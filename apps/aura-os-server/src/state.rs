@@ -15,7 +15,6 @@ use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
-use aura_os_settings::SettingsService;
 use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
@@ -32,7 +31,6 @@ pub(crate) struct AppState {
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
     pub auth_service: Arc<AuthService>,
-    pub settings_service: Arc<SettingsService>,
     pub pricing_service: Arc<PricingService>,
     pub billing_client: Arc<BillingClient>,
     pub project_service: Arc<ProjectService>,
