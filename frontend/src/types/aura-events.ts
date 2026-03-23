@@ -16,84 +16,89 @@ export interface ChatAttachment {
   name?: string;
 }
 
-/* ── EventType enum ─────────────────────────────────────────────────
+/* ── EventType ───────────────────────────────────────────────────────
  * Single source of truth — maps 1:1 with the backend DB enum.
  * String values are the wire/storage format.
+ *
+ * Defined as a `const` object + type alias instead of a TS `enum`
+ * so it is compatible with `erasableSyntaxOnly`.
  * ------------------------------------------------------------------ */
 
-export enum EventType {
+export const EventType = {
   // Message lifecycle
-  UserMessage           = "user_message",
-  MessageStart          = "message_start",
-  MessageEnd            = "message_end",
+  UserMessage:           "user_message",
+  MessageStart:          "message_start",
+  MessageEnd:            "message_end",
 
   // Streaming (within MessageStart..MessageEnd)
-  Delta                 = "delta",
-  ThinkingDelta         = "thinking_delta",
-  Progress              = "progress",
-  ToolCallStarted       = "tool_call_started",
-  ToolCallSnapshot      = "tool_call_snapshot",
-  ToolCall              = "tool_call",
-  ToolResult            = "tool_result",
-  TokenUsage            = "token_usage",
-  Done                  = "done",
+  Delta:                 "delta",
+  ThinkingDelta:         "thinking_delta",
+  Progress:              "progress",
+  ToolCallStarted:       "tool_call_started",
+  ToolCallSnapshot:      "tool_call_snapshot",
+  ToolCall:              "tool_call",
+  ToolResult:            "tool_result",
+  TokenUsage:            "token_usage",
+  Done:                  "done",
 
   // Agent state
-  AgentInstanceUpdated  = "agent_instance_updated",
+  AgentInstanceUpdated:  "agent_instance_updated",
 
   // Spec generation
-  SpecSaved             = "spec_saved",
-  SpecsTitle            = "specs_title",
-  SpecsSummary          = "specs_summary",
-  SpecGenStarted        = "spec_gen_started",
-  SpecGenProgress       = "spec_gen_progress",
-  SpecGenCompleted      = "spec_gen_completed",
-  SpecGenFailed         = "spec_gen_failed",
-  SpecGenerating        = "generating",
-  SpecGenComplete       = "complete",
+  SpecSaved:             "spec_saved",
+  SpecsTitle:            "specs_title",
+  SpecsSummary:          "specs_summary",
+  SpecGenStarted:        "spec_gen_started",
+  SpecGenProgress:       "spec_gen_progress",
+  SpecGenCompleted:      "spec_gen_completed",
+  SpecGenFailed:         "spec_gen_failed",
+  SpecGenerating:        "generating",
+  SpecGenComplete:       "complete",
 
   // Task lifecycle
-  TaskSaved             = "task_saved",
-  TaskStarted           = "task_started",
-  TaskCompleted         = "task_completed",
-  TaskFailed            = "task_failed",
-  TaskRetrying          = "task_retrying",
-  TaskBecameReady       = "task_became_ready",
-  TasksBecameReady      = "tasks_became_ready",
-  TaskOutputDelta       = "task_output_delta",
-  FollowUpTaskCreated   = "follow_up_task_created",
-  FileOpsApplied        = "file_ops_applied",
+  TaskSaved:             "task_saved",
+  TaskStarted:           "task_started",
+  TaskCompleted:         "task_completed",
+  TaskFailed:            "task_failed",
+  TaskRetrying:          "task_retrying",
+  TaskBecameReady:       "task_became_ready",
+  TasksBecameReady:      "tasks_became_ready",
+  TaskOutputDelta:       "task_output_delta",
+  FollowUpTaskCreated:   "follow_up_task_created",
+  FileOpsApplied:        "file_ops_applied",
 
   // Loop lifecycle
-  LoopStarted           = "loop_started",
-  LoopPaused            = "loop_paused",
-  LoopStopped           = "loop_stopped",
-  LoopFinished          = "loop_finished",
-  LoopIterationSummary  = "loop_iteration_summary",
-  SessionRolledOver     = "session_rolled_over",
+  LoopStarted:           "loop_started",
+  LoopPaused:            "loop_paused",
+  LoopStopped:           "loop_stopped",
+  LoopFinished:          "loop_finished",
+  LoopIterationSummary:  "loop_iteration_summary",
+  SessionRolledOver:     "session_rolled_over",
 
   // Build verification
-  BuildVerificationSkipped  = "build_verification_skipped",
-  BuildVerificationStarted  = "build_verification_started",
-  BuildVerificationPassed   = "build_verification_passed",
-  BuildVerificationFailed   = "build_verification_failed",
-  BuildFixAttempt           = "build_fix_attempt",
+  BuildVerificationSkipped:  "build_verification_skipped",
+  BuildVerificationStarted:  "build_verification_started",
+  BuildVerificationPassed:   "build_verification_passed",
+  BuildVerificationFailed:   "build_verification_failed",
+  BuildFixAttempt:           "build_fix_attempt",
 
   // Test verification
-  TestVerificationStarted   = "test_verification_started",
-  TestVerificationPassed    = "test_verification_passed",
-  TestVerificationFailed    = "test_verification_failed",
-  TestFixAttempt            = "test_fix_attempt",
+  TestVerificationStarted:   "test_verification_started",
+  TestVerificationPassed:    "test_verification_passed",
+  TestVerificationFailed:    "test_verification_failed",
+  TestFixAttempt:            "test_fix_attempt",
 
   // Git
-  GitCommitted          = "git_committed",
-  GitPushed             = "git_pushed",
+  GitCommitted:          "git_committed",
+  GitPushed:             "git_pushed",
 
   // Other
-  LogLine               = "log_line",
-  NetworkEvent          = "network_event",
-  Error                 = "error",
-}
+  LogLine:               "log_line",
+  NetworkEvent:          "network_event",
+  Error:                 "error",
+} as const;
+
+export type EventType = (typeof EventType)[keyof typeof EventType];
 
 /* ── Sender & AuraEventBase ─────────────────────────────────────────
  * Mirrors the `session_events` table columns.
