@@ -9,6 +9,7 @@ use tokio_stream::StreamExt;
 use tracing::info;
 
 use aura_os_core::{ProjectId, Spec, SpecId};
+use aura_os_link::AutomatonEvent;
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -95,12 +96,14 @@ pub async fn get_spec(
     Ok(Json(spec))
 }
 
-pub async fn generate_specs(
-    State(state): State<AppState>,
-    Path(project_id): Path<ProjectId>,
-) -> ApiResult<Json<Vec<Spec>>> {
-    super::billing::require_credits(&state).await?;
-    info!(%project_id, "Spec generation requested");
+const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
+    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
+
+async fn install_spec_gen(
+    state: &AppState,
+    project_id: &ProjectId,
+) -> ApiResult<tokio::sync::mpsc::UnboundedReceiver<AutomatonEvent>> {
+    super::billing::require_credits(state).await?;
 
     let config = serde_json::json!({
         "project_id": project_id.to_string(),
@@ -112,11 +115,19 @@ pub async fn generate_specs(
         .await
         .map_err(|e| ApiError::internal(format!("installing spec generation agent: {e}")))?;
 
-    let mut rx = state
+    state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(format!("subscribing to spec generation events: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to spec generation events: {e}")))
+}
+
+pub async fn generate_specs(
+    State(state): State<AppState>,
+    Path(project_id): Path<ProjectId>,
+) -> ApiResult<Json<Vec<Spec>>> {
+    info!(%project_id, "Spec generation requested");
+    let mut rx = install_spec_gen(&state, &project_id).await?;
 
     while let Some(event) = rx.recv().await {
         match event.event_type.as_str() {
@@ -146,9 +157,6 @@ pub async fn generate_specs(
     ))
 }
 
-const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
-    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
-
 pub async fn generate_specs_stream(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
@@ -156,24 +164,8 @@ pub async fn generate_specs_stream(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
 )> {
-    super::billing::require_credits(&state).await?;
     info!(%project_id, "Streaming spec generation requested");
-
-    let config = serde_json::json!({
-        "project_id": project_id.to_string(),
-    });
-
-    let resp = state
-        .swarm_client
-        .install("spec-gen", config)
-        .await
-        .map_err(|e| ApiError::internal(format!("installing streaming spec generation agent: {e}")))?;
-
-    let events_rx = state
-        .swarm_client
-        .events(&resp.automaton_id)
-        .await
-        .map_err(|e| ApiError::internal(format!("subscribing to streaming spec generation events: {e}")))?;
+    let events_rx = install_spec_gen(&state, &project_id).await?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
         .map(|evt| super::sse::automaton_event_to_sse(&evt));

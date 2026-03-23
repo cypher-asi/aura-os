@@ -46,14 +46,14 @@ async fn find_matching_project_agents(
 
     results
         .into_iter()
-        .enumerate()
-        .flat_map(|(i, result)| match result {
+        .zip(pids.iter())
+        .flat_map(|(result, pid)| match result {
             Ok(agents) => agents
                 .into_iter()
                 .filter(|a| a.agent_id.as_deref() == Some(agent_id_str))
                 .collect::<Vec<_>>(),
             Err(e) => {
-                warn!(project_id = %pids[i], error = %e, "Failed to list project agents");
+                warn!(project_id = %pid, error = %e, "Failed to list project agents");
                 Vec::new()
             }
         })
@@ -63,16 +63,15 @@ async fn find_matching_project_agents(
 async fn collect_session_messages(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
-    agents: &[aura_os_storage::StorageProjectAgent],
+    sessions: &[aura_os_storage::StorageSession],
 ) -> Vec<Message> {
-    let all_sessions = fetch_all_sessions(storage, jwt, agents).await;
-    let msg_futs: Vec<_> = all_sessions
+    let msg_futs: Vec<_> = sessions
         .iter()
         .map(|s| storage.list_messages(&s.id, jwt, None, None))
         .collect();
     let msg_results: Vec<Result<Vec<aura_os_storage::StorageMessage>, _>> = join_all(msg_futs).await;
     let mut messages = Vec::new();
-    for (i, result) in msg_results.into_iter().enumerate() {
+    for (result, session) in msg_results.into_iter().zip(sessions.iter()) {
         match result {
             Ok(session_msgs) => {
                 for sm in session_msgs
@@ -83,7 +82,7 @@ async fn collect_session_messages(
                 }
             }
             Err(e) => {
-                warn!(session_id = %all_sessions[i].id, error = %e, "Failed to list messages");
+                warn!(session_id = %session.id, error = %e, "Failed to list messages");
             }
         }
     }
@@ -102,11 +101,11 @@ async fn fetch_all_sessions(
     let results: Vec<Result<Vec<aura_os_storage::StorageSession>, _>> = join_all(futs).await;
     results
         .into_iter()
-        .enumerate()
-        .flat_map(|(i, result)| match result {
+        .zip(agents.iter())
+        .flat_map(|(result, agent)| match result {
             Ok(sessions) => sessions,
             Err(e) => {
-                warn!(project_agent_id = %agents[i].id, error = %e, "Failed to list sessions");
+                warn!(project_agent_id = %agent.id, error = %e, "Failed to list sessions");
                 Vec::new()
             }
         })
@@ -124,7 +123,8 @@ pub async fn aggregate_agent_messages_from_storage(
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
-    let mut messages = collect_session_messages(storage, &jwt, &matching).await;
+    let sessions = fetch_all_sessions(storage, &jwt, &matching).await;
+    let mut messages = collect_session_messages(storage, &jwt, &sessions).await;
     messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
     messages
 }
@@ -137,6 +137,34 @@ pub async fn list_agent_messages(
     let _ = state.get_jwt()?;
     let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
     Ok(Json(messages))
+}
+
+async fn install_chat_stream(
+    state: &AppState,
+    config: serde_json::Value,
+) -> ApiResult<(
+    [(&'static str, HeaderValue); 1],
+    Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
+)> {
+    let resp = state
+        .swarm_client
+        .install("chat", config)
+        .await
+        .map_err(|e| ApiError::internal(format!("installing chat agent: {e}")))?;
+
+    let events_rx = state
+        .swarm_client
+        .events(&resp.automaton_id)
+        .await
+        .map_err(|e| ApiError::internal(format!("subscribing to chat events: {e}")))?;
+
+    let stream = UnboundedReceiverStream::new(events_rx)
+        .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
+
+    Ok((
+        SSE_NO_BUFFERING_HEADERS,
+        Sse::new(stream).keep_alive(KeepAlive::default()),
+    ))
 }
 
 pub async fn send_agent_message_stream(
@@ -157,25 +185,7 @@ pub async fn send_agent_message_stream(
         "attachments": body.attachments,
     });
 
-    let resp = state
-        .swarm_client
-        .install("chat", config)
-        .await
-        .map_err(|e| ApiError::internal(format!("installing agent chat agent: {e}")))?;
-
-    let events_rx = state
-        .swarm_client
-        .events(&resp.automaton_id)
-        .await
-        .map_err(|e| ApiError::internal(format!("subscribing to agent chat events: {e}")))?;
-
-    let stream = UnboundedReceiverStream::new(events_rx)
-        .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
-
-    Ok((
-        SSE_NO_BUFFERING_HEADERS,
-        Sse::new(stream).keep_alive(KeepAlive::default()),
-    ))
+    install_chat_stream(&state, config).await
 }
 
 pub async fn list_messages(
@@ -193,17 +203,7 @@ pub async fn list_messages(
             Vec::new()
         });
 
-    let mut messages = Vec::new();
-    for session in &sessions {
-        if let Ok(session_msgs) = storage.list_messages(&session.id, &jwt, None, None).await {
-            for sm in session_msgs
-                .iter()
-                .filter(|sm| sm.role.as_deref() != Some("system"))
-            {
-                messages.push(storage_message_to_message(sm));
-            }
-        }
-    }
+    let mut messages = collect_session_messages(&storage, &jwt, &sessions).await;
     messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
     Ok(Json(messages))
 }
@@ -227,23 +227,5 @@ pub async fn send_message_stream(
         "attachments": body.attachments,
     });
 
-    let resp = state
-        .swarm_client
-        .install("chat", config)
-        .await
-        .map_err(|e| ApiError::internal(format!("installing instance chat agent: {e}")))?;
-
-    let events_rx = state
-        .swarm_client
-        .events(&resp.automaton_id)
-        .await
-        .map_err(|e| ApiError::internal(format!("subscribing to instance chat events: {e}")))?;
-
-    let stream = UnboundedReceiverStream::new(events_rx)
-        .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
-
-    Ok((
-        SSE_NO_BUFFERING_HEADERS,
-        Sse::new(stream).keep_alive(KeepAlive::default()),
-    ))
+    install_chat_stream(&state, config).await
 }
