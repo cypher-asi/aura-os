@@ -29,14 +29,16 @@ where
         while let Some(msg_result) = ws_stream_read.next().await {
             match msg_result {
                 Ok(WsMessage::Text(text)) => {
+                    debug!(raw = %text, "WS frame received");
                     match serde_json::from_str::<HarnessOutbound>(&text) {
                         Ok(event) => {
+                            debug!(?event, "Parsed harness event");
                             if reader_tx.send(event).is_err() {
                                 break;
                             }
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize harness message: {e}");
+                            warn!(raw = %text, "Failed to deserialize harness message: {e}");
                         }
                     }
                 }

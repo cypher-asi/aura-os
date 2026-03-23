@@ -162,8 +162,11 @@ async fn open_harness_chat_stream(
         })
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 
-    let stream = UnboundedReceiverStream::new(session.events_rx)
-        .map(|evt| super::super::sse::harness_event_to_sse(&evt));
+    let commands_tx = session.commands_tx;
+    let stream = UnboundedReceiverStream::new(session.events_rx).map(move |evt| {
+        let _ = &commands_tx;
+        super::super::sse::harness_event_to_sse(&evt)
+    });
 
     Ok((
         SSE_NO_BUFFERING_HEADERS,
