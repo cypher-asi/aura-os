@@ -84,6 +84,7 @@ pub(crate) struct CreateAgentRequest {
     #[serde(default)]
     pub skills: Vec<String>,
     pub icon: Option<String>,
+    pub machine_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,6 +95,7 @@ pub(crate) struct UpdateAgentRequest {
     pub system_prompt: Option<String>,
     pub skills: Option<Vec<String>>,
     pub icon: Option<Option<String>>,
+    pub machine_type: Option<String>,
 }
 
 // -- AgentInstance DTOs (project-level) --
