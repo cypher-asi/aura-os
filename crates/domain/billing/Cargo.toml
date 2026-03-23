@@ -9,11 +9,6 @@ test-utils = ["dep:axum", "dep:tempfile"]
 [dependencies]
 aura-core = { path = "../../infra/core" }
 aura-store = { path = "../../infra/store" }
-aura-claude = { path = "../../infra/claude" }
-aura-settings = { path = "../settings" }
-aura-provider = { path = "../../infra/provider" }
-async-trait = "0.1"
-futures-util = "0.3"
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

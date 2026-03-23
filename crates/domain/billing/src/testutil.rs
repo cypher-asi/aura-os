@@ -1,14 +1,9 @@
-/// Shared test utilities for billing-related tests.
-///
-/// This module is public so downstream crates (aura-chat, aura-engine) can
-/// reuse the mock billing server and session helpers instead of duplicating them.
 use std::sync::Arc;
 
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
 
 use crate::client::BillingClient;
-use crate::metered::MeteredLlm;
 
 pub static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
@@ -127,34 +122,3 @@ pub fn store_zero_auth_session(store: &RocksStore) {
     store.put_setting("zero_auth_session", &session).unwrap();
 }
 
-/// Create a fully wired `MeteredLlm` backed by a mock billing server and
-/// the given `LlmProvider`. Always operates in non-router mode regardless
-/// of the `AURA_ROUTER_URL` env var (avoids env-var races with parallel tests).
-pub async fn make_test_llm(
-    provider: Arc<dyn aura_claude::LlmProvider>,
-) -> (Arc<MeteredLlm>, tempfile::TempDir) {
-    let url = start_mock_billing_server().await;
-    let billing = Arc::new(billing_client_for_url(&url));
-    let tmp = tempfile::TempDir::new().unwrap();
-    let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-    store_zero_auth_session(&store);
-    let mut llm = MeteredLlm::new(provider, billing, store);
-    llm.router_mode = false;
-    (Arc::new(llm), tmp)
-}
-
-/// Like `make_test_llm`, but backed by a stateful mock server so tests can
-/// configure low balances. Always operates in non-router mode.
-pub async fn make_test_llm_stateful(
-    provider: Arc<dyn aura_claude::LlmProvider>,
-    state: Arc<tokio::sync::Mutex<MockBillingState>>,
-) -> (Arc<MeteredLlm>, tempfile::TempDir) {
-    let url = start_stateful_mock_billing_server(state).await;
-    let billing = Arc::new(billing_client_for_url(&url));
-    let tmp = tempfile::TempDir::new().unwrap();
-    let store = Arc::new(RocksStore::open(tmp.path()).unwrap());
-    store_zero_auth_session(&store);
-    let mut llm = MeteredLlm::new(provider, billing, store);
-    llm.router_mode = false;
-    (Arc::new(llm), tmp)
-}

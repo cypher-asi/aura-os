@@ -6,13 +6,10 @@ use std::sync::Arc;
 use chrono::Utc;
 use tracing::warn;
 
-use aura_claude::LlmProvider;
 pub use aura_core::parse_dt;
 use aura_core::*;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
-
-pub use aura_core::SESSION_SUMMARY_SYSTEM_PROMPT as SUMMARY_SYSTEM_PROMPT;
 
 pub struct SessionService {
     store: Arc<RocksStore>,
@@ -368,34 +365,12 @@ impl SessionService {
             .len())
     }
 
-    pub async fn generate_rollover_summary(
-        &self,
-        llm: &dyn LlmProvider,
-        api_key: &str,
-        conversation_history: &str,
-    ) -> Result<String, SessionError> {
-        let resp = llm
-            .complete_with_model(
-                aura_claude::FAST_MODEL,
-                api_key,
-                SUMMARY_SYSTEM_PROMPT,
-                conversation_history,
-                2048,
-            )
-            .await?;
-        Ok(resp.text)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use aura_claude::mock::{MockLlmProvider, MockResponse};
     use std::sync::Arc;
-
-    // -----------------------------------------------------------------------
-    // SessionService pure-logic tests (no StorageClient or local persistence)
-    // -----------------------------------------------------------------------
 
     #[tokio::test]
     async fn should_rollover_at_threshold() {
@@ -454,42 +429,5 @@ mod tests {
         assert_eq!(session.project_id, pid);
         assert_eq!(session.agent_instance_id, aid);
         assert_eq!(session.context_usage_estimate, 0.0);
-    }
-
-    // -----------------------------------------------------------------------
-    // generate_rollover_summary with MockLlmProvider
-    // -----------------------------------------------------------------------
-
-    #[tokio::test]
-    async fn generate_summary_returns_llm_text() {
-        let mock = Arc::new(MockLlmProvider::with_responses(vec![MockResponse::text(
-            "The user discussed authentication and database setup.",
-        )
-        .with_tokens(200, 100)]));
-
-        let (llm, _tmp_llm) = aura_billing::testutil::make_test_llm(mock.clone()).await;
-
-        let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-        let store =
-            Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
-        let svc = SessionService::new(store, 0.8, 150_000);
-
-        let summary = svc
-            .generate_rollover_summary(
-                llm.as_ref(),
-                "test-key",
-                "User: How do I set up auth?\nAssistant: Use JWT tokens.",
-            )
-            .await
-            .expect("summary generation should succeed");
-
-        assert_eq!(
-            summary,
-            "The user discussed authentication and database setup."
-        );
-        assert_eq!(mock.call_count(), 1);
-
-        let calls = mock.recorded_calls().await;
-        assert_eq!(calls[0].system_prompt, SUMMARY_SYSTEM_PROMPT);
     }
 }

@@ -2,10 +2,10 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
+use tracing::info;
 
 use aura_core::{AgentInstanceId, ProjectId, TaskId};
 
-use crate::channel_ext::send_or_log;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
@@ -22,21 +22,49 @@ pub async fn start_loop(
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
     super::billing::require_credits(&state).await?;
-    state.gc_finished_loops().await;
 
-    let engine = state.build_engine();
+    let agent_instance_id = params
+        .agent_instance_id
+        .unwrap_or_else(AgentInstanceId::new);
 
-    let loop_handle = engine
-        .start(project_id, params.agent_instance_id)
+    let config = serde_json::json!({
+        "project_id": project_id.to_string(),
+        "agent_instance_id": agent_instance_id.to_string(),
+    });
+
+    let resp = state
+        .swarm_client
+        .install("dev-loop", config)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
-    let agent_instance_id = loop_handle.agent_instance_id;
+    info!(
+        %project_id,
+        %agent_instance_id,
+        automaton_id = %resp.automaton_id,
+        "Dev loop automaton installed"
+    );
+
+    // Forward automaton events to the broadcast channel for WS clients
+    if let Ok(mut events_rx) = state.swarm_client.events(&resp.automaton_id).await {
+        let broadcast_tx = state.event_broadcast.clone();
+        tokio::spawn(async move {
+            while let Some(event) = events_rx.recv().await {
+                let json = serde_json::to_value(&event).unwrap_or_default();
+                let _ = broadcast_tx.send(json);
+            }
+        });
+    }
+
+    {
+        let mut reg = state.automaton_registry.lock().await;
+        reg.insert(agent_instance_id, (resp.automaton_id, project_id));
+    }
+
     let active_agent_instances = {
-        let mut reg = state.loop_registry.lock().await;
-        reg.insert(agent_instance_id, loop_handle);
+        let reg = state.automaton_registry.lock().await;
         reg.iter()
-            .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
+            .filter(|(_, (_, pid))| *pid == project_id)
             .map(|(aiid, _)| *aiid)
             .collect::<Vec<_>>()
     };
@@ -58,33 +86,35 @@ pub async fn pause_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    state.gc_finished_loops().await;
-    let reg = state.loop_registry.lock().await;
+    let reg = state.automaton_registry.lock().await;
 
-    let mut paused_any = false;
-    for (aiid, handle) in reg.iter() {
-        if handle.project_id == project_id && !handle.is_finished() {
-            if let Some(target) = params.agent_instance_id {
-                if *aiid == target {
-                    handle.pause();
-                    paused_any = true;
-                }
-            } else {
-                handle.pause();
-                paused_any = true;
-            }
-        }
-    }
+    let targets: Vec<(AgentInstanceId, String)> = reg
+        .iter()
+        .filter(|(_, (_, pid))| *pid == project_id)
+        .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
+        .map(|(aiid, (auto_id, _))| (*aiid, auto_id.clone()))
+        .collect();
+    drop(reg);
 
-    if !paused_any {
+    if targets.is_empty() {
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    let active_agent_instances: Vec<AgentInstanceId> = reg
-        .iter()
-        .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
-        .map(|(aiid, _)| *aiid)
-        .collect();
+    for (_, automaton_id) in &targets {
+        state
+            .swarm_client
+            .pause(automaton_id)
+            .await
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+    }
+
+    let active_agent_instances = {
+        let reg = state.automaton_registry.lock().await;
+        reg.iter()
+            .filter(|(_, (_, pid))| *pid == project_id)
+            .map(|(aiid, _)| *aiid)
+            .collect::<Vec<_>>()
+    };
 
     Ok(Json(LoopStatusResponse {
         running: true,
@@ -100,33 +130,34 @@ pub async fn stop_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    state.gc_finished_loops().await;
-    let mut reg = state.loop_registry.lock().await;
+    let mut reg = state.automaton_registry.lock().await;
 
-    let mut stopped_any = false;
-    let instances_to_remove: Vec<AgentInstanceId> = reg
+    let targets: Vec<(AgentInstanceId, String)> = reg
         .iter()
-        .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
+        .filter(|(_, (_, pid))| *pid == project_id)
         .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
-        .map(|(aiid, _)| *aiid)
+        .map(|(aiid, (auto_id, _))| (*aiid, auto_id.clone()))
         .collect();
 
-    for aiid in &instances_to_remove {
-        if let Some(h) = reg.remove(aiid) {
-            h.stop();
-            stopped_any = true;
-        }
+    if targets.is_empty() {
+        return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    if !stopped_any {
-        return Err(ApiError::bad_request("no matching dev loop is running"));
+    for (aiid, automaton_id) in &targets {
+        state
+            .swarm_client
+            .stop(automaton_id)
+            .await
+            .map_err(|e| ApiError::internal(e.to_string()))?;
+        reg.remove(aiid);
     }
 
     let remaining: Vec<AgentInstanceId> = reg
         .iter()
-        .filter(|(_, h)| h.project_id == project_id && !h.is_finished())
+        .filter(|(_, (_, pid))| *pid == project_id)
         .map(|(aiid, _)| *aiid)
         .collect();
+    drop(reg);
 
     Ok(Json(LoopStatusResponse {
         running: !remaining.is_empty(),
@@ -141,8 +172,33 @@ pub async fn get_loop_status(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    state.gc_finished_loops().await;
-    let active = state.loops_for_project(&project_id).await;
+    let mut reg = state.automaton_registry.lock().await;
+
+    // Prune finished automatons
+    let mut to_remove = Vec::new();
+    for (aiid, (automaton_id, pid)) in reg.iter() {
+        if *pid == project_id {
+            match state.swarm_client.status(automaton_id).await {
+                Ok(s) if s.status == "stopped" || s.status == "finished" => {
+                    to_remove.push(*aiid);
+                }
+                Err(_) => {
+                    to_remove.push(*aiid);
+                }
+                _ => {}
+            }
+        }
+    }
+    for aiid in &to_remove {
+        reg.remove(aiid);
+    }
+
+    let active: Vec<AgentInstanceId> = reg
+        .iter()
+        .filter(|(_, (_, pid))| *pid == project_id)
+        .map(|(aiid, _)| *aiid)
+        .collect();
+    drop(reg);
 
     Ok(Json(LoopStatusResponse {
         running: !active.is_empty(),
@@ -159,31 +215,29 @@ pub async fn run_single_task(
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
     super::billing::require_credits(&state).await?;
-    let engine = state.build_engine();
 
-    let agent_instance_id = params.agent_instance_id;
-    let event_tx = state.event_tx.clone();
-    tokio::spawn(async move {
-        if let Err(e) = engine
-            .run_single_task(project_id, task_id, agent_instance_id)
-            .await
-        {
-            send_or_log(
-                &event_tx,
-                aura_engine::EngineEvent::TaskFailed {
-                    project_id,
-                    agent_instance_id: aura_core::AgentInstanceId::new(),
-                    task_id,
-                    reason: e.to_string(),
-                    duration_ms: None,
-                    phase: None,
-                    parse_retries: None,
-                    build_fix_attempts: None,
-                    model: None,
-                },
-            );
-        }
+    let config = serde_json::json!({
+        "project_id": project_id.to_string(),
+        "task_id": task_id.to_string(),
+        "agent_instance_id": params.agent_instance_id.map(|id| id.to_string()),
     });
+
+    let resp = state
+        .swarm_client
+        .install("task-run", config)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    // Forward events to broadcast in background
+    if let Ok(mut events_rx) = state.swarm_client.events(&resp.automaton_id).await {
+        let broadcast_tx = state.event_broadcast.clone();
+        tokio::spawn(async move {
+            while let Some(event) = events_rx.recv().await {
+                let json = serde_json::to_value(&event).unwrap_or_default();
+                let _ = broadcast_tx.send(json);
+            }
+        });
+    }
 
     Ok(StatusCode::ACCEPTED)
 }

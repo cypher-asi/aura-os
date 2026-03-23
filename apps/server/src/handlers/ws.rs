@@ -1,7 +1,7 @@
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::IntoResponse;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::state::AppState;
 
@@ -18,9 +18,8 @@ async fn handle_ws(mut socket: WebSocket, state: AppState) {
         tokio::select! {
             result = rx.recv() => {
                 match result {
-                    Ok(event) => {
-                        let json = serde_json::to_string(&event).unwrap_or_default();
-                        debug!(event_type = ?event, "Sending event to WebSocket client");
+                    Ok(value) => {
+                        let json = serde_json::to_string(&value).unwrap_or_default();
                         if socket.send(Message::Text(json)).await.is_err() {
                             warn!("WebSocket send failed, closing connection");
                             break;

@@ -58,12 +58,44 @@ pub async fn extract_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
-    let tasks = state
-        .task_extraction_service
-        .extract_all_tasks(&project_id)
+    let config = serde_json::json!({
+        "project_id": project_id.to_string(),
+    });
+
+    let resp = state
+        .swarm_client
+        .install("task-extract", config)
         .await
         .map_err(|e| ApiError::internal(e.to_string()))?;
-    Ok(Json(tasks))
+
+    let mut rx = state
+        .swarm_client
+        .events(&resp.automaton_id)
+        .await
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    while let Some(event) = rx.recv().await {
+        match event.event_type.as_str() {
+            "complete" => {
+                let tasks: Vec<Task> = serde_json::from_value(
+                    event.data.get("tasks").cloned().unwrap_or_default(),
+                )
+                .unwrap_or_default();
+                return Ok(Json(tasks));
+            }
+            "error" => {
+                let msg = event
+                    .data
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("task extraction failed");
+                return Err(ApiError::internal(msg.to_string()));
+            }
+            _ => continue,
+        }
+    }
+
+    Ok(Json(Vec::new()))
 }
 
 pub async fn transition_task(
@@ -226,28 +258,6 @@ pub async fn get_task_output(
     State(state): State<AppState>,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {
-    let output = state
-        .task_output_buffers
-        .lock()
-        .map_err(|e| ApiError::internal(e.to_string()))?
-        .get(&task_id)
-        .cloned()
-        .unwrap_or_default();
-
-    if !output.is_empty() {
-        let (build_steps, test_steps) = state
-            .task_step_buffers
-            .lock()
-            .ok()
-            .and_then(|s| s.get(&task_id).cloned())
-            .unwrap_or_default();
-        return Ok(Json(TaskOutputResponse {
-            output,
-            build_steps,
-            test_steps,
-        }));
-    }
-
     if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {
         if let Some(resp) = fetch_task_output_from_storage(storage, &jwt, &task_id).await {
             return Ok(Json(resp));

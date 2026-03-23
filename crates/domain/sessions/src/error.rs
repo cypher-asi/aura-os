@@ -1,4 +1,3 @@
-use aura_claude::ClaudeClientError;
 use aura_storage::StorageError;
 
 #[derive(Debug, thiserror::Error)]
@@ -9,17 +8,4 @@ pub enum SessionError {
     NotFound,
     #[error("parse error: {0}")]
     Parse(String),
-    #[error("Claude API error: {0}")]
-    Claude(ClaudeClientError),
-    #[error("insufficient credits")]
-    InsufficientCredits,
-}
-
-impl From<ClaudeClientError> for SessionError {
-    fn from(e: ClaudeClientError) -> Self {
-        match e {
-            ClaudeClientError::InsufficientCredits => SessionError::InsufficientCredits,
-            other => SessionError::Claude(other),
-        }
-    }
 }

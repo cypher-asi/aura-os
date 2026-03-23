@@ -7,7 +7,6 @@ use tracing::{debug, info, warn};
 use futures_util::StreamExt;
 use tokio_tungstenite::tungstenite;
 
-use aura_engine::EngineEvent;
 use aura_network::NetworkClient;
 use aura_store::RocksStore;
 
@@ -16,7 +15,7 @@ use aura_store::RocksStore;
 pub(crate) fn spawn_network_ws_bridge(
     client: Arc<NetworkClient>,
     store: Arc<RocksStore>,
-    broadcast_tx: broadcast::Sender<EngineEvent>,
+    broadcast_tx: broadcast::Sender<serde_json::Value>,
 ) {
     tokio::spawn(async move {
         let mut backoff = Duration::from_secs(2);
@@ -52,12 +51,13 @@ pub(crate) fn spawn_network_ws_bridge(
                                             .unwrap_or("unknown")
                                             .to_string();
 
-                                        let event = EngineEvent::NetworkEvent {
-                                            network_event_type: event_type,
-                                            payload: Some(value),
-                                        };
+                                        let wrapped = serde_json::json!({
+                                            "type": "network_event",
+                                            "network_event_type": event_type,
+                                            "payload": value,
+                                        });
 
-                                        if broadcast_tx.send(event).is_err() {
+                                        if broadcast_tx.send(wrapped).is_err() {
                                             debug!("No local WS subscribers for network event");
                                         }
                                     }

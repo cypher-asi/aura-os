@@ -119,7 +119,7 @@ pub struct SendMessageRequest {
     pub content: String,
     pub action: Option<String>,
     #[serde(default)]
-    pub attachments: Option<Vec<aura_chat::ChatAttachment>>,
+    pub attachments: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(Debug, Deserialize)]

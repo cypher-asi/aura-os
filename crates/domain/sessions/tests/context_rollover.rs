@@ -2,7 +2,6 @@ mod common;
 
 use std::sync::Arc;
 
-use aura_claude::mock::{MockLlmProvider, MockResponse};
 use aura_core::*;
 use aura_sessions::SessionService;
 
@@ -387,31 +386,3 @@ async fn tasks_worked_count_survives_reload_from_storage() {
     );
 }
 
-#[tokio::test]
-async fn generate_rollover_summary_calls_llm() {
-    let mock = Arc::new(MockLlmProvider::with_responses(vec![MockResponse::text(
-        "Implemented user auth with JWT tokens and session management.",
-    )
-    .with_tokens(200, 80)]));
-
-    let (llm, _tmp_llm) = aura_billing::testutil::make_test_llm(mock.clone()).await;
-
-    let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
-    let svc = SessionService::new(store, 0.5, 200_000);
-
-    let summary = svc
-        .generate_rollover_summary(
-            llm.as_ref(),
-            "test-key",
-            "User asked about auth. Assistant set up JWT-based auth.",
-        )
-        .await
-        .expect("summary generation should succeed");
-
-    assert_eq!(
-        summary,
-        "Implemented user auth with JWT tokens and session management."
-    );
-    assert_eq!(mock.call_count(), 1);
-}

@@ -167,7 +167,7 @@ mod tests {
     #[test]
     fn fast_model_matches_haiku_entry() {
         let sched = default_fee_schedule();
-        let (inp, out) = lookup_rate_in(&sched, aura_claude::FAST_MODEL);
+        let (inp, out) = lookup_rate_in(&sched, "claude-haiku-4-5-20251001");
         assert!(
             (inp - 0.80).abs() < f64::EPSILON,
             "FAST_MODEL input rate should be haiku, got {inp}"

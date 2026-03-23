@@ -1,11 +1,9 @@
 [workspace]
 members = [
     "crates/infra/core",
-    "crates/infra/claude",
     "crates/infra/provider",
     "crates/domain/billing",
     "crates/ai/link",
-    "crates/ai/tools",
     "crates/domain/orgs",
     "crates/domain/projects",
     "crates/domain/agents",
@@ -13,9 +11,7 @@ members = [
     "crates/domain/tasks",
     "crates/domain/sessions",
     "crates/domain/specs",
-    "crates/ai/chat",
     "apps/desktop",
-    "crates/ai/engine",
     "apps/server",
     "crates/domain/settings",
     "crates/infra/store",

@@ -1,9 +1,7 @@
 mod error;
-mod task_extraction;
 mod task_service;
 
 pub use error::TaskError;
-pub use task_extraction::TaskExtractionService;
 
 use std::collections::HashMap;
 use std::sync::Arc;

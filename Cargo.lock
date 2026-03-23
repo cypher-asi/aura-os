@@ -346,69 +346,16 @@ dependencies = [
 name = "aura-billing"
 version = "0.1.0"
 dependencies = [
- "async-trait",
- "aura-claude",
  "aura-core 0.2.0",
- "aura-provider",
- "aura-settings",
  "aura-store 0.2.0",
  "axum",
  "chrono",
- "futures-util",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
- "tracing",
-]
-
-[[package]]
-name = "aura-chat"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-billing",
- "aura-claude",
- "aura-core 0.2.0",
- "aura-link",
- "aura-projects",
- "aura-settings",
- "aura-specs",
- "aura-storage",
- "aura-store 0.2.0",
- "aura-tasks",
- "aura-tools 0.2.0",
- "axum",
- "base64 0.22.1",
- "chrono",
- "futures",
- "glob",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "aura-claude"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-provider",
- "axum",
- "bytes",
- "futures-util",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tokio-stream",
  "tracing",
 ]
 
@@ -464,37 +411,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aura-engine"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aura-agents",
- "aura-billing",
- "aura-chat",
- "aura-claude",
- "aura-core 0.2.0",
- "aura-link",
- "aura-network",
- "aura-projects",
- "aura-sessions",
- "aura-settings",
- "aura-storage",
- "aura-store 0.2.0",
- "aura-tasks",
- "aura-tools 0.2.0",
- "chrono",
- "futures",
- "regex",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "aura-executor"
 version = "0.1.0"
 dependencies = [
@@ -527,7 +443,7 @@ dependencies = [
  "aura-executor",
  "aura-reasoner",
  "aura-store 0.1.0",
- "aura-tools 0.1.0",
+ "aura-tools",
  "bytes",
  "dashmap",
  "futures-util",
@@ -646,10 +562,7 @@ dependencies = [
  "aura-agents",
  "aura-auth",
  "aura-billing",
- "aura-chat",
- "aura-claude",
  "aura-core 0.2.0",
- "aura-engine",
  "aura-link",
  "aura-network",
  "aura-orbit",
@@ -657,12 +570,10 @@ dependencies = [
  "aura-projects",
  "aura-sessions",
  "aura-settings",
- "aura-specs",
  "aura-storage",
  "aura-store 0.2.0",
  "aura-tasks",
  "aura-terminal",
- "aura-tools 0.2.0",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -689,8 +600,6 @@ dependencies = [
 name = "aura-sessions"
 version = "0.1.0"
 dependencies = [
- "aura-billing",
- "aura-claude",
  "aura-core 0.2.0",
  "aura-storage",
  "aura-store 0.2.0",
@@ -720,17 +629,6 @@ dependencies = [
 name = "aura-specs"
 version = "0.1.0"
 dependencies = [
- "aura-billing",
- "aura-claude",
- "aura-core 0.2.0",
- "aura-projects",
- "aura-settings",
- "aura-storage",
- "aura-store 0.2.0",
- "chrono",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
  "tokio",
  "tracing",
 ]
@@ -782,14 +680,10 @@ dependencies = [
 name = "aura-tasks"
 version = "0.1.0"
 dependencies = [
- "aura-billing",
- "aura-claude",
  "aura-core 0.2.0",
- "aura-settings",
  "aura-storage",
  "aura-store 0.2.0",
  "chrono",
- "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
@@ -831,14 +725,6 @@ dependencies = [
  "tokio",
  "tracing",
  "walkdir",
-]
-
-[[package]]
-name = "aura-tools"
-version = "0.2.0"
-dependencies = [
- "aura-link",
- "serde_json",
 ]
 
 [[package]]
@@ -1961,21 +1847,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "futures"
-version = "0.3.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b147ee9d1f6d097cef9ce628cd2ee62288d963e16fb287bd9286455b241382d"
-dependencies = [
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
-]
-
-[[package]]
 name = "futures-channel"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2050,7 +1921,6 @@ version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "389ca41296e6190b48053de0321d02a77f32f8a5d2461dd38762c0593805c6d6"
 dependencies = [
- "futures-channel",
  "futures-core",
  "futures-io",
  "futures-macro",
