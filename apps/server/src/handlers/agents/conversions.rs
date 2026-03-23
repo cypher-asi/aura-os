@@ -5,11 +5,10 @@ use chrono::{DateTime, Utc};
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_chat::decode_message_content;
 use aura_core::parse_dt;
 use aura_core::{
-    Agent, AgentId, AgentInstanceId, ChatRole, Message, MessageId, ProfileId, ProjectId,
-    ZeroAuthSession,
+    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, Message, MessageId, ProfileId,
+    ProjectId, ZeroAuthSession,
 };
 use aura_network::NetworkAgent;
 use aura_storage::StorageMessage;
@@ -81,6 +80,51 @@ pub(crate) async fn resolve_single_agent(
     let client = state.network_client.as_ref()?;
     let net_agent = client.get_agent(agent_id, jwt).await.ok()?;
     Some(agent_from_network(&net_agent))
+}
+
+struct DecodedContent {
+    text: String,
+    content_blocks: Option<Vec<ChatContentBlock>>,
+    thinking: Option<String>,
+    thinking_duration_ms: Option<u64>,
+}
+
+/// Decode a stored message content string into structured parts.
+///
+/// The content may be a JSON object with `text`, `content_blocks`, `thinking`,
+/// and `thinking_duration_ms` fields, or plain text.
+fn decode_message_content(raw: &str) -> DecodedContent {
+    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(raw) {
+        if let Some(map) = obj.as_object() {
+            let text = map
+                .get("text")
+                .and_then(|v| v.as_str())
+                .unwrap_or(raw)
+                .to_string();
+            let content_blocks: Option<Vec<ChatContentBlock>> = map
+                .get("content_blocks")
+                .and_then(|v| serde_json::from_value(v.clone()).ok());
+            let thinking = map
+                .get("thinking")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let thinking_duration_ms = map
+                .get("thinking_duration_ms")
+                .and_then(|v| v.as_u64());
+            return DecodedContent {
+                text,
+                content_blocks,
+                thinking,
+                thinking_duration_ms,
+            };
+        }
+    }
+    DecodedContent {
+        text: raw.to_string(),
+        content_blocks: None,
+        thinking: None,
+        thinking_duration_ms: None,
+    }
 }
 
 pub(crate) fn storage_message_to_message(sm: &StorageMessage) -> Message {

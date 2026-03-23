@@ -10,50 +10,23 @@ use axum::Json;
 use axum::Router;
 use serde_json::Value;
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{broadcast, Mutex};
 
 use aura_agents::{AgentInstanceService, AgentService};
 use aura_auth::AuthService;
-use aura_billing::{BillingClient, MeteredLlm, PricingService};
-use aura_chat::{ChatService, ChatServiceDeps};
+use aura_billing::{BillingClient, PricingService};
 use aura_core::*;
-use aura_engine::EngineEvent;
+use aura_link::SwarmClient;
 use aura_network::NetworkClient;
 use aura_orbit::OrbitClient;
 use aura_orgs::OrgService;
 use aura_projects::ProjectService;
-use aura_server::state::{AppState, TaskOutputBuffers, TaskStepBuffers};
+use aura_server::state::AppState;
 use aura_sessions::SessionService;
 use aura_settings::SettingsService;
-use aura_specs::SpecGenerationService;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
-use aura_tasks::{TaskExtractionService, TaskService};
-
-/// Minimal AgentRuntime for server integration tests that only exercise
-/// HTTP routing, not the agentic tool loop.
-struct NoopRuntime;
-
-#[async_trait::async_trait]
-impl aura_link::AgentRuntime for NoopRuntime {
-    async fn execute_turn(
-        &self,
-        _request: aura_link::TurnRequest,
-    ) -> Result<aura_link::TurnResult, aura_link::RuntimeError> {
-        Ok(aura_link::TurnResult {
-            text: String::new(),
-            thinking: String::new(),
-            usage: aura_link::TotalUsage {
-                input_tokens: 0,
-                output_tokens: 0,
-            },
-            iterations_run: 0,
-            timed_out: false,
-            insufficient_credits: false,
-            llm_error: None,
-        })
-    }
-}
+use aura_tasks::TaskService;
 
 pub fn store_zero_auth_session(store: &RocksStore) {
     let session = serde_json::to_vec(&ZeroAuthSession {
@@ -66,6 +39,7 @@ pub fn store_zero_auth_session(store: &RocksStore) {
         zero_wallet: "w1".into(),
         wallets: vec![],
         access_token: "test-token".into(),
+        is_zero_pro: true,
         created_at: chrono::Utc::now(),
         validated_at: chrono::Utc::now(),
     })
@@ -229,39 +203,21 @@ pub fn build_test_app_from_store(
 ) -> (Router, AppState) {
     let settings_service = Arc::new(SettingsService::new(store.clone()));
     let billing_client = Arc::new(BillingClient::new());
-    let llm = Arc::new(MeteredLlm::new(
-        Arc::new(aura_claude::ClaudeClient::new()),
-        billing_client.clone(),
-        store.clone(),
-    ));
     let org_service = Arc::new(OrgService::new(store.clone()));
     let auth_service = Arc::new(AuthService::new(store.clone()));
     let project_service = Arc::new(ProjectService::new_with_network(
         network_client.clone(),
         store.clone(),
     ));
-    let spec_gen_service = Arc::new(SpecGenerationService::new(
-        store.clone(),
-        project_service.clone(),
-        settings_service.clone(),
-        llm.clone(),
-        None,
-    ));
-    let task_extraction_service = Arc::new(TaskExtractionService::new(
-        store.clone(),
-        settings_service.clone(),
-        llm.clone(),
-        None,
-    ));
     let pricing_service = Arc::new(PricingService::new(store.clone()));
     let task_service = Arc::new(TaskService::new(store.clone(), storage_client.clone()));
     let agent_service = Arc::new(AgentService::new(store.clone(), network_client.clone()));
-    let runtime_agent_state: aura_server::state::RuntimeAgentStateMap =
+    let runtime_agent_state: aura_agents::RuntimeAgentStateMap =
         Arc::new(Mutex::new(HashMap::new()));
     let agent_instance_service = Arc::new(AgentInstanceService::new(
         store.clone(),
         storage_client.clone(),
-        runtime_agent_state.clone(),
+        runtime_agent_state,
         network_client.clone(),
     ));
     let llm_config = LlmConfig::default();
@@ -270,23 +226,13 @@ pub fn build_test_app_from_store(
         llm_config.context_rollover_threshold,
         llm_config.max_context_tokens,
     ));
-    let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(NoopRuntime);
-    let chat_service = Arc::new(ChatService::new(ChatServiceDeps {
-        store: store.clone(),
-        settings: settings_service.clone(),
-        llm: llm.clone(),
-        spec_gen: spec_gen_service.clone(),
-        project_service: project_service.clone(),
-        task_service: task_service.clone(),
-        storage_client: storage_client.clone(),
-        runtime: runtime.clone(),
-    }));
 
-    let (event_tx, _event_rx) = mpsc::unbounded_channel::<EngineEvent>();
-    let (event_broadcast, _) = broadcast::channel::<EngineEvent>(256);
-    let task_output_buffers: TaskOutputBuffers = Arc::new(std::sync::Mutex::new(HashMap::new()));
+    let swarm_client = Arc::new(SwarmClient::new(
+        "http://localhost:19800".to_string(),
+        None,
+    ));
 
-    let task_step_buffers: TaskStepBuffers = Arc::new(std::sync::Mutex::new(HashMap::new()));
+    let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
 
     let state = AppState {
         store,
@@ -297,29 +243,20 @@ pub fn build_test_app_from_store(
         pricing_service,
         billing_client,
         project_service,
-        spec_gen_service,
-        task_extraction_service,
         task_service,
         agent_service,
         agent_instance_service,
         session_service,
-        chat_service,
-        llm,
-        event_tx,
+        swarm_client,
+        automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         event_broadcast,
-        loop_registry: Arc::new(Mutex::new(HashMap::new())),
-        write_coordinator: aura_engine::ProjectWriteCoordinator::new(),
-        task_output_buffers,
-        task_step_buffers,
         terminal_manager: Arc::new(aura_terminal::TerminalManager::new()),
         network_client,
         storage_client,
         orbit_client: Arc::new(OrbitClient::new()),
         orbit_base_url: None,
         internal_service_token: None,
-        runtime_agent_state: Arc::new(Mutex::new(HashMap::new())),
-        agent_message_cache: Arc::new(Mutex::new(HashMap::new())),
-        runtime,
+        require_zero_pro: false,
     };
 
     let app = aura_server::create_router(state.clone());

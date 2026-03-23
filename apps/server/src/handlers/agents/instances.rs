@@ -58,15 +58,12 @@ pub async fn list_agent_instances(
         .map_err(map_storage_error)?;
 
     let agent_map = resolve_network_agents(&state, &jwt).await;
-    let runtime_map = state.runtime_agent_state.lock().await;
 
     let instances: Vec<AgentInstance> = storage_agents
         .iter()
         .map(|spa| {
             let agent = spa.agent_id.as_deref().and_then(|aid| agent_map.get(aid));
-            let aiid = spa.id.parse::<AgentInstanceId>().ok();
-            let runtime = aiid.and_then(|id| runtime_map.get(&id));
-            merge_agent_instance(spa, agent, runtime)
+            merge_agent_instance(spa, agent, None)
         })
         .collect();
     Ok(Json(instances))
@@ -93,9 +90,7 @@ pub async fn get_agent_instance(
     } else {
         None
     };
-    let runtime_map = state.runtime_agent_state.lock().await;
-    let runtime = runtime_map.get(&agent_instance_id);
-    let instance = merge_agent_instance(&storage_agent, agent.as_ref(), runtime);
+    let instance = merge_agent_instance(&storage_agent, agent.as_ref(), None);
     Ok(Json(instance))
 }
 
@@ -142,9 +137,7 @@ pub async fn update_agent_instance(
     } else {
         None
     };
-    let runtime_map = state.runtime_agent_state.lock().await;
-    let runtime = runtime_map.get(&agent_instance_id);
-    let instance = merge_agent_instance(&storage_agent, agent.as_ref(), runtime);
+    let instance = merge_agent_instance(&storage_agent, agent.as_ref(), None);
     Ok(Json(instance))
 }
 
