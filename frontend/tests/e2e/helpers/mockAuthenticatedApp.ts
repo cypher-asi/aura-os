@@ -174,8 +174,6 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/update-status") {
       return json({ update: { status: "idle" }, channel: "stable", current_version: "0.0.0" });
     }
-    if (pathname === "/api/settings/api-key") return json({ has_key: false, source: null });
-    if (pathname === "/api/settings/fee-schedule") return json([]);
     if (pathname === "/api/users/me") {
       return json({
         id: "user-1",

@@ -14,14 +14,6 @@ export function mockAuthApi(): Record<string, ReturnType<typeof vi.fn>> {
   };
 }
 
-export function mockSettingsApi(): Record<string, ReturnType<typeof vi.fn>> {
-  return {
-    getApiKeyInfo: stub(),
-    getFeeSchedule: stub(),
-    putFeeSchedule: stub(),
-  };
-}
-
 export function mockOrgsApi(): Record<string, ReturnType<typeof vi.fn>> {
   return {
     list: stub(),
@@ -189,7 +181,6 @@ export function mockStreamSSE(): ReturnType<typeof vi.fn> {
 
 type MockApiResult = {
   auth: Record<string, ReturnType<typeof vi.fn>>;
-  settings: Record<string, ReturnType<typeof vi.fn>>;
   orgs: Record<string, ReturnType<typeof vi.fn>>;
   projects: Record<string, ReturnType<typeof vi.fn>>;
   tasks: Record<string, ReturnType<typeof vi.fn>>;
@@ -206,7 +197,6 @@ type MockApiResult = {
 export function mockApi(): MockApiResult {
   return {
     auth: mockAuthApi(),
-    settings: mockSettingsApi(),
     orgs: mockOrgsApi(),
     projects: mockProjectsApi(),
     tasks: mockTasksApi(),

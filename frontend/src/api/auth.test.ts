@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { authApi, settingsApi } from "./auth";
+import { authApi } from "./auth";
 import { ApiClientError } from "./core";
 
 function mockFetch(status: number, body: unknown) {
@@ -75,39 +75,5 @@ describe("authApi", () => {
   it("login throws ApiClientError on 401", async () => {
     globalThis.fetch = mockFetch(401, { error: "Invalid creds", code: "unauthorized", details: null });
     await expect(authApi.login("a@b.com", "wrong")).rejects.toThrow(ApiClientError);
-  });
-});
-
-describe("settingsApi", () => {
-  const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
-
-  it("getApiKeyInfo fetches GET /api/settings/api-key", async () => {
-    const info = { key: "sk-123", provider: "openai" };
-    const fetchMock = mockFetch(200, info);
-    globalThis.fetch = fetchMock;
-    const result = await settingsApi.getApiKeyInfo();
-    expect(result).toEqual(info);
-    expect(fetchMock).toHaveBeenCalledWith("/api/settings/api-key", expect.any(Object));
-  });
-
-  it("getFeeSchedule fetches GET /api/settings/fee-schedule", async () => {
-    const schedule = [{ model: "gpt-4", input_cost_per_million: 30, output_cost_per_million: 60, effective_date: "2026-01-01" }];
-    const fetchMock = mockFetch(200, schedule);
-    globalThis.fetch = fetchMock;
-    const result = await settingsApi.getFeeSchedule();
-    expect(result).toEqual(schedule);
-  });
-
-  it("putFeeSchedule sends PUT with entries", async () => {
-    const entries = [{ model: "gpt-4", input_cost_per_million: 25, output_cost_per_million: 50, effective_date: "2026-03-01" }];
-    const fetchMock = mockFetch(200, entries);
-    globalThis.fetch = fetchMock;
-    await settingsApi.putFeeSchedule(entries);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/settings/fee-schedule",
-      expect.objectContaining({ method: "PUT", body: JSON.stringify(entries) }),
-    );
   });
 });

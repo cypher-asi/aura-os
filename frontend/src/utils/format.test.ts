@@ -4,7 +4,7 @@ import {
   formatTokens,
   formatCompact,
   formatCurrency,
-  formatModelName,
+  formatCost,
   formatDuration,
   summarizeInput,
   formatResult,
@@ -119,17 +119,20 @@ describe("formatCurrency", () => {
   });
 });
 
-describe("formatModelName", () => {
-  it("strips claude- prefix and formats version", () => {
-    expect(formatModelName("claude-3.5-sonnet-2")).toBe("3.5-sonnet 2");
+describe("formatCost", () => {
+  it("formats small costs with 4 decimals", () => {
+    expect(formatCost(0.005)).toBe("$0.0050");
+    expect(formatCost(0.0001)).toBe("$0.0001");
   });
 
-  it("handles model without claude prefix", () => {
-    expect(formatModelName("gpt-4")).toBe("gpt 4");
+  it("formats larger costs with 2 decimals", () => {
+    expect(formatCost(0.01)).toBe("$0.01");
+    expect(formatCost(1.50)).toBe("$1.50");
+    expect(formatCost(30.0)).toBe("$30.00");
   });
 
-  it("handles model without trailing version", () => {
-    expect(formatModelName("claude-3-opus")).toBe("3-opus");
+  it("formats zero", () => {
+    expect(formatCost(0)).toBe("$0.0000");
   });
 });
 

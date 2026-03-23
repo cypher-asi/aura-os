@@ -23,14 +23,10 @@ vi.mock("../api/client", () => ({
   },
 }));
 
-vi.mock("../utils/format", () => ({
-  formatTime: vi.fn(() => "12:00:00"),
-}));
-
-vi.mock("../utils/pricing", () => ({
-  computeCost: vi.fn(() => 0),
-  formatCost: vi.fn(() => "$0.00"),
-}));
+vi.mock("../utils/format", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("../utils/format")>();
+  return { ...orig, formatTime: vi.fn(() => "12:00:00") };
+});
 
 describe("useLogStream", () => {
   beforeEach(() => {

@@ -112,9 +112,9 @@ describe("api (via apiFetch)", () => {
   it("throws ApiClientError on non-ok response", async () => {
     globalThis.fetch = mockFetch(404, { error: "Not Found", code: "not_found", details: null });
 
-    await expect(api.getApiKeyInfo()).rejects.toThrow(ApiClientError);
+    await expect(api.auth.getSession()).rejects.toThrow(ApiClientError);
     try {
-      await api.getApiKeyInfo();
+      await api.auth.getSession();
     } catch (e) {
       const err = e as ApiClientError;
       expect(err.status).toBe(404);
@@ -123,10 +123,10 @@ describe("api (via apiFetch)", () => {
   });
 
   it("returns parsed JSON on success", async () => {
-    const payload = { key: "sk-...", provider: "anthropic" };
+    const payload = { user_id: "u1", token: "abc" };
     globalThis.fetch = mockFetch(200, payload);
 
-    const result = await api.getApiKeyInfo();
+    const result = await api.auth.getSession();
     expect(result).toEqual(payload);
   });
 
