@@ -105,14 +105,9 @@ fn init_domain_services(
         runtime_agent_state,
         network_client.clone(),
     ));
-    let llm_config = aura_os_core::LlmConfig::from_env();
     let session_service = Arc::new(
-        SessionService::new(
-            store.clone(),
-            llm_config.context_rollover_threshold,
-            llm_config.max_context_tokens,
-        )
-        .with_storage_client(storage_client.clone()),
+        SessionService::new(store.clone(), 0.8, 200_000)
+            .with_storage_client(storage_client.clone()),
     );
     let swarm_client = Arc::new(SwarmClient::from_env());
 

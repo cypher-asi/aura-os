@@ -1,6 +1,5 @@
 #![warn(missing_docs)]
 
-pub mod config;
 pub mod entities;
 pub mod enums;
 pub mod helpers;
@@ -12,7 +11,6 @@ pub mod settings;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod testutil;
 
-pub use config::{EngineConfig, LlmConfig};
 // TODO: replace with explicit re-exports
 pub use entities::*;
 pub use enums::{AgentStatus, ChatRole, OrgRole, ProjectStatus, SessionStatus, TaskStatus};

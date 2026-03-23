@@ -217,12 +217,7 @@ pub fn build_test_app_from_store(
         runtime_agent_state,
         network_client.clone(),
     ));
-    let llm_config = LlmConfig::default();
-    let session_service = Arc::new(SessionService::new(
-        store.clone(),
-        llm_config.context_rollover_threshold,
-        llm_config.max_context_tokens,
-    ));
+    let session_service = Arc::new(SessionService::new(store.clone(), 0.8, 200_000));
 
     let swarm_client = Arc::new(
         SwarmClient::new("http://localhost:19800".to_string(), None)
