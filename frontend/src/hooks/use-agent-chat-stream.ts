@@ -4,6 +4,7 @@ import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { Spec, Task } from "../types";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
+import { useChatHistoryStore, agentHistoryKey } from "../stores/chat-history-store";
 import {
   useStreamCore,
   resetStreamBuffers,
@@ -147,6 +148,9 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       } finally {
         core.setIsStreaming(false);
         abortRef.current = null;
+        if (agentId) {
+          useChatHistoryStore.getState().invalidateHistory(agentHistoryKey(agentId));
+        }
       }
     },
     [agentId, core.key, refs, setters, abortRef, core.setMessages, core.setIsStreaming, core.setProgressText],

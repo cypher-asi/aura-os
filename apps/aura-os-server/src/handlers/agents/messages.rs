@@ -182,18 +182,48 @@ async fn setup_project_chat_persistence(
 async fn setup_agent_chat_persistence(
     state: &AppState,
     agent_id: &AgentId,
+    agent_name: &str,
 ) -> Option<ChatPersistCtx> {
     let storage = state.storage_client.as_ref()?.clone();
     let jwt = state.get_jwt().ok()?;
     let matching =
         find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
-    let project_agent = matching.first()?;
-    let pai = project_agent.id.clone();
-    let pid = project_agent.project_id.clone().unwrap_or_default();
-    if pid.is_empty() {
-        warn!(%agent_id, "No project_id for agent; skipping chat persistence");
-        return None;
-    }
+
+    let (pai, pid) = if let Some(pa) = matching.first() {
+        let pid = pa.project_id.clone().unwrap_or_default();
+        if pid.is_empty() {
+            warn!(%agent_id, "No project_id for agent; skipping chat persistence");
+            return None;
+        }
+        (pa.id.clone(), pid)
+    } else {
+        // No project_agent exists — auto-create one in the first available project.
+        let all_projects = projects::list_all_projects_from_network(state).await.ok()?;
+        let project = all_projects.first()?;
+        let project_id_str = project.project_id.to_string();
+        let req = aura_os_storage::CreateProjectAgentRequest {
+            agent_id: agent_id.to_string(),
+            name: agent_name.to_string(),
+            org_id: None,
+            role: None,
+            personality: None,
+            system_prompt: None,
+            skills: None,
+            icon: None,
+            harness: None,
+        };
+        match storage.create_project_agent(&project_id_str, &jwt, &req).await {
+            Ok(pa) => {
+                let pid = pa.project_id.clone().unwrap_or(project_id_str);
+                (pa.id, pid)
+            }
+            Err(e) => {
+                warn!(error = %e, %agent_id, "Failed to auto-create project_agent for chat persistence");
+                return None;
+            }
+        }
+    };
+
     let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
     Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
 }
@@ -431,7 +461,7 @@ pub(crate) async fn send_agent_message_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent: {e}")))?;
 
-    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id).await;
+    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name).await;
 
     let jwt = state.get_jwt().ok();
     let config = SessionConfig {
