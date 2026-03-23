@@ -331,7 +331,7 @@ pub fn merge_agent_instance(
             .unwrap_or_else(|_| ProjectId::new()),
         agent_id: agent
             .map(|a| a.agent_id)
-            .or_else(|| spa.agent_id.as_deref().and_then(|s| s.parse().ok()))
+            .or_else(|| spa.agent_id.as_deref().and_then(|s: &str| s.parse().ok()))
             .unwrap_or_default(),
         name: agent
             .map(|a| a.name.clone())
