@@ -9,14 +9,14 @@ use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
-pub struct FeedQuery {
+pub(crate) struct FeedQuery {
     pub filter: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct FeedEventResponse {
+pub(crate) struct FeedEventResponse {
     pub id: String,
     pub profile_id: String,
     pub event_type: String,
@@ -66,7 +66,7 @@ impl From<NetworkFeedEvent> for FeedEventResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct CommentResponse {
+pub(crate) struct CommentResponse {
     pub id: String,
     pub activity_event_id: String,
     pub profile_id: String,
@@ -88,19 +88,19 @@ impl From<NetworkComment> for CommentResponse {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AddCommentRequest {
+pub(crate) struct AddCommentRequest {
     pub content: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CreatePostRequest {
+pub(crate) struct CreatePostRequest {
     pub post_type: Option<String>,
     pub title: String,
     pub summary: Option<String>,
     pub metadata: Option<serde_json::Value>,
 }
 
-pub async fn list_feed(
+pub(crate) async fn list_feed(
     State(state): State<AppState>,
     Query(query): Query<FeedQuery>,
 ) -> ApiResult<Json<Vec<FeedEventResponse>>> {
@@ -115,7 +115,7 @@ pub async fn list_feed(
     ))
 }
 
-pub async fn create_post(
+pub(crate) async fn create_post(
     State(state): State<AppState>,
     Json(req): Json<CreatePostRequest>,
 ) -> ApiResult<(StatusCode, Json<FeedEventResponse>)> {
@@ -134,7 +134,7 @@ pub async fn create_post(
     Ok((StatusCode::CREATED, Json(FeedEventResponse::from(post))))
 }
 
-pub async fn get_post(
+pub(crate) async fn get_post(
     State(state): State<AppState>,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<FeedEventResponse>> {
@@ -147,7 +147,7 @@ pub async fn get_post(
     Ok(Json(FeedEventResponse::from(post)))
 }
 
-pub async fn get_profile_posts(
+pub(crate) async fn get_profile_posts(
     State(state): State<AppState>,
     Path(profile_id): Path<String>,
 ) -> ApiResult<Json<Vec<FeedEventResponse>>> {
@@ -162,7 +162,7 @@ pub async fn get_profile_posts(
     ))
 }
 
-pub async fn list_comments(
+pub(crate) async fn list_comments(
     State(state): State<AppState>,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<Vec<CommentResponse>>> {
@@ -177,7 +177,7 @@ pub async fn list_comments(
     ))
 }
 
-pub async fn add_comment(
+pub(crate) async fn add_comment(
     State(state): State<AppState>,
     Path(post_id): Path<String>,
     Json(req): Json<AddCommentRequest>,
@@ -191,7 +191,7 @@ pub async fn add_comment(
     Ok((StatusCode::CREATED, Json(CommentResponse::from(comment))))
 }
 
-pub async fn delete_comment(
+pub(crate) async fn delete_comment(
     State(state): State<AppState>,
     Path(comment_id): Path<String>,
 ) -> ApiResult<StatusCode> {

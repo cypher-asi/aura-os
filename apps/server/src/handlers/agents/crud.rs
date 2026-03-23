@@ -10,7 +10,7 @@ use crate::state::AppState;
 
 use super::conversions::agent_from_network;
 
-pub async fn create_agent(
+pub(crate) async fn create_agent(
     State(state): State<AppState>,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
@@ -33,7 +33,7 @@ pub async fn create_agent(
     Ok(Json(agent))
 }
 
-pub async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Agent>>> {
+pub(crate) async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Agent>>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
@@ -41,7 +41,7 @@ pub async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Ag
     Ok(Json(agents))
 }
 
-pub async fn get_agent(
+pub(crate) async fn get_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Agent>> {
@@ -55,7 +55,7 @@ pub async fn get_agent(
     Ok(Json(agent))
 }
 
-pub async fn update_agent(
+pub(crate) async fn update_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<UpdateAgentRequest>,
@@ -78,7 +78,7 @@ pub async fn update_agent(
     Ok(Json(agent))
 }
 
-pub async fn delete_agent(
+pub(crate) async fn delete_agent(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {

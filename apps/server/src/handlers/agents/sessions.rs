@@ -10,7 +10,7 @@ use crate::state::AppState;
 
 use super::conversions::storage_message_to_message;
 
-pub async fn list_project_sessions(
+pub(crate) async fn list_project_sessions(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Session>>> {
@@ -40,7 +40,7 @@ pub async fn list_project_sessions(
     Ok(Json(sessions))
 }
 
-pub async fn list_sessions(
+pub(crate) async fn list_sessions(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<Session>>> {
@@ -61,7 +61,7 @@ pub async fn list_sessions(
     Ok(Json(sessions))
 }
 
-pub async fn get_session(
+pub(crate) async fn get_session(
     State(state): State<AppState>,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
@@ -84,7 +84,7 @@ pub async fn get_session(
     Ok(Json(session))
 }
 
-pub async fn list_session_tasks(
+pub(crate) async fn list_session_tasks(
     State(state): State<AppState>,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
@@ -119,7 +119,7 @@ pub async fn list_session_tasks(
     Ok(Json(tasks))
 }
 
-pub async fn list_session_messages(
+pub(crate) async fn list_session_messages(
     State(state): State<AppState>,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,

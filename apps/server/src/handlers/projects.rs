@@ -103,7 +103,7 @@ async fn create_project_impl(
     Ok((StatusCode::CREATED, Json(project)))
 }
 
-pub async fn create_project(
+pub(crate) async fn create_project(
     State(state): State<AppState>,
     Json(req): Json<CreateProjectRequest>,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
@@ -120,7 +120,7 @@ pub async fn create_project(
     create_project_impl(&state, &req, folder).await
 }
 
-pub async fn create_imported_project(
+pub(crate) async fn create_imported_project(
     State(state): State<AppState>,
     Json(req): Json<CreateImportedProjectRequest>,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
@@ -174,7 +174,7 @@ pub async fn create_imported_project(
     create_project_impl(&state, &local_req, None).await
 }
 
-pub async fn list_projects(
+pub(crate) async fn list_projects(
     State(state): State<AppState>,
     Query(query): Query<ListProjectsQuery>,
 ) -> ApiResult<Json<Vec<Project>>> {
@@ -215,7 +215,7 @@ pub async fn list_projects(
     Ok(Json(projects))
 }
 
-pub async fn get_project(
+pub(crate) async fn get_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {
@@ -241,7 +241,7 @@ pub async fn get_project(
     Ok(Json(project))
 }
 
-pub async fn update_project(
+pub(crate) async fn update_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
     Json(req): Json<UpdateProjectRequest>,
@@ -292,7 +292,7 @@ pub async fn update_project(
     Ok(Json(project))
 }
 
-pub async fn delete_project(
+pub(crate) async fn delete_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<StatusCode> {
@@ -323,7 +323,7 @@ pub async fn delete_project(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn archive_project(
+pub(crate) async fn archive_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {

@@ -17,7 +17,7 @@ pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
     Task::try_from(s)
 }
 
-pub async fn list_tasks(
+pub(crate) async fn list_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
@@ -35,7 +35,7 @@ pub async fn list_tasks(
     Ok(Json(tasks))
 }
 
-pub async fn list_tasks_by_spec(
+pub(crate) async fn list_tasks_by_spec(
     State(state): State<AppState>,
     Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Vec<Task>>> {
@@ -54,7 +54,7 @@ pub async fn list_tasks_by_spec(
     Ok(Json(tasks))
 }
 
-pub async fn extract_tasks(
+pub(crate) async fn extract_tasks(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
@@ -98,7 +98,7 @@ pub async fn extract_tasks(
     Ok(Json(Vec::new()))
 }
 
-pub async fn transition_task(
+pub(crate) async fn transition_task(
     State(state): State<AppState>,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
     Json(req): Json<TransitionTaskRequest>,
@@ -150,7 +150,7 @@ pub async fn transition_task(
     Ok(Json(task))
 }
 
-pub async fn retry_task(
+pub(crate) async fn retry_task(
     State(state): State<AppState>,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<Task>> {
@@ -198,7 +198,7 @@ pub async fn retry_task(
 }
 
 #[derive(Serialize)]
-pub struct TaskOutputResponse {
+pub(crate) struct TaskOutputResponse {
     pub output: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub build_steps: Vec<serde_json::Value>,
@@ -254,7 +254,7 @@ async fn fetch_task_output_from_storage(
     })
 }
 
-pub async fn get_task_output(
+pub(crate) async fn get_task_output(
     State(state): State<AppState>,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {

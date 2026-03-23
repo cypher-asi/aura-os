@@ -18,7 +18,7 @@ use aura_os_core::Project;
 /// Workspace config for session_init. When present, the runtime clones the repo into its workspace.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct SessionInitWorkspace {
+pub(crate) struct SessionInitWorkspace {
     pub git_repo_url: String,
     pub git_branch: String,
 }
@@ -27,7 +27,7 @@ pub struct SessionInitWorkspace {
 /// Aligns with R9/R10 in docs/aura-runtime-requirements.md.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct SessionInitPayload {
+pub(crate) struct SessionInitPayload {
     #[serde(rename = "type")]
     pub message_type: String,
     /// Optional; when set, runtime clones this repo into workspace before session_ready.
@@ -42,7 +42,7 @@ pub struct SessionInitPayload {
 /// Build a session_init payload for the given project and optional JWT.
 /// When the project has `git_repo_url` and `git_branch`, sets `workspace` so the runtime
 /// can clone the repo. Pass `jwt` when the runtime needs to authenticate to Orbit for Git.
-pub fn build_session_init_payload(
+pub(crate) fn build_session_init_payload(
     project: &Project,
     orbit_jwt: Option<&str>,
 ) -> SessionInitPayload {

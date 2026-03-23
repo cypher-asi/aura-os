@@ -14,7 +14,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
-pub struct ListProjectsQuery {
+pub(crate) struct ListProjectsQuery {
     pub org_id: Option<OrgId>,
 }
 

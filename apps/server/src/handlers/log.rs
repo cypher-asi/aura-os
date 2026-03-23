@@ -8,13 +8,13 @@ use crate::handlers::projects;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
-pub struct LogEntriesQuery {
+pub(crate) struct LogEntriesQuery {
     pub limit: Option<usize>,
     pub project_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct PersistedLogEntry {
+pub(crate) struct PersistedLogEntry {
     pub timestamp_ms: i64,
     pub event: serde_json::Value,
 }
@@ -64,7 +64,7 @@ async fn aggregate_storage_logs(
     entries
 }
 
-pub async fn list_log_entries(
+pub(crate) async fn list_log_entries(
     State(state): State<AppState>,
     Query(query): Query<LogEntriesQuery>,
 ) -> ApiResult<Json<Vec<PersistedLogEntry>>> {

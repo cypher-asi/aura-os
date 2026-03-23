@@ -34,7 +34,7 @@ fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
     }
 }
 
-pub async fn login(
+pub(crate) async fn login(
     State(state): State<AppState>,
     Json(req): Json<AuthLoginRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
@@ -49,7 +49,7 @@ pub async fn login(
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn register(
+pub(crate) async fn register(
     State(state): State<AppState>,
     Json(req): Json<AuthRegisterRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
@@ -64,7 +64,7 @@ pub async fn register(
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn get_session(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
+pub(crate) async fn get_session(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
     let session = state
         .auth_service
         .get_session()
@@ -74,7 +74,7 @@ pub async fn get_session(State(state): State<AppState>) -> ApiResult<Json<AuthSe
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn validate(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
+pub(crate) async fn validate(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
     let mut session = state
         .auth_service
         .validate()
@@ -87,17 +87,17 @@ pub async fn validate(State(state): State<AppState>) -> ApiResult<Json<AuthSessi
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
+pub(crate) async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
     state.auth_service.logout().await.map_err(map_auth_error)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Serialize)]
-pub struct AccessTokenResponse {
+pub(crate) struct AccessTokenResponse {
     pub access_token: String,
 }
 
-pub async fn get_access_token(
+pub(crate) async fn get_access_token(
     State(state): State<AppState>,
 ) -> ApiResult<Json<AccessTokenResponse>> {
     let bytes = state
@@ -118,7 +118,7 @@ struct JwtPayloadIss {
 }
 
 #[derive(Serialize)]
-pub struct JwtIssuerResponse {
+pub(crate) struct JwtIssuerResponse {
     pub iss: String,
     pub jwks_url: String,
 }
@@ -126,7 +126,7 @@ pub struct JwtIssuerResponse {
 /// GET /api/auth/jwt-issuer — return the issuer and suggested JWKS URL from the current
 /// session's JWT. Used to configure Orbit's TRUSTED_JWT_* without pasting the token into jwt.io.
 /// Returns only public claims (iss); the token itself is never sent.
-pub async fn get_jwt_issuer(State(state): State<AppState>) -> ApiResult<Json<JwtIssuerResponse>> {
+pub(crate) async fn get_jwt_issuer(State(state): State<AppState>) -> ApiResult<Json<JwtIssuerResponse>> {
     let bytes = state
         .store
         .get_setting("zero_auth_session")

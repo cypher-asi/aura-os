@@ -25,10 +25,10 @@ use aura_os_terminal::TerminalManager;
 use crate::error::ApiError;
 
 /// Tracks running automatons: agent_instance_id → (automaton_id, project_id).
-pub type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, (String, ProjectId)>>>;
+pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, (String, ProjectId)>>>;
 
 #[derive(Clone)]
-pub struct AppState {
+pub(crate) struct AppState {
     pub data_dir: PathBuf,
     pub store: Arc<RocksStore>,
     pub org_service: Arc<OrgService>,
@@ -62,7 +62,7 @@ pub struct AppState {
 
 impl AppState {
     /// Load the full zOS auth session from storage.
-    pub fn get_session(&self) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
+    pub(crate) fn get_session(&self) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
         let bytes = self
             .store
             .get_setting("zero_auth_session")
@@ -78,12 +78,12 @@ impl AppState {
     }
 
     /// Extract the JWT access token from the stored zOS session.
-    pub fn get_jwt(&self) -> Result<String, (StatusCode, Json<ApiError>)> {
+    pub(crate) fn get_jwt(&self) -> Result<String, (StatusCode, Json<ApiError>)> {
         self.get_session().map(|s| s.access_token)
     }
 
     /// Get the network client, returning 503 if not configured.
-    pub fn require_network_client(
+    pub(crate) fn require_network_client(
         &self,
     ) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
         self.network_client
@@ -92,7 +92,7 @@ impl AppState {
     }
 
     /// Get the storage client, returning 503 if not configured.
-    pub fn require_storage_client(
+    pub(crate) fn require_storage_client(
         &self,
     ) -> Result<&Arc<StorageClient>, (StatusCode, Json<ApiError>)> {
         self.storage_client

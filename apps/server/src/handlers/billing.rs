@@ -43,7 +43,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
 }
 
 /// Pre-flight check: ensures the authenticated user has a positive credit balance.
-pub async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<ApiError>)> {
+pub(crate) async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<ApiError>)> {
     let session = get_auth_session(state)?;
     state
         .billing_client
@@ -53,7 +53,7 @@ pub async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<A
     Ok(())
 }
 
-pub async fn get_credit_balance(
+pub(crate) async fn get_credit_balance(
     State(state): State<AppState>,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<serde_json::Value>> {
@@ -66,7 +66,7 @@ pub async fn get_credit_balance(
     Ok(Json(serde_json::to_value(balance).unwrap_or_default()))
 }
 
-pub async fn create_credit_checkout(
+pub(crate) async fn create_credit_checkout(
     State(state): State<AppState>,
     Path(_org_id): Path<OrgId>,
     Json(body): Json<CreateCreditCheckoutRequest>,
@@ -80,7 +80,7 @@ pub async fn create_credit_checkout(
     Ok(Json(serde_json::to_value(resp).unwrap_or_default()))
 }
 
-pub async fn get_transactions(
+pub(crate) async fn get_transactions(
     State(state): State<AppState>,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<TransactionsResponse>> {
@@ -93,7 +93,7 @@ pub async fn get_transactions(
     Ok(Json(result))
 }
 
-pub async fn get_account(
+pub(crate) async fn get_account(
     State(state): State<AppState>,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<BillingAccount>> {

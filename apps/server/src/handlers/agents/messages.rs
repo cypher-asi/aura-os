@@ -114,7 +114,7 @@ async fn fetch_all_sessions(
 
 /// Aggregate agent-level messages from aura-storage (all project-agents for
 /// this agent_id -> sessions -> messages).
-pub async fn aggregate_agent_messages_from_storage(
+pub(crate) async fn aggregate_agent_messages_from_storage(
     state: &AppState,
     agent_id: &AgentId,
 ) -> Vec<Message> {
@@ -129,7 +129,7 @@ pub async fn aggregate_agent_messages_from_storage(
     messages
 }
 
-pub async fn list_agent_messages(
+pub(crate) async fn list_agent_messages(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<Message>>> {
@@ -167,7 +167,7 @@ async fn install_chat_stream(
     ))
 }
 
-pub async fn send_agent_message_stream(
+pub(crate) async fn send_agent_message_stream(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendMessageRequest>,
@@ -188,7 +188,7 @@ pub async fn send_agent_message_stream(
     install_chat_stream(&state, config).await
 }
 
-pub async fn list_messages(
+pub(crate) async fn list_messages(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<Message>>> {
@@ -208,7 +208,7 @@ pub async fn list_messages(
     Ok(Json(messages))
 }
 
-pub async fn send_message_stream(
+pub(crate) async fn send_message_stream(
     State(state): State<AppState>,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendMessageRequest>,

@@ -15,19 +15,19 @@ use aura_os_terminal::TerminalId;
 use crate::state::AppState;
 
 #[derive(Deserialize)]
-pub struct SpawnRequest {
+pub(crate) struct SpawnRequest {
     cols: Option<u16>,
     rows: Option<u16>,
     cwd: Option<String>,
 }
 
 #[derive(Serialize)]
-pub struct SpawnResponse {
+pub(crate) struct SpawnResponse {
     id: String,
     shell: String,
 }
 
-pub async fn spawn_terminal(
+pub(crate) async fn spawn_terminal(
     State(state): State<AppState>,
     Json(body): Json<SpawnRequest>,
 ) -> impl IntoResponse {
@@ -50,12 +50,12 @@ pub async fn spawn_terminal(
     }
 }
 
-pub async fn list_terminals(State(state): State<AppState>) -> impl IntoResponse {
+pub(crate) async fn list_terminals(State(state): State<AppState>) -> impl IntoResponse {
     let terminals = state.terminal_manager.list();
     Json(serde_json::json!(terminals))
 }
 
-pub async fn kill_terminal(
+pub(crate) async fn kill_terminal(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
@@ -89,7 +89,7 @@ struct WsClientMsg {
     rows: Option<u16>,
 }
 
-pub async fn ws_terminal(
+pub(crate) async fn ws_terminal(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
     Path(id): Path<String>,

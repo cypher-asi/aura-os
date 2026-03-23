@@ -13,13 +13,13 @@ const UPDATER_PUB_KEY: &str = env!("UPDATER_PUBLIC_KEY");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum UpdateChannel {
+pub(crate) enum UpdateChannel {
     Stable,
     Nightly,
 }
 
 impl UpdateChannel {
-    pub fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(&self) -> &'static str {
         match self {
             Self::Stable => "stable",
             Self::Nightly => "nightly",
@@ -46,7 +46,7 @@ impl std::str::FromStr for UpdateChannel {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
-pub enum UpdateStatus {
+pub(crate) enum UpdateStatus {
     Checking,
     Downloading,
     Ready {
@@ -62,13 +62,13 @@ pub enum UpdateStatus {
 
 /// Shared mutable state that both the background task and the API routes read/write.
 #[derive(Clone)]
-pub struct UpdateState {
+pub(crate) struct UpdateState {
     pub status: Arc<RwLock<UpdateStatus>>,
     pub channel: Arc<RwLock<UpdateChannel>>,
 }
 
 impl UpdateState {
-    pub fn new(channel: UpdateChannel) -> Self {
+    pub(crate) fn new(channel: UpdateChannel) -> Self {
         Self {
             status: Arc::new(RwLock::new(UpdateStatus::Idle)),
             channel: Arc::new(RwLock::new(channel)),
@@ -76,7 +76,7 @@ impl UpdateState {
     }
 }
 
-pub fn endpoint_for_channel(channel: UpdateChannel) -> String {
+pub(crate) fn endpoint_for_channel(channel: UpdateChannel) -> String {
     let base = "https://n3o.github.io/aura-app";
     let chan = channel.as_str();
     format!("{base}/{chan}/{{{{target}}}}/{{{{arch}}}}.json")
@@ -219,7 +219,7 @@ fn verify_signature(pkg_path: &std::path::Path, signature_b64: &str) -> Result<(
 }
 
 /// Install a previously-downloaded update and restart the process.
-pub fn install_and_restart() -> Result<(), String> {
+pub(crate) fn install_and_restart() -> Result<(), String> {
     let cache_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("aura-updates");
@@ -260,7 +260,7 @@ fn newest_file_in(dir: &std::path::Path) -> Option<std::path::PathBuf> {
 }
 
 /// Spawn the background update-check loop. Call once at startup.
-pub fn spawn_update_loop(state: UpdateState) {
+pub(crate) fn spawn_update_loop(state: UpdateState) {
     tokio::spawn(async move {
         // Small initial delay so the app finishes launching first.
         tokio::time::sleep(Duration::from_secs(5)).await;
@@ -283,7 +283,7 @@ pub fn spawn_update_loop(state: UpdateState) {
 }
 
 /// Trigger an immediate re-check (e.g. after the user switches channels).
-pub fn trigger_recheck(state: UpdateState) {
+pub(crate) fn trigger_recheck(state: UpdateState) {
     tokio::spawn(async move {
         let channel = *state.channel.read().await;
         match check_and_download(channel, Arc::clone(&state.status)).await {

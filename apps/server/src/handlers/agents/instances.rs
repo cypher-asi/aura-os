@@ -10,7 +10,7 @@ use crate::state::AppState;
 
 use super::conversions::{get_user_id, resolve_network_agents, resolve_single_agent};
 
-pub async fn create_agent_instance(
+pub(crate) async fn create_agent_instance(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
     Json(body): Json<CreateAgentInstanceRequest>,
@@ -46,7 +46,7 @@ pub async fn create_agent_instance(
     Ok(Json(instance))
 }
 
-pub async fn list_agent_instances(
+pub(crate) async fn list_agent_instances(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<AgentInstance>>> {
@@ -69,7 +69,7 @@ pub async fn list_agent_instances(
     Ok(Json(instances))
 }
 
-pub async fn get_agent_instance(
+pub(crate) async fn get_agent_instance(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<AgentInstance>> {
@@ -94,7 +94,7 @@ pub async fn get_agent_instance(
     Ok(Json(instance))
 }
 
-pub async fn update_agent_instance(
+pub(crate) async fn update_agent_instance(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<UpdateAgentInstanceRequest>,
@@ -141,7 +141,7 @@ pub async fn update_agent_instance(
     Ok(Json(instance))
 }
 
-pub async fn delete_agent_instance(
+pub(crate) async fn delete_agent_instance(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<()>> {

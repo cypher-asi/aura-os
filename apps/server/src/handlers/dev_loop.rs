@@ -11,7 +11,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize, Default)]
-pub struct LoopQueryParams {
+pub(crate) struct LoopQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
     pub agent_name: Option<String>,
 }
@@ -39,7 +39,7 @@ async fn active_instances_for_project(
         .collect()
 }
 
-pub async fn start_loop(
+pub(crate) async fn start_loop(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
@@ -87,7 +87,7 @@ pub async fn start_loop(
     ))
 }
 
-pub async fn pause_loop(
+pub(crate) async fn pause_loop(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
@@ -131,7 +131,7 @@ pub async fn pause_loop(
     }))
 }
 
-pub async fn stop_loop(
+pub(crate) async fn stop_loop(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
@@ -174,7 +174,7 @@ pub async fn stop_loop(
     }))
 }
 
-pub async fn get_loop_status(
+pub(crate) async fn get_loop_status(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -215,7 +215,7 @@ pub async fn get_loop_status(
     }))
 }
 
-pub async fn run_single_task(
+pub(crate) async fn run_single_task(
     State(state): State<AppState>,
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
     Query(params): Query<LoopQueryParams>,

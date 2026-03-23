@@ -12,7 +12,7 @@ use crate::UserEvent;
 // File pickers
 // ---------------------------------------------------------------------------
 
-pub async fn pick_folder() -> Json<serde_json::Value> {
+pub(crate) async fn pick_folder() -> Json<serde_json::Value> {
     let handle = rfd::AsyncFileDialog::new()
         .set_title("Select folder")
         .pick_folder()
@@ -21,7 +21,7 @@ pub async fn pick_folder() -> Json<serde_json::Value> {
     Json(serde_json::json!(path))
 }
 
-pub async fn pick_file() -> Json<serde_json::Value> {
+pub(crate) async fn pick_file() -> Json<serde_json::Value> {
     let handle = rfd::AsyncFileDialog::new()
         .set_title("Select file")
         .pick_file()
@@ -35,11 +35,11 @@ pub async fn pick_file() -> Json<serde_json::Value> {
 // ---------------------------------------------------------------------------
 
 #[derive(serde::Deserialize)]
-pub struct ReadFileRequest {
+pub(crate) struct ReadFileRequest {
     path: String,
 }
 
-pub async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Value> {
+pub(crate) async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,
@@ -65,12 +65,12 @@ pub async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Val
 }
 
 #[derive(serde::Deserialize)]
-pub struct WriteFileRequest {
+pub(crate) struct WriteFileRequest {
     path: String,
     content: String,
 }
 
-pub async fn write_file(Json(req): Json<WriteFileRequest>) -> Json<serde_json::Value> {
+pub(crate) async fn write_file(Json(req): Json<WriteFileRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     if let Some(parent) = target.parent() {
         if !tokio::fs::try_exists(parent).await.unwrap_or(false) {
@@ -95,11 +95,11 @@ pub async fn write_file(Json(req): Json<WriteFileRequest>) -> Json<serde_json::V
 // ---------------------------------------------------------------------------
 
 #[derive(serde::Deserialize)]
-pub struct OpenPathRequest {
+pub(crate) struct OpenPathRequest {
     path: String,
 }
 
-pub async fn open_path(Json(req): Json<OpenPathRequest>) -> Json<serde_json::Value> {
+pub(crate) async fn open_path(Json(req): Json<OpenPathRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     if !target.exists() {
         warn!(path = %req.path, "open_path: path does not exist");
@@ -118,12 +118,12 @@ pub async fn open_path(Json(req): Json<OpenPathRequest>) -> Json<serde_json::Val
 }
 
 #[derive(serde::Deserialize)]
-pub struct OpenIdeRequest {
+pub(crate) struct OpenIdeRequest {
     path: String,
     root: Option<String>,
 }
 
-pub async fn open_ide(
+pub(crate) async fn open_ide(
     AxumState(proxy): AxumState<Arc<EventLoopProxy<UserEvent>>>,
     Json(req): Json<OpenIdeRequest>,
 ) -> Json<serde_json::Value> {
@@ -139,7 +139,7 @@ pub async fn open_ide(
 // Update routes
 // ---------------------------------------------------------------------------
 
-pub async fn get_update_status(
+pub(crate) async fn get_update_status(
     AxumState(state): AxumState<UpdateState>,
 ) -> Json<serde_json::Value> {
     let status = state.status.read().await;
@@ -151,7 +151,7 @@ pub async fn get_update_status(
     }))
 }
 
-pub async fn post_update_install() -> Json<serde_json::Value> {
+pub(crate) async fn post_update_install() -> Json<serde_json::Value> {
     match crate::updater::install_and_restart() {
         Ok(()) => Json(serde_json::json!({ "ok": true })),
         Err(e) => {
@@ -162,11 +162,11 @@ pub async fn post_update_install() -> Json<serde_json::Value> {
 }
 
 #[derive(serde::Deserialize)]
-pub struct SetChannelRequest {
+pub(crate) struct SetChannelRequest {
     channel: UpdateChannel,
 }
 
-pub async fn post_update_channel(
+pub(crate) async fn post_update_channel(
     AxumState(state): AxumState<UpdateState>,
     Json(req): Json<SetChannelRequest>,
 ) -> Json<serde_json::Value> {

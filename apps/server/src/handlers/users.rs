@@ -14,7 +14,7 @@ use crate::state::AppState;
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
-pub struct UserResponse {
+pub(crate) struct UserResponse {
     pub id: String,
     pub zos_user_id: Option<String>,
     pub display_name: Option<String>,
@@ -45,7 +45,7 @@ impl From<NetworkUser> for UserResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ProfileResponse {
+pub(crate) struct ProfileResponse {
     pub id: String,
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
@@ -72,7 +72,7 @@ impl From<NetworkProfile> for ProfileResponse {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateMeRequest {
+pub(crate) struct UpdateMeRequest {
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
@@ -85,7 +85,7 @@ pub struct UpdateMeRequest {
 // ---------------------------------------------------------------------------
 
 /// GET /api/users/me — proxy to aura-network, returns the current user.
-pub async fn get_me(State(state): State<AppState>) -> ApiResult<Json<UserResponse>> {
+pub(crate) async fn get_me(State(state): State<AppState>) -> ApiResult<Json<UserResponse>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
 
@@ -98,7 +98,7 @@ pub async fn get_me(State(state): State<AppState>) -> ApiResult<Json<UserRespons
 }
 
 /// GET /api/users/:id — proxy to aura-network, returns a user by ID.
-pub async fn get_user(
+pub(crate) async fn get_user(
     State(state): State<AppState>,
     Path(user_id): Path<String>,
 ) -> ApiResult<Json<UserResponse>> {
@@ -114,7 +114,7 @@ pub async fn get_user(
 }
 
 /// PUT /api/users/me — proxy to aura-network, updates the current user.
-pub async fn update_me(
+pub(crate) async fn update_me(
     State(state): State<AppState>,
     Json(req): Json<UpdateMeRequest>,
 ) -> ApiResult<Json<UserResponse>> {
@@ -138,7 +138,7 @@ pub async fn update_me(
 }
 
 /// GET /api/users/:id/profile — proxy to aura-network, returns a user's profile.
-pub async fn get_user_profile(
+pub(crate) async fn get_user_profile(
     State(state): State<AppState>,
     Path(user_id): Path<String>,
 ) -> ApiResult<Json<ProfileResponse>> {
@@ -154,7 +154,7 @@ pub async fn get_user_profile(
 }
 
 /// GET /api/profiles/:id — proxy to aura-network, returns a profile by ID.
-pub async fn get_profile(
+pub(crate) async fn get_profile(
     State(state): State<AppState>,
     Path(profile_id): Path<String>,
 ) -> ApiResult<Json<ProfileResponse>> {
@@ -172,7 +172,7 @@ pub async fn get_profile(
 /// Sync user to aura-network: populates `network_user_id` and `profile_id`
 /// on the session and re-persists to RocksDB. Best-effort — logs warnings
 /// on failure but never errors out.
-pub async fn sync_user_to_network(state: &AppState, session: &mut ZeroAuthSession) {
+pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAuthSession) {
     if let Some(client) = &state.network_client {
         match client.get_current_user(&session.access_token).await {
             Ok(user) => {

@@ -15,11 +15,11 @@ use crate::handlers::{
 };
 use crate::state::AppState;
 
-pub fn create_router(state: AppState) -> Router {
+pub(crate) fn create_router(state: AppState) -> Router {
     create_router_with_frontend(state, None)
 }
 
-pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf>) -> Router {
+pub(crate) fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf>) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)

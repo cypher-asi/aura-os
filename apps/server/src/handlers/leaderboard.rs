@@ -13,13 +13,13 @@ use crate::state::AppState;
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
-pub struct LeaderboardQuery {
+pub(crate) struct LeaderboardQuery {
     pub period: Option<String>,
     pub org_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct LeaderboardEntryResponse {
+pub(crate) struct LeaderboardEntryResponse {
     pub profile_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
@@ -46,7 +46,7 @@ impl From<LeaderboardEntry> for LeaderboardEntryResponse {
     }
 }
 
-pub async fn get_leaderboard(
+pub(crate) async fn get_leaderboard(
     State(state): State<AppState>,
     Query(query): Query<LeaderboardQuery>,
 ) -> ApiResult<Json<Vec<LeaderboardEntryResponse>>> {
@@ -70,12 +70,12 @@ pub async fn get_leaderboard(
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Deserialize)]
-pub struct UsageQuery {
+pub(crate) struct UsageQuery {
     pub period: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct UsageResponse {
+pub(crate) struct UsageResponse {
     pub total_tokens: u64,
     pub total_input_tokens: u64,
     pub total_output_tokens: u64,
@@ -94,7 +94,7 @@ impl From<UsageStats> for UsageResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct MemberUsageResponse {
+pub(crate) struct MemberUsageResponse {
     pub user_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
@@ -116,7 +116,7 @@ impl From<MemberUsageStats> for MemberUsageResponse {
     }
 }
 
-pub async fn get_personal_usage(
+pub(crate) async fn get_personal_usage(
     State(state): State<AppState>,
     Query(query): Query<UsageQuery>,
 ) -> ApiResult<Json<UsageResponse>> {
@@ -130,7 +130,7 @@ pub async fn get_personal_usage(
     Ok(Json(UsageResponse::from(usage)))
 }
 
-pub async fn get_org_usage(
+pub(crate) async fn get_org_usage(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
     Query(query): Query<UsageQuery>,
@@ -146,7 +146,7 @@ pub async fn get_org_usage(
     Ok(Json(UsageResponse::from(usage)))
 }
 
-pub async fn get_org_usage_members(
+pub(crate) async fn get_org_usage_members(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberUsageResponse>>> {
@@ -167,7 +167,7 @@ pub async fn get_org_usage_members(
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
-pub struct PlatformStatsResponse {
+pub(crate) struct PlatformStatsResponse {
     pub id: String,
     pub date: String,
     pub daily_active_users: i32,
@@ -197,7 +197,7 @@ impl From<PlatformStats> for PlatformStatsResponse {
     }
 }
 
-pub async fn get_platform_stats(
+pub(crate) async fn get_platform_stats(
     State(state): State<AppState>,
 ) -> ApiResult<Json<Option<PlatformStatsResponse>>> {
     let client = state.require_network_client()?;

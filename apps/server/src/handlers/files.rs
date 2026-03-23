@@ -2,12 +2,12 @@ use axum::Json;
 use tracing::{debug, warn};
 
 #[derive(serde::Deserialize)]
-pub struct ListDirectoryRequest {
+pub(crate) struct ListDirectoryRequest {
     path: String,
 }
 
 #[derive(serde::Serialize)]
-pub struct DirEntry {
+pub(crate) struct DirEntry {
     name: String,
     path: String,
     is_dir: bool,
@@ -83,7 +83,7 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
         .collect()
 }
 
-pub async fn list_directory(Json(req): Json<ListDirectoryRequest>) -> Json<serde_json::Value> {
+pub(crate) async fn list_directory(Json(req): Json<ListDirectoryRequest>) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,

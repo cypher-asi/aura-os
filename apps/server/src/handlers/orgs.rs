@@ -15,7 +15,7 @@ use crate::state::AppState;
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
-pub struct OrgResponse {
+pub(crate) struct OrgResponse {
     pub org_id: String,
     pub name: String,
     pub owner_user_id: String,
@@ -50,7 +50,7 @@ impl OrgResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct MemberResponse {
+pub(crate) struct MemberResponse {
     pub org_id: String,
     pub user_id: String,
     pub display_name: String,
@@ -77,7 +77,7 @@ impl From<NetworkOrgMember> for MemberResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct InviteResponse {
+pub(crate) struct InviteResponse {
     pub invite_id: String,
     pub org_id: String,
     pub token: String,
@@ -120,7 +120,7 @@ fn map_org_err(e: aura_os_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
 // Org CRUD — network only; billing from settings
 // ---------------------------------------------------------------------------
 
-pub async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgResponse>>> {
+pub(crate) async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgResponse>>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let net_orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
@@ -140,7 +140,7 @@ pub async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgR
     Ok(Json(responses))
 }
 
-pub async fn create_org(
+pub(crate) async fn create_org(
     State(state): State<AppState>,
     Json(req): Json<crate::dto::CreateOrgRequest>,
 ) -> ApiResult<(StatusCode, Json<OrgResponse>)> {
@@ -168,7 +168,7 @@ pub async fn create_org(
     ))
 }
 
-pub async fn get_org(
+pub(crate) async fn get_org(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<OrgResponse>> {
@@ -184,7 +184,7 @@ pub async fn get_org(
     Ok(Json(OrgResponse::from_network(&net_org, billing)))
 }
 
-pub async fn update_org(
+pub(crate) async fn update_org(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
     Json(req): Json<crate::dto::UpdateOrgRequest>,
@@ -210,7 +210,7 @@ pub async fn update_org(
 // Members — proxied to aura-network
 // ---------------------------------------------------------------------------
 
-pub async fn list_members(
+pub(crate) async fn list_members(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberResponse>>> {
@@ -285,7 +285,7 @@ async fn try_fill_from_network(
     }
 }
 
-pub async fn update_member_role(
+pub(crate) async fn update_member_role(
     State(state): State<AppState>,
     Path((org_id, target_user_id)): Path<(OrgId, String)>,
     Json(req): Json<crate::dto::UpdateMemberRoleRequest>,
@@ -306,7 +306,7 @@ pub async fn update_member_role(
     Ok(Json(MemberResponse::from(member)))
 }
 
-pub async fn remove_member(
+pub(crate) async fn remove_member(
     State(state): State<AppState>,
     Path((org_id, target_user_id)): Path<(OrgId, String)>,
 ) -> ApiResult<StatusCode> {
@@ -325,7 +325,7 @@ pub async fn remove_member(
 // Invites — proxied to aura-network
 // ---------------------------------------------------------------------------
 
-pub async fn create_invite(
+pub(crate) async fn create_invite(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<(StatusCode, Json<InviteResponse>)> {
@@ -343,7 +343,7 @@ pub async fn create_invite(
     Ok((StatusCode::CREATED, Json(InviteResponse::from(invite))))
 }
 
-pub async fn list_invites(
+pub(crate) async fn list_invites(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<InviteResponse>>> {
@@ -359,7 +359,7 @@ pub async fn list_invites(
     ))
 }
 
-pub async fn revoke_invite(
+pub(crate) async fn revoke_invite(
     State(state): State<AppState>,
     Path((org_id, invite_id)): Path<(OrgId, String)>,
 ) -> ApiResult<StatusCode> {
@@ -373,7 +373,7 @@ pub async fn revoke_invite(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn accept_invite(
+pub(crate) async fn accept_invite(
     State(state): State<AppState>,
     Path(token): Path<String>,
 ) -> ApiResult<Json<MemberResponse>> {
@@ -391,7 +391,7 @@ pub async fn accept_invite(
 // Billing — stays local
 // ---------------------------------------------------------------------------
 
-pub async fn set_billing(
+pub(crate) async fn set_billing(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
     Json(req): Json<SetBillingRequest>,
@@ -407,7 +407,7 @@ pub async fn set_billing(
     Ok(Json(billing))
 }
 
-pub async fn get_billing(
+pub(crate) async fn get_billing(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Option<OrgBilling>>> {

@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
-pub struct CreateProjectRequest {
+pub(crate) struct CreateProjectRequest {
     pub org_id: OrgId,
     pub name: String,
     pub description: String,
@@ -20,7 +20,7 @@ pub struct CreateProjectRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateProjectRequest {
+pub(crate) struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub linked_folder_path: Option<String>,
@@ -36,13 +36,13 @@ pub struct UpdateProjectRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ImportedProjectFile {
+pub(crate) struct ImportedProjectFile {
     pub relative_path: String,
     pub contents_base64: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct CreateImportedProjectRequest {
+pub(crate) struct CreateImportedProjectRequest {
     pub org_id: OrgId,
     pub name: String,
     pub description: String,
@@ -58,12 +58,12 @@ pub struct CreateImportedProjectRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct TransitionTaskRequest {
+pub(crate) struct TransitionTaskRequest {
     pub new_status: TaskStatus,
 }
 
 #[derive(Debug, Serialize)]
-pub struct LoopStatusResponse {
+pub(crate) struct LoopStatusResponse {
     pub running: bool,
     pub paused: bool,
     pub project_id: Option<ProjectId>,
@@ -76,7 +76,7 @@ pub struct LoopStatusResponse {
 // -- Agent DTOs (user-level) --
 
 #[derive(Debug, Deserialize)]
-pub struct CreateAgentRequest {
+pub(crate) struct CreateAgentRequest {
     pub name: String,
     pub role: String,
     pub personality: String,
@@ -87,7 +87,7 @@ pub struct CreateAgentRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateAgentRequest {
+pub(crate) struct UpdateAgentRequest {
     pub name: Option<String>,
     pub role: Option<String>,
     pub personality: Option<String>,
@@ -99,12 +99,12 @@ pub struct UpdateAgentRequest {
 // -- AgentInstance DTOs (project-level) --
 
 #[derive(Debug, Deserialize)]
-pub struct CreateAgentInstanceRequest {
+pub(crate) struct CreateAgentInstanceRequest {
     pub agent_id: AgentId,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateAgentInstanceRequest {
+pub(crate) struct UpdateAgentInstanceRequest {
     pub status: Option<String>,
     pub name: Option<String>,
     pub role: Option<String>,
@@ -115,7 +115,7 @@ pub struct UpdateAgentInstanceRequest {
 // -- Message DTOs --
 
 #[derive(Debug, Deserialize)]
-pub struct SendMessageRequest {
+pub(crate) struct SendMessageRequest {
     pub content: String,
     pub action: Option<String>,
     #[serde(default)]
@@ -123,19 +123,19 @@ pub struct SendMessageRequest {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AuthLoginRequest {
+pub(crate) struct AuthLoginRequest {
     pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AuthRegisterRequest {
+pub(crate) struct AuthRegisterRequest {
     pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct AuthSessionResponse {
+pub(crate) struct AuthSessionResponse {
     pub user_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub network_user_id: Option<String>,
@@ -154,22 +154,22 @@ pub struct AuthSessionResponse {
 // -- Org DTOs --
 
 #[derive(Debug, Deserialize)]
-pub struct CreateOrgRequest {
+pub(crate) struct CreateOrgRequest {
     pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateOrgRequest {
+pub(crate) struct UpdateOrgRequest {
     pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UpdateMemberRoleRequest {
+pub(crate) struct UpdateMemberRoleRequest {
     pub role: aura_os_core::OrgRole,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SetBillingRequest {
+pub(crate) struct SetBillingRequest {
     pub billing_email: Option<String>,
     pub plan: String,
 }
@@ -177,19 +177,19 @@ pub struct SetBillingRequest {
 // -- Follow DTOs --
 
 #[derive(Debug, Deserialize)]
-pub struct FollowRequest {
+pub(crate) struct FollowRequest {
     pub target_profile_id: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct FollowCheckResponse {
+pub(crate) struct FollowCheckResponse {
     pub following: bool,
 }
 
 // -- Billing/Credits DTOs --
 
 #[derive(Debug, Deserialize)]
-pub struct CreateCreditCheckoutRequest {
+pub(crate) struct CreateCreditCheckoutRequest {
     pub amount_usd: f64,
 }
 

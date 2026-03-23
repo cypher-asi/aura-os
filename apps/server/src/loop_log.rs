@@ -19,7 +19,7 @@ struct RunState {
 }
 
 /// Writes all engine events and task output to flat files under a base directory.
-pub struct LoopLogWriter {
+pub(crate) struct LoopLogWriter {
     base_dir: PathBuf,
     run_state: Mutex<HashMap<(ProjectId, AgentInstanceId), RunState>>,
     task_to_run: Mutex<HashMap<TaskId, (ProjectId, AgentInstanceId)>>,
@@ -33,7 +33,7 @@ struct TimestampedEvent<'a> {
 }
 
 impl LoopLogWriter {
-    pub fn new(base_dir: PathBuf) -> Self {
+    pub(crate) fn new(base_dir: PathBuf) -> Self {
         Self {
             base_dir,
             run_state: Mutex::new(HashMap::new()),
@@ -42,7 +42,7 @@ impl LoopLogWriter {
     }
 
     /// Call on LoopStarted: create run dir and register run.
-    pub async fn on_loop_started(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
+    pub(crate) async fn on_loop_started(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
         let run_id = format!(
             "{}_{}",
             Utc::now().format("%Y%m%d_%H%M%S"),
@@ -64,7 +64,7 @@ impl LoopLogWriter {
     }
 
     /// Call on TaskStarted: record task -> (project, agent) for writing output later.
-    pub async fn on_task_started(
+    pub(crate) async fn on_task_started(
         &self,
         project_id: ProjectId,
         agent_instance_id: AgentInstanceId,
@@ -75,7 +75,7 @@ impl LoopLogWriter {
     }
 
     /// Append one timestamped event to the appropriate file (run, project, or global).
-    pub async fn on_event(&self, event: &EngineEvent) {
+    pub(crate) async fn on_event(&self, event: &EngineEvent) {
         let line = match serde_json::to_string(&TimestampedEvent {
             _ts: Utc::now().to_rfc3339(),
             event,
@@ -115,7 +115,7 @@ impl LoopLogWriter {
     }
 
     /// Call on TaskCompleted/TaskFailed: look up run from task_id, write task output to run dir, unregister task.
-    pub async fn on_task_end(&self, task_id: TaskId, output: &str) {
+    pub(crate) async fn on_task_end(&self, task_id: TaskId, output: &str) {
         let key = self.task_to_run.lock().await.get(&task_id).copied();
         let run_dir = if let Some((project_id, agent_instance_id)) = key {
             let state = self.run_state.lock().await;
@@ -136,7 +136,7 @@ impl LoopLogWriter {
     }
 
     /// Call on LoopFinished/LoopStopped: remove run state.
-    pub async fn on_loop_ended(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
+    pub(crate) async fn on_loop_ended(&self, project_id: ProjectId, agent_instance_id: AgentInstanceId) {
         let mut state = self.run_state.lock().await;
         state.remove(&(project_id, agent_instance_id));
     }

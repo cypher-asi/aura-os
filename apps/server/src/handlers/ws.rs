@@ -5,7 +5,7 @@ use tracing::{info, warn};
 
 use crate::state::AppState;
 
-pub async fn ws_events(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
+pub(crate) async fn ws_events(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
     info!("WebSocket client connecting");
     ws.on_upgrade(|socket| handle_ws(socket, state))
 }

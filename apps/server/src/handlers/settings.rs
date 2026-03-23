@@ -6,7 +6,7 @@ use aura_os_core::ApiKeyInfo;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-pub async fn get_api_key_info(State(state): State<AppState>) -> ApiResult<Json<ApiKeyInfo>> {
+pub(crate) async fn get_api_key_info(State(state): State<AppState>) -> ApiResult<Json<ApiKeyInfo>> {
     let info = state
         .settings_service
         .get_api_key_info()

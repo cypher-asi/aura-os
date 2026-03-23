@@ -14,7 +14,7 @@ use aura_os_link::AutomatonEvent;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
 
-pub async fn list_specs(
+pub(crate) async fn list_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
@@ -32,7 +32,7 @@ pub async fn list_specs(
     Ok(Json(specs))
 }
 
-pub async fn generate_specs_summary(
+pub(crate) async fn generate_specs_summary(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<aura_os_core::Project>> {
@@ -76,7 +76,7 @@ pub async fn generate_specs_summary(
     Ok(Json(project))
 }
 
-pub async fn get_spec(
+pub(crate) async fn get_spec(
     State(state): State<AppState>,
     Path((_project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Spec>> {
@@ -122,7 +122,7 @@ async fn install_spec_gen(
         .map_err(|e| ApiError::internal(format!("subscribing to spec generation events: {e}")))
 }
 
-pub async fn generate_specs(
+pub(crate) async fn generate_specs(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
@@ -157,7 +157,7 @@ pub async fn generate_specs(
     ))
 }
 
-pub async fn generate_specs_stream(
+pub(crate) async fn generate_specs_stream(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<(

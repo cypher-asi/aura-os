@@ -3,16 +3,16 @@ use axum::Json;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-pub struct ApiError {
+pub(crate) struct ApiError {
     pub error: String,
     pub code: String,
     pub details: Option<String>,
 }
 
-pub type ApiResult<T> = Result<T, (StatusCode, Json<ApiError>)>;
+pub(crate) type ApiResult<T> = Result<T, (StatusCode, Json<ApiError>)>;
 
 impl ApiError {
-    pub fn not_found(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn not_found(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::NOT_FOUND,
             Json(Self {
@@ -23,7 +23,7 @@ impl ApiError {
         )
     }
 
-    pub fn bad_request(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn bad_request(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::BAD_REQUEST,
             Json(Self {
@@ -34,7 +34,7 @@ impl ApiError {
         )
     }
 
-    pub fn internal(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn internal(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(Self {
@@ -45,7 +45,7 @@ impl ApiError {
         )
     }
 
-    pub fn unauthorized(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn unauthorized(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::UNAUTHORIZED,
             Json(Self {
@@ -56,7 +56,7 @@ impl ApiError {
         )
     }
 
-    pub fn forbidden(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn forbidden(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::FORBIDDEN,
             Json(Self {
@@ -67,7 +67,7 @@ impl ApiError {
         )
     }
 
-    pub fn payment_required(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn payment_required(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::PAYMENT_REQUIRED,
             Json(Self {
@@ -78,7 +78,7 @@ impl ApiError {
         )
     }
 
-    pub fn conflict(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn conflict(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::CONFLICT,
             Json(Self {
@@ -89,7 +89,7 @@ impl ApiError {
         )
     }
 
-    pub fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn service_unavailable(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::SERVICE_UNAVAILABLE,
             Json(Self {
@@ -100,7 +100,7 @@ impl ApiError {
         )
     }
 
-    pub fn bad_gateway(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
+    pub(crate) fn bad_gateway(msg: impl Into<String>) -> (StatusCode, Json<Self>) {
         (
             StatusCode::BAD_GATEWAY,
             Json(Self {
@@ -113,7 +113,7 @@ impl ApiError {
 }
 
 /// Map a `NetworkError` to an API error response.
-pub fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode, Json<ApiError>) {
+pub(crate) fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode, Json<ApiError>) {
     match &e {
         aura_os_network::NetworkError::Server { status, body } => {
             let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
@@ -131,7 +131,7 @@ pub fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode, Json<
 }
 
 /// Map a `StorageError` to an API error response, preserving the upstream HTTP status.
-pub fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode, Json<ApiError>) {
+pub(crate) fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode, Json<ApiError>) {
     match &e {
         aura_os_storage::StorageError::Server { status, body } => {
             let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);

@@ -7,14 +7,14 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
-pub struct ListOrbitReposQuery {
+pub(crate) struct ListOrbitReposQuery {
     pub q: Option<String>,
 }
 
 /// GET /api/orbit/repos?q=...
 /// Returns repos the current user can use (JWT auth). Requires ORBIT_BASE_URL to be set.
 /// Each repo includes a resolved clone_url for Git operations.
-pub async fn list_orbit_repos(
+pub(crate) async fn list_orbit_repos(
     State(state): State<AppState>,
     Query(query): Query<ListOrbitReposQuery>,
 ) -> ApiResult<axum::Json<Vec<aura_os_orbit::OrbitRepo>>> {
@@ -51,7 +51,7 @@ pub async fn list_orbit_repos(
 /// GET /api/projects/:project_id/orbit-collaborators
 /// Returns Orbit repo collaborators for a project with an Orbit link. Uses current user's JWT.
 /// "Can add people" = repo owner + users with owner role.
-pub async fn get_project_orbit_collaborators(
+pub(crate) async fn get_project_orbit_collaborators(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<axum::Json<Vec<aura_os_orbit::OrbitCollaborator>>> {

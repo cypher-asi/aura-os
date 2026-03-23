@@ -34,7 +34,7 @@ fn follow_from_network(net: &NetworkFollow) -> Follow {
     }
 }
 
-pub async fn follow(
+pub(crate) async fn follow(
     State(state): State<AppState>,
     Json(req): Json<FollowRequest>,
 ) -> ApiResult<(StatusCode, Json<Follow>)> {
@@ -50,7 +50,7 @@ pub async fn follow(
     Ok((StatusCode::CREATED, Json(follow_from_network(&net_follow))))
 }
 
-pub async fn unfollow(
+pub(crate) async fn unfollow(
     State(state): State<AppState>,
     Path(target_profile_id): Path<String>,
 ) -> ApiResult<StatusCode> {
@@ -63,7 +63,7 @@ pub async fn unfollow(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn list_follows(State(state): State<AppState>) -> ApiResult<Json<Vec<Follow>>> {
+pub(crate) async fn list_follows(State(state): State<AppState>) -> ApiResult<Json<Vec<Follow>>> {
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let net_follows = client.list_follows(&jwt).await.map_err(map_network_error)?;
@@ -71,7 +71,7 @@ pub async fn list_follows(State(state): State<AppState>) -> ApiResult<Json<Vec<F
     Ok(Json(follows))
 }
 
-pub async fn check_follow(
+pub(crate) async fn check_follow(
     State(state): State<AppState>,
     Path(target_profile_id): Path<String>,
 ) -> ApiResult<Json<FollowCheckResponse>> {
