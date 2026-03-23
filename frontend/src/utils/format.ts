@@ -91,6 +91,11 @@ export function formatModelName(model: string): string {
   return model.replace(/^claude-/, "").replace(/-(\d)$/, " $1");
 }
 
+export function formatCost(usd: number): string {
+  if (usd < 0.01) return `$${usd.toFixed(4)}`;
+  return `$${usd.toFixed(2)}`;
+}
+
 export function formatDuration(ms: number): string {
   const seconds = Math.round(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
