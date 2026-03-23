@@ -3,8 +3,8 @@ import { PageEmptyState } from "@cypher-asi/zui";
 import { Rocket } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { getLastAgent } from "../../utils/storage";
-import { projectAgentRoute } from "../../utils/mobileNavigation";
+import { getLastAgent, getLastAgentEntry, getLastProject } from "../../utils/storage";
+import { projectAgentChatRoute, projectAgentRoute } from "../../utils/mobileNavigation";
 import { useOrgStore } from "../../stores/org-store";
 import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
 
@@ -15,16 +15,22 @@ export function HomeView() {
     useShallow((s) => ({ activeOrg: s.activeOrg, isLoading: s.isLoading })),
   );
   const mostRecentProject = getMostRecentProject(projects);
-
-  const lastAgent = getLastAgent();
-  const targetProject = (
-    lastAgent
-      ? projects.find((project) => project.project_id === lastAgent.projectId)
-      : null
-  ) ?? mostRecentProject ?? projects[0] ?? null;
+  const lastProjectId = getLastProject();
+  const lastProject = lastProjectId
+    ? projects.find((project) => project.project_id === lastProjectId) ?? null
+    : null;
+  const lastAgentEntry = getLastAgentEntry();
+  const fallbackProject = lastAgentEntry
+    ? projects.find((project) => project.project_id === lastAgentEntry.projectId) ?? null
+    : null;
+  const targetProject = lastProject ?? fallbackProject ?? mostRecentProject ?? projects[0] ?? null;
 
   if (isMobileLayout && targetProject) {
-    return <Navigate to={projectAgentRoute(targetProject.project_id)} replace />;
+    const lastAgentId = getLastAgent(targetProject.project_id);
+    const targetPath = lastAgentId
+      ? projectAgentChatRoute(targetProject.project_id, lastAgentId)
+      : projectAgentRoute(targetProject.project_id);
+    return <Navigate to={targetPath} replace />;
   }
 
   return (

@@ -96,6 +96,7 @@ vi.mock("../../apps/projects/useProjectsList", () => ({
 }));
 
 vi.mock("../../utils/storage", () => ({
+  getLastProject: () => null,
   getLastAgentEntry: () => null,
   getLastAgent: () => ({ projectId: "proj-1", agentInstanceId: "agent-inst-1" }),
 }));
@@ -128,6 +129,9 @@ vi.mock("../UpdateBanner", () => ({
 }));
 vi.mock("../PanelSearch", () => ({
   PanelSearch: () => <div data-testid="panel-search" />,
+}));
+vi.mock("../HostSettingsModal", () => ({
+  HostSettingsModal: () => null,
 }));
 
 vi.mock("../AppShell/AppShell.module.css", () => ({

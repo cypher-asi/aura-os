@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useNavigate, useOutlet } from "react-router-dom";
+import { useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { Topbar, Drawer, Button, ButtonPlus, Text } from "@cypher-asi/zui";
 import { useShallow } from "zustand/react/shallow";
 import { ErrorBoundary } from "../ErrorBoundary";
@@ -26,7 +26,7 @@ import {
   projectRootPath,
   projectWorkRoute,
 } from "../../utils/mobileNavigation";
-import { LAST_AGENT_ID_KEY } from "../../apps/agents/stores";
+import { getLastSelectedAgentId } from "../../apps/agents/stores";
 import { useMobileShellState } from "./useMobileShellState";
 import styles from "../AppShell/AppShell.module.css";
 
@@ -44,7 +44,7 @@ function ProjectNavigationDrawerContent() {
     })),
   );
   const navigate = useNavigate();
-  const location = useMobileShellState().location;
+  const location = useLocation();
   const sidekick = useSidekick();
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
@@ -227,11 +227,7 @@ function resolveGlobalProjectPath(state: ReturnType<typeof useMobileShellState>)
 }
 
 function resolveGlobalAgentsPath() {
-  if (typeof window === "undefined") {
-    return "/agents";
-  }
-
-  const lastId = window.localStorage.getItem(LAST_AGENT_ID_KEY);
+  const lastId = getLastSelectedAgentId();
   return lastId ? `/agents/${lastId}` : "/agents";
 }
 
