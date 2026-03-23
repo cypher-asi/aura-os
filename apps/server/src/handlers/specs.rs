@@ -176,7 +176,7 @@ pub async fn generate_specs_stream(
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
-        .map(|evt| Ok(super::sse::automaton_event_to_sse(&evt)));
+        .map(|evt| super::sse::automaton_event_to_sse(&evt));
 
     Ok((
         SSE_NO_BUFFERING_HEADERS,

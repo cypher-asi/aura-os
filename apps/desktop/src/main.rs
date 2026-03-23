@@ -144,7 +144,7 @@ fn bind_listener() -> (StdTcpListener, u16, String) {
     std_listener
         .set_nonblocking(true)
         .expect("failed to set non-blocking");
-    let port = std_listener.local_addr().unwrap().port();
+    let port = std_listener.local_addr().expect("listener must have local address").port();
     let url = format!("http://127.0.0.1:{port}");
     info!(%url, "server binding ready");
     (std_listener, port, url)

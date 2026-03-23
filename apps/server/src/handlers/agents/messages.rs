@@ -170,7 +170,7 @@ pub async fn send_agent_message_stream(
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
-        .map(|evt| Ok(super::super::sse::automaton_event_to_sse(&evt)));
+        .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
 
     Ok((
         SSE_NO_BUFFERING_HEADERS,
@@ -240,7 +240,7 @@ pub async fn send_message_stream(
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
-        .map(|evt| Ok(super::super::sse::automaton_event_to_sse(&evt)));
+        .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
 
     Ok((
         SSE_NO_BUFFERING_HEADERS,

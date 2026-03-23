@@ -120,7 +120,7 @@ pub async fn transition_task(
         .map_err(|e| ApiError::bad_request(e.to_string()))?;
 
     let status_str = serde_json::to_value(req.new_status)
-        .unwrap()
+        .map_err(|e| ApiError::internal(e.to_string()))?
         .as_str()
         .unwrap_or("pending")
         .to_string();
