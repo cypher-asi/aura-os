@@ -59,7 +59,7 @@ Edit `.env` and set:
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
 
-The server reads `.env` from the current working directory when you run `aura-server` or `aura-desktop`.
+The server reads `.env` from the current working directory when you run `aura-os-server` or `aura-os-desktop`.
 
 ### Server URLs (local development)
 
@@ -71,7 +71,7 @@ The server reads `.env` from the current working directory when you run `aura-se
 From the repo root (so `.env` is found):
 
 ```bash
-cargo run -p aura-server
+cargo run -p aura-os-server
 ```
 
 The Axum server listens on `http://127.0.0.1:3100`.
@@ -96,7 +96,7 @@ For all mobile browser testing, use the shared mobile dev runner from the repo r
 
 What it does:
 
-- starts `aura-server` on `AURA_SERVER_HOST:AURA_SERVER_PORT`
+- starts `aura-os-server` on `AURA_SERVER_HOST:AURA_SERVER_PORT`
 - starts the frontend on `AURA_FRONTEND_HOST:AURA_FRONTEND_PORT`
 - prints the exact URL you should open for simulator or phone testing
 - fails fast if those ports are already in use, so the printed URLs stay accurate
@@ -191,7 +191,7 @@ This gives you the installed-PWA presentation, which is closer to the intended m
 
 Notes:
 
-- Mobile web uses the local Aura host (`aura-server`) even when the underlying services are remote.
+- Mobile web uses the local Aura host (`aura-os-server`) even when the underlying services are remote.
 - Some capabilities remain desktop-only by design, such as linked host folders, IDE open, and other native bridge actions.
 - Imported project files do work on mobile through the shared host file APIs; true linked-workspace browsing is still a desktop capability.
 - If you need different ports, set `AURA_SERVER_PORT` and/or `AURA_FRONTEND_PORT` before running the script.
@@ -203,7 +203,7 @@ Build the frontend once, then run the desktop shell (it embeds the server and fr
 
 ```bash
 cd frontend && npm run build && cd ..
-cargo run -p aura-desktop
+cargo run -p aura-os-desktop
 ```
 
 Run from the repo root so `.env` is loaded. The desktop app bundles the server and frontend into a single native window via WebView.
@@ -230,22 +230,22 @@ Run from the repo root so `.env` is loaded. The desktop app bundles the server a
 
 | Crate | Description |
 | --- | --- |
-| **aura-desktop** | Standalone desktop GUI (tao + wry WebView) |
-| **aura-server** | HTTP API server (Axum) serving the frontend and API routes |
-| **aura-ide** | IDE helper library for the desktop shell |
-| **aura-core** | Shared entity types, IDs, and enums |
-| **aura-store** | RocksDB persistence layer and storage abstractions |
+| **aura-os-desktop** | Standalone desktop GUI (tao + wry WebView) |
+| **aura-os-server** | HTTP API server (Axum) serving the frontend and API routes |
+| **aura-os-ide** | IDE helper library for the desktop shell |
+| **aura-os-core** | Shared entity types, IDs, and enums |
+| **aura-os-store** | RocksDB persistence layer and storage abstractions |
 | **aura-claude** | Claude API client |
-| **aura-terminal** | Terminal emulation for agent command execution |
-| **aura-projects** | Project CRUD and lifecycle management |
-| **aura-specs** | Spec generation, storage, and streaming |
-| **aura-tasks** | Task state machine, extraction, and transitions |
-| **aura-agents** | Agent and agent instance management |
-| **aura-sessions** | Session lifecycle and context rotation |
-| **aura-auth** | Authentication and session tokens |
-| **aura-orgs** | Organization CRUD, members, and invites |
-| **aura-billing** | Credit tiers, balance, and checkout |
-| **aura-settings** | API key management and app configuration |
+| **aura-os-terminal** | Terminal emulation for agent command execution |
+| **aura-os-projects** | Project CRUD and lifecycle management |
+| **aura-os-specs** | Spec generation, storage, and streaming |
+| **aura-os-tasks** | Task state machine, extraction, and transitions |
+| **aura-os-agents** | Agent and agent instance management |
+| **aura-os-sessions** | Session lifecycle and context rotation |
+| **aura-os-auth** | Authentication and session tokens |
+| **aura-os-orgs** | Organization CRUD, members, and invites |
+| **aura-os-billing** | Credit tiers, balance, and checkout |
+| **aura-os-settings** | API key management and app configuration |
 | **aura-github** | GitHub App integration and repository linking |
 | **aura-engine** | AI orchestration and autonomous dev loop |
 | **aura-chat** | Chat and streaming orchestration |

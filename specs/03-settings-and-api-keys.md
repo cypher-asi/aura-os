@@ -229,10 +229,10 @@ stateDiagram-v2
 
 | ID | Task | Description |
 |----|------|-------------|
-| T03.1 | Define settings types | `SettingsEntry`, `SettingsValue`, `EncryptedBlob`, `ApiKeyStatus`, `ApiKeyInfo` in `aura-core` |
+| T03.1 | Define settings types | `SettingsEntry`, `SettingsValue`, `EncryptedBlob`, `ApiKeyStatus`, `ApiKeyInfo` in `aura-os-core` |
 | T03.2 | Implement `KeyEncryption` | `init`, `encrypt`, `decrypt` with AES-256-GCM; keyfile read/write |
 | T03.3 | Implement `mask_api_key` | Masking helper with tests for various key formats |
-| T03.4 | Implement settings store ops | `put_setting` / `get_setting` / `delete_setting` in `aura-store` settings CF |
+| T03.4 | Implement settings store ops | `put_setting` / `get_setting` / `delete_setting` in `aura-os-store` settings CF |
 | T03.5 | Implement `SettingsService` | Wire encryption + store: `set_api_key`, `get_api_key_info`, `decrypt_api_key`, `delete_api_key` |
 | T03.6 | Implement API key validation probe | Async function that calls Claude API with the decrypted key, updates status |
 | T03.7 | Unit tests — encryption round-trip | Encrypt then decrypt, verify plaintext matches. Different nonces each time. |

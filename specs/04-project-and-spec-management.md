@@ -345,7 +345,7 @@ stateDiagram-v2
 
 | ID | Task | Description |
 |----|------|-------------|
-| T04.1 | Create `aura-services` crate | `cargo new aura-services --lib`, add to workspace, depend on `aura-core` and `aura-store` |
+| T04.1 | Create `aura-services` crate | `cargo new aura-services --lib`, add to workspace, depend on `aura-os-core` and `aura-os-store` |
 | T04.2 | Implement `ProjectService` | `create_project`, `get_project`, `list_projects`, `update_project`, `archive_project` |
 | T04.3 | Input validation | Validate name non-empty, linked_folder_path is existing directory, requirements_doc_path is existing file |
 | T04.4 | Implement `ClaudeClient` | HTTP POST to Claude Messages API, parse response, handle errors |

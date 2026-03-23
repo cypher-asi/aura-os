@@ -625,7 +625,7 @@ flowchart TD
 
 | ID | Task | Description |
 |----|------|-------------|
-| T07.1 | Create `aura-engine` crate | New crate with dependencies on `aura-core`, `aura-store`, `aura-services` |
+| T07.1 | Create `aura-engine` crate | New crate with dependencies on `aura-os-core`, `aura-os-store`, `aura-services` |
 | T07.2 | Implement `DevLoopEngine::new` | Wire all services |
 | T07.3 | Implement `LoopHandle` | Pause/stop/wait via `tokio::sync::watch` |
 | T07.4 | Implement `start` | Validate project, create agent+session, spawn loop |

@@ -424,7 +424,7 @@ async fn handle_ws(mut socket: WebSocket, state: AppState) {
 
 | ID | Task | Description |
 |----|------|-------------|
-| T08.1 | Create `aura-server` crate | New crate, add to workspace, depend on all service crates + axum |
+| T08.1 | Create `aura-os-server` crate | New crate, add to workspace, depend on all service crates + axum |
 | T08.2 | Implement `AppState` | Struct holding all `Arc<Service>` references |
 | T08.3 | Implement `create_router` | Wire all routes with CORS |
 | T08.4 | Implement settings handlers | `set_api_key`, `get_api_key_info`, `delete_api_key`, `get_setting`, `set_setting` |

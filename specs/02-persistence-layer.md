@@ -361,7 +361,7 @@ stateDiagram-v2
 
 | ID | Task | Description |
 |----|------|-------------|
-| T02.1 | Create `aura-store` crate | `cargo new aura-store --lib`, add to workspace, add `aura-core` and `rocksdb` dependencies |
+| T02.1 | Create `aura-os-store` crate | `cargo new aura-os-store --lib`, add to workspace, add `aura-os-core` and `rocksdb` dependencies |
 | T02.2 | Implement `RocksStore::open` | Open DB at path, create all 6 column families, return `RocksStore` |
 | T02.3 | Implement column family helpers | Private `cf_projects()`, `cf_specs()`, etc. methods returning CF handles |
 | T02.4 | Implement `scan_cf` generic helper | Prefix iterator with deserialization and prefix-boundary check |
@@ -375,7 +375,7 @@ stateDiagram-v2
 | T02.12 | Integration tests — CRUD per entity | For each entity: create, read back, update, delete, verify not-found |
 | T02.13 | Integration tests — prefix scans | Create multiple specs/tasks under different projects, verify scans return correct subsets |
 | T02.14 | Integration tests — batch writes | Write spec + tasks atomically, verify all-or-nothing |
-| T02.15 | Clippy + fmt clean | `cargo clippy -p aura-store -- -D warnings` and `cargo fmt` |
+| T02.15 | Clippy + fmt clean | `cargo clippy -p aura-os-store -- -D warnings` and `cargo fmt` |
 
 ---
 
@@ -383,8 +383,8 @@ stateDiagram-v2
 
 All of the following must pass before proceeding to Spec 03:
 
-- [ ] `cargo build -p aura-store` compiles with zero warnings
-- [ ] `cargo test -p aura-store` passes all tests (uses `tempfile` for DB path)
+- [ ] `cargo build -p aura-os-store` compiles with zero warnings
+- [ ] `cargo test -p aura-os-store` passes all tests (uses `tempfile` for DB path)
 - [ ] CRUD round-trip works for every entity type
 - [ ] Prefix scans return exactly the expected subset
 - [ ] Batch writes are atomic (all written or none)

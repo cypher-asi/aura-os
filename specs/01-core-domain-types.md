@@ -310,7 +310,7 @@ None. This is the foundation crate with no internal dependencies.
 
 | ID | Task | Description |
 |----|------|-------------|
-| T01.1 | Create `aura-core` crate | `cargo new aura-core --lib`, add to workspace `Cargo.toml`, add dependencies |
+| T01.1 | Create `aura-os-core` crate | `cargo new aura-os-core --lib`, add to workspace `Cargo.toml`, add dependencies |
 | T01.2 | Implement ID newtype macro | Create `src/ids.rs` with `define_id!` macro producing `ProjectId`, `SpecId`, `TaskId`, `AgentId`, `SessionId` |
 | T01.3 | Implement domain enums | Create `src/enums.rs` with `ProjectStatus`, `TaskStatus`, `AgentStatus`, `SessionStatus` |
 | T01.4 | Implement entity structs | Create `src/entities.rs` with `Project`, `Spec`, `Task`, `Agent`, `Session` |
@@ -318,7 +318,7 @@ None. This is the foundation crate with no internal dependencies.
 | T01.6 | Unit tests — ID round-trips | For each ID type: `new()`, `Display`, `FromStr`, JSON serialize/deserialize |
 | T01.7 | Unit tests — enum serde | For each enum: verify every variant serializes to expected snake_case string and deserializes back |
 | T01.8 | Unit tests — entity round-trips | For each entity: construct with sample data, serialize to JSON, deserialize back, assert equality |
-| T01.9 | Clippy + fmt clean | `cargo clippy -p aura-core -- -D warnings` and `cargo fmt -p aura-core -- --check` pass |
+| T01.9 | Clippy + fmt clean | `cargo clippy -p aura-os-core -- -D warnings` and `cargo fmt -p aura-os-core -- --check` pass |
 
 ---
 
@@ -326,10 +326,10 @@ None. This is the foundation crate with no internal dependencies.
 
 All of the following must pass before proceeding to Spec 02:
 
-- [ ] `cargo build -p aura-core` compiles with zero warnings
-- [ ] `cargo test -p aura-core` passes all tests
+- [ ] `cargo build -p aura-os-core` compiles with zero warnings
+- [ ] `cargo test -p aura-os-core` passes all tests
 - [ ] Every ID type round-trips through `Display` / `FromStr` and `serde_json`
 - [ ] Every enum variant round-trips through `serde_json` with expected snake_case value
 - [ ] Every entity struct round-trips through `serde_json`
-- [ ] `cargo clippy -p aura-core -- -D warnings` is clean
-- [ ] `cargo fmt -p aura-core -- --check` is clean
+- [ ] `cargo clippy -p aura-os-core -- -D warnings` is clean
+- [ ] `cargo fmt -p aura-os-core -- --check` is clean
