@@ -148,10 +148,7 @@ impl AgentInstanceService {
             system_prompt: Some(agent.system_prompt.clone()),
             skills: Some(agent.skills.clone()),
             icon: agent.icon.clone(),
-            harness: Some(match agent.harness {
-                HarnessMode::Local => "local".to_string(),
-                HarnessMode::Swarm => "swarm".to_string(),
-            }),
+            harness: None,
         };
         let spa = storage
             .create_project_agent(&project_id.to_string(), &jwt, &req)

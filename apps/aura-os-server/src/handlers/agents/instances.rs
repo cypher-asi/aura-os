@@ -35,10 +35,7 @@ pub(crate) async fn create_agent_instance(
         system_prompt: Some(agent.system_prompt.clone()),
         skills: Some(agent.skills.clone()),
         icon: agent.icon.clone(),
-        harness: Some(match agent.harness {
-            aura_os_core::HarnessMode::Local => "local".to_string(),
-            aura_os_core::HarnessMode::Swarm => "swarm".to_string(),
-        }),
+        harness: None,
     };
     let jwt = state.get_jwt()?;
     let storage_agent = storage
