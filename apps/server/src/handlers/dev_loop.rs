@@ -16,6 +16,29 @@ pub struct LoopQueryParams {
     pub agent_name: Option<String>,
 }
 
+async fn forward_automaton_events(state: &AppState, automaton_id: &str) {
+    if let Ok(mut events_rx) = state.swarm_client.events(automaton_id).await {
+        let broadcast_tx = state.event_broadcast.clone();
+        tokio::spawn(async move {
+            while let Some(event) = events_rx.recv().await {
+                let json = serde_json::to_value(&event).unwrap_or_default();
+                let _ = broadcast_tx.send(json);
+            }
+        });
+    }
+}
+
+async fn active_instances_for_project(
+    state: &AppState,
+    project_id: ProjectId,
+) -> Vec<AgentInstanceId> {
+    let reg = state.automaton_registry.lock().await;
+    reg.iter()
+        .filter(|(_, (_, pid))| *pid == project_id)
+        .map(|(aiid, _)| *aiid)
+        .collect()
+}
+
 pub async fn start_loop(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
@@ -45,29 +68,12 @@ pub async fn start_loop(
         "Dev loop automaton installed"
     );
 
-    // Forward automaton events to the broadcast channel for WS clients
-    if let Ok(mut events_rx) = state.swarm_client.events(&resp.automaton_id).await {
-        let broadcast_tx = state.event_broadcast.clone();
-        tokio::spawn(async move {
-            while let Some(event) = events_rx.recv().await {
-                let json = serde_json::to_value(&event).unwrap_or_default();
-                let _ = broadcast_tx.send(json);
-            }
-        });
-    }
-
+    forward_automaton_events(&state, &resp.automaton_id).await;
     {
         let mut reg = state.automaton_registry.lock().await;
         reg.insert(agent_instance_id, (resp.automaton_id, project_id));
     }
-
-    let active_agent_instances = {
-        let reg = state.automaton_registry.lock().await;
-        reg.iter()
-            .filter(|(_, (_, pid))| *pid == project_id)
-            .map(|(aiid, _)| *aiid)
-            .collect::<Vec<_>>()
-    };
+    let active_agent_instances = active_instances_for_project(&state, project_id).await;
 
     Ok((
         StatusCode::CREATED,
@@ -228,16 +234,7 @@ pub async fn run_single_task(
         .await
         .map_err(|e| ApiError::internal(format!("installing single task runner: {e}")))?;
 
-    // Forward events to broadcast in background
-    if let Ok(mut events_rx) = state.swarm_client.events(&resp.automaton_id).await {
-        let broadcast_tx = state.event_broadcast.clone();
-        tokio::spawn(async move {
-            while let Some(event) = events_rx.recv().await {
-                let json = serde_json::to_value(&event).unwrap_or_default();
-                let _ = broadcast_tx.send(json);
-            }
-        });
-    }
+    forward_automaton_events(&state, &resp.automaton_id).await;
 
     Ok(StatusCode::ACCEPTED)
 }

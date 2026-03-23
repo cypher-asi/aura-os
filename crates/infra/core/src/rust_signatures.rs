@@ -63,7 +63,7 @@ pub fn extract_signatures(content: &str) -> String {
 }
 
 fn try_process_preamble(lines: &[&str], i: usize, output: &mut String) -> Option<usize> {
-    let trimmed = lines[i].trim();
+    let trimmed = lines.get(i)?.trim();
 
     if trimmed.starts_with("use ")
         || trimmed.starts_with("pub use ")
@@ -89,7 +89,7 @@ fn try_process_preamble(lines: &[&str], i: usize, output: &mut String) -> Option
 }
 
 fn try_process_definition(lines: &[&str], i: usize, output: &mut String) -> Option<usize> {
-    let trimmed = lines[i].trim();
+    let trimmed = lines.get(i)?.trim();
 
     if (trimmed.starts_with("pub struct ") || trimmed.starts_with("pub enum "))
         && !trimmed.ends_with(';')
@@ -176,7 +176,7 @@ fn extract_trait_signatures(lines: &[&str], start: usize) -> (String, usize) {
 }
 
 fn extract_impl_signatures(lines: &[&str], start: usize) -> (String, usize) {
-    let header = lines[start].trim();
+    let header = lines.get(start).map_or("", |l| l.trim());
     let is_trait_impl = header.contains(" for ");
 
     if !impl_has_pub_methods(lines, start, is_trait_impl) && !is_trait_impl {
@@ -273,6 +273,41 @@ fn is_impl_noise(trimmed: &str, header: &str) -> bool {
         && !header.contains(trimmed)
 }
 
+fn update_brace_depth(trimmed: &str, depth: &mut i32, started: &mut bool) {
+    for ch in trimmed.chars() {
+        match ch {
+            '{' => {
+                *depth += 1;
+                *started = true;
+            }
+            '}' => *depth -= 1,
+            _ => {}
+        }
+    }
+}
+
+fn advance_fn_body(trimmed: &str, fn_body_depth: &mut i32, in_fn_body: &mut bool) {
+    *fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
+    *fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
+    if *fn_body_depth <= 0 {
+        *in_fn_body = false;
+    }
+}
+
+fn try_append_method(
+    trimmed: &str,
+    result: &mut String,
+    fn_body_depth: &mut i32,
+    in_fn_body: &mut bool,
+) {
+    let (entry, body_depth) = format_method_entry(trimmed);
+    result.push_str(&entry);
+    if trimmed.contains('{') && body_depth > 0 {
+        *in_fn_body = true;
+        *fn_body_depth = body_depth;
+    }
+}
+
 /// Shared extraction logic for trait and impl blocks.
 /// When `filter_impl_noise` is true, non-fn lines inside the block that don't
 /// look like associated types/consts are skipped (impl-block behaviour).
@@ -290,24 +325,10 @@ fn extract_method_signatures(
 
     for (j, line) in lines.iter().enumerate().skip(start) {
         let trimmed = line.trim();
-
-        for ch in trimmed.chars() {
-            match ch {
-                '{' => {
-                    depth += 1;
-                    started = true;
-                }
-                '}' => depth -= 1,
-                _ => {}
-            }
-        }
+        update_brace_depth(trimmed, &mut depth, &mut started);
 
         if in_fn_body {
-            fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
-            fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 {
-                in_fn_body = false;
-            }
+            advance_fn_body(trimmed, &mut fn_body_depth, &mut in_fn_body);
             if started && depth <= 0 {
                 result.push_str("}\n");
                 return (result, j);
@@ -316,12 +337,7 @@ fn extract_method_signatures(
         }
 
         if started && depth > 1 && is_fn_start(trimmed) {
-            let (entry, body_depth) = format_method_entry(trimmed);
-            result.push_str(&entry);
-            if trimmed.contains('{') && body_depth > 0 {
-                in_fn_body = true;
-                fn_body_depth = body_depth;
-            }
+            try_append_method(trimmed, &mut result, &mut fn_body_depth, &mut in_fn_body);
             if started && depth <= 0 {
                 return (result, j);
             }

@@ -50,6 +50,16 @@ fn parse_network_ids_and_dates(net: &NetworkProject) -> ApiResult<ParsedNetworkM
     })
 }
 
+fn prefer_network(
+    network: &Option<String>,
+    local: Option<&Project>,
+    local_field: impl Fn(&Project) -> &Option<String>,
+) -> Option<String> {
+    network
+        .clone()
+        .or_else(|| local.and_then(|p| local_field(p).clone()))
+}
+
 pub(crate) fn project_from_network(
     net: &NetworkProject,
     local: Option<&Project>,
@@ -88,26 +98,11 @@ pub(crate) fn project_from_network(
         specs_title: local.and_then(|project| project.specs_title.clone()),
         created_at: meta.created_at,
         updated_at: meta.updated_at,
-        git_repo_url: net
-            .git_repo_url
-            .clone()
-            .or_else(|| local.and_then(|project| project.git_repo_url.clone())),
-        git_branch: net
-            .git_branch
-            .clone()
-            .or_else(|| local.and_then(|project| project.git_branch.clone())),
-        orbit_base_url: net
-            .orbit_base_url
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_base_url.clone())),
-        orbit_owner: net
-            .orbit_owner
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_owner.clone())),
-        orbit_repo: net
-            .orbit_repo
-            .clone()
-            .or_else(|| local.and_then(|project| project.orbit_repo.clone())),
+        git_repo_url: prefer_network(&net.git_repo_url, local, |p| &p.git_repo_url),
+        git_branch: prefer_network(&net.git_branch, local, |p| &p.git_branch),
+        orbit_base_url: prefer_network(&net.orbit_base_url, local, |p| &p.orbit_base_url),
+        orbit_owner: prefer_network(&net.orbit_owner, local, |p| &p.orbit_owner),
+        orbit_repo: prefer_network(&net.orbit_repo, local, |p| &p.orbit_repo),
     })
 }
 
@@ -287,14 +282,14 @@ pub(super) async fn resolve_orbit_repo(
     let repo_name = req.orbit_repo.as_deref().unwrap_or(&req.name);
     let created = state
         .orbit_client
-        .create_repo(
+        .create_repo(&aura_os_orbit::CreateRepoParams {
             base_url,
-            &net_project.org_id,
-            &net_project.id,
-            repo_name,
-            (!req.description.trim().is_empty()).then_some(req.description.as_str()),
+            org_id: &net_project.org_id,
+            project_id: &net_project.id,
+            repo: repo_name,
+            description: (!req.description.trim().is_empty()).then_some(req.description.as_str()),
             jwt,
-        )
+        })
         .await
         .map_err(|err| ApiError::internal(err.message_for_api()))?;
     Ok(OrbitRepoFields {

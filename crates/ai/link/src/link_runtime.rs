@@ -55,6 +55,28 @@ impl LinkRuntime {
         })
     }
 
+    fn build_loop_config(&self, request: &TurnRequest) -> aura_agent::AgentLoopConfig {
+        let model = request
+            .config
+            .model_override
+            .as_deref()
+            .unwrap_or(&self.model);
+
+        aura_agent::AgentLoopConfig {
+            max_iterations: request.config.max_iterations,
+            max_tokens: request.config.max_tokens,
+            stream_timeout: request.config.stream_timeout,
+            model_override: request.config.model_override.clone(),
+            max_context_tokens: request.config.max_context_tokens,
+            exploration_allowance: request.config.exploration_allowance.unwrap_or(12),
+            auto_build_cooldown: request.config.auto_build_cooldown.unwrap_or(2),
+            system_prompt: request.system_prompt.clone(),
+            model: model.to_string(),
+            auth_token: request.auth_token.clone().or_else(|| self.auth_token.clone()),
+            ..aura_agent::AgentLoopConfig::default()
+        }
+    }
+
     /// Build an `AnthropicProvider` for a single turn.
     fn build_provider(&self) -> Result<aura_reasoner::AnthropicProvider, RuntimeError> {
         let routing_mode = match std::env::var("AURA_LLM_ROUTING").as_deref() {
@@ -103,32 +125,10 @@ impl LinkRuntime {
 impl AgentRuntime for LinkRuntime {
     async fn execute_turn(&self, request: TurnRequest) -> Result<TurnResult, RuntimeError> {
         let provider = self.build_provider()?;
-
         let messages: Vec<aura_reasoner::Message> =
             request.messages.iter().map(|m| m.to_reasoner()).collect();
-
         let tools: Vec<aura_reasoner::ToolDefinition> = request.tools.to_vec();
-
-        let model = request
-            .config
-            .model_override
-            .as_deref()
-            .unwrap_or(&self.model);
-
-        let config = aura_agent::AgentLoopConfig {
-            max_iterations: request.config.max_iterations,
-            max_tokens: request.config.max_tokens,
-            stream_timeout: request.config.stream_timeout,
-            model_override: request.config.model_override.clone(),
-            max_context_tokens: request.config.max_context_tokens,
-            exploration_allowance: request.config.exploration_allowance.unwrap_or(12),
-            auto_build_cooldown: request.config.auto_build_cooldown.unwrap_or(2),
-            system_prompt: request.system_prompt.clone(),
-            model: model.to_string(),
-            auth_token: request.auth_token.clone().or_else(|| self.auth_token.clone()),
-            ..aura_agent::AgentLoopConfig::default()
-        };
-
+        let config = self.build_loop_config(&request);
         let agent_loop = aura_agent::AgentLoop::new(config);
 
         let event_tx_for_agent = request.event_tx.as_ref().map(|app_tx| {
@@ -164,6 +164,63 @@ impl AgentRuntime for LinkRuntime {
 // Event Forwarding
 // ===========================================================================
 
+fn map_agent_event(
+    event: aura_agent::AgentLoopEvent,
+    detected_tool_ids: &mut std::collections::HashSet<String>,
+    app_tx: &mpsc::UnboundedSender<RuntimeEvent>,
+) -> Option<RuntimeEvent> {
+    match event {
+        aura_agent::AgentLoopEvent::TextDelta(t) => Some(RuntimeEvent::Delta(t)),
+        aura_agent::AgentLoopEvent::ThinkingDelta(t) => Some(RuntimeEvent::ThinkingDelta(t)),
+        aura_agent::AgentLoopEvent::ToolStart { id, name } => {
+            Some(RuntimeEvent::ToolUseStarted { id, name })
+        }
+        aura_agent::AgentLoopEvent::ToolInputSnapshot { id, name, input } => {
+            let parsed =
+                serde_json::from_str(&input).unwrap_or(serde_json::Value::String(input));
+            if !matches!(parsed, serde_json::Value::String(_))
+                && detected_tool_ids.insert(id.clone())
+            {
+                let _ = app_tx.send(RuntimeEvent::ToolUseDetected {
+                    id: id.clone(),
+                    name: name.clone(),
+                    input: parsed.clone(),
+                });
+            }
+            Some(RuntimeEvent::ToolInputSnapshot {
+                id,
+                name,
+                input: parsed,
+            })
+        }
+        aura_agent::AgentLoopEvent::ToolResult {
+            tool_use_id,
+            tool_name,
+            content,
+            is_error,
+        } => Some(RuntimeEvent::ToolResult {
+            tool_use_id,
+            tool_name,
+            content,
+            is_error,
+        }),
+        aura_agent::AgentLoopEvent::IterationComplete {
+            iteration,
+            input_tokens,
+            output_tokens,
+        } => {
+            let _ = app_tx.send(RuntimeEvent::IterationTokenUsage {
+                input_tokens,
+                output_tokens,
+            });
+            Some(RuntimeEvent::IterationComplete { iteration })
+        }
+        aura_agent::AgentLoopEvent::Error { message, .. } => Some(RuntimeEvent::Error(message)),
+        aura_agent::AgentLoopEvent::Warning(warning) => Some(RuntimeEvent::Warning(warning)),
+        aura_agent::AgentLoopEvent::ToolComplete { .. } => None,
+    }
+}
+
 /// Spawn a task that maps `AgentLoopEvent`s to `RuntimeEvent`s.
 fn forward_events(
     mut agent_rx: mpsc::UnboundedReceiver<aura_agent::AgentLoopEvent>,
@@ -173,69 +230,10 @@ fn forward_events(
         let mut detected_tool_ids: std::collections::HashSet<String> =
             std::collections::HashSet::new();
         while let Some(event) = agent_rx.recv().await {
-            let mapped = match event {
-                aura_agent::AgentLoopEvent::TextDelta(t) => RuntimeEvent::Delta(t),
-
-                aura_agent::AgentLoopEvent::ThinkingDelta(t) => RuntimeEvent::ThinkingDelta(t),
-
-                aura_agent::AgentLoopEvent::ToolStart { id, name } => {
-                    RuntimeEvent::ToolUseStarted { id, name }
+            if let Some(mapped) = map_agent_event(event, &mut detected_tool_ids, &app_tx) {
+                if app_tx.send(mapped).is_err() {
+                    break;
                 }
-
-                aura_agent::AgentLoopEvent::ToolInputSnapshot { id, name, input } => {
-                    let parsed = serde_json::from_str(&input)
-                        .unwrap_or(serde_json::Value::String(input));
-                    if !matches!(parsed, serde_json::Value::String(_))
-                        && detected_tool_ids.insert(id.clone())
-                    {
-                        let _ = app_tx.send(RuntimeEvent::ToolUseDetected {
-                            id: id.clone(),
-                            name: name.clone(),
-                            input: parsed.clone(),
-                        });
-                    }
-                    RuntimeEvent::ToolInputSnapshot {
-                        id,
-                        name,
-                        input: parsed,
-                    }
-                }
-
-                aura_agent::AgentLoopEvent::ToolResult {
-                    tool_use_id,
-                    tool_name,
-                    content,
-                    is_error,
-                } => RuntimeEvent::ToolResult {
-                    tool_use_id,
-                    tool_name,
-                    content,
-                    is_error,
-                },
-
-                aura_agent::AgentLoopEvent::IterationComplete {
-                    iteration,
-                    input_tokens,
-                    output_tokens,
-                } => {
-                    let _ = app_tx.send(RuntimeEvent::IterationTokenUsage {
-                        input_tokens,
-                        output_tokens,
-                    });
-                    RuntimeEvent::IterationComplete { iteration }
-                }
-
-                aura_agent::AgentLoopEvent::Error { message, .. } => {
-                    RuntimeEvent::Error(message)
-                }
-
-                aura_agent::AgentLoopEvent::Warning(warning) => RuntimeEvent::Warning(warning),
-
-                aura_agent::AgentLoopEvent::ToolComplete { .. } => continue,
-            };
-
-            if app_tx.send(mapped).is_err() {
-                break;
             }
         }
     });

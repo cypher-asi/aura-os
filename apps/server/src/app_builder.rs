@@ -65,23 +65,38 @@ fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
 }
 
-pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
-    let data_dir = db_path
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| Path::new(".").to_path_buf());
-    let store = Arc::new(RocksStore::open(db_path)?);
-    let network_client = NetworkClient::from_env().map(Arc::new);
-    let storage_client = StorageClient::from_env().map(Arc::new);
+struct CoreServices {
+    org_service: Arc<OrgService>,
+    auth_service: Arc<AuthService>,
+    settings_service: Arc<SettingsService>,
+    pricing_service: Arc<PricingService>,
+    billing_client: Arc<BillingClient>,
+}
 
-    // Core services
-    let org_service = Arc::new(OrgService::new(store.clone()));
-    let auth_service = Arc::new(AuthService::new(store.clone()));
-    let settings_service = Arc::new(SettingsService::new(store.clone()));
-    let pricing_service = Arc::new(PricingService::new(store.clone()));
-    let billing_client = Arc::new(BillingClient::new());
+fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
+    CoreServices {
+        org_service: Arc::new(OrgService::new(store.clone())),
+        auth_service: Arc::new(AuthService::new(store.clone())),
+        settings_service: Arc::new(SettingsService::new(store.clone())),
+        pricing_service: Arc::new(PricingService::new(store.clone())),
+        billing_client: Arc::new(BillingClient::new()),
+    }
+}
 
-    // Domain services
+struct DomainServices {
+    project_service: Arc<ProjectService>,
+    task_service: Arc<TaskService>,
+    agent_service: Arc<AgentService>,
+    agent_instance_service: Arc<AgentInstanceService>,
+    session_service: Arc<SessionService>,
+    swarm_client: Arc<SwarmClient>,
+}
+
+fn init_domain_services(
+    store: &Arc<RocksStore>,
+    network_client: &Option<Arc<NetworkClient>>,
+    storage_client: &Option<Arc<StorageClient>>,
+) -> DomainServices {
     let project_service = Arc::new(ProjectService::new_with_network(
         network_client.clone(),
         store.clone(),
@@ -105,11 +120,30 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         )
         .with_storage_client(storage_client.clone()),
     );
-
-    // Swarm client
     let swarm_client = Arc::new(SwarmClient::from_env());
 
-    // Broadcast channel for network/social events
+    DomainServices {
+        project_service,
+        task_service,
+        agent_service,
+        agent_instance_service,
+        session_service,
+        swarm_client,
+    }
+}
+
+pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
+    let data_dir = db_path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| Path::new(".").to_path_buf());
+    let store = Arc::new(RocksStore::open(db_path)?);
+    let network_client = NetworkClient::from_env().map(Arc::new);
+    let storage_client = StorageClient::from_env().map(Arc::new);
+
+    let core = init_core_services(&store);
+    let domain = init_domain_services(&store, &network_client, &storage_client);
+
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(4096);
 
     spawn_health_checks(&storage_client, &network_client);
@@ -124,17 +158,17 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     Ok(AppState {
         data_dir,
         store,
-        org_service,
-        auth_service,
-        settings_service,
-        pricing_service,
-        billing_client,
-        project_service,
-        task_service,
-        agent_service,
-        agent_instance_service,
-        session_service,
-        swarm_client,
+        org_service: core.org_service,
+        auth_service: core.auth_service,
+        settings_service: core.settings_service,
+        pricing_service: core.pricing_service,
+        billing_client: core.billing_client,
+        project_service: domain.project_service,
+        task_service: domain.task_service,
+        agent_service: domain.agent_service,
+        agent_instance_service: domain.agent_instance_service,
+        session_service: domain.session_service,
+        swarm_client: domain.swarm_client,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,

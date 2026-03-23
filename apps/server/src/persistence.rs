@@ -7,16 +7,56 @@ use aura_os_storage::StorageClient;
 
 use crate::TaskSessionEntry;
 
-pub(crate) async fn persist_task_to_storage(
-    storage: &Arc<StorageClient>,
-    jwt: &str,
-    event: &EngineEvent,
-    live_output: &str,
+#[derive(Debug)]
+pub(crate) struct PersistTaskParams<'a> {
+    pub storage: &'a Arc<StorageClient>,
+    pub jwt: &'a str,
+    pub event: &'a EngineEvent,
+    pub live_output: &'a str,
+    pub session_entry: Option<&'a TaskSessionEntry>,
+    pub build_steps: &'a [serde_json::Value],
+    pub test_steps: &'a [serde_json::Value],
+}
+
+fn make_update_request(
+    execution_notes: String,
+    files_changed: Option<Vec<aura_os_storage::StorageTaskFileChangeSummary>>,
+    model: &Option<String>,
+    input_tokens: Option<u64>,
+    output_tokens: Option<u64>,
     session_entry: Option<&TaskSessionEntry>,
-    build_steps: &[serde_json::Value],
-    test_steps: &[serde_json::Value],
-) {
-    match event {
+) -> aura_os_storage::UpdateTaskRequest {
+    aura_os_storage::UpdateTaskRequest {
+        title: None,
+        description: None,
+        order_index: None,
+        dependency_ids: None,
+        execution_notes: Some(execution_notes),
+        files_changed,
+        model: model.clone(),
+        total_input_tokens: input_tokens,
+        total_output_tokens: output_tokens,
+        session_id: session_entry.map(|e| e.session_id.to_string()),
+        assigned_project_agent_id: session_entry.map(|e| e.agent_instance_id.to_string()),
+    }
+}
+
+fn build_file_change_summaries(
+    file_changes: &[aura_engine::FileChangeSummary],
+) -> Vec<aura_os_storage::StorageTaskFileChangeSummary> {
+    file_changes
+        .iter()
+        .map(|f| aura_os_storage::StorageTaskFileChangeSummary {
+            op: f.op.clone(),
+            path: f.path.clone(),
+            lines_added: f.lines_added,
+            lines_removed: f.lines_removed,
+        })
+        .collect()
+}
+
+pub(crate) async fn persist_task_to_storage(params: &PersistTaskParams<'_>) {
+    match params.event {
         EngineEvent::TaskCompleted {
             task_id,
             execution_notes,
@@ -26,32 +66,17 @@ pub(crate) async fn persist_task_to_storage(
             model,
             ..
         } => {
-            let files_changed: Vec<aura_os_storage::StorageTaskFileChangeSummary> = file_changes
-                .iter()
-                .map(|f| aura_os_storage::StorageTaskFileChangeSummary {
-                    op: f.op.clone(),
-                    path: f.path.clone(),
-                    lines_added: f.lines_added,
-                    lines_removed: f.lines_removed,
-                })
-                .collect();
-
-            let update = aura_os_storage::UpdateTaskRequest {
-                title: None,
-                description: None,
-                order_index: None,
-                dependency_ids: None,
-                execution_notes: Some(execution_notes.clone()),
-                files_changed: Some(files_changed),
-                model: model.clone(),
-                total_input_tokens: *input_tokens,
-                total_output_tokens: *output_tokens,
-                session_id: session_entry.map(|e| e.session_id.to_string()),
-                assigned_project_agent_id: session_entry.map(|e| e.agent_instance_id.to_string()),
-            };
-
-            if let Err(e) = storage
-                .update_task(&task_id.to_string(), jwt, &update)
+            let update = make_update_request(
+                execution_notes.clone(),
+                Some(build_file_change_summaries(file_changes)),
+                model,
+                *input_tokens,
+                *output_tokens,
+                params.session_entry,
+            );
+            if let Err(e) = params
+                .storage
+                .update_task(&task_id.to_string(), params.jwt, &update)
                 .await
             {
                 warn!(task_id = %task_id, error = %e, "Failed to persist task execution data to aura-storage");
@@ -65,22 +90,17 @@ pub(crate) async fn persist_task_to_storage(
             model,
             ..
         } => {
-            let update = aura_os_storage::UpdateTaskRequest {
-                title: None,
-                description: None,
-                order_index: None,
-                dependency_ids: None,
-                execution_notes: Some(reason.clone()),
-                files_changed: None,
-                model: model.clone(),
-                total_input_tokens: None,
-                total_output_tokens: None,
-                session_id: session_entry.map(|e| e.session_id.to_string()),
-                assigned_project_agent_id: session_entry.map(|e| e.agent_instance_id.to_string()),
-            };
-
-            if let Err(e) = storage
-                .update_task(&task_id.to_string(), jwt, &update)
+            let update = make_update_request(
+                reason.clone(),
+                None,
+                model,
+                None,
+                None,
+                params.session_entry,
+            );
+            if let Err(e) = params
+                .storage
+                .update_task(&task_id.to_string(), params.jwt, &update)
                 .await
             {
                 warn!(task_id = %task_id, error = %e, "Failed to persist failed task data to aura-storage");
@@ -89,29 +109,25 @@ pub(crate) async fn persist_task_to_storage(
         _ => return,
     }
 
-    persist_task_output_message(storage, jwt, event, live_output, session_entry).await;
-    persist_task_steps(storage, jwt, event, build_steps, test_steps, session_entry).await;
+    persist_task_output_message(params).await;
+    persist_task_steps(params).await;
 }
 
-async fn persist_task_output_message(
-    storage: &Arc<StorageClient>,
-    jwt: &str,
-    event: &EngineEvent,
-    live_output: &str,
-    session_entry: Option<&TaskSessionEntry>,
-) {
-    let Some(entry) = session_entry else { return };
-    if live_output.is_empty() {
+async fn persist_task_output_message(params: &PersistTaskParams<'_>) {
+    let Some(entry) = params.session_entry else {
+        return;
+    };
+    if params.live_output.is_empty() {
         return;
     }
 
-    let task_id = match event {
+    let task_id = match params.event {
         EngineEvent::TaskCompleted { task_id, .. } | EngineEvent::TaskFailed { task_id, .. } => {
             task_id
         }
         _ => return,
     };
-    let (input_tokens, output_tokens) = match event {
+    let (input_tokens, output_tokens) = match params.event {
         EngineEvent::TaskCompleted {
             input_tokens,
             output_tokens,
@@ -124,7 +140,7 @@ async fn persist_task_output_message(
         project_agent_id: entry.agent_instance_id.to_string(),
         project_id: entry.project_id.to_string(),
         role: "assistant".to_string(),
-        content: live_output.to_string(),
+        content: params.live_output.to_string(),
         content_blocks: None,
         input_tokens,
         output_tokens,
@@ -132,8 +148,9 @@ async fn persist_task_output_message(
         thinking_duration_ms: None,
     };
 
-    if let Err(e) = storage
-        .create_message(&entry.session_id.to_string(), jwt, &msg_req)
+    if let Err(e) = params
+        .storage
+        .create_message(&entry.session_id.to_string(), params.jwt, &msg_req)
         .await
     {
         warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task output as session message");
@@ -142,20 +159,15 @@ async fn persist_task_output_message(
     }
 }
 
-async fn persist_task_steps(
-    storage: &Arc<StorageClient>,
-    jwt: &str,
-    event: &EngineEvent,
-    build_steps: &[serde_json::Value],
-    test_steps: &[serde_json::Value],
-    session_entry: Option<&TaskSessionEntry>,
-) {
-    let Some(entry) = session_entry else { return };
-    if build_steps.is_empty() && test_steps.is_empty() {
+async fn persist_task_steps(params: &PersistTaskParams<'_>) {
+    let Some(entry) = params.session_entry else {
+        return;
+    };
+    if params.build_steps.is_empty() && params.test_steps.is_empty() {
         return;
     }
 
-    let task_id = match event {
+    let task_id = match params.event {
         EngineEvent::TaskCompleted { task_id, .. } | EngineEvent::TaskFailed { task_id, .. } => {
             task_id
         }
@@ -163,8 +175,8 @@ async fn persist_task_steps(
     };
     let steps_payload = serde_json::json!({
         "_type": "task_steps",
-        "build_steps": build_steps,
-        "test_steps": test_steps,
+        "build_steps": params.build_steps,
+        "test_steps": params.test_steps,
     });
     let steps_msg = aura_os_storage::CreateMessageRequest {
         project_agent_id: entry.agent_instance_id.to_string(),
@@ -177,8 +189,9 @@ async fn persist_task_steps(
         thinking: None,
         thinking_duration_ms: None,
     };
-    if let Err(e) = storage
-        .create_message(&entry.session_id.to_string(), jwt, &steps_msg)
+    if let Err(e) = params
+        .storage
+        .create_message(&entry.session_id.to_string(), params.jwt, &steps_msg)
         .await
     {
         warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task steps as session message");
@@ -258,15 +271,15 @@ mod tests {
             agent_instance_id: aiid,
             session_id: sid,
         };
-        persist_task_to_storage(
-            &client,
-            "jwt",
-            &event,
-            "live output here",
-            Some(&entry),
-            &[],
-            &[],
-        )
+        persist_task_to_storage(&PersistTaskParams {
+            storage: &client,
+            jwt: "jwt",
+            event: &event,
+            live_output: "live output here",
+            session_entry: Some(&entry),
+            build_steps: &[],
+            test_steps: &[],
+        })
         .await;
 
         let guard = db.lock().await;
@@ -302,7 +315,16 @@ mod tests {
             agent_instance_id: aiid,
             session_id: sid,
         };
-        persist_task_to_storage(&client, "jwt", &event, "", Some(&entry), &[], &[]).await;
+        persist_task_to_storage(&PersistTaskParams {
+            storage: &client,
+            jwt: "jwt",
+            event: &event,
+            live_output: "",
+            session_entry: Some(&entry),
+            build_steps: &[],
+            test_steps: &[],
+        })
+        .await;
 
         let guard = db.lock().await;
         let task = &guard.tasks[0];
@@ -335,7 +357,16 @@ mod tests {
             model: None,
         };
 
-        persist_task_to_storage(&client, "jwt", &event, "some output", None, &[], &[]).await;
+        persist_task_to_storage(&PersistTaskParams {
+            storage: &client,
+            jwt: "jwt",
+            event: &event,
+            live_output: "some output",
+            session_entry: None,
+            build_steps: &[],
+            test_steps: &[],
+        })
+        .await;
 
         let guard = db.lock().await;
         let task = &guard.tasks[0];

@@ -321,62 +321,147 @@ fn create_main_webview(
     webview
 }
 
-fn main() {
-    dotenvy::dotenv().ok();
-    init_logging();
-
-    let (db_path, webview_data_dir, frontend_dir) = init_data_dirs();
-    let (std_listener, _port, url) = bind_listener();
-
-    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
-    let proxy = event_loop.create_proxy();
-    let ide_proxy: Arc<EventLoopProxy<UserEvent>> = Arc::new(proxy.clone());
-
-    let ready_rx = spawn_server(std_listener, db_path, frontend_dir, ide_proxy);
-
-    ready_rx
-        .recv()
-        .expect("server thread failed before becoming ready");
-    info!("axum server ready");
-
-    let icon_data = {
-        let png_bytes = include_bytes!("../assets/aura-icon.png");
-        let img = image::load_from_memory(png_bytes).expect("failed to decode icon");
-        let rgba = img.to_rgba8();
-        let (w, h) = rgba.dimensions();
-        IconData {
-            rgba: rgba.into_raw(),
-            width: w,
-            height: h,
-        }
-    };
-
-    let (window, main_window_id) = create_main_window(&event_loop, &icon_data);
-    let mut web_context = WebContext::new(Some(webview_data_dir));
-    let _main_webview = create_main_webview(
-        &window,
-        &mut web_context,
-        &url,
-        proxy.clone(),
-        main_window_id,
-    );
-
-    {
-        let fallback_proxy = proxy.clone();
-        std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-            let _ = fallback_proxy.send_event(UserEvent::ShowWindow {
-                window_id: main_window_id,
-            });
-        });
+fn load_icon_data() -> IconData {
+    let png_bytes = include_bytes!("../assets/aura-icon.png");
+    let img = image::load_from_memory(png_bytes).expect("failed to decode icon");
+    let rgba = img.to_rgba8();
+    let (w, h) = rgba.dimensions();
+    IconData {
+        rgba: rgba.into_raw(),
+        width: w,
+        height: h,
     }
+}
 
+fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window_id: WindowId) {
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
+    });
+}
+
+fn handle_window_command(
+    main_window: &tao::window::Window,
+    ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
+    window_id: WindowId,
+    main_window_id: WindowId,
+    cmd: WinCmd,
+    control_flow: &mut ControlFlow,
+) {
+    if window_id == main_window_id {
+        match cmd {
+            WinCmd::Minimize => main_window.set_minimized(true),
+            WinCmd::Maximize => main_window.set_maximized(!main_window.is_maximized()),
+            WinCmd::Close => *control_flow = ControlFlow::Exit,
+            WinCmd::Drag => {
+                let _ = main_window.drag_window();
+            }
+        }
+        return;
+    }
+    if matches!(cmd, WinCmd::Close) {
+        ide_windows.remove(&window_id);
+        return;
+    }
+    if let Some((ide_win, _)) = ide_windows.get(&window_id) {
+        match cmd {
+            WinCmd::Minimize => ide_win.set_minimized(true),
+            WinCmd::Maximize => ide_win.set_maximized(!ide_win.is_maximized()),
+            WinCmd::Drag => {
+                let _ = ide_win.drag_window();
+            }
+            WinCmd::Close => unreachable!(),
+        }
+    }
+}
+
+fn open_ide_window_with_fallback(
+    event_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
+    base_url: &str,
+    file_path: &str,
+    root_path: Option<&str>,
+    icon_data: &IconData,
+    proxy: &EventLoopProxy<UserEvent>,
+    ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
+) {
+    let proxy_clone = proxy.clone();
+    match aura_os_ide::open_ide_window(
+        event_target,
+        base_url,
+        file_path,
+        root_path,
+        Some(icon_data.to_icon()),
+        move |wid| Box::new(ipc_handler(proxy_clone, wid)),
+    ) {
+        Ok((win, wv)) => {
+            let ide_wid = win.id();
+            ide_windows.insert(ide_wid, (win, wv));
+            spawn_fallback_show_timer(proxy.clone(), ide_wid);
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "failed to open IDE window");
+        }
+    }
+}
+
+fn handle_user_event(
+    user_event: UserEvent,
+    main_window: &tao::window::Window,
+    icon_data: &IconData,
+    ide_windows: &mut HashMap<WindowId, (tao::window::Window, wry::WebView)>,
+    base_url: &str,
+    main_window_id: WindowId,
+    proxy: &EventLoopProxy<UserEvent>,
+    event_target: &tao::event_loop::EventLoopWindowTarget<UserEvent>,
+    control_flow: &mut ControlFlow,
+) {
+    match user_event {
+        UserEvent::WindowCommand { window_id, cmd } => {
+            handle_window_command(
+                main_window,
+                ide_windows,
+                window_id,
+                main_window_id,
+                cmd,
+                control_flow,
+            );
+        }
+        UserEvent::OpenIdeWindow {
+            file_path,
+            root_path,
+        } => {
+            open_ide_window_with_fallback(
+                event_target,
+                base_url,
+                &file_path,
+                root_path.as_deref(),
+                icon_data,
+                proxy,
+                ide_windows,
+            );
+        }
+        UserEvent::ShowWindow { window_id } => {
+            if window_id == main_window_id {
+                main_window.set_visible(true);
+            } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
+                ide_win.set_visible(true);
+            }
+        }
+    }
+}
+
+fn run_event_loop(
+    event_loop: tao::event_loop::EventLoop<UserEvent>,
+    window: tao::window::Window,
+    icon_data: IconData,
+    proxy: EventLoopProxy<UserEvent>,
+    base_url: String,
+) {
+    let main_window_id = window.id();
     let mut ide_windows: HashMap<WindowId, (tao::window::Window, wry::WebView)> = HashMap::new();
-    let base_url = url;
 
     event_loop.run(move |event, elwt, control_flow| {
         *control_flow = ControlFlow::Wait;
-
         match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -389,67 +474,50 @@ fn main() {
                     ide_windows.remove(&window_id);
                 }
             }
-            Event::UserEvent(user_event) => match user_event {
-                UserEvent::WindowCommand { window_id, cmd } => {
-                    if window_id == main_window_id {
-                        match cmd {
-                            WinCmd::Minimize => window.set_minimized(true),
-                            WinCmd::Maximize => window.set_maximized(!window.is_maximized()),
-                            WinCmd::Close => *control_flow = ControlFlow::Exit,
-                            WinCmd::Drag => {
-                                let _ = window.drag_window();
-                            }
-                        }
-                    } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
-                        match cmd {
-                            WinCmd::Minimize => ide_win.set_minimized(true),
-                            WinCmd::Maximize => ide_win.set_maximized(!ide_win.is_maximized()),
-                            WinCmd::Close => {
-                                ide_windows.remove(&window_id);
-                            }
-                            WinCmd::Drag => {
-                                let _ = ide_win.drag_window();
-                            }
-                        }
-                    }
-                }
-                UserEvent::OpenIdeWindow {
-                    file_path,
-                    root_path,
-                } => {
-                    let p = proxy.clone();
-                    match aura_os_ide::open_ide_window(
-                        elwt,
-                        &base_url,
-                        &file_path,
-                        root_path.as_deref(),
-                        Some(icon_data.to_icon()),
-                        move |wid| Box::new(ipc_handler(p, wid)),
-                    ) {
-                        Ok((win, wv)) => {
-                            let ide_wid = win.id();
-                            ide_windows.insert(ide_wid, (win, wv));
-                            let fallback_proxy = proxy.clone();
-                            std::thread::spawn(move || {
-                                std::thread::sleep(std::time::Duration::from_millis(500));
-                                let _ = fallback_proxy
-                                    .send_event(UserEvent::ShowWindow { window_id: ide_wid });
-                            });
-                        }
-                        Err(e) => {
-                            tracing::error!(error = %e, "failed to open IDE window");
-                        }
-                    }
-                }
-                UserEvent::ShowWindow { window_id } => {
-                    if window_id == main_window_id {
-                        window.set_visible(true);
-                    } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {
-                        ide_win.set_visible(true);
-                    }
-                }
-            },
+            Event::UserEvent(user_event) => handle_user_event(
+                user_event,
+                &window,
+                &icon_data,
+                &mut ide_windows,
+                &base_url,
+                main_window_id,
+                &proxy,
+                elwt,
+                control_flow,
+            ),
             _ => {}
         }
     });
+}
+
+fn main() {
+    dotenvy::dotenv().ok();
+    init_logging();
+
+    let (db_path, webview_data_dir, frontend_dir) = init_data_dirs();
+    let (std_listener, _port, url) = bind_listener();
+
+    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    let proxy = event_loop.create_proxy();
+    let ide_proxy: Arc<EventLoopProxy<UserEvent>> = Arc::new(proxy.clone());
+
+    let ready_rx = spawn_server(std_listener, db_path, frontend_dir, ide_proxy);
+    ready_rx
+        .recv()
+        .expect("server thread failed before becoming ready");
+    info!("axum server ready");
+
+    let icon_data = load_icon_data();
+    let (window, main_window_id) = create_main_window(&event_loop, &icon_data);
+    let mut web_context = WebContext::new(Some(webview_data_dir));
+    let _main_webview = create_main_webview(
+        &window,
+        &mut web_context,
+        &url,
+        proxy.clone(),
+        main_window_id,
+    );
+    spawn_fallback_show_timer(proxy.clone(), main_window_id);
+
+    run_event_loop(event_loop, window, icon_data, proxy, url);
 }
