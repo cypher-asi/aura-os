@@ -67,6 +67,11 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.LogLine]: "Log",
   [EventType.NetworkEvent]: "Network",
   [EventType.Error]: "Error",
+  [EventType.SessionReady]: "Session",
+  [EventType.AssistantMessageStart]: "Message",
+  [EventType.AssistantMessageEnd]: "Message",
+  [EventType.TextDelta]: "Message",
+  [EventType.ToolUseStart]: "Tool",
 };
 
 function fmtDuration(ms: number): string {

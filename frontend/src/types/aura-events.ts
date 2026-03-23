@@ -38,6 +38,13 @@ export enum EventType {
   TokenUsage            = "token_usage",
   Done                  = "done",
 
+  // Harness protocol (local harness wire format)
+  SessionReady              = "session_ready",
+  AssistantMessageStart     = "assistant_message_start",
+  AssistantMessageEnd       = "assistant_message_end",
+  TextDelta                 = "text_delta",
+  ToolUseStart              = "tool_use_start",
+
   // Agent state
   AgentInstanceUpdated  = "agent_instance_updated",
 
@@ -141,7 +148,8 @@ export type AuraEvent = AuraEventBase & (
     } }
   | { type: EventType.ThinkingDelta; content: {
       message_id?: string;
-      text: string;
+      text?: string;
+      thinking?: string;
     } }
   | { type: EventType.Progress; content: {
       message_id?: string;
@@ -362,6 +370,26 @@ export type AuraEvent = AuraEventBase & (
       repo?: string;
       branch?: string;
       commits?: { sha: string; message: string }[];
+    } }
+
+  // ── Harness protocol ─────────────────────────────────────────
+  | { type: EventType.SessionReady; content: {
+      session_id: string;
+    } }
+  | { type: EventType.AssistantMessageStart; content: {
+      message_id: string;
+    } }
+  | { type: EventType.AssistantMessageEnd; content: {
+      message_id: string;
+      stop_reason: string;
+      usage?: { input_tokens: number; output_tokens: number };
+    } }
+  | { type: EventType.TextDelta; content: {
+      text: string;
+    } }
+  | { type: EventType.ToolUseStart; content: {
+      id: string;
+      name: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────

@@ -79,16 +79,20 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         onEvent(event: AuraEvent) {
           switch (event.type) {
             case EventType.Delta:
-              handleTextDelta(refs, setters, getThinkingDurationMs(core.key), event.content.text);
+            case EventType.TextDelta:
+              handleTextDelta(refs, setters, getThinkingDurationMs(core.key), (event.content as { text: string }).text);
               break;
-            case EventType.ThinkingDelta:
-              handleThinkingDelta(refs, setters, event.content.text);
+            case EventType.ThinkingDelta: {
+              const tc = event.content as { text?: string; thinking?: string };
+              handleThinkingDelta(refs, setters, tc.text ?? tc.thinking ?? "");
               break;
+            }
             case EventType.Progress:
               core.setProgressText(event.content.stage);
               break;
             case EventType.ToolCallStarted:
-              handleToolCallStarted(refs, setters, event.content);
+            case EventType.ToolUseStart:
+              handleToolCallStarted(refs, setters, event.content as { id: string; name: string });
               break;
             case EventType.ToolCallSnapshot:
               handleToolCallSnapshot(refs, setters, event.content);
@@ -97,7 +101,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               handleToolCall(refs, setters, event.content);
               break;
             case EventType.ToolResult:
-              handleToolResult(refs, setters, event.content);
+              handleToolResult(refs, setters, event.content as { id: string; name: string; result: string; is_error: boolean });
               break;
             case EventType.SpecSaved:
               onSpecSavedRef.current?.(event.content.spec);
@@ -108,6 +112,11 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             case EventType.MessageEnd:
               handleMessageSaved(refs, setters, event.content.message);
               break;
+            case EventType.AssistantMessageEnd:
+              finalizeStream(refs, setters, abortRef, getIsStreaming(core.key));
+              break;
+            case EventType.AssistantMessageStart:
+            case EventType.SessionReady:
             case EventType.TokenUsage:
               break;
             case EventType.Error:

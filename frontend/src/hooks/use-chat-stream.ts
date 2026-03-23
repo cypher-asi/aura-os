@@ -179,16 +179,20 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
   const onEvent = (event: AuraEvent) => {
     switch (event.type) {
       case EventType.Delta:
-        handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), event.content.text);
+      case EventType.TextDelta:
+        handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), (event.content as { text: string }).text);
         break;
-      case EventType.ThinkingDelta:
-        handleThinkingDelta(refs, setters, event.content.text);
+      case EventType.ThinkingDelta: {
+        const tc = event.content as { text?: string; thinking?: string };
+        handleThinkingDelta(refs, setters, tc.text ?? tc.thinking ?? "");
         break;
+      }
       case EventType.Progress:
         setProgressText(event.content.stage);
         break;
       case EventType.ToolCallStarted:
-        handleToolCallStarted(refs, setters, event.content);
+      case EventType.ToolUseStart:
+        handleToolCallStarted(refs, setters, event.content as { id: string; name: string });
         break;
       case EventType.ToolCallSnapshot:
         handleToolCallSnapshot(refs, setters, event.content);
@@ -201,7 +205,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       }
       case EventType.ToolResult: {
-        const c = event.content;
+        const c = event.content as { id: string; name: string; result: string; is_error: boolean };
         coreHandleToolResult(refs, setters, c);
         if (c.name === "create_spec" && c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
         if (c.name === "create_task" && c.is_error) removePendingArtifact(c.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
@@ -238,9 +242,15 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.MessageEnd:
         handleMessageSaved(refs, setters, event.content.message);
         break;
+      case EventType.AssistantMessageEnd:
+        finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
+        sidekickRef.current.setStreamingAgentInstanceId(null);
+        break;
       case EventType.AgentInstanceUpdated:
         sidekickRef.current.notifyAgentInstanceUpdate(event.content.agent_instance);
         break;
+      case EventType.AssistantMessageStart:
+      case EventType.SessionReady:
       case EventType.TokenUsage:
         break;
       case EventType.Error:
