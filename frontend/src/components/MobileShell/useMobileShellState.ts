@@ -2,8 +2,8 @@ import { useLocation } from "react-router-dom";
 import { useAppStore } from "../../stores/app-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectContext } from "../../stores/project-action-store";
-import { getLastAgent } from "../../utils/storage";
 import { getMostRecentProject, useProjectsListStore } from "../../stores/projects-list-store";
+import { getLastAgentEntry } from "../../utils/storage";
 import {
   getMobileProjectDestination,
   getMobileShellMode,
@@ -16,22 +16,22 @@ export function useMobileShellState() {
   const activeApp = useAppStore((s) => s.activeApp);
   const { isPhoneLayout } = useAuraCapabilities();
   const projectContext = useProjectContext();
-  const projects = useProjectsListStore((s) => s.projects);
   const location = useLocation();
+  const projects = useProjectsListStore((s) => s.projects);
   const mostRecentProject = getMostRecentProject(projects);
 
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const currentProject = projectContext?.project
-    ?? projects.find((p) => p.project_id === currentProjectId)
+    ?? projects.find((project) => project.project_id === currentProjectId)
     ?? null;
   const mobileDestination = getMobileProjectDestination(location.pathname);
 
-  const lastAgent = getLastAgent();
-  const recentProjectId = lastAgent && projects.some((p) => p.project_id === lastAgent.projectId)
+  const lastAgent = getLastAgentEntry();
+  const recentProjectId = lastAgent && projects.some((project) => project.project_id === lastAgent.projectId)
     ? lastAgent.projectId
     : mostRecentProject?.project_id ?? projects[0]?.project_id ?? null;
   const mobileTargetProjectId = currentProjectId ?? recentProjectId;
-  const mobileTargetProject = projects.find((p) => p.project_id === mobileTargetProjectId) ?? null;
+  const mobileTargetProject = projects.find((project) => project.project_id === mobileTargetProjectId) ?? null;
 
   const hasResolvedCurrentProject = Boolean(currentProject);
   const currentProjectRootPath = currentProjectId ? projectRootPath(currentProjectId) : null;

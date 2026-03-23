@@ -2,14 +2,16 @@ use std::path::Path;
 
 use tracing::warn;
 
-use aura_core::*;
-use aura_claude::StreamTokenCapture;
 use aura_billing::MeteredCompletionRequest;
+use aura_claude::StreamTokenCapture;
+use aura_core::*;
 
 use super::build_fix::{normalize_error_signature, BuildFixAttemptRecord};
 use super::orchestrator::DevLoopEngine;
 use super::parser::parse_execution_response;
-use super::prompts::{BuildFixPromptParams, build_fix_system_prompt, build_fix_prompt_with_history};
+use super::prompts::{
+    build_fix_prompt_with_history, build_fix_system_prompt, BuildFixPromptParams,
+};
 use super::types::*;
 use crate::error::EngineError;
 use crate::file_ops::{self, FileOp, WorkspaceCache};
@@ -30,13 +32,19 @@ pub(crate) fn describe_file_ops(ops: &[FileOp]) -> Vec<String> {
 }
 
 fn truncate_str(s: &str, max: usize) -> &str {
-    if s.len() <= max { s } else { &s[..max] }
+    if s.len() <= max {
+        s
+    } else {
+        &s[..max]
+    }
 }
 
 pub(crate) fn summarize_file_ops(ops: &[FileOp]) -> String {
     ops.iter()
         .map(|op| match op {
-            FileOp::SearchReplace { path, replacements, .. } => {
+            FileOp::SearchReplace {
+                path, replacements, ..
+            } => {
                 let changes: Vec<String> = replacements
                     .iter()
                     .map(|r| {
@@ -67,7 +75,11 @@ pub(crate) async fn build_codebase_snapshot(
     workspace_cache: &WorkspaceCache,
 ) -> String {
     match file_ops::retrieve_task_relevant_files_cached(
-        project_folder, task_title, task_description, budget, workspace_cache,
+        project_folder,
+        task_title,
+        task_description,
+        budget,
+        workspace_cache,
     )
     .await
     {
@@ -150,8 +162,7 @@ impl DevLoopEngine {
     ) -> Result<bool, EngineError> {
         match parse_execution_response(response) {
             Ok(fix_execution) => {
-                if let Err(e) = file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await
-                {
+                if let Err(e) = file_ops::apply_file_ops(base_path, &fix_execution.file_ops).await {
                     warn!(
                         task_id = %task.task_id, attempt, error = %e,
                         "file ops failed during {fix_kind} (likely search-replace mismatch), \

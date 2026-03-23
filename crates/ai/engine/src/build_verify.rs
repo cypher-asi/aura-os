@@ -7,9 +7,9 @@ use tokio::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, warn};
 
-use aura_core::IndividualTestResult;
 use crate::channel_ext::send_or_log;
 use crate::error::EngineError;
+use aura_core::IndividualTestResult;
 
 #[derive(Debug, Clone)]
 pub struct BuildResult {
@@ -33,15 +33,23 @@ fn truncate_output(s: &str, max: usize) -> String {
     let half = max / 2;
     let start = &s[..half];
     let end = &s[s.len() - half..];
-    format!("{start}\n\n... (truncated {0} bytes) ...\n\n{end}", s.len() - max)
+    format!(
+        "{start}\n\n... (truncated {0} bytes) ...\n\n{end}",
+        s.len() - max
+    )
 }
 
 /// Returns true if the command string contains shell operators that require
 /// interpretation by a shell (&&, ||, pipes, redirects, semicolons, etc.).
 fn needs_shell(cmd: &str) -> bool {
-    cmd.contains("&&") || cmd.contains("||") || cmd.contains('|')
-        || cmd.contains('>') || cmd.contains('<') || cmd.contains(';')
-        || cmd.contains('$') || cmd.contains('`')
+    cmd.contains("&&")
+        || cmd.contains("||")
+        || cmd.contains('|')
+        || cmd.contains('>')
+        || cmd.contains('<')
+        || cmd.contains(';')
+        || cmd.contains('$')
+        || cmd.contains('`')
 }
 
 /// Run a build command in the project directory and capture the result.
@@ -92,7 +100,11 @@ pub async fn run_build_command(
             .stderr(Stdio::piped())
             .spawn()
     }
-    .map_err(|e| EngineError::Io(format!("failed to execute build command `{build_command}`: {e}")))?;
+    .map_err(|e| {
+        EngineError::Io(format!(
+            "failed to execute build command `{build_command}`: {e}"
+        ))
+    })?;
 
     let stdout_pipe = child.stdout.take();
     let stderr_pipe = child.stderr.take();
@@ -164,7 +176,11 @@ pub async fn run_build_command(
             let stderr = if partial_stderr.is_empty() {
                 timeout_msg
             } else {
-                format!("{}\n\n{}", truncate_output(&partial_stderr, MAX_OUTPUT_BYTES), timeout_msg)
+                format!(
+                    "{}\n\n{}",
+                    truncate_output(&partial_stderr, MAX_OUTPUT_BYTES),
+                    timeout_msg
+                )
             };
             BuildResult {
                 success: false,
@@ -194,15 +210,28 @@ pub async fn run_build_command(
 ///
 /// Supports cargo test and Jest/npm test formats. Falls back to a single
 /// aggregate result derived from the exit code when the format is unrecognised.
-pub fn parse_test_output(stdout: &str, stderr: &str, success: bool) -> (Vec<IndividualTestResult>, String) {
+pub fn parse_test_output(
+    stdout: &str,
+    stderr: &str,
+    success: bool,
+) -> (Vec<IndividualTestResult>, String) {
     let combined = format!("{stdout}\n{stderr}");
 
     // Try cargo test format: `test module::name ... ok/FAILED/ignored`
     let cargo_results = parse_cargo_test(&combined);
     if !cargo_results.is_empty() {
-        let passed = cargo_results.iter().filter(|r| r.status == "passed").count();
-        let failed = cargo_results.iter().filter(|r| r.status == "failed").count();
-        let ignored = cargo_results.iter().filter(|r| r.status == "skipped").count();
+        let passed = cargo_results
+            .iter()
+            .filter(|r| r.status == "passed")
+            .count();
+        let failed = cargo_results
+            .iter()
+            .filter(|r| r.status == "failed")
+            .count();
+        let ignored = cargo_results
+            .iter()
+            .filter(|r| r.status == "skipped")
+            .count();
         let summary = format!("{passed} passed, {failed} failed, {ignored} ignored");
         return (cargo_results, summary);
     }
@@ -218,7 +247,11 @@ pub fn parse_test_output(stdout: &str, stderr: &str, success: bool) -> (Vec<Indi
 
     // Fallback: single aggregate result
     let status = if success { "passed" } else { "failed" };
-    let summary = if success { "all tests passed".to_string() } else { "tests failed".to_string() };
+    let summary = if success {
+        "all tests passed".to_string()
+    } else {
+        "tests failed".to_string()
+    };
     let result = IndividualTestResult {
         name: "(aggregate)".to_string(),
         status: status.to_string(),
@@ -248,8 +281,16 @@ fn parse_cargo_test(output: &str) -> Vec<IndividualTestResult> {
                 s if s.starts_with("ignored") => "skipped",
                 _ => continue,
             };
-            let message = if status == "failed" { Some(outcome.to_string()) } else { None };
-            results.push(IndividualTestResult { name, status: status.to_string(), message });
+            let message = if status == "failed" {
+                Some(outcome.to_string())
+            } else {
+                None
+            };
+            results.push(IndividualTestResult {
+                name,
+                status: status.to_string(),
+                message,
+            });
         }
     }
     results
@@ -277,7 +318,10 @@ fn parse_jest_output(output: &str) -> Vec<IndividualTestResult> {
                 status: "passed".to_string(),
                 message: None,
             });
-        } else if trimmed.starts_with("\u{2717} ") || trimmed.starts_with("✕ ") || trimmed.starts_with("✗ ") {
+        } else if trimmed.starts_with("\u{2717} ")
+            || trimmed.starts_with("✕ ")
+            || trimmed.starts_with("✗ ")
+        {
             results.push(IndividualTestResult {
                 name: trimmed[3..].trim().to_string(),
                 status: "failed".to_string(),

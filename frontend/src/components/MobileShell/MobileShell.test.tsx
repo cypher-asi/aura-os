@@ -37,8 +37,8 @@ const demoProject = {
 };
 
 vi.mock("../../stores/app-store", () => ({
-  useAppStore: (sel: (s: { activeApp: typeof mockActiveApp }) => unknown) =>
-    sel({ activeApp: mockActiveApp }),
+  useAppStore: (selector: (state: { activeApp: typeof mockActiveApp }) => unknown) =>
+    selector({ activeApp: mockActiveApp }),
 }));
 
 const drawers = {
@@ -51,13 +51,13 @@ const drawers = {
   setPreviewOpen: vi.fn(),
   setAccountOpen: vi.fn(),
   closeDrawers: vi.fn(),
-  openAfterDrawerClose: vi.fn((cb: () => void) => cb()),
+  openAfterDrawerClose: vi.fn((callback: () => void) => callback()),
 };
 
 vi.mock("../../stores/mobile-drawer-store", () => ({
-  useMobileDrawerStore: (sel: (s: typeof drawers) => unknown) => sel(drawers),
-  selectDrawerOpen: (s: typeof drawers) => s.navOpen || s.appOpen || s.previewOpen || s.accountOpen,
-  selectOverlayDrawerOpen: (s: typeof drawers) => s.navOpen || s.appOpen || s.previewOpen || s.accountOpen,
+  useMobileDrawerStore: (selector: (state: typeof drawers) => unknown) => selector(drawers),
+  selectDrawerOpen: (state: typeof drawers) => state.navOpen || state.appOpen || state.previewOpen || state.accountOpen,
+  selectOverlayDrawerOpen: (state: typeof drawers) => state.navOpen || state.appOpen || state.previewOpen || state.accountOpen,
 }));
 
 vi.mock("../../stores/ui-modal-store", () => ({
@@ -86,17 +86,21 @@ vi.mock("../../context/SidebarSearchContext", () => ({
   useSidebarSearch: () => ({ query: "", setQuery: vi.fn() }),
 }));
 
-vi.mock("../../apps/projects/useProjectsList", () => ({
-  useProjectsList: () => ({
-    projects: [demoProject],
-    recentProjects: [],
-    mostRecentProject: demoProject,
-    openNewProjectModal: vi.fn(),
-  }),
+vi.mock("../../stores/projects-list-store", () => ({
+  useProjectsListStore: (selector: (state: {
+    projects: typeof demoProject[];
+    openNewProjectModal: () => void;
+  }) => unknown) =>
+    selector({
+      projects: [demoProject],
+      openNewProjectModal: vi.fn(),
+    }),
+  getRecentProjects: (projects: typeof demoProject[]) => projects.slice(0, 3),
+  getMostRecentProject: (projects: typeof demoProject[]) => projects[0] ?? null,
 }));
 
 vi.mock("../../utils/storage", () => ({
-  getLastAgent: () => ({ projectId: "proj-1", agentInstanceId: "agent-inst-1" }),
+  getLastAgentEntry: () => null,
 }));
 
 vi.mock("../../utils/mobileNavigation", () => ({
@@ -130,7 +134,7 @@ vi.mock("../PanelSearch", () => ({
 }));
 
 vi.mock("../AppShell/AppShell.module.css", () => ({
-  default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
 import { MobileShell } from "../MobileShell";

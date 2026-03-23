@@ -158,10 +158,7 @@ pub async fn get_org_usage_members(
         .await
         .map_err(map_network_error)?;
     Ok(Json(
-        members
-            .into_iter()
-            .map(MemberUsageResponse::from)
-            .collect(),
+        members.into_iter().map(MemberUsageResponse::from).collect(),
     ))
 }
 

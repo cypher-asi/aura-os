@@ -5,7 +5,8 @@ import { api } from "../../api/client";
 import { useChatStream } from "../../hooks/use-chat-stream";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { setLastAgent } from "../../utils/storage";
+import { useDelayedLoading } from "../../hooks/use-delayed-loading";
+import { setLastAgent, setLastProject } from "../../utils/storage";
 import { projectAgentChatRoute } from "../../utils/mobileNavigation";
 import { ChatPanel } from "../ChatPanel";
 import { useChatHistoryStore, useChatHistory, projectChatHistoryKey } from "../../stores/chat-history-store";
@@ -58,13 +59,13 @@ export function ChatView() {
     void refreshProjectAgents(projectId).catch(() => {});
   }, [isLoadingProjectAgents, projectAgents.length, projectId, refreshProjectAgents]);
 
-  // Fetch agent instance metadata (name)
   useEffect(() => {
     const loadId = ++metadataLoadIdRef.current;
     const controller = new AbortController();
 
     if (projectId && agentInstanceId) {
       setAgentName(undefined);
+      setLastProject(projectId);
       setLastAgent(projectId, agentInstanceId);
       api
         .getAgentInstance(projectId, agentInstanceId, { signal: controller.signal })
@@ -81,22 +82,25 @@ export function ChatView() {
     return () => { controller.abort(); };
   }, [projectId, agentInstanceId]);
 
-  // Fetch context usage
   const fetchActiveSessionContext = useCallback(async () => {
     if (!projectId || !agentInstanceId) return null;
     try {
       const sessions = await api.listSessions(projectId, agentInstanceId);
-      const active = sessions.find((s) => s.status === "active");
+      const active = sessions.find((session) => session.status === "active");
       if (active != null && typeof active.context_usage_estimate === "number") {
         return Math.round(active.context_usage_estimate * 100);
       }
-    } catch { /* ignore */ }
+    } catch {
+      // ignore
+    }
     return null;
   }, [projectId, agentInstanceId]);
 
   useEffect(() => {
     let cancelled = false;
-    void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
+    void fetchActiveSessionContext().then((percent) => {
+      if (!cancelled) setContextUsagePercent(percent);
+    });
     return () => { cancelled = true; };
   }, [fetchActiveSessionContext]);
 
@@ -104,13 +108,17 @@ export function ChatView() {
   useEffect(() => {
     let cancelled = false;
     if (prevIsStreamingRef.current && !isStreaming) {
-      void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
+      void fetchActiveSessionContext().then((percent) => {
+        if (!cancelled) setContextUsagePercent(percent);
+      });
+      if (historyKey) {
+        useChatHistoryStore.getState().invalidateHistory(historyKey);
+      }
     }
     prevIsStreamingRef.current = isStreaming;
     return () => { cancelled = true; };
-  }, [isStreaming, fetchActiveSessionContext]);
+  }, [isStreaming, fetchActiveSessionContext, historyKey]);
 
-  // Load chat history via shared store
   useEffect(() => {
     if (!projectId || !agentInstanceId) {
       queueMicrotask(() => {
@@ -119,6 +127,7 @@ export function ChatView() {
       });
       return;
     }
+
     const key = projectChatHistoryKey(projectId, agentInstanceId);
     useChatHistoryStore.getState().fetchHistory(
       key,
@@ -126,11 +135,10 @@ export function ChatView() {
     );
   }, [projectId, agentInstanceId]);
 
-  // Sync history messages to stream store
   useEffect(() => {
-    if (historyMessages.length === 0) return;
+    if (historyStatus !== "ready") return;
     resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages]);
+  }, [historyMessages, historyStatus]);
 
   const wrappedSend = useCallback(
     (...args: Parameters<typeof sendMessage>) => {
@@ -146,6 +154,10 @@ export function ChatView() {
     if (!projectId || !nextAgentInstanceId || nextAgentInstanceId === agentInstanceId) return;
     navigate(projectAgentChatRoute(projectId, nextAgentInstanceId));
   }, [agentInstanceId, navigate, projectId]);
+
+  const rawLoading = historyStatus === "loading" || historyStatus === "idle";
+  const deferredLoading = useDelayedLoading(rawLoading);
+  const historyResolved = historyStatus === "ready" || historyStatus === "error";
 
   if (!agentInstanceId) return null;
 
@@ -191,7 +203,8 @@ export function ChatView() {
         onSend={wrappedSend}
         onStop={stopStreaming}
         agentName={selectedProjectAgent?.name ?? agentName}
-        isLoading={historyStatus === "loading"}
+        isLoading={deferredLoading}
+        historyResolved={historyResolved}
         contextUsagePercent={projectId && agentInstanceId ? contextUsagePercent : undefined}
         scrollResetKey={agentInstanceId}
       />

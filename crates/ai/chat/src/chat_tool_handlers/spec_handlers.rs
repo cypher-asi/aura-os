@@ -2,12 +2,16 @@ use chrono::Utc;
 use serde_json::{json, Value};
 
 use aura_core::*;
+use aura_specs::order_index_from_spec_title;
 
-use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 use super::str_field;
+use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
 
 impl ChatToolExecutor {
-    pub(crate) async fn list_specs_from_storage(&self, project_id: &ProjectId) -> Result<Vec<Spec>, ToolExecResult> {
+    pub(crate) async fn list_specs_from_storage(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<Vec<Spec>, ToolExecResult> {
         let (storage, jwt) = self.storage_and_jwt()?;
         let storage_specs = storage
             .list_specs(&project_id.to_string(), &jwt)
@@ -19,7 +23,10 @@ impl ChatToolExecutor {
             .collect())
     }
 
-    pub(crate) async fn get_spec_from_storage(&self, spec_id: &SpecId) -> Result<Spec, ToolExecResult> {
+    pub(crate) async fn get_spec_from_storage(
+        &self,
+        spec_id: &SpecId,
+    ) -> Result<Spec, ToolExecResult> {
         let (storage, jwt) = self.storage_and_jwt()?;
         let ss = storage
             .get_spec(&spec_id.to_string(), &jwt)
@@ -45,7 +52,10 @@ impl ChatToolExecutor {
 
         let specs = self.list_specs_from_storage(project_id).await?;
 
-        if let Some(spec) = specs.iter().find(|s| s.title.starts_with(&format!("{raw}:"))) {
+        if let Some(spec) = specs
+            .iter()
+            .find(|s| s.title.starts_with(&format!("{raw}:")))
+        {
             return Ok(spec.spec_id);
         }
 
@@ -94,12 +104,20 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn create_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn create_spec(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let title = str_field(input, "title").unwrap_or_default();
         let markdown = str_field(input, "markdown_contents").unwrap_or_default();
 
-        let existing = self.list_specs_from_storage(project_id).await.unwrap_or_default();
-        let order = existing.iter().map(|s| s.order_index).max().unwrap_or(0) + 1;
+        let existing = self
+            .list_specs_from_storage(project_id)
+            .await
+            .unwrap_or_default();
+        let order = order_index_from_spec_title(&title)
+            .unwrap_or_else(|| existing.iter().map(|s| s.order_index).max().unwrap_or(0) + 1);
 
         let (storage, jwt) = match self.storage_and_jwt() {
             Ok(v) => v,
@@ -110,7 +128,10 @@ impl ChatToolExecutor {
             order_index: Some(order as i32),
             markdown_contents: Some(markdown.clone()),
         };
-        match storage.create_spec(&project_id.to_string(), &jwt, &req).await {
+        match storage
+            .create_spec(&project_id.to_string(), &jwt, &req)
+            .await
+        {
             Ok(ss) => match Spec::try_from(ss) {
                 Ok(spec) => ToolExecResult::ok_with_spec(json!(spec), spec),
                 Err(e) => ToolExecResult::err(e),
@@ -119,7 +140,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn update_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn update_spec(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
@@ -153,7 +178,11 @@ impl ChatToolExecutor {
         ToolExecResult::ok_with_spec(json!(updated), updated)
     }
 
-    pub(crate) async fn delete_spec(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn delete_spec(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,

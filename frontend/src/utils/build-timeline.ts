@@ -1,6 +1,11 @@
 import type { ChatContentBlock } from "../types";
 import type { TimelineItem } from "../types/stream";
 
+let _btlId = 0;
+function nextId(): string {
+  return `btl-${++_btlId}`;
+}
+
 /**
  * Reconstruct a timeline from a completed message's content blocks.
  *
@@ -23,21 +28,21 @@ export function buildTimelineFromBlocks(
   const items: TimelineItem[] = [];
 
   if (thinking) {
-    items.push({ kind: "thinking" });
+    items.push({ kind: "thinking", id: nextId() });
   }
 
   let hasText = false;
   for (const block of blocks) {
     if (block.type === "text") {
-      items.push({ kind: "text", content: block.text ?? "" });
+      items.push({ kind: "text", content: block.text ?? "", id: nextId() });
       hasText = true;
     } else if (block.type === "tool_use" && block.id) {
-      items.push({ kind: "tool", toolCallId: block.id });
+      items.push({ kind: "tool", toolCallId: block.id, id: nextId() });
     }
   }
 
   if (!hasText && fallbackContent) {
-    items.push({ kind: "text", content: fallbackContent });
+    items.push({ kind: "text", content: fallbackContent, id: nextId() });
   }
 
   return items;

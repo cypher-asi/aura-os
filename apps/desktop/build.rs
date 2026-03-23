@@ -28,10 +28,7 @@ fn main() {
     let dist_dir = frontend_dir.join("dist");
 
     if !frontend_dir.join("package.json").exists() {
-        panic!(
-            "frontend directory not found at {}",
-            frontend_dir.display()
-        );
+        panic!("frontend directory not found at {}", frontend_dir.display());
     }
 
     if !frontend_dir.join("node_modules").exists() {

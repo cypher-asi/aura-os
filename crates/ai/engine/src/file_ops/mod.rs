@@ -1,22 +1,22 @@
 use std::path::Path;
 
-use serde::{Deserialize, Serialize};
 use crate::error::EngineError;
+use serde::{Deserialize, Serialize};
 
 mod apply;
 pub(crate) mod error_context;
+pub mod file_walkers;
 pub(crate) mod source_parser;
 pub mod stub_detection;
-pub mod task_relevance;
 pub mod task_keywords;
-pub mod file_walkers;
+pub mod task_relevance;
 pub mod type_resolution;
 pub mod validation;
 pub mod workspace_map;
 
 pub use apply::{apply_file_ops, compute_file_changes};
 pub use error_context::{resolve_error_context, resolve_error_source_files, ERROR_SOURCE_BUDGET};
-pub(crate) use source_parser::{extract_pub_signatures, extract_definition_block};
+pub(crate) use source_parser::{extract_definition_block, extract_pub_signatures};
 pub use stub_detection::*;
 pub use task_relevance::*;
 pub use validation::*;
@@ -31,9 +31,17 @@ pub struct Replacement {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum FileOp {
-    Create { path: String, content: String },
-    Modify { path: String, content: String },
-    Delete { path: String },
+    Create {
+        path: String,
+        content: String,
+    },
+    Modify {
+        path: String,
+        content: String,
+    },
+    Delete {
+        path: String,
+    },
     SearchReplace {
         path: String,
         replacements: Vec<Replacement>,
@@ -87,8 +95,8 @@ pub struct ErrorReferences {
 }
 
 pub(crate) const INCLUDE_EXTENSIONS: &[&str] = &[
-    "rs", "ts", "tsx", "js", "jsx", "json", "toml", "md", "css", "html", "yaml", "yml", "py",
-    "sh", "sql", "graphql",
+    "rs", "ts", "tsx", "js", "jsx", "json", "toml", "md", "css", "html", "yaml", "yml", "py", "sh",
+    "sql", "graphql",
 ];
 
 pub fn read_relevant_files(linked_folder: &str, max_bytes: usize) -> Result<String, EngineError> {
@@ -107,5 +115,12 @@ fn walk_and_collect(
     max_bytes: usize,
 ) -> Result<(), EngineError> {
     let mut included = std::collections::HashSet::new();
-    file_walkers::walk_and_collect_filtered(base, dir, output, current_size, max_bytes, &mut included)
+    file_walkers::walk_and_collect_filtered(
+        base,
+        dir,
+        output,
+        current_size,
+        max_bytes,
+        &mut included,
+    )
 }

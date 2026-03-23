@@ -1,6 +1,11 @@
 import type { MutableRefObject } from "react";
 import { isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import type { ToolCallStartedInfo, ToolCallInfo, ToolResultInfo } from "../../api/streams";
+import type {
+  ToolCallStartedInfo,
+  ToolCallSnapshotInfo,
+  ToolCallInfo,
+  ToolResultInfo,
+} from "../../api/streams";
 import type { Message } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
@@ -47,6 +52,12 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   setters.setActiveToolCalls([]);
   refs.timeline.current = [];
   setters.setTimeline([]);
+  setters.setProgressText("");
+}
+
+let _tlId = 0;
+function nextTimelineId(): string {
+  return `tl-${++_tlId}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -66,14 +77,14 @@ export function handleThinkingDelta(
 
   const tl = refs.timeline.current;
   if (tl.length === 0 || tl[tl.length - 1].kind !== "thinking") {
-    tl.push({ kind: "thinking" });
-    setters.setTimeline([...tl]);
+    tl.push({ kind: "thinking", id: nextTimelineId() });
   }
 
   if (refs.thinkingRaf.current === null) {
     refs.thinkingRaf.current = requestAnimationFrame(() => {
       refs.thinkingRaf.current = null;
       setters.setThinkingText(refs.thinkingBuffer.current);
+      setters.setTimeline([...refs.timeline.current]);
     });
   }
 }
@@ -99,7 +110,7 @@ export function handleTextDelta(
   if (last && last.kind === "text") {
     last.content += text;
   } else {
-    tl.push({ kind: "text", content: text });
+    tl.push({ kind: "text", content: text, id: nextTimelineId() });
   }
 
   if (refs.raf.current === null) {
@@ -116,7 +127,6 @@ export function handleToolCallStarted(
   setters: StreamSetters,
   info: ToolCallStartedInfo,
 ): void {
-  setters.setProgressText("");
   const entry: ToolCallEntry = {
     id: info.id,
     name: info.name,
@@ -127,8 +137,43 @@ export function handleToolCallStarted(
   refs.toolCalls.current = [...refs.toolCalls.current, entry];
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
-  refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+  refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
   setters.setTimeline([...refs.timeline.current]);
+}
+
+export function handleToolCallSnapshot(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  info: ToolCallSnapshotInfo,
+): void {
+  const idx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
+  if (idx === -1) {
+    refs.toolCalls.current = [
+      ...refs.toolCalls.current,
+      {
+        id: info.id,
+        name: info.name,
+        input: info.input,
+        pending: true,
+        started: true,
+      },
+    ];
+    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
+    setters.setTimeline([...refs.timeline.current]);
+    setters.setActiveToolCalls([...refs.toolCalls.current]);
+    return;
+  }
+
+  refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
+    tc.id === info.id
+      ? {
+        ...tc,
+        name: info.name,
+        input: { ...tc.input, ...info.input },
+      }
+      : tc,
+  );
+  setters.setActiveToolCalls([...refs.toolCalls.current]);
 }
 
 export function handleToolCall(
@@ -136,14 +181,30 @@ export function handleToolCall(
   setters: StreamSetters,
   info: ToolCallInfo,
 ): void {
-  setters.setProgressText("");
-  const existingIdx = refs.toolCalls.current.findIndex(
-    (tc) => tc.id === info.id && tc.started,
-  );
+  const existingIdx = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
   if (existingIdx !== -1) {
+    const existing = refs.toolCalls.current[existingIdx];
+    const existingMarkdown = typeof existing.input.markdown_contents === "string"
+      ? (existing.input.markdown_contents as string)
+      : "";
+    const incomingMarkdown = typeof info.input.markdown_contents === "string"
+      ? (info.input.markdown_contents as string)
+      : undefined;
+    let mergedMarkdown = existingMarkdown;
+    if (incomingMarkdown !== undefined) {
+      if (!existingMarkdown || incomingMarkdown.startsWith(existingMarkdown) || incomingMarkdown.length >= existingMarkdown.length) {
+        mergedMarkdown = incomingMarkdown;
+      } else {
+        mergedMarkdown = existingMarkdown + incomingMarkdown;
+      }
+    }
+    const mergedInput: Record<string, unknown> = { ...existing.input, ...info.input };
+    if (incomingMarkdown !== undefined) {
+      mergedInput.markdown_contents = mergedMarkdown;
+    }
     refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
-      tc.id === info.id && tc.started
-        ? { ...tc, input: info.input, started: false }
+      tc.id === info.id
+        ? { ...tc, name: info.name, input: mergedInput, started: false }
         : tc,
     );
   } else {
@@ -155,7 +216,7 @@ export function handleToolCall(
     };
     refs.toolCalls.current = [...refs.toolCalls.current, entry];
 
-    refs.timeline.current.push({ kind: "tool", toolCallId: info.id });
+    refs.timeline.current.push({ kind: "tool", toolCallId: info.id, id: nextTimelineId() });
     setters.setTimeline([...refs.timeline.current]);
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);
@@ -274,6 +335,7 @@ export function finalizeStream(
   refs.thinkingBuffer.current = "";
   refs.thinkingStart.current = null;
   setters.setThinkingDurationMs(null);
+  setters.setProgressText("");
   setters.setIsStreaming(false);
   abortRef.current = null;
 }

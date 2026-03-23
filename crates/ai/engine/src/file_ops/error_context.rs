@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
-use super::source_parser::{extract_struct_fields, extract_pub_signatures};
+use super::source_parser::{extract_pub_signatures, extract_struct_fields};
 use super::{ErrorReferences, SKIP_DIRS};
 
 const RESOLVE_BUDGET: usize = 10_240;

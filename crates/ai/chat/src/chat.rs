@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use aura_core::*;
 use aura_billing::MeteredLlm;
+use aura_core::*;
 use aura_settings::SettingsService;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
@@ -31,6 +31,11 @@ pub enum ChatStreamEvent {
     ToolCallStarted {
         id: String,
         name: String,
+    },
+    ToolCallSnapshot {
+        id: String,
+        name: String,
+        input: serde_json::Value,
     },
     ToolCall {
         id: String,
@@ -66,6 +71,7 @@ pub struct ChatService {
     pub(crate) task_service: Arc<TaskService>,
     pub(crate) storage_client: Option<Arc<StorageClient>>,
     pub(crate) llm_config: LlmConfig,
+    pub(crate) runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 pub struct ChatServiceDeps {
@@ -76,6 +82,7 @@ pub struct ChatServiceDeps {
     pub project_service: Arc<ProjectService>,
     pub task_service: Arc<TaskService>,
     pub storage_client: Option<Arc<StorageClient>>,
+    pub runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 impl ChatService {
@@ -93,6 +100,7 @@ impl ChatService {
             task_service: deps.task_service,
             storage_client: deps.storage_client,
             llm_config,
+            runtime: deps.runtime,
         }
     }
 
@@ -150,7 +158,9 @@ impl ChatService {
         input_tokens: u64,
         output_tokens: u64,
     ) {
-        let Some(ref storage) = self.storage_client else { return };
+        let Some(ref storage) = self.storage_client else {
+            return;
+        };
         let Some(jwt) = self.get_jwt() else { return };
 
         let current = match storage.get_session(session_id, &jwt).await {

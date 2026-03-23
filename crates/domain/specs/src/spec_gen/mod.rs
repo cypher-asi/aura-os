@@ -1,6 +1,8 @@
 pub(crate) mod parser;
 mod streaming;
 
+pub use parser::order_index_from_spec_title;
+
 use std::sync::Arc;
 
 use serde::Serialize;
@@ -10,14 +12,14 @@ use tracing::{debug, error, info};
 use aura_core::*;
 use aura_projects::ProjectService;
 use aura_settings::SettingsService;
-use aura_store::RocksStore;
 use aura_storage::StorageClient;
+use aura_store::RocksStore;
 
-use aura_billing::MeteredLlm;
 use crate::channel_ext::send_or_log;
 use crate::error::SpecGenError;
+use aura_billing::MeteredLlm;
 
-use parser::{RawSpecOutput, parse_claude_response, raw_to_specs};
+use parser::{parse_claude_response, raw_to_specs, RawSpecOutput};
 
 pub type ProgressTx = mpsc::UnboundedSender<String>;
 
@@ -28,10 +30,20 @@ pub enum SpecStreamEvent {
     SpecsTitle(String),
     SpecsSummary(String),
     Delta(String),
-    Generating { tokens: usize },
+    Generating {
+        tokens: usize,
+    },
+    SpecDraftPreview {
+        draft_index: usize,
+        title: Option<String>,
+        markdown_preview: String,
+    },
     SpecSaved(Spec),
     TaskSaved(Box<Task>),
-    TokenUsage { input_tokens: u64, output_tokens: u64 },
+    TokenUsage {
+        input_tokens: u64,
+        output_tokens: u64,
+    },
     Complete(Vec<Spec>),
     Error(String),
 }
@@ -117,10 +129,14 @@ impl SpecGenerationService {
         Self::emit(progress, "Loading project");
         info!(%project_id, "Loading project for spec generation");
 
-        let project = self.project_service.get_project_async(project_id).await.map_err(|e| {
-            error!(%project_id, error = %e, "Failed to load project from network");
-            e
-        })?;
+        let project = self
+            .project_service
+            .get_project_async(project_id)
+            .await
+            .map_err(|e| {
+                error!(%project_id, error = %e, "Failed to load project from network");
+                e
+            })?;
 
         Self::emit(progress, "Reading requirements document");
         let requirements_content = load_requirements(project_id, &project)?;
@@ -140,9 +156,14 @@ impl SpecGenerationService {
         project_id: &ProjectId,
         progress: Option<ProgressTx>,
     ) -> Result<Vec<Spec>, SpecGenError> {
-        let (requirements_content, api_key) = self.load_requirements_and_key(project_id, &progress).await?;
+        let (requirements_content, api_key) = self
+            .load_requirements_and_key(project_id, &progress)
+            .await?;
 
-        Self::emit(&progress, "Calling Claude to generate specs — this may take a minute");
+        Self::emit(
+            &progress,
+            "Calling Claude to generate specs — this may take a minute",
+        );
         info!(%project_id, max_tokens = MAX_TOKENS, "Sending request to Claude API");
 
         let llm_response = self
@@ -172,14 +193,20 @@ impl SpecGenerationService {
         info!(%project_id, count = raw_specs.len(), "Parsed specs from Claude response");
 
         let new_specs = raw_to_specs(project_id, raw_specs);
-        Self::emit(&progress, &format!("Saving {} specs to database", new_specs.len()));
+        Self::emit(
+            &progress,
+            &format!("Saving {} specs to database", new_specs.len()),
+        );
         self.save_specs(project_id, &new_specs).await?;
         info!(%project_id, count = new_specs.len(), "Specs saved to database");
 
         Ok(new_specs)
     }
 
-    pub(crate) async fn clear_project_specs(&self, project_id: &ProjectId) -> Result<(), SpecGenError> {
+    pub(crate) async fn clear_project_specs(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<(), SpecGenError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
         let pid = project_id.to_string();
@@ -211,10 +238,17 @@ impl SpecGenerationService {
                 dependency_ids: if task.dependency_ids.is_empty() {
                     None
                 } else {
-                    Some(task.dependency_ids.iter().map(|id| id.to_string()).collect())
+                    Some(
+                        task.dependency_ids
+                            .iter()
+                            .map(|id| id.to_string())
+                            .collect(),
+                    )
                 },
             };
-            storage.create_task(&task.project_id.to_string(), &jwt, &req).await?;
+            storage
+                .create_task(&task.project_id.to_string(), &jwt, &req)
+                .await?;
         }
         Ok(())
     }
@@ -233,7 +267,11 @@ impl SpecGenerationService {
         Ok(())
     }
 
-    pub(crate) async fn save_specs(&self, project_id: &ProjectId, new_specs: &[Spec]) -> Result<(), SpecGenError> {
+    pub(crate) async fn save_specs(
+        &self,
+        project_id: &ProjectId,
+        new_specs: &[Spec],
+    ) -> Result<(), SpecGenError> {
         self.clear_project_specs(project_id).await?;
 
         let storage = self.require_storage()?;
@@ -254,9 +292,7 @@ impl SpecGenerationService {
     pub async fn list_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, SpecGenError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
-        let storage_specs = storage
-            .list_specs(&project_id.to_string(), &jwt)
-            .await?;
+        let storage_specs = storage.list_specs(&project_id.to_string(), &jwt).await?;
         let mut specs: Vec<Spec> = storage_specs
             .into_iter()
             .filter_map(|s| Spec::try_from(s).ok())
@@ -265,7 +301,11 @@ impl SpecGenerationService {
         Ok(specs)
     }
 
-    pub async fn get_spec(&self, project_id: &ProjectId, spec_id: &SpecId) -> Result<Spec, SpecGenError> {
+    pub async fn get_spec(
+        &self,
+        project_id: &ProjectId,
+        spec_id: &SpecId,
+    ) -> Result<Spec, SpecGenError> {
         let _ = project_id;
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;

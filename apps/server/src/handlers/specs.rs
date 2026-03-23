@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 
 use axum::extract::{Path, State};
+use axum::http::HeaderValue;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use tokio::sync::mpsc;
@@ -58,24 +59,26 @@ pub async fn get_spec(
 ) -> ApiResult<Json<Spec>> {
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
-    let storage_spec = storage
-        .get_spec(&spec_id.to_string(), &jwt)
-        .await
-        .map_err(|e| match &e {
-            aura_storage::StorageError::Server { status: 404, .. } => {
-                ApiError::not_found("spec not found")
-            }
-            _ => ApiError::internal(e.to_string()),
-        })?;
-    let spec = Spec::try_from(storage_spec)
-        .map_err(ApiError::internal)?;
+    let storage_spec =
+        storage
+            .get_spec(&spec_id.to_string(), &jwt)
+            .await
+            .map_err(|e| match &e {
+                aura_storage::StorageError::Server { status: 404, .. } => {
+                    ApiError::not_found("spec not found")
+                }
+                _ => ApiError::internal(e.to_string()),
+            })?;
+    let spec = Spec::try_from(storage_spec).map_err(ApiError::internal)?;
     Ok(Json(spec))
 }
 
 fn spec_gen_error_to_api(e: &aura_specs::SpecGenError) -> (axum::http::StatusCode, Json<ApiError>) {
     match e {
         aura_specs::SpecGenError::ProjectNotFound(_) => ApiError::not_found("project not found"),
-        aura_specs::SpecGenError::RequirementsFileNotFound(p) => ApiError::bad_request(format!("requirements file not found: {p}")),
+        aura_specs::SpecGenError::RequirementsFileNotFound(p) => {
+            ApiError::bad_request(format!("requirements file not found: {p}"))
+        }
         aura_specs::SpecGenError::Settings(_) => ApiError::bad_request("API key not configured"),
         _ => ApiError::internal(e.to_string()),
     }
@@ -95,19 +98,41 @@ pub async fn generate_specs(
     tokio::spawn(async move {
         while let Some(stage) = progress_rx.recv().await {
             info!(%pid, stage, "Spec generation progress");
-            send_or_log(&event_tx, EngineEvent::SpecGenProgress { project_id: pid, stage });
+            send_or_log(
+                &event_tx,
+                EngineEvent::SpecGenProgress {
+                    project_id: pid,
+                    stage,
+                },
+            );
         }
     });
 
-    match state.spec_gen_service.generate_specs_with_progress(&project_id, Some(progress_tx)).await {
+    match state
+        .spec_gen_service
+        .generate_specs_with_progress(&project_id, Some(progress_tx))
+        .await
+    {
         Ok(specs) => {
             info!(%project_id, count = specs.len(), "Spec generation completed");
-            send_or_log(&state.event_tx, EngineEvent::SpecGenCompleted { project_id, spec_count: specs.len() });
+            send_or_log(
+                &state.event_tx,
+                EngineEvent::SpecGenCompleted {
+                    project_id,
+                    spec_count: specs.len(),
+                },
+            );
             Ok(Json(specs))
         }
         Err(e) => {
             error!(%project_id, error = %e, "Spec generation failed");
-            send_or_log(&state.event_tx, EngineEvent::SpecGenFailed { project_id, reason: e.to_string() });
+            send_or_log(
+                &state.event_tx,
+                EngineEvent::SpecGenFailed {
+                    project_id,
+                    reason: e.to_string(),
+                },
+            );
             Err(spec_gen_error_to_api(&e))
         }
     }
@@ -119,34 +144,101 @@ fn spec_stream_event_to_sse(
     project_id: ProjectId,
 ) -> Event {
     match evt {
-        SpecStreamEvent::Progress(stage) => Event::default().event("progress").json_data(serde_json::json!({ "stage": stage })).unwrap(),
-        SpecStreamEvent::SpecsTitle(title) => Event::default().event("specs_title").json_data(serde_json::json!({ "title": title })).unwrap(),
-        SpecStreamEvent::SpecsSummary(summary) => Event::default().event("specs_summary").json_data(serde_json::json!({ "summary": summary })).unwrap(),
-        SpecStreamEvent::Delta(text) => Event::default().event("delta").json_data(serde_json::json!({ "text": text })).unwrap(),
-        SpecStreamEvent::Generating { tokens } => Event::default().event("generating").json_data(serde_json::json!({ "tokens": tokens })).unwrap(),
+        SpecStreamEvent::Progress(stage) => Event::default()
+            .event("progress")
+            .json_data(serde_json::json!({ "stage": stage }))
+            .unwrap(),
+        SpecStreamEvent::SpecsTitle(title) => Event::default()
+            .event("specs_title")
+            .json_data(serde_json::json!({ "title": title }))
+            .unwrap(),
+        SpecStreamEvent::SpecsSummary(summary) => Event::default()
+            .event("specs_summary")
+            .json_data(serde_json::json!({ "summary": summary }))
+            .unwrap(),
+        SpecStreamEvent::Delta(text) => Event::default()
+            .event("delta")
+            .json_data(serde_json::json!({ "text": text }))
+            .unwrap(),
+        SpecStreamEvent::Generating { tokens } => Event::default()
+            .event("generating")
+            .json_data(serde_json::json!({ "tokens": tokens }))
+            .unwrap(),
         SpecStreamEvent::SpecSaved(ref spec) => {
-            send_or_log(event_tx, EngineEvent::SpecSaved { project_id, spec: spec.clone() });
-            Event::default().event("spec_saved").json_data(serde_json::json!({ "spec": spec })).unwrap()
+            send_or_log(
+                event_tx,
+                EngineEvent::SpecSaved {
+                    project_id,
+                    spec: spec.clone(),
+                },
+            );
+            Event::default()
+                .event("spec_saved")
+                .json_data(serde_json::json!({ "spec": spec }))
+                .unwrap()
         }
-        SpecStreamEvent::TaskSaved(ref task) => Event::default().event("task_saved").json_data(serde_json::json!({ "task": task })).unwrap(),
+        SpecStreamEvent::TaskSaved(ref task) => Event::default()
+            .event("task_saved")
+            .json_data(serde_json::json!({ "task": task }))
+            .unwrap(),
         SpecStreamEvent::Complete(specs) => {
-            send_or_log(event_tx, EngineEvent::SpecGenCompleted { project_id, spec_count: specs.len() });
-            Event::default().event("complete").json_data(serde_json::json!({ "specs": specs })).unwrap()
+            send_or_log(
+                event_tx,
+                EngineEvent::SpecGenCompleted {
+                    project_id,
+                    spec_count: specs.len(),
+                },
+            );
+            Event::default()
+                .event("complete")
+                .json_data(serde_json::json!({ "specs": specs }))
+                .unwrap()
         }
         SpecStreamEvent::Error(msg) => {
-            send_or_log(event_tx, EngineEvent::SpecGenFailed { project_id, reason: msg.clone() });
-            Event::default().event("error").json_data(serde_json::json!({ "message": msg })).unwrap()
+            send_or_log(
+                event_tx,
+                EngineEvent::SpecGenFailed {
+                    project_id,
+                    reason: msg.clone(),
+                },
+            );
+            Event::default()
+                .event("error")
+                .json_data(serde_json::json!({ "message": msg }))
+                .unwrap()
         }
-        SpecStreamEvent::TokenUsage { input_tokens, output_tokens } => {
-            Event::default().event("token_usage").json_data(serde_json::json!({ "input_tokens": input_tokens, "output_tokens": output_tokens })).unwrap()
-        }
+        SpecStreamEvent::TokenUsage {
+            input_tokens,
+            output_tokens,
+        } => Event::default()
+            .event("token_usage")
+            .json_data(
+                serde_json::json!({ "input_tokens": input_tokens, "output_tokens": output_tokens }),
+            )
+            .unwrap(),
+        SpecStreamEvent::SpecDraftPreview {
+            draft_index,
+            title,
+            markdown_preview,
+        } => Event::default()
+            .event("spec_draft_preview")
+            .json_data(serde_json::json!({
+                "draft_index": draft_index, "title": title, "markdown_preview": markdown_preview
+            }))
+            .unwrap(),
     }
 }
+
+const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
+    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
 pub async fn generate_specs_stream(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
-) -> ApiResult<Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>> {
+) -> ApiResult<(
+    [(&'static str, HeaderValue); 1],
+    Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
+)> {
     super::billing::require_credits(&state).await?;
     info!(%project_id, "Streaming spec generation requested");
     send_or_log(&state.event_tx, EngineEvent::SpecGenStarted { project_id });
@@ -154,11 +246,15 @@ pub async fn generate_specs_stream(
     let (tx, rx) = mpsc::unbounded_channel::<SpecStreamEvent>();
     let spec_gen = state.spec_gen_service.clone();
     let pid = project_id;
-    tokio::spawn(async move { spec_gen.generate_specs_streaming(&pid, tx).await; });
+    tokio::spawn(async move {
+        spec_gen.generate_specs_streaming(&pid, tx).await;
+    });
 
     let event_tx = state.event_tx.clone();
-    let stream = UnboundedReceiverStream::new(rx).map(move |evt| {
-        Ok(spec_stream_event_to_sse(&evt, &event_tx, project_id))
-    });
-    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+    let stream = UnboundedReceiverStream::new(rx)
+        .map(move |evt| Ok(spec_stream_event_to_sse(&evt, &event_tx, project_id)));
+    Ok((
+        SSE_NO_BUFFERING_HEADERS,
+        Sse::new(stream).keep_alive(KeepAlive::default()),
+    ))
 }

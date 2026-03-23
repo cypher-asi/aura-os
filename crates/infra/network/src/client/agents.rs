@@ -30,16 +30,9 @@ impl NetworkClient {
         .await
     }
 
-    pub async fn get_agent(
-        &self,
-        agent_id: &str,
-        jwt: &str,
-    ) -> Result<NetworkAgent, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/agents/{}", self.base_url, agent_id),
-            jwt,
-        )
-        .await
+    pub async fn get_agent(&self, agent_id: &str, jwt: &str) -> Result<NetworkAgent, NetworkError> {
+        self.get_authed(&format!("{}/api/agents/{}", self.base_url, agent_id), jwt)
+            .await
     }
 
     pub async fn update_agent(
@@ -57,10 +50,7 @@ impl NetworkClient {
     }
 
     pub async fn delete_agent(&self, agent_id: &str, jwt: &str) -> Result<(), NetworkError> {
-        self.delete_authed(
-            &format!("{}/api/agents/{}", self.base_url, agent_id),
-            jwt,
-        )
-        .await
+        self.delete_authed(&format!("{}/api/agents/{}", self.base_url, agent_id), jwt)
+            .await
     }
 }

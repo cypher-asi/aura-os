@@ -1,8 +1,8 @@
 use axum::extract::{Path, State};
 use axum::Json;
 
-use aura_core::{AgentInstance, AgentInstanceId, AgentStatus, ProjectId};
 use aura_agents::{merge_agent_instance, AgentInstanceService};
+use aura_core::{AgentInstance, AgentInstanceId, AgentStatus, ProjectId};
 
 use crate::dto::{CreateAgentInstanceRequest, UpdateAgentInstanceRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};

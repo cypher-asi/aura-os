@@ -91,7 +91,6 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
   flex: 1;
 }
 

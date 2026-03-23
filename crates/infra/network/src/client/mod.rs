@@ -122,12 +122,7 @@ impl NetworkClient {
         url: &str,
         jwt: &str,
     ) -> Result<T, NetworkError> {
-        let resp = self
-            .http
-            .get(url)
-            .bearer_auth(jwt)
-            .send()
-            .await?;
+        let resp = self.http.get(url).bearer_auth(jwt).send().await?;
 
         self.handle_response(resp).await
     }
@@ -167,12 +162,7 @@ impl NetworkClient {
     }
 
     pub(crate) async fn delete_authed(&self, url: &str, jwt: &str) -> Result<(), NetworkError> {
-        let resp = self
-            .http
-            .delete(url)
-            .bearer_auth(jwt)
-            .send()
-            .await?;
+        let resp = self.http.delete(url).bearer_auth(jwt).send().await?;
 
         let status = resp.status();
         if !status.is_success() {
@@ -198,7 +188,10 @@ impl NetworkClient {
                 body,
             });
         }
-        let body = resp.text().await.map_err(|e| NetworkError::Deserialize(e.to_string()))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| NetworkError::Deserialize(e.to_string()))?;
         serde_json::from_str::<T>(&body).map_err(|e| {
             let preview: String = body.chars().take(200).collect();
             warn!(%url, error = %e, body_preview = %preview, "Deserialization failed");

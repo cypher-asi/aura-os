@@ -3,14 +3,18 @@ use serde_json::{json, Value};
 use aura_core::*;
 use aura_tasks::storage_task_to_task;
 
+use super::{parse_id, str_field};
 use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
-use super::{str_field, parse_id};
 
 impl ChatToolExecutor {
     pub(crate) async fn list_tasks(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
         let tasks = if str_field(input, "spec_id").is_some() {
             match self.resolve_spec_id(project_id, input).await {
-                Ok(spec_id) => self.task_service.list_tasks_by_spec(project_id, &spec_id).await,
+                Ok(spec_id) => {
+                    self.task_service
+                        .list_tasks_by_spec(project_id, &spec_id)
+                        .await
+                }
                 Err(e) => return e,
             }
         } else {
@@ -36,7 +40,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn create_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn create_task(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let spec_id = match self.resolve_spec_id(project_id, input).await {
             Ok(id) => id,
             Err(e) => return e,
@@ -44,7 +52,11 @@ impl ChatToolExecutor {
         let title = str_field(input, "title").unwrap_or_default();
         let description = str_field(input, "description").unwrap_or_default();
 
-        let existing = self.task_service.list_tasks_by_spec(project_id, &spec_id).await.unwrap_or_default();
+        let existing = self
+            .task_service
+            .list_tasks_by_spec(project_id, &spec_id)
+            .await
+            .unwrap_or_default();
         let order = existing.iter().map(|t| t.order_index).max().unwrap_or(0) + 1;
 
         let dep_ids: Option<Vec<String>> = input
@@ -65,7 +77,10 @@ impl ChatToolExecutor {
             order_index: Some(order as i32),
             dependency_ids: dep_ids,
         };
-        match storage.create_task(&project_id.to_string(), &jwt, &req).await {
+        match storage
+            .create_task(&project_id.to_string(), &jwt, &req)
+            .await
+        {
             Ok(st) => match storage_task_to_task(st) {
                 Ok(task) => ToolExecResult::ok_with_task(json!(task), task),
                 Err(e) => ToolExecResult::err(e),
@@ -74,7 +89,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn update_task(&self, _project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn update_task(
+        &self,
+        _project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
@@ -103,7 +122,10 @@ impl ChatToolExecutor {
 
         if let Some(s) = str_field(input, "status") {
             let transition_req = aura_storage::TransitionTaskRequest { status: s };
-            if let Err(e) = storage.transition_task(&task_id.to_string(), &jwt, &transition_req).await {
+            if let Err(e) = storage
+                .transition_task(&task_id.to_string(), &jwt, &transition_req)
+                .await
+            {
                 return ToolExecResult::err(format!("aura-storage transition: {e}"));
             }
         }
@@ -117,7 +139,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn delete_task(&self, _project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn delete_task(
+        &self,
+        _project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
@@ -132,7 +158,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn transition_task(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn transition_task(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let task_id = match parse_id::<TaskId>(input, "task_id") {
             Ok(id) => id,
             Err(e) => return e,
@@ -152,7 +182,11 @@ impl ChatToolExecutor {
             None => return ToolExecResult::err("Task not found"),
         };
 
-        match self.task_service.transition_task(project_id, &task.spec_id, &task_id, new_status).await {
+        match self
+            .task_service
+            .transition_task(project_id, &task.spec_id, &task_id, new_status)
+            .await
+        {
             Ok(t) => ToolExecResult::ok(json!(t)),
             Err(e) => ToolExecResult::err(format!("{e:?}")),
         }

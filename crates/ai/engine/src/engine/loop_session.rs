@@ -24,15 +24,21 @@ impl LoopRunContext {
             "Checking session rollover"
         );
 
-        let current_session = engine.session_service.get_session(
-            &self.project_id,
-            &self.agent_instance_id,
-            &self.session.session_id,
-        ).await?;
+        let current_session = engine
+            .session_service
+            .get_session(
+                &self.project_id,
+                &self.agent_instance_id,
+                &self.session.session_id,
+            )
+            .await?;
         if !engine.session_service.should_rollover(&current_session) {
             return Ok(None);
         }
-        let project = engine.project_service.get_project_async(&self.project_id).await?;
+        let project = engine
+            .project_service
+            .get_project_async(&self.project_id)
+            .await?;
         let history = build_rollover_history(&project, &self.work_log, self.completed_count);
 
         let summary_start = Instant::now();
@@ -55,13 +61,16 @@ impl LoopRunContext {
             tasks_completed = self.completed_count,
             "Performing session rollover"
         );
-        let new_session = engine.session_service.rollover_session(
-            &self.project_id,
-            &self.agent_instance_id,
-            &self.session.session_id,
-            summary,
-            None,
-        ).await?;
+        let new_session = engine
+            .session_service
+            .rollover_session(
+                &self.project_id,
+                &self.agent_instance_id,
+                &self.session.session_id,
+                summary,
+                None,
+            )
+            .await?;
         engine.emit(EngineEvent::SessionRolledOver {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
@@ -77,7 +86,11 @@ impl LoopRunContext {
     }
 }
 
-fn build_rollover_history(project: &Project, work_log: &[String], completed_count: usize) -> String {
+fn build_rollover_history(
+    project: &Project,
+    work_log: &[String],
+    completed_count: usize,
+) -> String {
     let mut raw_log = work_log.join("\n\n---\n\n");
     const MAX_WORK_LOG_CHARS: usize = 20_000;
     if raw_log.len() > MAX_WORK_LOG_CHARS {
@@ -98,7 +111,10 @@ mod tests {
     #[test]
     fn test_build_rollover_history_with_tasks() {
         let project = make_project("test", "/tmp/test");
-        let log = vec!["Implemented auth module".to_string(), "Fixed tests".to_string()];
+        let log = vec![
+            "Implemented auth module".to_string(),
+            "Fixed tests".to_string(),
+        ];
         let history = build_rollover_history(&project, &log, 2);
         assert!(history.contains("test"));
         assert!(history.contains("Implemented auth module"));
@@ -117,7 +133,9 @@ mod tests {
     #[test]
     fn test_build_rollover_history_truncation() {
         let project = make_project("proj", "/tmp/proj");
-        let log: Vec<String> = (0..1000).map(|i| format!("Task {} completed with lots of detail and information", i)).collect();
+        let log: Vec<String> = (0..1000)
+            .map(|i| format!("Task {} completed with lots of detail and information", i))
+            .collect();
         let history = build_rollover_history(&project, &log, 1000);
         assert!(history.contains("(work log truncated)"));
     }

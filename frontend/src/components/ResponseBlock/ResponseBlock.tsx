@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import styles from "./ResponseBlock.module.css";
 
 interface ResponseBlockProps {
@@ -11,6 +11,8 @@ interface ResponseBlockProps {
   className?: string;
   contentClassName?: string;
   maxExpandedHeight?: number;
+  /** When false, expand/collapse happens instantly (no CSS transition). */
+  animate?: boolean;
 }
 
 export function ResponseBlock({
@@ -22,6 +24,7 @@ export function ResponseBlock({
   className,
   contentClassName,
   maxExpandedHeight = 320,
+  animate = true,
 }: ResponseBlockProps) {
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
 
@@ -38,12 +41,12 @@ export function ResponseBlock({
     <div className={`${styles.block} ${className ?? ""}`}>
       <button className={styles.header} onClick={toggle} type="button">
         {header}
-        <span className={styles.chevron}>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <span className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ""}`}>
+          <ChevronRight size={14} />
         </span>
       </button>
       <div
-        className={`${styles.bodyWrap} ${expanded ? styles.bodyExpanded : ""}`}
+        className={`${styles.bodyWrap} ${expanded ? styles.bodyExpanded : ""} ${!animate ? styles.bodyWrapInstant : ""}`}
         style={expanded ? { maxHeight: maxExpandedHeight } : undefined}
       >
         <div className={`${styles.content} ${contentClassName ?? ""}`}>

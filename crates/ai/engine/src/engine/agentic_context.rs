@@ -21,14 +21,18 @@ pub(super) async fn fetch_codebase_context(
         &task.description,
         50_000,
         workspace_cache,
-    ).await {
+    )
+    .await
+    {
         Ok(s) => s,
         Err(e) => {
             tracing::warn!("cached file retrieval failed, falling back to basic read: {e}");
-            file_ops::read_relevant_files(&project.linked_folder_path, 50_000).unwrap_or_else(|e2| {
-                tracing::warn!("fallback read_relevant_files also failed: {e2}");
-                String::new()
-            })
+            file_ops::read_relevant_files(&project.linked_folder_path, 50_000).unwrap_or_else(
+                |e2| {
+                    tracing::warn!("fallback read_relevant_files also failed: {e2}");
+                    String::new()
+                },
+            )
         }
     };
 
@@ -39,7 +43,9 @@ pub(super) async fn fetch_codebase_context(
             &task.description,
             15_000,
             workspace_cache,
-        ).await.unwrap_or_else(|e| {
+        )
+        .await
+        .unwrap_or_else(|e| {
             tracing::warn!("resolve_task_dep_api_context_cached failed: {e}");
             String::new()
         })
@@ -53,9 +59,14 @@ pub(super) async fn fetch_codebase_context(
         &task.description,
         &spec.markdown_contents,
         10_000,
-    ).await;
+    )
+    .await;
 
-    CodebaseContext { codebase_snapshot, dep_api_context, type_defs_context }
+    CodebaseContext {
+        codebase_snapshot,
+        dep_api_context,
+        type_defs_context,
+    }
 }
 
 pub(super) async fn resolve_completed_deps(
@@ -66,13 +77,18 @@ pub(super) async fn resolve_completed_deps(
     if task.dependency_ids.is_empty() {
         return Vec::new();
     }
-    let all_project_tasks = task_service.list_tasks(project_id).await.unwrap_or_else(|e| {
-        tracing::warn!("failed to list tasks for dependency resolution: {e}");
-        Vec::new()
-    });
-    task.dependency_ids.iter()
+    let all_project_tasks = task_service
+        .list_tasks(project_id)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!("failed to list tasks for dependency resolution: {e}");
+            Vec::new()
+        });
+    task.dependency_ids
+        .iter()
         .filter_map(|dep_id| {
-            all_project_tasks.iter()
+            all_project_tasks
+                .iter()
                 .find(|t| t.task_id == *dep_id && t.status == TaskStatus::Done)
                 .cloned()
         })
@@ -132,10 +148,16 @@ pub(super) fn build_full_task_context(
         task_context.push_str(&format!("\n# Workspace Structure\n{}\n", workspace_map));
     }
     if !type_defs.is_empty() {
-        task_context.push_str(&format!("\n# Type Definitions Referenced in Task\n{}\n", type_defs));
+        task_context.push_str(&format!(
+            "\n# Type Definitions Referenced in Task\n{}\n",
+            type_defs
+        ));
     }
     if !codebase_snapshot.is_empty() {
-        task_context.push_str(&format!("\n# Current Codebase Files\n{}\n", codebase_snapshot));
+        task_context.push_str(&format!(
+            "\n# Current Codebase Files\n{}\n",
+            codebase_snapshot
+        ));
     }
     if !dep_api.is_empty() {
         task_context.push_str(&format!("\n# Dependency API Surface\n{}\n", dep_api));
@@ -192,7 +214,10 @@ pub(super) fn cap_task_context(task_context: &mut String, budget: usize) {
             } else {
                 let keep = section_len - overshoot;
                 let trim_start = start + keep;
-                task_context.replace_range(trim_start..end, "\n... (truncated to fit context budget) ...\n");
+                task_context.replace_range(
+                    trim_start..end,
+                    "\n... (truncated to fit context budget) ...\n",
+                );
             }
         }
     }
@@ -200,66 +225,6 @@ pub(super) fn cap_task_context(task_context: &mut String, budget: usize) {
     if task_context.len() > budget {
         task_context.truncate(budget);
         task_context.push_str("\n... (context truncated) ...\n");
-    }
-}
-
-pub(super) fn compute_thinking_budget(base: u32, member_count: usize) -> u32 {
-    if member_count >= 15 {
-        base.max(16_000)
-    } else if member_count >= 8 {
-        base.max(10_000)
-    } else {
-        base
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum TaskComplexity {
-    Simple,
-    Standard,
-    Complex,
-}
-
-pub(super) fn classify_task_complexity(title: &str, description: &str) -> TaskComplexity {
-    let combined = format!("{} {}", title, description).to_lowercase();
-    let mut score: i32 = 0;
-
-    let simple_signals: &[(&str, i32)] = &[
-        ("add dependency", -3), ("add dep ", -3), ("set up dependency", -3),
-        ("define enum", -2), ("define struct", -2), ("define type", -2),
-        ("add import", -2), ("update cargo.toml", -2), ("update package.json", -2),
-        ("rename ", -1), ("move file", -1),
-    ];
-    let complex_signals: &[(&str, i32)] = &[
-        ("integration test", 3), ("end-to-end", 3), ("e2e test", 3),
-        ("refactor", 3), ("migrate", 3), ("rewrite", 3),
-        ("multi-file", 2), ("cross-crate", 2),
-        ("implement service", 3), ("implement api", 3),
-    ];
-
-    for &(pattern, weight) in simple_signals {
-        if combined.contains(pattern) {
-            score += weight;
-        }
-    }
-    for &(pattern, weight) in complex_signals {
-        if combined.contains(pattern) {
-            score += weight;
-        }
-    }
-
-    if description.len() > 1000 {
-        score += 2;
-    } else if description.len() < 200 {
-        score -= 1;
-    }
-
-    if score <= -2 {
-        TaskComplexity::Simple
-    } else if score >= 2 {
-        TaskComplexity::Complex
-    } else {
-        TaskComplexity::Standard
     }
 }
 
@@ -287,10 +252,16 @@ pub(super) async fn check_already_completed(
     for (trigger, code_prefix) in define_patterns {
         if let Some(pos) = desc_lower.find(trigger) {
             let after = &desc_lower[pos + trigger.len()..];
-            let name: String = after.chars().take_while(|c| c.is_alphanumeric() || *c == '_').collect();
-            if name.is_empty() { continue; }
+            let name: String = after
+                .chars()
+                .take_while(|c| c.is_alphanumeric() || *c == '_')
+                .collect();
+            if name.is_empty() {
+                continue;
+            }
 
-            let dep_files: Vec<&str> = completed_deps.iter()
+            let dep_files: Vec<&str> = completed_deps
+                .iter()
                 .flat_map(|d| d.files_changed.iter())
                 .map(|f| f.path.as_str())
                 .collect();
@@ -313,43 +284,6 @@ pub(super) async fn check_already_completed(
     None
 }
 
-pub(super) fn resolve_simple_model() -> String {
-    std::env::var("AURA_SIMPLE_MODEL")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| aura_claude::MID_MODEL.to_string())
-}
-
-pub(super) fn compute_exploration_allowance(
-    task_title: &str,
-    task_description: &str,
-    member_count: usize,
-) -> usize {
-    let complexity = classify_task_complexity(task_title, task_description);
-    let combined = format!("{} {}", task_title, task_description).to_lowercase();
-
-    let is_refactoring = combined.contains("refactor")
-        || combined.contains("rename across")
-        || combined.contains("migrate")
-        || combined.contains("multi-file");
-
-    let base: usize = match complexity {
-        TaskComplexity::Simple => 8,
-        TaskComplexity::Standard => 12,
-        TaskComplexity::Complex => {
-            if is_refactoring { 22 } else { 18 }
-        }
-    };
-
-    if member_count >= 15 {
-        base + 4
-    } else if member_count >= 8 {
-        base + 2
-    } else {
-        base
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -370,7 +304,9 @@ mod tests {
 
     #[test]
     fn build_work_log_summary_truncates_long_input() {
-        let log: Vec<String> = (0..500).map(|i| format!("Entry {i}: some work done here")).collect();
+        let log: Vec<String> = (0..500)
+            .map(|i| format!("Entry {i}: some work done here"))
+            .collect();
         let summary = build_work_log_summary(&log);
         assert!(summary.len() <= MAX_WORK_LOG_TASK_CONTEXT + 30);
         assert!(summary.contains("(truncated)"));
@@ -396,9 +332,18 @@ mod tests {
         let original_len = ctx.len();
         let budget = 200;
         cap_task_context(&mut ctx, budget);
-        assert!(ctx.len() < original_len, "context should be smaller after capping");
-        assert!(!ctx.contains(&"x".repeat(4000)), "bulk of codebase section should be trimmed");
-        assert!(ctx.contains("truncated"), "should contain truncation marker");
+        assert!(
+            ctx.len() < original_len,
+            "context should be smaller after capping"
+        );
+        assert!(
+            !ctx.contains(&"x".repeat(4000)),
+            "bulk of codebase section should be trimmed"
+        );
+        assert!(
+            ctx.contains("truncated"),
+            "should contain truncation marker"
+        );
     }
 
     #[test]
@@ -407,65 +352,6 @@ mod tests {
         cap_task_context(&mut ctx, 500);
         assert!(ctx.len() <= 550);
         assert!(ctx.contains("(context truncated)"));
-    }
-
-    #[test]
-    fn classify_task_complexity_simple_patterns() {
-        assert_eq!(classify_task_complexity("Add dependency for serde", ""), TaskComplexity::Simple);
-        assert_eq!(classify_task_complexity("Define enum Status", ""), TaskComplexity::Simple);
-        assert_eq!(classify_task_complexity("Rename the module", "short"), TaskComplexity::Simple);
-        assert_eq!(classify_task_complexity("Update Cargo.toml", ""), TaskComplexity::Simple);
-    }
-
-    #[test]
-    fn classify_task_complexity_complex_patterns() {
-        assert_eq!(classify_task_complexity("Refactor auth module", ""), TaskComplexity::Complex);
-        assert_eq!(classify_task_complexity("Add integration test for API", ""), TaskComplexity::Complex);
-        assert_eq!(classify_task_complexity("Implement service layer", ""), TaskComplexity::Complex);
-        assert_eq!(classify_task_complexity("Migrate to new storage", ""), TaskComplexity::Complex);
-    }
-
-    #[test]
-    fn classify_task_complexity_standard_for_moderate_descriptions() {
-        let desc = "a".repeat(500);
-        assert_eq!(classify_task_complexity("Add handler", &desc), TaskComplexity::Standard);
-    }
-
-    #[test]
-    fn classify_task_complexity_long_desc_is_complex() {
-        let desc = "a".repeat(1500);
-        assert_eq!(classify_task_complexity("Add handler", &desc), TaskComplexity::Complex);
-    }
-
-    #[test]
-    fn compute_thinking_budget_base_for_small_workspace() {
-        assert_eq!(compute_thinking_budget(8000, 3), 8000);
-    }
-
-    #[test]
-    fn compute_thinking_budget_scales_for_medium_workspace() {
-        assert_eq!(compute_thinking_budget(8000, 10), 10_000);
-    }
-
-    #[test]
-    fn compute_thinking_budget_scales_for_large_workspace() {
-        assert_eq!(compute_thinking_budget(8000, 20), 16_000);
-    }
-
-    #[test]
-    fn compute_exploration_allowance_simple_small_workspace() {
-        assert_eq!(compute_exploration_allowance("Add dependency for serde", "", 3), 8);
-    }
-
-    #[test]
-    fn compute_exploration_allowance_complex_refactoring_large_workspace() {
-        assert_eq!(compute_exploration_allowance("Refactor the auth module", "", 20), 26);
-    }
-
-    #[test]
-    fn compute_exploration_allowance_standard_medium_workspace() {
-        let desc = "a".repeat(500);
-        assert_eq!(compute_exploration_allowance("Add handler", &desc, 10), 14);
     }
 
     #[test]

@@ -1,6 +1,7 @@
-import { getLastAgent, setLastAgent, clearLastAgentIf } from "./storage";
+import { getLastAgent, setLastAgent, clearLastAgentIf, getLastProject, setLastProject } from "./storage";
 
 const LAST_AGENT_KEY = "aura-last-agent";
+const LAST_PROJECT_KEY = "aura-last-project";
 
 describe("storage", () => {
   let store: Record<string, string>;
@@ -20,69 +21,87 @@ describe("storage", () => {
 
   describe("getLastAgent", () => {
     it("returns null when no data stored", () => {
-      expect(getLastAgent()).toBeNull();
+      expect(getLastAgent("p1")).toBeNull();
     });
 
-    it("returns parsed agent data", () => {
-      store[LAST_AGENT_KEY] = JSON.stringify({
-        projectId: "p1",
-        agentInstanceId: "ai-1",
-      });
-      const result = getLastAgent();
-      expect(result).toEqual({ projectId: "p1", agentInstanceId: "ai-1" });
+    it("returns agentInstanceId for the given project", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1", p2: "ai-2" });
+      expect(getLastAgent("p1")).toBe("ai-1");
+      expect(getLastAgent("p2")).toBe("ai-2");
+    });
+
+    it("returns null for an unknown project", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1" });
+      expect(getLastAgent("p999")).toBeNull();
     });
 
     it("returns null for malformed JSON", () => {
       store[LAST_AGENT_KEY] = "not-json";
-      expect(getLastAgent()).toBeNull();
+      expect(getLastAgent("p1")).toBeNull();
     });
 
-    it("returns null when parsed object is missing required fields", () => {
-      store[LAST_AGENT_KEY] = JSON.stringify({ projectId: "p1" });
-      expect(getLastAgent()).toBeNull();
+    it("returns null for non-object values", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify([1, 2, 3]);
+      expect(getLastAgent("p1")).toBeNull();
     });
 
     it("returns null for empty object", () => {
       store[LAST_AGENT_KEY] = "{}";
-      expect(getLastAgent()).toBeNull();
+      expect(getLastAgent("p1")).toBeNull();
     });
   });
 
   describe("setLastAgent", () => {
-    it("stores the agent data in localStorage", () => {
+    it("stores a single project entry", () => {
       setLastAgent("p1", "ai-1");
       expect(localStorage.setItem).toHaveBeenCalledWith(
         LAST_AGENT_KEY,
-        JSON.stringify({ projectId: "p1", agentInstanceId: "ai-1" }),
+        JSON.stringify({ p1: "ai-1" }),
+      );
+    });
+
+    it("preserves entries for other projects", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1" });
+      setLastAgent("p2", "ai-2");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        LAST_AGENT_KEY,
+        JSON.stringify({ p1: "ai-1", p2: "ai-2" }),
+      );
+    });
+
+    it("overwrites the entry for an existing project", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1" });
+      setLastAgent("p1", "ai-99");
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        LAST_AGENT_KEY,
+        JSON.stringify({ p1: "ai-99" }),
       );
     });
   });
 
   describe("clearLastAgentIf", () => {
-    it("clears when projectId matches", () => {
-      store[LAST_AGENT_KEY] = JSON.stringify({
-        projectId: "p1",
-        agentInstanceId: "ai-1",
-      });
+    it("removes entry when projectId matches", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1", p2: "ai-2" });
+      clearLastAgentIf({ projectId: "p1" });
+      expect(store[LAST_AGENT_KEY]).toBe(JSON.stringify({ p2: "ai-2" }));
+    });
+
+    it("removes all entries matching agentInstanceId", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1", p2: "ai-1", p3: "ai-3" });
+      clearLastAgentIf({ agentInstanceId: "ai-1" });
+      expect(store[LAST_AGENT_KEY]).toBe(JSON.stringify({ p3: "ai-3" }));
+    });
+
+    it("removes localStorage key entirely when map becomes empty", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1" });
       clearLastAgentIf({ projectId: "p1" });
       expect(localStorage.removeItem).toHaveBeenCalledWith(LAST_AGENT_KEY);
     });
 
-    it("clears when agentInstanceId matches", () => {
-      store[LAST_AGENT_KEY] = JSON.stringify({
-        projectId: "p1",
-        agentInstanceId: "ai-1",
-      });
-      clearLastAgentIf({ agentInstanceId: "ai-1" });
-      expect(localStorage.removeItem).toHaveBeenCalledWith(LAST_AGENT_KEY);
-    });
-
-    it("does not clear when nothing matches", () => {
-      store[LAST_AGENT_KEY] = JSON.stringify({
-        projectId: "p1",
-        agentInstanceId: "ai-1",
-      });
+    it("does not modify storage when nothing matches", () => {
+      store[LAST_AGENT_KEY] = JSON.stringify({ p1: "ai-1" });
       clearLastAgentIf({ projectId: "p2" });
+      expect(localStorage.setItem).not.toHaveBeenCalled();
       expect(localStorage.removeItem).not.toHaveBeenCalled();
     });
 
@@ -93,6 +112,30 @@ describe("storage", () => {
     it("handles malformed JSON gracefully", () => {
       store[LAST_AGENT_KEY] = "bad-json";
       expect(() => clearLastAgentIf({ projectId: "p1" })).not.toThrow();
+    });
+  });
+
+  describe("getLastProject", () => {
+    it("returns null when no data stored", () => {
+      expect(getLastProject()).toBeNull();
+    });
+
+    it("returns the stored project id", () => {
+      store[LAST_PROJECT_KEY] = "p1";
+      expect(getLastProject()).toBe("p1");
+    });
+  });
+
+  describe("setLastProject", () => {
+    it("stores the project id in localStorage", () => {
+      setLastProject("p1");
+      expect(localStorage.setItem).toHaveBeenCalledWith(LAST_PROJECT_KEY, "p1");
+    });
+
+    it("overwrites the previous value", () => {
+      store[LAST_PROJECT_KEY] = "p1";
+      setLastProject("p2");
+      expect(localStorage.setItem).toHaveBeenCalledWith(LAST_PROJECT_KEY, "p2");
     });
   });
 });

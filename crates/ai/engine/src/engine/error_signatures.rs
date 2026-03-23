@@ -7,7 +7,10 @@ pub(crate) fn normalize_error_signature(stderr: &str) -> String {
     let mut signature_lines: Vec<String> = Vec::new();
     for line in stderr.lines() {
         let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with("For more information") || trimmed.starts_with("help:") {
+        if trimmed.is_empty()
+            || trimmed.starts_with("For more information")
+            || trimmed.starts_with("help:")
+        {
             continue;
         }
         if trimmed.starts_with("-->") {
@@ -17,7 +20,10 @@ pub(crate) fn normalize_error_signature(stderr: &str) -> String {
         if trimmed.chars().next().is_some_and(|c| c.is_ascii_digit()) && trimmed.contains('|') {
             continue;
         }
-        if trimmed.chars().all(|c| c == '^' || c == '-' || c == ' ' || c == '~' || c == '+') {
+        if trimmed
+            .chars()
+            .all(|c| c == '^' || c == '-' || c == ' ' || c == '~' || c == '+')
+        {
             continue;
         }
         let normalized = normalize_line_col_refs(trimmed);

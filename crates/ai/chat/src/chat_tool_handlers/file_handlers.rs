@@ -4,9 +4,36 @@ use serde_json::{json, Value};
 
 use aura_core::*;
 
-use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
-use crate::tool_loop_blocking::looks_truncated;
 use super::str_field;
+use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
+
+/// Heuristic: unbalanced braces/brackets or content that ends mid-line.
+fn looks_truncated(content: &str) -> bool {
+    if content.len() < 200 {
+        return false;
+    }
+    let mut brace_depth: i64 = 0;
+    let mut bracket_depth: i64 = 0;
+    let mut paren_depth: i64 = 0;
+    for ch in content.chars() {
+        match ch {
+            '{' => brace_depth += 1,
+            '}' => brace_depth -= 1,
+            '[' => bracket_depth += 1,
+            ']' => bracket_depth -= 1,
+            '(' => paren_depth += 1,
+            ')' => paren_depth -= 1,
+            _ => {}
+        }
+    }
+    let significantly_unbalanced =
+        brace_depth.abs() > 2 || bracket_depth.abs() > 2 || paren_depth.abs() > 2;
+    let ends_abruptly = !content.ends_with('\n')
+        && !content.ends_with('}')
+        && !content.ends_with(';')
+        && !content.ends_with('\r');
+    significantly_unbalanced || ends_abruptly
+}
 
 const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
 
@@ -19,7 +46,12 @@ fn normalize_line_endings(content: &str, uses_crlf: bool) -> String {
     }
 }
 
-fn format_line_range(content: &str, start_line: Option<usize>, end_line: Option<usize>, rel: &str) -> ToolExecResult {
+fn format_line_range(
+    content: &str,
+    start_line: Option<usize>,
+    end_line: Option<usize>,
+    rel: &str,
+) -> ToolExecResult {
     let lines: Vec<&str> = content.lines().collect();
     let total = lines.len();
     let start = start_line.unwrap_or(1).max(1) - 1;
@@ -27,7 +59,8 @@ fn format_line_range(content: &str, start_line: Option<usize>, end_line: Option<
     if start >= total {
         return ToolExecResult::err(format!(
             "start_line {} is beyond end of file ({} lines)",
-            start + 1, total,
+            start + 1,
+            total,
         ));
     }
     let selected: Vec<String> = lines[start..end]
@@ -74,13 +107,12 @@ async fn validate_write_size(abs: &Path, content: &str, rel: &str) -> Result<(),
 
 async fn verify_post_write(abs: &Path, content: &str, rel: &str) -> Result<(), ToolExecResult> {
     match tokio::fs::metadata(abs).await {
-        Ok(meta) if meta.len() as usize != content.len() => {
-            Err(ToolExecResult::err(format!(
-                "Post-write verification failed for {rel}: wrote {} bytes but \
+        Ok(meta) if meta.len() as usize != content.len() => Err(ToolExecResult::err(format!(
+            "Post-write verification failed for {rel}: wrote {} bytes but \
                  file on disk is {} bytes. The file may be corrupted.",
-                content.len(), meta.len()
-            )))
-        }
+            content.len(),
+            meta.len()
+        ))),
         _ => Ok(()),
     }
 }
@@ -134,14 +166,18 @@ fn check_shrinkage(raw_content: &str, new_content: &str, rel: &str) -> Result<()
         return Err(ToolExecResult::err(format!(
             "REJECTED: This edit would shrink '{rel}' from {} to {} bytes (>80% reduction). \
              The file is unchanged. Use a more targeted old_text/new_text pair.",
-            raw_content.len(), new_content.len()
+            raw_content.len(),
+            new_content.len()
         )));
     }
     Ok(())
 }
 
 async fn assemble_write_result(
-    abs: &Path, content: &str, rel: &str, truncation_warning: Option<&str>,
+    abs: &Path,
+    content: &str,
+    rel: &str,
+    truncation_warning: Option<&str>,
 ) -> ToolExecResult {
     let line_count = content.lines().count();
     if let Err(e) = verify_post_write(abs, content, rel).await {
@@ -150,7 +186,9 @@ async fn assemble_write_result(
     let mut message = format!(
         "Successfully wrote {} lines ({} bytes) to {}. \
          Proceed to compilation to catch any issues.",
-        line_count, content.len(), rel,
+        line_count,
+        content.len(),
+        rel,
     );
     if let Some(warn) = truncation_warning {
         message.push(' ');
@@ -165,7 +203,12 @@ async fn assemble_write_result(
     }))
 }
 
-async fn write_and_report_edit(abs: &Path, final_content: &str, rel: &str, replacements: usize) -> ToolExecResult {
+async fn write_and_report_edit(
+    abs: &Path,
+    final_content: &str,
+    rel: &str,
+    replacements: usize,
+) -> ToolExecResult {
     match tokio::fs::write(abs, final_content).await {
         Ok(()) => ToolExecResult::ok(json!({
             "status": "ok",
@@ -189,8 +232,14 @@ impl ChatToolExecutor {
             Ok(p) => p,
             Err(e) => return e,
         };
-        let start_line = input.get("start_line").and_then(|v| v.as_u64()).map(|n| n as usize);
-        let end_line = input.get("end_line").and_then(|v| v.as_u64()).map(|n| n as usize);
+        let start_line = input
+            .get("start_line")
+            .and_then(|v| v.as_u64())
+            .map(|n| n as usize);
+        let end_line = input
+            .get("end_line")
+            .and_then(|v| v.as_u64())
+            .map(|n| n as usize);
 
         if let Ok(meta) = tokio::fs::metadata(&abs).await {
             if meta.len() > MAX_FILE_SIZE {
@@ -252,8 +301,10 @@ impl ChatToolExecutor {
 
         let is_new_file = !abs.exists();
         let truncation_warning = if is_new_file && looks_truncated(&content) {
-            Some("Warning: content may be truncated (unbalanced delimiters). \
-                  Consider using read_file to verify, or use edit_file to append missing sections.")
+            Some(
+                "Warning: content may be truncated (unbalanced delimiters). \
+                  Consider using read_file to verify, or use edit_file to append missing sections.",
+            )
         } else {
             None
         };
@@ -264,7 +315,11 @@ impl ChatToolExecutor {
         }
     }
 
-    pub(crate) async fn delete_file(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn delete_file(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let rel = str_field(input, "path").unwrap_or_default();
         let abs = match self.resolve_project_path(project_id, &rel).await {
             Ok(p) => p,
@@ -289,17 +344,28 @@ impl ChatToolExecutor {
         let mut items: Vec<Value> = Vec::new();
         while let Ok(Some(entry)) = read_dir.next_entry().await {
             let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with('.') || name == "node_modules" || name == "target" || name == "__pycache__" {
+            if name.starts_with('.')
+                || name == "node_modules"
+                || name == "target"
+                || name == "__pycache__"
+            {
                 continue;
             }
-            let is_dir = entry.file_type().await.map(|ft| ft.is_dir()).unwrap_or(false);
+            let is_dir = entry
+                .file_type()
+                .await
+                .map(|ft| ft.is_dir())
+                .unwrap_or(false);
             items.push(json!({ "name": name, "is_dir": is_dir }));
         }
         items.sort_by(|a, b| {
             let a_dir = a["is_dir"].as_bool().unwrap_or(false);
             let b_dir = b["is_dir"].as_bool().unwrap_or(false);
             b_dir.cmp(&a_dir).then_with(|| {
-                a["name"].as_str().unwrap_or("").cmp(b["name"].as_str().unwrap_or(""))
+                a["name"]
+                    .as_str()
+                    .unwrap_or("")
+                    .cmp(b["name"].as_str().unwrap_or(""))
             })
         });
         ToolExecResult::ok(json!({ "path": rel, "entries": items }))
@@ -309,7 +375,10 @@ impl ChatToolExecutor {
         let rel = str_field(input, "path").unwrap_or_default();
         let old_text = str_field(input, "old_text").unwrap_or_default();
         let new_text = str_field(input, "new_text").unwrap_or_default();
-        let replace_all = input.get("replace_all").and_then(|v| v.as_bool()).unwrap_or(false);
+        let replace_all = input
+            .get("replace_all")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         if rel.is_empty() {
             return ToolExecResult::err("Missing required field: path");
@@ -333,10 +402,11 @@ impl ChatToolExecutor {
         let norm_old = old_text.replace("\r\n", "\n");
         let norm_new = new_text.replace("\r\n", "\n");
 
-        let (new_content, replacements) = match perform_replacement(&content, &norm_old, &norm_new, replace_all, &rel) {
-            Ok(r) => r,
-            Err(e) => return e,
-        };
+        let (new_content, replacements) =
+            match perform_replacement(&content, &norm_old, &norm_new, replace_all, &rel) {
+                Ok(r) => r,
+                Err(e) => return e,
+            };
 
         if let Err(e) = check_shrinkage(&raw_content, &new_content, &rel) {
             return e;
@@ -397,7 +467,10 @@ mod tests {
         assert!(!result.is_error);
         assert!(result.content.contains("line2"));
         assert!(result.content.contains("line4"));
-        assert!(!result.content.contains("\"start_line\": 1,") || result.content.contains("\"start_line\": 2"));
+        assert!(
+            !result.content.contains("\"start_line\": 1,")
+                || result.content.contains("\"start_line\": 2")
+        );
     }
 
     #[test]
@@ -427,7 +500,8 @@ mod tests {
 
     #[test]
     fn perform_replacement_single() {
-        let (result, count) = perform_replacement("aaa bbb ccc", "bbb", "ZZZ", false, "f.rs").unwrap();
+        let (result, count) =
+            perform_replacement("aaa bbb ccc", "bbb", "ZZZ", false, "f.rs").unwrap();
         assert_eq!(result, "aaa ZZZ ccc");
         assert_eq!(count, 1);
     }
@@ -440,7 +514,8 @@ mod tests {
 
     #[test]
     fn perform_replacement_replace_all() {
-        let (result, count) = perform_replacement("aaa bbb aaa bbb", "bbb", "ZZZ", true, "f.rs").unwrap();
+        let (result, count) =
+            perform_replacement("aaa bbb aaa bbb", "bbb", "ZZZ", true, "f.rs").unwrap();
         assert_eq!(result, "aaa ZZZ aaa ZZZ");
         assert_eq!(count, 2);
     }
@@ -454,7 +529,10 @@ mod tests {
     #[test]
     fn perform_replacement_ambiguous_matches_without_replace_all_errors() {
         let err = perform_replacement("one two one", "one", "three", false, "f.rs");
-        assert!(err.is_err(), "ambiguous match without replace_all should error");
+        assert!(
+            err.is_err(),
+            "ambiguous match without replace_all should error"
+        );
     }
 
     // ── check_shrinkage ───────────────────────────────────────────
@@ -491,7 +569,9 @@ mod tests {
     async fn validate_write_size_new_file_passes() {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("new.txt");
-        assert!(validate_write_size(&path, "content", "new.txt").await.is_ok());
+        assert!(validate_write_size(&path, "content", "new.txt")
+            .await
+            .is_ok());
     }
 
     #[tokio::test]
@@ -514,7 +594,9 @@ mod tests {
         tokio::fs::write(&path, &content).await.unwrap();
 
         let new_content = "y".repeat(800);
-        assert!(validate_write_size(&path, &new_content, "normal.txt").await.is_ok());
+        assert!(validate_write_size(&path, &new_content, "normal.txt")
+            .await
+            .is_ok());
     }
 
     // ── verify_post_write ─────────────────────────────────────────
@@ -526,7 +608,9 @@ mod tests {
         let content = "hello world";
         tokio::fs::write(&path, content).await.unwrap();
 
-        assert!(verify_post_write(&path, content, "verified.txt").await.is_ok());
+        assert!(verify_post_write(&path, content, "verified.txt")
+            .await
+            .is_ok());
     }
 
     #[tokio::test]
@@ -543,7 +627,9 @@ mod tests {
     async fn verify_post_write_nonexistent_file_passes() {
         let dir = TempDir::new().unwrap();
         let path = dir.path().join("gone.txt");
-        assert!(verify_post_write(&path, "anything", "gone.txt").await.is_ok());
+        assert!(verify_post_write(&path, "anything", "gone.txt")
+            .await
+            .is_ok());
     }
 
     // ── read_and_validate_size ────────────────────────────────────

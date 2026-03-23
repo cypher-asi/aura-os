@@ -26,10 +26,9 @@ async fn main() {
     dotenvy::dotenv().ok();
 
     tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("aura_server=debug,aura_services=debug,tower_http=debug,info")),
-        )
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            EnvFilter::new("aura_server=debug,aura_services=debug,tower_http=debug,info")
+        }))
         .init();
 
     let data_dir = default_data_dir();

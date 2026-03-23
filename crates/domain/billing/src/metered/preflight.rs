@@ -1,5 +1,5 @@
-use std::time::Instant;
 use std::sync::atomic::Ordering;
+use std::time::Instant;
 
 use tracing::{info, warn};
 
@@ -13,7 +13,10 @@ impl MeteredLlm {
     /// Pre-flight check with cost awareness. When `estimated_credits > 0`,
     /// verifies that the user's balance can cover at least that amount before
     /// making the API call.
-    pub(crate) async fn pre_flight_check_for(&self, estimated_credits: u64) -> Result<(), MeteredLlmError> {
+    pub(crate) async fn pre_flight_check_for(
+        &self,
+        estimated_credits: u64,
+    ) -> Result<(), MeteredLlmError> {
         let Some(token) = self.access_token() else {
             warn!("No access token available — cannot verify credits");
             self.credits_exhausted.store(true, Ordering::SeqCst);

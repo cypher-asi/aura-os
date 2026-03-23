@@ -131,7 +131,9 @@ mod integration {
             Some(storage_client.clone()),
         ));
 
-        let jwt = store.get_jwt().expect("JWT should exist after session setup");
+        let jwt = store
+            .get_jwt()
+            .expect("JWT should exist after session setup");
         let pid = ProjectId::new().to_string();
         let spec = storage_client
             .create_spec(
@@ -169,7 +171,8 @@ mod integration {
 
     async fn create_task(params: CreateTestTask<'_>) -> String {
         let jwt = params.store.get_jwt().expect("store should have a JWT");
-        let t = params.sc
+        let t = params
+            .sc
             .create_task(
                 params.pid,
                 &jwt,
@@ -197,9 +200,39 @@ mod integration {
         let pid: ProjectId = ctx.project_id.parse().expect("project_id should parse");
         let aid = AgentInstanceId::new();
 
-        create_task(CreateTestTask { sc: &ctx.storage_client, store: &ctx.store, pid: &ctx.project_id, spec_id: &ctx.spec_id, title: "Third", status: "ready", order_index: 2, dependency_ids: None }).await;
-        create_task(CreateTestTask { sc: &ctx.storage_client, store: &ctx.store, pid: &ctx.project_id, spec_id: &ctx.spec_id, title: "First", status: "ready", order_index: 0, dependency_ids: None }).await;
-        create_task(CreateTestTask { sc: &ctx.storage_client, store: &ctx.store, pid: &ctx.project_id, spec_id: &ctx.spec_id, title: "Second", status: "ready", order_index: 1, dependency_ids: None }).await;
+        create_task(CreateTestTask {
+            sc: &ctx.storage_client,
+            store: &ctx.store,
+            pid: &ctx.project_id,
+            spec_id: &ctx.spec_id,
+            title: "Third",
+            status: "ready",
+            order_index: 2,
+            dependency_ids: None,
+        })
+        .await;
+        create_task(CreateTestTask {
+            sc: &ctx.storage_client,
+            store: &ctx.store,
+            pid: &ctx.project_id,
+            spec_id: &ctx.spec_id,
+            title: "First",
+            status: "ready",
+            order_index: 0,
+            dependency_ids: None,
+        })
+        .await;
+        create_task(CreateTestTask {
+            sc: &ctx.storage_client,
+            store: &ctx.store,
+            pid: &ctx.project_id,
+            spec_id: &ctx.spec_id,
+            title: "Second",
+            status: "ready",
+            order_index: 1,
+            dependency_ids: None,
+        })
+        .await;
 
         let t1 = ctx
             .task_service
@@ -245,34 +278,59 @@ mod integration {
 
         let (storage_url, _db) = aura_storage::testutil::start_mock_storage().await;
         let sc = Arc::new(StorageClient::with_base_url(&storage_url));
-        let svc = Arc::new(TaskService::new(
-            store.clone(),
-            Some(sc.clone()),
-        ));
+        let svc = Arc::new(TaskService::new(store.clone(), Some(sc.clone())));
 
         let jwt = store.get_jwt().expect("JWT should be available");
         let pid = ProjectId::new();
         let pid_str = pid.to_string();
 
         let spec_b = sc
-            .create_spec(&pid_str, &jwt, &aura_storage::CreateSpecRequest {
-                title: "Spec B".into(),
-                order_index: Some(1),
-                markdown_contents: None,
-            })
+            .create_spec(
+                &pid_str,
+                &jwt,
+                &aura_storage::CreateSpecRequest {
+                    title: "Spec B".into(),
+                    order_index: Some(1),
+                    markdown_contents: None,
+                },
+            )
             .await
             .expect("spec creation should succeed");
         let spec_a = sc
-            .create_spec(&pid_str, &jwt, &aura_storage::CreateSpecRequest {
-                title: "Spec A".into(),
-                order_index: Some(0),
-                markdown_contents: None,
-            })
+            .create_spec(
+                &pid_str,
+                &jwt,
+                &aura_storage::CreateSpecRequest {
+                    title: "Spec A".into(),
+                    order_index: Some(0),
+                    markdown_contents: None,
+                },
+            )
             .await
             .expect("spec creation should succeed");
 
-        create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec_b.id, title: "B-task", status: "ready", order_index: 0, dependency_ids: None }).await;
-        create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec_a.id, title: "A-task", status: "ready", order_index: 0, dependency_ids: None }).await;
+        create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec_b.id,
+            title: "B-task",
+            status: "ready",
+            order_index: 0,
+            dependency_ids: None,
+        })
+        .await;
+        create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec_a.id,
+            title: "A-task",
+            status: "ready",
+            order_index: 0,
+            dependency_ids: None,
+        })
+        .await;
 
         let aid = AgentInstanceId::new();
         let t1 = svc
@@ -280,7 +338,10 @@ mod integration {
             .await
             .expect("claim should not error")
             .expect("a ready task should exist");
-        assert_eq!(t1.title, "A-task", "spec_a (order 0) should be claimed before spec_b (order 1)");
+        assert_eq!(
+            t1.title, "A-task",
+            "spec_a (order 0) should be claimed before spec_b (order 1)"
+        );
 
         let t2 = svc
             .claim_next_task(&pid, &aid, None)
@@ -302,27 +363,58 @@ mod integration {
 
         let (storage_url, _db) = aura_storage::testutil::start_mock_storage().await;
         let sc = Arc::new(StorageClient::with_base_url(&storage_url));
-        let svc = Arc::new(TaskService::new(
-            store.clone(),
-            Some(sc.clone()),
-        ));
+        let svc = Arc::new(TaskService::new(store.clone(), Some(sc.clone())));
 
         let jwt = store.get_jwt().expect("JWT should be available");
         let pid = ProjectId::new();
         let pid_str = pid.to_string();
 
         let spec = sc
-            .create_spec(&pid_str, &jwt, &aura_storage::CreateSpecRequest {
-                title: "Spec".into(),
-                order_index: Some(0),
-                markdown_contents: None,
-            })
+            .create_spec(
+                &pid_str,
+                &jwt,
+                &aura_storage::CreateSpecRequest {
+                    title: "Spec".into(),
+                    order_index: Some(0),
+                    markdown_contents: None,
+                },
+            )
             .await
             .expect("spec creation should succeed");
 
-        let task_a_id = create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "Task A", status: "ready", order_index: 0, dependency_ids: None }).await;
-        let task_b_id = create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "Task B", status: "pending", order_index: 1, dependency_ids: Some(vec![task_a_id.clone()]) }).await;
-        let _task_c_id = create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "Task C", status: "pending", order_index: 2, dependency_ids: Some(vec![task_a_id.clone(), task_b_id.clone()]) }).await;
+        let task_a_id = create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "Task A",
+            status: "ready",
+            order_index: 0,
+            dependency_ids: None,
+        })
+        .await;
+        let task_b_id = create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "Task B",
+            status: "pending",
+            order_index: 1,
+            dependency_ids: Some(vec![task_a_id.clone()]),
+        })
+        .await;
+        let _task_c_id = create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "Task C",
+            status: "pending",
+            order_index: 2,
+            dependency_ids: Some(vec![task_a_id.clone(), task_b_id.clone()]),
+        })
+        .await;
 
         let aid = AgentInstanceId::new();
         let claimed_a = svc
@@ -352,7 +444,11 @@ mod integration {
             .resolve_dependencies_after_completion(&pid, &claimed_a.task_id)
             .await
             .expect("dependency resolution should succeed");
-        assert_eq!(promoted.len(), 1, "only Task B should become ready (C still waiting on B)");
+        assert_eq!(
+            promoted.len(),
+            1,
+            "only Task B should become ready (C still waiting on B)"
+        );
         assert_eq!(promoted[0].title, "Task B");
 
         let claimed_b = svc
@@ -392,28 +488,69 @@ mod integration {
 
         let (storage_url, _db) = aura_storage::testutil::start_mock_storage().await;
         let sc = Arc::new(StorageClient::with_base_url(&storage_url));
-        let svc = Arc::new(TaskService::new(
-            store.clone(),
-            Some(sc.clone()),
-        ));
+        let svc = Arc::new(TaskService::new(store.clone(), Some(sc.clone())));
 
         let jwt = store.get_jwt().expect("JWT should be available");
         let pid = ProjectId::new();
         let pid_str = pid.to_string();
 
         let spec = sc
-            .create_spec(&pid_str, &jwt, &aura_storage::CreateSpecRequest {
-                title: "Spec".into(),
-                order_index: Some(0),
-                markdown_contents: None,
-            })
+            .create_spec(
+                &pid_str,
+                &jwt,
+                &aura_storage::CreateSpecRequest {
+                    title: "Spec".into(),
+                    order_index: Some(0),
+                    markdown_contents: None,
+                },
+            )
             .await
             .expect("spec creation should succeed");
 
-        create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "No deps A", status: "pending", order_index: 0, dependency_ids: None }).await;
-        create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "No deps B", status: "pending", order_index: 1, dependency_ids: None }).await;
-        let blocker_id = create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "Blocker", status: "pending", order_index: 2, dependency_ids: None }).await;
-        create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: "Blocked", status: "pending", order_index: 3, dependency_ids: Some(vec![blocker_id]) }).await;
+        create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "No deps A",
+            status: "pending",
+            order_index: 0,
+            dependency_ids: None,
+        })
+        .await;
+        create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "No deps B",
+            status: "pending",
+            order_index: 1,
+            dependency_ids: None,
+        })
+        .await;
+        let blocker_id = create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "Blocker",
+            status: "pending",
+            order_index: 2,
+            dependency_ids: None,
+        })
+        .await;
+        create_task(CreateTestTask {
+            sc: &sc,
+            store: &store,
+            pid: &pid_str,
+            spec_id: &spec.id,
+            title: "Blocked",
+            status: "pending",
+            order_index: 3,
+            dependency_ids: Some(vec![blocker_id]),
+        })
+        .await;
 
         let promoted = svc
             .resolve_initial_readiness(&pid)
@@ -443,26 +580,37 @@ mod integration {
 
         let (storage_url, _db) = aura_storage::testutil::start_mock_storage().await;
         let sc = Arc::new(StorageClient::with_base_url(&storage_url));
-        let svc = Arc::new(TaskService::new(
-            store.clone(),
-            Some(sc.clone()),
-        ));
+        let svc = Arc::new(TaskService::new(store.clone(), Some(sc.clone())));
 
         let jwt = store.get_jwt().expect("JWT should be available");
         let pid = ProjectId::new();
         let pid_str = pid.to_string();
 
         let spec = sc
-            .create_spec(&pid_str, &jwt, &aura_storage::CreateSpecRequest {
-                title: "Spec".into(),
-                order_index: Some(0),
-                markdown_contents: None,
-            })
+            .create_spec(
+                &pid_str,
+                &jwt,
+                &aura_storage::CreateSpecRequest {
+                    title: "Spec".into(),
+                    order_index: Some(0),
+                    markdown_contents: None,
+                },
+            )
             .await
             .expect("spec creation should succeed");
 
         for i in 0..4 {
-            create_task(CreateTestTask { sc: &sc, store: &store, pid: &pid_str, spec_id: &spec.id, title: &format!("Task {i}"), status: "ready", order_index: i, dependency_ids: None }).await;
+            create_task(CreateTestTask {
+                sc: &sc,
+                store: &store,
+                pid: &pid_str,
+                spec_id: &spec.id,
+                title: &format!("Task {i}"),
+                status: "ready",
+                order_index: i,
+                dependency_ids: None,
+            })
+            .await;
         }
 
         let svc1 = svc.clone();
@@ -475,8 +623,12 @@ mod integration {
             svc2.claim_next_task(&pid, &aid2, None),
         );
 
-        let t1 = r1.expect("first claim should not error").expect("first claim should succeed");
-        let t2 = r2.expect("second claim should not error").expect("second claim should succeed");
+        let t1 = r1
+            .expect("first claim should not error")
+            .expect("first claim should succeed");
+        let t2 = r2
+            .expect("second claim should not error")
+            .expect("second claim should succeed");
         assert_ne!(
             t1.task_id, t2.task_id,
             "concurrent claims must return different tasks"

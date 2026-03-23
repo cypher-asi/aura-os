@@ -29,7 +29,11 @@ export function ProjectListModals({ actions }: Props) {
       <DeleteProjectModal
         target={actions.deleteTarget}
         loading={actions.deleteLoading}
-        onClose={() => actions.setDeleteTarget(null)}
+        error={actions.deleteError}
+        onClose={() => {
+          actions.setDeleteTarget(null);
+          actions.setDeleteError(null);
+        }}
         onDelete={actions.handleDelete}
       />
 

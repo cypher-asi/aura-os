@@ -206,11 +206,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: var(--space-1) var(--space-2);
+  padding: 0 var(--space-2);
   border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
   flex-shrink: 0;
   scrollbar-width: none;
+  height: var(--control-height-sm, 32px);
+  min-height: var(--control-height-sm, 32px);
+  box-sizing: border-box;
 }
 
 .logFilterBar::-webkit-scrollbar {
@@ -291,6 +294,8 @@
 .logFilterMore {
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .logFilterDropdown {

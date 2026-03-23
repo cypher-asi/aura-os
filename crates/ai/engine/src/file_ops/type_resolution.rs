@@ -6,10 +6,7 @@ use super::task_keywords::extract_type_names_from_text;
 /// task description and spec. Returns a formatted section listing definitions
 /// and method signatures, giving the model accurate API information upfront
 /// to prevent field name and method hallucination.
-fn build_type_section(
-    type_name: &str,
-    sources: &[(String, String)],
-) -> String {
+fn build_type_section(type_name: &str, sources: &[(String, String)]) -> String {
     let mut section = String::new();
     let mut has_content = false;
 
@@ -37,7 +34,9 @@ fn build_type_section(
             }
         }
     }
-    if has_content { section.push('\n'); }
+    if has_content {
+        section.push('\n');
+    }
     section
 }
 
@@ -50,16 +49,22 @@ pub fn resolve_type_definitions_for_task(
 ) -> String {
     let combined = format!("{} {} {}", task_title, task_description, spec_content);
     let type_names = extract_type_names_from_text(&combined);
-    if type_names.is_empty() { return String::new(); }
+    if type_names.is_empty() {
+        return String::new();
+    }
 
     let base_path = Path::new(project_root);
     let mut output = String::new();
     let mut remaining = budget;
 
     for type_name in &type_names {
-        if remaining == 0 { break; }
+        if remaining == 0 {
+            break;
+        }
         let sources = super::error_context::find_type_sources(base_path, type_name, &[]);
-        if sources.is_empty() { continue; }
+        if sources.is_empty() {
+            continue;
+        }
         let section = build_type_section(type_name, &sources);
         if !section.is_empty() && section.len() <= remaining {
             output.push_str(&section);
@@ -67,7 +72,11 @@ pub fn resolve_type_definitions_for_task(
         }
     }
 
-    if output.is_empty() { String::new() } else { format!("## Key Type Definitions\n\n{}", output) }
+    if output.is_empty() {
+        String::new()
+    } else {
+        format!("## Key Type Definitions\n\n{}", output)
+    }
 }
 
 /// Async wrapper that runs on a blocking thread.
@@ -84,7 +93,11 @@ pub async fn resolve_type_definitions_for_task_async(
     let spec_content = spec_content.to_string();
     tokio::task::spawn_blocking(move || {
         resolve_type_definitions_for_task(
-            &project_root, &task_title, &task_description, &spec_content, budget,
+            &project_root,
+            &task_title,
+            &task_description,
+            &spec_content,
+            budget,
         )
     })
     .await

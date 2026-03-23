@@ -179,7 +179,10 @@ pub async fn open_ide(
     Json(req): Json<OpenIdeRequest>,
 ) -> Json<serde_json::Value> {
     info!(path = %req.path, "requesting IDE window");
-    let _ = proxy.send_event(UserEvent::OpenIdeWindow { file_path: req.path, root_path: req.root });
+    let _ = proxy.send_event(UserEvent::OpenIdeWindow {
+        file_path: req.path,
+        root_path: req.root,
+    });
     Json(serde_json::json!({ "ok": true }))
 }
 

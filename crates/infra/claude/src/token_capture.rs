@@ -24,7 +24,12 @@ impl TokenCaptureHandle {
     pub async fn finalize(self) -> (u64, u64, u64, u64) {
         let _ = self.forwarder.await;
         let usage = *self.tokens.lock().await;
-        (usage.input, usage.output, usage.cache_creation, usage.cache_read)
+        (
+            usage.input,
+            usage.output,
+            usage.cache_creation,
+            usage.cache_read,
+        )
     }
 }
 
@@ -43,9 +48,13 @@ impl StreamTokenCapture {
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = rx.recv().await {
                 if let ClaudeStreamEvent::Done {
-                    input_tokens, output_tokens,
-                    cache_creation_input_tokens, cache_read_input_tokens, ..
-                } = &evt {
+                    input_tokens,
+                    output_tokens,
+                    cache_creation_input_tokens,
+                    cache_read_input_tokens,
+                    ..
+                } = &evt
+                {
                     let mut usage = tc.lock().await;
                     usage.input = *input_tokens;
                     usage.output = *output_tokens;
@@ -67,9 +76,13 @@ impl StreamTokenCapture {
         let forwarder = tokio::spawn(async move {
             while let Some(evt) = rx.recv().await {
                 if let ClaudeStreamEvent::Done {
-                    input_tokens, output_tokens,
-                    cache_creation_input_tokens, cache_read_input_tokens, ..
-                } = &evt {
+                    input_tokens,
+                    output_tokens,
+                    cache_creation_input_tokens,
+                    cache_read_input_tokens,
+                    ..
+                } = &evt
+                {
                     let mut usage = tc.lock().await;
                     usage.input += *input_tokens;
                     usage.output += *output_tokens;

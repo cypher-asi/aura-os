@@ -55,8 +55,14 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
 
     let mut items: Vec<_> = read_dir.filter_map(|entry| entry.ok()).collect();
     items.sort_by(|a, b| {
-        let a_dir = a.file_type().map(|file_type| file_type.is_dir()).unwrap_or(false);
-        let b_dir = b.file_type().map(|file_type| file_type.is_dir()).unwrap_or(false);
+        let a_dir = a
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or(false);
+        let b_dir = b
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or(false);
         b_dir
             .cmp(&a_dir)
             .then_with(|| a.file_name().cmp(&b.file_name()))
@@ -69,7 +75,10 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
         }
 
         let item_path = item.path();
-        let is_dir = item.file_type().map(|file_type| file_type.is_dir()).unwrap_or(false);
+        let is_dir = item
+            .file_type()
+            .map(|file_type| file_type.is_dir())
+            .unwrap_or(false);
         if is_dir && IGNORED_DIRS.contains(&name.as_str()) {
             continue;
         }

@@ -5,19 +5,29 @@ use tracing::{info, warn};
 
 use aura_core::*;
 
-use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
-use crate::constants::{DEFAULT_CMD_TIMEOUT_SECS, MAX_CMD_TIMEOUT_SECS, CMD_STDOUT_TRUNCATE_CHARS, CMD_STDERR_TRUNCATE_CHARS, SEARCH_REGEX_SIZE_LIMIT, MAX_SEARCH_RESULTS};
 use super::str_field;
+use crate::chat_tool_executor::{ChatToolExecutor, ToolExecResult};
+use crate::constants::{
+    CMD_STDERR_TRUNCATE_CHARS, CMD_STDOUT_TRUNCATE_CHARS, DEFAULT_CMD_TIMEOUT_SECS,
+    MAX_CMD_TIMEOUT_SECS, MAX_SEARCH_RESULTS, SEARCH_REGEX_SIZE_LIMIT,
+};
 
 impl ChatToolExecutor {
-    pub(crate) async fn run_command(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn run_command(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let command = match str_field(input, "command") {
             Some(c) if !c.trim().is_empty() => c,
             _ => return ToolExecResult::err("Missing required field: command"),
         };
 
         let working_dir_rel = str_field(input, "working_dir").unwrap_or_else(|| ".".to_string());
-        let abs_dir = match self.resolve_project_path(project_id, &working_dir_rel).await {
+        let abs_dir = match self
+            .resolve_project_path(project_id, &working_dir_rel)
+            .await
+        {
             Ok(p) => p,
             Err(e) => return e,
         };
@@ -49,13 +59,17 @@ impl ChatToolExecutor {
         match result {
             Ok(Ok(output)) => format_command_result(&output, &command),
             Ok(Err(e)) => ToolExecResult::err(format!("Failed to execute command: {e}")),
-            Err(_) => ToolExecResult::err(format!(
-                "Command timed out after {timeout_secs} seconds"
-            )),
+            Err(_) => {
+                ToolExecResult::err(format!("Command timed out after {timeout_secs} seconds"))
+            }
         }
     }
 
-    pub(crate) async fn search_code(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
+    pub(crate) async fn search_code(
+        &self,
+        project_id: &ProjectId,
+        input: &Value,
+    ) -> ToolExecResult {
         let pattern = str_field(input, "pattern").unwrap_or_default();
         if pattern.is_empty() {
             return ToolExecResult::err("Missing required field: pattern");
@@ -91,8 +105,11 @@ impl ChatToolExecutor {
             let mut m: Vec<Value> = Vec::new();
             let mut stats = SearchStats::default();
             let sp = SearchParams {
-                root: &abs_clone, regex: &regex, include_glob: include_clone.as_deref(),
-                max_results, context_lines,
+                root: &abs_clone,
+                regex: &regex,
+                include_glob: include_clone.as_deref(),
+                max_results,
+                context_lines,
             };
             search_directory(&sp, &abs_clone, &mut m, &mut stats);
             (m, stats.files_scanned)
@@ -103,7 +120,14 @@ impl ChatToolExecutor {
             Default::default()
         });
 
-        build_search_result(&pattern, &pattern_clone, &abs, matches, max_results, files_scanned)
+        build_search_result(
+            &pattern,
+            &pattern_clone,
+            &abs,
+            matches,
+            max_results,
+            files_scanned,
+        )
     }
 
     pub(crate) async fn find_files(&self, project_id: &ProjectId, input: &Value) -> ToolExecResult {
@@ -206,14 +230,33 @@ fn truncate_output(s: &str, max_chars: usize) -> String {
     } else {
         let half = max_chars / 2;
         let start: String = s.chars().take(half).collect();
-        let end: String = s.chars().rev().take(half).collect::<String>().chars().rev().collect();
-        format!("{start}\n\n... [truncated {len} chars] ...\n\n{end}", len = s.len() - max_chars)
+        let end: String = s
+            .chars()
+            .rev()
+            .take(half)
+            .collect::<String>()
+            .chars()
+            .rev()
+            .collect();
+        format!(
+            "{start}\n\n... [truncated {len} chars] ...\n\n{end}",
+            len = s.len() - max_chars
+        )
     }
 }
 
 const SKIP_DIRS: &[&str] = &[
-    "node_modules", "target", ".git", "__pycache__", ".next", "dist",
-    "build", ".cargo", "vendor", ".venv", "venv",
+    "node_modules",
+    "target",
+    ".git",
+    "__pycache__",
+    ".next",
+    "dist",
+    "build",
+    ".cargo",
+    "vendor",
+    ".venv",
+    "venv",
 ];
 
 fn should_skip_path(path: &str) -> bool {
@@ -267,7 +310,15 @@ fn search_directory(
                     }
                 }
             }
-            search_file(&path, &rel, params.regex, params.context_lines, params.max_results, matches, stats);
+            search_file(
+                &path,
+                &rel,
+                params.regex,
+                params.context_lines,
+                params.max_results,
+                matches,
+                stats,
+            );
         }
     }
 }
@@ -301,7 +352,10 @@ fn search_file(
                     .map(|(i, l)| {
                         let ln = start + i + 1;
                         let marker = if start + i == line_num { ">" } else { " " };
-                        format!("{marker}{ln:>5}| {}", l.chars().take(200).collect::<String>())
+                        format!(
+                            "{marker}{ln:>5}| {}",
+                            l.chars().take(200).collect::<String>()
+                        )
                     })
                     .collect();
                 matches.push(json!({
@@ -333,12 +387,18 @@ fn build_search_diagnostics(pattern: &str, search_path: &Path, files_scanned: us
 
     let mut hints: Vec<String> = Vec::new();
     if !path_exists {
-        hints.push(format!("Search path '{}' does not exist.", search_path.display()));
+        hints.push(format!(
+            "Search path '{}' does not exist.",
+            search_path.display()
+        ));
     } else if !path_is_dir {
         hints.push("Search path is a file, not a directory.".to_string());
     }
     if files_scanned == 0 && path_exists && path_is_dir {
-        hints.push("No files matched (directory may be empty or all files excluded by skip-dirs).".to_string());
+        hints.push(
+            "No files matched (directory may be empty or all files excluded by skip-dirs)."
+                .to_string(),
+        );
     }
     if has_unescaped_brackets {
         hints.push(format!(
@@ -353,7 +413,9 @@ fn build_search_diagnostics(pattern: &str, search_path: &Path, files_scanned: us
         ));
     }
     if hints.is_empty() {
-        hints.push(format!("No matches found in {files_scanned} files. Try a broader pattern or different path."));
+        hints.push(format!(
+            "No matches found in {files_scanned} files. Try a broader pattern or different path."
+        ));
     }
 
     json!({
@@ -549,7 +611,9 @@ mod tests {
         let diag = build_search_diagnostics("test", Path::new("/nonexistent/path"), 0);
         assert_eq!(diag["path_exists"], false);
         let hints = diag["hints"].as_array().unwrap();
-        assert!(hints.iter().any(|h| h.as_str().unwrap().contains("does not exist")));
+        assert!(hints
+            .iter()
+            .any(|h| h.as_str().unwrap().contains("does not exist")));
     }
 
     #[test]
@@ -557,7 +621,9 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let diag = build_search_diagnostics("[test]", dir.path(), 5);
         let hints = diag["hints"].as_array().unwrap();
-        assert!(hints.iter().any(|h| h.as_str().unwrap().contains("character class")));
+        assert!(hints
+            .iter()
+            .any(|h| h.as_str().unwrap().contains("character class")));
     }
 
     #[test]
@@ -565,6 +631,8 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let diag = build_search_diagnostics("test", dir.path(), 10);
         let hints = diag["hints"].as_array().unwrap();
-        assert!(hints.iter().any(|h| h.as_str().unwrap().contains("No matches found")));
+        assert!(hints
+            .iter()
+            .any(|h| h.as_str().unwrap().contains("No matches found")));
     }
 }

@@ -1,7 +1,7 @@
 mod fixtures;
 
-use aura_engine::*;
 use aura_engine::file_ops::Replacement;
+use aura_engine::*;
 
 use fixtures::make_temp_base;
 
@@ -159,7 +159,10 @@ async fn apply_search_replace_multiple_replacements() {
     file_ops::apply_file_ops(&base, &ops).await.unwrap();
     let content = std::fs::read_to_string(base.join("main.rs")).unwrap();
     assert!(content.contains("fn alpha() { 10 }"));
-    assert!(content.contains("fn beta() { 2 }"), "beta should be untouched");
+    assert!(
+        content.contains("fn beta() { 2 }"),
+        "beta should be untouched"
+    );
     assert!(content.contains("fn gamma() { 30 }"));
 }
 
@@ -179,7 +182,10 @@ async fn apply_search_replace_fails_when_not_found() {
     let err = file_ops::apply_file_ops(&base, &ops).await.unwrap_err();
     match err {
         EngineError::Parse(msg) => {
-            assert!(msg.contains("not found"), "error should mention not found: {msg}");
+            assert!(
+                msg.contains("not found"),
+                "error should mention not found: {msg}"
+            );
         }
         other => panic!("Expected Parse error, got: {other:?}"),
     }
@@ -188,11 +194,7 @@ async fn apply_search_replace_fails_when_not_found() {
 #[tokio::test]
 async fn apply_search_replace_fails_on_duplicate_match() {
     let (_dir, base) = make_temp_base();
-    std::fs::write(
-        base.join("lib.rs"),
-        "fn foo() { 1 }\nfn foo() { 2 }\n",
-    )
-    .unwrap();
+    std::fs::write(base.join("lib.rs"), "fn foo() { 1 }\nfn foo() { 2 }\n").unwrap();
 
     let ops = vec![FileOp::SearchReplace {
         path: "lib.rs".into(),
@@ -205,7 +207,10 @@ async fn apply_search_replace_fails_on_duplicate_match() {
     let err = file_ops::apply_file_ops(&base, &ops).await.unwrap_err();
     match err {
         EngineError::Parse(msg) => {
-            assert!(msg.contains("matched 2 times"), "error should mention duplicate: {msg}");
+            assert!(
+                msg.contains("matched 2 times"),
+                "error should mention duplicate: {msg}"
+            );
         }
         other => panic!("Expected Parse error, got: {other:?}"),
     }
@@ -226,7 +231,10 @@ async fn apply_search_replace_file_not_found() {
     let err = file_ops::apply_file_ops(&base, &ops).await.unwrap_err();
     match err {
         EngineError::Io(msg) => {
-            assert!(msg.contains("missing.rs"), "error should mention the file: {msg}");
+            assert!(
+                msg.contains("missing.rs"),
+                "error should mention the file: {msg}"
+            );
         }
         other => panic!("Expected Io error, got: {other:?}"),
     }

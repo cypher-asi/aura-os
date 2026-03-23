@@ -17,15 +17,21 @@ fn parse_rfc3339_or_now(raw: Option<&str>) -> DateTime<Utc> {
         .unwrap_or_else(Utc::now)
 }
 
-fn net_or_local<T: Clone>(net_val: &Option<T>, local: Option<&Project>, field: fn(&Project) -> &Option<T>) -> Option<T> {
-    net_val.clone().or_else(|| local.and_then(|p| field(p).clone()))
+fn net_or_local<T: Clone>(
+    net_val: &Option<T>,
+    local: Option<&Project>,
+    field: fn(&Project) -> &Option<T>,
+) -> Option<T> {
+    net_val
+        .clone()
+        .or_else(|| local.and_then(|p| field(p).clone()))
 }
 
-fn network_project_to_core(
-    net: &aura_network::NetworkProject,
-    local: Option<&Project>,
-) -> Project {
-    let project_id = net.id.parse::<ProjectId>().unwrap_or_else(|_| ProjectId::new());
+fn network_project_to_core(net: &aura_network::NetworkProject, local: Option<&Project>) -> Project {
+    let project_id = net
+        .id
+        .parse::<ProjectId>()
+        .unwrap_or_else(|_| ProjectId::new());
     let org_id = net.org_id.parse::<OrgId>().unwrap_or_else(|_| OrgId::new());
 
     debug!(
@@ -38,7 +44,9 @@ fn network_project_to_core(
         project_id,
         org_id,
         name: net.name.clone(),
-        description: net.description.clone()
+        description: net
+            .description
+            .clone()
             .or_else(|| local.map(|p| p.description.clone()))
             .unwrap_or_default(),
         linked_folder_path: local
@@ -47,7 +55,9 @@ fn network_project_to_core(
         workspace_source: local.and_then(|p| p.workspace_source.clone()),
         workspace_display_path: local.and_then(|p| p.workspace_display_path.clone()),
         requirements_doc_path: local.and_then(|p| p.requirements_doc_path.clone()),
-        current_status: local.map(|p| p.current_status).unwrap_or(ProjectStatus::Active),
+        current_status: local
+            .map(|p| p.current_status)
+            .unwrap_or(ProjectStatus::Active),
         build_command: local.and_then(|p| p.build_command.clone()),
         test_command: local.and_then(|p| p.test_command.clone()),
         specs_summary: local.and_then(|p| p.specs_summary.clone()),
@@ -63,17 +73,43 @@ fn network_project_to_core(
 }
 
 const TRAILING_PHRASES: &[&str] = &[
-    " in order to ", " so that ", " which will ", " that will ",
-    " to confirm ", " to verify ", " to check ", " to ensure ",
-    " to validate ", " to test ", " to see ", " to make sure ",
-    " to run ", " to build ", " to compile ",
-    " for confirming ", " for verifying ", " for checking ",
+    " in order to ",
+    " so that ",
+    " which will ",
+    " that will ",
+    " to confirm ",
+    " to verify ",
+    " to check ",
+    " to ensure ",
+    " to validate ",
+    " to test ",
+    " to see ",
+    " to make sure ",
+    " to run ",
+    " to build ",
+    " to compile ",
+    " for confirming ",
+    " for verifying ",
+    " for checking ",
 ];
 
 const NON_COMMAND_VERBS: &[&str] = &[
-    "confirm", "verify", "check", "ensure", "validate", "test", "see",
-    "make", "run", "build", "compile", "show", "prove", "demonstrate",
-    "try", "attempt",
+    "confirm",
+    "verify",
+    "check",
+    "ensure",
+    "validate",
+    "test",
+    "see",
+    "make",
+    "run",
+    "build",
+    "compile",
+    "show",
+    "prove",
+    "demonstrate",
+    "try",
+    "attempt",
 ];
 
 fn strip_trailing_phrase(cmd: &str, lower: &str) -> Option<String> {
@@ -184,7 +220,9 @@ impl ProjectService {
             .map_err(ProjectError::Store)?;
         let mut projects = Vec::new();
         for (_key, value) in entries {
-            if let Ok(project) = serde_json::from_slice::<Project>(&value) { projects.push(project) }
+            if let Ok(project) = serde_json::from_slice::<Project>(&value) {
+                projects.push(project)
+            }
         }
         Ok(projects)
     }
@@ -196,8 +234,14 @@ impl ProjectService {
         }
     }
 
-    pub fn new_with_network(network_client: Option<Arc<NetworkClient>>, store: Arc<RocksStore>) -> Self {
-        Self { network_client, store }
+    pub fn new_with_network(
+        network_client: Option<Arc<NetworkClient>>,
+        store: Arc<RocksStore>,
+    ) -> Self {
+        Self {
+            network_client,
+            store,
+        }
     }
 
     pub fn create_project(&self, input: CreateProjectInput) -> Result<Project, ProjectError> {
@@ -259,7 +303,9 @@ impl ProjectService {
         let all = self.list_local_projects()?;
         Ok(all
             .into_iter()
-            .filter(|project| project.org_id == *org_id && project.current_status != ProjectStatus::Archived)
+            .filter(|project| {
+                project.org_id == *org_id && project.current_status != ProjectStatus::Archived
+            })
             .collect())
     }
 
@@ -314,7 +360,9 @@ impl ProjectService {
         if let Ok(all) = self.list_local_projects() {
             for project in all {
                 if project.name.trim().is_empty() {
-                    let _ = self.store.delete_setting(&Self::project_key(&project.project_id));
+                    let _ = self
+                        .store
+                        .delete_setting(&Self::project_key(&project.project_id));
                 }
             }
         }
@@ -329,9 +377,7 @@ impl ProjectService {
     }
 
     fn get_jwt(&self) -> Result<String, ProjectError> {
-        self.store
-            .get_jwt()
-            .ok_or(ProjectError::NoSession)
+        self.store.get_jwt().ok_or(ProjectError::NoSession)
     }
 
     pub async fn get_project_async(&self, id: &ProjectId) -> Result<Project, ProjectError> {
@@ -344,7 +390,9 @@ impl ProjectService {
             .get_project(&id.to_string(), &jwt)
             .await
             .map_err(|e| match &e {
-                aura_network::NetworkError::Server { status: 404, .. } => ProjectError::NotFound(*id),
+                aura_network::NetworkError::Server { status: 404, .. } => {
+                    ProjectError::NotFound(*id)
+                }
                 _ => ProjectError::Network(e),
             })?;
         let local = self.load_local_project(id).ok();

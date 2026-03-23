@@ -164,18 +164,24 @@ pub async fn run_single_task(
     let agent_instance_id = params.agent_instance_id;
     let event_tx = state.event_tx.clone();
     tokio::spawn(async move {
-        if let Err(e) = engine.run_single_task(project_id, task_id, agent_instance_id).await {
-            send_or_log(&event_tx, aura_engine::EngineEvent::TaskFailed {
-                project_id,
-                agent_instance_id: aura_core::AgentInstanceId::new(),
-                task_id,
-                reason: e.to_string(),
-                duration_ms: None,
-                phase: None,
-                parse_retries: None,
-                build_fix_attempts: None,
-                model: None,
-            });
+        if let Err(e) = engine
+            .run_single_task(project_id, task_id, agent_instance_id)
+            .await
+        {
+            send_or_log(
+                &event_tx,
+                aura_engine::EngineEvent::TaskFailed {
+                    project_id,
+                    agent_instance_id: aura_core::AgentInstanceId::new(),
+                    task_id,
+                    reason: e.to_string(),
+                    duration_ms: None,
+                    phase: None,
+                    parse_retries: None,
+                    build_fix_attempts: None,
+                    model: None,
+                },
+            );
         }
     });
 

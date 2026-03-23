@@ -1,8 +1,4 @@
-use aura_claude::ToolCall;
-
-pub(super) fn normalize_tool_path(path: &str) -> String {
-    path.replace('\\', "/").trim_start_matches("./").to_string()
-}
+use aura_link::ToolCall;
 
 pub(super) fn looks_like_compiler_errors(output: &str) -> bool {
     let has_rust_errors = output.contains("error[E") && output.contains("-->");
@@ -24,14 +20,24 @@ pub(super) fn format_tool_arg_hint(tc: &ToolCall) -> String {
                 (None, None) => path.to_string(),
             }
         }
-        "write_file" | "edit_file" | "delete_file" => {
-            tc.input.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string()
-        }
-        "list_files" => {
-            tc.input.get("directory").and_then(|v| v.as_str()).unwrap_or("").to_string()
-        }
+        "write_file" | "edit_file" | "delete_file" => tc
+            .input
+            .get("path")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        "list_files" => tc
+            .input
+            .get("directory")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
         "search_code" => {
-            let pattern = tc.input.get("pattern").and_then(|v| v.as_str()).unwrap_or("");
+            let pattern = tc
+                .input
+                .get("pattern")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let ctx = tc.input.get("context_lines").and_then(|v| v.as_u64());
             if let Some(c) = ctx {
                 format!("{pattern}, context={c}")
@@ -39,9 +45,12 @@ pub(super) fn format_tool_arg_hint(tc: &ToolCall) -> String {
                 pattern.to_string()
             }
         }
-        "run_command" => {
-            tc.input.get("command").and_then(|v| v.as_str()).unwrap_or("").to_string()
-        }
+        "run_command" => tc
+            .input
+            .get("command")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
         _ => String::new(),
     }
 }

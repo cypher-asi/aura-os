@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use chrono::Utc;
@@ -182,17 +182,39 @@ async fn update_task(
 ) -> axum::http::StatusCode {
     let mut db = db.lock().await;
     if let Some(task) = db.tasks.iter_mut().find(|t| t.id == task_id) {
-        if let Some(v) = req.title { task.title = Some(v); }
-        if let Some(v) = req.description { task.description = Some(v); }
-        if let Some(v) = req.order_index { task.order_index = Some(v); }
-        if let Some(v) = req.dependency_ids { task.dependency_ids = Some(v); }
-        if let Some(v) = req.execution_notes { task.execution_notes = Some(v); }
-        if let Some(v) = req.files_changed { task.files_changed = Some(v); }
-        if let Some(v) = req.model { task.model = Some(v); }
-        if let Some(v) = req.total_input_tokens { task.total_input_tokens = Some(v); }
-        if let Some(v) = req.total_output_tokens { task.total_output_tokens = Some(v); }
-        if let Some(v) = req.session_id { task.session_id = Some(v); }
-        if let Some(v) = req.assigned_project_agent_id { task.assigned_project_agent_id = Some(v); }
+        if let Some(v) = req.title {
+            task.title = Some(v);
+        }
+        if let Some(v) = req.description {
+            task.description = Some(v);
+        }
+        if let Some(v) = req.order_index {
+            task.order_index = Some(v);
+        }
+        if let Some(v) = req.dependency_ids {
+            task.dependency_ids = Some(v);
+        }
+        if let Some(v) = req.execution_notes {
+            task.execution_notes = Some(v);
+        }
+        if let Some(v) = req.files_changed {
+            task.files_changed = Some(v);
+        }
+        if let Some(v) = req.model {
+            task.model = Some(v);
+        }
+        if let Some(v) = req.total_input_tokens {
+            task.total_input_tokens = Some(v);
+        }
+        if let Some(v) = req.total_output_tokens {
+            task.total_output_tokens = Some(v);
+        }
+        if let Some(v) = req.session_id {
+            task.session_id = Some(v);
+        }
+        if let Some(v) = req.assigned_project_agent_id {
+            task.assigned_project_agent_id = Some(v);
+        }
         task.updated_at = Some(Utc::now().to_rfc3339());
         axum::http::StatusCode::OK
     } else {
@@ -296,8 +318,11 @@ async fn create_message(
         project_id: Some(req.project_id),
         role: Some(req.role),
         content: Some(req.content),
+        content_blocks: req.content_blocks,
         input_tokens: req.input_tokens,
         output_tokens: req.output_tokens,
+        thinking: req.thinking,
+        thinking_duration_ms: req.thinking_duration_ms,
         created_at: Some(Utc::now().to_rfc3339()),
     };
     let mut db = db.lock().await;
@@ -384,7 +409,11 @@ async fn update_project_agent(
     Json(req): Json<UpdateProjectAgentRequest>,
 ) -> axum::http::StatusCode {
     let mut db = db.lock().await;
-    if let Some(agent) = db.project_agents.iter_mut().find(|a| a.id == project_agent_id) {
+    if let Some(agent) = db
+        .project_agents
+        .iter_mut()
+        .find(|a| a.id == project_agent_id)
+    {
         agent.status = Some(req.status);
         agent.updated_at = Some(Utc::now().to_rfc3339());
         axum::http::StatusCode::OK
@@ -444,7 +473,10 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             "/api/projects/:project_id/agents",
             post(create_project_agent).get(list_project_agents),
         )
-        .route("/api/project-agents/:id", get(get_project_agent).put(update_project_agent))
+        .route(
+            "/api/project-agents/:id",
+            get(get_project_agent).put(update_project_agent),
+        )
         .with_state(db)
 }
 

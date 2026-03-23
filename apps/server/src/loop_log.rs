@@ -48,12 +48,13 @@ impl LoopLogWriter {
             Utc::now().format("%Y%m%d_%H%M%S"),
             agent_instance_id
         );
-        let run_dir = self
-            .base_dir
-            .join(project_id.to_string())
-            .join(&run_id);
+        let run_dir = self.base_dir.join(project_id.to_string()).join(&run_id);
         if let Err(e) = fs::create_dir_all(&run_dir).await {
-            debug!("loop_log: failed to create run dir {}: {}", run_dir.display(), e);
+            debug!(
+                "loop_log: failed to create run dir {}: {}",
+                run_dir.display(),
+                e
+            );
             return;
         }
         let mut state = self.run_state.lock().await;
@@ -131,7 +132,11 @@ impl LoopLogWriter {
         if let Some(run_dir) = run_dir {
             let path = run_dir.join(format!("task_{}.output.txt", task_id));
             if let Err(e) = fs::write(&path, output).await {
-                debug!("loop_log: failed to write task output {}: {}", path.display(), e);
+                debug!(
+                    "loop_log: failed to write task output {}: {}",
+                    path.display(),
+                    e
+                );
             }
         }
         let mut map = self.task_to_run.lock().await;
@@ -159,11 +164,7 @@ async fn append_line(path: &Path, line: &str) -> std::io::Result<()> {
     f.flush().await
 }
 
-async fn create_dir_and_append(
-    dir: &Path,
-    path: &Path,
-    line: &str,
-) -> std::io::Result<()> {
+async fn create_dir_and_append(dir: &Path, path: &Path, line: &str) -> std::io::Result<()> {
     fs::create_dir_all(dir).await?;
     append_line(path, line).await
 }

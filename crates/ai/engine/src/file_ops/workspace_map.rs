@@ -13,7 +13,9 @@ struct WorkspaceMetadata {
 fn parse_workspace_metadata(root: &Path) -> Option<WorkspaceMetadata> {
     let cargo_content = std::fs::read_to_string(root.join("Cargo.toml")).ok()?;
     let members = parse_workspace_members(&cargo_content);
-    if members.is_empty() { return None; }
+    if members.is_empty() {
+        return None;
+    }
 
     let mut crate_names = HashMap::new();
     let mut crate_deps = HashMap::new();
@@ -28,20 +30,46 @@ fn parse_workspace_metadata(root: &Path) -> Option<WorkspaceMetadata> {
         crate_names.insert(member.clone(), name);
         crate_deps.insert(member.clone(), parse_internal_deps(&content));
         let doc = read_crate_doc_comment(root, member);
-        if !doc.is_empty() { crate_docs.insert(member.clone(), doc); }
+        if !doc.is_empty() {
+            crate_docs.insert(member.clone(), doc);
+        }
     }
-    Some(WorkspaceMetadata { members, crate_names, crate_deps, crate_docs })
+    Some(WorkspaceMetadata {
+        members,
+        crate_names,
+        crate_deps,
+        crate_docs,
+    })
 }
 
-fn format_workspace_map(meta: &WorkspaceMetadata, name_to_path: &HashMap<String, String>) -> String {
+fn format_workspace_map(
+    meta: &WorkspaceMetadata,
+    name_to_path: &HashMap<String, String>,
+) -> String {
     let mut output = format!("Workspace: {} crates\n", meta.members.len());
     for member in &meta.members {
-        let name = meta.crate_names.get(member).map(|s| s.as_str()).unwrap_or(member);
-        let doc = meta.crate_docs.get(member).map(|s| s.as_str()).unwrap_or("");
-        let doc_suffix = if doc.is_empty() { String::new() } else { format!(" -- {doc}") };
+        let name = meta
+            .crate_names
+            .get(member)
+            .map(|s| s.as_str())
+            .unwrap_or(member);
+        let doc = meta
+            .crate_docs
+            .get(member)
+            .map(|s| s.as_str())
+            .unwrap_or("");
+        let doc_suffix = if doc.is_empty() {
+            String::new()
+        } else {
+            format!(" -- {doc}")
+        };
         output.push_str(&format!("  {member} ({name}){doc_suffix}\n"));
         if let Some(deps) = meta.crate_deps.get(member) {
-            let resolved: Vec<&str> = deps.iter().filter(|d| name_to_path.contains_key(d.as_str())).map(|d| d.as_str()).collect();
+            let resolved: Vec<&str> = deps
+                .iter()
+                .filter(|d| name_to_path.contains_key(d.as_str()))
+                .map(|d| d.as_str())
+                .collect();
             if resolved.is_empty() {
                 output.push_str("    deps: []\n");
             } else {
@@ -61,7 +89,11 @@ pub fn generate_workspace_map(project_root: &str) -> Result<String, EngineError>
         Some(m) => m,
         None => return Ok(String::new()),
     };
-    let name_to_path: HashMap<String, String> = meta.crate_names.iter().map(|(p, n)| (n.clone(), p.clone())).collect();
+    let name_to_path: HashMap<String, String> = meta
+        .crate_names
+        .iter()
+        .map(|(p, n)| (n.clone(), p.clone()))
+        .collect();
     Ok(format_workspace_map(&meta, &name_to_path))
 }
 
@@ -237,7 +269,9 @@ impl WorkspaceCache {
             Some(m) => m,
             None => return Ok(Self::empty()),
         };
-        let name_to_path: HashMap<String, String> = meta.crate_names.iter()
+        let name_to_path: HashMap<String, String> = meta
+            .crate_names
+            .iter()
             .map(|(p, n)| (n.clone(), p.clone()))
             .collect();
         let workspace_map_text = format_workspace_map(&meta, &name_to_path);

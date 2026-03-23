@@ -2,8 +2,13 @@
 
 /// Events emitted by an [`AgentRuntime`](crate::AgentRuntime) during execution.
 ///
-/// These are the canonical event types that consumers (e.g. the chat streaming
-/// layer) subscribe to for real-time progress updates.
+/// `RuntimeEvent` is a **stable, app-level** event vocabulary that decouples
+/// downstream consumers (chat streaming, engine task output) from the harness's
+/// `aura_agent::AgentLoopEvent` wire format.  The mapping from `AgentLoopEvent`
+/// to `RuntimeEvent` lives in [`link_runtime::forward_events`](crate::link_runtime).
+///
+/// If consumers are ever refactored to map directly from `AgentLoopEvent`, this
+/// intermediate type can be removed.
 #[derive(Debug, Clone)]
 pub enum RuntimeEvent {
     /// A chunk of assistant text output.
@@ -16,6 +21,15 @@ pub enum RuntimeEvent {
         id: String,
         /// Tool name.
         name: String,
+    },
+    /// Parsed snapshot of tool input JSON (streamed incrementally).
+    ToolInputSnapshot {
+        /// Tool use identifier.
+        id: String,
+        /// Tool name.
+        name: String,
+        /// Parsed tool input snapshot.
+        input: serde_json::Value,
     },
     /// A tool invocation is fully parsed (input available).
     ToolUseDetected {
@@ -37,13 +51,22 @@ pub enum RuntimeEvent {
         /// Whether this result represents an error.
         is_error: bool,
     },
-    /// Token usage for a single LLM iteration within the turn.
+    /// Cumulative token usage reported after each LLM iteration.
+    ///
+    /// Values are running totals for the turn, not per-iteration deltas.
     IterationTokenUsage {
         /// Input tokens consumed.
         input_tokens: u64,
         /// Output tokens generated.
         output_tokens: u64,
     },
+    /// A tool-loop iteration completed (all tool calls in this round finished).
+    IterationComplete {
+        /// Zero-based iteration index.
+        iteration: usize,
+    },
+    /// A non-fatal warning occurred during the turn.
+    Warning(String),
     /// An error occurred during the turn.
     Error(String),
 }

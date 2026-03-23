@@ -83,7 +83,7 @@ describe("useNewProjectForm", () => {
 
     expect(result.current.name).toBe("");
     expect(result.current.description).toBe("");
-    expect(result.current.workspaceMode).toBe("imported");
+    expect(result.current.workspaceMode).toBe("linked");
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBe("");
   });
@@ -160,7 +160,7 @@ describe("useNewProjectForm", () => {
       await result.current.handleSubmit();
     });
 
-    expect(result.current.error).toContain("Choose files or a folder");
+    expect(result.current.error).toContain("Choose a linked folder");
   });
 
   it("handleClose resets form and calls onClose", () => {

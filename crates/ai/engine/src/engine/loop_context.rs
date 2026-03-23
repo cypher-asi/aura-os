@@ -3,13 +3,13 @@ use std::time::Instant;
 
 use tracing::{info, warn};
 
-use aura_core::*;
 use super::orchestrator::DevLoopEngine;
 use super::types::*;
 use crate::error::EngineError;
 use crate::events::EngineEvent;
 use crate::file_ops::{FileOp, WorkspaceCache};
 use crate::metrics::{LoopRunMetrics, TaskMetrics};
+use aura_core::*;
 
 pub(crate) struct LoopRunContext {
     pub project_id: ProjectId,
@@ -128,14 +128,22 @@ impl LoopRunContext {
     // ------------------------------------------------------------------
 
     pub async fn reset_and_promote_tasks(&self, engine: &DevLoopEngine) -> Result<(), EngineError> {
-        for t in &engine.task_service.reset_in_progress_tasks(&self.project_id).await? {
+        for t in &engine
+            .task_service
+            .reset_in_progress_tasks(&self.project_id)
+            .await?
+        {
             engine.emit(EngineEvent::TaskBecameReady {
                 project_id: self.project_id,
                 agent_instance_id: self.agent_instance_id,
                 task_id: t.task_id,
             });
         }
-        for t in &engine.task_service.resolve_initial_readiness(&self.project_id).await? {
+        for t in &engine
+            .task_service
+            .resolve_initial_readiness(&self.project_id)
+            .await?
+        {
             engine.emit(EngineEvent::TaskBecameReady {
                 project_id: self.project_id,
                 agent_instance_id: self.agent_instance_id,
@@ -156,18 +164,24 @@ impl LoopRunContext {
             session_id = %self.session.session_id,
             "Beginning task execution"
         );
-        engine.session_service.record_task_worked(
-            &self.project_id,
-            &self.agent_instance_id,
-            &self.session.session_id,
-            task.task_id,
-        ).await?;
-        engine.agent_instance_service.start_working(
-            &self.project_id,
-            &self.agent_instance_id,
-            &task.task_id,
-            &self.session.session_id,
-        ).await?;
+        engine
+            .session_service
+            .record_task_worked(
+                &self.project_id,
+                &self.agent_instance_id,
+                &self.session.session_id,
+                task.task_id,
+            )
+            .await?;
+        engine
+            .agent_instance_service
+            .start_working(
+                &self.project_id,
+                &self.agent_instance_id,
+                &task.task_id,
+                &self.session.session_id,
+            )
+            .await?;
         engine.emit(EngineEvent::TaskStarted {
             project_id: self.project_id,
             agent_instance_id: self.agent_instance_id,
@@ -196,15 +210,34 @@ impl LoopRunContext {
             self.duplicate_error_bailouts += t.duplicate_error_bailouts;
         }
         let task_metrics = TaskMetrics::from_outcome(
-            task.task_id.to_string(), task.title.clone(),
-            self.session.model.clone(), &outcome,
+            task.task_id.to_string(),
+            task.title.clone(),
+            self.session.model.clone(),
+            &outcome,
         );
         match outcome {
-            TaskOutcome::Completed { notes, follow_up_tasks, file_ops, .. } => {
-                self.process_completed(engine, task, &notes, &follow_up_tasks, &file_ops, task_metrics).await?;
+            TaskOutcome::Completed {
+                notes,
+                follow_up_tasks,
+                file_ops,
+                ..
+            } => {
+                self.process_completed(
+                    engine,
+                    task,
+                    &notes,
+                    &follow_up_tasks,
+                    &file_ops,
+                    task_metrics,
+                )
+                .await?;
                 Ok(false)
             }
-            TaskOutcome::Failed { reason, credit_failure, .. } => {
+            TaskOutcome::Failed {
+                reason,
+                credit_failure,
+                ..
+            } => {
                 self.process_failed(task, &reason, credit_failure, task_metrics);
                 Ok(true)
             }
@@ -225,12 +258,16 @@ impl LoopRunContext {
                 );
                 break;
             }
-            match engine.task_service.create_follow_up_task(
-                task,
-                follow_up.title.clone(),
-                follow_up.description.clone(),
-                vec![],
-            ).await {
+            match engine
+                .task_service
+                .create_follow_up_task(
+                    task,
+                    follow_up.title.clone(),
+                    follow_up.description.clone(),
+                    vec![],
+                )
+                .await
+            {
                 Ok(new_task) => {
                     self.follow_up_count += 1;
                     engine.emit(EngineEvent::FollowUpTaskCreated {
@@ -252,13 +289,12 @@ impl LoopRunContext {
         Ok(())
     }
 
-    async fn auto_commit_if_git(
-        &self,
-        engine: &DevLoopEngine,
-        task: &Task,
-        notes: &str,
-    ) {
-        let project = match engine.project_service.get_project_async(&self.project_id).await {
+    async fn auto_commit_if_git(&self, engine: &DevLoopEngine, task: &Task, notes: &str) {
+        let project = match engine
+            .project_service
+            .get_project_async(&self.project_id)
+            .await
+        {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -303,7 +339,8 @@ impl LoopRunContext {
         });
         self.record_task(task_metrics);
 
-        self.create_follow_up_tasks(engine, task, follow_up_tasks).await?;
+        self.create_follow_up_tasks(engine, task, follow_up_tasks)
+            .await?;
 
         let (touches_tests, touches_build_manifest) = check_baseline_invalidation(file_ops);
         if touches_tests {
@@ -345,7 +382,8 @@ impl LoopRunContext {
             self.credit_failed_tasks.insert(task.task_id);
         }
         self.record_task(task_metrics);
-        self.work_log.push(format!("Task (failed): {}\nReason: {}", task.title, reason));
+        self.work_log
+            .push(format!("Task (failed): {}\nReason: {}", task.title, reason));
     }
 
     // ------------------------------------------------------------------
@@ -371,11 +409,10 @@ impl LoopRunContext {
             *count += 1;
             self.tasks_retried += 1;
             info!(task_id = %t.task_id, title = %t.title, attempt = *count, "resetting failed task for retry");
-            if let Err(e) =
-                engine
-                    .task_service
-                    .retry_task(&self.project_id, &t.spec_id, &t.task_id)
-                    .await
+            if let Err(e) = engine
+                .task_service
+                .retry_task(&self.project_id, &t.spec_id, &t.task_id)
+                .await
             {
                 warn!(task_id = %t.task_id, error = %e, "retry_task failed, skipping");
                 continue;
@@ -419,7 +456,6 @@ impl LoopRunContext {
         self.flush_metrics("insufficient_credits");
         LoopOutcome::AllTasksBlocked
     }
-
 }
 
 fn check_baseline_invalidation(file_ops: &[FileOp]) -> (bool, bool) {
@@ -440,10 +476,7 @@ fn check_baseline_invalidation(file_ops: &[FileOp]) -> (bool, bool) {
             || f.contains("tests\\")
     });
     let touches_build_manifest = changed_files.iter().any(|f| {
-        f.ends_with("Cargo.toml")
-            || f.ends_with("package.json")
-            || f.ends_with("pyproject.toml")
+        f.ends_with("Cargo.toml") || f.ends_with("package.json") || f.ends_with("pyproject.toml")
     });
     (touches_tests, touches_build_manifest)
 }
-

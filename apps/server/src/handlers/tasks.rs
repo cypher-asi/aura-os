@@ -78,15 +78,20 @@ pub async fn transition_task(
         .get_task(&task_id.to_string(), &jwt)
         .await
         .map_err(|e| match &e {
-            aura_storage::StorageError::Server { status: 404, .. } => ApiError::not_found("task not found"),
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("task not found")
+            }
             _ => ApiError::internal(e.to_string()),
         })?;
     let task = storage_task_to_task(current).map_err(ApiError::internal)?;
     TaskService::validate_transition(task.status, req.new_status)
         .map_err(|e| ApiError::bad_request(e.to_string()))?;
 
-    let status_str =
-        serde_json::to_value(req.new_status).unwrap().as_str().unwrap_or("pending").to_string();
+    let status_str = serde_json::to_value(req.new_status)
+        .unwrap()
+        .as_str()
+        .unwrap_or("pending")
+        .to_string();
 
     storage
         .transition_task(
@@ -124,7 +129,9 @@ pub async fn retry_task(
         .get_task(&task_id.to_string(), &jwt)
         .await
         .map_err(|e| match &e {
-            aura_storage::StorageError::Server { status: 404, .. } => ApiError::not_found("task not found"),
+            aura_storage::StorageError::Server { status: 404, .. } => {
+                ApiError::not_found("task not found")
+            }
             _ => ApiError::internal(e.to_string()),
         })?;
     let task = storage_task_to_task(current).map_err(ApiError::internal)?;
@@ -174,7 +181,10 @@ async fn fetch_task_output_from_storage(
 ) -> Option<TaskOutputResponse> {
     let task = storage.get_task(&task_id.to_string(), jwt).await.ok()?;
     let session_id = task.session_id?;
-    let msgs = storage.list_messages(&session_id, jwt, None, None).await.ok()?;
+    let msgs = storage
+        .list_messages(&session_id, jwt, None, None)
+        .await
+        .ok()?;
 
     let content: String = msgs
         .iter()
@@ -205,7 +215,11 @@ async fn fetch_task_output_from_storage(
     if content.is_empty() && build_steps.is_empty() && test_steps.is_empty() {
         return None;
     }
-    Some(TaskOutputResponse { output: content, build_steps, test_steps })
+    Some(TaskOutputResponse {
+        output: content,
+        build_steps,
+        test_steps,
+    })
 }
 
 pub async fn get_task_output(
@@ -227,7 +241,11 @@ pub async fn get_task_output(
             .ok()
             .and_then(|s| s.get(&task_id).cloned())
             .unwrap_or_default();
-        return Ok(Json(TaskOutputResponse { output, build_steps, test_steps }));
+        return Ok(Json(TaskOutputResponse {
+            output,
+            build_steps,
+            test_steps,
+        }));
     }
 
     if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {

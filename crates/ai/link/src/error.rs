@@ -5,7 +5,7 @@
 pub enum RuntimeError {
     /// The underlying model provider returned an error.
     #[error("provider error: {0}")]
-    Provider(#[from] aura_provider::ProviderError),
+    Provider(String),
 
     /// Tool execution failed.
     #[error("tool execution error: {0}")]

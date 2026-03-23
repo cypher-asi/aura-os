@@ -22,11 +22,7 @@ impl NetworkClient {
             .await
     }
 
-    pub async fn unfollow_profile(
-        &self,
-        profile_id: &str,
-        jwt: &str,
-    ) -> Result<(), NetworkError> {
+    pub async fn unfollow_profile(&self, profile_id: &str, jwt: &str) -> Result<(), NetworkError> {
         self.delete_authed(
             &format!("{}/api/follows/{}", self.base_url, profile_id),
             jwt,
@@ -86,12 +82,8 @@ impl NetworkClient {
         if let Some(meta) = metadata {
             body["metadata"] = meta;
         }
-        self.post_authed(
-            &format!("{}/api/posts", self.base_url),
-            jwt,
-            &body,
-        )
-        .await
+        self.post_authed(&format!("{}/api/posts", self.base_url), jwt, &body)
+            .await
     }
 
     pub async fn get_post(
@@ -99,11 +91,8 @@ impl NetworkClient {
         post_id: &str,
         jwt: &str,
     ) -> Result<NetworkFeedEvent, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/posts/{}", self.base_url, post_id),
-            jwt,
-        )
-        .await
+        self.get_authed(&format!("{}/api/posts/{}", self.base_url, post_id), jwt)
+            .await
     }
 
     pub async fn get_profile_posts(
@@ -128,10 +117,7 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<Vec<NetworkComment>, NetworkError> {
         self.get_authed(
-            &format!(
-                "{}/api/posts/{}/comments",
-                self.base_url, post_id
-            ),
+            &format!("{}/api/posts/{}/comments", self.base_url, post_id),
             jwt,
         )
         .await
@@ -144,10 +130,7 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<NetworkComment, NetworkError> {
         self.post_authed(
-            &format!(
-                "{}/api/posts/{}/comments",
-                self.base_url, post_id
-            ),
+            &format!("{}/api/posts/{}/comments", self.base_url, post_id),
             jwt,
             &serde_json::json!({ "content": content }),
         )

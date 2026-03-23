@@ -181,9 +181,7 @@ fn detect_hollow_functions(path: &str, lines: &[&str], reports: &mut Vec<StubRep
                     context: format!(
                         "{} {{ {} }}",
                         trimmed.trim_end_matches('{').trim(),
-                        body_trimmed
-                            .trim_matches(|c| c == '{' || c == '}')
-                            .trim()
+                        body_trimmed.trim_matches(|c| c == '{' || c == '}').trim()
                     ),
                 });
             }
@@ -192,14 +190,15 @@ fn detect_hollow_functions(path: &str, lines: &[&str], reports: &mut Vec<StubRep
                 && params_str != "&self"
                 && params_str != "&mut self"
                 && params_str != "self"
-                && all_params_ignored(params_str) {
-                    reports.push(StubReport {
-                        path: path.to_string(),
-                        line: fn_line,
-                        pattern: StubPattern::IgnoredParams,
-                        context: trimmed.to_string(),
-                    });
-                }
+                && all_params_ignored(params_str)
+            {
+                reports.push(StubReport {
+                    path: path.to_string(),
+                    line: fn_line,
+                    pattern: StubPattern::IgnoredParams,
+                    context: trimmed.to_string(),
+                });
+            }
         }
 
         i = if body_end > i { body_end + 1 } else { i + 1 };

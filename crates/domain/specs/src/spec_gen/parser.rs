@@ -1,8 +1,8 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use aura_core::*;
 use aura_core::extract_fenced_json;
+use aura_core::*;
 
 use crate::error::SpecGenError;
 
@@ -15,7 +15,7 @@ pub struct RawSpecOutput {
 
 /// Parses a leading "NN:" or "N:" from a spec title (e.g. "05: Requirements..." or "1: Core Domain").
 /// Returns the logical spec number for use as order_index so display order matches the intended numbering.
-pub(crate) fn order_index_from_spec_title(title: &str) -> Option<u32> {
+pub fn order_index_from_spec_title(title: &str) -> Option<u32> {
     let t = title.trim();
     let colon = t.find(':')?;
     let prefix = t.get(..colon)?;
@@ -96,11 +96,95 @@ impl IncrementalSpecParser {
 
         complete_objects
     }
+
+    /// Attempt a best-effort parse of the in-progress JSON object buffer.
+    /// Returns `Some(RawSpecOutput)` when enough fields have accumulated to
+    /// produce a meaningful partial spec (at minimum a non-empty title).
+    /// Uses `serde_json::Value` internally so that partially-populated objects
+    /// (e.g. title present but purpose/markdown still streaming) succeed.
+    pub fn best_effort_partial(&self) -> Option<RawSpecOutput> {
+        if !self.in_object || self.current_object.len() < 10 {
+            return None;
+        }
+        let repaired = repair_partial_json(&self.current_object);
+        let val: serde_json::Value = serde_json::from_str(&repaired).ok()?;
+        let obj = val.as_object()?;
+        let title = obj
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if title.trim().is_empty() {
+            return None;
+        }
+        Some(RawSpecOutput {
+            title,
+            purpose: obj
+                .get("purpose")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            markdown: obj
+                .get("markdown")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+        })
+    }
 }
 
-pub(crate) fn parse_claude_response(
-    response: &str,
-) -> Result<Vec<RawSpecOutput>, SpecGenError> {
+/// Close unterminated strings, strip trailing commas, and balance braces/brackets
+/// so that a partial JSON fragment can be parsed by serde_json.
+/// Mirrors the heuristic used by `parse_best_effort_json_snapshot` in the Claude
+/// SSE parser.
+fn repair_partial_json(buf: &str) -> String {
+    let trimmed = buf.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    let mut escaped = false;
+    let mut in_str = false;
+    let mut open_braces = 0usize;
+    let mut open_brackets = 0usize;
+
+    for ch in trimmed.chars() {
+        if in_str {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_str = false;
+            }
+            continue;
+        }
+        match ch {
+            '"' => in_str = true,
+            '{' => open_braces += 1,
+            '}' => open_braces = open_braces.saturating_sub(1),
+            '[' => open_brackets += 1,
+            ']' => open_brackets = open_brackets.saturating_sub(1),
+            _ => {}
+        }
+    }
+
+    let mut candidate = String::from(trimmed);
+    if candidate.ends_with(',') {
+        candidate.pop();
+    }
+    if in_str {
+        if escaped {
+            candidate.pop(); // drop dangling backslash from incomplete escape
+        }
+        candidate.push('"');
+    }
+    candidate.push_str(&"]".repeat(open_brackets));
+    candidate.push_str(&"}".repeat(open_braces));
+    candidate
+}
+
+pub(crate) fn parse_claude_response(response: &str) -> Result<Vec<RawSpecOutput>, SpecGenError> {
     let trimmed = response.trim();
 
     if let Ok(specs) = serde_json::from_str::<Vec<RawSpecOutput>>(trimmed) {

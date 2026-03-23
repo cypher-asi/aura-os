@@ -9,6 +9,7 @@ import {
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,
+  handleToolCallSnapshot,
   handleToolCall as coreHandleToolCall,
   handleToolResult as coreHandleToolResult,
   handleMessageSaved,
@@ -17,6 +18,7 @@ import {
   getIsStreaming,
   getThinkingDurationMs,
 } from "./use-stream-core";
+import { orderIndexFromTitle } from "../utils/collections";
 
 export type {
   DisplayContentBlock,
@@ -86,16 +88,19 @@ function pushPendingSpec(
 ) {
   const pendingId = `pending-${info.id}`;
   const now = new Date().toISOString();
+  const title = (info.input.title as string) || "Generating…";
   sidekick.pushSpec({
     spec_id: pendingId,
     project_id: projectId,
-    title: (info.input.title as string) || "Generating…",
-    order_index: Date.now(),
+    title,
+    order_index: orderIndexFromTitle(title) ?? Date.now(),
     markdown_contents: (info.input.markdown_contents as string) || "",
     created_at: now,
     updated_at: now,
   });
-  pendingSpecIdsRef.current.push(pendingId);
+  if (!pendingSpecIdsRef.current.includes(pendingId)) {
+    pendingSpecIdsRef.current.push(pendingId);
+  }
 }
 
 function pushPendingTask(
@@ -106,14 +111,15 @@ function pushPendingTask(
 ) {
   const pendingId = `pending-${info.id}`;
   const now = new Date().toISOString();
+  const title = (info.input.title as string) || "Creating…";
   sidekick.pushTask({
     task_id: pendingId,
     project_id: projectId,
     spec_id: (info.input.spec_id as string) || "",
-    title: (info.input.title as string) || "Creating…",
+    title,
     description: (info.input.description as string) || "",
     status: "pending",
-    order_index: Date.now(),
+    order_index: orderIndexFromTitle(title) ?? Date.now(),
     dependency_ids: [],
     parent_task_id: null,
     assigned_agent_instance_id: null,
@@ -213,6 +219,7 @@ function buildStreamCallbacks(deps: CallbackDeps): ChatStreamCallbacks {
     onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
     onDelta: (text) => handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), text),
     onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
+    onToolCallSnapshot: (info) => handleToolCallSnapshot(refs, setters, info),
     ...buildToolCallbacks(deps),
     ...buildArtifactCallbacks(deps),
     onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),

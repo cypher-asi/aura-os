@@ -1,9 +1,9 @@
 mod fixtures;
 
 use aura_core::*;
-use aura_engine::*;
-use aura_engine::metrics::{TaskMetrics, LoopRunMetrics};
 use aura_engine::events::PhaseTimingEntry;
+use aura_engine::metrics::{LoopRunMetrics, TaskMetrics};
+use aura_engine::*;
 
 // ---------------------------------------------------------------------------
 // Event emission tests
@@ -87,14 +87,19 @@ fn loop_outcome_variants() {
 
 #[test]
 fn task_metrics_completed_builder() {
-    let m = TaskMetrics::completed("t1".into(), "Add feature".into(), 5000, Some("claude-opus-4-6".into()))
-        .with_tokens(1000, 500)
-        .with_files_changed(3)
-        .with_llm_duration(4500)
-        .with_build_verify_duration(300)
-        .with_file_ops_duration(200)
-        .with_parse_retries(1)
-        .with_build_fix_attempts(2);
+    let m = TaskMetrics::completed(
+        "t1".into(),
+        "Add feature".into(),
+        5000,
+        Some("claude-opus-4-6".into()),
+    )
+    .with_tokens(1000, 500)
+    .with_files_changed(3)
+    .with_llm_duration(4500)
+    .with_build_verify_duration(300)
+    .with_file_ops_duration(200)
+    .with_parse_retries(1)
+    .with_build_fix_attempts(2);
 
     assert_eq!(m.task_id, "t1");
     assert_eq!(m.title, "Add feature");
@@ -115,8 +120,12 @@ fn task_metrics_completed_builder() {
 #[test]
 fn task_metrics_failed_builder() {
     let m = TaskMetrics::failed(
-        "t2".into(), "Broken task".into(), 3000, None,
-        "build_verify", "compilation failed".into(),
+        "t2".into(),
+        "Broken task".into(),
+        3000,
+        None,
+        "build_verify",
+        "compilation failed".into(),
     )
     .with_tokens(800, 400);
 
@@ -130,23 +139,30 @@ fn task_metrics_failed_builder() {
 #[test]
 fn task_metrics_with_phase_timings() {
     let timings = vec![
-        PhaseTimingEntry { phase: "llm".into(), duration_ms: 2000 },
-        PhaseTimingEntry { phase: "build".into(), duration_ms: 1000 },
+        PhaseTimingEntry {
+            phase: "llm".into(),
+            duration_ms: 2000,
+        },
+        PhaseTimingEntry {
+            phase: "build".into(),
+            duration_ms: 1000,
+        },
     ];
-    let m = TaskMetrics::completed("t3".into(), "T".into(), 3000, None)
-        .with_phase_timings(timings);
+    let m = TaskMetrics::completed("t3".into(), "T".into(), 3000, None).with_phase_timings(timings);
     assert_eq!(m.phase_timings.len(), 2);
     assert_eq!(m.phase_timings[0].phase, "llm");
 }
 
 #[test]
 fn task_metrics_serializes_to_json() {
-    let m = TaskMetrics::completed("t1".into(), "T".into(), 1000, None)
-        .with_tokens(100, 50);
+    let m = TaskMetrics::completed("t1".into(), "T".into(), 1000, None).with_tokens(100, 50);
     let json = serde_json::to_string(&m).unwrap();
     assert!(json.contains("\"outcome\":\"completed\""));
     assert!(json.contains("\"input_tokens\":100"));
-    assert!(!json.contains("failure_phase"), "None fields should be skipped");
+    assert!(
+        !json.contains("failure_phase"),
+        "None fields should be skipped"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -166,10 +182,8 @@ fn loop_run_metrics_new_has_defaults() {
 #[test]
 fn loop_run_metrics_finalize_recomputes() {
     let mut m = LoopRunMetrics::new("proj-2".into());
-    m.tasks.push(
-        TaskMetrics::completed("t1".into(), "T1".into(), 1000, None)
-            .with_tokens(500, 200),
-    );
+    m.tasks
+        .push(TaskMetrics::completed("t1".into(), "T1".into(), 1000, None).with_tokens(500, 200));
     m.tasks.push(
         TaskMetrics::failed("t2".into(), "T2".into(), 2000, None, "exec", "err".into())
             .with_tokens(300, 100),
@@ -188,10 +202,8 @@ fn loop_run_metrics_finalize_recomputes() {
 #[test]
 fn loop_run_metrics_snapshot_sets_in_progress() {
     let mut m = LoopRunMetrics::new("proj-3".into());
-    m.tasks.push(
-        TaskMetrics::completed("t1".into(), "T1".into(), 500, None)
-            .with_tokens(100, 50),
-    );
+    m.tasks
+        .push(TaskMetrics::completed("t1".into(), "T1".into(), 500, None).with_tokens(100, 50));
     m.snapshot(1000, 1, 0, 0, &[]);
     assert_eq!(m.outcome, "in_progress");
     assert_eq!(m.tasks_completed, 1);
@@ -204,8 +216,8 @@ fn loop_run_metrics_snapshot_sets_in_progress() {
 #[test]
 fn write_and_read_single_task_metrics() {
     let dir = tempfile::tempdir().unwrap();
-    let task = TaskMetrics::completed("t1".into(), "Do thing".into(), 2000, None)
-        .with_tokens(200, 100);
+    let task =
+        TaskMetrics::completed("t1".into(), "Do thing".into(), 2000, None).with_tokens(200, 100);
 
     aura_engine::metrics::write_single_task_metrics(dir.path(), "proj-1", task, &[]);
 

@@ -41,14 +41,16 @@ async fn aggregate_storage_logs(
                         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
                         .map(|dt| dt.timestamp_millis())
                         .unwrap_or(0);
-                    let event = sl
-                        .metadata
-                        .clone()
-                        .unwrap_or_else(|| serde_json::json!({
+                    let event = sl.metadata.clone().unwrap_or_else(|| {
+                        serde_json::json!({
                             "type": "log_line",
                             "message": sl.message.clone().unwrap_or_default(),
-                        }));
-                    entries.push(PersistedLogEntry { timestamp_ms, event });
+                        })
+                    });
+                    entries.push(PersistedLogEntry {
+                        timestamp_ms,
+                        event,
+                    });
                 }
             }
             Err(e) => {

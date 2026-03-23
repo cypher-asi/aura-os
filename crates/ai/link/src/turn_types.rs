@@ -5,10 +5,9 @@ use std::time::Duration;
 
 use tokio::sync::mpsc;
 
-use aura_provider::{Message, ThinkingConfig, ToolDefinition};
-
 use crate::events::RuntimeEvent;
 use crate::executor::ToolExecutor;
+use crate::types::{Message, ThinkingConfig, ToolDefinition};
 
 /// Configuration for a single agent turn.
 pub struct TurnConfig {
@@ -28,6 +27,10 @@ pub struct TurnConfig {
     pub exploration_allowance: Option<usize>,
     /// Iterations between automatic build checks.
     pub auto_build_cooldown: Option<usize>,
+    /// Credit budget for the turn (None = unlimited).
+    pub credit_budget: Option<u64>,
+    /// Billing attribution reason (e.g. "aura_chat", "aura_task").
+    pub billing_reason: Option<String>,
 }
 
 /// A request to execute a single agent turn.
@@ -44,6 +47,9 @@ pub struct TurnRequest {
     pub config: TurnConfig,
     /// Optional channel for streaming runtime events.
     pub event_tx: Option<mpsc::UnboundedSender<RuntimeEvent>>,
+    /// Per-request JWT for proxy-mode auth. Takes priority over any
+    /// environment-level token configured on the runtime.
+    pub auth_token: Option<String>,
 }
 
 /// Aggregated token usage across all iterations of a turn.
@@ -56,6 +62,7 @@ pub struct TotalUsage {
 }
 
 /// The result of a completed agent turn.
+#[derive(Debug)]
 pub struct TurnResult {
     /// The final assistant text response.
     pub text: String,

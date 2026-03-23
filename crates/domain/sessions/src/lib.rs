@@ -6,11 +6,11 @@ use std::sync::Arc;
 use chrono::Utc;
 use tracing::warn;
 
-use aura_core::*;
-pub use aura_core::parse_dt;
-use aura_store::RocksStore;
-use aura_storage::StorageClient;
 use aura_claude::LlmProvider;
+pub use aura_core::parse_dt;
+use aura_core::*;
+use aura_storage::StorageClient;
+use aura_store::RocksStore;
 
 pub use aura_core::SESSION_SUMMARY_SYSTEM_PROMPT as SUMMARY_SYSTEM_PROMPT;
 
@@ -88,8 +88,7 @@ impl SessionService {
             let ss = storage
                 .create_session(&agent_instance_id.to_string(), &jwt, &req)
                 .await?;
-            let mut session = storage_session_to_session(ss, None)
-                .map_err(SessionError::Parse)?;
+            let mut session = storage_session_to_session(ss, None).map_err(SessionError::Parse)?;
             session.active_task_id = active_task_id;
             session.user_id = user_id;
             session.model = model;
@@ -132,10 +131,8 @@ impl SessionService {
         let mut session = self
             .get_session(project_id, agent_instance_id, session_id)
             .await?;
-        let turn_usage =
-            (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
-        session.context_usage_estimate =
-            (session.context_usage_estimate + turn_usage).min(1.0);
+        let turn_usage = (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
+        session.context_usage_estimate = (session.context_usage_estimate + turn_usage).min(1.0);
         session.total_input_tokens += input_tokens;
         session.total_output_tokens += output_tokens;
 
@@ -224,7 +221,9 @@ impl SessionService {
                 ended_at: Some(
                     session
                         .ended_at
-                        .ok_or(SessionError::Parse("ended_at missing on completed session".into()))?
+                        .ok_or(SessionError::Parse(
+                            "ended_at missing on completed session".into(),
+                        ))?
                         .to_rfc3339(),
                 ),
             };
@@ -245,8 +244,7 @@ impl SessionService {
             let jwt = self.get_jwt()?;
             match storage.get_session(&session_id.to_string(), &jwt).await {
                 Ok(ss) => {
-                    return storage_session_to_session(ss, None)
-                        .map_err(SessionError::Parse);
+                    return storage_session_to_session(ss, None).map_err(SessionError::Parse);
                 }
                 Err(aura_storage::StorageError::Server { status: 404, .. }) => {
                     return Err(SessionError::NotFound);
@@ -289,9 +287,7 @@ impl SessionService {
     ) -> Result<Session, SessionError> {
         if let Some(ref storage) = self.storage_client {
             let jwt = self.get_jwt()?;
-            let current = storage
-                .get_session(&session_id.to_string(), &jwt)
-                .await?;
+            let current = storage.get_session(&session_id.to_string(), &jwt).await?;
             let new_count = current.tasks_worked_count.unwrap_or(0) + 1;
             let req = aura_storage::UpdateSessionRequest {
                 status: None,
@@ -302,8 +298,8 @@ impl SessionService {
             storage
                 .update_session(&session_id.to_string(), &jwt, &req)
                 .await?;
-            let mut session = storage_session_to_session(current, None)
-                .map_err(SessionError::Parse)?;
+            let mut session =
+                storage_session_to_session(current, None).map_err(SessionError::Parse)?;
             session.tasks_worked.push(task_id);
             return Ok(session);
         }
@@ -346,9 +342,7 @@ impl SessionService {
                         tasks_worked_count: None,
                         ended_at: Some(now.to_rfc3339()),
                     };
-                    if let Err(e) =
-                        storage.update_session(&ss.id, &jwt, &req).await
-                    {
+                    if let Err(e) = storage.update_session(&ss.id, &jwt, &req).await {
                         warn!(session_id = %ss.id, error = %e, "failed to close stale session");
                         continue;
                     }
@@ -368,7 +362,10 @@ impl SessionService {
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<usize, SessionError> {
-        Ok(self.list_sessions(project_id, agent_instance_id).await?.len())
+        Ok(self
+            .list_sessions(project_id, agent_instance_id)
+            .await?
+            .len())
     }
 
     pub async fn generate_rollover_summary(
@@ -393,8 +390,8 @@ impl SessionService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use aura_claude::mock::{MockLlmProvider, MockResponse};
+    use std::sync::Arc;
 
     // -----------------------------------------------------------------------
     // SessionService pure-logic tests (no StorageClient or local persistence)
@@ -403,9 +400,8 @@ mod tests {
     #[tokio::test]
     async fn should_rollover_at_threshold() {
         let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-        let store = Arc::new(
-            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-        );
+        let store =
+            Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let below = Session {
@@ -442,9 +438,8 @@ mod tests {
     #[tokio::test]
     async fn create_session_returns_active_session() {
         let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-        let store = Arc::new(
-            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-        );
+        let store =
+            Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let pid = ProjectId::new();
@@ -467,17 +462,16 @@ mod tests {
 
     #[tokio::test]
     async fn generate_summary_returns_llm_text() {
-        let mock = Arc::new(MockLlmProvider::with_responses(vec![
-            MockResponse::text("The user discussed authentication and database setup.")
-                .with_tokens(200, 100),
-        ]));
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![MockResponse::text(
+            "The user discussed authentication and database setup.",
+        )
+        .with_tokens(200, 100)]));
 
         let (llm, _tmp_llm) = aura_billing::testutil::make_test_llm(mock.clone()).await;
 
         let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-        let store = Arc::new(
-            aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-        );
+        let store =
+            Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
         let svc = SessionService::new(store, 0.8, 150_000);
 
         let summary = svc
@@ -489,7 +483,10 @@ mod tests {
             .await
             .expect("summary generation should succeed");
 
-        assert_eq!(summary, "The user discussed authentication and database setup.");
+        assert_eq!(
+            summary,
+            "The user discussed authentication and database setup."
+        );
         assert_eq!(mock.call_count(), 1);
 
         let calls = mock.recorded_calls().await;

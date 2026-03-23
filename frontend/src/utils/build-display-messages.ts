@@ -5,12 +5,13 @@ import { buildTimelineFromBlocks } from "./build-timeline";
 
 export function buildDisplayMessages(msgs: Message[]): DisplayMessage[] {
   return msgs
-    .filter(
-      (m) =>
-        (m.content && m.content.trim().length > 0) ||
-        (m.content_blocks && m.content_blocks.length > 0) ||
-        m.thinking,
-    )
+    .filter((m) => {
+      if (m.content && m.content.trim().length > 0) return true;
+      if (m.content_blocks && m.content_blocks.length > 0) return true;
+      if (m.thinking) return true;
+      if (m.role === "assistant" && m.thinking_duration_ms) return true;
+      return false;
+    })
     .map((m) => {
       const allBlocks = m.content_blocks ?? [];
       const displayBlocks = allBlocks

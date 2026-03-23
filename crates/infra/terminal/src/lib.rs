@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::Mutex;
 
-use portable_pty::{CommandBuilder, MasterPty, PtySize, native_pty_system};
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -92,16 +92,37 @@ fn open_pty_session(
     rows: u16,
 ) -> Result<PtyComponents, String> {
     let pty_system = native_pty_system();
-    let size = PtySize { rows, cols, pixel_width: 0, pixel_height: 0 };
-    let pair = pty_system.openpty(size).map_err(|e| format!("Failed to open PTY: {e}"))?;
+    let size = PtySize {
+        rows,
+        cols,
+        pixel_width: 0,
+        pixel_height: 0,
+    };
+    let pair = pty_system
+        .openpty(size)
+        .map_err(|e| format!("Failed to open PTY: {e}"))?;
 
     let mut cmd = CommandBuilder::new(shell);
     cmd.cwd(working_dir);
     cmd.env("TERM", "xterm-256color");
-    let child = pair.slave.spawn_command(cmd).map_err(|e| format!("Failed to spawn shell: {e}"))?;
-    let reader = pair.master.try_clone_reader().map_err(|e| format!("Failed to clone PTY reader: {e}"))?;
-    let writer = pair.master.take_writer().map_err(|e| format!("Failed to take PTY writer: {e}"))?;
-    Ok(PtyComponents { child, master: pair.master, reader, writer })
+    let child = pair
+        .slave
+        .spawn_command(cmd)
+        .map_err(|e| format!("Failed to spawn shell: {e}"))?;
+    let reader = pair
+        .master
+        .try_clone_reader()
+        .map_err(|e| format!("Failed to clone PTY reader: {e}"))?;
+    let writer = pair
+        .master
+        .take_writer()
+        .map_err(|e| format!("Failed to take PTY writer: {e}"))?;
+    Ok(PtyComponents {
+        child,
+        master: pair.master,
+        reader,
+        writer,
+    })
 }
 
 impl TerminalManager {
@@ -111,27 +132,41 @@ impl TerminalManager {
         }
     }
 
-    pub fn spawn(
-        &self,
-        cols: u16,
-        rows: u16,
-        cwd: Option<String>,
-    ) -> Result<TerminalInfo, String> {
+    pub fn spawn(&self, cols: u16, rows: u16, cwd: Option<String>) -> Result<TerminalInfo, String> {
         let shell = default_shell();
         let working_dir = cwd.unwrap_or_else(default_cwd);
-        let PtyComponents { child, master, reader, writer } = open_pty_session(&shell, &working_dir, cols, rows)?;
+        let PtyComponents {
+            child,
+            master,
+            reader,
+            writer,
+        } = open_pty_session(&shell, &working_dir, cols, rows)?;
 
         let id = TerminalId::new();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        let terminal_info = TerminalInfo { id, shell: shell.clone(), cols, rows, cwd: working_dir, created_at: now };
+        let terminal_info = TerminalInfo {
+            id,
+            shell: shell.clone(),
+            cols,
+            rows,
+            cwd: working_dir,
+            created_at: now,
+        };
         let session = TerminalSession {
-            _child: child, master, writer, reader: Some(reader), info: terminal_info.clone(),
+            _child: child,
+            master,
+            writer,
+            reader: Some(reader),
+            info: terminal_info.clone(),
         };
 
-        self.sessions.lock().map_err(|e| format!("Lock poisoned: {e}"))?.insert(id, session);
+        self.sessions
+            .lock()
+            .map_err(|e| format!("Lock poisoned: {e}"))?
+            .insert(id, session);
         info!(%id, %shell, "Terminal session spawned");
         Ok(terminal_info)
     }
@@ -209,10 +244,7 @@ impl TerminalManager {
         }
     }
 
-    pub fn take_reader(
-        &self,
-        id: TerminalId,
-    ) -> Result<Box<dyn Read + Send>, String> {
+    pub fn take_reader(&self, id: TerminalId) -> Result<Box<dyn Read + Send>, String> {
         let mut sessions = self
             .sessions
             .lock()

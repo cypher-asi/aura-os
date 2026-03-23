@@ -110,7 +110,9 @@ pub async fn list_feed(
         .get_feed(query.filter.as_deref(), query.limit, query.offset, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(events.into_iter().map(FeedEventResponse::from).collect()))
+    Ok(Json(
+        events.into_iter().map(FeedEventResponse::from).collect(),
+    ))
 }
 
 pub async fn create_post(
@@ -120,7 +122,13 @@ pub async fn create_post(
     let client = state.require_network_client()?;
     let jwt = state.get_jwt()?;
     let post = client
-        .create_post(&req.title, req.summary.as_deref(), req.post_type.as_deref(), req.metadata.clone(), &jwt)
+        .create_post(
+            &req.title,
+            req.summary.as_deref(),
+            req.post_type.as_deref(),
+            req.metadata.clone(),
+            &jwt,
+        )
         .await
         .map_err(map_network_error)?;
     Ok((StatusCode::CREATED, Json(FeedEventResponse::from(post))))
@@ -149,7 +157,9 @@ pub async fn get_profile_posts(
         .get_profile_posts(&profile_id, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(posts.into_iter().map(FeedEventResponse::from).collect()))
+    Ok(Json(
+        posts.into_iter().map(FeedEventResponse::from).collect(),
+    ))
 }
 
 pub async fn list_comments(
@@ -162,7 +172,9 @@ pub async fn list_comments(
         .list_comments(&post_id, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(comments.into_iter().map(CommentResponse::from).collect()))
+    Ok(Json(
+        comments.into_iter().map(CommentResponse::from).collect(),
+    ))
 }
 
 pub async fn add_comment(

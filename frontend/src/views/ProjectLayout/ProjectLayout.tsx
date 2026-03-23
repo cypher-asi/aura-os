@@ -5,14 +5,16 @@ import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { EmptyState } from "../../components/EmptyState";
 import { Button } from "@cypher-asi/zui";
 import { ArrowLeft } from "lucide-react";
+import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { useProjectLayoutData } from "./useProjectLayoutData";
 import styles from "./ProjectLayout.module.css";
 
 export function ProjectLayout() {
   const navigate = useNavigate();
   const { displayProject, loading, projects } = useProjectLayoutData();
+  const showSpinner = useDelayedLoading(loading && !displayProject);
 
-  if (loading && !displayProject) {
+  if (showSpinner) {
     return (
       <EmptyState>
         <Loader2 size={20} className="spin" />

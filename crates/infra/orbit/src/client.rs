@@ -79,8 +79,8 @@ impl OrbitClient {
             });
         }
 
-        let repo_resp: OrbitRepoApiResponse =
-            serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
+        let repo_resp: OrbitRepoApiResponse = serde_json::from_str(&body_text)
+            .map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
         Ok(repo_resp.to_create_repo_response(base_url))
     }
 
@@ -90,7 +90,13 @@ impl OrbitClient {
         params: &CreateRepoInternalParams<'_>,
     ) -> Result<CreateRepoResponse, OrbitError> {
         let CreateRepoInternalParams {
-            base_url, internal_token, org_id, project_id, owner_id, repo, description,
+            base_url,
+            internal_token,
+            org_id,
+            project_id,
+            owner_id,
+            repo,
+            description,
         } = params;
         let url = format!("{}/internal/repos", base_url.trim_end_matches('/'));
         debug!(%url, org_id, project_id, owner_id, repo, "Orbit create_repo_internal");
@@ -122,8 +128,8 @@ impl OrbitClient {
             });
         }
 
-        let repo_resp: OrbitRepoApiResponse =
-            serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
+        let repo_resp: OrbitRepoApiResponse = serde_json::from_str(&body_text)
+            .map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
         Ok(repo_resp.to_create_repo_response(base_url))
     }
 
@@ -251,7 +257,10 @@ impl OrbitClient {
     ) -> Result<Vec<OrbitRepo>, OrbitError> {
         let base = base_url.trim_end_matches('/');
         let url = format!("{}/repos", base);
-        let mut req = self.http.get(&url).header("Authorization", format!("Bearer {}", jwt));
+        let mut req = self
+            .http
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", jwt));
         if let Some(q) = q {
             if !q.is_empty() {
                 req = req.query(&[("q", q)]);
@@ -271,9 +280,12 @@ impl OrbitClient {
             });
         }
 
-        let repos: Vec<OrbitRepoApiResponse> =
-            serde_json::from_str(&body_text).map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
-        Ok(repos.into_iter().map(|repo| repo.to_orbit_repo(base)).collect())
+        let repos: Vec<OrbitRepoApiResponse> = serde_json::from_str(&body_text)
+            .map_err(|e| OrbitError::InvalidResponse(e.to_string()))?;
+        Ok(repos
+            .into_iter()
+            .map(|repo| repo.to_orbit_repo(base))
+            .collect())
     }
 }
 

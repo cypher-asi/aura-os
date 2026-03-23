@@ -7,29 +7,30 @@ use axum::http::StatusCode;
 use axum::Json;
 use tokio::sync::{broadcast, mpsc, Mutex};
 
+pub use aura_agents::RuntimeAgentStateMap;
+use aura_agents::{AgentInstanceService, AgentService};
+use aura_auth::AuthService;
+use aura_billing::{BillingClient, MeteredLlm, PricingService};
+use aura_chat::ChatService;
 use aura_core::{AgentInstanceId, ProjectId, TaskId, ZeroAuthSession};
 use aura_engine::{DevLoopEngine, EngineEvent, LoopHandle, ProjectWriteCoordinator};
 use aura_network::NetworkClient;
 use aura_orbit::OrbitClient;
-use aura_storage::StorageClient;
-use aura_terminal::TerminalManager;
-use aura_agents::{AgentService, AgentInstanceService};
-pub use aura_agents::RuntimeAgentStateMap;
-use aura_auth::AuthService;
-use aura_chat::ChatService;
 use aura_orgs::OrgService;
-use aura_billing::{BillingClient, MeteredLlm, PricingService};
 use aura_projects::ProjectService;
 use aura_sessions::SessionService;
-use aura_specs::SpecGenerationService;
-use aura_tasks::{TaskExtractionService, TaskService};
 use aura_settings::SettingsService;
+use aura_specs::SpecGenerationService;
+use aura_storage::StorageClient;
 use aura_store::RocksStore;
+use aura_tasks::{TaskExtractionService, TaskService};
+use aura_terminal::TerminalManager;
 
 use crate::error::ApiError;
 
 pub type TaskOutputBuffers = Arc<std::sync::Mutex<HashMap<TaskId, String>>>;
-pub type TaskStepBuffers = Arc<std::sync::Mutex<HashMap<TaskId, (Vec<serde_json::Value>, Vec<serde_json::Value>)>>>;
+pub type TaskStepBuffers =
+    Arc<std::sync::Mutex<HashMap<TaskId, (Vec<serde_json::Value>, Vec<serde_json::Value>)>>>;
 
 /// Tracks all active agent loops across projects.
 pub type LoopRegistry = Arc<Mutex<HashMap<AgentInstanceId, LoopHandle>>>;
@@ -78,6 +79,8 @@ pub struct AppState {
     pub agent_message_cache: AgentMessageCache,
     /// When true, non-Pro users are blocked from API access.
     pub require_zero_pro: bool,
+    /// Provider-agnostic agent runtime for executing agentic turns.
+    pub runtime: Arc<dyn aura_link::AgentRuntime>,
 }
 
 impl AppState {
@@ -104,14 +107,18 @@ impl AppState {
     }
 
     /// Get the network client, returning 503 if not configured.
-    pub fn require_network_client(&self) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
+    pub fn require_network_client(
+        &self,
+    ) -> Result<&Arc<NetworkClient>, (StatusCode, Json<ApiError>)> {
         self.network_client
             .as_ref()
             .ok_or_else(|| ApiError::service_unavailable("aura-network is not configured"))
     }
 
     /// Get the storage client, returning 503 if not configured.
-    pub fn require_storage_client(&self) -> Result<&Arc<StorageClient>, (StatusCode, Json<ApiError>)> {
+    pub fn require_storage_client(
+        &self,
+    ) -> Result<&Arc<StorageClient>, (StatusCode, Json<ApiError>)> {
         self.storage_client
             .as_ref()
             .ok_or_else(|| ApiError::service_unavailable("aura-storage is not configured"))
@@ -129,6 +136,7 @@ impl AppState {
                 self.agent_instance_service.clone(),
                 self.session_service.clone(),
                 self.event_tx.clone(),
+                self.runtime.clone(),
             )
             .with_write_coordinator(self.write_coordinator.clone())
             .with_storage_client(self.storage_client.clone())

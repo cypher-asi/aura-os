@@ -10,11 +10,8 @@ impl NetworkClient {
     }
 
     pub async fn get_user(&self, user_id: &str, jwt: &str) -> Result<NetworkUser, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/users/{}", self.base_url, user_id),
-            jwt,
-        )
-        .await
+        self.get_authed(&format!("{}/api/users/{}", self.base_url, user_id), jwt)
+            .await
     }
 
     pub async fn update_current_user(

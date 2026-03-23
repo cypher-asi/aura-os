@@ -15,9 +15,7 @@ use common::*;
 #[tokio::test]
 async fn should_rollover_respects_threshold() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     let svc = SessionService::new(store, 0.5, 200_000);
 
     let base = Session::dummy(ProjectId::new());
@@ -26,7 +24,10 @@ async fn should_rollover_respects_threshold() {
         context_usage_estimate: 0.49,
         ..base.clone()
     };
-    assert!(!svc.should_rollover(&below), "below threshold should not trigger");
+    assert!(
+        !svc.should_rollover(&below),
+        "below threshold should not trigger"
+    );
 
     let at = Session {
         context_usage_estimate: 0.5,
@@ -38,15 +39,16 @@ async fn should_rollover_respects_threshold() {
         context_usage_estimate: 0.9,
         ..base.clone()
     };
-    assert!(svc.should_rollover(&above), "above threshold should trigger");
+    assert!(
+        svc.should_rollover(&above),
+        "above threshold should trigger"
+    );
 }
 
 #[tokio::test]
 async fn should_rollover_triggers_on_max_tasks() {
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     let svc = SessionService::new(store, 0.99, 200_000);
 
     let base = Session::dummy(ProjectId::new());
@@ -56,7 +58,10 @@ async fn should_rollover_triggers_on_max_tasks() {
         context_usage_estimate: 0.1,
         ..base.clone()
     };
-    assert!(!svc.should_rollover(&seven_tasks), "7 tasks should not trigger");
+    assert!(
+        !svc.should_rollover(&seven_tasks),
+        "7 tasks should not trigger"
+    );
 
     let eight_tasks = Session {
         tasks_worked: (0..8).map(|_| TaskId::new()).collect(),
@@ -70,9 +75,7 @@ async fn should_rollover_triggers_on_max_tasks() {
 async fn rollover_session_marks_old_and_creates_new() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.5);
@@ -113,16 +116,17 @@ async fn rollover_session_marks_old_and_creates_new() {
         .find(|s| s.id == original.session_id.to_string())
         .expect("old session should exist in storage");
     assert_eq!(old.status.as_deref(), Some("rolled_over"));
-    assert!(old.ended_at.is_some(), "old session should have ended_at set");
+    assert!(
+        old.ended_at.is_some(),
+        "old session should have ended_at set"
+    );
 }
 
 #[tokio::test]
 async fn rollover_chain_creates_linked_sessions() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.3);
@@ -167,9 +171,7 @@ async fn rollover_chain_creates_linked_sessions() {
 async fn update_context_usage_accumulates() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.8);
@@ -213,9 +215,7 @@ async fn update_context_usage_accumulates() {
 async fn context_usage_caps_at_one() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.8);
@@ -244,9 +244,7 @@ async fn context_usage_caps_at_one() {
 async fn end_to_end_usage_triggers_rollover() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let threshold = 0.5;
@@ -302,7 +300,10 @@ async fn end_to_end_usage_triggers_rollover() {
 
     assert_eq!(new_session.status, SessionStatus::Active);
     assert_eq!(new_session.context_usage_estimate, 0.0);
-    assert_eq!(new_session.summary_of_previous_context, "Completed auth module");
+    assert_eq!(
+        new_session.summary_of_previous_context,
+        "Completed auth module"
+    );
 
     let sessions = db.lock().await;
     assert_eq!(sessions.len(), 2);
@@ -318,9 +319,7 @@ async fn end_to_end_usage_triggers_rollover() {
 async fn record_task_worked_persists_count() {
     let (storage_url, db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.99);
@@ -357,9 +356,7 @@ async fn record_task_worked_persists_count() {
 async fn tasks_worked_count_survives_reload_from_storage() {
     let (storage_url, _db) = start_mock_storage().await;
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     store_test_jwt(&store);
 
     let svc = make_session_service(&store, &storage_url, 0.99);
@@ -392,17 +389,15 @@ async fn tasks_worked_count_survives_reload_from_storage() {
 
 #[tokio::test]
 async fn generate_rollover_summary_calls_llm() {
-    let mock = Arc::new(MockLlmProvider::with_responses(vec![
-        MockResponse::text("Implemented user auth with JWT tokens and session management.")
-            .with_tokens(200, 80),
-    ]));
+    let mock = Arc::new(MockLlmProvider::with_responses(vec![MockResponse::text(
+        "Implemented user auth with JWT tokens and session management.",
+    )
+    .with_tokens(200, 80)]));
 
     let (llm, _tmp_llm) = aura_billing::testutil::make_test_llm(mock.clone()).await;
 
     let tmp = tempfile::TempDir::new().expect("temp dir should be created");
-    let store = Arc::new(
-        aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"),
-    );
+    let store = Arc::new(aura_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
     let svc = SessionService::new(store, 0.5, 200_000);
 
     let summary = svc

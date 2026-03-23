@@ -11,7 +11,8 @@ impl RocksStore {
     }
 
     pub fn put_setting(&self, key: &str, value: &[u8]) -> StoreResult<()> {
-        self.db.put_cf(&self.cf_settings()?, key.as_bytes(), value)?;
+        self.db
+            .put_cf(&self.cf_settings()?, key.as_bytes(), value)?;
         Ok(())
     }
 
@@ -29,7 +30,9 @@ impl RocksStore {
     }
 
     pub fn list_settings_with_prefix(&self, prefix: &str) -> StoreResult<Vec<(String, Vec<u8>)>> {
-        let iter = self.db.prefix_iterator_cf(&self.cf_settings()?, prefix.as_bytes());
+        let iter = self
+            .db
+            .prefix_iterator_cf(&self.cf_settings()?, prefix.as_bytes());
         let mut values = Vec::new();
         for item in iter {
             let (key, value) = item?;

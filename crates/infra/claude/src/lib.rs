@@ -23,19 +23,20 @@ use async_trait::async_trait;
 use tokio::sync::mpsc;
 use tracing::{error, info};
 
-use types::{
-    SimpleMessage, SimpleMessagesRequest, ToolMessagesRequest,
-    MessagesResponse,
-};
+use types::{MessagesResponse, SimpleMessage, SimpleMessagesRequest, ToolMessagesRequest};
 
 pub(crate) const ANTHROPIC_API_VERSION: &str = "2023-06-01";
 pub(crate) const ANTHROPIC_BETA: &str = "prompt-caching-2024-07-31";
 pub const DEFAULT_MODEL: &str = "claude-opus-4-6";
 pub const FAST_MODEL: &str = "claude-haiku-4-5-20251001";
-pub const MID_MODEL: &str = "claude-opus-4-6";
+pub const MID_MODEL: &str = "claude-sonnet-4-5";
 
 /// Ordered fallback chain: when the primary model is overloaded, try these in order.
-pub(crate) const FALLBACK_MODELS: &[&str] = &["claude-opus-4-6", "claude-sonnet-4-5", "claude-haiku-4-5-20251001"];
+pub(crate) const FALLBACK_MODELS: &[&str] = &[
+    "claude-opus-4-6",
+    "claude-sonnet-4-5",
+    "claude-haiku-4-5-20251001",
+];
 
 /// Resolve the model to use at startup: AURA_LLM_MODEL env var, then DEFAULT_MODEL.
 pub fn resolve_model() -> String {
@@ -70,7 +71,10 @@ fn build_http_client() -> reqwest::Client {
 impl ClaudeClient {
     pub fn new() -> Self {
         let model = resolve_model();
-        let (base_url, auth_mode) = match std::env::var("AURA_ROUTER_URL").ok().filter(|s| !s.is_empty()) {
+        let (base_url, auth_mode) = match std::env::var("AURA_ROUTER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+        {
             Some(url) => {
                 info!(router_url = %url, "Router mode enabled");
                 (url, AuthMode::Bearer)
@@ -87,7 +91,10 @@ impl ClaudeClient {
     }
 
     pub fn with_model(model: &str) -> Self {
-        let (base_url, auth_mode) = match std::env::var("AURA_ROUTER_URL").ok().filter(|s| !s.is_empty()) {
+        let (base_url, auth_mode) = match std::env::var("AURA_ROUTER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+        {
             Some(url) => (url, AuthMode::Bearer),
             None => ("https://api.anthropic.com".to_string(), AuthMode::ApiKey),
         };
@@ -140,7 +147,14 @@ impl ClaudeClient {
         user_message: &str,
         max_tokens: u32,
     ) -> Result<LlmResponse, ClaudeClientError> {
-        self.complete_with_usage_model(&self.model, api_key, system_prompt, user_message, max_tokens).await
+        self.complete_with_usage_model(
+            &self.model,
+            api_key,
+            system_prompt,
+            user_message,
+            max_tokens,
+        )
+        .await
     }
 
     pub async fn complete_with_usage_model(
@@ -155,13 +169,18 @@ impl ClaudeClient {
             model: model.to_string(),
             max_tokens,
             system: serde_json::Value::String(system_prompt.to_string()),
-            messages: vec![SimpleMessage { role: "user".to_string(), content: user_message.to_string() }],
+            messages: vec![SimpleMessage {
+                role: "user".to_string(),
+                content: user_message.to_string(),
+            }],
             stream: None,
         };
 
         let url = format!("{}/v1/messages", self.base_url);
         info!(model, max_tokens, user_msg_len = user_message.len(), url = %url, "Sending Claude API request");
-        let response = self.complete_non_stream_with_retry(api_key, &url, &request).await?;
+        let response = self
+            .complete_non_stream_with_retry(api_key, &url, &request)
+            .await?;
         parse_messages_response(response, max_tokens).await
     }
 
@@ -173,9 +192,7 @@ impl ClaudeClient {
         max_tokens: u32,
         event_tx: mpsc::UnboundedSender<ClaudeStreamEvent>,
     ) -> Result<String, ClaudeClientError> {
-        let messages = vec![
-            ("user".to_string(), user_message.to_string()),
-        ];
+        let messages = vec![("user".to_string(), user_message.to_string())];
         self.complete_stream_multi(api_key, system_prompt, messages, max_tokens, event_tx)
             .await
     }
@@ -230,10 +247,11 @@ impl ClaudeClient {
             "Sending multi-turn streaming Claude API request"
         );
 
-        let body = serde_json::to_value(&request).map_err(|e| {
-            ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
-        })?;
-        let result = self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await?;
+        let body = serde_json::to_value(&request)
+            .map_err(|e| ClaudeClientError::Parse(format!("Failed to serialize request: {e}")))?;
+        let result = self
+            .stream_with_retry_and_fallback(api_key, &url, body, &event_tx)
+            .await?;
 
         if result.stop_reason == "max_tokens" {
             error!(max_tokens, "Claude multi-turn streaming response truncated");
@@ -242,12 +260,13 @@ impl ClaudeClient {
 
         if result.text.is_empty() && result.tool_calls.is_empty() {
             error!("Claude multi-turn streaming returned empty content");
-            return Err(ClaudeClientError::Parse("no text content in streaming response".into()));
+            return Err(ClaudeClientError::Parse(
+                "no text content in streaming response".into(),
+            ));
         }
 
         Ok(result.text)
     }
-
 }
 
 async fn parse_messages_response(
@@ -262,19 +281,76 @@ async fn parse_messages_response(
     let stop_reason = body.stop_reason.as_deref().unwrap_or("unknown");
     info!(stop_reason, "Claude stop_reason");
     if stop_reason == "max_tokens" {
-        error!(max_tokens, "Claude response truncated — hit max_tokens limit");
+        error!(
+            max_tokens,
+            "Claude response truncated — hit max_tokens limit"
+        );
         return Err(ClaudeClientError::Truncated { max_tokens });
     }
 
     let usage = body.usage.unwrap_or_default();
-    let text: String = body.content.into_iter().filter_map(|block| block.text).collect::<Vec<_>>().join("");
+    let text: String = body
+        .content
+        .into_iter()
+        .filter_map(|block| block.text)
+        .collect::<Vec<_>>()
+        .join("");
     if text.is_empty() {
         error!("Claude returned empty text content");
-        return Err(ClaudeClientError::Parse("no text content in response".into()));
+        return Err(ClaudeClientError::Parse(
+            "no text content in response".into(),
+        ));
     }
 
-    tracing::debug!(response_len = text.len(), input_tokens = usage.input_tokens, output_tokens = usage.output_tokens, "Claude response text extracted");
-    Ok(LlmResponse { text, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens })
+    tracing::debug!(
+        response_len = text.len(),
+        input_tokens = usage.input_tokens,
+        output_tokens = usage.output_tokens,
+        "Claude response text extracted"
+    );
+    Ok(LlmResponse {
+        text,
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+    })
+}
+
+/// Place a rolling `cache_control: ephemeral` breakpoint on the last user
+/// message's last content block.  This lets Anthropic cache the entire prefix
+/// (system + tools + all messages up to this point) between iterations,
+/// reducing input-token cost by 50-80% on subsequent calls.
+fn inject_message_cache_breakpoint(body: &mut serde_json::Value) {
+    let Some(messages) = body.get_mut("messages").and_then(|m| m.as_array_mut()) else {
+        return;
+    };
+    for msg in messages.iter_mut().rev() {
+        if msg.get("role").and_then(|r| r.as_str()) != Some("user") {
+            continue;
+        }
+        let Some(content) = msg.get_mut("content") else {
+            continue;
+        };
+        if content.is_array() {
+            if let Some(last_block) = content.as_array_mut().and_then(|a| a.last_mut()) {
+                if let Some(obj) = last_block.as_object_mut() {
+                    obj.insert(
+                        "cache_control".into(),
+                        serde_json::json!({"type": "ephemeral"}),
+                    );
+                }
+            }
+            return;
+        }
+        if content.is_string() {
+            let text = content.as_str().unwrap_or("").to_string();
+            *content = serde_json::json!([{
+                "type": "text",
+                "text": text,
+                "cache_control": {"type": "ephemeral"}
+            }]);
+            return;
+        }
+    }
 }
 
 fn cached_system_blocks(text: &str) -> serde_json::Value {
@@ -316,8 +392,15 @@ impl LlmProvider for ClaudeClient {
         max_tokens: u32,
         event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
     ) -> Result<String, ClaudeClientError> {
-        ClaudeClient::complete_stream(self, api_key, system_prompt, user_message, max_tokens, event_tx)
-            .await
+        ClaudeClient::complete_stream(
+            self,
+            api_key,
+            system_prompt,
+            user_message,
+            max_tokens,
+            event_tx,
+        )
+        .await
     }
 
     async fn complete_stream_multi(
@@ -328,8 +411,15 @@ impl LlmProvider for ClaudeClient {
         max_tokens: u32,
         event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
     ) -> Result<String, ClaudeClientError> {
-        ClaudeClient::complete_stream_multi(self, api_key, system_prompt, messages, max_tokens, event_tx)
-            .await
+        ClaudeClient::complete_stream_multi(
+            self,
+            api_key,
+            system_prompt,
+            messages,
+            max_tokens,
+            event_tx,
+        )
+        .await
     }
 
     async fn complete_stream_with_tools(
@@ -337,8 +427,14 @@ impl LlmProvider for ClaudeClient {
         req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
         let ToolStreamRequest {
-            api_key, system_prompt, messages, mut tools,
-            max_tokens, thinking, event_tx, model_override,
+            api_key,
+            system_prompt,
+            messages,
+            mut tools,
+            max_tokens,
+            thinking,
+            event_tx,
+            model_override,
         } = req;
         let msg_count = messages.len();
         let tool_count = tools.len();
@@ -368,10 +464,11 @@ impl LlmProvider for ClaudeClient {
             "Sending tool-use streaming Claude API request"
         );
 
-        let body = serde_json::to_value(&request).map_err(|e| {
-            ClaudeClientError::Parse(format!("Failed to serialize request: {e}"))
-        })?;
-        self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx).await
+        let mut body = serde_json::to_value(&request)
+            .map_err(|e| ClaudeClientError::Parse(format!("Failed to serialize request: {e}")))?;
+        inject_message_cache_breakpoint(&mut body);
+        self.stream_with_retry_and_fallback(api_key, &url, body, &event_tx)
+            .await
     }
 
     async fn complete_with_model(

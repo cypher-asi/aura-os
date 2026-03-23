@@ -32,17 +32,10 @@ impl StorageClient {
         .await
     }
 
-    pub async fn get_task(
-        &self,
-        task_id: &str,
-        jwt: &str,
-    ) -> Result<StorageTask, StorageError> {
+    pub async fn get_task(&self, task_id: &str, jwt: &str) -> Result<StorageTask, StorageError> {
         validate_url_id(task_id, "task_id")?;
-        self.get_authed(
-            &format!("{}/api/tasks/{}", self.base_url, task_id),
-            jwt,
-        )
-        .await
+        self.get_authed(&format!("{}/api/tasks/{}", self.base_url, task_id), jwt)
+            .await
     }
 
     pub async fn update_task(
@@ -86,16 +79,9 @@ impl StorageClient {
         Ok(())
     }
 
-    pub async fn delete_task(
-        &self,
-        task_id: &str,
-        jwt: &str,
-    ) -> Result<(), StorageError> {
+    pub async fn delete_task(&self, task_id: &str, jwt: &str) -> Result<(), StorageError> {
         validate_url_id(task_id, "task_id")?;
-        self.delete_authed(
-            &format!("{}/api/tasks/{}", self.base_url, task_id),
-            jwt,
-        )
-        .await
+        self.delete_authed(&format!("{}/api/tasks/{}", self.base_url, task_id), jwt)
+            .await
     }
 }

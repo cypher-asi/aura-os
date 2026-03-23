@@ -1,11 +1,11 @@
-use tokio::sync::mpsc;
-use tracing::{error, info};
-use aura_core::*;
-use aura_billing::MeteredCompletionRequest;
+use super::chat_streaming::ChatLoopContext;
 use crate::channel_ext::send_or_log;
 use crate::chat::{ChatService, ChatStreamEvent};
 use crate::chat_event_forwarding::extract_user_text;
-use super::chat_streaming::ChatLoopContext;
+use aura_billing::MeteredCompletionRequest;
+use aura_core::*;
+use tokio::sync::mpsc;
+use tracing::{error, info};
 
 impl ChatService {
     pub(crate) async fn maybe_generate_attachment_overview(
@@ -30,7 +30,10 @@ impl ChatService {
             return;
         }
 
-        send_or_log(tx, ChatStreamEvent::Progress("Analyzing attachments...".to_string()));
+        send_or_log(
+            tx,
+            ChatStreamEvent::Progress("Analyzing attachments...".to_string()),
+        );
 
         let requirements_content = extract_user_text(stored_messages);
         if requirements_content.is_empty() {
@@ -38,7 +41,11 @@ impl ChatService {
         }
 
         info!(%project_id, len = requirements_content.len(), "Generating project overview from attachments");
-        match self.spec_gen.generate_project_overview(project_id, &requirements_content).await {
+        match self
+            .spec_gen
+            .generate_project_overview(project_id, &requirements_content)
+            .await
+        {
             Ok((title, summary)) => {
                 info!(%project_id, %title, "Project overview generated");
                 send_or_log(tx, ChatStreamEvent::SpecsTitle(title));
@@ -46,9 +53,10 @@ impl ChatService {
             }
             Err(e) => {
                 error!(%project_id, error = %e, "Failed to generate project overview");
-                send_or_log(tx, ChatStreamEvent::Error(
-                    format!("Failed to generate project overview: {e}"),
-                ));
+                send_or_log(
+                    tx,
+                    ChatStreamEvent::Error(format!("Failed to generate project overview: {e}")),
+                );
             }
         }
     }
@@ -62,7 +70,8 @@ impl ChatService {
             return;
         }
 
-        let first_user_msg = ctx.stored_messages
+        let first_user_msg = ctx
+            .stored_messages
             .iter()
             .find(|m| m.role == ChatRole::User)
             .map(|m| m.content.as_str())
@@ -78,10 +87,13 @@ impl ChatService {
         match self
             .llm
             .complete(MeteredCompletionRequest {
-                model: Some(aura_claude::FAST_MODEL), api_key: ctx.api_key,
+                model: Some(aura_claude::FAST_MODEL),
+                api_key: ctx.api_key,
                 system_prompt: TITLE_GEN_SYSTEM_PROMPT,
-                user_message: &title_prompt, max_tokens: 30,
-                billing_reason: "aura_title_gen", metadata: None,
+                user_message: &title_prompt,
+                max_tokens: 30,
+                billing_reason: "aura_title_gen",
+                metadata: None,
             })
             .await
         {

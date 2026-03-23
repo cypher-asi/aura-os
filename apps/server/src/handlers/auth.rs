@@ -14,20 +14,22 @@ use crate::state::AppState;
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
     match &e {
-        AuthError::ZosApi { status, code, message } if *status == 401 || code == "INVALID_EMAIL_PASSWORD" => {
+        AuthError::ZosApi {
+            status,
+            code,
+            message,
+        } if *status == 401 || code == "INVALID_EMAIL_PASSWORD" => {
             ApiError::unauthorized(if message.is_empty() {
                 "Invalid email or password".to_string()
             } else {
                 message.clone()
             })
         }
-        AuthError::ZosApi { message, .. } => {
-            ApiError::bad_request(if message.is_empty() {
-                "Authentication request failed".to_string()
-            } else {
-                message.clone()
-            })
-        }
+        AuthError::ZosApi { message, .. } => ApiError::bad_request(if message.is_empty() {
+            "Authentication request failed".to_string()
+        } else {
+            message.clone()
+        }),
         _ => ApiError::internal(e.to_string()),
     }
 }
@@ -62,9 +64,7 @@ pub async fn register(
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn get_session(
-    State(state): State<AppState>,
-) -> ApiResult<Json<AuthSessionResponse>> {
+pub async fn get_session(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
     let session = state
         .auth_service
         .get_session()
@@ -74,9 +74,7 @@ pub async fn get_session(
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub async fn validate(
-    State(state): State<AppState>,
-) -> ApiResult<Json<AuthSessionResponse>> {
+pub async fn validate(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
     let mut session = state
         .auth_service
         .validate()
@@ -90,11 +88,7 @@ pub async fn validate(
 }
 
 pub async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
-    state
-        .auth_service
-        .logout()
-        .await
-        .map_err(map_auth_error)?;
+    state.auth_service.logout().await.map_err(map_auth_error)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -132,9 +126,7 @@ pub struct JwtIssuerResponse {
 /// GET /api/auth/jwt-issuer — return the issuer and suggested JWKS URL from the current
 /// session's JWT. Used to configure Orbit's TRUSTED_JWT_* without pasting the token into jwt.io.
 /// Returns only public claims (iss); the token itself is never sent.
-pub async fn get_jwt_issuer(
-    State(state): State<AppState>,
-) -> ApiResult<Json<JwtIssuerResponse>> {
+pub async fn get_jwt_issuer(State(state): State<AppState>) -> ApiResult<Json<JwtIssuerResponse>> {
     let bytes = state
         .store
         .get_setting("zero_auth_session")
@@ -143,7 +135,9 @@ pub async fn get_jwt_issuer(
         serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
     let token = session.access_token.trim();
     let parts: Vec<&str> = token.split('.').collect();
-    let payload_b64 = parts.get(1).ok_or_else(|| ApiError::bad_request("invalid token format".to_string()))?;
+    let payload_b64 = parts
+        .get(1)
+        .ok_or_else(|| ApiError::bad_request("invalid token format".to_string()))?;
     let payload_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(payload_b64.as_bytes())
         .map_err(|_| ApiError::bad_request("invalid token payload".to_string()))?;
@@ -158,8 +152,5 @@ pub async fn get_jwt_issuer(
     } else {
         format!("{}/.well-known/jwks.json", iss)
     };
-    Ok(Json(JwtIssuerResponse {
-        iss,
-        jwks_url,
-    }))
+    Ok(Json(JwtIssuerResponse { iss, jwks_url }))
 }

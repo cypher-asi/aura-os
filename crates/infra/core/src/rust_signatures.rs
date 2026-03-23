@@ -4,14 +4,30 @@ pub fn looks_like_rust(content: &str) -> bool {
     let start = &content[..content.len().min(2000)];
     let mut signals = 0u32;
 
-    if start.contains("use ") || start.contains("pub use ") { signals += 1; }
-    if start.contains("pub fn ") || start.contains("fn ") { signals += 1; }
-    if start.contains("pub struct ") || start.contains("struct ") { signals += 1; }
-    if start.contains("impl ") { signals += 1; }
-    if start.contains("pub mod ") || start.contains("mod ") { signals += 1; }
-    if start.contains("pub enum ") || start.contains("enum ") { signals += 1; }
-    if start.contains("pub trait ") || start.contains("trait ") { signals += 1; }
-    if start.contains("-> Result<") || start.contains("-> Option<") { signals += 1; }
+    if start.contains("use ") || start.contains("pub use ") {
+        signals += 1;
+    }
+    if start.contains("pub fn ") || start.contains("fn ") {
+        signals += 1;
+    }
+    if start.contains("pub struct ") || start.contains("struct ") {
+        signals += 1;
+    }
+    if start.contains("impl ") {
+        signals += 1;
+    }
+    if start.contains("pub mod ") || start.contains("mod ") {
+        signals += 1;
+    }
+    if start.contains("pub enum ") || start.contains("enum ") {
+        signals += 1;
+    }
+    if start.contains("pub trait ") || start.contains("trait ") {
+        signals += 1;
+    }
+    if start.contains("-> Result<") || start.contains("-> Option<") {
+        signals += 1;
+    }
 
     signals >= 3
 }
@@ -138,7 +154,10 @@ fn extract_braced_block(lines: &[&str], start: usize) -> (String, usize) {
     for (j, line) in lines.iter().enumerate().skip(start) {
         for ch in line.chars() {
             match ch {
-                '{' => { depth += 1; started = true; }
+                '{' => {
+                    depth += 1;
+                    started = true;
+                }
                 '}' => depth -= 1,
                 _ => {}
             }
@@ -179,7 +198,10 @@ fn impl_has_pub_methods(lines: &[&str], start: usize, is_trait_impl: bool) -> bo
 
         for ch in trimmed.chars() {
             match ch {
-                '{' => { depth += 1; started = true; }
+                '{' => {
+                    depth += 1;
+                    started = true;
+                }
                 '}' => depth -= 1,
                 _ => {}
             }
@@ -188,8 +210,12 @@ fn impl_has_pub_methods(lines: &[&str], start: usize, is_trait_impl: bool) -> bo
         if in_fn_body {
             fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
             fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 { in_fn_body = false; }
-            if started && depth <= 0 { break; }
+            if fn_body_depth <= 0 {
+                in_fn_body = false;
+            }
+            if started && depth <= 0 {
+                break;
+            }
             continue;
         }
 
@@ -202,12 +228,16 @@ fn impl_has_pub_methods(lines: &[&str], start: usize, is_trait_impl: bool) -> bo
                 if trimmed.contains('{') {
                     fn_body_depth = trimmed.chars().filter(|&c| c == '{').count() as i32
                         - trimmed.chars().filter(|&c| c == '}').count() as i32;
-                    if fn_body_depth > 0 { in_fn_body = true; }
+                    if fn_body_depth > 0 {
+                        in_fn_body = true;
+                    }
                 }
             }
         }
 
-        if started && depth <= 0 { break; }
+        if started && depth <= 0 {
+            break;
+        }
     }
     false
 }
@@ -263,7 +293,10 @@ fn extract_method_signatures(
 
         for ch in trimmed.chars() {
             match ch {
-                '{' => { depth += 1; started = true; }
+                '{' => {
+                    depth += 1;
+                    started = true;
+                }
                 '}' => depth -= 1,
                 _ => {}
             }
@@ -272,7 +305,9 @@ fn extract_method_signatures(
         if in_fn_body {
             fn_body_depth += trimmed.chars().filter(|&c| c == '{').count() as i32;
             fn_body_depth -= trimmed.chars().filter(|&c| c == '}').count() as i32;
-            if fn_body_depth <= 0 { in_fn_body = false; }
+            if fn_body_depth <= 0 {
+                in_fn_body = false;
+            }
             if started && depth <= 0 {
                 result.push_str("}\n");
                 return (result, j);
@@ -287,12 +322,17 @@ fn extract_method_signatures(
                 in_fn_body = true;
                 fn_body_depth = body_depth;
             }
-            if started && depth <= 0 { return (result, j); }
+            if started && depth <= 0 {
+                return (result, j);
+            }
             continue;
         }
 
-        if filter_impl_noise && started && depth >= 1
-            && j != start && is_impl_noise(trimmed, header)
+        if filter_impl_noise
+            && started
+            && depth >= 1
+            && j != start
+            && is_impl_noise(trimmed, header)
         {
             if started && depth <= 0 {
                 result.push_str("}\n");
@@ -328,12 +368,16 @@ fn extract_fn_signature(lines: &[&str], start: usize) -> String {
         if let Some(pos) = trimmed.find('{') {
             let before = trimmed[..pos].trim();
             if !before.is_empty() {
-                if !sig.is_empty() { sig.push(' '); }
+                if !sig.is_empty() {
+                    sig.push(' ');
+                }
                 sig.push_str(before);
             }
             break;
         }
-        if !sig.is_empty() { sig.push(' '); }
+        if !sig.is_empty() {
+            sig.push(' ');
+        }
         sig.push_str(trimmed);
     }
     sig
@@ -345,7 +389,10 @@ fn skip_braced_block(lines: &[&str], start: usize) -> usize {
     for (j, line) in lines.iter().enumerate().skip(start) {
         for ch in line.chars() {
             match ch {
-                '{' => { depth += 1; started = true; }
+                '{' => {
+                    depth += 1;
+                    started = true;
+                }
                 '}' => depth -= 1,
                 _ => {}
             }

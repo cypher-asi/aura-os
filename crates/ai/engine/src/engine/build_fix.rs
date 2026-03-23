@@ -7,17 +7,17 @@ use tracing::{info, warn};
 use aura_core::*;
 
 pub(crate) use super::build_fix_types::{
-    BuildFixAttemptRecord, ErrorCategory,
-    classify_build_errors, error_category_guidance, parse_error_references,
+    classify_build_errors, error_category_guidance, parse_error_references, BuildFixAttemptRecord,
+    ErrorCategory,
+};
+use super::build_fix_utils::{all_errors_in_baseline, build_fix_snapshot};
+pub(crate) use super::build_fix_utils::{
+    auto_correct_build_command, infer_default_build_command, rollback_to_snapshot,
+    snapshot_modified_files,
 };
 pub(crate) use super::error_signatures::{
     normalize_error_signature, parse_individual_error_signatures,
 };
-pub(crate) use super::build_fix_utils::{
-    snapshot_modified_files, rollback_to_snapshot,
-    auto_correct_build_command, infer_default_build_command,
-};
-use super::build_fix_utils::{build_fix_snapshot, all_errors_in_baseline};
 
 use super::orchestrator::DevLoopEngine;
 use super::types::*;
@@ -69,7 +69,10 @@ impl DevLoopEngine {
     }
 
     async fn resolve_build_command(
-        &self, project: &Project, session: &Session, task: &Task,
+        &self,
+        project: &Project,
+        session: &Session,
+        task: &Task,
     ) -> Option<String> {
         let project_root = Path::new(&project.linked_folder_path);
         let cmd = match &project.build_command {
@@ -97,13 +100,17 @@ impl DevLoopEngine {
                 old = %build_command, new = %corrected,
                 "eagerly rewriting server-starting build command"
             );
-            if let Err(e) = self.project_service.update_project_async(
-                &project.project_id,
-                aura_projects::UpdateProjectInput {
-                    build_command: Some(corrected.clone()),
-                    ..Default::default()
-                },
-            ).await {
+            if let Err(e) = self
+                .project_service
+                .update_project_async(
+                    &project.project_id,
+                    aura_projects::UpdateProjectInput {
+                        build_command: Some(corrected.clone()),
+                        ..Default::default()
+                    },
+                )
+                .await
+            {
                 warn!(project_id = %project.project_id, error = %e, "failed to persist auto-corrected build command");
             }
             build_command = corrected;
@@ -112,8 +119,13 @@ impl DevLoopEngine {
     }
 
     async fn run_build_with_streaming(
-        &self, project: &Project, session: &Session, task: &Task,
-        base_path: &Path, build_command: &str, _attempt: u32,
+        &self,
+        project: &Project,
+        session: &Session,
+        task: &Task,
+        base_path: &Path,
+        build_command: &str,
+        _attempt: u32,
     ) -> Result<(build_verify::BuildResult, u64), EngineError> {
         let build_step_start = Instant::now();
         self.emit(EngineEvent::BuildVerificationStarted {
@@ -129,44 +141,57 @@ impl DevLoopEngine {
         let fwd_tid = task.task_id;
         tokio::spawn(async move {
             while let Some(line) = line_rx.recv().await {
-                send_or_log(&fwd_event_tx, EngineEvent::TaskOutputDelta {
-                    project_id: fwd_pid,
-                    agent_instance_id: fwd_aiid,
-                    task_id: fwd_tid,
-                    delta: line,
-                });
+                send_or_log(
+                    &fwd_event_tx,
+                    EngineEvent::TaskOutputDelta {
+                        project_id: fwd_pid,
+                        agent_instance_id: fwd_aiid,
+                        task_id: fwd_tid,
+                        delta: line,
+                    },
+                );
             }
         });
-        let build_result = build_verify::run_build_command(
-            base_path, build_command, Some(line_tx),
-        ).await?;
+        let build_result =
+            build_verify::run_build_command(base_path, build_command, Some(line_tx)).await?;
         let step_duration_ms = build_step_start.elapsed().as_millis() as u64;
         Ok((build_result, step_duration_ms))
     }
 
     async fn try_auto_correct_timeout(
-        &self, project: &Project, build_command: &str,
+        &self,
+        project: &Project,
+        build_command: &str,
     ) -> Option<String> {
         let corrected = auto_correct_build_command(build_command)?;
         warn!(
             old = %build_command, new = %corrected,
             "build command timed out, auto-correcting"
         );
-        if let Err(e) = self.project_service.update_project_async(
-            &project.project_id,
-            aura_projects::UpdateProjectInput {
-                build_command: Some(corrected.clone()),
-                ..Default::default()
-            },
-        ).await {
+        if let Err(e) = self
+            .project_service
+            .update_project_async(
+                &project.project_id,
+                aura_projects::UpdateProjectInput {
+                    build_command: Some(corrected.clone()),
+                    ..Default::default()
+                },
+            )
+            .await
+        {
             warn!(project_id = %project.project_id, error = %e, "failed to persist timeout-corrected build command");
         }
         Some(corrected)
     }
 
     fn record_build_passed(
-        &self, project: &Project, session: &Session, task: &Task,
-        build_command: &str, stdout: &str, duration_ms: u64,
+        &self,
+        project: &Project,
+        session: &Session,
+        task: &Task,
+        build_command: &str,
+        stdout: &str,
+        duration_ms: u64,
     ) {
         self.emit(EngineEvent::BuildVerificationPassed {
             project_id: project.project_id,
@@ -180,13 +205,21 @@ impl DevLoopEngine {
 
     #[allow(clippy::too_many_arguments)]
     fn record_build_failed(
-        &self, project: &Project, session: &Session, task: &Task,
-        build_command: &str, stdout: &str, stderr: &str,
-        duration_ms: u64, attempt: u32,
+        &self,
+        project: &Project,
+        session: &Session,
+        task: &Task,
+        build_command: &str,
+        stdout: &str,
+        stderr: &str,
+        duration_ms: u64,
+        attempt: u32,
     ) {
         let error_hash = Some(format!("{:x}", {
             let mut h = 0u64;
-            for b in stderr.bytes() { h = h.wrapping_mul(31).wrapping_add(b as u64); }
+            for b in stderr.bytes() {
+                h = h.wrapping_mul(31).wrapping_add(b as u64);
+            }
             h
         }));
         self.emit(EngineEvent::BuildVerificationFailed {
@@ -203,8 +236,11 @@ impl DevLoopEngine {
     }
 
     fn check_error_stagnation(
-        &self, task: &Task, stderr: &str,
-        prior_attempts: &[BuildFixAttemptRecord], attempt: u32,
+        &self,
+        task: &Task,
+        stderr: &str,
+        prior_attempts: &[BuildFixAttemptRecord],
+        attempt: u32,
     ) -> bool {
         let current_signature = normalize_error_signature(stderr);
         let consecutive_dupes = prior_attempts
@@ -224,9 +260,13 @@ impl DevLoopEngine {
     }
 
     async fn request_build_fix(
-        &self, params: &BuildVerifyParams<'_>,
-        build_command: &str, build_stderr: &str, build_stdout: &str,
-        prior_attempts: &[BuildFixAttemptRecord], attempt: u32,
+        &self,
+        params: &BuildVerifyParams<'_>,
+        build_command: &str,
+        build_stderr: &str,
+        build_stdout: &str,
+        prior_attempts: &[BuildFixAttemptRecord],
+        attempt: u32,
     ) -> Result<(String, u64, u64), EngineError> {
         self.emit(EngineEvent::BuildFixAttempt {
             project_id: params.project.project_id,
@@ -236,36 +276,66 @@ impl DevLoopEngine {
         });
 
         let codebase_snapshot = build_fix_snapshot(
-            params.project, build_stderr, params.task, params.workspace_cache,
-        ).await;
+            params.project,
+            build_stderr,
+            params.task,
+            params.workspace_cache,
+        )
+        .await;
 
         self.request_fix(
-            params.project, params.task, params.session, params.api_key,
-            params.initial_execution, build_command, build_stderr, build_stdout,
-            &codebase_snapshot, prior_attempts,
-        ).await
+            params.project,
+            params.task,
+            params.session,
+            params.api_key,
+            params.initial_execution,
+            build_command,
+            build_stderr,
+            build_stdout,
+            &codebase_snapshot,
+            prior_attempts,
+        )
+        .await
     }
 
     #[allow(clippy::too_many_arguments)] // Build loop state; mutable refs prevent bundling
     async fn handle_build_success(
-        &self, params: &BuildVerifyParams<'_>,
-        build_command: &str, stdout: &str, duration_ms: u64,
-        attempt: u32, test_command: &Option<String>,
-        base_path: &Path, all_fix_ops: &mut Vec<FileOp>,
+        &self,
+        params: &BuildVerifyParams<'_>,
+        build_command: &str,
+        stdout: &str,
+        duration_ms: u64,
+        attempt: u32,
+        test_command: &Option<String>,
+        base_path: &Path,
+        all_fix_ops: &mut Vec<FileOp>,
         prior_test_attempts: &mut Vec<BuildFixAttemptRecord>,
     ) -> Result<(bool, u64, u64), EngineError> {
         self.record_build_passed(
-            params.project, params.session, params.task,
-            build_command, stdout, duration_ms,
+            params.project,
+            params.session,
+            params.task,
+            build_command,
+            stdout,
+            duration_ms,
         );
         match test_command.as_deref() {
             Some(test_cmd) => {
                 self.run_and_handle_tests(
-                    params.project, params.task, params.session, params.api_key,
-                    params.initial_execution, test_cmd, base_path, attempt,
-                    all_fix_ops, params.baseline_test_failures,
-                    prior_test_attempts, params.workspace_cache,
-                ).await
+                    params.project,
+                    params.task,
+                    params.session,
+                    params.api_key,
+                    params.initial_execution,
+                    test_cmd,
+                    base_path,
+                    attempt,
+                    all_fix_ops,
+                    params.baseline_test_failures,
+                    prior_test_attempts,
+                    params.workspace_cache,
+                )
+                .await
             }
             None => Ok((true, 0, 0)),
         }
@@ -273,35 +343,63 @@ impl DevLoopEngine {
 
     #[allow(clippy::too_many_arguments)] // Build loop state; mutable refs prevent bundling
     async fn attempt_build_fix(
-        &self, params: &BuildVerifyParams<'_>,
-        build_command: &str, build_result: &build_verify::BuildResult,
-        base_path: &Path, prior_attempts: &mut Vec<BuildFixAttemptRecord>,
-        all_fix_ops: &mut Vec<FileOp>, attempt: u32,
+        &self,
+        params: &BuildVerifyParams<'_>,
+        build_command: &str,
+        build_result: &build_verify::BuildResult,
+        base_path: &Path,
+        prior_attempts: &mut Vec<BuildFixAttemptRecord>,
+        all_fix_ops: &mut Vec<FileOp>,
+        attempt: u32,
     ) -> Result<(u64, u64), EngineError> {
-        let (response, inp, out) = self.request_build_fix(
-            params, build_command, &build_result.stderr, &build_result.stdout,
-            prior_attempts, attempt,
-        ).await?;
+        let (response, inp, out) = self
+            .request_build_fix(
+                params,
+                build_command,
+                &build_result.stderr,
+                &build_result.stdout,
+                prior_attempts,
+                attempt,
+            )
+            .await?;
         self.apply_fix_and_record(
-            params.project, params.session, params.task, base_path, &response,
-            attempt, &build_result.stderr, prior_attempts, all_fix_ops, "build-fix",
-        ).await?;
+            params.project,
+            params.session,
+            params.task,
+            base_path,
+            &response,
+            attempt,
+            &build_result.stderr,
+            prior_attempts,
+            all_fix_ops,
+            "build-fix",
+        )
+        .await?;
         Ok((inp, out))
     }
 
     /// Returns (fix_ops, build_passed, attempts_used, duplicate_bailouts, fix_input_tokens, fix_output_tokens, last_stderr).
     pub(crate) async fn verify_and_fix_build(
-        &self, params: &BuildVerifyParams<'_>,
+        &self,
+        params: &BuildVerifyParams<'_>,
     ) -> Result<(Vec<FileOp>, bool, u32, u32, u64, u64, String), EngineError> {
         let BuildVerifyParams {
-            project, task, session, initial_execution,
-            baseline_build_errors, ..
+            project,
+            task,
+            session,
+            initial_execution,
+            baseline_build_errors,
+            ..
         } = params;
         let mut build_cmd = match self.resolve_build_command(project, session, task).await {
             Some(cmd) => cmd,
             None => return Ok((vec![], true, 0, 0, 0, 0, String::new())),
         };
-        let test_cmd = project.test_command.as_ref().filter(|c| !c.trim().is_empty()).cloned();
+        let test_cmd = project
+            .test_command
+            .as_ref()
+            .filter(|c| !c.trim().is_empty())
+            .cloned();
         let base_path = Path::new(&project.linked_folder_path);
         let mut fix_ops: Vec<FileOp> = Vec::new();
         let mut prior: Vec<BuildFixAttemptRecord> = Vec::new();
@@ -311,9 +409,9 @@ impl DevLoopEngine {
         let pre_fix_snapshots = snapshot_modified_files(base_path, &initial_execution.file_ops);
 
         for attempt in 1..=self.engine_config.max_build_fix_retries {
-            let (br, dur) = self.run_build_with_streaming(
-                project, session, task, base_path, &build_cmd, attempt,
-            ).await?;
+            let (br, dur) = self
+                .run_build_with_streaming(project, session, task, base_path, &build_cmd, attempt)
+                .await?;
             if br.timed_out {
                 if let Some(c) = self.try_auto_correct_timeout(project, &build_cmd).await {
                     build_cmd = c;
@@ -321,21 +419,48 @@ impl DevLoopEngine {
                 }
             }
             if br.success {
-                let (tp, i, o) = self.handle_build_success(
-                    params, &build_cmd, &br.stdout, dur, attempt, &test_cmd,
-                    base_path, &mut fix_ops, &mut test_prior,
-                ).await?;
-                inp_t += i; out_t += o;
-                if tp { return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t, String::new())); }
+                let (tp, i, o) = self
+                    .handle_build_success(
+                        params,
+                        &build_cmd,
+                        &br.stdout,
+                        dur,
+                        attempt,
+                        &test_cmd,
+                        base_path,
+                        &mut fix_ops,
+                        &mut test_prior,
+                    )
+                    .await?;
+                inp_t += i;
+                out_t += o;
+                if tp {
+                    return Ok((
+                        fix_ops,
+                        true,
+                        attempt,
+                        dup_bail,
+                        inp_t,
+                        out_t,
+                        String::new(),
+                    ));
+                }
                 continue;
             }
             last_stderr = br.stderr.clone();
             self.record_build_failed(
-                project, session, task, &build_cmd,
-                &br.stdout, &br.stderr, dur, attempt,
+                project, session, task, &build_cmd, &br.stdout, &br.stderr, dur, attempt,
             );
             if all_errors_in_baseline(baseline_build_errors, &br.stderr) {
-                return Ok((fix_ops, true, attempt, dup_bail, inp_t, out_t, String::new()));
+                return Ok((
+                    fix_ops,
+                    true,
+                    attempt,
+                    dup_bail,
+                    inp_t,
+                    out_t,
+                    String::new(),
+                ));
             }
             if attempt == self.engine_config.max_build_fix_retries {
                 info!(task_id = %task.task_id, "build still failing after max retries");
@@ -347,13 +472,29 @@ impl DevLoopEngine {
                 info!(task_id = %task.task_id, "rolled back files after stagnated fix loop");
                 return Ok((fix_ops, false, attempt, dup_bail, inp_t, out_t, last_stderr));
             }
-            let (i, o) = self.attempt_build_fix(
-                params, &build_cmd, &br, base_path, &mut prior,
-                &mut fix_ops, attempt,
-            ).await?;
-            inp_t += i; out_t += o;
+            let (i, o) = self
+                .attempt_build_fix(
+                    params,
+                    &build_cmd,
+                    &br,
+                    base_path,
+                    &mut prior,
+                    &mut fix_ops,
+                    attempt,
+                )
+                .await?;
+            inp_t += i;
+            out_t += o;
         }
-        Ok((fix_ops, false, self.engine_config.max_build_fix_retries, dup_bail, inp_t, out_t, last_stderr))
+        Ok((
+            fix_ops,
+            false,
+            self.engine_config.max_build_fix_retries,
+            dup_bail,
+            inp_t,
+            out_t,
+            last_stderr,
+        ))
     }
 }
 

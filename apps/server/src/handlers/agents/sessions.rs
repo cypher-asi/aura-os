@@ -52,7 +52,11 @@ pub async fn list_sessions(
         .map_err(map_storage_error)?;
     let sessions: Vec<Session> = storage_sessions
         .into_iter()
-        .filter_map(|s| storage_session_to_session(s, None).map_err(|e| warn!(error = %e, "skipping malformed session")).ok())
+        .filter_map(|s| {
+            storage_session_to_session(s, None)
+                .map_err(|e| warn!(error = %e, "skipping malformed session"))
+                .ok()
+        })
         .collect();
     Ok(Json(sessions))
 }

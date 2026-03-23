@@ -1,14 +1,14 @@
 //! Conversions between provider-agnostic types and Claude wire types.
 
 use aura_provider::{
-    ContentBlock as ProviderBlock, Message as ProviderMessage,
-    MessageContent as ProviderContent, Role, ThinkingConfig as ProviderThinking,
-    ToolCall as ProviderToolCall, ToolDefinition as ProviderToolDef,
+    ContentBlock as ProviderBlock, Message as ProviderMessage, MessageContent as ProviderContent,
+    Role, ThinkingConfig as ProviderThinking, ToolCall as ProviderToolCall,
+    ToolDefinition as ProviderToolDef,
 };
 
 use crate::types::{
-    CacheControl, ContentBlock, ImageSource, MessageContent, RichMessage, ThinkingConfig,
-    ToolCall, ToolDefinition, ToolStreamResponse,
+    CacheControl, ContentBlock, ImageSource, MessageContent, RichMessage, ThinkingConfig, ToolCall,
+    ToolDefinition, ToolStreamResponse,
 };
 use crate::ClaudeClientError;
 
@@ -49,9 +49,7 @@ impl From<ProviderBlock> for ContentBlock {
                     data: source.data,
                 },
             },
-            ProviderBlock::ToolUse { id, name, input } => {
-                ContentBlock::ToolUse { id, name, input }
-            }
+            ProviderBlock::ToolUse { id, name, input } => ContentBlock::ToolUse { id, name, input },
             ProviderBlock::ToolResult {
                 tool_use_id,
                 content,
@@ -120,9 +118,7 @@ impl From<ToolStreamResponse> for aura_provider::ModelResponse {
 impl From<ClaudeClientError> for aura_provider::ProviderError {
     fn from(e: ClaudeClientError) -> Self {
         match e {
-            ClaudeClientError::Http(re) => {
-                aura_provider::ProviderError::Http(re.to_string())
-            }
+            ClaudeClientError::Http(re) => aura_provider::ProviderError::Http(re.to_string()),
             ClaudeClientError::Api { status, message } => {
                 aura_provider::ProviderError::Api { status, message }
             }

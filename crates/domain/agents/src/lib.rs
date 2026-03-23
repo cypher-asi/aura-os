@@ -7,8 +7,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
-use aura_core::*;
 use aura_core::parse_dt;
+use aura_core::*;
 use aura_network::NetworkAgent;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
@@ -17,10 +17,7 @@ pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentS
 
 /// Convert NetworkAgent to core Agent (no local store).
 fn network_agent_to_core(net: &NetworkAgent) -> Agent {
-    let agent_id = net
-        .id
-        .parse::<AgentId>()
-        .unwrap_or_else(|_| AgentId::new());
+    let agent_id = net.id.parse::<AgentId>().unwrap_or_else(|_| AgentId::new());
     let profile_id: Option<ProfileId> = net.profile_id.as_ref().and_then(|s| s.parse().ok());
     let created_at = net
         .created_at
@@ -65,17 +62,22 @@ impl AgentService {
         store: Arc<RocksStore>,
         network_client: Option<Arc<aura_network::NetworkClient>>,
     ) -> Self {
-        Self { store, network_client }
+        Self {
+            store,
+            network_client,
+        }
     }
 
     fn get_jwt(&self) -> Result<String, AgentError> {
-        self.store
-            .get_jwt()
-            .ok_or(AgentError::NoSession)
+        self.store.get_jwt().ok_or(AgentError::NoSession)
     }
 
     /// Get agent from aura-network only. Returns error if network is not configured or agent not found.
-    pub async fn get_agent_async(&self, _user_id: &str, agent_id: &AgentId) -> Result<Agent, AgentError> {
+    pub async fn get_agent_async(
+        &self,
+        _user_id: &str,
+        agent_id: &AgentId,
+    ) -> Result<Agent, AgentError> {
         let client = self
             .network_client
             .as_ref()
@@ -130,9 +132,7 @@ impl AgentInstanceService {
     }
 
     fn get_jwt(&self) -> Result<String, AgentError> {
-        self.store
-            .get_jwt()
-            .ok_or(AgentError::NoSession)
+        self.store.get_jwt().ok_or(AgentError::NoSession)
     }
 
     /// Resolve agent config from aura-network only. Returns None if network is unavailable or agent not found.
@@ -258,7 +258,8 @@ impl AgentInstanceService {
         task_id: &TaskId,
         session_id: &SessionId,
     ) -> Result<(), AgentError> {
-        self.update_status(agent_instance_id, AgentStatus::Working).await?;
+        self.update_status(agent_instance_id, AgentStatus::Working)
+            .await?;
         self.runtime_state.lock().await.insert(
             *agent_instance_id,
             RuntimeAgentState {
@@ -274,7 +275,8 @@ impl AgentInstanceService {
         _project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<(), AgentError> {
-        self.update_status(agent_instance_id, AgentStatus::Idle).await?;
+        self.update_status(agent_instance_id, AgentStatus::Idle)
+            .await?;
         self.runtime_state.lock().await.remove(agent_instance_id);
         Ok(())
     }
@@ -338,11 +340,7 @@ pub fn merge_agent_instance(
             .unwrap_or_else(|_| ProjectId::new()),
         agent_id: agent
             .map(|a| a.agent_id)
-            .or_else(|| {
-                spa.agent_id
-                    .as_deref()
-                    .and_then(|s| s.parse().ok())
-            })
+            .or_else(|| spa.agent_id.as_deref().and_then(|s| s.parse().ok()))
             .unwrap_or_default(),
         name: agent
             .map(|a| a.name.clone())

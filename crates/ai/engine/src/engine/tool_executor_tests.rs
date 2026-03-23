@@ -1,5 +1,5 @@
 use super::*;
-use aura_claude::ToolCall;
+use aura_link::ToolCall;
 
 fn make_executor() -> EngineToolLoopExecutor {
     use chrono::Utc;
@@ -65,18 +65,13 @@ fn make_executor() -> EngineToolLoopExecutor {
 
     let (engine_event_tx, _rx) = mpsc::unbounded_channel();
 
-    let store = Arc::new(aura_store::RocksStore::open(
-        tempfile::TempDir::new().unwrap().path(),
-    ).unwrap());
+    let store =
+        Arc::new(aura_store::RocksStore::open(tempfile::TempDir::new().unwrap().path()).unwrap());
     let project_service = Arc::new(aura_projects::ProjectService::new(store.clone()));
-    let task_service = Arc::new(aura_tasks::TaskService::new(
-        store.clone(), None,
-    ));
+    let task_service = Arc::new(aura_tasks::TaskService::new(store.clone(), None));
 
     EngineToolLoopExecutor {
-        inner: ChatToolExecutor::new(
-            store, None, project_service, task_service,
-        ),
+        inner: ChatToolExecutor::new(store, None, project_service, task_service),
         project_id: project.project_id,
         project,
         spec,
@@ -91,14 +86,10 @@ fn make_executor() -> EngineToolLoopExecutor {
         stub_fix_attempts: Arc::new(Mutex::new(0)),
         completed_deps: vec![],
         work_log_summary: String::new(),
-        exploration_allowance: 12,
-        task_phase: Arc::new(Mutex::new(
-            TaskPhase::Implementing {
-                plan: TaskPlan::empty(),
-            }
-        )),
-        self_review_done: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-        files_read: Arc::new(Mutex::new(std::collections::HashSet::new())),
+        task_phase: Arc::new(Mutex::new(TaskPhase::Implementing {
+            plan: TaskPlan::empty(),
+        })),
+        self_review: Arc::new(Mutex::new(aura_link::self_review::SelfReviewGuard::new())),
     }
 }
 
@@ -122,7 +113,9 @@ fn looks_like_compiler_errors_detects_typescript() {
 
 #[test]
 fn looks_like_compiler_errors_false_for_plain_text() {
-    assert!(!looks_like_compiler_errors("Everything compiled successfully"));
+    assert!(!looks_like_compiler_errors(
+        "Everything compiled successfully"
+    ));
     assert!(!looks_like_compiler_errors("error: something"));
     assert!(!looks_like_compiler_errors(""));
 }
@@ -198,29 +191,28 @@ fn handle_get_context_returns_context_string() {
 #[tokio::test]
 async fn execute_dispatches_task_done_stops_all_results() {
     let exec = make_executor();
-    let tool_calls = vec![
-        ToolCall {
-            id: "t1".into(),
-            name: "task_done".into(),
-            input: serde_json::json!({"notes": "All done"}),
-        },
-    ];
+    let tool_calls = vec![ToolCall {
+        id: "t1".into(),
+        name: "task_done".into(),
+        input: serde_json::json!({"notes": "All done"}),
+    }];
 
     let results = exec.execute(&tool_calls).await;
     assert_eq!(results.len(), 1);
-    assert!(results[0].stop_loop, "task_done should set stop_loop on all results");
+    assert!(
+        results[0].stop_loop,
+        "task_done should set stop_loop on all results"
+    );
 }
 
 #[tokio::test]
 async fn execute_dispatches_get_task_context() {
     let exec = make_executor();
-    let tool_calls = vec![
-        ToolCall {
-            id: "t1".into(),
-            name: "get_task_context".into(),
-            input: serde_json::json!({}),
-        },
-    ];
+    let tool_calls = vec![ToolCall {
+        id: "t1".into(),
+        name: "get_task_context".into(),
+        input: serde_json::json!({}),
+    }];
 
     let results = exec.execute(&tool_calls).await;
     assert_eq!(results.len(), 1);

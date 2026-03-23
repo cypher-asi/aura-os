@@ -3,7 +3,8 @@ use chrono::{DateTime, Utc};
 /// Parse an optional RFC 3339 timestamp into `DateTime<Utc>`, falling back to
 /// `Utc::now()` when the value is `None` or malformed.
 pub fn parse_dt(value: &Option<String>) -> DateTime<Utc> {
-    value.as_deref()
+    value
+        .as_deref()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now)

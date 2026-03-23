@@ -11,6 +11,7 @@ export function AgentChatView() {
   const historyKey = agentId ? agentHistoryKey(agentId) : undefined;
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { messages: historyMessages, status: historyStatus, error: historyError } = useChatHistory(historyKey);
+  const showHistoryLoading = historyStatus === "loading" || historyStatus === "idle";
 
   const {
     streamKey,
@@ -24,8 +25,14 @@ export function AgentChatView() {
 
   useEffect(() => {
     if (!agentId) return;
+    const key = agentHistoryKey(agentId);
+    resetMessagesRef.current([], { allowWhileStreaming: true });
+    const cached = useChatHistoryStore.getState().entries[key];
+    if (cached?.status === "ready") {
+      resetMessagesRef.current(cached.messages, { allowWhileStreaming: true });
+    }
     useChatHistoryStore.getState().fetchHistory(
-      agentHistoryKey(agentId),
+      key,
       () => api.agents.listMessages(agentId),
     );
     setSelectedAgent(agentId);
@@ -33,20 +40,19 @@ export function AgentChatView() {
   }, [agentId, setSelectedAgent]);
 
   useEffect(() => {
-    if (historyMessages.length === 0) return;
+    if (historyStatus !== "ready") return;
     resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
-  }, [historyMessages]);
+  }, [historyMessages, historyStatus]);
 
   if (!agentId) return null;
 
   return (
     <ChatPanel
-      key={agentId}
       streamKey={streamKey}
       onSend={sendMessage}
       onStop={stopStreaming}
       agentName={selectedAgent?.name}
-      isLoading={historyStatus === "loading"}
+      isLoading={showHistoryLoading}
       errorMessage={historyStatus === "error" ? (historyError ?? "Failed to load conversation") : null}
       emptyMessage="Send a message"
       scrollResetKey={agentId}

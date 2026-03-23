@@ -34,7 +34,11 @@ impl LoopRunContext {
         }
     }
 
-    pub(crate) fn build_finished_event(&self, engine: &DevLoopEngine, outcome: &str) -> EngineEvent {
+    pub(crate) fn build_finished_event(
+        &self,
+        engine: &DevLoopEngine,
+        outcome: &str,
+    ) -> EngineEvent {
         let total_cost_usd = Some(engine.pricing_service.compute_cost(
             self.default_model.as_str(),
             self.total_input_tokens,

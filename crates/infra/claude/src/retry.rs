@@ -37,7 +37,8 @@ impl ClaudeClient {
                 let result = async {
                     let response = self.send_request(api_key, url, &body).await?;
                     self.parse_sse_stream(response, event_tx).await
-                }.await;
+                }
+                .await;
                 match result {
                     Ok(mut resp) => {
                         resp.model_used = model.to_string();
@@ -73,7 +74,11 @@ impl ClaudeClient {
         for attempt in 0..=Self::MAX_RETRIES {
             if attempt > 0 {
                 let backoff = Self::INITIAL_BACKOFF_MS * 2u64.pow(attempt - 1);
-                warn!(attempt, backoff_ms = backoff, "Retrying non-streaming request after overloaded error");
+                warn!(
+                    attempt,
+                    backoff_ms = backoff,
+                    "Retrying non-streaming request after overloaded error"
+                );
                 tokio::time::sleep(std::time::Duration::from_millis(backoff)).await;
             }
 
@@ -85,7 +90,8 @@ impl ClaudeClient {
 
             match self.auth_mode {
                 AuthMode::ApiKey => {
-                    req = req.header("x-api-key", api_key)
+                    req = req
+                        .header("x-api-key", api_key)
                         .header("anthropic-version", ANTHROPIC_API_VERSION)
                         .header("anthropic-beta", ANTHROPIC_BETA);
                 }
@@ -151,7 +157,8 @@ impl ClaudeClient {
 
         match self.auth_mode {
             AuthMode::ApiKey => {
-                req = req.header("x-api-key", api_key)
+                req = req
+                    .header("x-api-key", api_key)
                     .header("anthropic-version", ANTHROPIC_API_VERSION)
                     .header("anthropic-beta", ANTHROPIC_BETA);
             }
@@ -171,10 +178,15 @@ impl ClaudeClient {
 
         let status = response.status();
         let elapsed_ms = start.elapsed().as_millis() as u64;
-        let content_type = response.headers().get("content-type")
+        let content_type = response
+            .headers()
+            .get("content-type")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("unknown");
-        info!(status = status.as_u16(), elapsed_ms, content_type, "Claude API responded");
+        info!(
+            status = status.as_u16(),
+            elapsed_ms, content_type, "Claude API responded"
+        );
 
         if !status.is_success() {
             let status_code = status.as_u16();
@@ -201,7 +213,9 @@ impl ClaudeClient {
         response: reqwest::Response,
         event_tx: &mpsc::UnboundedSender<ClaudeStreamEvent>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
-        let byte_stream = response.bytes_stream().map(|r| r.map_err(ClaudeClientError::Http));
+        let byte_stream = response
+            .bytes_stream()
+            .map(|r| r.map_err(ClaudeClientError::Http));
         sse::parse_sse_events(byte_stream, event_tx).await
     }
 }

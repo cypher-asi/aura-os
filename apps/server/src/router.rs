@@ -9,7 +9,10 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::handlers::{agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orbit, orgs, pricing, projects, settings, specs, tasks, terminal, users, ws};
+use crate::handlers::{
+    agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orbit, orgs, pricing,
+    projects, settings, specs, tasks, terminal, users, ws,
+};
 use crate::state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
@@ -112,14 +115,8 @@ fn billing_routes() -> Router<AppState> {
             "/api/orgs/:org_id/credits/transactions",
             get(billing::get_transactions),
         )
-        .route(
-            "/api/orgs/:org_id/account",
-            get(billing::get_account),
-        )
-        .route(
-            "/api/settings/api-key",
-            get(settings::get_api_key_info),
-        )
+        .route("/api/orgs/:org_id/account", get(billing::get_account))
+        .route("/api/settings/api-key", get(settings::get_api_key_info))
         .route(
             "/api/settings/fee-schedule",
             get(pricing::get_fee_schedule).put(pricing::set_fee_schedule),
@@ -272,24 +269,15 @@ fn social_routes() -> Router<AppState> {
             "/api/follows",
             post(follows::follow).get(follows::list_follows),
         )
-        .route(
-            "/api/follows/:target_profile_id",
-            delete(follows::unfollow),
-        )
+        .route("/api/follows/:target_profile_id", delete(follows::unfollow))
         .route(
             "/api/follows/check/:target_profile_id",
             get(follows::check_follow),
         )
         .route("/api/leaderboard", get(leaderboard::get_leaderboard))
         .route("/api/stats", get(leaderboard::get_platform_stats))
-        .route(
-            "/api/users/me/usage",
-            get(leaderboard::get_personal_usage),
-        )
-        .route(
-            "/api/orgs/:org_id/usage",
-            get(leaderboard::get_org_usage),
-        )
+        .route("/api/users/me/usage", get(leaderboard::get_personal_usage))
+        .route("/api/orgs/:org_id/usage", get(leaderboard::get_org_usage))
         .route(
             "/api/orgs/:org_id/usage/members",
             get(leaderboard::get_org_usage_members),
@@ -305,10 +293,7 @@ fn social_routes() -> Router<AppState> {
             "/api/posts/:post_id/comments",
             get(feed::list_comments).post(feed::add_comment),
         )
-        .route(
-            "/api/comments/:comment_id",
-            delete(feed::delete_comment),
-        )
+        .route("/api/comments/:comment_id", delete(feed::delete_comment))
 }
 
 fn system_routes() -> Router<AppState> {
@@ -330,7 +315,10 @@ fn system_routes() -> Router<AppState> {
             "/api/projects/:project_id/loop/status",
             get(dev_loop::get_loop_status),
         )
-        .route("/api/terminal", post(terminal::spawn_terminal).get(terminal::list_terminals))
+        .route(
+            "/api/terminal",
+            post(terminal::spawn_terminal).get(terminal::list_terminals),
+        )
         .route("/api/terminal/:id", delete(terminal::kill_terminal))
         .route("/ws/terminal/:id", get(terminal::ws_terminal))
         .route("/ws/events", get(ws::ws_events))

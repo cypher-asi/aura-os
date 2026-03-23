@@ -83,7 +83,10 @@ pub(crate) fn spawn_network_ws_bridge(
                 }
             }
 
-            info!(backoff_secs = backoff.as_secs(), "Reconnecting to aura-network WS...");
+            info!(
+                backoff_secs = backoff.as_secs(),
+                "Reconnecting to aura-network WS..."
+            );
             tokio::time::sleep(backoff).await;
             backoff = (backoff * 2).min(max_backoff);
         }

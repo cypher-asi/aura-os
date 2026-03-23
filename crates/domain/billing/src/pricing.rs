@@ -97,12 +97,12 @@ impl aura_core::CostCalculator for PricingService {
 /// Picks the entry with the latest effective_date for the given model.
 /// Falls back to substring matching, then first entry, then hardcoded defaults.
 pub fn lookup_rate_in(schedule: &[FeeScheduleEntry], model: &str) -> (f64, f64) {
-    let exact: Vec<&FeeScheduleEntry> = schedule
-        .iter()
-        .filter(|e| e.model == model)
-        .collect();
+    let exact: Vec<&FeeScheduleEntry> = schedule.iter().filter(|e| e.model == model).collect();
 
-    if let Some(entry) = exact.iter().max_by(|a, b| a.effective_date.cmp(&b.effective_date)) {
+    if let Some(entry) = exact
+        .iter()
+        .max_by(|a, b| a.effective_date.cmp(&b.effective_date))
+    {
         return (entry.input_cost_per_million, entry.output_cost_per_million);
     }
 
@@ -111,7 +111,10 @@ pub fn lookup_rate_in(schedule: &[FeeScheduleEntry], model: &str) -> (f64, f64) 
         .filter(|e| model.starts_with(&e.model) || e.model.starts_with(model))
         .collect();
 
-    if let Some(entry) = partial.iter().max_by(|a, b| a.effective_date.cmp(&b.effective_date)) {
+    if let Some(entry) = partial
+        .iter()
+        .max_by(|a, b| a.effective_date.cmp(&b.effective_date))
+    {
         return (entry.input_cost_per_million, entry.output_cost_per_million);
     }
 
@@ -165,8 +168,14 @@ mod tests {
     fn fast_model_matches_haiku_entry() {
         let sched = default_fee_schedule();
         let (inp, out) = lookup_rate_in(&sched, aura_claude::FAST_MODEL);
-        assert!((inp - 0.80).abs() < f64::EPSILON, "FAST_MODEL input rate should be haiku, got {inp}");
-        assert!((out - 4.00).abs() < f64::EPSILON, "FAST_MODEL output rate should be haiku, got {out}");
+        assert!(
+            (inp - 0.80).abs() < f64::EPSILON,
+            "FAST_MODEL input rate should be haiku, got {inp}"
+        );
+        assert!(
+            (out - 4.00).abs() < f64::EPSILON,
+            "FAST_MODEL output rate should be haiku, got {out}"
+        );
     }
 
     #[test]
@@ -297,12 +306,21 @@ mod tests {
     #[test]
     fn compute_cost_with_rates_known_opus_values() {
         let cost = compute_cost_with_rates(1_000_000, 0, 5.0, 25.0);
-        assert!((cost - 5.0).abs() < f64::EPSILON, "1M opus input tokens should cost $5.00");
+        assert!(
+            (cost - 5.0).abs() < f64::EPSILON,
+            "1M opus input tokens should cost $5.00"
+        );
 
         let cost = compute_cost_with_rates(0, 1_000_000, 5.0, 25.0);
-        assert!((cost - 25.0).abs() < f64::EPSILON, "1M opus output tokens should cost $25.00");
+        assert!(
+            (cost - 25.0).abs() < f64::EPSILON,
+            "1M opus output tokens should cost $25.00"
+        );
 
         let cost_haiku = compute_cost_with_rates(1_000_000, 1_000_000, 0.80, 4.0);
-        assert!((cost_haiku - 4.80).abs() < f64::EPSILON, "1M haiku in+out should cost $4.80");
+        assert!(
+            (cost_haiku - 4.80).abs() < f64::EPSILON,
+            "1M haiku in+out should cost $4.80"
+        );
     }
 }

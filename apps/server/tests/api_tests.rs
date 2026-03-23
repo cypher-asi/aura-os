@@ -20,7 +20,11 @@ async fn settings_api_key_lifecycle() {
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;
-    assert!(body["configured"].is_boolean(), "expected configured field: {}", body);
+    assert!(
+        body["configured"].is_boolean(),
+        "expected configured field: {}",
+        body
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -53,11 +57,7 @@ async fn project_crud() {
     assert_eq!(body["name"], "Test Project");
 
     // List (org-scoped; no org_id returns empty)
-    let req = json_request(
-        "GET",
-        &format!("/api/projects?org_id={}", org_id),
-        None,
-    );
+    let req = json_request("GET", &format!("/api/projects?org_id={}", org_id), None);
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let body = response_json(resp).await;

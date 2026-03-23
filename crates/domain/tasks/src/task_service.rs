@@ -31,7 +31,9 @@ impl TaskService {
             .transition_task(
                 &task_id.to_string(),
                 &jwt,
-                &StorageTransitionReq { status: task_status_str(new_status) },
+                &StorageTransitionReq {
+                    status: task_status_str(new_status),
+                },
             )
             .await?;
         let st = storage.get_task(&task_id.to_string(), &jwt).await?;
@@ -78,25 +80,19 @@ impl TaskService {
     /// Resets all in-progress tasks to ready (e.g. after restart or loop error). Uses
     /// two-step transition (in_progress → failed → ready) because aura-storage does
     /// not allow a direct in_progress → ready transition.
-    pub async fn reset_in_progress_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
+    pub async fn reset_in_progress_tasks(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<Vec<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
         let mut reset = Vec::new();
         for task in &all_tasks {
             if task.status == TaskStatus::InProgress {
-                self.transition_task(
-                    project_id,
-                    &task.spec_id,
-                    &task.task_id,
-                    TaskStatus::Failed,
-                )
-                .await?;
-                let ready_task = self.transition_task(
-                    project_id,
-                    &task.spec_id,
-                    &task.task_id,
-                    TaskStatus::Ready,
-                )
-                .await?;
+                self.transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Failed)
+                    .await?;
+                let ready_task = self
+                    .transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Ready)
+                    .await?;
                 reset.push(ready_task);
             }
         }
@@ -111,9 +107,9 @@ impl TaskService {
         agent_instance_id: &AgentInstanceId,
         session_id: Option<SessionId>,
     ) -> Result<Task, TaskError> {
-        let mut task = self.transition_task(
-            project_id, spec_id, task_id, TaskStatus::InProgress,
-        ).await?;
+        let mut task = self
+            .transition_task(project_id, spec_id, task_id, TaskStatus::InProgress)
+            .await?;
         task.assigned_agent_instance_id = Some(*agent_instance_id);
         task.session_id = session_id;
 
@@ -132,7 +128,10 @@ impl TaskService {
                     session_id: session_id.map(|s| s.to_string()),
                     assigned_project_agent_id: Some(agent_instance_id.to_string()),
                 };
-                if let Err(e) = storage.update_task(&task_id.to_string(), &jwt, &update).await {
+                if let Err(e) = storage
+                    .update_task(&task_id.to_string(), &jwt, &update)
+                    .await
+                {
                     tracing::warn!(
                         task_id = %task_id,
                         error = %e,
@@ -153,9 +152,9 @@ impl TaskService {
         notes: &str,
         files_changed: Vec<FileChangeSummary>,
     ) -> Result<Task, TaskError> {
-        let mut task = self.transition_task(
-            project_id, spec_id, task_id, TaskStatus::Done,
-        ).await?;
+        let mut task = self
+            .transition_task(project_id, spec_id, task_id, TaskStatus::Done)
+            .await?;
         task.completed_by_agent_instance_id = task.assigned_agent_instance_id;
         task.execution_notes = notes.to_string();
         task.files_changed = files_changed;
@@ -169,9 +168,9 @@ impl TaskService {
         task_id: &TaskId,
         reason: &str,
     ) -> Result<Task, TaskError> {
-        let mut task = self.transition_task(
-            project_id, spec_id, task_id, TaskStatus::Failed,
-        ).await?;
+        let mut task = self
+            .transition_task(project_id, spec_id, task_id, TaskStatus::Failed)
+            .await?;
         task.execution_notes = reason.to_string();
         Ok(task)
     }
@@ -186,7 +185,8 @@ impl TaskService {
         if task.status == TaskStatus::Ready {
             return Ok(task);
         }
-        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready).await
+        self.transition_task(project_id, spec_id, task_id, TaskStatus::Ready)
+            .await
     }
 
     // -- Dependency resolution --
@@ -197,7 +197,8 @@ impl TaskService {
         completed_task_id: &TaskId,
     ) -> Result<Vec<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
-        self.resolve_dependencies_with_tasks(project_id, completed_task_id, &all_tasks).await
+        self.resolve_dependencies_with_tasks(project_id, completed_task_id, &all_tasks)
+            .await
     }
 
     pub async fn resolve_dependencies_with_tasks(
@@ -221,12 +222,9 @@ impl TaskService {
                     .is_some_and(|t| t.status == TaskStatus::Done)
             });
             if all_deps_done {
-                let ready_task = self.transition_task(
-                    project_id,
-                    &task.spec_id,
-                    &task.task_id,
-                    TaskStatus::Ready,
-                ).await?;
+                let ready_task = self
+                    .transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Ready)
+                    .await?;
                 newly_ready.push(ready_task);
             }
         }
@@ -278,7 +276,10 @@ impl TaskService {
         }
     }
 
-    pub async fn resolve_initial_readiness(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
+    pub async fn resolve_initial_readiness(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<Vec<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
         let done_ids: HashSet<TaskId> = all_tasks
             .iter()
@@ -294,12 +295,9 @@ impl TaskService {
             let deps_satisfied = task.dependency_ids.is_empty()
                 || task.dependency_ids.iter().all(|d| done_ids.contains(d));
             if deps_satisfied {
-                let ready_task = self.transition_task(
-                    project_id,
-                    &task.spec_id,
-                    &task.task_id,
-                    TaskStatus::Ready,
-                ).await?;
+                let ready_task = self
+                    .transition_task(project_id, &task.spec_id, &task.task_id, TaskStatus::Ready)
+                    .await?;
                 promoted.push(ready_task);
             }
         }
@@ -308,7 +306,10 @@ impl TaskService {
 
     // -- Next-task selection --
 
-    pub async fn select_next_task(&self, project_id: &ProjectId) -> Result<Option<Task>, TaskError> {
+    pub async fn select_next_task(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<Option<Task>, TaskError> {
         let all_tasks = self.list_tasks(project_id).await?;
         self.select_next_task_from(project_id, &all_tasks).await
     }
@@ -320,14 +321,20 @@ impl TaskService {
     ) -> Result<Option<Task>, TaskError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
-        let storage_specs = storage
-            .list_specs(&project_id.to_string(), &jwt)
-            .await?;
+        let storage_specs = storage.list_specs(&project_id.to_string(), &jwt).await?;
         let specs: HashMap<SpecId, u32> = storage_specs
             .into_iter()
             .filter_map(|s| {
                 let sid: SpecId = s.id.parse().ok()?;
-                Some((sid, s.order_index.unwrap_or(0) as u32))
+                let title_order = s
+                    .title
+                    .as_deref()
+                    .and_then(|t| t.trim().split(':').next())
+                    .and_then(|p| p.trim().parse::<u32>().ok());
+                Some((
+                    sid,
+                    title_order.unwrap_or(s.order_index.unwrap_or(0) as u32),
+                ))
             })
             .collect();
 
@@ -360,7 +367,15 @@ impl TaskService {
         let task = self.select_next_task_from(project_id, &all_tasks).await?;
         match task {
             Some(t) => {
-                let assigned = self.assign_task(project_id, &t.spec_id, &t.task_id, agent_instance_id, session_id).await?;
+                let assigned = self
+                    .assign_task(
+                        project_id,
+                        &t.spec_id,
+                        &t.task_id,
+                        agent_instance_id,
+                        session_id,
+                    )
+                    .await?;
                 Ok(Some(assigned))
             }
             None => Ok(None),
@@ -382,13 +397,18 @@ impl TaskService {
 
         let existing = storage.list_tasks(&pid, &jwt).await?;
         let norm_title = title.trim().to_lowercase();
-        if existing.iter().any(|t| {
-            t.title.as_deref().unwrap_or("").trim().to_lowercase() == norm_title
-        }) {
+        if existing
+            .iter()
+            .any(|t| t.title.as_deref().unwrap_or("").trim().to_lowercase() == norm_title)
+        {
             return Err(TaskError::DuplicateFollowUp);
         }
 
-        let status = if dependency_ids.is_empty() { "ready" } else { "pending" };
+        let status = if dependency_ids.is_empty() {
+            "ready"
+        } else {
+            "pending"
+        };
         let dep_ids: Vec<String> = dependency_ids.iter().map(|d| d.to_string()).collect();
 
         let req = aura_storage::CreateTaskRequest {
@@ -397,7 +417,11 @@ impl TaskService {
             description: Some(description),
             status: Some(status.to_string()),
             order_index: Some((originating_task.order_index + 1) as i32),
-            dependency_ids: if dep_ids.is_empty() { None } else { Some(dep_ids) },
+            dependency_ids: if dep_ids.is_empty() {
+                None
+            } else {
+                Some(dep_ids)
+            },
         };
         let created = storage.create_task(&pid, &jwt, &req).await?;
         crate::storage_task_to_task(created).map_err(TaskError::ParseError)

@@ -1,7 +1,8 @@
 use aura_core::*;
 
 pub(crate) fn build_fix_system_prompt() -> String {
-    format!(r#"
+    format!(
+        r#"
 You are an expert software engineer fixing build/test errors in existing code.
 
 CRITICAL: You MUST respond with ONLY a valid JSON object. No explanation,
@@ -66,7 +67,9 @@ Use to remove files. {{"op":"delete","path":"src/old.rs"}}
 
 Response schema:
 {{"notes":"...","file_ops":[{{"op":"search_replace","path":"src/foo.rs","replacements":[{{"search":"old code","replace":"new code"}}]}}],"follow_up_tasks":[]}}
-"#, hash = "#")
+"#,
+        hash = "#"
+    )
 }
 
 pub(crate) fn agentic_execution_system_prompt(
@@ -75,8 +78,14 @@ pub(crate) fn agentic_execution_system_prompt(
     workspace_info: Option<&str>,
     exploration_allowance: usize,
 ) -> String {
-    let build_cmd = project.build_command.as_deref().unwrap_or("(not configured)");
-    let test_cmd = project.test_command.as_deref().unwrap_or("(not configured)");
+    let build_cmd = project
+        .build_command
+        .as_deref()
+        .unwrap_or("(not configured)");
+    let test_cmd = project
+        .test_command
+        .as_deref()
+        .unwrap_or("(not configured)");
 
     let preamble = build_agent_preamble(agent);
     let platform_info = platform_info_string();
@@ -222,7 +231,8 @@ fn platform_info_string() -> &'static str {
 }
 
 fn workspace_context_section(ws_info: &str) -> String {
-    let crate_count = ws_info.lines()
+    let crate_count = ws_info
+        .lines()
         .next()
         .and_then(|l| l.split_whitespace().nth(1))
         .unwrap_or("multiple");

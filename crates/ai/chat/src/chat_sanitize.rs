@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use tracing::warn;
 
-use aura_claude::{ContentBlock, MessageContent, RichMessage};
+use aura_link::{ContentBlock, Message, MessageContent, Role, ToolResultContent};
 
 // ── Shared helpers ──────────────────────────────────────────────────
 
@@ -29,9 +29,9 @@ fn tool_result_ids_from_blocks(blocks: &[ContentBlock]) -> HashSet<String> {
 // ── sanitize_orphan_tool_results helpers ────────────────────────────
 
 /// Collect tool_use IDs from the message immediately preceding `index`.
-fn collect_valid_tool_use_ids(messages: &[RichMessage], index: usize) -> HashSet<String> {
+fn collect_valid_tool_use_ids(messages: &[Message], index: usize) -> HashSet<String> {
     match messages.get(index.wrapping_sub(1)) {
-        Some(prev) if prev.role == "assistant" => match &prev.content {
+        Some(prev) if prev.role == Role::Assistant => match &prev.content {
             MessageContent::Blocks(prev_blocks) => {
                 tool_use_ids_from_blocks(prev_blocks).into_iter().collect()
             }
@@ -48,12 +48,14 @@ fn rebuild_filtered_message(
     kept: Vec<ContentBlock>,
     other_blocks: Vec<ContentBlock>,
     orig_count: usize,
-) -> Option<RichMessage> {
+) -> Option<Message> {
     if kept.is_empty() && other_blocks.is_empty() {
         let preview: String = blocks
             .iter()
             .filter_map(|b| match b {
-                ContentBlock::ToolResult { content, .. } => Some(content.as_str()),
+                ContentBlock::ToolResult { content, .. } => {
+                    Some(aura_link::tool_result_as_str(content))
+                }
                 _ => None,
             })
             .collect::<Vec<_>>()
@@ -62,15 +64,15 @@ fn rebuild_filtered_message(
             .take(200)
             .collect();
         warn!(preview = %preview, "Converting orphan tool_result message to text");
-        Some(RichMessage::user(&format!(
+        Some(Message::user(&format!(
             "[Previous tool result was lost due to context: {}]",
             preview
         )))
     } else if kept.len() != orig_count {
         let mut new_blocks = other_blocks;
         new_blocks.extend(kept);
-        Some(RichMessage {
-            role: "user".into(),
+        Some(Message {
+            role: Role::User,
             content: MessageContent::Blocks(new_blocks),
         })
     } else {
@@ -80,7 +82,7 @@ fn rebuild_filtered_message(
 
 /// Remove orphan tool_result blocks whose matching tool_use no longer exists
 /// in the preceding assistant message (e.g. after context compaction).
-pub(crate) fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+pub(crate) fn sanitize_orphan_tool_results(messages: Vec<Message>) -> Vec<Message> {
     let mut result = Vec::with_capacity(messages.len());
     for i in 0..messages.len() {
         let msg = &messages[i];
@@ -93,7 +95,7 @@ pub(crate) fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<Ri
             .filter(|b| matches!(b, ContentBlock::ToolResult { .. }))
             .cloned()
             .collect();
-        if tool_result_blocks.is_empty() || msg.role != "user" {
+        if tool_result_blocks.is_empty() || msg.role != Role::User {
             result.push(msg.clone());
             continue;
         }
@@ -102,9 +104,7 @@ pub(crate) fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<Ri
         let kept: Vec<ContentBlock> = tool_result_blocks
             .into_iter()
             .filter_map(|b| match &b {
-                ContentBlock::ToolResult { tool_use_id, .. }
-                    if valid_ids.contains(tool_use_id) =>
-                {
+                ContentBlock::ToolResult { tool_use_id, .. } if valid_ids.contains(tool_use_id) => {
                     Some(b)
                 }
                 ContentBlock::ToolResult { tool_use_id, .. } => {
@@ -129,16 +129,16 @@ pub(crate) fn sanitize_orphan_tool_results(messages: Vec<RichMessage>) -> Vec<Ri
 
 // ── sanitize_tool_use_results helpers ───────────────────────────────
 
-fn extract_tool_use_ids(msg: &RichMessage) -> Vec<String> {
+fn extract_tool_use_ids(msg: &Message) -> Vec<String> {
     match &msg.content {
         MessageContent::Blocks(blocks) => tool_use_ids_from_blocks(blocks),
         MessageContent::Text(_) => vec![],
     }
 }
 
-fn collect_existing_result_ids(next_msg: Option<&RichMessage>) -> HashSet<String> {
+fn collect_existing_result_ids(next_msg: Option<&Message>) -> HashSet<String> {
     match next_msg {
-        Some(m) if m.role == "user" => match &m.content {
+        Some(m) if m.role == Role::User => match &m.content {
             MessageContent::Blocks(blocks) => tool_result_ids_from_blocks(blocks),
             _ => HashSet::new(),
         },
@@ -150,8 +150,8 @@ fn collect_existing_result_ids(next_msg: Option<&RichMessage>) -> HashSet<String
 /// Returns the messages to append and whether the next message was consumed.
 fn inject_missing_tool_results(
     missing_ids: Vec<String>,
-    next_msg: Option<&RichMessage>,
-) -> (Vec<RichMessage>, bool) {
+    next_msg: Option<&Message>,
+) -> (Vec<Message>, bool) {
     warn!(
         orphaned_count = missing_ids.len(),
         ids = ?missing_ids,
@@ -161,13 +161,15 @@ fn inject_missing_tool_results(
         .into_iter()
         .map(|tool_use_id| ContentBlock::ToolResult {
             tool_use_id: tool_use_id.clone(),
-            content: "Tool execution was interrupted or not completed.".to_string(),
-            is_error: Some(true),
+            content: ToolResultContent::Text(
+                "Tool execution was interrupted or not completed.".into(),
+            ),
+            is_error: true,
         })
         .collect();
 
     if let Some(m) = next_msg {
-        if m.role == "user" {
+        if m.role == Role::User {
             let merged = match &m.content {
                 MessageContent::Blocks(blocks) => {
                     let mut merged = blocks.clone();
@@ -181,21 +183,21 @@ fn inject_missing_tool_results(
                 }
             };
             return (
-                vec![RichMessage {
-                    role: "user".into(),
+                vec![Message {
+                    role: Role::User,
                     content: MessageContent::Blocks(merged),
                 }],
                 true,
             );
         }
     }
-    (vec![RichMessage::tool_results(synthetic)], false)
+    (vec![Message::tool_results(synthetic)], false)
 }
 
 /// Ensure every tool_use block in an assistant message has a corresponding
 /// tool_result in the next user message.  Injects synthetic error results
 /// for any orphaned tool_use blocks.
-pub(crate) fn sanitize_tool_use_results(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+pub(crate) fn sanitize_tool_use_results(messages: Vec<Message>) -> Vec<Message> {
     let mut result = Vec::with_capacity(messages.len() + 16);
     let mut i = 0;
     while i < messages.len() {
@@ -240,7 +242,7 @@ pub(crate) fn sanitize_tool_use_results(messages: Vec<RichMessage>) -> Vec<RichM
 ///
 /// This is called as a final safety net before every API call to prevent
 /// 400 errors from invalid message structure.
-pub(crate) fn validate_and_repair_messages(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+pub(crate) fn validate_and_repair_messages(messages: Vec<Message>) -> Vec<Message> {
     let messages = remove_empty_messages(messages);
     let messages = merge_consecutive_same_role(messages);
     let messages = sanitize_orphan_tool_results(messages);
@@ -249,7 +251,7 @@ pub(crate) fn validate_and_repair_messages(messages: Vec<RichMessage>) -> Vec<Ri
 }
 
 /// Drop messages that have no meaningful content.
-fn remove_empty_messages(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+fn remove_empty_messages(messages: Vec<Message>) -> Vec<Message> {
     messages
         .into_iter()
         .filter(|msg| {
@@ -257,14 +259,16 @@ fn remove_empty_messages(messages: Vec<RichMessage>) -> Vec<RichMessage> {
                 MessageContent::Text(t) => !t.is_empty(),
                 MessageContent::Blocks(blocks) => {
                     if blocks.is_empty() {
-                        warn!(role = %msg.role, "Dropping message with empty blocks");
+                        warn!(role = ?msg.role, "Dropping message with empty blocks");
                         return false;
                     }
                     // Keep if any block has content
                     blocks.iter().any(|b| match b {
                         ContentBlock::Text { text } => !text.is_empty(),
                         ContentBlock::ToolUse { .. } => true,
-                        ContentBlock::ToolResult { content, .. } => !content.is_empty(),
+                        ContentBlock::ToolResult { content, .. } => {
+                            !aura_link::tool_result_as_str(content).is_empty()
+                        }
                         _ => true,
                     })
                 }
@@ -275,18 +279,18 @@ fn remove_empty_messages(messages: Vec<RichMessage>) -> Vec<RichMessage> {
 
 /// Public entry point for merging consecutive same-role messages,
 /// used by `sanitize_after_compaction` in tool_loop.rs.
-pub(crate) fn merge_consecutive_same_role_pub(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+pub(crate) fn merge_consecutive_same_role_pub(messages: Vec<Message>) -> Vec<Message> {
     merge_consecutive_same_role(messages)
 }
 
 /// Claude requires strict user/assistant alternation.  When compaction
 /// or other mutations produce consecutive messages with the same role,
 /// merge them into a single message.
-fn merge_consecutive_same_role(messages: Vec<RichMessage>) -> Vec<RichMessage> {
+fn merge_consecutive_same_role(messages: Vec<Message>) -> Vec<Message> {
     if messages.is_empty() {
         return messages;
     }
-    let mut result: Vec<RichMessage> = Vec::with_capacity(messages.len());
+    let mut result: Vec<Message> = Vec::with_capacity(messages.len());
     for msg in messages {
         let should_merge = result
             .last()
@@ -304,8 +308,8 @@ fn merge_consecutive_same_role(messages: Vec<RichMessage>) -> Vec<RichMessage> {
 }
 
 /// Merge `src` message content into `dst` (same role).
-fn merge_into(dst: &mut RichMessage, src: RichMessage) {
-    warn!(role = %dst.role, "Merging consecutive same-role messages");
+fn merge_into(dst: &mut Message, src: Message) {
+    warn!(role = ?dst.role, "Merging consecutive same-role messages");
     match (&mut dst.content, src.content) {
         (MessageContent::Text(dst_text), MessageContent::Text(src_text)) => {
             dst_text.push('\n');
@@ -333,14 +337,14 @@ fn content_to_blocks(content: MessageContent) -> Vec<ContentBlock> {
 }
 
 /// Ensure the message list starts with a user message.
-fn ensure_starts_with_user(mut messages: Vec<RichMessage>) -> Vec<RichMessage> {
+fn ensure_starts_with_user(mut messages: Vec<Message>) -> Vec<Message> {
     if let Some(first) = messages.first() {
-        if first.role != "user" {
+        if first.role != Role::User {
             warn!(
-                role = %first.role,
+                role = ?first.role,
                 "Message history does not start with a user message, prepending placeholder"
             );
-            messages.insert(0, RichMessage::user("Continue."));
+            messages.insert(0, Message::user("Continue."));
         }
     }
     messages

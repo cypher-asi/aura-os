@@ -12,6 +12,7 @@ import {
   projectFilesRoute,
   projectWorkRoute,
 } from "../../utils/mobileNavigation";
+import { getLastAgent } from "../../utils/storage";
 import { useProjectListData } from "./useProjectListData";
 import { ProjectListModals } from "./ProjectListModals";
 
@@ -85,7 +86,11 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
     if (path.endsWith("/execution") || path.endsWith("/work") || path.endsWith("/files") || path.endsWith("/agent") || path !== `/projects/${projectId}`) return;
     if (projectId in agentsByProject) {
       const agents = agentsByProject[projectId];
-      if (agents && agents.length > 0) navigate(`/projects/${projectId}/agents/${agents[0].agent_instance_id}`, { replace: true });
+      if (agents && agents.length > 0) {
+        const lastAid = getLastAgent(projectId);
+        const target = (lastAid ? agents.find((a) => a.agent_instance_id === lastAid) : undefined) ?? agents[0];
+        navigate(`/projects/${projectId}/agents/${target.agent_instance_id}`, { replace: true });
+      }
     }
   }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId]);
 }
@@ -174,7 +179,13 @@ export function ProjectList() {
         navigate(projectAgentRoute(id)); return;
       }
       const agents = agentsByProject[id];
-      if (agents && agents.length > 0) navigate(`/projects/${id}/agents/${agents[0].agent_instance_id}`);
+      if (agents && agents.length > 0) {
+        const lastAid = getLastAgent(id);
+        const target = (lastAid ? agents.find((a) => a.agent_instance_id === lastAid) : undefined) ?? agents[0];
+        navigate(`/projects/${id}/agents/${target.agent_instance_id}`);
+      } else if (!agents) {
+        navigate(projectAgentRoute(id));
+      }
     } else if (id.startsWith("execution:")) {
       const pid = id.slice("execution:".length);
       if (pid !== projectId) sidekick.closePreview();
@@ -190,7 +201,7 @@ export function ProjectList() {
     const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files");
     if (!expanded && nodeId === projectId && isNested) {
       sidekick.closePreview();
-      navigate(isMobileLayout ? `/projects/${nodeId}` : "/projects");
+      if (isMobileLayout) navigate(`/projects/${nodeId}`);
       return;
     }
     if (expanded && projectMap.has(nodeId) && !(nodeId in agentsByProject)) void refreshProjectAgents(nodeId);

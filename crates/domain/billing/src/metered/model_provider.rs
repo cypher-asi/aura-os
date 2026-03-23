@@ -27,7 +27,10 @@ impl MeteredLlm {
         }
     }
 
-    fn handle_provider_result<T>(&self, result: Result<T, aura_claude::ClaudeClientError>) -> Result<T, ProviderError> {
+    fn handle_provider_result<T>(
+        &self,
+        result: Result<T, aura_claude::ClaudeClientError>,
+    ) -> Result<T, ProviderError> {
         match result {
             Ok(v) => Ok(v),
             Err(aura_claude::ClaudeClientError::InsufficientCredits) => {
@@ -46,7 +49,9 @@ impl ModelProvider for MeteredLlm {
     }
 
     async fn complete(&self, request: ModelRequest) -> Result<ModelResponse, ProviderError> {
-        let credential = self.resolve_credential(&request.api_key).map_err(Self::map_metered_err)?;
+        let credential = self
+            .resolve_credential(&request.api_key)
+            .map_err(Self::map_metered_err)?;
         let model_str = request.model.clone();
 
         let estimated_input = aura_provider::estimate_tokens(&request.system_prompt)
@@ -174,11 +179,9 @@ fn provider_msg_to_rich(msg: aura_provider::Message) -> aura_claude::RichMessage
     };
     let content = match msg.content {
         aura_provider::MessageContent::Text(t) => aura_claude::MessageContent::Text(t),
-        aura_provider::MessageContent::Blocks(blocks) => {
-            aura_claude::MessageContent::Blocks(
-                blocks.into_iter().map(provider_block_to_claude).collect(),
-            )
-        }
+        aura_provider::MessageContent::Blocks(blocks) => aura_claude::MessageContent::Blocks(
+            blocks.into_iter().map(provider_block_to_claude).collect(),
+        ),
     };
     aura_claude::RichMessage {
         role: role.to_string(),

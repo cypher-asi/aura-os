@@ -13,6 +13,37 @@ mod tests {
     use aura_core::*;
     use aura_engine::{DevLoopEngine, EngineEvent, LoopOutcome};
 
+    #[derive(Default)]
+    struct CannedTurnRuntime;
+
+    #[async_trait::async_trait]
+    impl aura_link::AgentRuntime for CannedTurnRuntime {
+        async fn execute_turn(
+            &self,
+            request: aura_link::TurnRequest,
+        ) -> Result<aura_link::TurnResult, aura_link::RuntimeError> {
+            let tool_calls = vec![aura_link::ToolCall {
+                id: "auto_done".into(),
+                name: "task_done".into(),
+                input: serde_json::json!({"notes": "Auto-completed by test runtime"}),
+            }];
+            let _results = request.executor.execute(&tool_calls).await;
+
+            Ok(aura_link::TurnResult {
+                text: "Task completed by test runtime.".into(),
+                thinking: String::new(),
+                usage: aura_link::TotalUsage {
+                    input_tokens: 100,
+                    output_tokens: 50,
+                },
+                iterations_run: 1,
+                timed_out: false,
+                insufficient_credits: false,
+                llm_error: None,
+            })
+        }
+    }
+
     use aura_agents::AgentInstanceService;
     use aura_projects::{CreateProjectInput, ProjectService};
     use aura_sessions::SessionService;
@@ -37,9 +68,9 @@ mod tests {
         testutil::store_zero_auth_session(&store);
         std::env::set_var("ANTHROPIC_API_KEY", "test-key");
 
-        let billing_state = Arc::new(tokio::sync::Mutex::new(
-            testutil::MockBillingState::new(10_000_000),
-        ));
+        let billing_state = Arc::new(tokio::sync::Mutex::new(testutil::MockBillingState::new(
+            10_000_000,
+        )));
         let billing_url = testutil::start_stateful_mock_billing_server(billing_state).await;
         let billing = Arc::new(testutil::billing_client_for_url(&billing_url));
 
@@ -66,6 +97,9 @@ mod tests {
         );
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
+        let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
+            CannedTurnRuntime::default(),
+        );
         let engine = Arc::new(
             DevLoopEngine::new(
                 store.clone(),
@@ -76,6 +110,7 @@ mod tests {
                 agent_instance_service,
                 session_service,
                 event_tx,
+                runtime,
             )
             .with_storage_client(Some(storage_client.clone())),
         );
@@ -175,9 +210,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_task_agentic_simple() {
-        let mock = Arc::new(MockLlmProvider::with_responses(vec![
-            MockResponse::text("Completed simple task").with_tokens(200, 80),
-        ]));
+        let mock = Arc::new(MockLlmProvider::with_responses(vec![MockResponse::text(
+            "Completed simple task",
+        )
+        .with_tokens(200, 80)]));
         let mut h = setup(mock.clone()).await;
 
         create_task(&h, "Add enum definition", "ready").await;
@@ -191,8 +227,12 @@ mod tests {
         );
 
         let events = collect_events(&mut h.event_rx);
-        assert!(events.iter().any(|e| matches!(e, EngineEvent::TaskStarted { .. })));
-        assert!(events.iter().any(|e| matches!(e, EngineEvent::TaskCompleted { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, EngineEvent::TaskStarted { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, EngineEvent::TaskCompleted { .. })));
         assert!(mock.call_count() >= 1, "LLM should have been called");
     }
 
@@ -243,16 +283,16 @@ mod tests {
         assert_eq!(stored.status.as_deref(), Some("done"));
 
         let events = collect_events(&mut h.event_rx);
-        assert!(events.iter().any(|e| matches!(e, EngineEvent::BuildVerificationStarted { .. })));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, EngineEvent::BuildVerificationStarted { .. })));
     }
 
     #[tokio::test]
     async fn test_build_fix_loop() {
         let mut responses = Vec::new();
         for i in 0..50 {
-            responses.push(
-                MockResponse::text(format!("Response {i}")).with_tokens(200, 80),
-            );
+            responses.push(MockResponse::text(format!("Response {i}")).with_tokens(200, 80));
         }
         let mock = Arc::new(MockLlmProvider::with_responses(responses));
 
@@ -261,9 +301,9 @@ mod tests {
         testutil::store_zero_auth_session(&store);
         std::env::set_var("ANTHROPIC_API_KEY", "test-key");
 
-        let billing_state = Arc::new(tokio::sync::Mutex::new(
-            testutil::MockBillingState::new(10_000_000),
-        ));
+        let billing_state = Arc::new(tokio::sync::Mutex::new(testutil::MockBillingState::new(
+            10_000_000,
+        )));
         let billing_url = testutil::start_stateful_mock_billing_server(billing_state).await;
         let billing = Arc::new(testutil::billing_client_for_url(&billing_url));
 
@@ -293,6 +333,9 @@ mod tests {
         let project_dir = tmp.path().join("project");
         std::fs::create_dir_all(&project_dir).unwrap();
 
+        let runtime: Arc<dyn aura_link::AgentRuntime> = Arc::new(
+            CannedTurnRuntime::default(),
+        );
         let engine = Arc::new(
             DevLoopEngine::new(
                 store.clone(),
@@ -303,6 +346,7 @@ mod tests {
                 agent_instance_service,
                 session_service,
                 event_tx,
+                runtime,
             )
             .with_storage_client(Some(storage_client.clone())),
         );
@@ -352,7 +396,11 @@ mod tests {
             .await
             .unwrap();
 
-        let handle = engine.clone().start(project.project_id, None).await.unwrap();
+        let handle = engine
+            .clone()
+            .start(project.project_id, None)
+            .await
+            .unwrap();
         // The loop may exhaust mock responses if retries exceed our budget; either outcome is fine.
         let _outcome = handle.wait().await;
 
@@ -366,9 +414,14 @@ mod tests {
                     | EngineEvent::BuildFixAttempt { .. }
             )
         });
-        assert!(has_build_event, "expected at least one build verification event");
         assert!(
-            events.iter().any(|e| matches!(e, EngineEvent::LoopFinished { .. })),
+            has_build_event,
+            "expected at least one build verification event"
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, EngineEvent::LoopFinished { .. })),
             "loop should finish"
         );
     }

@@ -32,12 +32,21 @@
   margin-left: auto;
   flex-shrink: 0;
   opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
 }
 
 .bodyWrap {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.3s ease;
+}
+
+.bodyWrapInstant {
+  transition: none;
 }
 
 .bodyExpanded {

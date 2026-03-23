@@ -6,15 +6,15 @@ mod preflight;
 #[cfg(test)]
 mod tests;
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Instant;
 
 use tokio::sync::{mpsc, Mutex};
 
 use aura_claude::{
-    ClaudeStreamEvent, LlmResponse, RichMessage, StreamTokenCapture,
-    ThinkingConfig, ToolDefinition, ToolStreamRequest, ToolStreamResponse,
+    ClaudeStreamEvent, LlmResponse, RichMessage, StreamTokenCapture, ThinkingConfig,
+    ToolDefinition, ToolStreamRequest, ToolStreamResponse,
 };
 use aura_core::ZeroAuthSession;
 use aura_store::RocksStore;
@@ -46,7 +46,10 @@ impl MeteredLlmError {
     /// whether to stop the automation loop — we must not keep running LLM
     /// calls if we can't record the billing for them.
     pub fn is_billing_error(&self) -> bool {
-        matches!(self, MeteredLlmError::InsufficientCredits | MeteredLlmError::Billing(_))
+        matches!(
+            self,
+            MeteredLlmError::InsufficientCredits | MeteredLlmError::Billing(_)
+        )
     }
 }
 
@@ -99,7 +102,10 @@ impl MeteredLlm {
         store: Arc<RocksStore>,
     ) -> Self {
         let credits_per_usd: f64 = DEFAULT_CREDITS_PER_USD;
-        let router_mode = std::env::var("AURA_ROUTER_URL").ok().filter(|s| !s.is_empty()).is_some();
+        let router_mode = std::env::var("AURA_ROUTER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .is_some();
         let pricing = PricingService::new(store.clone());
         Self {
             provider,
@@ -121,13 +127,20 @@ impl MeteredLlm {
     /// counts. Applies a conservative cache discount (assumes 50% of input
     /// tokens are cache reads at 0.1x cost) to avoid stopping the tool loop
     /// prematurely when prompt caching is active.
-    pub fn estimate_credits(&self, model: &str, estimated_input_tokens: u64, estimated_output_tokens: u64) -> u64 {
+    pub fn estimate_credits(
+        &self,
+        model: &str,
+        estimated_input_tokens: u64,
+        estimated_output_tokens: u64,
+    ) -> u64 {
         let (inp_rate, out_rate) = self.pricing.lookup_rate(model);
         let cache_read_fraction = 0.5;
         let non_cached = estimated_input_tokens as f64 * (1.0 - cache_read_fraction);
         let cached = estimated_input_tokens as f64 * cache_read_fraction;
-        let usd_cost = (non_cached * inp_rate + cached * inp_rate * 0.1
-            + estimated_output_tokens as f64 * out_rate) / 1_000_000.0;
+        let usd_cost = (non_cached * inp_rate
+            + cached * inp_rate * 0.1
+            + estimated_output_tokens as f64 * out_rate)
+            / 1_000_000.0;
         if self.router_mode {
             (usd_cost * 100.0).round() as u64
         } else {
@@ -137,7 +150,11 @@ impl MeteredLlm {
 
     pub async fn current_balance(&self) -> Option<u64> {
         let token = self.access_token()?;
-        self.billing.get_balance(&token).await.ok().map(|b| b.balance_cents.max(0) as u64)
+        self.billing
+            .get_balance(&token)
+            .await
+            .ok()
+            .map(|b| b.balance_cents.max(0) as u64)
     }
 
     pub(crate) fn access_token(&self) -> Option<String> {
@@ -150,13 +167,17 @@ impl MeteredLlm {
 
     pub(crate) fn resolve_credential(&self, api_key: &str) -> Result<String, MeteredLlmError> {
         if self.router_mode {
-            self.access_token().ok_or(MeteredLlmError::InsufficientCredits)
+            self.access_token()
+                .ok_or(MeteredLlmError::InsufficientCredits)
         } else {
             Ok(api_key.to_string())
         }
     }
 
-    pub(crate) fn handle_llm_result<T>(&self, result: Result<T, aura_claude::ClaudeClientError>) -> Result<T, MeteredLlmError> {
+    pub(crate) fn handle_llm_result<T>(
+        &self,
+        result: Result<T, aura_claude::ClaudeClientError>,
+    ) -> Result<T, MeteredLlmError> {
         match result {
             Ok(v) => Ok(v),
             Err(aura_claude::ClaudeClientError::InsufficientCredits) => {
@@ -182,27 +203,68 @@ impl MeteredLlm {
         let credential = self.resolve_credential(req.api_key)?;
         if self.router_mode {
             let result = match req.model {
-                Some(m) => self.provider.complete_with_model(m, &credential, req.system_prompt, req.user_message, req.max_tokens).await,
-                None => self.provider.complete(&credential, req.system_prompt, req.user_message, req.max_tokens).await,
+                Some(m) => {
+                    self.provider
+                        .complete_with_model(
+                            m,
+                            &credential,
+                            req.system_prompt,
+                            req.user_message,
+                            req.max_tokens,
+                        )
+                        .await
+                }
+                None => {
+                    self.provider
+                        .complete(
+                            &credential,
+                            req.system_prompt,
+                            req.user_message,
+                            req.max_tokens,
+                        )
+                        .await
+                }
             };
             return self.handle_llm_result(result);
         }
         self.pre_flight_check().await?;
         let (model, resp) = match req.model {
             Some(m) => {
-                let r = self.provider.complete_with_model(m, req.api_key, req.system_prompt, req.user_message, req.max_tokens).await?;
+                let r = self
+                    .provider
+                    .complete_with_model(
+                        m,
+                        req.api_key,
+                        req.system_prompt,
+                        req.user_message,
+                        req.max_tokens,
+                    )
+                    .await?;
                 (m, r)
             }
             None => {
-                let r = self.provider.complete(req.api_key, req.system_prompt, req.user_message, req.max_tokens).await?;
+                let r = self
+                    .provider
+                    .complete(
+                        req.api_key,
+                        req.system_prompt,
+                        req.user_message,
+                        req.max_tokens,
+                    )
+                    .await?;
                 (aura_claude::DEFAULT_MODEL, r)
             }
         };
         self.debit(debit::DebitParams {
-            model, input_tokens: resp.input_tokens, output_tokens: resp.output_tokens,
-            cache_creation_input_tokens: 0, cache_read_input_tokens: 0,
-            reason: req.billing_reason, metadata: req.metadata,
-        }).await?;
+            model,
+            input_tokens: resp.input_tokens,
+            output_tokens: resp.output_tokens,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
+            reason: req.billing_reason,
+            metadata: req.metadata,
+        })
+        .await?;
         Ok(resp)
     }
 
@@ -213,22 +275,41 @@ impl MeteredLlm {
     ) -> Result<String, MeteredLlmError> {
         let credential = self.resolve_credential(req.api_key)?;
         if self.router_mode {
-            let result = self.provider.complete_stream(
-                &credential, req.system_prompt, req.user_message, req.max_tokens, event_tx,
-            ).await;
+            let result = self
+                .provider
+                .complete_stream(
+                    &credential,
+                    req.system_prompt,
+                    req.user_message,
+                    req.max_tokens,
+                    event_tx,
+                )
+                .await;
             return self.handle_llm_result(result);
         }
         self.pre_flight_check().await?;
         let (tx, handle) = StreamTokenCapture::forwarding(event_tx);
-        let result = self.provider.complete_stream(
-            req.api_key, req.system_prompt, req.user_message, req.max_tokens, tx,
-        ).await?;
+        let result = self
+            .provider
+            .complete_stream(
+                req.api_key,
+                req.system_prompt,
+                req.user_message,
+                req.max_tokens,
+                tx,
+            )
+            .await?;
         let (inp, out, cache_create, cache_read) = handle.finalize().await;
         self.debit(debit::DebitParams {
-            model: aura_claude::DEFAULT_MODEL, input_tokens: inp, output_tokens: out,
-            cache_creation_input_tokens: cache_create, cache_read_input_tokens: cache_read,
-            reason: req.billing_reason, metadata: req.metadata,
-        }).await?;
+            model: aura_claude::DEFAULT_MODEL,
+            input_tokens: inp,
+            output_tokens: out,
+            cache_creation_input_tokens: cache_create,
+            cache_read_input_tokens: cache_read,
+            reason: req.billing_reason,
+            metadata: req.metadata,
+        })
+        .await?;
         Ok(result)
     }
 
@@ -245,22 +326,29 @@ impl MeteredLlm {
     ) -> Result<String, MeteredLlmError> {
         let credential = self.resolve_credential(api_key)?;
         if self.router_mode {
-            let result = self.provider.complete_stream_multi(
-                &credential, system_prompt, messages, max_tokens, event_tx,
-            ).await;
+            let result = self
+                .provider
+                .complete_stream_multi(&credential, system_prompt, messages, max_tokens, event_tx)
+                .await;
             return self.handle_llm_result(result);
         }
         self.pre_flight_check().await?;
         let (tx, handle) = StreamTokenCapture::forwarding(event_tx);
-        let result = self.provider.complete_stream_multi(
-            api_key, system_prompt, messages, max_tokens, tx,
-        ).await?;
+        let result = self
+            .provider
+            .complete_stream_multi(api_key, system_prompt, messages, max_tokens, tx)
+            .await?;
         let (inp, out, cache_create, cache_read) = handle.finalize().await;
         self.debit(debit::DebitParams {
-            model: aura_claude::DEFAULT_MODEL, input_tokens: inp, output_tokens: out,
-            cache_creation_input_tokens: cache_create, cache_read_input_tokens: cache_read,
-            reason, metadata,
-        }).await?;
+            model: aura_claude::DEFAULT_MODEL,
+            input_tokens: inp,
+            output_tokens: out,
+            cache_creation_input_tokens: cache_create,
+            cache_read_input_tokens: cache_read,
+            reason,
+            metadata,
+        })
+        .await?;
         Ok(result)
     }
 
@@ -269,37 +357,74 @@ impl MeteredLlm {
         req: MeteredStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, MeteredLlmError> {
         let MeteredStreamRequest {
-            api_key, system_prompt, messages, tools, max_tokens,
-            thinking, event_tx, model_override, billing_reason, metadata,
+            api_key,
+            system_prompt,
+            messages,
+            tools,
+            max_tokens,
+            thinking,
+            event_tx,
+            model_override,
+            billing_reason,
+            metadata,
         } = req;
 
         let credential = self.resolve_credential(api_key)?;
         if self.router_mode {
-            let result = self.provider.complete_stream_with_tools(ToolStreamRequest {
-                api_key: &credential, system_prompt, messages, tools, max_tokens,
-                thinking, event_tx, model_override,
-            }).await;
+            let result = self
+                .provider
+                .complete_stream_with_tools(ToolStreamRequest {
+                    api_key: &credential,
+                    system_prompt,
+                    messages,
+                    tools,
+                    max_tokens,
+                    thinking,
+                    event_tx,
+                    model_override,
+                })
+                .await;
             return self.handle_llm_result(result);
         }
 
         let estimated_input: u64 = aura_claude::estimate_tokens(system_prompt)
-            + messages.iter().map(aura_claude::estimate_message_tokens).sum::<u64>();
-        let estimated_credits = self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
+            + messages
+                .iter()
+                .map(aura_claude::estimate_message_tokens)
+                .sum::<u64>();
+        let estimated_credits =
+            self.estimate_credits(aura_claude::DEFAULT_MODEL, estimated_input, 0);
         self.pre_flight_check_for(estimated_credits).await?;
 
-        let resp = self.provider.complete_stream_with_tools(ToolStreamRequest {
-            api_key, system_prompt, messages, tools, max_tokens,
-            thinking, event_tx, model_override,
-        }).await?;
+        let resp = self
+            .provider
+            .complete_stream_with_tools(ToolStreamRequest {
+                api_key,
+                system_prompt,
+                messages,
+                tools,
+                max_tokens,
+                thinking,
+                event_tx,
+                model_override,
+            })
+            .await?;
 
-        let billing_model = if resp.model_used.is_empty() { aura_claude::DEFAULT_MODEL } else { &resp.model_used };
+        let billing_model = if resp.model_used.is_empty() {
+            aura_claude::DEFAULT_MODEL
+        } else {
+            &resp.model_used
+        };
         self.debit(debit::DebitParams {
-            model: billing_model, input_tokens: resp.input_tokens,
+            model: billing_model,
+            input_tokens: resp.input_tokens,
             output_tokens: resp.output_tokens,
             cache_creation_input_tokens: resp.cache_creation_input_tokens,
             cache_read_input_tokens: resp.cache_read_input_tokens,
-            reason: billing_reason, metadata,
-        }).await?;
+            reason: billing_reason,
+            metadata,
+        })
+        .await?;
         Ok(resp)
     }
 }

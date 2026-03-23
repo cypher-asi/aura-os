@@ -15,7 +15,10 @@ impl TryFrom<StorageSpec> for Spec {
 
     fn try_from(val: StorageSpec) -> Result<Self, Self::Error> {
         Ok(Spec {
-            spec_id: val.id.parse().map_err(|e| format!("invalid spec id: {e}"))?,
+            spec_id: val
+                .id
+                .parse()
+                .map_err(|e| format!("invalid spec id: {e}"))?,
             project_id: val
                 .project_id
                 .as_deref()
@@ -46,7 +49,9 @@ fn parse_dependency_ids(ids: Option<Vec<String>>) -> Vec<TaskId> {
         .collect()
 }
 
-fn convert_files_changed(changes: Option<Vec<StorageTaskFileChangeSummary>>) -> Vec<FileChangeSummary> {
+fn convert_files_changed(
+    changes: Option<Vec<StorageTaskFileChangeSummary>>,
+) -> Vec<FileChangeSummary> {
     changes
         .unwrap_or_default()
         .into_iter()
@@ -68,9 +73,16 @@ impl TryFrom<StorageTask> for Task {
             .assigned_project_agent_id
             .as_deref()
             .and_then(|id| id.parse().ok());
-        let completed_id = if status == TaskStatus::Done { assigned_id } else { None };
+        let completed_id = if status == TaskStatus::Done {
+            assigned_id
+        } else {
+            None
+        };
         Ok(Task {
-            task_id: val.id.parse().map_err(|e| format!("invalid task id: {e}"))?,
+            task_id: val
+                .id
+                .parse()
+                .map_err(|e| format!("invalid task id: {e}"))?,
             project_id: val
                 .project_id
                 .as_deref()

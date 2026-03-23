@@ -32,17 +32,10 @@ impl StorageClient {
         .await
     }
 
-    pub async fn get_spec(
-        &self,
-        spec_id: &str,
-        jwt: &str,
-    ) -> Result<StorageSpec, StorageError> {
+    pub async fn get_spec(&self, spec_id: &str, jwt: &str) -> Result<StorageSpec, StorageError> {
         validate_url_id(spec_id, "spec_id")?;
-        self.get_authed(
-            &format!("{}/api/specs/{}", self.base_url, spec_id),
-            jwt,
-        )
-        .await
+        self.get_authed(&format!("{}/api/specs/{}", self.base_url, spec_id), jwt)
+            .await
     }
 
     pub async fn update_spec(
@@ -60,16 +53,9 @@ impl StorageClient {
         .await
     }
 
-    pub async fn delete_spec(
-        &self,
-        spec_id: &str,
-        jwt: &str,
-    ) -> Result<(), StorageError> {
+    pub async fn delete_spec(&self, spec_id: &str, jwt: &str) -> Result<(), StorageError> {
         validate_url_id(spec_id, "spec_id")?;
-        self.delete_authed(
-            &format!("{}/api/specs/{}", self.base_url, spec_id),
-            jwt,
-        )
-        .await
+        self.delete_authed(&format!("{}/api/specs/{}", self.base_url, spec_id), jwt)
+            .await
     }
 }

@@ -21,10 +21,7 @@ pub struct TaskService {
 }
 
 impl TaskService {
-    pub fn new(
-        store: Arc<RocksStore>,
-        storage_client: Option<Arc<StorageClient>>,
-    ) -> Self {
+    pub fn new(store: Arc<RocksStore>, storage_client: Option<Arc<StorageClient>>) -> Self {
         Self {
             store,
             storage_client,
@@ -34,13 +31,14 @@ impl TaskService {
 
     async fn project_claim_lock(&self, project_id: &ProjectId) -> Arc<Mutex<()>> {
         let mut locks = self.claim_locks.lock().await;
-        locks.entry(*project_id).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+        locks
+            .entry(*project_id)
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
     }
 
     fn get_jwt(&self) -> Result<String, TaskError> {
-        self.store
-            .get_jwt()
-            .ok_or(TaskError::NoActiveSession)
+        self.store.get_jwt().ok_or(TaskError::NoActiveSession)
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
@@ -52,9 +50,7 @@ impl TaskService {
     pub async fn list_tasks(&self, project_id: &ProjectId) -> Result<Vec<Task>, TaskError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
-        let storage_tasks = storage
-            .list_tasks(&project_id.to_string(), &jwt)
-            .await?;
+        let storage_tasks = storage.list_tasks(&project_id.to_string(), &jwt).await?;
         let tasks = storage_tasks
             .into_iter()
             .filter_map(|s| {
@@ -75,9 +71,7 @@ impl TaskService {
     ) -> Result<Vec<Task>, TaskError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
-        let storage_tasks = storage
-            .list_tasks(&project_id.to_string(), &jwt)
-            .await?;
+        let storage_tasks = storage.list_tasks(&project_id.to_string(), &jwt).await?;
         let tasks = storage_tasks
             .into_iter()
             .filter_map(|s| {

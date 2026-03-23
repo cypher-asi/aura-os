@@ -122,7 +122,14 @@ impl MockLlmProvider {
         Ok(queue.remove(0))
     }
 
-    async fn record(&self, method: &str, system: &str, messages: Vec<RichMessage>, tools: Vec<ToolDefinition>, max_tokens: u32) {
+    async fn record(
+        &self,
+        method: &str,
+        system: &str,
+        messages: Vec<RichMessage>,
+        tools: Vec<ToolDefinition>,
+        max_tokens: u32,
+    ) {
         self.call_count.fetch_add(1, Ordering::SeqCst);
         self.recorded_calls.lock().await.push(RecordedCall {
             method: method.into(),
@@ -138,23 +145,32 @@ impl MockLlmProvider {
             send_or_log(event_tx, ClaudeStreamEvent::Delta(resp.text.clone()));
         }
         for tc in &resp.tool_calls {
-            send_or_log(event_tx, ClaudeStreamEvent::ToolUseStarted {
-                id: tc.id.clone(),
-                name: tc.name.clone(),
-            });
-            send_or_log(event_tx, ClaudeStreamEvent::ToolUse {
-                id: tc.id.clone(),
-                name: tc.name.clone(),
-                input: tc.input.clone(),
-            });
+            send_or_log(
+                event_tx,
+                ClaudeStreamEvent::ToolUseStarted {
+                    id: tc.id.clone(),
+                    name: tc.name.clone(),
+                },
+            );
+            send_or_log(
+                event_tx,
+                ClaudeStreamEvent::ToolUse {
+                    id: tc.id.clone(),
+                    name: tc.name.clone(),
+                    input: tc.input.clone(),
+                },
+            );
         }
-        send_or_log(event_tx, ClaudeStreamEvent::Done {
-            stop_reason: resp.stop_reason.clone(),
-            input_tokens: resp.input_tokens,
-            output_tokens: resp.output_tokens,
-            cache_creation_input_tokens: resp.cache_creation_input_tokens,
-            cache_read_input_tokens: resp.cache_read_input_tokens,
-        });
+        send_or_log(
+            event_tx,
+            ClaudeStreamEvent::Done {
+                stop_reason: resp.stop_reason.clone(),
+                input_tokens: resp.input_tokens,
+                output_tokens: resp.output_tokens,
+                cache_creation_input_tokens: resp.cache_creation_input_tokens,
+                cache_read_input_tokens: resp.cache_read_input_tokens,
+            },
+        );
     }
 }
 
@@ -174,7 +190,8 @@ impl LlmProvider for MockLlmProvider {
         max_tokens: u32,
     ) -> Result<LlmResponse, ClaudeClientError> {
         let msgs = vec![RichMessage::user(user_message)];
-        self.record("complete", system_prompt, msgs, vec![], max_tokens).await;
+        self.record("complete", system_prompt, msgs, vec![], max_tokens)
+            .await;
         let resp = self.next_response().await?;
         Ok(LlmResponse {
             text: resp.text,
@@ -192,7 +209,8 @@ impl LlmProvider for MockLlmProvider {
         event_tx: mpsc::UnboundedSender<LlmStreamEvent>,
     ) -> Result<String, ClaudeClientError> {
         let msgs = vec![RichMessage::user(user_message)];
-        self.record("complete_stream", system_prompt, msgs, vec![], max_tokens).await;
+        self.record("complete_stream", system_prompt, msgs, vec![], max_tokens)
+            .await;
         let resp = self.next_response().await?;
         Self::send_events(&resp, &event_tx);
         Ok(resp.text)
@@ -213,7 +231,14 @@ impl LlmProvider for MockLlmProvider {
                 content: crate::MessageContent::Text(content.clone()),
             })
             .collect();
-        self.record("complete_stream_multi", system_prompt, rich, vec![], max_tokens).await;
+        self.record(
+            "complete_stream_multi",
+            system_prompt,
+            rich,
+            vec![],
+            max_tokens,
+        )
+        .await;
         let resp = self.next_response().await?;
         Self::send_events(&resp, &event_tx);
         Ok(resp.text)
@@ -224,9 +249,21 @@ impl LlmProvider for MockLlmProvider {
         req: ToolStreamRequest<'_>,
     ) -> Result<ToolStreamResponse, ClaudeClientError> {
         let ToolStreamRequest {
-            system_prompt, messages, tools, max_tokens, event_tx, ..
+            system_prompt,
+            messages,
+            tools,
+            max_tokens,
+            event_tx,
+            ..
         } = req;
-        self.record("complete_stream_with_tools", system_prompt, messages, tools, max_tokens).await;
+        self.record(
+            "complete_stream_with_tools",
+            system_prompt,
+            messages,
+            tools,
+            max_tokens,
+        )
+        .await;
         let resp = self.next_response().await?;
         Self::send_events(&resp, &event_tx);
         Ok(ToolStreamResponse {
@@ -316,7 +353,9 @@ mod tests {
         while let Ok(evt) = rx.try_recv() {
             events.push(evt);
         }
-        assert!(events.iter().any(|e| matches!(e, ClaudeStreamEvent::ToolUse { name, .. } if name == "read_file")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, ClaudeStreamEvent::ToolUse { name, .. } if name == "read_file")));
         assert!(events.iter().any(|e| matches!(e, ClaudeStreamEvent::Done { stop_reason, .. } if stop_reason == "tool_use")));
     }
 }

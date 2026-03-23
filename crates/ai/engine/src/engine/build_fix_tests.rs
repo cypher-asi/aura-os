@@ -222,19 +222,54 @@ fn normalize_different_errors_produce_different_sigs() {
 #[test]
 fn stagnation_detected_after_three_consecutive_identical_sigs() {
     let sig = normalize_error_signature("error[E0308]: mismatched types\n  --> src/lib.rs:1:1\n");
-    let prior = [BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() },
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig.clone(), files_changed: vec![], changes_summary: String::new() }];
-    let consecutive = prior.iter().rev().take_while(|a| a.error_signature == sig).count();
-    assert!(consecutive >= 2, "should detect stagnation (3 total: 2 prior + current)");
+    let prior = [
+        BuildFixAttemptRecord {
+            stderr: String::new(),
+            error_signature: sig.clone(),
+            files_changed: vec![],
+            changes_summary: String::new(),
+        },
+        BuildFixAttemptRecord {
+            stderr: String::new(),
+            error_signature: sig.clone(),
+            files_changed: vec![],
+            changes_summary: String::new(),
+        },
+    ];
+    let consecutive = prior
+        .iter()
+        .rev()
+        .take_while(|a| a.error_signature == sig)
+        .count();
+    assert!(
+        consecutive >= 2,
+        "should detect stagnation (3 total: 2 prior + current)"
+    );
 }
 
 #[test]
 fn stagnation_not_triggered_with_interleaved_different_error() {
     let sig_a = normalize_error_signature("error[E0308]: mismatched types\n");
     let sig_b = normalize_error_signature("error[E0599]: no method named `foo`\n");
-    let prior = [BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_a.clone(), files_changed: vec![], changes_summary: String::new() },
-        BuildFixAttemptRecord { stderr: String::new(), error_signature: sig_b.clone(), files_changed: vec![], changes_summary: String::new() }];
-    let consecutive = prior.iter().rev().take_while(|a| a.error_signature == sig_a).count();
+    let prior = [
+        BuildFixAttemptRecord {
+            stderr: String::new(),
+            error_signature: sig_a.clone(),
+            files_changed: vec![],
+            changes_summary: String::new(),
+        },
+        BuildFixAttemptRecord {
+            stderr: String::new(),
+            error_signature: sig_b.clone(),
+            files_changed: vec![],
+            changes_summary: String::new(),
+        },
+    ];
+    let consecutive = prior
+        .iter()
+        .rev()
+        .take_while(|a| a.error_signature == sig_a)
+        .count();
     assert_eq!(consecutive, 0, "different last error breaks the streak");
 }
 
@@ -253,14 +288,20 @@ fn parse_refs_extracts_type_names() {
 fn parse_refs_extracts_missing_fields() {
     let stderr = "error[E0063]: missing field `name` in initializer of `aura_core::Task`";
     let refs = parse_error_references(stderr);
-    assert!(refs.missing_fields.iter().any(|(t, f)| t == "Task" && f == "name"));
+    assert!(refs
+        .missing_fields
+        .iter()
+        .any(|(t, f)| t == "Task" && f == "name"));
 }
 
 #[test]
 fn parse_refs_extracts_methods_not_found() {
     let stderr = "error[E0599]: no method named `do_thing` found for struct `MyService`";
     let refs = parse_error_references(stderr);
-    assert!(refs.methods_not_found.iter().any(|(t, m)| t == "MyService" && m == "do_thing"));
+    assert!(refs
+        .methods_not_found
+        .iter()
+        .any(|(t, m)| t == "MyService" && m == "do_thing"));
 }
 
 #[test]
@@ -311,7 +352,11 @@ error[E0599]: no method named `foo` found for struct `Bar`
   --> src/lib.rs:42:9
 ";
     let sigs = parse_individual_error_signatures(stderr);
-    assert_eq!(sigs.len(), 2, "should split into two distinct error signatures");
+    assert_eq!(
+        sigs.len(),
+        2,
+        "should split into two distinct error signatures"
+    );
 }
 
 #[test]
@@ -323,7 +368,11 @@ error[E0308]: mismatched types
   --> src/main.rs:20:5
 ";
     let sigs = parse_individual_error_signatures(stderr);
-    assert_eq!(sigs.len(), 1, "identical errors on different lines should dedup to one");
+    assert_eq!(
+        sigs.len(),
+        1,
+        "identical errors on different lines should dedup to one"
+    );
 }
 
 #[test]
@@ -335,8 +384,10 @@ fn parse_individual_empty_stderr() {
 #[test]
 fn parse_individual_no_error_prefix() {
     let sigs = parse_individual_error_signatures("warning: unused variable\n");
-    assert!(sigs.is_empty() || sigs.iter().all(|s| s.is_empty()),
-        "non-error output should produce no meaningful signatures");
+    assert!(
+        sigs.is_empty() || sigs.iter().all(|s| s.is_empty()),
+        "non-error output should produce no meaningful signatures"
+    );
 }
 
 // -----------------------------------------------------------------------
@@ -354,7 +405,10 @@ error[E0599]: no method named `foo` found for struct `Bar`
     let baseline = parse_individual_error_signatures(stderr);
     let current = parse_individual_error_signatures(stderr);
     let new_errors: std::collections::HashSet<_> = current.difference(&baseline).cloned().collect();
-    assert!(new_errors.is_empty(), "all errors are pre-existing, none should be new");
+    assert!(
+        new_errors.is_empty(),
+        "all errors are pre-existing, none should be new"
+    );
 }
 
 #[test]
@@ -384,5 +438,9 @@ error[E0308]: mismatched types
     let baseline: std::collections::HashSet<String> = std::collections::HashSet::new();
     let current = parse_individual_error_signatures(stderr);
     let new_errors: std::collections::HashSet<_> = current.difference(&baseline).cloned().collect();
-    assert_eq!(new_errors.len(), current.len(), "with empty baseline, all errors are new");
+    assert_eq!(
+        new_errors.len(),
+        current.len(),
+        "with empty baseline, all errors are new"
+    );
 }

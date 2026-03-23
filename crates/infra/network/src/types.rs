@@ -39,7 +39,11 @@ impl NetworkUser {
         self.id.parse().ok().map(UserId::from_uuid)
     }
     pub fn profile_id_typed(&self) -> Option<ProfileId> {
-        self.profile_id.as_ref()?.parse().ok().map(ProfileId::from_uuid)
+        self.profile_id
+            .as_ref()?
+            .parse()
+            .ok()
+            .map(ProfileId::from_uuid)
     }
 }
 
@@ -224,7 +228,11 @@ pub struct NetworkAgent {
 
 impl NetworkAgent {
     pub fn profile_id_typed(&self) -> Option<ProfileId> {
-        self.profile_id.as_ref()?.parse().ok().map(ProfileId::from_uuid)
+        self.profile_id
+            .as_ref()?
+            .parse()
+            .ok()
+            .map(ProfileId::from_uuid)
     }
 }
 

@@ -22,10 +22,7 @@ fn setup() -> TestHarness {
     let store = Arc::new(RocksStore::open(store_dir.path()).expect("failed to open RocksStore"));
 
     let project_service = Arc::new(ProjectService::new(Arc::clone(&store)));
-    let task_service = Arc::new(TaskService::new(
-        Arc::clone(&store),
-        None,
-    ));
+    let task_service = Arc::new(TaskService::new(Arc::clone(&store), None));
 
     let project_dir = TempDir::new().expect("failed to create project temp dir");
     let project = project_service
@@ -143,11 +140,7 @@ async fn run_command_captures_output() {
     let cmd = "echo hello";
     let result = h
         .executor
-        .execute(
-            &h.project_id,
-            "run_command",
-            json!({ "command": cmd }),
-        )
+        .execute(&h.project_id, "run_command", json!({ "command": cmd }))
         .await;
 
     assert!(!result.is_error, "unexpected error: {}", result.content);
@@ -169,11 +162,7 @@ async fn find_files_discovers_files() {
 
     let result = h
         .executor
-        .execute(
-            &h.project_id,
-            "find_files",
-            json!({ "pattern": "*.rs" }),
-        )
+        .execute(&h.project_id, "find_files", json!({ "pattern": "*.rs" }))
         .await;
 
     assert!(!result.is_error, "unexpected error: {}", result.content);

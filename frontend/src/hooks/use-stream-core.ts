@@ -41,6 +41,7 @@ export {
   handleThinkingDelta,
   handleTextDelta,
   handleToolCallStarted,
+  handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
   handleMessageSaved,

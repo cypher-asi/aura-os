@@ -2,10 +2,10 @@ use std::path::Path;
 
 use tracing::{error, info};
 
-use aura_core::fuzzy_search_replace;
 use crate::error::EngineError;
+use aura_core::fuzzy_search_replace;
 
-use super::{FileOp, validate_path};
+use super::{validate_path, FileOp};
 
 pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), EngineError> {
     info!(base = %base_path.display(), count = ops.len(), "applying file operations");
@@ -23,12 +23,10 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                         .await
                         .map_err(|e| EngineError::Io(e.to_string()))?;
                 }
-                tokio::fs::write(&full_path, content)
-                    .await
-                    .map_err(|e| {
-                        error!(path = %path, error = %e, "failed to write file");
-                        EngineError::Io(e.to_string())
-                    })?;
+                tokio::fs::write(&full_path, content).await.map_err(|e| {
+                    error!(path = %path, error = %e, "failed to write file");
+                    EngineError::Io(e.to_string())
+                })?;
                 info!(path = %path, bytes = content.len(), "wrote file");
             }
             FileOp::Delete { path } => {
@@ -38,12 +36,10 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
                     return Err(e);
                 }
                 if full_path.exists() {
-                    tokio::fs::remove_file(&full_path)
-                        .await
-                        .map_err(|e| {
-                            error!(path = %path, error = %e, "failed to delete file");
-                            EngineError::Io(e.to_string())
-                        })?;
+                    tokio::fs::remove_file(&full_path).await.map_err(|e| {
+                        error!(path = %path, error = %e, "failed to delete file");
+                        EngineError::Io(e.to_string())
+                    })?;
                     info!(path = %path, "deleted file");
                 }
             }
@@ -53,24 +49,27 @@ pub async fn apply_file_ops(base_path: &Path, ops: &[FileOp]) -> Result<(), Engi
         }
     }
 
-    info!(count = ops.len(), "all file operations applied successfully");
+    info!(
+        count = ops.len(),
+        "all file operations applied successfully"
+    );
     Ok(())
 }
 
 async fn apply_search_replace(
-    base_path: &Path, path: &str, replacements: &[super::Replacement],
+    base_path: &Path,
+    path: &str,
+    replacements: &[super::Replacement],
 ) -> Result<(), EngineError> {
     let full_path = base_path.join(path);
     if let Err(e) = validate_path(base_path, &full_path) {
         error!(path = %path, error = %e, "path validation failed");
         return Err(e);
     }
-    let raw_content = tokio::fs::read_to_string(&full_path)
-        .await
-        .map_err(|e| {
-            error!(path = %path, error = %e, "failed to read file for search-replace");
-            EngineError::Io(format!("failed to read {path} for search-replace: {e}"))
-        })?;
+    let raw_content = tokio::fs::read_to_string(&full_path).await.map_err(|e| {
+        error!(path = %path, error = %e, "failed to read file for search-replace");
+        EngineError::Io(format!("failed to read {path} for search-replace: {e}"))
+    })?;
 
     let uses_crlf = raw_content.contains("\r\n");
     let mut content = raw_content.replace("\r\n", "\n");
@@ -130,10 +129,7 @@ async fn apply_search_replace(
 
 /// Compute line-level change stats for each file op before applying them.
 /// Must be called before `apply_file_ops` so old file contents are still on disk.
-pub fn compute_file_changes(
-    base_path: &Path,
-    ops: &[FileOp],
-) -> Vec<aura_core::FileChangeSummary> {
+pub fn compute_file_changes(base_path: &Path, ops: &[FileOp]) -> Vec<aura_core::FileChangeSummary> {
     ops.iter()
         .map(|op| match op {
             FileOp::Create { path, content } => aura_core::FileChangeSummary {
@@ -165,8 +161,7 @@ pub fn compute_file_changes(
                 }
             }
             FileOp::SearchReplace { path, replacements } => {
-                let old_content = std::fs::read_to_string(base_path.join(path))
-                    .unwrap_or_default();
+                let old_content = std::fs::read_to_string(base_path.join(path)).unwrap_or_default();
                 let old_lines = old_content.lines().count() as u32;
                 let mut new_content = old_content;
                 for rep in replacements {

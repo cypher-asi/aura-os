@@ -29,8 +29,12 @@ pub enum LoopCommand {
 #[derive(Debug, Clone)]
 pub enum LoopOutcome {
     AllTasksComplete,
-    Paused { completed_count: usize },
-    Stopped { completed_count: usize },
+    Paused {
+        completed_count: usize,
+    },
+    Stopped {
+        completed_count: usize,
+    },
     AllTasksBlocked,
     TaskFailed {
         completed_count: usize,
@@ -41,21 +45,40 @@ pub enum LoopOutcome {
 }
 
 pub(crate) fn track_file_op(tool_name: &str, input: &serde_json::Value, ops: &mut Vec<FileOp>) {
-    let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let path = input
+        .get("path")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     if path.is_empty() {
         return;
     }
     match tool_name {
         "write_file" => {
-            let content = input.get("content").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let content = input
+                .get("content")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             ops.push(FileOp::Create { path, content });
         }
         "edit_file" => {
-            let old_text = input.get("old_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let new_text = input.get("new_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let old_text = input
+                .get("old_text")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let new_text = input
+                .get("new_text")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             ops.push(FileOp::SearchReplace {
                 path,
-                replacements: vec![Replacement { search: old_text, replace: new_text }],
+                replacements: vec![Replacement {
+                    search: old_text,
+                    replace: new_text,
+                }],
             });
         }
         "delete_file" => {
@@ -82,8 +105,12 @@ pub(crate) struct TaskTimings {
 }
 
 impl TaskTimings {
-    pub fn total_input(&self) -> u64 { self.input_tokens + self.fix_input_tokens }
-    pub fn total_output(&self) -> u64 { self.output_tokens + self.fix_output_tokens }
+    pub fn total_input(&self) -> u64 {
+        self.input_tokens + self.fix_input_tokens
+    }
+    pub fn total_output(&self) -> u64 {
+        self.output_tokens + self.fix_output_tokens
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -113,34 +140,41 @@ impl TaskOutcome {
     pub fn is_completed(&self) -> bool {
         matches!(self, TaskOutcome::Completed { .. })
     }
-
 }
 
 pub(crate) fn simple_file_changes(ops: &[FileOp]) -> Vec<FileChangeSummary> {
-    ops.iter().map(|op| match op {
-        FileOp::Create { path, content } => FileChangeSummary {
-            op: "create".to_string(),
-            path: path.clone(),
-            lines_added: content.lines().count() as u32,
-            lines_removed: 0,
-        },
-        FileOp::Modify { path, content } => FileChangeSummary {
-            op: "modify".to_string(),
-            path: path.clone(),
-            lines_added: content.lines().count() as u32,
-            lines_removed: 0,
-        },
-        FileOp::Delete { path } => FileChangeSummary {
-            op: "delete".to_string(),
-            path: path.clone(),
-            lines_added: 0,
-            lines_removed: 0,
-        },
-        FileOp::SearchReplace { path, replacements } => FileChangeSummary {
-            op: "modify".to_string(),
-            path: path.clone(),
-            lines_added: replacements.iter().map(|r| r.replace.lines().count() as u32).sum(),
-            lines_removed: replacements.iter().map(|r| r.search.lines().count() as u32).sum(),
-        },
-    }).collect()
+    ops.iter()
+        .map(|op| match op {
+            FileOp::Create { path, content } => FileChangeSummary {
+                op: "create".to_string(),
+                path: path.clone(),
+                lines_added: content.lines().count() as u32,
+                lines_removed: 0,
+            },
+            FileOp::Modify { path, content } => FileChangeSummary {
+                op: "modify".to_string(),
+                path: path.clone(),
+                lines_added: content.lines().count() as u32,
+                lines_removed: 0,
+            },
+            FileOp::Delete { path } => FileChangeSummary {
+                op: "delete".to_string(),
+                path: path.clone(),
+                lines_added: 0,
+                lines_removed: 0,
+            },
+            FileOp::SearchReplace { path, replacements } => FileChangeSummary {
+                op: "modify".to_string(),
+                path: path.clone(),
+                lines_added: replacements
+                    .iter()
+                    .map(|r| r.replace.lines().count() as u32)
+                    .sum(),
+                lines_removed: replacements
+                    .iter()
+                    .map(|r| r.search.lines().count() as u32)
+                    .sum(),
+            },
+        })
+        .collect()
 }

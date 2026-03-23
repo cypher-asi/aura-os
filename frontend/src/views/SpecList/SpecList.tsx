@@ -6,7 +6,7 @@ import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
-import { mergeById } from "../../utils/collections";
+import { mergeById, compareSpecs } from "../../utils/collections";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
@@ -34,7 +34,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     }
   }, [ctx?.initialSpecs]);
   const mergedSpecs = useMemo(() => {
-    const merged = mergeById(localSpecs, sidekick.specs, "spec_id");
+    const merged = mergeById(localSpecs, sidekick.specs, "spec_id").sort(compareSpecs);
     if (sidekick.deletedSpecIds.length === 0) return merged;
     const deleted = new Set(sidekick.deletedSpecIds);
     return merged.filter((s) => !deleted.has(s.spec_id));
@@ -46,7 +46,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
       api
         .listSpecs(projectId)
         .then((s) => {
-          const sorted = s.sort((a, b) => a.order_index - b.order_index);
+          const sorted = s.sort(compareSpecs);
           setLocalSpecs(sorted);
           sidekickRef.current.clearDeletedSpecs();
           if (autoSelect && sorted.length > 0) {
@@ -84,7 +84,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
         if (e.project_id === projectId && spec) {
           setLocalSpecs((prev) => {
             if (prev.some((s) => s.spec_id === spec.spec_id)) return prev;
-            return [...prev, spec].sort((a, b) => a.order_index - b.order_index);
+            return [...prev, spec].sort(compareSpecs);
           });
         }
       }),

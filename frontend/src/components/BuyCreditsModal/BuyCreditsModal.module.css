@@ -34,7 +34,8 @@
 .presetCard {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-4);
+  height: var(--control-height-md);
+  padding: 0 var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,8 +45,8 @@
 }
 
 .presetCard:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  border-color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
 }
 
 .presetCard:disabled {
@@ -54,8 +55,8 @@
 }
 
 .presetSelected {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
 }
 
 .presetPrice {
@@ -66,7 +67,7 @@
 }
 
 .presetSelected .presetPrice {
-  color: var(--color-accent);
+  color: var(--color-text-primary);
 }
 
 /* Custom amount row */
@@ -74,6 +75,18 @@
 .customRow {
   display: flex;
   gap: var(--space-2);
+  height: var(--control-height-md);
+}
+
+.customRow input {
+  height: 100%;
+}
+
+/* Purchase button */
+
+.purchaseButton {
+  width: 100%;
+  font-weight: 400;
 }
 
 /* Status / feedback */
@@ -128,14 +141,7 @@
 .footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.footerEnd {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  justify-content: flex-start;
 }
 
 .billingLink {

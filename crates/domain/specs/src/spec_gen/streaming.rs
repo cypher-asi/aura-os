@@ -4,13 +4,19 @@ use tracing::{error, info};
 
 use aura_core::*;
 
-use aura_claude::ClaudeStreamEvent;
 use aura_billing::MeteredCompletionRequest;
+use aura_claude::ClaudeStreamEvent;
 
+use super::parser::{
+    order_index_from_spec_title, parse_claude_response, parse_tasks_from_markdown, raw_to_specs,
+    IncrementalSpecParser, RawSpecOutput,
+};
+use super::{
+    SpecGenerationService, SpecStreamEvent, MAX_TOKENS, SPEC_OVERVIEW_MAX_TOKENS,
+    SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS,
+};
 use crate::channel_ext::send_or_log;
 use crate::SpecGenError;
-use super::parser::{IncrementalSpecParser, RawSpecOutput, order_index_from_spec_title, parse_claude_response, parse_tasks_from_markdown, raw_to_specs};
-use super::{SpecGenerationService, SpecStreamEvent, SPEC_OVERVIEW_MAX_TOKENS, SPEC_SUMMARY_MAX_TOKENS, SPEC_SUMMARY_MAX_WORDS, MAX_TOKENS};
 
 /// Parses "TITLE: ...\n\nsummary" format. Returns (title, summary).
 /// Falls back to (None, full_text) if format not matched.
@@ -28,7 +34,11 @@ fn parse_title_and_summary(text: &str, max_summary_words: usize) -> (Option<Stri
         }
         let first_line = after_prefix.lines().next().unwrap_or("").trim();
         let rest: String = after_prefix.lines().skip(1).collect::<Vec<_>>().join("\n");
-        let title_opt = if first_line.is_empty() { None } else { Some(first_line.to_string()) };
+        let title_opt = if first_line.is_empty() {
+            None
+        } else {
+            Some(first_line.to_string())
+        };
         let summary = truncate_to_max_words(rest.trim(), max_summary_words);
         return (title_opt, summary);
     }
@@ -41,7 +51,13 @@ fn truncate_to_max_words(s: &str, max_words: usize) -> String {
     if words.len() <= max_words {
         s.trim().to_string()
     } else {
-        words.into_iter().take(max_words).collect::<Vec<_>>().join(" ").trim().to_string()
+        words
+            .into_iter()
+            .take(max_words)
+            .collect::<Vec<_>>()
+            .join(" ")
+            .trim()
+            .to_string()
     }
 }
 
@@ -118,29 +134,40 @@ impl SpecGenerationService {
         project_id: &ProjectId,
         tx: mpsc::UnboundedSender<SpecStreamEvent>,
     ) {
-        let send = |evt: SpecStreamEvent| { send_or_log(&tx, evt); };
+        let send = |evt: SpecStreamEvent| {
+            send_or_log(&tx, evt);
+        };
 
-        let (requirements_content, api_key) =
-            match self.load_project_and_key(project_id, &tx).await {
-                Some(v) => v,
-                None => return,
-            };
+        let (requirements_content, api_key) = match self.load_project_and_key(project_id, &tx).await
+        {
+            Some(v) => v,
+            None => return,
+        };
         if let Err(e) = self.clear_project_specs(project_id).await {
-            send(SpecStreamEvent::Error(format!("Failed to clear existing specs: {e}")));
+            send(SpecStreamEvent::Error(format!(
+                "Failed to clear existing specs: {e}"
+            )));
             return;
         }
         send(SpecStreamEvent::Progress("Generating spec overview".into()));
-        match self.generate_project_overview(project_id, &requirements_content).await {
+        match self
+            .generate_project_overview(project_id, &requirements_content)
+            .await
+        {
             Ok((title, summary)) => {
                 send(SpecStreamEvent::SpecsTitle(title));
                 send(SpecStreamEvent::SpecsSummary(summary));
             }
             Err(e) => {
-                send(SpecStreamEvent::Error(format!("Failed to generate spec overview: {e}")));
+                send(SpecStreamEvent::Error(format!(
+                    "Failed to generate spec overview: {e}"
+                )));
                 return;
             }
         }
-        send(SpecStreamEvent::Progress("Calling Claude to generate specs".into()));
+        send(SpecStreamEvent::Progress(
+            "Calling Claude to generate specs".into(),
+        ));
         let (claude_tx, claude_rx) = mpsc::unbounded_channel::<ClaudeStreamEvent>();
         let llm = self.llm.clone();
         let api_key_owned = api_key;
@@ -157,11 +184,14 @@ impl SpecGenerationService {
                     metadata: None,
                 },
                 claude_tx,
-            ).await
+            )
+            .await
         });
         let mut saved_specs: Vec<Spec> = Vec::new();
-        self.process_spec_stream(project_id, &tx, claude_rx, &mut saved_specs).await;
-        self.finalize_spec_stream(project_id, &tx, stream_handle, &mut saved_specs).await;
+        self.process_spec_stream(project_id, &tx, claude_rx, &mut saved_specs)
+            .await;
+        self.finalize_spec_stream(project_id, &tx, stream_handle, &mut saved_specs)
+            .await;
     }
 
     async fn process_spec_stream(
@@ -182,9 +212,35 @@ impl SpecGenerationService {
                     delta_count += 1;
                     send_or_log(tx, SpecStreamEvent::Delta(text.clone()));
                     if delta_count.is_multiple_of(20) {
-                        send_or_log(tx, SpecStreamEvent::Generating { tokens: token_count });
+                        send_or_log(
+                            tx,
+                            SpecStreamEvent::Generating {
+                                tokens: token_count,
+                            },
+                        );
                     }
-                    for json_obj in parser.feed(&text) {
+                    let completed = parser.feed(&text);
+                    if completed.is_empty() && delta_count % 3 == 0 {
+                        if let Some(partial) = parser.best_effort_partial() {
+                            let markdown = format!(
+                                "## Purpose\n\n{}\n\n{}",
+                                partial.purpose, partial.markdown,
+                            );
+                            send_or_log(
+                                tx,
+                                SpecStreamEvent::SpecDraftPreview {
+                                    draft_index: spec_index as usize,
+                                    title: if partial.title.is_empty() {
+                                        None
+                                    } else {
+                                        Some(partial.title)
+                                    },
+                                    markdown_preview: markdown,
+                                },
+                            );
+                        }
+                    }
+                    for json_obj in completed {
                         if let Ok(raw) = serde_json::from_str::<RawSpecOutput>(&json_obj) {
                             let order_index =
                                 order_index_from_spec_title(&raw.title).unwrap_or(spec_index);
@@ -194,20 +250,41 @@ impl SpecGenerationService {
                                 title: raw.title,
                                 order_index,
                                 markdown_contents: format!(
-                                    "## Purpose\n\n{}\n\n{}", raw.purpose, raw.markdown
+                                    "## Purpose\n\n{}\n\n{}",
+                                    raw.purpose, raw.markdown
                                 ),
                                 created_at: now,
                                 updated_at: now,
                             };
                             self.save_and_emit_spec(
-                                project_id, &spec, tx, &mut spec_index, saved_specs,
-                            ).await;
+                                project_id,
+                                &spec,
+                                tx,
+                                &mut spec_index,
+                                saved_specs,
+                            )
+                            .await;
                         }
                     }
                 }
-                ClaudeStreamEvent::Done { input_tokens, output_tokens, .. } => {
-                    send_or_log(tx, SpecStreamEvent::Generating { tokens: token_count });
-                    send_or_log(tx, SpecStreamEvent::TokenUsage { input_tokens, output_tokens });
+                ClaudeStreamEvent::Done {
+                    input_tokens,
+                    output_tokens,
+                    ..
+                } => {
+                    send_or_log(
+                        tx,
+                        SpecStreamEvent::Generating {
+                            tokens: token_count,
+                        },
+                    );
+                    send_or_log(
+                        tx,
+                        SpecStreamEvent::TokenUsage {
+                            input_tokens,
+                            output_tokens,
+                        },
+                    );
                 }
                 ClaudeStreamEvent::Error(msg) => {
                     send_or_log(tx, SpecStreamEvent::Error(msg));
@@ -224,7 +301,9 @@ impl SpecGenerationService {
         stream_handle: tokio::task::JoinHandle<Result<String, E>>,
         saved_specs: &mut Vec<Spec>,
     ) {
-        let send = |evt: SpecStreamEvent| { send_or_log(tx, evt); };
+        let send = |evt: SpecStreamEvent| {
+            send_or_log(tx, evt);
+        };
         let response_text = match stream_handle.await {
             Ok(Ok(text)) => Some(text),
             Ok(Err(e)) => {
@@ -244,8 +323,11 @@ impl SpecGenerationService {
         };
         if saved_specs.is_empty() {
             if let Some(text) = response_text {
-                self.try_fallback_parse(project_id, &text, tx, saved_specs).await;
-                if saved_specs.is_empty() { return; }
+                self.try_fallback_parse(project_id, &text, tx, saved_specs)
+                    .await;
+                if saved_specs.is_empty() {
+                    return;
+                }
             }
         }
         info!(%project_id, count = saved_specs.len(), "Streaming spec generation complete");
@@ -254,7 +336,10 @@ impl SpecGenerationService {
 
     /// Regenerate project overview (title + summary) from the current specs.
     /// Used only as a manual refresh from the API endpoint.
-    pub async fn regenerate_specs_summary(&self, project_id: &ProjectId) -> Result<(String, String), SpecGenError> {
+    pub async fn regenerate_specs_summary(
+        &self,
+        project_id: &ProjectId,
+    ) -> Result<(String, String), SpecGenError> {
         let specs = self.list_specs(project_id).await?;
         if specs.is_empty() {
             return Err(SpecGenError::ParseError("No specs found".to_string()));
@@ -293,7 +378,9 @@ impl SpecGenerationService {
             SpecGenError::ParseError("LLM did not produce a TITLE line".to_string())
         })?;
         if summary.is_empty() {
-            return Err(SpecGenError::ParseError("LLM produced empty summary".to_string()));
+            return Err(SpecGenError::ParseError(
+                "LLM produced empty summary".to_string(),
+            ));
         }
         let _project = self.project_service.get_project_async(project_id).await?;
         info!(%project_id, %title, "Specs summary regenerated");
@@ -311,12 +398,18 @@ impl SpecGenerationService {
         let project = match self.project_service.get_project_async(project_id).await {
             Ok(p) => p,
             Err(_) => {
-                send_or_log(tx, SpecStreamEvent::Error(format!("Project not found: {project_id}")));
+                send_or_log(
+                    tx,
+                    SpecStreamEvent::Error(format!("Project not found: {project_id}")),
+                );
                 return None;
             }
         };
 
-        send_or_log(tx, SpecStreamEvent::Progress("Reading requirements document".into()));
+        send_or_log(
+            tx,
+            SpecStreamEvent::Progress("Reading requirements document".into()),
+        );
 
         let req_path = project.requirements_doc_path.as_deref().unwrap_or("");
         if req_path.is_empty() || !std::path::Path::new(req_path).is_file() {
@@ -331,7 +424,10 @@ impl SpecGenerationService {
         let requirements_content = match std::fs::read_to_string(req_path) {
             Ok(c) => c,
             Err(e) => {
-                send_or_log(tx, SpecStreamEvent::Error(format!("Failed to read requirements: {e}")));
+                send_or_log(
+                    tx,
+                    SpecStreamEvent::Error(format!("Failed to read requirements: {e}")),
+                );
                 return None;
             }
         };
@@ -365,11 +461,7 @@ impl SpecGenerationService {
         saved_specs.push(spec.clone());
         send_or_log(tx, SpecStreamEvent::SpecSaved(spec.clone()));
 
-        let tasks = parse_tasks_from_markdown(
-            project_id,
-            &spec.spec_id,
-            &spec.markdown_contents,
-        );
+        let tasks = parse_tasks_from_markdown(project_id, &spec.spec_id, &spec.markdown_contents);
         if !tasks.is_empty() {
             if let Err(e) = self.save_tasks_for_spec(&tasks).await {
                 error!(%project_id, error = %e, "Failed to save tasks for spec");

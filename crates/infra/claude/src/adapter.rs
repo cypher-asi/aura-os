@@ -27,8 +27,10 @@ fn map_claude_event(event: ClaudeStreamEvent) -> Vec<StreamEvent> {
         ClaudeStreamEvent::ToolUseStarted { id, name } => {
             vec![StreamEvent::ToolUseStart { id, name }]
         }
-        // The completed ToolUse is already captured in the ToolStreamResponse;
-        // streaming consumers rely on ToolUseStart + InputJsonDelta instead.
+        ClaudeStreamEvent::ToolInputSnapshot { .. } => vec![],
+        ClaudeStreamEvent::ToolInputDelta { partial_json, .. } => {
+            vec![StreamEvent::InputJsonDelta(partial_json)]
+        }
         ClaudeStreamEvent::ToolUse { .. } => vec![],
         ClaudeStreamEvent::Done {
             stop_reason,

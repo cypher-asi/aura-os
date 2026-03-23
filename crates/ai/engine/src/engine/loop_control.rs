@@ -10,12 +10,16 @@ use crate::events::EngineEvent;
 
 impl LoopRunContext {
     pub(super) async fn end_session(&self, engine: &DevLoopEngine) {
-        if let Err(e) = engine.session_service.end_session(
-            &self.project_id,
-            &self.agent_instance_id,
-            &self.session.session_id,
-            SessionStatus::Completed,
-        ).await {
+        if let Err(e) = engine
+            .session_service
+            .end_session(
+                &self.project_id,
+                &self.agent_instance_id,
+                &self.session.session_id,
+                SessionStatus::Completed,
+            )
+            .await
+        {
             warn!(error = %e, "failed to end session");
         }
     }
@@ -38,7 +42,9 @@ impl LoopRunContext {
             completed_count: self.completed_count,
         });
         self.flush_metrics("paused");
-        LoopOutcome::Paused { completed_count: self.completed_count }
+        LoopOutcome::Paused {
+            completed_count: self.completed_count,
+        }
     }
 
     async fn handle_stop(&mut self, engine: &DevLoopEngine) -> LoopOutcome {
@@ -49,7 +55,9 @@ impl LoopRunContext {
             completed_count: self.completed_count,
         });
         self.flush_metrics("stopped");
-        LoopOutcome::Stopped { completed_count: self.completed_count }
+        LoopOutcome::Stopped {
+            completed_count: self.completed_count,
+        }
     }
 
     pub(crate) async fn stop_or_pause(
@@ -89,11 +97,10 @@ impl LoopRunContext {
         task: &Task,
         stop_rx: &watch::Receiver<LoopCommand>,
     ) -> LoopOutcome {
-        if let Err(e) =
-            engine
-                .task_service
-                .reset_task_to_ready(&self.project_id, &task.spec_id, &task.task_id)
-                .await
+        if let Err(e) = engine
+            .task_service
+            .reset_task_to_ready(&self.project_id, &task.spec_id, &task.task_id)
+            .await
         {
             warn!(error = %e, "failed to reset task to ready after interruption");
         }

@@ -5,14 +5,14 @@ use chrono::{DateTime, Utc};
 use axum::http::StatusCode;
 use axum::Json;
 
+use aura_chat::decode_message_content;
+use aura_core::parse_dt;
 use aura_core::{
     Agent, AgentId, AgentInstanceId, ChatRole, Message, MessageId, ProfileId, ProjectId,
     ZeroAuthSession,
 };
-use aura_core::parse_dt;
-use aura_storage::StorageMessage;
 use aura_network::NetworkAgent;
-use aura_chat::decode_message_content;
+use aura_storage::StorageMessage;
 
 use crate::error::ApiError;
 use crate::state::AppState;
@@ -28,10 +28,7 @@ pub(crate) fn get_user_id(state: &AppState) -> Result<String, (StatusCode, Json<
 }
 
 pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
-    let agent_id = net
-        .id
-        .parse::<AgentId>()
-        .unwrap_or_else(|_| AgentId::new());
+    let agent_id = net.id.parse::<AgentId>().unwrap_or_else(|_| AgentId::new());
     let profile_id: Option<ProfileId> = net.profile_id_typed();
     let created_at = net
         .created_at
@@ -76,7 +73,11 @@ pub(crate) async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashM
 }
 
 /// Fetch a single agent's config from the network only (no local fallback).
-pub(crate) async fn resolve_single_agent(state: &AppState, jwt: &str, agent_id: &str) -> Option<Agent> {
+pub(crate) async fn resolve_single_agent(
+    state: &AppState,
+    jwt: &str,
+    agent_id: &str,
+) -> Option<Agent> {
     let client = state.network_client.as_ref()?;
     let net_agent = client.get_agent(agent_id, jwt).await.ok()?;
     Some(agent_from_network(&net_agent))

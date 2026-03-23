@@ -50,7 +50,10 @@ fn parse_network_ids_and_dates(net: &NetworkProject) -> ApiResult<ParsedNetworkM
     })
 }
 
-pub(crate) fn project_from_network(net: &NetworkProject, local: Option<&Project>) -> ApiResult<Project> {
+pub(crate) fn project_from_network(
+    net: &NetworkProject,
+    local: Option<&Project>,
+) -> ApiResult<Project> {
     let meta = parse_network_ids_and_dates(net)?;
     let folder = net.folder.clone().unwrap_or_default();
     debug!(
@@ -192,32 +195,34 @@ pub(super) async fn write_imported_files(
     files: Vec<ImportedProjectFile>,
 ) -> ApiResult<()> {
     if files.is_empty() {
-        return Err(ApiError::bad_request("select at least one file to import".to_string()));
+        return Err(ApiError::bad_request(
+            "select at least one file to import".to_string(),
+        ));
     }
 
     for file in files {
         let relative_path = sanitize_import_path(&file.relative_path)?;
         let destination = workspace_root.join(relative_path);
         if let Some(parent) = destination.parent() {
-            tokio::fs::create_dir_all(parent)
-                .await
-                .map_err(|e| ApiError::internal(format!(
+            tokio::fs::create_dir_all(parent).await.map_err(|e| {
+                ApiError::internal(format!(
                     "failed to create imported workspace directories: {e}",
-                )))?;
+                ))
+            })?;
         }
 
         let contents = base64::engine::general_purpose::STANDARD
             .decode(file.contents_base64)
-            .map_err(|e| ApiError::bad_request(format!(
-                "invalid imported file contents: {e}",
-            )))?;
+            .map_err(|e| ApiError::bad_request(format!("invalid imported file contents: {e}",)))?;
 
         tokio::fs::write(&destination, contents)
             .await
-            .map_err(|e| ApiError::internal(format!(
-                "failed to write imported file {}: {e}",
-                destination.display(),
-            )))?;
+            .map_err(|e| {
+                ApiError::internal(format!(
+                    "failed to write imported file {}: {e}",
+                    destination.display(),
+                ))
+            })?;
     }
 
     Ok(())
@@ -275,10 +280,9 @@ pub(super) async fn resolve_orbit_repo(
             orbit_repo: req.orbit_repo.clone(),
         });
     }
-    let base_url = state
-        .orbit_base_url
-        .as_deref()
-        .ok_or_else(|| ApiError::service_unavailable("Orbit repo creation is not configured (ORBIT_BASE_URL)"))?;
+    let base_url = state.orbit_base_url.as_deref().ok_or_else(|| {
+        ApiError::service_unavailable("Orbit repo creation is not configured (ORBIT_BASE_URL)")
+    })?;
     let owner = req.orbit_owner.as_deref().unwrap_or(&net_project.org_id);
     let repo_name = req.orbit_repo.as_deref().unwrap_or(&req.name);
     let created = state
@@ -294,7 +298,12 @@ pub(super) async fn resolve_orbit_repo(
         .await
         .map_err(|err| ApiError::internal(err.message_for_api()))?;
     Ok(OrbitRepoFields {
-        git_repo_url: Some(orbit_create_repo_url(base_url, owner, &created.name, &created)),
+        git_repo_url: Some(orbit_create_repo_url(
+            base_url,
+            owner,
+            &created.name,
+            &created,
+        )),
         git_branch: req.git_branch.clone().or_else(|| Some("main".into())),
         orbit_base_url: Some(base_url.to_string()),
         orbit_owner: Some(owner.to_string()),

@@ -28,10 +28,7 @@ impl BillingClient {
         }
     }
 
-    pub async fn get_balance(
-        &self,
-        access_token: &str,
-    ) -> Result<CreditBalance, BillingError> {
+    pub async fn get_balance(&self, access_token: &str) -> Result<CreditBalance, BillingError> {
         let url = format!("{}/v1/credits/balance", self.base_url);
         debug!(%url, "Fetching credit balance");
 
@@ -111,10 +108,7 @@ impl BillingClient {
             .map_err(|e| BillingError::Deserialize(e.to_string()))
     }
 
-    pub async fn get_account(
-        &self,
-        access_token: &str,
-    ) -> Result<BillingAccount, BillingError> {
+    pub async fn get_account(&self, access_token: &str) -> Result<BillingAccount, BillingError> {
         let url = format!("{}/v1/accounts/me", self.base_url);
         debug!(%url, "Fetching billing account");
 
@@ -138,10 +132,7 @@ impl BillingClient {
             .map_err(|e| BillingError::Deserialize(e.to_string()))
     }
 
-    pub async fn ensure_has_credits(
-        &self,
-        access_token: &str,
-    ) -> Result<i64, BillingError> {
+    pub async fn ensure_has_credits(&self, access_token: &str) -> Result<i64, BillingError> {
         let balance = self.get_balance(access_token).await?;
         if balance.balance_cents > 0 {
             Ok(balance.balance_cents)
@@ -151,7 +142,6 @@ impl BillingClient {
             })
         }
     }
-
 }
 
 impl Default for BillingClient {
@@ -163,7 +153,10 @@ impl Default for BillingClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{routing::{get, post}, Json, Router};
+    use axum::{
+        routing::{get, post},
+        Json, Router,
+    };
     use tokio::net::TcpListener;
 
     async fn start_server(app: Router) -> (String, BillingClient) {
@@ -375,7 +368,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_reads_z_billing_url() {
-        let _guard = crate::testutil::ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = crate::testutil::ENV_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         std::env::set_var("Z_BILLING_URL", "https://custom.example.com");
         let client = BillingClient::new();
         assert_eq!(client.base_url, "https://custom.example.com");

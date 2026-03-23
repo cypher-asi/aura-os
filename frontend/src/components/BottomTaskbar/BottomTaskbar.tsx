@@ -4,7 +4,7 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import styles from "./BottomTaskbar.module.css";
 
 export function BottomTaskbar() {
-  const openOrgBilling = useUIModalStore((s) => s.openOrgBilling);
+  const openBuyCredits = useUIModalStore((s) => s.openBuyCredits);
 
   return (
     <div className={styles.bar}>
@@ -13,7 +13,7 @@ export function BottomTaskbar() {
       </div>
       <div className={styles.divider} />
       <div className={styles.creditsWrap}>
-        <CreditsBadge onClick={openOrgBilling} />
+        <CreditsBadge onClick={openBuyCredits} />
       </div>
     </div>
   );

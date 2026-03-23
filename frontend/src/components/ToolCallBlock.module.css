@@ -47,12 +47,13 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 2px 0;
+  padding: 1px 0;
   border: none;
   background: transparent;
   color: var(--color-text-muted, #999);
   font-family: inherit;
   font-size: 13px;
+  line-height: 1;
   cursor: pointer;
   text-align: left;
 }
@@ -65,9 +66,9 @@
 
 .taskCheck {
   display: block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--color-text-muted, #666);
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--color-text-muted, #666);
   flex-shrink: 0;
   position: relative;
   box-sizing: border-box;
@@ -81,10 +82,10 @@
 .taskActive .taskCheck::before {
   content: "";
   position: absolute;
-  top: 3px;
-  left: 3px;
-  right: 3px;
-  bottom: 3px;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
   background: var(--color-text, #ddd);
 }
 
@@ -104,7 +105,7 @@
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 8px;
+  width: 7px;
   height: 1.5px;
   background: var(--color-text-muted, #666);
   border-radius: 1px;
@@ -137,7 +138,7 @@
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 8px;
+  width: 7px;
   height: 1.5px;
   background: #f87171;
   border-radius: 1px;
@@ -153,6 +154,21 @@
 
 .taskError .toolName {
   color: #f87171;
+}
+
+/* ── Expand chevron (far right) ── */
+
+.toolChevron {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.toolChevronExpanded {
+  transform: rotate(90deg);
 }
 
 /* ── Shared item parts ── */
@@ -176,20 +192,27 @@
 
 /* ── Expandable detail body ── */
 
+@keyframes fadeSlideIn {
+  from {
+    transform: translateY(-4px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 .toolBodyWrap {
-  max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease;
 }
 
 .toolBodyExpanded {
-  max-height: 500px;
+  animation: fadeSlideIn 0.15s ease-out;
 }
 
 .toolBody {
   padding: 4px 0 8px 22px;
   margin-left: 18px;
-  border-left: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  border-left: none;
 }
 
 .section {

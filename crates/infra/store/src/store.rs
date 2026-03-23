@@ -56,9 +56,7 @@ impl RocksStore {
             db.drop_cf(name)?;
         }
 
-        Ok(Self {
-            db: Arc::new(db),
-        })
+        Ok(Self { db: Arc::new(db) })
     }
 
     pub(crate) fn cf_handle(&self, name: &str) -> StoreResult<Arc<rocksdb::BoundColumnFamily<'_>>> {

@@ -97,11 +97,7 @@ pub async fn ws_terminal(
     let tid: TerminalId = match id.parse() {
         Ok(t) => t,
         Err(_) => {
-            return (
-                axum::http::StatusCode::BAD_REQUEST,
-                "Invalid terminal ID",
-            )
-                .into_response()
+            return (axum::http::StatusCode::BAD_REQUEST, "Invalid terminal ID").into_response()
         }
     };
 
@@ -140,14 +136,20 @@ async fn handle_terminal_ws(mut socket: WebSocket, state: AppState, id: Terminal
         Ok(r) => r,
         Err(e) => {
             warn!(%id, "Failed to take reader: {e}");
-            let _ = socket.send(Message::Text(serde_json::json!({"type": "exit", "code": -1}).to_string())).await;
+            let _ = socket
+                .send(Message::Text(
+                    serde_json::json!({"type": "exit", "code": -1}).to_string(),
+                ))
+                .await;
             return;
         }
     };
 
     let (output_tx, mut output_rx) = mpsc::channel::<Vec<u8>>(256);
     let (exit_tx, mut exit_rx) = mpsc::channel::<i32>(1);
-    tokio::task::spawn_blocking(move || { read_pty_loop(reader, output_tx, exit_tx); });
+    tokio::task::spawn_blocking(move || {
+        read_pty_loop(reader, output_tx, exit_tx);
+    });
 
     loop {
         tokio::select! {

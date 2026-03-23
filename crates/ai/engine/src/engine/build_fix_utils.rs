@@ -3,11 +3,11 @@ use std::path::Path;
 
 use tracing::{info, warn};
 
-use crate::file_ops::{self, FileOp, WorkspaceCache};
 use super::build_fix::BUILD_FIX_SNAPSHOT_BUDGET;
 use super::build_fix_types::parse_error_references;
 use super::error_signatures::parse_individual_error_signatures;
 use super::verify_fix_common::build_codebase_snapshot;
+use crate::file_ops::{self, FileOp, WorkspaceCache};
 
 use aura_core::*;
 
@@ -42,10 +42,7 @@ pub(crate) fn snapshot_modified_files(
     snapshots
 }
 
-pub(crate) async fn rollback_to_snapshot(
-    project_root: &Path,
-    snapshots: &[FileSnapshot],
-) {
+pub(crate) async fn rollback_to_snapshot(project_root: &Path, snapshots: &[FileSnapshot]) {
     for snap in snapshots {
         let full_path = project_root.join(&snap.path);
         match &snap.content {
@@ -97,7 +94,9 @@ pub(crate) fn infer_default_build_command(project_root: &Path) -> Option<String>
     if project_root.join("package.json").is_file() {
         return Some("npm run build --if-present".to_string());
     }
-    if project_root.join("pyproject.toml").is_file() || project_root.join("requirements.txt").is_file() {
+    if project_root.join("pyproject.toml").is_file()
+        || project_root.join("requirements.txt").is_file()
+    {
         return Some("python -m compileall .".to_string());
     }
     None
@@ -106,7 +105,9 @@ pub(crate) fn infer_default_build_command(project_root: &Path) -> Option<String>
 /// Build a codebase snapshot for a build-fix prompt by reading error source
 /// files fresh from disk and optionally supplementing with workspace context.
 pub(super) async fn build_fix_snapshot(
-    project: &Project, build_stderr: &str, task: &Task,
+    project: &Project,
+    build_stderr: &str,
+    task: &Task,
     workspace_cache: &WorkspaceCache,
 ) -> String {
     let error_refs = parse_error_references(build_stderr);
@@ -120,9 +121,13 @@ pub(super) async fn build_fix_snapshot(
         let remaining_budget = BUILD_FIX_SNAPSHOT_BUDGET.saturating_sub(fresh_error_files.len());
         let supplemental = if remaining_budget > 2_000 {
             build_codebase_snapshot(
-                &project.linked_folder_path, &task.title, &task.description,
-                remaining_budget, workspace_cache,
-            ).await
+                &project.linked_folder_path,
+                &task.title,
+                &task.description,
+                remaining_budget,
+                workspace_cache,
+            )
+            .await
         } else {
             String::new()
         };
@@ -133,9 +138,13 @@ pub(super) async fn build_fix_snapshot(
         }
     } else {
         build_codebase_snapshot(
-            &project.linked_folder_path, &task.title, &task.description,
-            BUILD_FIX_SNAPSHOT_BUDGET, workspace_cache,
-        ).await
+            &project.linked_folder_path,
+            &task.title,
+            &task.description,
+            BUILD_FIX_SNAPSHOT_BUDGET,
+            workspace_cache,
+        )
+        .await
     }
 }
 

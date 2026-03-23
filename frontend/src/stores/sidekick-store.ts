@@ -3,6 +3,7 @@ import { useShallow } from "zustand/react/shallow";
 import type { ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";
+import { compareSpecs } from "../utils/collections";
 
 export type SidekickTab = "specs" | "tasks" | "stats" | "sessions" | "log" | "files";
 
@@ -59,6 +60,20 @@ function patchTaskInHistory(
     if (item.kind !== "task" || item.task.task_id !== taskId) return item;
     changed = true;
     return { kind: "task" as const, task: { ...item.task, ...patch } };
+  });
+  return changed ? next : history;
+}
+
+function patchSpecInHistory(
+  history: PreviewItem[],
+  specId: string,
+  patch: Partial<Spec> | Spec,
+): PreviewItem[] {
+  let changed = false;
+  const next = history.map((item) => {
+    if (item.kind !== "spec" || item.spec.spec_id !== specId) return item;
+    changed = true;
+    return { kind: "spec" as const, spec: { ...item.spec, ...patch } };
   });
   return changed ? next : history;
 }
@@ -130,12 +145,21 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 
   pushSpec: (spec) => {
-    const { specs } = get();
+    const { specs, previewItem, previewHistory } = get();
     const exists = specs.some((s) => s.spec_id === spec.spec_id);
     const next = exists
       ? specs.map((s) => (s.spec_id === spec.spec_id ? spec : s))
       : [...specs, spec];
-    set({ specs: next.sort((a, b) => a.order_index - b.order_index) });
+    let newPreview = previewItem;
+    if (previewItem?.kind === "spec" && previewItem.spec.spec_id === spec.spec_id) {
+      newPreview = { kind: "spec", spec };
+    }
+    const newHistory = patchSpecInHistory(previewHistory, spec.spec_id, spec);
+    set({
+      specs: next.sort(compareSpecs),
+      previewItem: newPreview,
+      previewHistory: newHistory,
+    });
   },
 
   removeSpec: (specId) => {

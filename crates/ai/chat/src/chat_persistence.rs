@@ -25,11 +25,21 @@ impl ChatService {
     /// When `session_id` is provided, skips the session lookup HTTP call.
     pub(crate) async fn save_message_to_storage(&self, params: SaveMessageParams<'_>) {
         let SaveMessageParams {
-            project_id, agent_instance_id, role, content, content_blocks,
-            thinking, thinking_duration_ms, input_tokens, output_tokens, session_id,
+            project_id,
+            agent_instance_id,
+            role,
+            content,
+            content_blocks,
+            thinking,
+            thinking_duration_ms,
+            input_tokens,
+            output_tokens,
+            session_id,
         } = params;
 
-        let Some(ref storage) = self.storage_client else { return };
+        let Some(ref storage) = self.storage_client else {
+            return;
+        };
         let Some(jwt) = self.get_jwt() else { return };
 
         let owned_session_id;
@@ -50,20 +60,26 @@ impl ChatService {
             },
         };
 
-        let encoded_content = crate::message_metadata::encode_message_content(
-            content,
-            content_blocks,
-            thinking,
-            thinking_duration_ms,
-        );
+        let serialized_blocks = content_blocks.and_then(|blocks| {
+            if blocks.is_empty() {
+                return None;
+            }
+            blocks
+                .iter()
+                .map(|b| serde_json::to_value(b).ok())
+                .collect::<Option<Vec<_>>>()
+        });
 
         let req = aura_storage::CreateMessageRequest {
             project_agent_id: agent_instance_id.to_string(),
             project_id: project_id.to_string(),
             role: role.to_string(),
-            content: encoded_content,
+            content: content.to_string(),
+            content_blocks: serialized_blocks,
             input_tokens,
             output_tokens,
+            thinking: thinking.map(|t| t.to_string()),
+            thinking_duration_ms,
         };
 
         if let Err(e) = storage.create_message(sid, &jwt, &req).await {
@@ -95,18 +111,47 @@ impl ChatService {
             .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(Utc::now);
-        let raw = sm.content.clone().unwrap_or_default();
-        let decoded = crate::message_metadata::decode_message_content(&raw);
-        Message {
-            message_id,
-            agent_instance_id,
-            project_id,
-            role,
-            content: decoded.text,
-            content_blocks: decoded.content_blocks,
-            thinking: decoded.thinking,
-            thinking_duration_ms: decoded.thinking_duration_ms,
-            created_at,
+        let has_native_fields = sm.content_blocks.is_some()
+            || sm.thinking.is_some()
+            || sm.thinking_duration_ms.is_some();
+
+        if has_native_fields {
+            let content_blocks = sm.content_blocks.as_ref().and_then(|vals| {
+                let blocks: Vec<ChatContentBlock> = vals
+                    .iter()
+                    .filter_map(|v| serde_json::from_value(v.clone()).ok())
+                    .collect();
+                if blocks.is_empty() {
+                    None
+                } else {
+                    Some(blocks)
+                }
+            });
+            Message {
+                message_id,
+                agent_instance_id,
+                project_id,
+                role,
+                content: sm.content.clone().unwrap_or_default(),
+                content_blocks,
+                thinking: sm.thinking.clone(),
+                thinking_duration_ms: sm.thinking_duration_ms,
+                created_at,
+            }
+        } else {
+            let raw = sm.content.clone().unwrap_or_default();
+            let decoded = crate::message_metadata::decode_message_content(&raw);
+            Message {
+                message_id,
+                agent_instance_id,
+                project_id,
+                role,
+                content: decoded.text,
+                content_blocks: decoded.content_blocks,
+                thinking: decoded.thinking,
+                thinking_duration_ms: decoded.thinking_duration_ms,
+                created_at,
+            }
         }
     }
 
@@ -117,9 +162,10 @@ impl ChatService {
         project_id: &ProjectId,
         agent_instance_id: &AgentInstanceId,
     ) -> Result<Vec<Message>, ChatError> {
-        let storage = self.storage_client.as_ref().ok_or_else(|| {
-            ChatError::Storage(aura_storage::StorageError::NotConfigured)
-        })?;
+        let storage = self
+            .storage_client
+            .as_ref()
+            .ok_or_else(|| ChatError::Storage(aura_storage::StorageError::NotConfigured))?;
         let jwt = self.get_jwt().ok_or_else(|| {
             ChatError::Storage(aura_storage::StorageError::Deserialize(
                 "not authenticated".to_string(),
@@ -135,7 +181,10 @@ impl ChatService {
                 .list_messages(&session.id, &jwt, None, None)
                 .await
                 .map_err(ChatError::Storage)?;
-            for sm in session_msgs.iter().filter(|sm| sm.role.as_deref() != Some("system")) {
+            for sm in session_msgs
+                .iter()
+                .filter(|sm| sm.role.as_deref() != Some("system"))
+            {
                 messages.push(Self::storage_message_to_message(
                     sm,
                     *project_id,
@@ -153,21 +202,39 @@ mod tests {
     use super::*;
     use aura_storage::StorageMessage;
 
+    fn make_storage_msg(overrides: impl FnOnce(&mut StorageMessage)) -> StorageMessage {
+        let mut sm = StorageMessage {
+            id: MessageId::new().to_string(),
+            session_id: None,
+            project_agent_id: None,
+            project_id: None,
+            role: None,
+            content: None,
+            content_blocks: None,
+            input_tokens: None,
+            output_tokens: None,
+            thinking: None,
+            thinking_duration_ms: None,
+            created_at: None,
+        };
+        overrides(&mut sm);
+        sm
+    }
+
     #[test]
     fn storage_message_to_message_basic() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
-        let sm = StorageMessage {
-            id: MessageId::new().to_string(),
-            session_id: Some("s1".into()),
-            project_agent_id: Some(aid.to_string()),
-            project_id: Some(pid.to_string()),
-            role: Some("user".into()),
-            content: Some("Hello world".into()),
-            input_tokens: Some(100),
-            output_tokens: Some(50),
-            created_at: Some("2024-01-15T10:30:00Z".into()),
-        };
+        let sm = make_storage_msg(|sm| {
+            sm.session_id = Some("s1".into());
+            sm.project_agent_id = Some(aid.to_string());
+            sm.project_id = Some(pid.to_string());
+            sm.role = Some("user".into());
+            sm.content = Some("Hello world".into());
+            sm.input_tokens = Some(100);
+            sm.output_tokens = Some(50);
+            sm.created_at = Some("2024-01-15T10:30:00Z".into());
+        });
 
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);
 
@@ -183,17 +250,10 @@ mod tests {
     fn storage_message_to_message_assistant_role() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
-        let sm = StorageMessage {
-            id: MessageId::new().to_string(),
-            session_id: None,
-            project_agent_id: None,
-            project_id: None,
-            role: Some("assistant".into()),
-            content: Some("I can help".into()),
-            input_tokens: None,
-            output_tokens: None,
-            created_at: None,
-        };
+        let sm = make_storage_msg(|sm| {
+            sm.role = Some("assistant".into());
+            sm.content = Some("I can help".into());
+        });
 
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);
         assert_eq!(msg.role, ChatRole::Assistant);
@@ -201,11 +261,36 @@ mod tests {
     }
 
     #[test]
-    fn storage_message_to_message_with_content_blocks() {
+    fn storage_message_native_fields() {
+        let pid = ProjectId::new();
+        let aid = AgentInstanceId::new();
+        let sm = make_storage_msg(|sm| {
+            sm.role = Some("assistant".into());
+            sm.content = Some("main text".into());
+            sm.content_blocks = Some(vec![
+                serde_json::json!({"type": "text", "text": "check this"}),
+                serde_json::json!({"type": "tool_use", "id": "t1", "name": "read_file", "input": {"path": "a.rs"}}),
+            ]);
+            sm.thinking = Some("thinking...".into());
+            sm.thinking_duration_ms = Some(1500);
+            sm.created_at = Some("2024-06-01T12:00:00Z".into());
+        });
+
+        let msg = ChatService::storage_message_to_message(&sm, pid, aid);
+        assert_eq!(msg.content, "main text");
+        assert_eq!(msg.content_blocks.as_ref().unwrap().len(), 2);
+        assert_eq!(msg.thinking.as_deref(), Some("thinking..."));
+        assert_eq!(msg.thinking_duration_ms, Some(1500));
+    }
+
+    #[test]
+    fn storage_message_legacy_encoded_content_fallback() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
         let blocks = vec![
-            ChatContentBlock::Text { text: "check this".into() },
+            ChatContentBlock::Text {
+                text: "check this".into(),
+            },
             ChatContentBlock::ToolUse {
                 id: "t1".into(),
                 name: "read_file".into(),
@@ -218,17 +303,11 @@ mod tests {
             Some("thinking..."),
             Some(1500),
         );
-        let sm = StorageMessage {
-            id: MessageId::new().to_string(),
-            session_id: None,
-            project_agent_id: None,
-            project_id: None,
-            role: Some("assistant".into()),
-            content: Some(encoded),
-            input_tokens: None,
-            output_tokens: None,
-            created_at: Some("2024-06-01T12:00:00Z".into()),
-        };
+        let sm = make_storage_msg(|sm| {
+            sm.role = Some("assistant".into());
+            sm.content = Some(encoded);
+            sm.created_at = Some("2024-06-01T12:00:00Z".into());
+        });
 
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);
         assert_eq!(msg.content, "main text");
@@ -241,17 +320,8 @@ mod tests {
     fn storage_message_to_message_missing_fields_use_defaults() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
-        let sm = StorageMessage {
-            id: "not-a-valid-uuid".into(),
-            session_id: None,
-            project_agent_id: None,
-            project_id: None,
-            role: None,
-            content: None,
-            input_tokens: None,
-            output_tokens: None,
-            created_at: None,
-        };
+        let mut sm = make_storage_msg(|_| {});
+        sm.id = "not-a-valid-uuid".into();
 
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);
         assert_eq!(msg.role, ChatRole::User);
@@ -264,17 +334,10 @@ mod tests {
     fn storage_message_to_message_unknown_role_defaults_to_user() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
-        let sm = StorageMessage {
-            id: MessageId::new().to_string(),
-            session_id: None,
-            project_agent_id: None,
-            project_id: None,
-            role: Some("system".into()),
-            content: Some("test".into()),
-            input_tokens: None,
-            output_tokens: None,
-            created_at: None,
-        };
+        let sm = make_storage_msg(|sm| {
+            sm.role = Some("system".into());
+            sm.content = Some("test".into());
+        });
 
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);
         assert_eq!(msg.role, ChatRole::User);
@@ -284,17 +347,11 @@ mod tests {
     fn storage_message_to_message_invalid_date_uses_now() {
         let pid = ProjectId::new();
         let aid = AgentInstanceId::new();
-        let sm = StorageMessage {
-            id: MessageId::new().to_string(),
-            session_id: None,
-            project_agent_id: None,
-            project_id: None,
-            role: Some("user".into()),
-            content: Some("test".into()),
-            input_tokens: None,
-            output_tokens: None,
-            created_at: Some("not-a-date".into()),
-        };
+        let sm = make_storage_msg(|sm| {
+            sm.role = Some("user".into());
+            sm.content = Some("test".into());
+            sm.created_at = Some("not-a-date".into());
+        });
 
         let before = chrono::Utc::now();
         let msg = ChatService::storage_message_to_message(&sm, pid, aid);

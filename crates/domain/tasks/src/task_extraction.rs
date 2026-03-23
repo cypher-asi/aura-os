@@ -4,8 +4,8 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use aura_core::*;
 use aura_billing::{MeteredCompletionRequest, MeteredLlm};
+use aura_core::*;
 use aura_settings::SettingsService;
 use aura_storage::StorageClient;
 use aura_store::RocksStore;
@@ -51,17 +51,15 @@ impl TaskExtractionService {
     }
 
     fn require_storage(&self) -> Result<&Arc<StorageClient>, TaskError> {
-        self.storage_client.as_ref().ok_or_else(|| {
-            TaskError::ParseError("aura-storage is not configured".into())
-        })
+        self.storage_client
+            .as_ref()
+            .ok_or_else(|| TaskError::ParseError("aura-storage is not configured".into()))
     }
 
     async fn load_specs(&self, project_id: &ProjectId) -> Result<Vec<Spec>, TaskError> {
         let storage = self.require_storage()?;
         let jwt = self.get_jwt()?;
-        let storage_specs = storage
-            .list_specs(&project_id.to_string(), &jwt)
-            .await?;
+        let storage_specs = storage.list_specs(&project_id.to_string(), &jwt).await?;
         let mut specs: Vec<Spec> = storage_specs
             .into_iter()
             .filter_map(|s| Spec::try_from(s).ok())
@@ -209,7 +207,11 @@ impl TaskExtractionService {
                 description: Some(task.description.clone()),
                 status: Some(status_str),
                 order_index: Some(task.order_index as i32),
-                dependency_ids: if dep_ids.is_empty() { None } else { Some(dep_ids) },
+                dependency_ids: if dep_ids.is_empty() {
+                    None
+                } else {
+                    Some(dep_ids)
+                },
             };
             storage.create_task(&pid, &jwt, &req).await?;
         }
@@ -245,7 +247,6 @@ impl TaskExtractionService {
             &trimmed[..trimmed.len().min(500)]
         )))
     }
-
 }
 
 #[cfg(test)]
@@ -262,7 +263,8 @@ mod tests {
             {"title": "Setup DB", "description": "Create tables", "depends_on": []},
             {"title": "Add API", "description": "REST endpoints", "depends_on": ["Setup DB"]}
         ]"#;
-        let tasks = TaskExtractionService::parse_extraction_response(input).expect("valid JSON should parse");
+        let tasks = TaskExtractionService::parse_extraction_response(input)
+            .expect("valid JSON should parse");
         assert_eq!(tasks.len(), 2);
         assert_eq!(tasks[0].title, "Setup DB");
         assert!(tasks[0].depends_on.is_empty());
@@ -279,7 +281,8 @@ Here are the extracted tasks:
 [{"title": "Init project", "description": "Scaffold", "depends_on": []}]
 ```
 "#;
-        let tasks = TaskExtractionService::parse_extraction_response(input).expect("fenced JSON should parse");
+        let tasks = TaskExtractionService::parse_extraction_response(input)
+            .expect("fenced JSON should parse");
         assert_eq!(tasks.len(), 1);
         assert_eq!(tasks[0].title, "Init project");
     }
@@ -287,7 +290,8 @@ Here are the extracted tasks:
     #[test]
     fn parse_empty_task_array_errors() {
         let input = "[]";
-        let err = TaskExtractionService::parse_extraction_response(input).expect_err("empty array should produce an error");
+        let err = TaskExtractionService::parse_extraction_response(input)
+            .expect_err("empty array should produce an error");
         let msg = format!("{err}");
         assert!(msg.contains("empty"), "expected empty error, got: {msg}");
     }
@@ -301,7 +305,8 @@ Here are the extracted tasks:
     #[test]
     fn parse_fenced_without_lang_tag() {
         let input = "```\n[{\"title\":\"T\",\"description\":\"D\",\"depends_on\":[]}]\n```";
-        let tasks = TaskExtractionService::parse_extraction_response(input).expect("bare fenced JSON should parse");
+        let tasks = TaskExtractionService::parse_extraction_response(input)
+            .expect("bare fenced JSON should parse");
         assert_eq!(tasks.len(), 1);
     }
 
@@ -319,7 +324,8 @@ Here are the extracted tasks:
     #[test]
     fn extract_fenced_json_without_lang() {
         let input = "```\n[1,2,3]\n```";
-        let result = extract_fenced_json(input).expect("fenced json without lang tag should extract");
+        let result =
+            extract_fenced_json(input).expect("fenced json without lang tag should extract");
         assert_eq!(result, "[1,2,3]");
     }
 

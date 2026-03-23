@@ -7,11 +7,12 @@ import formStyles from "../ProjectSettingsModal/ProjectSettingsModal.module.css"
 interface DeleteProjectModalProps {
   target: Project | null;
   loading: boolean;
+  error?: string | null;
   onClose: () => void;
   onDelete: () => void;
 }
 
-export function DeleteProjectModal({ target, loading, onClose, onDelete }: DeleteProjectModalProps) {
+export function DeleteProjectModal({ target, loading, error, onClose, onDelete }: DeleteProjectModalProps) {
   return (
     <Modal
       isOpen={!!target}
@@ -30,6 +31,11 @@ export function DeleteProjectModal({ target, loading, onClose, onDelete }: Delet
       <div className={styles.confirmMessage}>
         Are you sure you want to delete &ldquo;{target?.name}&rdquo;? This action cannot be undone.
       </div>
+      {error && (
+        <div className={styles.errorMessage} role="alert">
+          {error}
+        </div>
+      )}
     </Modal>
   );
 }

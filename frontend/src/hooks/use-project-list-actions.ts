@@ -28,6 +28,7 @@ export function useProjectListActions() {
   const [settingsTarget, setSettingsTarget] = useState<Project | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteAgentTarget, setDeleteAgentTarget] = useState<AgentInstance | null>(null);
   const [deleteAgentLoading, setDeleteAgentLoading] = useState(false);
   const [deleteAgentError, setDeleteAgentError] = useState<string | null>(null);
@@ -95,6 +96,7 @@ export function useProjectListActions() {
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
+    setDeleteError(null);
     try {
       await api.deleteProject(deleteTarget.project_id);
       clearLastAgentIf({ projectId: deleteTarget.project_id });
@@ -105,6 +107,13 @@ export function useProjectListActions() {
       await refreshProjects();
     } catch (err) {
       console.error("Failed to delete project", err);
+      const message =
+        err instanceof ApiClientError
+          ? err.body.error
+          : err instanceof Error
+            ? err.message
+            : "Failed to delete project.";
+      setDeleteError(message);
     } finally {
       setDeleteLoading(false);
     }
@@ -175,7 +184,7 @@ export function useProjectListActions() {
     ctxMenu, setCtxMenu, ctxMenuRef,
     renameTarget, setRenameTarget,
     settingsTarget, setSettingsTarget,
-    deleteTarget, setDeleteTarget, deleteLoading,
+    deleteTarget, setDeleteTarget, deleteLoading, deleteError, setDeleteError,
     deleteAgentTarget, setDeleteAgentTarget, deleteAgentLoading, deleteAgentError, setDeleteAgentError,
     agentSelectorProjectId, setAgentSelectorProjectId,
     handleAddAgent,

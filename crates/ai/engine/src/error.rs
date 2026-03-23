@@ -3,10 +3,10 @@ use aura_billing::MeteredLlmError;
 use aura_claude::ClaudeClientError;
 use aura_projects::ProjectError;
 use aura_sessions::SessionError;
-use aura_storage::StorageError;
-use aura_tasks::TaskError;
 use aura_settings::SettingsError;
+use aura_storage::StorageError;
 use aura_store::StoreError;
+use aura_tasks::TaskError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum EngineError {

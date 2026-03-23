@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
 import styles from "./BuyCreditsModal.module.css";
@@ -9,7 +9,7 @@ interface Props {
   onOpenBilling?: () => void;
 }
 
-const PRESETS = [5, 10, 25, 50];
+const PRESETS = [25, 50, 100, 250];
 const MIN_USD = 1;
 const MAX_USD = 1000;
 
@@ -20,8 +20,17 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
     loadBalance, handlePurchase, balance,
   } = useBuyCreditsData(isOpen);
 
-  const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selectedPreset, setSelectedPreset] = useState<number | null>(100);
   const [customAmount, setCustomAmount] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedPreset(100);
+      setCustomAmount("");
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
 
   const customNum = parseFloat(customAmount);
   const customValid = !isNaN(customNum) && customNum >= MIN_USD && customNum <= MAX_USD;
@@ -48,18 +57,11 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
   const footer = (
     <div className={styles.footer}>
-      <div>
-        {onOpenBilling && (
-          <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
-            Billing Settings
-          </button>
-        )}
-      </div>
-      <div className={styles.footerEnd}>
-        <Button variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
+      {onOpenBilling && (
+        <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
+          Billing Settings
+        </button>
+      )}
     </div>
   );
 
@@ -96,6 +98,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
         <div className={styles.customRow}>
           <Input
+            ref={inputRef}
             size="sm"
             type="number"
             min={MIN_USD}
@@ -110,6 +113,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
         <Button
           variant="primary"
+          className={styles.purchaseButton}
           onClick={handlePurchaseClick}
           disabled={effectiveAmount === null || isPolling}
         >

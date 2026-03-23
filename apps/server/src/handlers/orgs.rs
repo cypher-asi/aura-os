@@ -47,7 +47,6 @@ impl OrgResponse {
             updated_at: net.updated_at.clone().unwrap_or_default(),
         }
     }
-
 }
 
 #[derive(Debug, Serialize)]
@@ -129,7 +128,11 @@ pub async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgR
     let responses = net_orgs
         .iter()
         .map(|net| {
-            let billing = net.id.parse::<OrgId>().ok().and_then(|id| state.org_service.get_billing(&id).ok().flatten());
+            let billing = net
+                .id
+                .parse::<OrgId>()
+                .ok()
+                .and_then(|id| state.org_service.get_billing(&id).ok().flatten());
             OrgResponse::from_network(net, billing)
         })
         .collect();
@@ -154,8 +157,15 @@ pub async fn create_org(
         .await
         .map_err(map_network_error)?;
 
-    let billing = net_org.id.parse::<OrgId>().ok().and_then(|id| state.org_service.get_billing(&id).ok().flatten());
-    Ok((StatusCode::CREATED, Json(OrgResponse::from_network(&net_org, billing))))
+    let billing = net_org
+        .id
+        .parse::<OrgId>()
+        .ok()
+        .and_then(|id| state.org_service.get_billing(&id).ok().flatten());
+    Ok((
+        StatusCode::CREATED,
+        Json(OrgResponse::from_network(&net_org, billing)),
+    ))
 }
 
 pub async fn get_org(
@@ -213,7 +223,8 @@ pub async fn list_members(
         .await
         .map_err(map_network_error)?;
 
-    let mut responses: Vec<MemberResponse> = members.into_iter().map(MemberResponse::from).collect();
+    let mut responses: Vec<MemberResponse> =
+        members.into_iter().map(MemberResponse::from).collect();
     enrich_member_display_names(&mut responses, &session, client.as_ref(), &jwt).await;
     Ok(Json(responses))
 }
@@ -343,7 +354,9 @@ pub async fn list_invites(
         .list_invites(&org_id_str, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(invites.into_iter().map(InviteResponse::from).collect()))
+    Ok(Json(
+        invites.into_iter().map(InviteResponse::from).collect(),
+    ))
 }
 
 pub async fn revoke_invite(
@@ -398,6 +411,9 @@ pub async fn get_billing(
     State(state): State<AppState>,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Option<OrgBilling>>> {
-    let billing = state.org_service.get_billing(&org_id).map_err(map_org_err)?;
+    let billing = state
+        .org_service
+        .get_billing(&org_id)
+        .map_err(map_org_err)?;
     Ok(Json(billing))
 }

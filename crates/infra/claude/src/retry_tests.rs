@@ -25,7 +25,10 @@ async fn mock_handler(
     let (status, body) = if idx < responses.len() {
         responses[idx].clone()
     } else {
-        responses.last().expect("responses vec should not be empty").clone()
+        responses
+            .last()
+            .expect("responses vec should not be empty")
+            .clone()
     };
     let sc = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     (sc, body).into_response()
@@ -70,7 +73,10 @@ fn ok_body() -> String {
 #[tokio::test]
 async fn non_stream_retry_succeeds_after_429() {
     let responses = vec![
-        (429, r#"{"error":{"type":"rate_limit","message":"rate limited"}}"#.into()),
+        (
+            429,
+            r#"{"error":{"type":"rate_limit","message":"rate limited"}}"#.into(),
+        ),
         (200, ok_body()),
     ];
     let (base, counter) = start_mock(responses).await;
@@ -140,7 +146,10 @@ async fn non_stream_529_triggers_retry() {
         .complete_non_stream_with_retry("fake-key", &url, &make_request())
         .await;
 
-    assert!(result.is_ok(), "expected Ok after 529 retries, got {result:?}");
+    assert!(
+        result.is_ok(),
+        "expected Ok after 529 retries, got {result:?}"
+    );
     assert_eq!(counter.load(Ordering::SeqCst), 3);
 }
 
@@ -228,7 +237,11 @@ async fn test_non_stream_402_returns_insufficient_credits() {
         matches!(result, Err(ClaudeClientError::InsufficientCredits)),
         "expected InsufficientCredits, got {result:?}"
     );
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "402 should not be retried");
+    assert_eq!(
+        counter.load(Ordering::SeqCst),
+        1,
+        "402 should not be retried"
+    );
 }
 
 #[tokio::test]
@@ -249,15 +262,16 @@ async fn test_stream_402_returns_insufficient_credits() {
         matches!(result, Err(ClaudeClientError::InsufficientCredits)),
         "expected InsufficientCredits, got {result:?}"
     );
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "402 should not be retried");
+    assert_eq!(
+        counter.load(Ordering::SeqCst),
+        1,
+        "402 should not be retried"
+    );
 }
 
 #[tokio::test]
 async fn test_402_is_not_retried() {
-    let responses = vec![
-        (402, "payment required".into()),
-        (200, ok_body()),
-    ];
+    let responses = vec![(402, "payment required".into()), (200, ok_body())];
     let (base, counter) = start_mock(responses).await;
     let client = ClaudeClient::with_base_url(&base);
     let url = format!("{base}/v1/messages");
@@ -266,6 +280,13 @@ async fn test_402_is_not_retried() {
         .complete_non_stream_with_retry("fake-key", &url, &make_request())
         .await;
 
-    assert!(matches!(result, Err(ClaudeClientError::InsufficientCredits)));
-    assert_eq!(counter.load(Ordering::SeqCst), 1, "should hit server exactly once — no retries for 402");
+    assert!(matches!(
+        result,
+        Err(ClaudeClientError::InsufficientCredits)
+    ));
+    assert_eq!(
+        counter.load(Ordering::SeqCst),
+        1,
+        "should hit server exactly once — no retries for 402"
+    );
 }

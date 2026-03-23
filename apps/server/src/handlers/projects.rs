@@ -5,17 +5,13 @@ use axum::Json;
 use aura_core::{Project, ProjectId};
 use aura_projects::UpdateProjectInput;
 
-use crate::dto::{
-    CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest,
-};
+use crate::dto::{CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 use super::projects_helpers::{
-    ListProjectsQuery,
-    project_from_network, ensure_local_shadow, folder_name_from_path,
-    to_project_input, write_imported_files,
-    build_local_shadow, resolve_orbit_repo,
+    build_local_shadow, ensure_local_shadow, folder_name_from_path, project_from_network,
+    resolve_orbit_repo, to_project_input, write_imported_files, ListProjectsQuery,
 };
 
 pub(crate) async fn list_all_projects_from_network(state: &AppState) -> ApiResult<Vec<Project>> {
@@ -57,8 +53,7 @@ async fn create_project_impl(
             .git_repo_url
             .as_ref()
             .is_some_and(|u| !u.trim().is_empty());
-        let has_new_repo =
-            req.orbit_owner.is_some() && req.orbit_repo.is_some();
+        let has_new_repo = req.orbit_owner.is_some() && req.orbit_repo.is_some();
         if !has_existing_repo && !has_new_repo {
             return Err(ApiError::bad_request(
                 "An Orbit repo is required: provide orbit_owner and orbit_repo to create a new repo, or git_repo_url to use an existing one",
@@ -86,7 +81,10 @@ async fn create_project_impl(
         let orbit = resolve_orbit_repo(state, req, &net_project, &jwt).await?;
 
         let project_id = net_project.id.parse::<ProjectId>().map_err(|e| {
-            ApiError::internal(format!("unparseable network project id '{}': {e}", net_project.id))
+            ApiError::internal(format!(
+                "unparseable network project id '{}': {e}",
+                net_project.id
+            ))
         })?;
         let local_shadow = build_local_shadow(project_id, req, orbit);
         let project = project_from_network(&net_project, Some(&local_shadow))?;
@@ -113,7 +111,9 @@ pub async fn create_project(
         return Err(ApiError::bad_request("name must not be empty"));
     }
     if req.linked_folder_path.trim().is_empty() {
-        return Err(ApiError::bad_request("linked_folder_path must not be empty"));
+        return Err(ApiError::bad_request(
+            "linked_folder_path must not be empty",
+        ));
     }
 
     let folder = folder_name_from_path(&req.linked_folder_path);
@@ -147,9 +147,11 @@ pub async fn create_imported_project(
 
     tokio::fs::create_dir_all(&workspace_root)
         .await
-        .map_err(|e| ApiError::internal(format!(
-            "failed to create imported workspace directory: {e}",
-        )))?;
+        .map_err(|e| {
+            ApiError::internal(format!(
+                "failed to create imported workspace directory: {e}",
+            ))
+        })?;
 
     write_imported_files(&workspace_root, files).await?;
 
@@ -187,11 +189,10 @@ pub async fn list_projects(
             let projects: Vec<Project> = net_projects
                 .iter()
                 .map(|net| {
-                    let local = net
-                        .id
-                        .parse::<ProjectId>()
-                        .ok()
-                        .and_then(|project_id| state.project_service.get_project(&project_id).ok());
+                    let local =
+                        net.id.parse::<ProjectId>().ok().and_then(|project_id| {
+                            state.project_service.get_project(&project_id).ok()
+                        });
                     let project = project_from_network(net, local.as_ref())?;
                     ensure_local_shadow(&state, &project);
                     Ok(project)
@@ -295,14 +296,17 @@ pub async fn delete_project(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<StatusCode> {
+    // Verify the project exists locally before attempting remote deletion.
     state
         .project_service
-        .delete_project(&project_id)
+        .get_project(&project_id)
         .map_err(|e| match &e {
             aura_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             _ => ApiError::internal(e.to_string()),
         })?;
 
+    // Delete remotely first so that a rejection (e.g. project has agent
+    // children) prevents us from removing the local copy.
     if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
         client
@@ -310,6 +314,11 @@ pub async fn delete_project(
             .await
             .map_err(map_network_error)?;
     }
+
+    state
+        .project_service
+        .delete_project(&project_id)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
 
     Ok(StatusCode::NO_CONTENT)
 }

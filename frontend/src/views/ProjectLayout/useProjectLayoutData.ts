@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, type SetStateAction } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo, type SetStateAction } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import type { Project, Spec, Task } from "../../types";
@@ -6,6 +6,8 @@ import type { EngineEvent } from "../../types/events";
 import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
+import { useSidekickStore } from "../../stores/sidekick-store";
+import { compareSpecs } from "../../utils/collections";
 
 interface ProjectLayoutData {
   displayProject: Project | null;
@@ -74,7 +76,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
       .then(([proj, specs, tasks]) => {
         if (cancelled) return;
         setProjectRaw(proj);
-        setInitialSpecs(specs.sort((a, b) => a.order_index - b.order_index));
+        setInitialSpecs(specs.sort(compareSpecs));
         setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
       })
       .catch(() => {})
@@ -90,6 +92,23 @@ export function useProjectLayoutData(): ProjectLayoutData {
       }
     });
   }, [projectId, setProjectSafe, subscribe]);
+
+  const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);
+  const prevStreamingIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const wasStreaming = prevStreamingIdRef.current != null;
+    prevStreamingIdRef.current = streamingId;
+    if (wasStreaming && streamingId == null && projectId) {
+      Promise.all([
+        api.listSpecs(projectId).catch(() => [] as Spec[]),
+        api.listTasks(projectId).catch(() => [] as Task[]),
+      ]).then(([specs, tasks]) => {
+        setInitialSpecs(specs.sort(compareSpecs));
+        setInitialTasks(tasks.sort((a, b) => a.order_index - b.order_index));
+      });
+    }
+  }, [streamingId, projectId]);
 
   useEffect(() => {
     if (!displayProject) { unregister(); return; }

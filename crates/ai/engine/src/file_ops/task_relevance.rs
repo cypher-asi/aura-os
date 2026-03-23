@@ -3,15 +3,14 @@ use std::path::Path;
 
 use crate::error::EngineError;
 
+use super::file_walkers::{collect_tiered_files, resolve_dependency_signatures_bfs};
+use super::task_keywords::{extract_task_keywords, identify_target_crates};
 use super::workspace_map::{
     parse_internal_deps, parse_package_name, parse_workspace_members, WorkspaceCache,
 };
-use super::task_keywords::{extract_task_keywords, identify_target_crates};
-use super::file_walkers::{collect_tiered_files, resolve_dependency_signatures_bfs};
 
 pub use super::type_resolution::{
-    resolve_type_definitions_for_task,
-    resolve_type_definitions_for_task_async,
+    resolve_type_definitions_for_task, resolve_type_definitions_for_task_async,
 };
 
 /// Builds workspace context from disk (non-cached path).
@@ -45,7 +44,12 @@ fn build_workspace_context_from_disk(root: &Path) -> Option<WorkspaceContext> {
         }
     }
 
-    Some(WorkspaceContext { members, crate_names, crate_deps, name_to_path })
+    Some(WorkspaceContext {
+        members,
+        crate_names,
+        crate_deps,
+        name_to_path,
+    })
 }
 
 /// Task-aware file retrieval with 4-tier priority.
@@ -61,7 +65,8 @@ pub fn retrieve_task_relevant_files(
         None => return super::read_relevant_files(project_root, max_bytes),
     };
 
-    let target_crates = identify_target_crates(task_title, task_description, &ctx.members, &ctx.crate_names);
+    let target_crates =
+        identify_target_crates(task_title, task_description, &ctx.members, &ctx.crate_names);
     let keywords = extract_task_keywords(task_title, task_description);
 
     let dep_crate_paths: Vec<String> = target_crates
@@ -94,7 +99,12 @@ pub fn resolve_crate_api_context(
     };
 
     Ok(resolve_dependency_signatures_bfs(
-        root, &target_path, &ctx.crate_names, &ctx.crate_deps, &ctx.name_to_path, max_bytes,
+        root,
+        &target_path,
+        &ctx.crate_names,
+        &ctx.crate_deps,
+        &ctx.name_to_path,
+        max_bytes,
     ))
 }
 
@@ -135,7 +145,9 @@ pub fn resolve_task_dep_api_context(
     let mut remaining = max_bytes;
 
     for target in &targets {
-        if remaining == 0 { break; }
+        if remaining == 0 {
+            break;
+        }
         let section = resolve_crate_api_context(project_root, target, remaining)?;
         if !section.is_empty() {
             remaining = remaining.saturating_sub(section.len());
@@ -160,7 +172,11 @@ pub async fn retrieve_task_relevant_files_cached(
     let cache = cache.clone();
     tokio::task::spawn_blocking(move || {
         retrieve_task_relevant_files_cached_sync(
-            &project_root, &task_title, &task_description, max_bytes, &cache,
+            &project_root,
+            &task_title,
+            &task_description,
+            max_bytes,
+            &cache,
         )
     })
     .await
@@ -180,7 +196,10 @@ fn retrieve_task_relevant_files_cached_sync(
 
     let root = Path::new(project_root);
     let target_crates = identify_target_crates(
-        task_title, task_description, &cache.members, &cache.crate_names,
+        task_title,
+        task_description,
+        &cache.members,
+        &cache.crate_names,
     );
     let keywords = extract_task_keywords(task_title, task_description);
 
@@ -207,7 +226,11 @@ pub async fn resolve_task_dep_api_context_cached(
     let cache = cache.clone();
     tokio::task::spawn_blocking(move || {
         resolve_task_dep_api_context_cached_sync(
-            &project_root, &task_title, &task_description, max_bytes, &cache,
+            &project_root,
+            &task_title,
+            &task_description,
+            max_bytes,
+            &cache,
         )
     })
     .await
@@ -226,7 +249,10 @@ fn resolve_task_dep_api_context_cached_sync(
     }
 
     let targets = identify_target_crates(
-        task_title, task_description, &cache.members, &cache.crate_names,
+        task_title,
+        task_description,
+        &cache.members,
+        &cache.crate_names,
     );
     if targets.is_empty() {
         return Ok(String::new());
@@ -237,7 +263,9 @@ fn resolve_task_dep_api_context_cached_sync(
     let mut remaining = max_bytes;
 
     for target in &targets {
-        if remaining == 0 { break; }
+        if remaining == 0 {
+            break;
+        }
 
         let target_path = if cache.members.contains(target) {
             target.clone()
@@ -248,8 +276,12 @@ fn resolve_task_dep_api_context_cached_sync(
         };
 
         let section = resolve_dependency_signatures_bfs(
-            root, &target_path, &cache.crate_names, &cache.crate_deps,
-            &cache.name_to_path, remaining,
+            root,
+            &target_path,
+            &cache.crate_names,
+            &cache.crate_deps,
+            &cache.name_to_path,
+            remaining,
         );
 
         if !section.is_empty() {

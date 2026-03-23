@@ -38,9 +38,7 @@ For conversational questions about architecture, debugging, or best practices, r
 Use markdown formatting for code blocks and structured responses. Be concise. Do NOT use emojis in your responses."#;
 
 /// Prompt for summarizing conversation context (e.g. before rollover).
-pub const CONTEXT_SUMMARY_SYSTEM_PROMPT: &str =
-    "You summarize conversations concisely.";
+pub const CONTEXT_SUMMARY_SYSTEM_PROMPT: &str = "You summarize conversations concisely.";
 
 /// Prompt for generating a short chat title.
-pub const TITLE_GEN_SYSTEM_PROMPT: &str =
-    "You generate short chat titles.";
+pub const TITLE_GEN_SYSTEM_PROMPT: &str = "You generate short chat titles.";

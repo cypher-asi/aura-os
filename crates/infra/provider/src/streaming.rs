@@ -124,9 +124,9 @@ impl StreamAccumulator {
         let tool_calls = self
             .tool_json_parts
             .into_iter()
-            .filter_map(|(id, name, json)| {
+            .map(|(id, name, json)| {
                 let input = serde_json::from_str(&json).unwrap_or(serde_json::Value::Null);
-                Some(crate::types::ToolCall { id, name, input })
+                crate::types::ToolCall { id, name, input }
             })
             .collect();
 

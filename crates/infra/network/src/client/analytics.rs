@@ -23,10 +23,7 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<UsageStats, NetworkError> {
         self.get_authed(
-            &format!(
-                "{}/api/users/me/usage?period={}",
-                self.base_url, period
-            ),
+            &format!("{}/api/users/me/usage?period={}", self.base_url, period),
             jwt,
         )
         .await
@@ -54,10 +51,7 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<Vec<MemberUsageStats>, NetworkError> {
         self.get_authed(
-            &format!(
-                "{}/api/orgs/{}/usage/members",
-                self.base_url, org_id
-            ),
+            &format!("{}/api/orgs/{}/usage/members", self.base_url, org_id),
             jwt,
         )
         .await

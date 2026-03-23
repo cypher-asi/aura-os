@@ -4,10 +4,10 @@ use chrono::Utc;
 use serde::Serialize;
 use tracing::warn;
 
-use aura_core::FeeScheduleEntry;
-use aura_billing::{compute_cost_with_rates, lookup_rate_in};
 use crate::engine::types::{TaskOutcome, TaskTimings};
 use crate::events::PhaseTimingEntry;
+use aura_billing::{compute_cost_with_rates, lookup_rate_in};
+use aura_core::FeeScheduleEntry;
 
 const METRICS_DIR: &str = ".aura";
 const LAST_RUN_FILE: &str = "last_run_metrics.json";
@@ -42,24 +42,49 @@ pub struct TaskMetrics {
 }
 
 impl TaskMetrics {
-    fn base(task_id: String, title: String, outcome: &str, duration_ms: u64, model: Option<String>) -> Self {
+    fn base(
+        task_id: String,
+        title: String,
+        outcome: &str,
+        duration_ms: u64,
+        model: Option<String>,
+    ) -> Self {
         Self {
-            task_id, title, outcome: outcome.into(), duration_ms, model,
-            llm_duration_ms: None, build_verify_duration_ms: None, file_ops_duration_ms: None,
-            input_tokens: 0, output_tokens: 0,
-            files_changed: 0, parse_retries: 0, build_fix_attempts: 0,
-            failure_phase: None, failure_reason: None,
+            task_id,
+            title,
+            outcome: outcome.into(),
+            duration_ms,
+            model,
+            llm_duration_ms: None,
+            build_verify_duration_ms: None,
+            file_ops_duration_ms: None,
+            input_tokens: 0,
+            output_tokens: 0,
+            files_changed: 0,
+            parse_retries: 0,
+            build_fix_attempts: 0,
+            failure_phase: None,
+            failure_reason: None,
             phase_timings: vec![],
         }
     }
 
-    pub fn completed(task_id: String, title: String, duration_ms: u64, model: Option<String>) -> Self {
+    pub fn completed(
+        task_id: String,
+        title: String,
+        duration_ms: u64,
+        model: Option<String>,
+    ) -> Self {
         Self::base(task_id, title, "completed", duration_ms, model)
     }
 
     pub fn failed(
-        task_id: String, title: String, duration_ms: u64, model: Option<String>,
-        phase: &str, reason: String,
+        task_id: String,
+        title: String,
+        duration_ms: u64,
+        model: Option<String>,
+        phase: &str,
+        reason: String,
     ) -> Self {
         let mut m = Self::base(task_id, title, "failed", duration_ms, model);
         m.failure_phase = Some(phase.into());
@@ -68,38 +93,52 @@ impl TaskMetrics {
     }
 
     pub fn with_tokens(mut self, input: u64, output: u64) -> Self {
-        self.input_tokens = input; self.output_tokens = output; self
+        self.input_tokens = input;
+        self.output_tokens = output;
+        self
     }
 
     pub fn with_llm_duration(mut self, ms: u64) -> Self {
-        self.llm_duration_ms = Some(ms); self
+        self.llm_duration_ms = Some(ms);
+        self
     }
 
     pub fn with_build_verify_duration(mut self, ms: u64) -> Self {
-        self.build_verify_duration_ms = Some(ms); self
+        self.build_verify_duration_ms = Some(ms);
+        self
     }
 
     pub fn with_file_ops_duration(mut self, ms: u64) -> Self {
-        self.file_ops_duration_ms = Some(ms); self
+        self.file_ops_duration_ms = Some(ms);
+        self
     }
 
     pub fn with_files_changed(mut self, count: u32) -> Self {
-        self.files_changed = count; self
+        self.files_changed = count;
+        self
     }
 
     pub fn with_parse_retries(mut self, count: u32) -> Self {
-        self.parse_retries = count; self
+        self.parse_retries = count;
+        self
     }
 
     pub fn with_build_fix_attempts(mut self, count: u32) -> Self {
-        self.build_fix_attempts = count; self
+        self.build_fix_attempts = count;
+        self
     }
 
     pub fn with_phase_timings(mut self, timings: Vec<PhaseTimingEntry>) -> Self {
-        self.phase_timings = timings; self
+        self.phase_timings = timings;
+        self
     }
 
-    fn from_timings(task_id: String, title: String, model: Option<String>, t: &TaskTimings) -> Self {
+    fn from_timings(
+        task_id: String,
+        title: String,
+        model: Option<String>,
+        t: &TaskTimings,
+    ) -> Self {
         Self::base(task_id, title, "completed", t.task_duration_ms, model)
             .with_tokens(t.total_input(), t.total_output())
             .with_llm_duration(t.llm_duration_ms)
@@ -109,18 +148,37 @@ impl TaskMetrics {
             .with_parse_retries(t.parse_retries)
             .with_build_fix_attempts(t.build_fix_attempts)
             .with_phase_timings(vec![
-                PhaseTimingEntry { phase: "llm_call".into(), duration_ms: t.llm_duration_ms },
-                PhaseTimingEntry { phase: "file_ops".into(), duration_ms: t.file_ops_duration_ms },
-                PhaseTimingEntry { phase: "build_verify".into(), duration_ms: t.build_verify_duration_ms },
+                PhaseTimingEntry {
+                    phase: "llm_call".into(),
+                    duration_ms: t.llm_duration_ms,
+                },
+                PhaseTimingEntry {
+                    phase: "file_ops".into(),
+                    duration_ms: t.file_ops_duration_ms,
+                },
+                PhaseTimingEntry {
+                    phase: "build_verify".into(),
+                    duration_ms: t.build_verify_duration_ms,
+                },
             ])
     }
 
-    pub(crate) fn from_outcome(task_id: String, title: String, model: Option<String>, outcome: &TaskOutcome) -> Self {
+    pub(crate) fn from_outcome(
+        task_id: String,
+        title: String,
+        model: Option<String>,
+        outcome: &TaskOutcome,
+    ) -> Self {
         match outcome {
             TaskOutcome::Completed { timings, .. } => {
                 Self::from_timings(task_id, title, model, timings)
             }
-            TaskOutcome::Failed { reason, phase, timings, .. } => {
+            TaskOutcome::Failed {
+                reason,
+                phase,
+                timings,
+                ..
+            } => {
                 let mut m = Self::from_timings(task_id, title, model, timings);
                 m.outcome = "failed".into();
                 m.failure_phase = Some(phase.clone());
@@ -207,17 +265,25 @@ impl LoopRunMetrics {
     }
 
     fn recompute_aggregates(&mut self, fee_schedule: &[FeeScheduleEntry]) {
-        self.tasks_completed = self.tasks.iter().filter(|t| t.outcome == "completed").count();
+        self.tasks_completed = self
+            .tasks
+            .iter()
+            .filter(|t| t.outcome == "completed")
+            .count();
         self.tasks_failed = self.tasks.iter().filter(|t| t.outcome == "failed").count();
         self.total_input_tokens = self.tasks.iter().map(|t| t.input_tokens).sum();
         self.total_output_tokens = self.tasks.iter().map(|t| t.output_tokens).sum();
         self.total_parse_retries = self.tasks.iter().map(|t| t.parse_retries).sum();
         self.total_build_fix_attempts = self.tasks.iter().map(|t| t.build_fix_attempts).sum();
-        self.estimated_cost_usd = self.tasks.iter().map(|t| {
-            let model = t.model.as_deref().unwrap_or("claude-opus-4-6");
-            let (inp_rate, out_rate) = lookup_rate_in(fee_schedule, model);
-            compute_cost_with_rates(t.input_tokens, t.output_tokens, inp_rate, out_rate)
-        }).sum();
+        self.estimated_cost_usd = self
+            .tasks
+            .iter()
+            .map(|t| {
+                let model = t.model.as_deref().unwrap_or("claude-opus-4-6");
+                let (inp_rate, out_rate) = lookup_rate_in(fee_schedule, model);
+                compute_cost_with_rates(t.input_tokens, t.output_tokens, inp_rate, out_rate)
+            })
+            .sum();
     }
 }
 
@@ -351,7 +417,12 @@ mod tests {
             timings: timings.clone(),
         };
 
-        let metrics = TaskMetrics::from_outcome("t1".into(), "Test Task".into(), Some("opus".into()), &outcome);
+        let metrics = TaskMetrics::from_outcome(
+            "t1".into(),
+            "Test Task".into(),
+            Some("opus".into()),
+            &outcome,
+        );
         assert_eq!(metrics.input_tokens, timings.total_input());
         assert_eq!(metrics.output_tokens, timings.total_output());
         assert_eq!(metrics.input_tokens, 1200);
@@ -406,18 +477,35 @@ mod tests {
 
         let mut run = LoopRunMetrics::new("proj-1".into());
         run.tasks.push(
-            TaskMetrics::completed("t1".into(), "Task 1".into(), 1000, Some("claude-opus-4-6".into()))
-                .with_tokens(100_000, 50_000)
-                .with_parse_retries(2)
-                .with_build_fix_attempts(1),
+            TaskMetrics::completed(
+                "t1".into(),
+                "Task 1".into(),
+                1000,
+                Some("claude-opus-4-6".into()),
+            )
+            .with_tokens(100_000, 50_000)
+            .with_parse_retries(2)
+            .with_build_fix_attempts(1),
         );
         run.tasks.push(
-            TaskMetrics::completed("t2".into(), "Task 2".into(), 2000, Some("claude-haiku-4-5".into()))
-                .with_tokens(200_000, 80_000),
+            TaskMetrics::completed(
+                "t2".into(),
+                "Task 2".into(),
+                2000,
+                Some("claude-haiku-4-5".into()),
+            )
+            .with_tokens(200_000, 80_000),
         );
         run.tasks.push(
-            TaskMetrics::failed("t3".into(), "Task 3".into(), 500, None, "build", "error".into())
-                .with_tokens(50_000, 20_000),
+            TaskMetrics::failed(
+                "t3".into(),
+                "Task 3".into(),
+                500,
+                None,
+                "build",
+                "error".into(),
+            )
+            .with_tokens(50_000, 20_000),
         );
 
         run.finalize("completed", 5000, 1, 0, 0, &schedule);
@@ -456,12 +544,22 @@ mod tests {
 
         let mut run = LoopRunMetrics::new("proj-1".into());
         run.tasks.push(
-            TaskMetrics::completed("t1".into(), "Opus".into(), 1000, Some("claude-opus-4-6".into()))
-                .with_tokens(1_000_000, 0),
+            TaskMetrics::completed(
+                "t1".into(),
+                "Opus".into(),
+                1000,
+                Some("claude-opus-4-6".into()),
+            )
+            .with_tokens(1_000_000, 0),
         );
         run.tasks.push(
-            TaskMetrics::completed("t2".into(), "Haiku".into(), 1000, Some("claude-haiku-4-5".into()))
-                .with_tokens(1_000_000, 0),
+            TaskMetrics::completed(
+                "t2".into(),
+                "Haiku".into(),
+                1000,
+                Some("claude-haiku-4-5".into()),
+            )
+            .with_tokens(1_000_000, 0),
         );
         run.finalize("completed", 2000, 1, 0, 0, &schedule);
 

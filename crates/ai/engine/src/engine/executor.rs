@@ -84,34 +84,63 @@ impl DevLoopEngine {
                 .create_instance_from_agent(&project_id, &default_agent)
                 .await?
         };
-        let session = self.session_service.create_session(
-            &agent.agent_instance_id, &project_id, None,
-            String::new(), user_id.clone(), model.clone(),
-        ).await?;
+        let session = self
+            .session_service
+            .create_session(
+                &agent.agent_instance_id,
+                &project_id,
+                None,
+                String::new(),
+                user_id.clone(),
+                model.clone(),
+            )
+            .await?;
 
-        self.task_service.assign_task(
-            &project_id, &task.spec_id, &task.task_id,
-            &agent.agent_instance_id, Some(session.session_id),
-        ).await?;
-        self.session_service.record_task_worked(
-            &project_id, &agent.agent_instance_id, &session.session_id, task.task_id,
-        ).await?;
-        self.agent_instance_service.start_working(
-            &project_id, &agent.agent_instance_id, &task.task_id, &session.session_id,
-        ).await?;
+        self.task_service
+            .assign_task(
+                &project_id,
+                &task.spec_id,
+                &task.task_id,
+                &agent.agent_instance_id,
+                Some(session.session_id),
+            )
+            .await?;
+        self.session_service
+            .record_task_worked(
+                &project_id,
+                &agent.agent_instance_id,
+                &session.session_id,
+                task.task_id,
+            )
+            .await?;
+        self.agent_instance_service
+            .start_working(
+                &project_id,
+                &agent.agent_instance_id,
+                &task.task_id,
+                &session.session_id,
+            )
+            .await?;
         let aiid = agent.agent_instance_id;
         self.emit(EngineEvent::TaskStarted {
-            project_id, agent_instance_id: aiid,
-            task_id: task.task_id, task_title: task.title.clone(),
+            project_id,
+            agent_instance_id: aiid,
+            task_id: task.task_id,
+            task_title: task.title.clone(),
             session_id: session.session_id,
             prompt_tokens_estimate: None,
-            codebase_snapshot_bytes: None, codebase_file_count: None,
+            codebase_snapshot_bytes: None,
+            codebase_file_count: None,
         });
 
         let task_start = Instant::now();
         let model_name = model.clone();
-        let project_root = self.project_service.get_project_async(&project_id).await?
-            .linked_folder_path.clone();
+        let project_root = self
+            .project_service
+            .get_project_async(&project_id)
+            .await?
+            .linked_folder_path
+            .clone();
         let workspace_cache = WorkspaceCache::build_async(&project_root).await?;
         let fee_schedule = self.pricing_service.get_fee_schedule();
 
@@ -127,30 +156,62 @@ impl DevLoopEngine {
             self.execute_shell_task(&project, &task, &cmd, aiid).await
         } else {
             self.execute_task_agentic(&super::executor_agentic::AgenticTaskParams {
-                project_id: &project_id, task: &task, session: &session, api_key: &api_key,
-                agent: Some(&agent), work_log: &[], workspace_cache: &workspace_cache,
-            }).await
+                project_id: &project_id,
+                task: &task,
+                session: &session,
+                agent: Some(&agent),
+                work_log: &[],
+                workspace_cache: &workspace_cache,
+            })
+            .await
         };
 
-        let outcome = self.finalize_task_execution(TaskFinalizationParams {
-            project_id, agent_instance_id: aiid,
-            task: &task, session: &session, api_key: &api_key,
-            model: &model, task_start,
-            baseline_test_failures: &baseline_test_failures,
-            baseline_build_errors: &baseline_build_errors,
-            workspace_cache: &workspace_cache,
-        }, execution_result).await?;
+        let outcome = self
+            .finalize_task_execution(
+                TaskFinalizationParams {
+                    project_id,
+                    agent_instance_id: aiid,
+                    task: &task,
+                    session: &session,
+                    api_key: &api_key,
+                    model: &model,
+                    task_start,
+                    baseline_test_failures: &baseline_test_failures,
+                    baseline_build_errors: &baseline_build_errors,
+                    workspace_cache: &workspace_cache,
+                },
+                execution_result,
+            )
+            .await?;
 
         self.record_single_task_metrics(
-            &task, &outcome, &project_root, &project_id, &model_name, &fee_schedule,
+            &task,
+            &outcome,
+            &project_root,
+            &project_id,
+            &model_name,
+            &fee_schedule,
         );
-        self.create_follow_ups_if_completed(&task, &outcome, project_id, aiid).await;
+        self.create_follow_ups_if_completed(&task, &outcome, project_id, aiid)
+            .await;
 
-        let end_status = if outcome.is_completed() { SessionStatus::Completed } else { SessionStatus::Failed };
-        if let Err(e) = self.session_service.end_session(&project_id, &aiid, &session.session_id, end_status).await {
+        let end_status = if outcome.is_completed() {
+            SessionStatus::Completed
+        } else {
+            SessionStatus::Failed
+        };
+        if let Err(e) = self
+            .session_service
+            .end_session(&project_id, &aiid, &session.session_id, end_status)
+            .await
+        {
             warn!(error = %e, "failed to end session after single task");
         }
-        if let Err(e) = self.agent_instance_service.finish_working(&project_id, &aiid).await {
+        if let Err(e) = self
+            .agent_instance_service
+            .finish_working(&project_id, &aiid)
+            .await
+        {
             warn!(error = %e, "failed to finish_working after single task");
         }
         Ok(())
@@ -164,14 +225,24 @@ impl DevLoopEngine {
         let execution = match execution_result {
             Ok(exec) => exec,
             Err(e) => {
-                return Ok(self.handle_execution_error(
-                    fp.project_id, fp.agent_instance_id, fp.task, fp.model, fp.task_start, e,
-                ).await);
+                return Ok(self
+                    .handle_execution_error(
+                        fp.project_id,
+                        fp.agent_instance_id,
+                        fp.task,
+                        fp.model,
+                        fp.task_start,
+                        e,
+                    )
+                    .await);
             }
         };
 
         let llm_duration_ms = fp.task_start.elapsed().as_millis() as u64;
-        let project = self.project_service.get_project_async(&fp.project_id).await?;
+        let project = self
+            .project_service
+            .get_project_async(&fp.project_id)
+            .await?;
         let base_path = Path::new(&project.linked_folder_path);
 
         let file_changes = if execution.files_already_applied {
@@ -179,11 +250,9 @@ impl DevLoopEngine {
         } else {
             let bp = base_path.to_path_buf();
             let ops = execution.file_ops.clone();
-            tokio::task::spawn_blocking(move || {
-                file_ops::compute_file_changes(&bp, &ops)
-            })
-            .await
-            .unwrap_or_default()
+            tokio::task::spawn_blocking(move || file_ops::compute_file_changes(&bp, &ops))
+                .await
+                .unwrap_or_default()
         };
 
         let _write_guard = self.write_coordinator.acquire(&fp.project_id).await;
@@ -191,23 +260,32 @@ impl DevLoopEngine {
         let file_ops_start = Instant::now();
         if !execution.files_already_applied {
             if let Err(e) = file_ops::apply_file_ops(base_path, &execution.file_ops).await {
-                return Ok(self.handle_file_ops_failure(
-                    &fp, llm_duration_ms, &execution, e,
-                ).await);
+                return Ok(self
+                    .handle_file_ops_failure(&fp, llm_duration_ms, &execution, e)
+                    .await);
             }
         }
         let file_ops_duration_ms = file_ops_start.elapsed().as_millis() as u64;
-        self.emit_file_ops_applied(fp.project_id, fp.agent_instance_id, fp.task, &execution.file_ops);
+        self.emit_file_ops_applied(
+            fp.project_id,
+            fp.agent_instance_id,
+            fp.task,
+            &execution.file_ops,
+        );
 
         let build_start = Instant::now();
-        let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out, last_build_stderr) = self
-            .verify_and_fix_build(&super::build_fix::BuildVerifyParams {
-                project: &project, task: fp.task, session: fp.session, api_key: fp.api_key,
+        let (_, build_passed, build_attempts, dup_bailouts, fix_inp, fix_out, last_build_stderr) =
+            self.verify_and_fix_build(&super::build_fix::BuildVerifyParams {
+                project: &project,
+                task: fp.task,
+                session: fp.session,
+                api_key: fp.api_key,
                 initial_execution: &execution,
                 baseline_test_failures: fp.baseline_test_failures,
                 baseline_build_errors: fp.baseline_build_errors,
                 workspace_cache: fp.workspace_cache,
-            }).await?;
+            })
+            .await?;
         let build_verify_duration_ms = build_start.elapsed().as_millis() as u64;
         let task_duration_ms = fp.task_start.elapsed().as_millis() as u64;
 
@@ -219,21 +297,30 @@ impl DevLoopEngine {
             parse_retries: execution.parse_retries,
             build_fix_attempts: build_attempts,
             duplicate_error_bailouts: dup_bailouts,
-            llm_duration_ms, file_ops_duration_ms, build_verify_duration_ms, task_duration_ms,
+            llm_duration_ms,
+            file_ops_duration_ms,
+            build_verify_duration_ms,
+            task_duration_ms,
             files_changed: execution.file_ops.len() as u32,
         };
 
         self.run_post_build_stub_check(
-            fp.project_id, fp.agent_instance_id, fp.task, base_path, &execution, build_passed,
+            fp.project_id,
+            fp.agent_instance_id,
+            fp.task,
+            base_path,
+            &execution,
+            build_passed,
         );
 
         if !build_passed {
-            return Ok(self.handle_build_failure(
-                &fp, &execution, timings, &last_build_stderr,
-            ).await);
+            return Ok(self
+                .handle_build_failure(&fp, &execution, timings, &last_build_stderr)
+                .await);
         }
 
-        self.emit_completion(&fp, &execution, &file_changes, &timings).await;
+        self.emit_completion(&fp, &execution, &file_changes, &timings)
+            .await;
 
         Ok(TaskOutcome::Completed {
             notes: execution.notes,
@@ -255,19 +342,37 @@ impl DevLoopEngine {
         let credit_failure = matches!(e, EngineError::InsufficientCredits);
         let reason = format!("execution error: {e}");
         let task_dur = task_start.elapsed().as_millis() as u64;
-        if let Err(e2) = self.task_service.fail_task(&project_id, &task.spec_id, &task.task_id, &reason).await {
+        if let Err(e2) = self
+            .task_service
+            .fail_task(&project_id, &task.spec_id, &task.task_id, &reason)
+            .await
+        {
             warn!(task_id = %task.task_id, error = %e2, "failed to mark task as failed");
         }
-        let phase = if credit_failure { "insufficient_credits" } else { "execution" };
+        let phase = if credit_failure {
+            "insufficient_credits"
+        } else {
+            "execution"
+        };
         self.emit(EngineEvent::TaskFailed {
-            project_id, agent_instance_id, task_id: task.task_id,
-            reason: e.to_string(), duration_ms: Some(task_dur),
-            phase: Some(phase.into()), parse_retries: None,
-            build_fix_attempts: None, model: model.clone(),
+            project_id,
+            agent_instance_id,
+            task_id: task.task_id,
+            reason: e.to_string(),
+            duration_ms: Some(task_dur),
+            phase: Some(phase.into()),
+            parse_retries: None,
+            build_fix_attempts: None,
+            model: model.clone(),
         });
         TaskOutcome::Failed {
-            reason, phase: phase.to_string(), credit_failure,
-            timings: TaskTimings { task_duration_ms: task_dur, ..Default::default() },
+            reason,
+            phase: phase.to_string(),
+            credit_failure,
+            timings: TaskTimings {
+                task_duration_ms: task_dur,
+                ..Default::default()
+            },
         }
     }
 
@@ -280,27 +385,47 @@ impl DevLoopEngine {
     ) -> TaskOutcome {
         let reason = format!("file operation failed: {e}");
         let task_dur = fp.task_start.elapsed().as_millis() as u64;
-        if let Err(e2) = self.task_service.fail_task(&fp.project_id, &fp.task.spec_id, &fp.task.task_id, &reason).await {
+        if let Err(e2) = self
+            .task_service
+            .fail_task(&fp.project_id, &fp.task.spec_id, &fp.task.task_id, &reason)
+            .await
+        {
             warn!(task_id = %fp.task.task_id, error = %e2, "failed to mark task as failed");
         }
         self.emit(EngineEvent::TaskFailed {
-            project_id: fp.project_id, agent_instance_id: fp.agent_instance_id,
+            project_id: fp.project_id,
+            agent_instance_id: fp.agent_instance_id,
             task_id: fp.task.task_id,
-            reason: e.to_string(), duration_ms: Some(task_dur),
-            phase: Some("file_ops".into()), parse_retries: Some(execution.parse_retries),
-            build_fix_attempts: None, model: fp.model.clone(),
+            reason: e.to_string(),
+            duration_ms: Some(task_dur),
+            phase: Some("file_ops".into()),
+            parse_retries: Some(execution.parse_retries),
+            build_fix_attempts: None,
+            model: fp.model.clone(),
         });
-        if let Err(e2) = self.session_service.update_context_usage(
-            &fp.project_id, &fp.agent_instance_id, &fp.session.session_id,
-            execution.input_tokens, execution.output_tokens,
-        ).await { warn!(error = %e2, "failed to update context usage"); }
+        if let Err(e2) = self
+            .session_service
+            .update_context_usage(
+                &fp.project_id,
+                &fp.agent_instance_id,
+                &fp.session.session_id,
+                execution.input_tokens,
+                execution.output_tokens,
+            )
+            .await
+        {
+            warn!(error = %e2, "failed to update context usage");
+        }
         TaskOutcome::Failed {
-            reason, phase: "file_ops".to_string(), credit_failure: false,
+            reason,
+            phase: "file_ops".to_string(),
+            credit_failure: false,
             timings: TaskTimings {
                 input_tokens: execution.input_tokens,
                 output_tokens: execution.output_tokens,
                 parse_retries: execution.parse_retries,
-                llm_duration_ms, task_duration_ms: task_dur,
+                llm_duration_ms,
+                task_duration_ms: task_dur,
                 files_changed: execution.file_ops.len() as u32,
                 ..Default::default()
             },
@@ -316,10 +441,15 @@ impl DevLoopEngine {
         execution: &TaskExecution,
         build_passed: bool,
     ) {
-        if !build_passed { return; }
+        if !build_passed {
+            return;
+        }
         let stub_reports = file_ops::detect_stub_patterns(base_path, &execution.file_ops);
-        if stub_reports.is_empty() { return; }
-        let stub_summary: Vec<String> = stub_reports.iter()
+        if stub_reports.is_empty() {
+            return;
+        }
+        let stub_summary: Vec<String> = stub_reports
+            .iter()
             .map(|r| format!("{}:{} -- {}", r.path, r.line, r.pattern))
             .collect();
         warn!(
@@ -327,10 +457,13 @@ impl DevLoopEngine {
             "task completed with {} remaining stub(s): {}", stub_reports.len(), stub_summary.join("; "),
         );
         self.emit(EngineEvent::TaskOutputDelta {
-            project_id, agent_instance_id, task_id: task.task_id,
+            project_id,
+            agent_instance_id,
+            task_id: task.task_id,
             delta: format!(
                 "\n[warning] {} stub/placeholder pattern(s) remain in output:\n{}\n",
-                stub_reports.len(), stub_summary.join("\n"),
+                stub_reports.len(),
+                stub_summary.join("\n"),
             ),
         });
     }
@@ -362,23 +495,42 @@ impl DevLoopEngine {
                 truncated
             )
         };
-        if let Err(e) = self.task_service.fail_task(&fp.project_id, &fp.task.spec_id, &fp.task.task_id, &reason).await {
+        if let Err(e) = self
+            .task_service
+            .fail_task(&fp.project_id, &fp.task.spec_id, &fp.task.task_id, &reason)
+            .await
+        {
             warn!(task_id = %fp.task.task_id, error = %e, "failed to mark task as failed");
         }
         self.emit(EngineEvent::TaskFailed {
-            project_id: fp.project_id, agent_instance_id: fp.agent_instance_id,
+            project_id: fp.project_id,
+            agent_instance_id: fp.agent_instance_id,
             task_id: fp.task.task_id,
-            reason: reason.clone(), duration_ms: Some(timings.task_duration_ms),
+            reason: reason.clone(),
+            duration_ms: Some(timings.task_duration_ms),
             phase: Some("build_verify".into()),
             parse_retries: Some(execution.parse_retries),
-            build_fix_attempts: Some(timings.build_fix_attempts), model: fp.model.clone(),
+            build_fix_attempts: Some(timings.build_fix_attempts),
+            model: fp.model.clone(),
         });
-        if let Err(e) = self.session_service.update_context_usage(
-            &fp.project_id, &fp.agent_instance_id, &fp.session.session_id,
-            total_input, total_output,
-        ).await { warn!(error = %e, "failed to update context usage"); }
+        if let Err(e) = self
+            .session_service
+            .update_context_usage(
+                &fp.project_id,
+                &fp.agent_instance_id,
+                &fp.session.session_id,
+                total_input,
+                total_output,
+            )
+            .await
+        {
+            warn!(error = %e, "failed to update context usage");
+        }
         TaskOutcome::Failed {
-            reason, phase: "build_verify".to_string(), credit_failure: false, timings,
+            reason,
+            phase: "build_verify".to_string(),
+            credit_failure: false,
+            timings,
         }
     }
 
@@ -391,46 +543,71 @@ impl DevLoopEngine {
     ) {
         let total_input = timings.input_tokens + timings.fix_input_tokens;
         let total_output = timings.output_tokens + timings.fix_output_tokens;
-        if let Err(e) = self.task_service.complete_task(
-            &fp.project_id, &fp.task.spec_id, &fp.task.task_id,
-            &execution.notes, file_changes.to_vec(),
-        ).await { warn!(task_id = %fp.task.task_id, error = %e, "failed to mark task as completed"); }
+        if let Err(e) = self
+            .task_service
+            .complete_task(
+                &fp.project_id,
+                &fp.task.spec_id,
+                &fp.task.task_id,
+                &execution.notes,
+                file_changes.to_vec(),
+            )
+            .await
+        {
+            warn!(task_id = %fp.task.task_id, error = %e, "failed to mark task as completed");
+        }
 
         let cost_usd = {
             Some(self.pricing_service.compute_cost(
                 fp.model.as_deref().unwrap_or(aura_claude::DEFAULT_MODEL),
-                total_input, total_output,
+                total_input,
+                total_output,
             ))
         };
         self.emit(EngineEvent::TaskCompleted {
-            project_id: fp.project_id, agent_instance_id: fp.agent_instance_id,
+            project_id: fp.project_id,
+            agent_instance_id: fp.agent_instance_id,
             task_id: fp.task.task_id,
             execution_notes: execution.notes.clone(),
             file_changes: file_changes.to_vec(),
             duration_ms: Some(timings.task_duration_ms),
-            input_tokens: Some(total_input), output_tokens: Some(total_output),
-            cost_usd, llm_duration_ms: Some(timings.llm_duration_ms),
+            input_tokens: Some(total_input),
+            output_tokens: Some(total_output),
+            cost_usd,
+            llm_duration_ms: Some(timings.llm_duration_ms),
             build_verify_duration_ms: Some(timings.build_verify_duration_ms),
             files_changed_count: Some(execution.file_ops.len() as u32),
             parse_retries: Some(execution.parse_retries),
-            build_fix_attempts: Some(timings.build_fix_attempts), model: fp.model.clone(),
+            build_fix_attempts: Some(timings.build_fix_attempts),
+            model: fp.model.clone(),
         });
 
-        let newly_ready = self.task_service
+        let newly_ready = self
+            .task_service
             .resolve_dependencies_after_completion(&fp.project_id, &fp.task.task_id)
             .await
             .unwrap_or_default();
         for t in &newly_ready {
             self.emit(EngineEvent::TaskBecameReady {
-                project_id: fp.project_id, agent_instance_id: fp.agent_instance_id,
+                project_id: fp.project_id,
+                agent_instance_id: fp.agent_instance_id,
                 task_id: t.task_id,
             });
         }
 
-        if let Err(e) = self.session_service.update_context_usage(
-            &fp.project_id, &fp.agent_instance_id, &fp.session.session_id,
-            total_input, total_output,
-        ).await { warn!(error = %e, "failed to update context usage"); }
+        if let Err(e) = self
+            .session_service
+            .update_context_usage(
+                &fp.project_id,
+                &fp.agent_instance_id,
+                &fp.session.session_id,
+                total_input,
+                total_output,
+            )
+            .await
+        {
+            warn!(error = %e, "failed to update context usage");
+        }
     }
 
     fn record_single_task_metrics(
@@ -442,12 +619,20 @@ impl DevLoopEngine {
         model_name: &Option<String>,
         fee_schedule: &[aura_core::FeeScheduleEntry],
     ) {
-        if project_root.is_empty() { return; }
+        if project_root.is_empty() {
+            return;
+        }
         let task_metrics = metrics::TaskMetrics::from_outcome(
-            task.task_id.to_string(), task.title.clone(), model_name.clone(), outcome,
+            task.task_id.to_string(),
+            task.title.clone(),
+            model_name.clone(),
+            outcome,
         );
         metrics::write_single_task_metrics(
-            Path::new(project_root), &project_id.to_string(), task_metrics, fee_schedule,
+            Path::new(project_root),
+            &project_id.to_string(),
+            task_metrics,
+            fee_schedule,
         );
     }
 
@@ -458,14 +643,26 @@ impl DevLoopEngine {
         project_id: ProjectId,
         aiid: AgentInstanceId,
     ) {
-        if let TaskOutcome::Completed { follow_up_tasks, .. } = outcome {
+        if let TaskOutcome::Completed {
+            follow_up_tasks, ..
+        } = outcome
+        {
             for follow_up in follow_up_tasks {
-                match self.task_service.create_follow_up_task(
-                    task, follow_up.title.clone(), follow_up.description.clone(), vec![],
-                ).await {
+                match self
+                    .task_service
+                    .create_follow_up_task(
+                        task,
+                        follow_up.title.clone(),
+                        follow_up.description.clone(),
+                        vec![],
+                    )
+                    .await
+                {
                     Ok(new_task) => {
                         self.emit(EngineEvent::FollowUpTaskCreated {
-                            project_id, agent_instance_id: aiid, task_id: new_task.task_id,
+                            project_id,
+                            agent_instance_id: aiid,
+                            task_id: new_task.task_id,
                         });
                     }
                     Err(e) => {

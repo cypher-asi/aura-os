@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS } from "../../constants/tools";
 import { summarizeInput, formatResult } from "../../utils/format";
@@ -14,7 +15,7 @@ export function ToolCallBlock({
   entry: ToolCallEntry;
   defaultExpanded?: boolean;
 }) {
-  const isSpec = entry.name === "create_spec";
+  const isSpec = entry.name === "create_spec" || entry.name === "update_spec";
   const isTask = entry.name === "create_task";
   const autoExpand = defaultExpanded ?? (isSpec && !entry.started);
   const [expanded, setExpanded] = useState(autoExpand);
@@ -30,30 +31,22 @@ export function ToolCallBlock({
 
   const renderBody = () => {
     if (entry.started) {
+      const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
+      if (hasPartialContent) {
+        return (
+          <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+            <div className={toolStyles.toolBody}>
+              <SpecPreviewCard entry={entry} />
+            </div>
+          </div>
+        );
+      }
       return (
         <div className={`${toolStyles.toolBodyWrap} ${toolStyles.startedWrap}`}>
           <div className={toolStyles.toolBody}>
             <span className={toolStyles.generatingHint}>
               Generating…
             </span>
-          </div>
-        </div>
-      );
-    }
-    if (isFileOp) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${expanded ? toolStyles.toolBodyExpanded : ""}`}>
-          <div className={toolStyles.toolBody}>
-            <FilePreviewCard entry={entry} />
-          </div>
-        </div>
-      );
-    }
-    if (isSpec) {
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${expanded ? toolStyles.toolBodyExpanded : ""}`}>
-          <div className={toolStyles.toolBody}>
-            <SpecPreviewCard entry={entry} />
           </div>
         </div>
       );
@@ -67,8 +60,27 @@ export function ToolCallBlock({
         </div>
       );
     }
+    if (!expanded) return null;
+    if (isFileOp) {
+      return (
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+          <div className={toolStyles.toolBody}>
+            <FilePreviewCard entry={entry} />
+          </div>
+        </div>
+      );
+    }
+    if (isSpec) {
+      return (
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+          <div className={toolStyles.toolBody}>
+            <SpecPreviewCard entry={entry} />
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className={`${toolStyles.toolBodyWrap} ${expanded ? toolStyles.toolBodyExpanded : ""}`}>
+      <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
         <div className={toolStyles.toolBody}>
           <div className={toolStyles.section}>
             <div className={toolStyles.sectionLabel}>Input</div>
@@ -103,6 +115,9 @@ export function ToolCallBlock({
         {inputSummary && (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
         )}
+        <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
+          <ChevronRight size={12} />
+        </span>
       </button>
       {renderBody()}
     </div>

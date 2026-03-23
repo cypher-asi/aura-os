@@ -18,10 +18,7 @@ pub(crate) fn validate_url_id(id: &str, label: &str) -> Result<(), StorageError>
     if id.is_empty() {
         return Err(StorageError::Validation(format!("{label} is empty")));
     }
-    let valid = id.len() <= 64
-        && id
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-');
+    let valid = id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
     if !valid {
         return Err(StorageError::Validation(format!(
             "{label} contains invalid characters: {id}"

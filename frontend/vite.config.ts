@@ -21,7 +21,17 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        "/api": apiTarget,
+        "/api": {
+          target: apiTarget,
+          configure: (proxy) => {
+            proxy.on("proxyRes", (proxyRes) => {
+              if (proxyRes.headers["content-type"]?.includes("text/event-stream")) {
+                proxyRes.headers["x-accel-buffering"] = "no";
+                proxyRes.headers["cache-control"] = "no-cache, no-transform";
+              }
+            });
+          },
+        },
         "/ws": {
           target: wsTarget,
           ws: true,

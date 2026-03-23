@@ -19,11 +19,8 @@ impl NetworkClient {
     }
 
     pub async fn get_org(&self, org_id: &str, jwt: &str) -> Result<NetworkOrg, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/orgs/{}", self.base_url, org_id),
-            jwt,
-        )
-        .await
+        self.get_authed(&format!("{}/api/orgs/{}", self.base_url, org_id), jwt)
+            .await
     }
 
     pub async fn update_org(
@@ -32,12 +29,8 @@ impl NetworkClient {
         jwt: &str,
         req: &UpdateOrgRequest,
     ) -> Result<NetworkOrg, NetworkError> {
-        self.put_authed(
-            &format!("{}/api/orgs/{}", self.base_url, org_id),
-            jwt,
-            req,
-        )
-        .await
+        self.put_authed(&format!("{}/api/orgs/{}", self.base_url, org_id), jwt, req)
+            .await
     }
 
     pub async fn list_org_members(
@@ -60,10 +53,7 @@ impl NetworkClient {
         req: &UpdateMemberRequest,
     ) -> Result<NetworkOrgMember, NetworkError> {
         self.put_authed(
-            &format!(
-                "{}/api/orgs/{}/members/{}",
-                self.base_url, org_id, user_id
-            ),
+            &format!("{}/api/orgs/{}/members/{}", self.base_url, org_id, user_id),
             jwt,
             req,
         )
@@ -77,10 +67,7 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<(), NetworkError> {
         self.delete_authed(
-            &format!(
-                "{}/api/orgs/{}/members/{}",
-                self.base_url, org_id, user_id
-            ),
+            &format!("{}/api/orgs/{}/members/{}", self.base_url, org_id, user_id),
             jwt,
         )
         .await

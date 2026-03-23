@@ -4,9 +4,9 @@ import { useMarkdownHtml } from "../../utils/markdown";
 import styles from "./SegmentedContent.module.css";
 
 type ContentSegment =
-  | { kind: "text"; content: string }
-  | { kind: "tool"; name: string; arg?: string; status: "ok" | "error" }
-  | { kind: "auto-build"; command: string };
+  | { key: string; kind: "text"; content: string }
+  | { key: string; kind: "tool"; name: string; arg?: string; status: "ok" | "error" }
+  | { key: string; kind: "auto-build"; command: string };
 
 const INLINE_MARKER_RE =
   /\[tool:\s*(\S+?)(?:\(([^)]*)\))?\s*(?:->|→)\s*(ok|error)\]|\[auto-build:\s*([^\]]+)\]/g;
@@ -24,12 +24,13 @@ function splitContentByMarkers(text: string): ContentSegment[] | null {
   while ((match = INLINE_MARKER_RE.exec(text)) !== null) {
     if (match.index > cursor) {
       const prose = text.slice(cursor, match.index).trim();
-      if (prose) segments.push({ kind: "text", content: prose });
+      if (prose) segments.push({ key: `text-${cursor}`, kind: "text", content: prose });
     }
     if (match[4] !== undefined) {
-      segments.push({ kind: "auto-build", command: match[4].trim() });
+      segments.push({ key: `auto-build-${match.index}`, kind: "auto-build", command: match[4].trim() });
     } else {
       segments.push({
+        key: `tool-${match.index}-${match[1]}-${match[3]}`,
         kind: "tool",
         name: match[1],
         arg: match[2] || undefined,
@@ -41,7 +42,7 @@ function splitContentByMarkers(text: string): ContentSegment[] | null {
 
   if (cursor < text.length) {
     const prose = text.slice(cursor).trim();
-    if (prose) segments.push({ kind: "text", content: prose });
+    if (prose) segments.push({ key: `text-${cursor}`, kind: "text", content: prose });
   }
 
   return segments.length > 0 ? segments : null;
@@ -116,14 +117,14 @@ export function SegmentedContent({ content }: { content: string }) {
 
   return (
     <>
-      {segments.map((seg, i) => {
+      {segments.map((seg) => {
         if (seg.kind === "text") {
-          return <MarkdownBlock key={i} content={seg.content} />;
+          return <MarkdownBlock key={seg.key} content={seg.content} />;
         }
         if (seg.kind === "auto-build") {
-          return <InlineAutoBuildMarker key={i} seg={seg} />;
+          return <InlineAutoBuildMarker key={seg.key} seg={seg} />;
         }
-        return <InlineToolMarker key={i} seg={seg} />;
+        return <InlineToolMarker key={seg.key} seg={seg} />;
       })}
     </>
   );

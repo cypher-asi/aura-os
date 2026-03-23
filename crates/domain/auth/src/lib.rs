@@ -52,7 +52,8 @@ struct ZosProfileSummary {
     #[serde(rename = "lastName")]
     last_name: Option<String>,
     #[serde(rename = "profileImage")]
-    #[allow(dead_code)] // We no longer use ZOS profile image; avatar comes from aura-network only.
+    #[allow(dead_code)]
+    // We no longer use ZOS profile image; avatar comes from aura-network only.
     profile_image: Option<String>,
 }
 
@@ -93,11 +94,7 @@ impl AuthService {
         }
     }
 
-    pub async fn login(
-        &self,
-        email: &str,
-        password: &str,
-    ) -> Result<ZeroAuthSession, AuthError> {
+    pub async fn login(&self, email: &str, password: &str) -> Result<ZeroAuthSession, AuthError> {
         debug!(email, "Logging in via zOS-api");
         let res = self
             .http
@@ -125,9 +122,7 @@ impl AuthService {
         debug!(email, "Registering via zOS-api");
         let res = self
             .http
-            .post(format!(
-                "{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"
-            ))
+            .post(format!("{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"))
             .json(&serde_json::json!({ "email": email, "password": password }))
             .send()
             .await
@@ -168,10 +163,7 @@ impl AuthService {
                     user_id: user.id,
                     network_user_id: session.network_user_id,
                     profile_id: session.profile_id,
-                    display_name: build_display_name(
-                        &user.profile_summary,
-                        &user.primary_zid,
-                    ),
+                    display_name: build_display_name(&user.profile_summary, &user.primary_zid),
                     profile_image: if session.profile_image.starts_with("http") {
                         session.profile_image.clone()
                     } else {
@@ -285,10 +277,7 @@ impl AuthService {
     }
 }
 
-fn build_display_name(
-    profile: &Option<ZosProfileSummary>,
-    primary_zid: &Option<String>,
-) -> String {
+fn build_display_name(profile: &Option<ZosProfileSummary>, primary_zid: &Option<String>) -> String {
     if let Some(p) = profile {
         let first = p.first_name.as_deref().unwrap_or("");
         let last = p.last_name.as_deref().unwrap_or("");

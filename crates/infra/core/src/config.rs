@@ -50,8 +50,7 @@ impl LlmConfig {
     pub fn from_env() -> Self {
         let defaults = Self::default();
         Self {
-            default_model: env::var("AURA_LLM_MODEL")
-                .unwrap_or(defaults.default_model),
+            default_model: env::var("AURA_LLM_MODEL").unwrap_or(defaults.default_model),
             chat_max_tokens: parse_env("AURA_LLM_CHAT_MAX_TOKENS")
                 .unwrap_or(defaults.chat_max_tokens),
             task_execution_max_tokens: parse_env("AURA_LLM_TASK_MAX_TOKENS")
@@ -131,7 +130,8 @@ impl EngineConfig {
                 .unwrap_or(defaults.max_loop_task_retries),
             max_follow_ups_per_loop: parse_env("AURA_ENGINE_MAX_FOLLOW_UPS_PER_LOOP")
                 .unwrap_or(defaults.max_follow_ups_per_loop),
-            max_task_credits: parse_env::<u64>("AURA_ENGINE_MAX_TASK_CREDITS").or(defaults.max_task_credits),
+            max_task_credits: parse_env::<u64>("AURA_ENGINE_MAX_TASK_CREDITS")
+                .or(defaults.max_task_credits),
         }
     }
 }
@@ -167,6 +167,9 @@ mod tests {
         let llm_d = LlmConfig::default();
         let engine_d = EngineConfig::default();
         assert_eq!(llm.chat_max_tokens, llm_d.chat_max_tokens);
-        assert_eq!(engine.max_agentic_iterations, engine_d.max_agentic_iterations);
+        assert_eq!(
+            engine.max_agentic_iterations,
+            engine_d.max_agentic_iterations
+        );
     }
 }

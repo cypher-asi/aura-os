@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use crate::error::EngineError;
-use super::{INCLUDE_EXTENSIONS, SKIP_DIRS};
 use super::workspace_map::{extract_signatures_from_content, read_signatures_only};
+use super::{INCLUDE_EXTENSIONS, SKIP_DIRS};
+use crate::error::EngineError;
 
 /// Collect all .rs files in a directory recursively, reading full content.
 pub(crate) fn collect_rs_files_recursive(
@@ -171,10 +171,18 @@ struct TieredCollector<'a> {
 
 impl<'a> TieredCollector<'a> {
     fn new(root: &'a Path, max_bytes: usize) -> Self {
-        Self { root, output: String::new(), current_size: 0, max_bytes, included: std::collections::HashSet::new() }
+        Self {
+            root,
+            output: String::new(),
+            current_size: 0,
+            max_bytes,
+            included: std::collections::HashSet::new(),
+        }
     }
 
-    fn budget_exhausted(&self) -> bool { self.current_size >= self.max_bytes }
+    fn budget_exhausted(&self) -> bool {
+        self.current_size >= self.max_bytes
+    }
 
     fn try_append(&mut self, rel: String, section: &str) {
         if self.included.insert(rel) && self.current_size + section.len() <= self.max_bytes {
@@ -185,12 +193,24 @@ impl<'a> TieredCollector<'a> {
 
     fn collect_target_crates(&mut self, target_crates: &[String]) -> Result<(), EngineError> {
         for target in target_crates {
-            if self.budget_exhausted() { break; }
+            if self.budget_exhausted() {
+                break;
+            }
             let crate_dir = self.root.join(target);
-            for file in &[crate_dir.join("Cargo.toml"), crate_dir.join("src/lib.rs"),
-                          crate_dir.join("src/main.rs"), crate_dir.join("src/mod.rs")] {
-                if self.budget_exhausted() || !file.exists() { continue; }
-                let rel = file.strip_prefix(self.root).unwrap_or(file).display().to_string();
+            for file in &[
+                crate_dir.join("Cargo.toml"),
+                crate_dir.join("src/lib.rs"),
+                crate_dir.join("src/main.rs"),
+                crate_dir.join("src/mod.rs"),
+            ] {
+                if self.budget_exhausted() || !file.exists() {
+                    continue;
+                }
+                let rel = file
+                    .strip_prefix(self.root)
+                    .unwrap_or(file)
+                    .display()
+                    .to_string();
                 if let Ok(content) = std::fs::read_to_string(file) {
                     self.try_append(rel.clone(), &format!("--- {rel} ---\n{content}\n\n"));
                 }
@@ -198,8 +218,12 @@ impl<'a> TieredCollector<'a> {
             let src_dir = crate_dir.join("src");
             if src_dir.is_dir() {
                 collect_rs_files_recursive(
-                    self.root, &src_dir, &mut self.output, &mut self.current_size,
-                    self.max_bytes, &mut self.included,
+                    self.root,
+                    &src_dir,
+                    &mut self.output,
+                    &mut self.current_size,
+                    self.max_bytes,
+                    &mut self.included,
                 )?;
             }
         }
@@ -208,25 +232,46 @@ impl<'a> TieredCollector<'a> {
 
     fn collect_dep_signatures(&mut self, dep_crate_paths: &[String]) {
         for dep_path in dep_crate_paths {
-            if self.budget_exhausted() { break; }
+            if self.budget_exhausted() {
+                break;
+            }
             let lib_rs = self.root.join(dep_path).join("src").join("lib.rs");
-            if !lib_rs.exists() { continue; }
-            let rel = lib_rs.strip_prefix(self.root).unwrap_or(&lib_rs).display().to_string();
+            if !lib_rs.exists() {
+                continue;
+            }
+            let rel = lib_rs
+                .strip_prefix(self.root)
+                .unwrap_or(&lib_rs)
+                .display()
+                .to_string();
             if let Ok(sigs) = read_signatures_only(&lib_rs) {
                 if !sigs.is_empty() {
-                    self.try_append(rel.clone(), &format!("--- {rel} [signatures] ---\n{sigs}\n\n"));
+                    self.try_append(
+                        rel.clone(),
+                        &format!("--- {rel} [signatures] ---\n{sigs}\n\n"),
+                    );
                 }
             }
         }
     }
 
     fn collect_keyword_files(&mut self, keywords: &[String]) {
-        if self.budget_exhausted() || keywords.is_empty() { return; }
+        if self.budget_exhausted() || keywords.is_empty() {
+            return;
+        }
         let mut matches: Vec<(String, std::path::PathBuf)> = Vec::new();
-        collect_keyword_matching_files(self.root, self.root, keywords, &mut matches, &self.included);
+        collect_keyword_matching_files(
+            self.root,
+            self.root,
+            keywords,
+            &mut matches,
+            &self.included,
+        );
         matches.sort_by(|a, b| a.0.cmp(&b.0));
         for (rel, full) in matches {
-            if self.budget_exhausted() { break; }
+            if self.budget_exhausted() {
+                break;
+            }
             if let Ok(content) = std::fs::read_to_string(&full) {
                 let section = format_file_or_signatures(&rel, &content);
                 self.try_append(rel, &section);
@@ -260,8 +305,12 @@ pub(crate) fn collect_tiered_files(
     tc.collect_keyword_files(keywords);
     if !tc.budget_exhausted() {
         walk_and_collect_filtered(
-            root, root, &mut tc.output, &mut tc.current_size,
-            max_bytes, &mut tc.included,
+            root,
+            root,
+            &mut tc.output,
+            &mut tc.current_size,
+            max_bytes,
+            &mut tc.included,
         )?;
     }
     Ok(tc.output)
@@ -295,7 +344,9 @@ fn enqueue_transitive_deps(
     name_to_path: &std::collections::HashMap<String, String>,
     visited: &mut std::collections::HashSet<String>,
 ) {
-    if depth >= max_depth { return; }
+    if depth >= max_depth {
+        return;
+    }
     if let Some(transitive_deps) = crate_deps.get(member_path) {
         for dep_name in transitive_deps {
             if let Some(dep_path) = name_to_path.get(dep_name) {
@@ -321,7 +372,10 @@ pub(crate) fn resolve_dependency_signatures_bfs(
     visited.insert(target_path.to_string());
     let mut queue = seed_bfs_queue(target_path, crate_deps, name_to_path, &mut visited);
 
-    let target_name = crate_names.get(target_path).cloned().unwrap_or_else(|| target_path.to_string());
+    let target_name = crate_names
+        .get(target_path)
+        .cloned()
+        .unwrap_or_else(|| target_path.to_string());
     let mut output = String::new();
     let mut remaining = max_bytes;
     let mut idx = 0;
@@ -329,15 +383,34 @@ pub(crate) fn resolve_dependency_signatures_bfs(
     while idx < queue.len() && remaining > 0 {
         let (member_path, depth) = queue[idx].clone();
         idx += 1;
-        let crate_name = crate_names.get(&member_path).cloned().unwrap_or_else(|| member_path.clone());
+        let crate_name = crate_names
+            .get(&member_path)
+            .cloned()
+            .unwrap_or_else(|| member_path.clone());
         let lib_rs = root.join(&member_path).join("src").join("lib.rs");
-        if !lib_rs.exists() { continue; }
-        let sigs = match read_signatures_only(&lib_rs) { Ok(s) if !s.is_empty() => s, _ => continue };
-        let section = format!("# API Surface: {crate_name} (dependency of {target_name})\n{sigs}\n\n");
-        if section.len() > remaining { continue; }
+        if !lib_rs.exists() {
+            continue;
+        }
+        let sigs = match read_signatures_only(&lib_rs) {
+            Ok(s) if !s.is_empty() => s,
+            _ => continue,
+        };
+        let section =
+            format!("# API Surface: {crate_name} (dependency of {target_name})\n{sigs}\n\n");
+        if section.len() > remaining {
+            continue;
+        }
         output.push_str(&section);
         remaining = remaining.saturating_sub(section.len());
-        enqueue_transitive_deps(&mut queue, &member_path, depth, MAX_DEPTH, crate_deps, name_to_path, &mut visited);
+        enqueue_transitive_deps(
+            &mut queue,
+            &member_path,
+            depth,
+            MAX_DEPTH,
+            crate_deps,
+            name_to_path,
+            &mut visited,
+        );
     }
     output
 }
@@ -356,7 +429,11 @@ mod tests {
         std::fs::write(dir.path().join(".git").join("config"), "git stuff").unwrap();
         std::fs::create_dir_all(dir.path().join("src")).unwrap();
         std::fs::write(dir.path().join("src").join("utils.rs"), "pub fn util() {}").unwrap();
-        std::fs::write(dir.path().join("src").join("helper.ts"), "export function helper() {}").unwrap();
+        std::fs::write(
+            dir.path().join("src").join("helper.ts"),
+            "export function helper() {}",
+        )
+        .unwrap();
         dir
     }
 
@@ -366,8 +443,19 @@ mod tests {
         let mut output = String::new();
         let mut size = 0;
         let mut included = HashSet::new();
-        walk_and_collect_filtered(dir.path(), dir.path(), &mut output, &mut size, 100_000, &mut included).unwrap();
-        assert!(!output.contains("git stuff"), ".git/ contents should be skipped");
+        walk_and_collect_filtered(
+            dir.path(),
+            dir.path(),
+            &mut output,
+            &mut size,
+            100_000,
+            &mut included,
+        )
+        .unwrap();
+        assert!(
+            !output.contains("git stuff"),
+            ".git/ contents should be skipped"
+        );
         assert!(!included.iter().any(|f| f.contains(".git")));
     }
 
@@ -377,9 +465,20 @@ mod tests {
         let mut output = String::new();
         let mut size = 0;
         let mut included = HashSet::new();
-        walk_and_collect_filtered(dir.path(), dir.path(), &mut output, &mut size, 100_000, &mut included).unwrap();
+        walk_and_collect_filtered(
+            dir.path(),
+            dir.path(),
+            &mut output,
+            &mut size,
+            100_000,
+            &mut included,
+        )
+        .unwrap();
         assert!(output.contains("main.rs"), "should include .rs files");
-        assert!(!output.contains("not included"), "should not include .txt files");
+        assert!(
+            !output.contains("not included"),
+            "should not include .txt files"
+        );
     }
 
     #[test]
@@ -388,8 +487,19 @@ mod tests {
         let mut output = String::new();
         let mut size = 0;
         let mut included = HashSet::new();
-        walk_and_collect_filtered(dir.path(), dir.path(), &mut output, &mut size, 50, &mut included).unwrap();
-        assert!(output.len() <= 100, "output should be limited by max_bytes (with some tolerance for one section)");
+        walk_and_collect_filtered(
+            dir.path(),
+            dir.path(),
+            &mut output,
+            &mut size,
+            50,
+            &mut included,
+        )
+        .unwrap();
+        assert!(
+            output.len() <= 100,
+            "output should be limited by max_bytes (with some tolerance for one section)"
+        );
     }
 
     #[test]
@@ -399,22 +509,38 @@ mod tests {
         let mut size = 0;
         let mut included = HashSet::new();
         included.insert("main.rs".to_string());
-        walk_and_collect_filtered(dir.path(), dir.path(), &mut output, &mut size, 100_000, &mut included).unwrap();
-        assert!(!output.contains("fn main()"), "pre-included files should be skipped");
+        walk_and_collect_filtered(
+            dir.path(),
+            dir.path(),
+            &mut output,
+            &mut size,
+            100_000,
+            &mut included,
+        )
+        .unwrap();
+        assert!(
+            !output.contains("fn main()"),
+            "pre-included files should be skipped"
+        );
     }
 
     #[test]
     fn test_format_file_or_signatures_short_file() {
         let content = "fn short() {}";
         let result = format_file_or_signatures("short.rs", content);
-        assert!(result.contains("fn short() {}"), "short file should include full content");
+        assert!(
+            result.contains("fn short() {}"),
+            "short file should include full content"
+        );
         assert!(result.contains("--- short.rs ---"));
         assert!(!result.contains("[signatures]"));
     }
 
     #[test]
     fn test_format_file_or_signatures_long_file() {
-        let content = (0..500).map(|i| format!("fn func_{i}() {{ /* body */ }}\n")).collect::<String>();
+        let content = (0..500)
+            .map(|i| format!("fn func_{i}() {{ /* body */ }}\n"))
+            .collect::<String>();
         assert!(content.len() > 8_000);
         let result = format_file_or_signatures("long.rs", &content);
         assert!(result.contains("long.rs"));
@@ -425,9 +551,18 @@ mod tests {
         let dir = make_temp_project();
         let mut results = Vec::new();
         let included = HashSet::new();
-        collect_keyword_matching_files(dir.path(), dir.path(), &["utils".to_string()], &mut results, &included);
+        collect_keyword_matching_files(
+            dir.path(),
+            dir.path(),
+            &["utils".to_string()],
+            &mut results,
+            &included,
+        );
         let paths: Vec<&str> = results.iter().map(|(r, _)| r.as_str()).collect();
-        assert!(paths.iter().any(|p| p.contains("utils")), "should find utils.rs");
+        assert!(
+            paths.iter().any(|p| p.contains("utils")),
+            "should find utils.rs"
+        );
     }
 
     #[test]
@@ -435,7 +570,13 @@ mod tests {
         let dir = make_temp_project();
         let mut results = Vec::new();
         let included = HashSet::new();
-        collect_keyword_matching_files(dir.path(), dir.path(), &["nonexistent".to_string()], &mut results, &included);
+        collect_keyword_matching_files(
+            dir.path(),
+            dir.path(),
+            &["nonexistent".to_string()],
+            &mut results,
+            &included,
+        );
         assert!(results.is_empty(), "no files should match 'nonexistent'");
     }
 
@@ -443,8 +584,14 @@ mod tests {
     fn test_tiered_collector_budget_exhaustion() {
         let dir = make_temp_project();
         let tc = TieredCollector::new(dir.path(), 0);
-        assert!(tc.budget_exhausted(), "zero budget should be immediately exhausted");
+        assert!(
+            tc.budget_exhausted(),
+            "zero budget should be immediately exhausted"
+        );
         let tc2 = TieredCollector::new(dir.path(), 100_000);
-        assert!(!tc2.budget_exhausted(), "large budget should not be exhausted");
+        assert!(
+            !tc2.budget_exhausted(),
+            "large budget should not be exhausted"
+        );
     }
 }

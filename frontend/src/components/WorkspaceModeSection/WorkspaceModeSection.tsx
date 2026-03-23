@@ -29,7 +29,7 @@ export function WorkspaceModeSection({
               onClick={() => onSelect(option.id)}
               className={styles.optionButton}
               style={{
-                border: option.id === workspaceMode ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
+                border: option.id === workspaceMode ? "1px solid #fff" : "1px solid var(--color-border)",
                 background: option.id === workspaceMode ? "rgba(255,255,255,0.06)" : "var(--color-bg-elevated)",
               }}
             >

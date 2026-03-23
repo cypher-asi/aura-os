@@ -199,7 +199,10 @@ pub async fn sync_user_to_network(state: &AppState, session: &mut ZeroAuthSessio
                         location: None,
                         website: None,
                     };
-                    match client.update_current_user(&session.access_token, &update).await {
+                    match client
+                        .update_current_user(&session.access_token, &update)
+                        .await
+                    {
                         Ok(_) => tracing::info!(
                             display_name = %local_name,
                             "Pushed display name to aura-network"

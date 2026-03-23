@@ -1,4 +1,5 @@
 import { useCreditBalance } from "./useCreditBalance";
+import { formatCredits } from "../../utils/format";
 import styles from "./CreditsBadge.module.css";
 
 export { CREDITS_UPDATED_EVENT } from "./useCreditBalance";
@@ -8,9 +9,9 @@ interface Props {
 }
 
 export function CreditsBadge({ onClick }: Props) {
-  const { balanceFormatted } = useCreditBalance();
+  const { credits } = useCreditBalance();
 
-  const display = balanceFormatted ?? "---";
+  const display = credits !== null ? formatCredits(credits) : "---";
   return (
     <button
       className={styles.creditsBadge}

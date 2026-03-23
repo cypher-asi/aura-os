@@ -82,7 +82,11 @@ pub(crate) fn extract_backtick_command(text: &str, shell_indicators: &[&str]) ->
 /// Extract a command from prose like "Execute cd ui && npm install in a shell with..."
 /// Looks for a prefix ("execute ", "run ") followed by a shell indicator, and cuts
 /// the command at natural language boundaries (" in a shell", " in a ", " to ", " with ").
-pub(crate) fn extract_prose_command(text: &str, prefixes: &[&str], shell_indicators: &[&str]) -> Option<String> {
+pub(crate) fn extract_prose_command(
+    text: &str,
+    prefixes: &[&str],
+    shell_indicators: &[&str],
+) -> Option<String> {
     for line in text.lines() {
         let trimmed = line.trim().to_lowercase();
         for prefix in prefixes {
@@ -119,9 +123,29 @@ pub(crate) fn extract_shell_command(task: &Task) -> Option<String> {
     let desc = task.description.trim();
 
     let prefixes = ["run ", "execute ", "run: "];
-    let shell_indicators = ["cd ", "npm ", "npx ", "cargo ", "yarn ", "pnpm ", "pip ", "python ",
-        "node ", "sh ", "bash ", "powershell ", "cmd ", "make ", "gradle ", "mvn ",
-        "dotnet ", "go ", "rustup ", "apt ", "brew "];
+    let shell_indicators = [
+        "cd ",
+        "npm ",
+        "npx ",
+        "cargo ",
+        "yarn ",
+        "pnpm ",
+        "pip ",
+        "python ",
+        "node ",
+        "sh ",
+        "bash ",
+        "powershell ",
+        "cmd ",
+        "make ",
+        "gradle ",
+        "mvn ",
+        "dotnet ",
+        "go ",
+        "rustup ",
+        "apt ",
+        "brew ",
+    ];
 
     if let Some(cmd) = extract_backtick_command(desc, &shell_indicators) {
         return Some(cmd);
@@ -133,16 +157,29 @@ pub(crate) fn extract_shell_command(task: &Task) -> Option<String> {
 
     let candidate = if prefixes.iter().any(|p| title.to_lowercase().starts_with(p)) {
         let lower = title.to_lowercase();
-        let cmd_start = prefixes.iter()
-            .filter_map(|p| if lower.starts_with(p) { Some(p.len()) } else { None })
+        let cmd_start = prefixes
+            .iter()
+            .filter_map(|p| {
+                if lower.starts_with(p) {
+                    Some(p.len())
+                } else {
+                    None
+                }
+            })
             .next()
             .unwrap_or(0);
         title[cmd_start..].trim().to_string()
-    } else if shell_indicators.iter().any(|ind| title.to_lowercase().starts_with(ind)) {
+    } else if shell_indicators
+        .iter()
+        .any(|ind| title.to_lowercase().starts_with(ind))
+    {
         title.to_string()
     } else if !desc.is_empty() && desc.lines().count() <= 2 {
         let first_line = desc.lines().next().unwrap_or("").trim();
-        if shell_indicators.iter().any(|ind| first_line.to_lowercase().starts_with(ind)) {
+        if shell_indicators
+            .iter()
+            .any(|ind| first_line.to_lowercase().starts_with(ind))
+        {
             first_line.to_string()
         } else {
             return None;
@@ -151,7 +188,11 @@ pub(crate) fn extract_shell_command(task: &Task) -> Option<String> {
         return None;
     };
 
-    if candidate.is_empty() { None } else { Some(trim_prose_suffix(&candidate)) }
+    if candidate.is_empty() {
+        None
+    } else {
+        Some(trim_prose_suffix(&candidate))
+    }
 }
 
 #[cfg(test)]
@@ -190,7 +231,10 @@ mod tests {
 
     #[test]
     fn trim_prose_no_suffix() {
-        assert_eq!(trim_prose_suffix("cargo build --workspace"), "cargo build --workspace");
+        assert_eq!(
+            trim_prose_suffix("cargo build --workspace"),
+            "cargo build --workspace"
+        );
     }
 
     #[test]
@@ -213,7 +257,10 @@ mod tests {
     fn extract_backtick_npm() {
         let indicators = &["npm ", "cargo "];
         let text = "Please run `npm install` in the project";
-        assert_eq!(extract_backtick_command(text, indicators), Some("npm install".into()));
+        assert_eq!(
+            extract_backtick_command(text, indicators),
+            Some("npm install".into())
+        );
     }
 
     #[test]
@@ -227,7 +274,10 @@ mod tests {
     fn extract_backtick_multiple_picks_first_shell() {
         let indicators = &["npm ", "cargo "];
         let text = "After setting `DEBUG=true`, run `cargo test` to verify";
-        assert_eq!(extract_backtick_command(text, indicators), Some("cargo test".into()));
+        assert_eq!(
+            extract_backtick_command(text, indicators),
+            Some("cargo test".into())
+        );
     }
 
     #[test]
@@ -256,24 +306,36 @@ mod tests {
     fn extract_prose_no_match() {
         let prefixes = &["run ", "execute "];
         let indicators = &["npm ", "cargo "];
-        assert_eq!(extract_prose_command("Implement the feature", prefixes, indicators), None);
+        assert_eq!(
+            extract_prose_command("Implement the feature", prefixes, indicators),
+            None
+        );
     }
 
     #[test]
     fn shell_command_from_title_with_run_prefix() {
         let t = task("Run cargo build --workspace", "");
-        assert_eq!(extract_shell_command(&t), Some("cargo build --workspace".into()));
+        assert_eq!(
+            extract_shell_command(&t),
+            Some("cargo build --workspace".into())
+        );
     }
 
     #[test]
     fn shell_command_from_title_indicator_start() {
         let t = task("cargo test --release", "something unrelated");
-        assert_eq!(extract_shell_command(&t), Some("cargo test --release".into()));
+        assert_eq!(
+            extract_shell_command(&t),
+            Some("cargo test --release".into())
+        );
     }
 
     #[test]
     fn shell_command_from_description_backtick() {
-        let t = task("Set up dependencies", "Run `npm install` in the project root");
+        let t = task(
+            "Set up dependencies",
+            "Run `npm install` in the project root",
+        );
         assert_eq!(extract_shell_command(&t), Some("npm install".into()));
     }
 
@@ -285,7 +347,10 @@ mod tests {
 
     #[test]
     fn no_shell_command_for_regular_task() {
-        let t = task("Implement user auth", "Add login and signup endpoints with JWT tokens");
+        let t = task(
+            "Implement user auth",
+            "Add login and signup endpoints with JWT tokens",
+        );
         assert_eq!(extract_shell_command(&t), None);
     }
 

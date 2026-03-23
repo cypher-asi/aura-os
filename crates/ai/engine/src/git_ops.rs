@@ -41,7 +41,8 @@ pub async fn ensure_remote(project_root: &str, name: &str, url: &str) {
                         .args(["remote", "set-url", name, url])
                         .current_dir(project_root),
                 )
-                .await {
+                .await
+                {
                     tracing::warn!(remote = name, %url, error = %e, "failed to set-url git remote");
                 } else {
                     debug!(remote = name, %url, "updated git remote URL");
@@ -54,7 +55,8 @@ pub async fn ensure_remote(project_root: &str, name: &str, url: &str) {
                     .args(["remote", "add", name, url])
                     .current_dir(project_root),
             )
-            .await {
+            .await
+            {
                 tracing::warn!(remote = name, %url, error = %e, "failed to add git remote");
             } else {
                 debug!(remote = name, %url, "added git remote");
@@ -182,10 +184,7 @@ fn build_auth_url(remote_url: &str, jwt: &str) -> Result<String, String> {
     let url = url::Url::parse(remote_url).map_err(|e| format!("invalid remote URL: {e}"))?;
     let host = url.host_str().ok_or("remote URL has no host")?;
     let scheme = url.scheme();
-    let port_part = url
-        .port()
-        .map(|p| format!(":{p}"))
-        .unwrap_or_default();
+    let port_part = url.port().map(|p| format!(":{p}")).unwrap_or_default();
     let path = url.path();
     Ok(format!("{scheme}://x-token:{jwt}@{host}{port_part}{path}"))
 }

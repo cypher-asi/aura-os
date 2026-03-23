@@ -7,6 +7,6 @@ mod client;
 mod error;
 mod types;
 
-pub use client::{OrbitClient, CreateRepoInternalParams};
+pub use client::{CreateRepoInternalParams, OrbitClient};
 pub use error::OrbitError;
 pub use types::{CreateRepoResponse, OrbitCollaborator, OrbitRepo, OrbitRepoApiResponse};

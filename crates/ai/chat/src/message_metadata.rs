@@ -110,7 +110,9 @@ mod tests {
     #[test]
     fn blocks_roundtrip() {
         let blocks = vec![
-            ChatContentBlock::Text { text: "Hello".into() },
+            ChatContentBlock::Text {
+                text: "Hello".into(),
+            },
             ChatContentBlock::ToolUse {
                 id: "t1".into(),
                 name: "read_file".into(),
@@ -147,12 +149,8 @@ mod tests {
 
     #[test]
     fn thinking_only_roundtrip() {
-        let encoded = encode_message_content(
-            "Response text",
-            None,
-            Some("deep thoughts"),
-            Some(3000),
-        );
+        let encoded =
+            encode_message_content("Response text", None, Some("deep thoughts"), Some(3000));
         assert!(encoded.starts_with("{\"_aura_v\":"));
 
         let decoded = decode_message_content(&encoded);
@@ -166,7 +164,10 @@ mod tests {
     fn malformed_json_fallback() {
         let raw = r#"{"_aura_v": not valid json!!!"#;
         let decoded = decode_message_content(raw);
-        assert_eq!(decoded.text, raw, "malformed JSON should decode as plain text");
+        assert_eq!(
+            decoded.text, raw,
+            "malformed JSON should decode as plain text"
+        );
         assert!(decoded.content_blocks.is_none());
         assert!(decoded.thinking.is_none());
     }
@@ -183,9 +184,9 @@ mod tests {
     #[test]
     fn unicode_content_roundtrip() {
         let text = "Hello 🌍 世界 مرحبا";
-        let blocks = vec![
-            ChatContentBlock::Text { text: "emoji: 🎉🎊 CJK: 你好世界 Arabic: مرحبا بالعالم".into() },
-        ];
+        let blocks = vec![ChatContentBlock::Text {
+            text: "emoji: 🎉🎊 CJK: 你好世界 Arabic: مرحبا بالعالم".into(),
+        }];
         let thinking = "思考中… 🤔";
         let encoded = encode_message_content(text, Some(&blocks), Some(thinking), Some(42));
         assert!(encoded.starts_with("{\"_aura_v\":"));
@@ -201,7 +202,9 @@ mod tests {
     fn large_content_roundtrip() {
         let text = "x".repeat(50_000);
         let blocks: Vec<ChatContentBlock> = (0..100)
-            .map(|i| ChatContentBlock::Text { text: format!("block {i}") })
+            .map(|i| ChatContentBlock::Text {
+                text: format!("block {i}"),
+            })
             .collect();
         let thinking = "t".repeat(10_000);
 

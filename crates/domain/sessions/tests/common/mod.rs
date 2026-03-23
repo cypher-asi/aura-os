@@ -11,9 +11,7 @@ use tokio::sync::Mutex;
 
 use aura_core::*;
 use aura_sessions::SessionService;
-use aura_storage::{
-    CreateSessionRequest, StorageClient, StorageSession, UpdateSessionRequest,
-};
+use aura_storage::{CreateSessionRequest, StorageClient, StorageSession, UpdateSessionRequest};
 
 pub type SessionDb = Arc<Mutex<Vec<StorageSession>>>;
 
@@ -104,7 +102,9 @@ pub async fn start_mock_storage() -> (String, SessionDb) {
         .expect("test TCP listener should bind");
     let url = format!(
         "http://{}",
-        listener.local_addr().expect("listener should have local address"),
+        listener
+            .local_addr()
+            .expect("listener should have local address"),
     );
     tokio::spawn(async move { axum::serve(listener, app).await.ok() });
     (url, db)

@@ -65,7 +65,7 @@ export function AgentInfoPanel() {
 
   const a = selectedAgent;
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
-  const isOwnAgent = user?.user_id === a.user_id;
+  const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
 
   return (
     <div className={styles.wrapper}>
@@ -134,6 +134,7 @@ export function AgentInfoPanel() {
 
       {isOwnAgent && (
         <SidekickActions
+          onEdit={() => setShowEditor(true)}
           onDelete={openDeleteConfirm}
         />
       )}

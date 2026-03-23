@@ -149,14 +149,9 @@ async fn download_and_verify(manifest: &UpdateManifest) -> Result<std::path::Pat
     let cache_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("aura-updates");
-    std::fs::create_dir_all(&cache_dir)
-        .map_err(|e| format!("failed to create cache dir: {e}"))?;
+    std::fs::create_dir_all(&cache_dir).map_err(|e| format!("failed to create cache dir: {e}"))?;
 
-    let filename = manifest
-        .url
-        .rsplit('/')
-        .next()
-        .unwrap_or("update-package");
+    let filename = manifest.url.rsplit('/').next().unwrap_or("update-package");
     let pkg_path = cache_dir.join(filename);
     std::fs::write(&pkg_path, &bytes)
         .map_err(|e| format!("failed to write update package: {e}"))?;
@@ -208,10 +203,7 @@ async fn check_and_download(
     Ok(Some(manifest.version))
 }
 
-fn verify_signature(
-    pkg_path: &std::path::Path,
-    signature_b64: &str,
-) -> Result<(), String> {
+fn verify_signature(pkg_path: &std::path::Path, signature_b64: &str) -> Result<(), String> {
     let _ = (pkg_path, signature_b64, UPDATER_PUB_KEY);
 
     // cargo-packager-updater handles verification internally when using its
@@ -246,8 +238,7 @@ pub fn install_and_restart() -> Result<(), String> {
     {
         let current_exe =
             std::env::current_exe().map_err(|e| format!("cannot find current exe: {e}"))?;
-        std::fs::copy(&pkg, &current_exe)
-            .map_err(|e| format!("failed to replace binary: {e}"))?;
+        std::fs::copy(&pkg, &current_exe).map_err(|e| format!("failed to replace binary: {e}"))?;
         std::process::Command::new(&current_exe)
             .spawn()
             .map_err(|e| format!("failed to restart: {e}"))?;
@@ -259,12 +250,7 @@ fn newest_file_in(dir: &std::path::Path) -> Option<std::path::PathBuf> {
     std::fs::read_dir(dir)
         .ok()?
         .filter_map(|e| e.ok())
-        .filter(|e| {
-            e.path().is_file()
-                && e
-                    .path()
-                    .extension().is_none_or(|ext| ext != "sig")
-        })
+        .filter(|e| e.path().is_file() && e.path().extension().is_none_or(|ext| ext != "sig"))
         .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
         .map(|e| e.path())
 }
