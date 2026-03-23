@@ -98,6 +98,7 @@ export interface Agent {
   system_prompt: string;
   skills: string[];
   icon: string | null;
+  machine_type: string;
   network_agent_id?: string;
   profile_id?: string;
   created_at: string;
