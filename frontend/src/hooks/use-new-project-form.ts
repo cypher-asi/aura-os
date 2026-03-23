@@ -207,8 +207,9 @@ export function useNewProjectForm(
   const { user, isAuthenticated } = useAuth();
   const { projects, loadingProjects, refreshProjects } = useProjectsList();
   const { features } = useAuraCapabilities();
+  const defaultWorkspaceMode: WorkspaceMode = features.linkedWorkspace ? "linked" : "imported";
 
-  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("linked");
+  const [workspaceModeState, setWorkspaceModeState] = useState<WorkspaceMode>(defaultWorkspaceMode);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folderPath, setFolderPath] = useState("");
@@ -221,6 +222,10 @@ export function useNewProjectForm(
   const [nameError, setNameError] = useState("");
   const importFolderInputRef = useRef<DirectoryInput>(null);
   const importFilesInputRef = useRef<HTMLInputElement>(null);
+  const workspaceMode: WorkspaceMode = features.linkedWorkspace ? workspaceModeState : "imported";
+  const setWorkspaceMode = useCallback((mode: WorkspaceMode) => {
+    setWorkspaceModeState(features.linkedWorkspace ? mode : "imported");
+  }, [features.linkedWorkspace]);
 
   const { storedDraft, clearDraft } = useNewProjectDraft(isOpen, { workspaceMode, name, description, folderPath });
   const { orbitRepos, orbitReposLoading, resetOrbitRepos } = useOrbitRepos(isOpen, orbitRepoMode, isAuthenticated);
@@ -231,7 +236,7 @@ export function useNewProjectForm(
   useEffect(() => {
     if (draftAppliedRef.current || !storedDraft) return;
     draftAppliedRef.current = true;
-    setWorkspaceMode(storedDraft.workspaceMode === "linked" && features.linkedWorkspace ? "linked" : "imported");
+    setWorkspaceModeState(storedDraft.workspaceMode === "linked" && features.linkedWorkspace ? "linked" : "imported");
     if (storedDraft.name) setName(storedDraft.name);
     if (storedDraft.description) setDescription(storedDraft.description);
     if (storedDraft.folderPath) setFolderPath(storedDraft.folderPath);
@@ -257,7 +262,7 @@ export function useNewProjectForm(
   }, []);
 
   const reset = useCallback(() => {
-    setWorkspaceMode(features.linkedWorkspace ? "linked" : "imported");
+    setWorkspaceModeState(features.linkedWorkspace ? "linked" : "imported");
     setName(""); setDescription(""); setFolderPath("");
     setImportCandidates([]); setOrbitRepoName(""); setOrbitRepoMode("default");
     resetOrbitRepos(); setSelectedOrbitRepo(null);
