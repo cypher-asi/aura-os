@@ -4,6 +4,7 @@ import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "..
 import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
 import type { ProjectId } from "../../types";
+import { EventType } from "../../types/aura-events";
 
 type AutomationStatus = "idle" | "starting" | "preparing" | "active" | "paused" | "stopped";
 
@@ -63,28 +64,28 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
 
   useEffect(() => {
     const unsubs = [
-      subscribe("loop_started", (e) => {
+      subscribe(EventType.LoopStarted, (e) => {
         if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
+        const agentId = e.agent_id;
         if (agentId) setActiveAgents((prev) => prev.includes(agentId) ? prev : [...prev, agentId]);
         setPaused(false); setStarting(false); setPreparing(true);
       }),
-      subscribe("task_started", (e) => { if (!isForProject(e)) return; setPreparing(false); }),
-      subscribe("loop_paused", (e) => { if (!isForProject(e)) return; setPaused(true); setPreparing(false); }),
-      subscribe("loop_stopped", (e) => {
+      subscribe(EventType.TaskStarted, (e) => { if (!isForProject(e)) return; setPreparing(false); }),
+      subscribe(EventType.LoopPaused, (e) => { if (!isForProject(e)) return; setPaused(true); setPreparing(false); }),
+      subscribe(EventType.LoopStopped, (e) => {
         if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
+        const agentId = e.agent_id;
         if (agentId) setActiveAgents((prev) => prev.filter((id) => id !== agentId));
         else setActiveAgents([]);
         setPaused(false); setStarting(false); setPreparing(false);
       }),
-      subscribe("loop_finished", (e) => {
+      subscribe(EventType.LoopFinished, (e) => {
         if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
+        const agentId = e.agent_id;
         if (agentId) setActiveAgents((prev) => prev.filter((id) => id !== agentId));
         else setActiveAgents([]);
         setPaused(false); setStarting(false); setPreparing(false);
-        if (e.outcome === "insufficient_credits") dispatchInsufficientCredits();
+        if (e.content.outcome === "insufficient_credits") dispatchInsufficientCredits();
       }),
     ];
     return () => unsubs.forEach((u) => u());

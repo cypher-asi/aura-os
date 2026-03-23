@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useEventStore } from "../stores/event-store";
+import { EventType } from "../types/aura-events";
 
-/**
- * Tracks which project/agent instance is currently automating via loop events.
- * Provides a global view of loop status, unlike useLoopActive which is per-project.
- */
 export function useLoopStatus(currentAgentInstanceId?: string): {
   automatingProjectId: string | null;
   automatingAgentInstanceId: string | null;
@@ -21,15 +18,15 @@ export function useLoopStatus(currentAgentInstanceId?: string): {
       setAutomatingAgentInstanceId(null);
     };
     const unsubs = [
-      subscribe("loop_started", (e) => {
+      subscribe(EventType.LoopStarted, (e) => {
         if (e.project_id) {
           setAutomatingProjectId(e.project_id);
           setAutomatingAgentInstanceId(agentInstanceIdRef.current ?? null);
         }
       }),
-      subscribe("loop_paused", clearAutomation),
-      subscribe("loop_stopped", clearAutomation),
-      subscribe("loop_finished", clearAutomation),
+      subscribe(EventType.LoopPaused, clearAutomation),
+      subscribe(EventType.LoopStopped, clearAutomation),
+      subscribe(EventType.LoopFinished, clearAutomation),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe]);

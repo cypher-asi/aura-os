@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, type SetStateAction 
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
 import type { Project, Spec, Task } from "../../types";
-import type { EngineEvent } from "../../types/events";
+import { EventType } from "../../types/aura-events";
 import { useProjectRegister } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
@@ -86,7 +86,7 @@ export function useProjectLayoutData(): ProjectLayoutData {
 
   useEffect(() => {
     if (!projectId) return;
-    return subscribe("spec_gen_completed", (e: EngineEvent) => {
+    return subscribe(EventType.SpecGenCompleted, (e) => {
       if (e.project_id === projectId) {
         api.getProject(projectId).then(setProjectRaw).catch(() => {});
       }

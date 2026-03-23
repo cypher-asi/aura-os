@@ -6,7 +6,7 @@ import {
 } from "./streams";
 import type {
   SpecGenStreamCallbacks,
-  ChatStreamCallbacks,
+  StreamEventHandler,
 } from "./streams";
 import * as sseModule from "./sse";
 
@@ -113,12 +113,12 @@ describe("sendAgentMessageStream", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("calls streamSSE with agent message URL", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hello", "chat", undefined, undefined, cb);
+    await sendAgentMessageStream("a1", "hello", "chat", undefined, undefined, handler);
 
     const [url, init] = streamSSE.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/agents/a1/messages/stream");
@@ -127,44 +127,38 @@ describe("sendAgentMessageStream", () => {
   });
 
   it("includes attachments in body when provided", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
     const attachments = [{ type: "image" as const, media_type: "image/png", data: "base64data" }];
 
-    await sendAgentMessageStream("a1", "look", null, undefined, attachments, cb);
+    await sendAgentMessageStream("a1", "look", null, undefined, attachments, handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toEqual(attachments);
   });
 
   it("omits attachments from body when empty", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hi", "ask", undefined, [], cb);
+    await sendAgentMessageStream("a1", "hi", "ask", undefined, [], handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toBeUndefined();
   });
 
-  it("routes chat stream events to callbacks", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
-      onThinkingDelta: vi.fn(),
-      onProgress: vi.fn(),
-      onToolCall: vi.fn(),
-      onToolResult: vi.fn(),
-      onToolCallStarted: vi.fn(),
-      onTokenUsage: vi.fn(),
+  it("routes chat stream events via parseAuraEvent to handler", async () => {
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
       onDone: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hi", null, undefined, undefined, cb);
+    await sendAgentMessageStream("a1", "hi", null, undefined, undefined, handler);
 
     const sseCallbacks = streamSSE.mock.calls[0][2] as {
       onEvent: (type: string, data: unknown) => void;
@@ -172,19 +166,13 @@ describe("sendAgentMessageStream", () => {
     };
 
     sseCallbacks.onEvent("delta", { text: "word" });
-    expect(cb.onDelta).toHaveBeenCalledWith("word");
-
-    sseCallbacks.onEvent("thinking_delta", { text: "hmm" });
-    expect(cb.onThinkingDelta).toHaveBeenCalledWith("hmm");
-
-    sseCallbacks.onEvent("token_usage", { input_tokens: 10, output_tokens: 20 });
-    expect(cb.onTokenUsage).toHaveBeenCalledWith(10, 20);
-
-    sseCallbacks.onEvent("done", {});
-    expect(cb.onDone).toHaveBeenCalled();
+    expect(handler.onEvent).toHaveBeenCalledTimes(1);
+    const event = (handler.onEvent as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(event.type).toBe("delta");
+    expect(event.content.text).toBe("word");
 
     sseCallbacks.onDone();
-    expect(cb.onDone).toHaveBeenCalledTimes(2);
+    expect(handler.onDone).toHaveBeenCalled();
   });
 });
 
@@ -192,12 +180,12 @@ describe("sendMessageStream", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("calls streamSSE with project agent instance URL", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
 
-    await sendMessageStream("p1" as string, "ai1", "msg", "plan", undefined, undefined, cb);
+    await sendMessageStream("p1" as string, "ai1", "msg", "plan", undefined, undefined, handler);
 
     const [url, init] = streamSSE.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/projects/p1/agents/ai1/messages/stream");
@@ -206,13 +194,13 @@ describe("sendMessageStream", () => {
   });
 
   it("includes attachments when provided", async () => {
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
     const attachments = [{ type: "text" as const, media_type: "text/plain", data: "content", name: "file.txt" }];
 
-    await sendMessageStream("p1" as string, "ai1", "check", null, undefined, attachments, cb);
+    await sendMessageStream("p1" as string, "ai1", "check", null, undefined, attachments, handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toEqual(attachments);
@@ -220,12 +208,12 @@ describe("sendMessageStream", () => {
 
   it("passes signal through", async () => {
     const controller = new AbortController();
-    const cb: ChatStreamCallbacks = {
-      onDelta: vi.fn(),
+    const handler: StreamEventHandler = {
+      onEvent: vi.fn(),
       onError: vi.fn(),
     };
 
-    await sendMessageStream("p1" as string, "ai1", "x", null, undefined, undefined, cb, controller.signal);
+    await sendMessageStream("p1" as string, "ai1", "x", null, undefined, undefined, handler, controller.signal);
     expect(streamSSE.mock.calls[0][3]).toBe(controller.signal);
   });
 });

@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import type { ProjectId, AgentInstance, Session } from "../../types";
+import type { AuraEvent } from "../../types/aura-events";
+import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
@@ -8,7 +10,7 @@ import { useClickOutside } from "../../hooks/use-click-outside";
 interface AgentEventParams {
   subscribe: ReturnType<typeof useEventStore.getState>["subscribe"];
   projectId: ProjectId;
-  isForProject: (event: { project_id?: string }) => boolean;
+  isForProject: (event: AuraEvent) => boolean;
   selectedAgent: AgentInstance | null;
   fetchSessions: (agentInstanceId: string) => void;
   setAgents: Dispatch<SetStateAction<AgentInstance[]>>;
@@ -20,32 +22,32 @@ function useAgentEventSubscriptions({
   fetchSessions, setAgents, setCurrentTaskTitles,
 }: AgentEventParams): void {
   useEffect(() => {
-    const clearTaskTitle = (e: { project_id?: string; agent_instance_id?: string }) => {
+    const clearTaskTitle = (e: AuraEvent) => {
       if (!isForProject(e)) return;
-      const agentId = e.agent_instance_id;
+      const agentId = e.agent_id;
       if (agentId) setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: null }));
     };
     const unsubs = [
-      subscribe("loop_started", (e) => {
+      subscribe(EventType.LoopStarted, (e) => {
         if (!isForProject(e)) return;
         api.listAgentInstances(projectId).then(setAgents).catch(console.error);
       }),
-      subscribe("task_started", (e) => {
+      subscribe(EventType.TaskStarted, (e) => {
         if (!isForProject(e)) return;
-        const agentId = e.agent_instance_id;
-        if (agentId && e.task_title) {
-          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: e.task_title ?? null }));
+        const agentId = e.agent_id;
+        if (agentId && e.content.task_title) {
+          setCurrentTaskTitles((prev) => ({ ...prev, [agentId]: e.content.task_title ?? null }));
         }
       }),
-      subscribe("task_completed", clearTaskTitle),
-      subscribe("task_failed", clearTaskTitle),
-      subscribe("session_rolled_over", (e) => {
+      subscribe(EventType.TaskCompleted, clearTaskTitle),
+      subscribe(EventType.TaskFailed, clearTaskTitle),
+      subscribe(EventType.SessionRolledOver, (e) => {
         if (!isForProject(e)) return;
         if (selectedAgent) fetchSessions(selectedAgent.agent_instance_id);
       }),
-      subscribe("loop_paused", clearTaskTitle),
-      subscribe("loop_stopped", clearTaskTitle),
-      subscribe("loop_finished", clearTaskTitle),
+      subscribe(EventType.LoopPaused, clearTaskTitle),
+      subscribe(EventType.LoopStopped, clearTaskTitle),
+      subscribe(EventType.LoopFinished, clearTaskTitle),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe, selectedAgent, fetchSessions, isForProject, projectId, setAgents, setCurrentTaskTitles]);
@@ -102,7 +104,7 @@ export function useAgentStatusBarData(projectId: ProjectId): AgentStatusBarData 
   }, [selectedAgent?.agent_instance_id, fetchSessions]);
 
   const isForProject = useCallback(
-    (event: { project_id?: string }) => event.project_id === projectId,
+    (event: AuraEvent) => event.project_id === projectId,
     [projectId],
   );
 

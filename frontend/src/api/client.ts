@@ -7,7 +7,7 @@ export {
 
 export type {
   SpecGenStreamCallbacks,
-  ChatStreamCallbacks,
+  StreamEventHandler,
 } from "./streams";
 
 export type {

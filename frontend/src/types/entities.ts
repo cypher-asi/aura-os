@@ -145,21 +145,14 @@ export interface ApiKeyInfo {
   configured: boolean;
 }
 
-export interface ChatContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "image" | "task_ref" | "spec_ref";
-  text?: string;
-  id?: string;
-  name?: string;
-  input?: unknown;
-  tool_use_id?: string;
-  content?: string;
-  is_error?: boolean;
-  media_type?: string;
-  data?: string;
-  task_id?: string;
-  spec_id?: string;
-  title?: string;
-}
+export type ChatContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; media_type: string; data: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_result"; tool_use_id: string; content: string;
+      is_error?: boolean }
+  | { type: "task_ref"; task_id: string; title: string }
+  | { type: "spec_ref"; spec_id: string; title: string };
 
 export interface Message {
   message_id: MessageId;

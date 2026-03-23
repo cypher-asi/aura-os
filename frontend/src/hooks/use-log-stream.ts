@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, type RefObject } from "react";
 import { useEventStore } from "../stores/event-store";
-import type { EngineEvent, EngineEventType } from "../types/events";
+import type { AuraEvent, AuraEventContent } from "../types/aura-events";
+import { EventType } from "../types/aura-events";
 import { formatTime } from "../utils/format";
 import { LOG_MAX_LINES } from "../constants";
 import { api } from "../api/client";
@@ -8,45 +9,64 @@ import { computeCost, formatCost } from "../utils/pricing";
 
 export interface LogEntry {
   timestamp: string;
-  type: EngineEventType;
+  type: EventType;
   summary: string;
-  detail: EngineEvent;
+  detail: AuraEvent;
 }
 
-const EVENT_LABELS: Record<EngineEventType, string> = {
-  loop_started: "Loop",
-  loop_paused: "Loop",
-  loop_stopped: "Loop",
-  loop_finished: "Loop",
-  loop_iteration_summary: "Loop",
-  task_started: "Task",
-  task_completed: "Task",
-  task_failed: "Task",
-  task_retrying: "Task",
-  task_became_ready: "Task",
-  tasks_became_ready: "Task",
-  task_output_delta: "Output",
-  file_ops_applied: "Files",
-  follow_up_task_created: "Task",
-  session_rolled_over: "Session",
-  log_line: "Log",
-  spec_gen_started: "Spec",
-  spec_gen_progress: "Spec",
-  spec_gen_completed: "Spec",
-  spec_gen_failed: "Spec",
-  spec_saved: "Spec",
-  build_verification_skipped: "Build",
-  build_verification_started: "Build",
-  build_verification_passed: "Build",
-  build_verification_failed: "Build",
-  build_fix_attempt: "Build",
-  test_verification_started: "Test",
-  test_verification_passed: "Test",
-  test_verification_failed: "Test",
-  test_fix_attempt: "Test",
-  git_committed: "Git",
-  git_pushed: "Git",
-  network_event: "Network",
+const EVENT_LABELS: Record<EventType, string> = {
+  [EventType.UserMessage]: "Message",
+  [EventType.MessageStart]: "Message",
+  [EventType.MessageEnd]: "Message",
+  [EventType.Delta]: "Message",
+  [EventType.ThinkingDelta]: "Message",
+  [EventType.Progress]: "Message",
+  [EventType.ToolCallStarted]: "Tool",
+  [EventType.ToolCallSnapshot]: "Tool",
+  [EventType.ToolCall]: "Tool",
+  [EventType.ToolResult]: "Tool",
+  [EventType.TokenUsage]: "Token",
+  [EventType.Done]: "Message",
+  [EventType.AgentInstanceUpdated]: "Agent",
+  [EventType.SpecSaved]: "Spec",
+  [EventType.SpecsTitle]: "Spec",
+  [EventType.SpecsSummary]: "Spec",
+  [EventType.SpecGenStarted]: "Spec",
+  [EventType.SpecGenProgress]: "Spec",
+  [EventType.SpecGenCompleted]: "Spec",
+  [EventType.SpecGenFailed]: "Spec",
+  [EventType.SpecGenerating]: "Spec",
+  [EventType.SpecGenComplete]: "Spec",
+  [EventType.TaskSaved]: "Task",
+  [EventType.TaskStarted]: "Task",
+  [EventType.TaskCompleted]: "Task",
+  [EventType.TaskFailed]: "Task",
+  [EventType.TaskRetrying]: "Task",
+  [EventType.TaskBecameReady]: "Task",
+  [EventType.TasksBecameReady]: "Task",
+  [EventType.TaskOutputDelta]: "Output",
+  [EventType.FollowUpTaskCreated]: "Task",
+  [EventType.FileOpsApplied]: "Files",
+  [EventType.LoopStarted]: "Loop",
+  [EventType.LoopPaused]: "Loop",
+  [EventType.LoopStopped]: "Loop",
+  [EventType.LoopFinished]: "Loop",
+  [EventType.LoopIterationSummary]: "Loop",
+  [EventType.SessionRolledOver]: "Session",
+  [EventType.BuildVerificationSkipped]: "Build",
+  [EventType.BuildVerificationStarted]: "Build",
+  [EventType.BuildVerificationPassed]: "Build",
+  [EventType.BuildVerificationFailed]: "Build",
+  [EventType.BuildFixAttempt]: "Build",
+  [EventType.TestVerificationStarted]: "Test",
+  [EventType.TestVerificationPassed]: "Test",
+  [EventType.TestVerificationFailed]: "Test",
+  [EventType.TestFixAttempt]: "Test",
+  [EventType.GitCommitted]: "Git",
+  [EventType.GitPushed]: "Git",
+  [EventType.LogLine]: "Log",
+  [EventType.NetworkEvent]: "Network",
+  [EventType.Error]: "Error",
 };
 
 function fmtDuration(ms: number): string {
@@ -62,36 +82,38 @@ function fmtTokens(n: number): string {
   return `${(n / 1000).toFixed(1)}k`;
 }
 
-function summariseLoopEvent(e: EngineEvent): string {
+function summariseLoopEvent(e: AuraEvent): string {
   switch (e.type) {
-    case "loop_started":
+    case EventType.LoopStarted:
       return "Dev loop started";
-    case "loop_paused":
-      return `Loop paused (${e.completed_count ?? 0} completed)`;
-    case "loop_stopped":
-      return `Loop stopped (${e.completed_count ?? 0} completed)`;
-    case "loop_finished": {
-      const parts = [`Loop finished: ${e.outcome ?? "unknown"}`];
-      if (e.tasks_completed != null) {
-        const dur = e.total_duration_ms != null ? ` in ${fmtDuration(e.total_duration_ms)}` : "";
-        parts[0] = `Loop finished: ${e.tasks_completed} tasks${dur}`;
+    case EventType.LoopPaused:
+      return `Loop paused (${e.content.completed_count ?? 0} completed)`;
+    case EventType.LoopStopped:
+      return `Loop stopped (${e.content.completed_count ?? 0} completed)`;
+    case EventType.LoopFinished: {
+      const c = e.content;
+      const parts = [`Loop finished: ${c.outcome ?? "unknown"}`];
+      if (c.tasks_completed != null) {
+        const dur = c.total_duration_ms != null ? ` in ${fmtDuration(c.total_duration_ms)}` : "";
+        parts[0] = `Loop finished: ${c.tasks_completed} tasks${dur}`;
       }
-      if (e.total_input_tokens != null && e.total_output_tokens != null) {
-        const tokens = fmtTokens(e.total_input_tokens + e.total_output_tokens);
-        const cost = e.total_cost_usd != null
-          ? formatCost(e.total_cost_usd)
-          : formatCost(computeCost(e.total_input_tokens, e.total_output_tokens));
+      if (c.total_input_tokens != null && c.total_output_tokens != null) {
+        const tokens = fmtTokens(c.total_input_tokens + c.total_output_tokens);
+        const cost = c.total_cost_usd != null
+          ? formatCost(c.total_cost_usd)
+          : formatCost(computeCost(c.total_input_tokens, c.total_output_tokens));
         parts.push(`${tokens} tokens, ${cost} (est.)`);
       }
-      if (e.tasks_retried) parts.push(`${e.tasks_retried} retries`);
-      if (e.sessions_used && e.sessions_used > 1) parts.push(`${e.sessions_used} sessions`);
-      if (e.total_build_fix_attempts) parts.push(`${e.total_build_fix_attempts} build fixes`);
-      if (e.total_parse_retries) parts.push(`${e.total_parse_retries} parse retries`);
+      if (c.tasks_retried) parts.push(`${c.tasks_retried} retries`);
+      if (c.sessions_used && c.sessions_used > 1) parts.push(`${c.sessions_used} sessions`);
+      if (c.total_build_fix_attempts) parts.push(`${c.total_build_fix_attempts} build fixes`);
+      if (c.total_parse_retries) parts.push(`${c.total_parse_retries} parse retries`);
       return parts.length > 1 ? `${parts[0]} (${parts.slice(1).join(", ")})` : parts[0];
     }
-    case "loop_iteration_summary": {
-      if (!e.phase_timings || e.phase_timings.length === 0) return `Task breakdown: ${e.task_id}`;
-      const breakdown = e.phase_timings
+    case EventType.LoopIterationSummary: {
+      const c = e.content;
+      if (!c.phase_timings || c.phase_timings.length === 0) return `Task breakdown: ${c.task_id}`;
+      const breakdown = c.phase_timings
         .map((p) => `${p.phase} ${fmtDuration(p.duration_ms)}`)
         .join(", ");
       return `Task breakdown: ${breakdown}`;
@@ -101,182 +123,193 @@ function summariseLoopEvent(e: EngineEvent): string {
   }
 }
 
-function summariseTaskCompleted(e: EngineEvent): string {
-  const name = e.task_title || e.task_id;
+function summariseTaskCompleted(c: AuraEventContent<EventType.TaskCompleted>): string {
+  const name = c.task_title || c.task_id;
   const parts: string[] = [];
-  if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
-  if (e.input_tokens != null && e.output_tokens != null) {
-    parts.push(`${fmtTokens(e.input_tokens + e.output_tokens)} tokens`);
-    const taskCost = e.cost_usd != null
-      ? formatCost(e.cost_usd)
-      : formatCost(computeCost(e.input_tokens, e.output_tokens, e.model));
+  if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms));
+  if (c.input_tokens != null && c.output_tokens != null) {
+    parts.push(`${fmtTokens(c.input_tokens + c.output_tokens)} tokens`);
+    const taskCost = c.cost_usd != null
+      ? formatCost(c.cost_usd)
+      : formatCost(computeCost(c.input_tokens, c.output_tokens, c.model));
     parts.push(`${taskCost} (est.)`);
   }
-  if (e.parse_retries) parts.push(`${e.parse_retries} retries`);
-  if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} build fix${e.build_fix_attempts > 1 ? "es" : ""}`);
+  if (c.parse_retries) parts.push(`${c.parse_retries} retries`);
+  if (c.build_fix_attempts) parts.push(`${c.build_fix_attempts} build fix${c.build_fix_attempts > 1 ? "es" : ""}`);
   return parts.length > 0 ? `Completed: ${name} (${parts.join(", ")})` : `Completed: ${name}`;
 }
 
-function summariseTaskEvent(e: EngineEvent): string {
+function summariseTaskEvent(e: AuraEvent): string {
   switch (e.type) {
-    case "task_started": {
-      const name = e.task_title || e.task_id;
-      if (e.codebase_snapshot_bytes != null) {
-        const kb = (e.codebase_snapshot_bytes / 1024).toFixed(0);
-        return `Started: ${name} (snapshot: ${kb}KB, ${e.codebase_file_count ?? "?"} files)`;
+    case EventType.TaskStarted: {
+      const c = e.content;
+      const name = c.task_title || c.task_id;
+      if (c.codebase_snapshot_bytes != null) {
+        const kb = (c.codebase_snapshot_bytes / 1024).toFixed(0);
+        return `Started: ${name} (snapshot: ${kb}KB, ${c.codebase_file_count ?? "?"} files)`;
       }
       return `Started: ${name}`;
     }
-    case "task_completed":
-      return summariseTaskCompleted(e);
-    case "task_failed": {
-      const name = e.task_title || e.task_id;
+    case EventType.TaskCompleted:
+      return summariseTaskCompleted(e.content);
+    case EventType.TaskFailed: {
+      const c = e.content;
+      const name = c.task_title || c.task_id;
       const parts: string[] = [];
-      if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
-      if (e.phase) parts.push(`phase: ${e.phase}`);
-      if (e.build_fix_attempts) parts.push(`${e.build_fix_attempts} fix attempts`);
-      return `Failed: ${name}${parts.length > 0 ? ` (${parts.join(", ")})` : ""} — ${e.reason || "unknown"}`;
+      if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms));
+      if (c.phase) parts.push(`phase: ${c.phase}`);
+      if (c.build_fix_attempts) parts.push(`${c.build_fix_attempts} fix attempts`);
+      return `Failed: ${name}${parts.length > 0 ? ` (${parts.join(", ")})` : ""} — ${c.reason || "unknown"}`;
     }
-    case "task_retrying":
-      return `Retrying: ${e.task_id} (attempt ${e.attempt ?? "?"})`;
-    case "task_became_ready":
-      return `Task ready: ${e.task_id}`;
-    case "tasks_became_ready":
-      return `Tasks ready: ${(e.task_ids ?? []).length} task(s)`;
-    case "task_output_delta":
-      return `Output: ${(e.delta ?? "").slice(0, 80)}`;
-    case "file_ops_applied":
-      return `Files: ${e.files_written ?? 0} written, ${e.files_deleted ?? 0} deleted`;
-    case "follow_up_task_created":
-      return `Follow-up created: ${e.task_id}`;
+    case EventType.TaskRetrying:
+      return `Retrying: ${e.content.task_id} (attempt ${e.content.attempt ?? "?"})`;
+    case EventType.TaskBecameReady:
+      return `Task ready: ${e.content.task_id}`;
+    case EventType.TasksBecameReady:
+      return `Tasks ready: ${(e.content.task_ids ?? []).length} task(s)`;
+    case EventType.TaskOutputDelta:
+      return `Output: ${(e.content.delta ?? "").slice(0, 80)}`;
+    case EventType.FileOpsApplied:
+      return `Files: ${e.content.files_written ?? 0} written, ${e.content.files_deleted ?? 0} deleted`;
+    case EventType.FollowUpTaskCreated:
+      return `Follow-up created: ${e.content.task_id}`;
     default:
       return e.type;
   }
 }
 
-function summariseSessionEvent(e: EngineEvent): string {
+function summariseSessionEvent(e: AuraEvent): string {
   switch (e.type) {
-    case "session_rolled_over": {
+    case EventType.SessionRolledOver: {
+      const c = e.content;
       const parts: string[] = [];
-      if (e.context_usage_pct != null) parts.push(`usage: ${e.context_usage_pct.toFixed(0)}%`);
-      if (e.summary_duration_ms != null) parts.push(`summary took ${fmtDuration(e.summary_duration_ms)}`);
+      if (c.context_usage_pct != null) parts.push(`usage: ${c.context_usage_pct.toFixed(0)}%`);
+      if (c.summary_duration_ms != null) parts.push(`summary took ${fmtDuration(c.summary_duration_ms)}`);
       const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
-      return `Context rotated${detail} → Session ${e.new_session_id?.slice(0, 8)}`;
+      return `Context rotated${detail} → Session ${c.new_session_id?.slice(0, 8)}`;
     }
-    case "log_line":
-      return e.message || "";
+    case EventType.LogLine:
+      return e.content.message || "";
     default:
       return e.type;
   }
 }
 
-function summariseSpecEvent(e: EngineEvent): string {
+function summariseSpecEvent(e: AuraEvent): string {
   switch (e.type) {
-    case "spec_gen_started":
+    case EventType.SpecGenStarted:
       return "Spec generation started";
-    case "spec_gen_progress":
-      return `Spec generation: ${e.stage ?? ""}`;
-    case "spec_gen_completed":
-      return `Spec generation completed (${e.spec_count ?? 0} specs)`;
-    case "spec_gen_failed":
-      return `Spec generation failed: ${e.reason ?? "unknown"}`;
-    case "spec_saved":
-      return `Spec saved: ${e.spec?.title ?? e.project_id}`;
+    case EventType.SpecGenProgress:
+      return `Spec generation: ${e.content.stage ?? ""}`;
+    case EventType.SpecGenCompleted:
+      return `Spec generation completed (${e.content.spec_count ?? 0} specs)`;
+    case EventType.SpecGenFailed:
+      return `Spec generation failed: ${e.content.reason ?? "unknown"}`;
+    case EventType.SpecSaved:
+      return `Spec saved: ${e.content.spec?.title ?? e.project_id}`;
     default:
       return e.type;
   }
 }
 
-function summariseBuildEvent(e: EngineEvent): string {
+function summariseBuildEvent(e: AuraEvent): string {
+  const c = e.content as Record<string, unknown>;
   switch (e.type) {
-    case "build_verification_skipped":
-      return `Build verification skipped${e.reason ? `: ${e.reason}` : ""}`;
-    case "build_verification_started":
-      return `Build verification started${e.task_id ? `: ${e.task_id}` : ""}`;
-    case "build_verification_passed": {
-      const dur = e.duration_ms != null ? ` (${fmtDuration(e.duration_ms)})` : "";
+    case EventType.BuildVerificationSkipped:
+      return `Build verification skipped${c.reason ? `: ${c.reason}` : ""}`;
+    case EventType.BuildVerificationStarted:
+      return `Build verification started${c.task_id ? `: ${c.task_id}` : ""}`;
+    case EventType.BuildVerificationPassed: {
+      const dur = c.duration_ms != null ? ` (${fmtDuration(c.duration_ms as number)})` : "";
       return `Build passed${dur}`;
     }
-    case "build_verification_failed": {
+    case EventType.BuildVerificationFailed: {
       const parts: string[] = [];
-      if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
-      if (e.attempt != null) parts.push(`attempt ${e.attempt}`);
+      if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms as number));
+      if (c.attempt != null) parts.push(`attempt ${c.attempt}`);
       const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
       return `Build failed${detail}`;
     }
-    case "build_fix_attempt":
-      return `Build fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    case EventType.BuildFixAttempt:
+      return `Build fix attempt${c.attempt ? ` #${c.attempt}` : ""}`;
     default:
       return e.type;
   }
 }
 
-function summariseTestEvent(e: EngineEvent): string {
+function summariseTestEvent(e: AuraEvent): string {
+  const c = e.content as Record<string, unknown>;
   switch (e.type) {
-    case "test_verification_started":
-      return `Test verification started${e.task_id ? `: ${e.task_id}` : ""}`;
-    case "test_verification_passed": {
-      const dur = e.duration_ms != null ? ` (${fmtDuration(e.duration_ms)})` : "";
+    case EventType.TestVerificationStarted:
+      return `Test verification started${c.task_id ? `: ${c.task_id}` : ""}`;
+    case EventType.TestVerificationPassed: {
+      const dur = c.duration_ms != null ? ` (${fmtDuration(c.duration_ms as number)})` : "";
       return `Test passed${dur}`;
     }
-    case "test_verification_failed": {
+    case EventType.TestVerificationFailed: {
       const parts: string[] = [];
-      if (e.duration_ms != null) parts.push(fmtDuration(e.duration_ms));
-      if (e.attempt != null) parts.push(`attempt ${e.attempt}`);
+      if (c.duration_ms != null) parts.push(fmtDuration(c.duration_ms as number));
+      if (c.attempt != null) parts.push(`attempt ${c.attempt}`);
       const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
       return `Test failed${detail}`;
     }
-    case "test_fix_attempt":
-      return `Test fix attempt${e.attempt ? ` #${e.attempt}` : ""}`;
+    case EventType.TestFixAttempt:
+      return `Test fix attempt${c.attempt ? ` #${c.attempt}` : ""}`;
     default:
       return e.type;
   }
 }
 
-function summarise(e: EngineEvent): string {
+function summarise(e: AuraEvent): string {
   switch (e.type) {
-    case "loop_started":
-    case "loop_paused":
-    case "loop_stopped":
-    case "loop_finished":
-    case "loop_iteration_summary":
+    case EventType.LoopStarted:
+    case EventType.LoopPaused:
+    case EventType.LoopStopped:
+    case EventType.LoopFinished:
+    case EventType.LoopIterationSummary:
       return summariseLoopEvent(e);
-    case "task_started":
-    case "task_completed":
-    case "task_failed":
-    case "task_retrying":
-    case "task_became_ready":
-    case "tasks_became_ready":
-    case "task_output_delta":
-    case "file_ops_applied":
-    case "follow_up_task_created":
+    case EventType.TaskStarted:
+    case EventType.TaskCompleted:
+    case EventType.TaskFailed:
+    case EventType.TaskRetrying:
+    case EventType.TaskBecameReady:
+    case EventType.TasksBecameReady:
+    case EventType.TaskOutputDelta:
+    case EventType.FileOpsApplied:
+    case EventType.FollowUpTaskCreated:
       return summariseTaskEvent(e);
-    case "session_rolled_over":
-    case "log_line":
+    case EventType.SessionRolledOver:
+    case EventType.LogLine:
       return summariseSessionEvent(e);
-    case "spec_gen_started":
-    case "spec_gen_progress":
-    case "spec_gen_completed":
-    case "spec_gen_failed":
-    case "spec_saved":
+    case EventType.SpecGenStarted:
+    case EventType.SpecGenProgress:
+    case EventType.SpecGenCompleted:
+    case EventType.SpecGenFailed:
+    case EventType.SpecSaved:
       return summariseSpecEvent(e);
-    case "build_verification_skipped":
-    case "build_verification_started":
-    case "build_verification_passed":
-    case "build_verification_failed":
-    case "build_fix_attempt":
+    case EventType.BuildVerificationSkipped:
+    case EventType.BuildVerificationStarted:
+    case EventType.BuildVerificationPassed:
+    case EventType.BuildVerificationFailed:
+    case EventType.BuildFixAttempt:
       return summariseBuildEvent(e);
-    case "test_verification_started":
-    case "test_verification_passed":
-    case "test_verification_failed":
-    case "test_fix_attempt":
+    case EventType.TestVerificationStarted:
+    case EventType.TestVerificationPassed:
+    case EventType.TestVerificationFailed:
+    case EventType.TestFixAttempt:
       return summariseTestEvent(e);
-    case "git_committed":
-      return `Git commit: ${e.commit_sha?.slice(0, 8) ?? e.task_id ?? ""}`;
-    case "git_pushed":
-      return `Git push: ${e.branch ?? e.task_id ?? ""}`;
-    case "network_event":
-      return `Network: ${e.network_event_type ?? "event"}`;
+    case EventType.GitCommitted: {
+      const c = e.content;
+      return `Git commit: ${c.commit_sha?.slice(0, 8) ?? c.task_id ?? ""}`;
+    }
+    case EventType.GitPushed: {
+      const c = e.content;
+      return `Git push: ${c.branch ?? c.task_id ?? ""}`;
+    }
+    case EventType.NetworkEvent:
+      return `Network: ${e.content.network_event_type ?? "event"}`;
+    case EventType.Error:
+      return `Error: ${e.content.message}`;
     default:
       return e.type;
   }
@@ -291,19 +324,24 @@ interface UseLogStreamResult {
   connected: boolean;
 }
 
-const ALL_EVENT_TYPES: EngineEventType[] = [
-  "loop_started", "loop_paused", "loop_stopped", "loop_finished", "loop_iteration_summary",
-  "task_started", "task_completed", "task_failed", "task_retrying",
-  "task_became_ready", "tasks_became_ready", "task_output_delta",
-  "file_ops_applied", "follow_up_task_created",
-  "session_rolled_over", "log_line",
-  "spec_gen_started", "spec_gen_progress", "spec_gen_completed", "spec_gen_failed", "spec_saved",
-  "build_verification_skipped", "build_verification_started", "build_verification_passed", "build_verification_failed", "build_fix_attempt",
-  "test_verification_started", "test_verification_passed", "test_verification_failed", "test_fix_attempt",
-  "git_committed", "git_pushed", "network_event",
+const ALL_ENGINE_EVENT_TYPES: EventType[] = [
+  EventType.LoopStarted, EventType.LoopPaused, EventType.LoopStopped,
+  EventType.LoopFinished, EventType.LoopIterationSummary,
+  EventType.TaskStarted, EventType.TaskCompleted, EventType.TaskFailed,
+  EventType.TaskRetrying, EventType.TaskBecameReady, EventType.TasksBecameReady,
+  EventType.TaskOutputDelta, EventType.FileOpsApplied, EventType.FollowUpTaskCreated,
+  EventType.SessionRolledOver, EventType.LogLine,
+  EventType.SpecGenStarted, EventType.SpecGenProgress,
+  EventType.SpecGenCompleted, EventType.SpecGenFailed, EventType.SpecSaved,
+  EventType.BuildVerificationSkipped, EventType.BuildVerificationStarted,
+  EventType.BuildVerificationPassed, EventType.BuildVerificationFailed,
+  EventType.BuildFixAttempt,
+  EventType.TestVerificationStarted, EventType.TestVerificationPassed,
+  EventType.TestVerificationFailed, EventType.TestFixAttempt,
+  EventType.GitCommitted, EventType.GitPushed, EventType.NetworkEvent,
 ];
 
-function eventToLogEntry(event: EngineEvent, ts?: Date): LogEntry {
+function eventToLogEntry(event: AuraEvent, ts?: Date): LogEntry {
   return {
     timestamp: formatTime(ts ?? new Date()),
     type: event.type,
@@ -325,7 +363,7 @@ function useLogHistory(setEntries: React.Dispatch<React.SetStateAction<LogEntry[
 
     api.getLogEntries(LOG_MAX_LINES).then((persisted) => {
       if (persisted.length === 0) return;
-      const restored = persisted.map((p) => eventToLogEntry(p.event, new Date(p.timestamp_ms)));
+      const restored = persisted.map((p) => eventToLogEntry(p.event as unknown as AuraEvent, new Date(p.timestamp_ms)));
       setEntries((prev) => mergeEntries(restored, prev));
     }).catch(() => {});
 
@@ -338,7 +376,7 @@ function useLogSubscription(
 ): void {
   const subscribe = useEventStore((s) => s.subscribe);
 
-  const addEntry = useCallback((event: EngineEvent) => {
+  const addEntry = useCallback((event: AuraEvent) => {
     setEntries((prev) => {
       const next = [...prev, eventToLogEntry(event)];
       return next.length > LOG_MAX_LINES ? next.slice(-LOG_MAX_LINES) : next;
@@ -346,7 +384,7 @@ function useLogSubscription(
   }, [setEntries]);
 
   useEffect(() => {
-    const unsubs = ALL_EVENT_TYPES.map((type) => subscribe(type, (e) => addEntry(e)));
+    const unsubs = ALL_ENGINE_EVENT_TYPES.map((type) => subscribe(type, (e) => addEntry(e)));
     return () => unsubs.forEach((u) => u());
   }, [subscribe, addEntry]);
 }

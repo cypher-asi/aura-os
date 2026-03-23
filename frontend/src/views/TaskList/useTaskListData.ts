@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { api } from "../../api/client";
 import type { Spec, Task, TaskStatus } from "../../types";
+import { EventType } from "../../types/aura-events";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
@@ -68,44 +69,48 @@ export function useTaskListData(): TaskListData {
 
   useEffect(() => {
     const unsubs = [
-      subscribe("task_started", (e) => {
-        if (e.task_id) {
-          setLiveTaskIds((prev) => new Set(prev).add(e.task_id!));
-          updateTaskStatus(e.task_id, "in_progress", {
+      subscribe(EventType.TaskStarted, (e) => {
+        const { task_id } = e.content;
+        if (task_id) {
+          setLiveTaskIds((prev) => new Set(prev).add(task_id));
+          updateTaskStatus(task_id, "in_progress", {
             ...(e.session_id ? { session_id: e.session_id } : {}),
           });
         }
       }),
-      subscribe("task_completed", (e) => {
-        if (e.task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(e.task_id!); return next; });
-          updateTaskStatus(e.task_id, "done", {
-            execution_notes: e.execution_notes,
-            ...(e.files ? { files_changed: e.files } : {}),
+      subscribe(EventType.TaskCompleted, (e) => {
+        const { task_id, execution_notes, files } = e.content;
+        if (task_id) {
+          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          updateTaskStatus(task_id, "done", {
+            execution_notes,
+            ...(files ? { files_changed: files } : {}),
           });
         }
       }),
-      subscribe("task_failed", (e) => {
-        if (e.task_id) {
-          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(e.task_id!); return next; });
-          updateTaskStatus(e.task_id, "failed");
+      subscribe(EventType.TaskFailed, (e) => {
+        const { task_id } = e.content;
+        if (task_id) {
+          setLiveTaskIds((prev) => { const next = new Set(prev); next.delete(task_id); return next; });
+          updateTaskStatus(task_id, "failed");
         }
       }),
-      subscribe("file_ops_applied", (e) => {
-        if (e.task_id && e.files) updateTaskStatus(e.task_id, "in_progress", { files_changed: e.files });
+      subscribe(EventType.FileOpsApplied, (e) => {
+        const { task_id, files } = e.content;
+        if (task_id && files) updateTaskStatus(task_id, "in_progress", { files_changed: files });
       }),
-      subscribe("task_became_ready", (e) => { if (e.task_id) updateTaskStatus(e.task_id, "ready"); }),
-      subscribe("tasks_became_ready", (e) => {
-        if (!e.task_ids?.length) return;
+      subscribe(EventType.TaskBecameReady, (e) => { if (e.content.task_id) updateTaskStatus(e.content.task_id, "ready"); }),
+      subscribe(EventType.TasksBecameReady, (e) => {
+        if (!e.content.task_ids?.length) return;
         setLocalTasks((prev) => {
-          const readySet = new Set(e.task_ids);
+          const readySet = new Set(e.content.task_ids);
           return prev.map((t) => readySet.has(t.task_id) ? { ...t, status: "ready" as const } : t);
         });
       }),
-      subscribe("follow_up_task_created", refetchTasks),
-      subscribe("loop_stopped", refetchTasks),
-      subscribe("loop_paused", refetchTasks),
-      subscribe("loop_finished", refetchTasks),
+      subscribe(EventType.FollowUpTaskCreated, refetchTasks),
+      subscribe(EventType.LoopStopped, refetchTasks),
+      subscribe(EventType.LoopPaused, refetchTasks),
+      subscribe(EventType.LoopFinished, refetchTasks),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe, updateTaskStatus, refetchTasks]);

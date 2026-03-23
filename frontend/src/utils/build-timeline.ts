@@ -34,9 +34,9 @@ export function buildTimelineFromBlocks(
   let hasText = false;
   for (const block of blocks) {
     if (block.type === "text") {
-      items.push({ kind: "text", content: block.text ?? "", id: nextId() });
+      items.push({ kind: "text", content: block.text, id: nextId() });
       hasText = true;
-    } else if (block.type === "tool_use" && block.id) {
+    } else if (block.type === "tool_use") {
       items.push({ kind: "tool", toolCallId: block.id, id: nextId() });
     }
   }

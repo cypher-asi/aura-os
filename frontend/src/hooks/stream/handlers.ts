@@ -6,7 +6,7 @@ import type {
   ToolCallInfo,
   ToolResultInfo,
 } from "../../api/streams";
-import type { Message } from "../../types";
+import type { Message, ChatContentBlock } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
   DisplayContentBlockUnion,
@@ -236,6 +236,10 @@ export function handleToolResult(
   refs.needsSeparator.current = true;
 }
 
+function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { type: "text" } | { type: "image" }> {
+  return b.type === "text" || b.type === "image";
+}
+
 export function handleMessageSaved(
   refs: StreamRefs,
   setters: StreamSetters,
@@ -243,11 +247,11 @@ export function handleMessageSaved(
 ): void {
   const allBlocks = msg.content_blocks ?? [];
   const displayBlocks: DisplayContentBlockUnion[] = allBlocks
-    .filter((b) => b.type === "text" || b.type === "image")
+    .filter(isTextOrImage)
     .map((b) =>
       b.type === "text"
-        ? { type: "text" as const, text: b.text ?? "" }
-        : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
+        ? { type: "text" as const, text: b.text }
+        : { type: "image" as const, media_type: b.media_type, data: b.data },
     );
 
   const msgToolCalls = extractToolCalls(allBlocks);

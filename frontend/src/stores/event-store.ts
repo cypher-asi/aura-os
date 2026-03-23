@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { EngineEvent, EngineEventType } from "../types/events";
+import type { AuraEvent, AuraEventOfType } from "../types/aura-events";
+import { EventType, parseAuraEvent } from "../types/aura-events";
 import { createReconnectingWebSocket } from "../hooks/ws-reconnect";
 import { resolveWsUrl } from "../lib/host-config";
 
@@ -31,12 +32,12 @@ export interface TaskOutputEntry {
   testSteps: TestStep[];
 }
 
-type EventCallback = (event: EngineEvent) => void;
+type EventCallback = (event: AuraEvent) => void;
 type TaskOutputListener = () => void;
 
 const EMPTY_OUTPUT: TaskOutputEntry = { text: "", fileOps: [], buildSteps: [], testSteps: [] };
 
-const subscribers = new Map<EngineEventType, Set<EventCallback>>();
+const subscribers = new Map<EventType, Set<EventCallback>>();
 const taskOutputListeners = new Map<string, Set<TaskOutputListener>>();
 
 interface EventState {
@@ -44,7 +45,7 @@ interface EventState {
   lastEventAt: number | null;
   taskOutputs: Record<string, TaskOutputEntry>;
 
-  subscribe: (type: EngineEventType, callback: EventCallback) => () => void;
+  subscribe: <T extends EventType>(type: T, callback: (event: AuraEventOfType<T>) => void) => () => void;
   seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => void;
 }
 
@@ -59,14 +60,14 @@ export const useEventStore = create<EventState>()((set, get) => ({
   taskOutputs: {},
 
   subscribe: (type, callback) => {
-    let set = subscribers.get(type);
-    if (!set) {
-      set = new Set();
-      subscribers.set(type, set);
+    let s = subscribers.get(type);
+    if (!s) {
+      s = new Set();
+      subscribers.set(type, s);
     }
-    set.add(callback);
+    s.add(callback as EventCallback);
     return () => {
-      subscribers.get(type)?.delete(callback);
+      subscribers.get(type)?.delete(callback as EventCallback);
     };
   },
 
@@ -88,107 +89,122 @@ export const useEventStore = create<EventState>()((set, get) => ({
   },
 }));
 
-function handleEngineEvent(event: EngineEvent) {
+function handleEngineEvent(event: AuraEvent) {
   const { taskOutputs } = useEventStore.getState();
   let updatedOutputs = taskOutputs;
   let outputChanged = false;
 
-  if (event.type === "task_started" && event.task_id) {
-    const existing = updatedOutputs[event.task_id];
-    if (existing && existing.text) {
-      updatedOutputs = { ...updatedOutputs, [event.task_id]: { text: "", fileOps: [], buildSteps: [], testSteps: [] } };
-      outputChanged = true;
-      notifyTaskOutputListeners(event.task_id);
+  if (event.type === EventType.TaskStarted) {
+    const { task_id } = event.content;
+    if (task_id) {
+      const existing = updatedOutputs[task_id];
+      if (existing && existing.text) {
+        updatedOutputs = { ...updatedOutputs, [task_id]: { text: "", fileOps: [], buildSteps: [], testSteps: [] } };
+        outputChanged = true;
+        notifyTaskOutputListeners(task_id);
+      }
     }
   }
 
-  if (event.type === "task_output_delta" && event.task_id && event.delta) {
-    const existing = updatedOutputs[event.task_id] ?? EMPTY_OUTPUT;
-    updatedOutputs = { ...updatedOutputs, [event.task_id]: { ...existing, text: existing.text + event.delta } };
-    outputChanged = true;
-    notifyTaskOutputListeners(event.task_id);
+  if (event.type === EventType.TaskOutputDelta) {
+    const { task_id, delta } = event.content;
+    if (task_id && delta) {
+      const existing = updatedOutputs[task_id] ?? EMPTY_OUTPUT;
+      updatedOutputs = { ...updatedOutputs, [task_id]: { ...existing, text: existing.text + delta } };
+      outputChanged = true;
+      notifyTaskOutputListeners(task_id);
+    }
   }
 
-  if (event.type === "file_ops_applied" && event.task_id && event.files) {
-    const existing = updatedOutputs[event.task_id] ?? EMPTY_OUTPUT;
-    updatedOutputs = { ...updatedOutputs, [event.task_id]: { ...existing, fileOps: event.files } };
-    outputChanged = true;
-    notifyTaskOutputListeners(event.task_id);
-  }
-
-  if (
-    event.task_id &&
-    (event.type === "build_verification_skipped" ||
-      event.type === "build_verification_started" ||
-      event.type === "build_verification_passed" ||
-      event.type === "build_verification_failed" ||
-      event.type === "build_fix_attempt")
-  ) {
-    const kindMap: Record<string, BuildStep["kind"]> = {
-      build_verification_skipped: "skipped",
-      build_verification_started: "started",
-      build_verification_passed: "passed",
-      build_verification_failed: "failed",
-      build_fix_attempt: "fix_attempt",
-    };
-    const step: BuildStep = {
-      kind: kindMap[event.type],
-      command: event.command,
-      stderr: event.stderr,
-      stdout: event.stdout,
-      attempt: event.attempt,
-      reason: event.reason,
-      timestamp: Date.now(),
-    };
-    const existing = updatedOutputs[event.task_id] ?? EMPTY_OUTPUT;
-    updatedOutputs = {
-      ...updatedOutputs,
-      [event.task_id]: { ...existing, buildSteps: [...existing.buildSteps, step] },
-    };
-    outputChanged = true;
-    notifyTaskOutputListeners(event.task_id);
+  if (event.type === EventType.FileOpsApplied) {
+    const { task_id, files } = event.content;
+    if (task_id && files) {
+      const existing = updatedOutputs[task_id] ?? EMPTY_OUTPUT;
+      updatedOutputs = { ...updatedOutputs, [task_id]: { ...existing, fileOps: files } };
+      outputChanged = true;
+      notifyTaskOutputListeners(task_id);
+    }
   }
 
   if (
-    event.task_id &&
-    (event.type === "test_verification_started" ||
-      event.type === "test_verification_passed" ||
-      event.type === "test_verification_failed" ||
-      event.type === "test_fix_attempt")
+    event.type === EventType.BuildVerificationSkipped ||
+    event.type === EventType.BuildVerificationStarted ||
+    event.type === EventType.BuildVerificationPassed ||
+    event.type === EventType.BuildVerificationFailed ||
+    event.type === EventType.BuildFixAttempt
   ) {
-    const kindMap: Record<string, TestStep["kind"]> = {
-      test_verification_started: "started",
-      test_verification_passed: "passed",
-      test_verification_failed: "failed",
-      test_fix_attempt: "fix_attempt",
-    };
-    const step: TestStep = {
-      kind: kindMap[event.type],
-      command: event.command,
-      stderr: event.stderr,
-      stdout: event.stdout,
-      attempt: event.attempt,
-      tests: event.tests ?? [],
-      summary: event.summary,
-      timestamp: Date.now(),
-    };
-    const existing = updatedOutputs[event.task_id] ?? EMPTY_OUTPUT;
-    updatedOutputs = {
-      ...updatedOutputs,
-      [event.task_id]: { ...existing, testSteps: [...existing.testSteps, step] },
-    };
-    outputChanged = true;
-    notifyTaskOutputListeners(event.task_id);
+    const c = event.content as Record<string, unknown>;
+    const taskId = c.task_id as string | undefined;
+    if (taskId) {
+      const kindMap: Record<string, BuildStep["kind"]> = {
+        [EventType.BuildVerificationSkipped]: "skipped",
+        [EventType.BuildVerificationStarted]: "started",
+        [EventType.BuildVerificationPassed]: "passed",
+        [EventType.BuildVerificationFailed]: "failed",
+        [EventType.BuildFixAttempt]: "fix_attempt",
+      };
+      const step: BuildStep = {
+        kind: kindMap[event.type],
+        command: c.command as string | undefined,
+        stderr: c.stderr as string | undefined,
+        stdout: c.stdout as string | undefined,
+        attempt: c.attempt as number | undefined,
+        reason: c.reason as string | undefined,
+        timestamp: Date.now(),
+      };
+      const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
+      updatedOutputs = {
+        ...updatedOutputs,
+        [taskId]: { ...existing, buildSteps: [...existing.buildSteps, step] },
+      };
+      outputChanged = true;
+      notifyTaskOutputListeners(taskId);
+    }
   }
 
   if (
-    (event.type === "task_completed" || event.type === "task_failed") &&
-    event.task_id
+    event.type === EventType.TestVerificationStarted ||
+    event.type === EventType.TestVerificationPassed ||
+    event.type === EventType.TestVerificationFailed ||
+    event.type === EventType.TestFixAttempt
   ) {
-    notifyTaskOutputListeners(event.task_id);
+    const c = event.content as Record<string, unknown>;
+    const taskId = c.task_id as string | undefined;
+    if (taskId) {
+      const kindMap: Record<string, TestStep["kind"]> = {
+        [EventType.TestVerificationStarted]: "started",
+        [EventType.TestVerificationPassed]: "passed",
+        [EventType.TestVerificationFailed]: "failed",
+        [EventType.TestFixAttempt]: "fix_attempt",
+      };
+      const step: TestStep = {
+        kind: kindMap[event.type],
+        command: c.command as string | undefined,
+        stderr: c.stderr as string | undefined,
+        stdout: c.stdout as string | undefined,
+        attempt: c.attempt as number | undefined,
+        tests: (c.tests as TestStep["tests"]) ?? [],
+        summary: c.summary as string | undefined,
+        timestamp: Date.now(),
+      };
+      const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
+      updatedOutputs = {
+        ...updatedOutputs,
+        [taskId]: { ...existing, testSteps: [...existing.testSteps, step] },
+      };
+      outputChanged = true;
+      notifyTaskOutputListeners(taskId);
+    }
   }
 
-  if (event.type === "loop_stopped" || event.type === "loop_finished") {
+  if (
+    (event.type === EventType.TaskCompleted || event.type === EventType.TaskFailed)
+  ) {
+    const c = event.content as { task_id: string };
+    if (c.task_id) notifyTaskOutputListeners(c.task_id);
+  }
+
+  if (event.type === EventType.LoopStopped || event.type === EventType.LoopFinished) {
     for (const taskId of Object.keys(updatedOutputs)) {
       notifyTaskOutputListeners(taskId);
     }
@@ -203,10 +219,6 @@ function handleEngineEvent(event: EngineEvent) {
   if (subs) subs.forEach((cb) => cb(event));
 }
 
-/**
- * Subscribe to per-task output changes (used by useTaskOutput).
- * Kept outside the store since it drives useSyncExternalStore-style subscriptions.
- */
 export function subscribeTaskOutput(taskId: string, listener: TaskOutputListener): () => void {
   let set = taskOutputListeners.get(taskId);
   if (!set) {
@@ -225,10 +237,6 @@ export function getTaskOutput(taskId: string): TaskOutputEntry {
 
 export { EMPTY_OUTPUT };
 
-/**
- * Returns the live accumulated output for a task via a Zustand selector.
- * Components can use this directly: `const output = useTaskOutput(taskId)`.
- */
 export function useTaskOutput(taskId: string | undefined): TaskOutputEntry {
   return useEventStore((s) => (taskId ? s.taskOutputs[taskId] : undefined) ?? EMPTY_OUTPUT);
 }
@@ -246,7 +254,17 @@ function connectEventSocket() {
     },
     (data: string) => {
       try {
-        handleEngineEvent(JSON.parse(data));
+        const raw = JSON.parse(data) as Record<string, unknown>;
+        const event = parseAuraEvent(
+          raw.type as string,
+          raw,
+          {
+            session_id: raw.session_id as string | undefined,
+            project_id: raw.project_id as string | undefined,
+            agent_id: raw.agent_instance_id as string | undefined,
+          },
+        );
+        handleEngineEvent(event);
       } catch {
         // ignore malformed events
       }

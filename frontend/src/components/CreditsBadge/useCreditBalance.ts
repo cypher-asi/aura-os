@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useOrgStore } from "../../stores/org-store";
 import { useEventStore } from "../../stores/event-store";
 import { api } from "../../api/client";
+import { EventType } from "../../types/aura-events";
 
 export const CREDITS_UPDATED_EVENT = "credits-updated";
 
@@ -55,8 +56,8 @@ export function useCreditBalance(): CreditBalanceResult {
 
   useEffect(() => {
     const unsubs = [
-      subscribe("task_completed", debouncedFetch),
-      subscribe("loop_finished", debouncedFetch),
+      subscribe(EventType.TaskCompleted, debouncedFetch),
+      subscribe(EventType.LoopFinished, debouncedFetch),
     ];
     return () => {
       unsubs.forEach((fn) => fn());

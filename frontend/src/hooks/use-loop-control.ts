@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store";
+import { EventType } from "../types/aura-events";
 
 interface LoopControlResult {
   loopRunning: boolean;
@@ -19,10 +20,10 @@ export function useLoopControl(projectId: string | undefined): LoopControlResult
 
   useEffect(() => {
     const unsubs = [
-      subscribe("loop_started", () => { setLoopRunning(true); setLoopPaused(false); }),
-      subscribe("loop_paused", () => { setLoopPaused(true); }),
-      subscribe("loop_stopped", () => { setLoopRunning(false); setLoopPaused(false); }),
-      subscribe("loop_finished", () => { setLoopRunning(false); setLoopPaused(false); }),
+      subscribe(EventType.LoopStarted, () => { setLoopRunning(true); setLoopPaused(false); }),
+      subscribe(EventType.LoopPaused, () => { setLoopPaused(true); }),
+      subscribe(EventType.LoopStopped, () => { setLoopRunning(false); setLoopPaused(false); }),
+      subscribe(EventType.LoopFinished, () => { setLoopRunning(false); setLoopPaused(false); }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe]);

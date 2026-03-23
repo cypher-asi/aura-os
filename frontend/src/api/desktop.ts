@@ -9,7 +9,7 @@ export interface DirEntry {
 
 export const desktopApi = {
   getLogEntries: (limit = 1000) =>
-    apiFetch<{ timestamp_ms: number; event: import("../types/events").EngineEvent }[]>(
+    apiFetch<{ timestamp_ms: number; event: import("../types/aura-events").AuraEvent }[]>(
       `/api/log-entries?limit=${limit}`,
     ),
   listDirectory: (path: string) =>

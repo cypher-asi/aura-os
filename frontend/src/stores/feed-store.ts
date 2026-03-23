@@ -5,7 +5,8 @@ import { useEventStore } from "./event-store";
 import { useFollowStore } from "./follow-store";
 import { api } from "../api/client";
 import type { FeedEventDto } from "../api/social";
-import type { EngineEvent } from "../types/events";
+import type { AuraEvent } from "../types/aura-events";
+import { EventType } from "../types/aura-events";
 
 export type PostType = "post" | "push" | "event";
 
@@ -158,19 +159,20 @@ type FeedSetter = (
   partial: FeedState | Partial<FeedState> | ((state: FeedState) => FeedState | Partial<FeedState>),
 ) => void;
 
-function handleGitPushed(event: EngineEvent, set: FeedSetter): void {
-  if (event.type !== "git_pushed") return;
+function handleGitPushed(event: AuraEvent, set: FeedSetter): void {
+  if (event.type !== EventType.GitPushed) return;
+  const c = event.content;
   const feedEvent: FeedEvent = {
-    id: `git-push-${event.spec_id ?? Date.now()}`,
+    id: `git-push-${c.spec_id ?? Date.now()}`,
     postType: "push",
-    title: event.summary ?? "Code pushed",
+    title: c.summary ?? "Code pushed",
     author: { name: "Agent", type: "agent" },
-    repo: event.repo ?? "",
-    branch: event.branch ?? "main",
-    commits: (event.commits ?? []).map((c) => ({ sha: c.sha, message: c.message })),
-    commitIds: (event.commits ?? []).map((c) => c.sha),
+    repo: c.repo ?? "",
+    branch: c.branch ?? "main",
+    commits: (c.commits ?? []).map((cm) => ({ sha: cm.sha, message: cm.message })),
+    commitIds: (c.commits ?? []).map((cm) => cm.sha),
     timestamp: new Date().toISOString(),
-    summary: event.summary,
+    summary: c.summary,
     eventType: "push",
   };
   if (_seenIds.has(feedEvent.id)) return;
@@ -178,9 +180,9 @@ function handleGitPushed(event: EngineEvent, set: FeedSetter): void {
   set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
 }
 
-function handleNetworkEvent(event: EngineEvent, set: FeedSetter): void {
-  if (event.type !== "network_event") return;
-  const payload = event.payload;
+function handleNetworkEvent(event: AuraEvent, set: FeedSetter): void {
+  if (event.type !== EventType.NetworkEvent) return;
+  const payload = event.content.payload;
   if (!payload) return;
   const wsType = (payload.type as string) ?? "";
   if (wsType !== "activity.new") return;
@@ -263,8 +265,8 @@ export const useFeedStore = create<FeedState>()((set, get) => ({
       .catch(() => {});
 
     const { subscribe } = useEventStore.getState();
-    _eventUnsubs.push(subscribe("git_pushed", (e) => handleGitPushed(e, set)));
-    _eventUnsubs.push(subscribe("network_event", (e) => handleNetworkEvent(e, set)));
+    _eventUnsubs.push(subscribe(EventType.GitPushed, (e) => handleGitPushed(e, set)));
+    _eventUnsubs.push(subscribe(EventType.NetworkEvent, (e) => handleNetworkEvent(e, set)));
   },
 }));
 

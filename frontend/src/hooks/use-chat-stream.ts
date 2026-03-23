@@ -2,7 +2,10 @@ import React, { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import { useSidekick } from "../stores/sidekick-store";
 import { useProjectContext } from "../stores/project-action-store";
-import type { ChatStreamCallbacks, ChatAttachment, ToolCallInfo } from "../api/streams";
+import type { StreamEventHandler } from "../api/streams";
+import type { AuraEvent } from "../types/aura-events";
+import { EventType } from "../types/aura-events";
+import type { ChatAttachment } from "../api/streams";
 import {
   useStreamCore,
   resetStreamBuffers,
@@ -81,20 +84,20 @@ function buildAttachmentLabel(attachments: ChatAttachment[] | undefined): string
 /* ------------------------------------------------------------------ */
 
 function pushPendingSpec(
-  info: ToolCallInfo,
+  content: { id: string; name: string; input: Record<string, unknown> },
   projectId: string,
   sidekick: ReturnType<typeof useSidekick>,
   pendingSpecIdsRef: { current: string[] },
 ) {
-  const pendingId = `pending-${info.id}`;
+  const pendingId = `pending-${content.id}`;
   const now = new Date().toISOString();
-  const title = (info.input.title as string) || "Generating…";
+  const title = (content.input.title as string) || "Generating…";
   sidekick.pushSpec({
     spec_id: pendingId,
     project_id: projectId,
     title,
     order_index: orderIndexFromTitle(title) ?? Date.now(),
-    markdown_contents: (info.input.markdown_contents as string) || "",
+    markdown_contents: (content.input.markdown_contents as string) || "",
     created_at: now,
     updated_at: now,
   });
@@ -104,20 +107,20 @@ function pushPendingSpec(
 }
 
 function pushPendingTask(
-  info: ToolCallInfo,
+  content: { id: string; name: string; input: Record<string, unknown> },
   projectId: string,
   sidekick: ReturnType<typeof useSidekick>,
   pendingTaskIdsRef: { current: string[] },
 ) {
-  const pendingId = `pending-${info.id}`;
+  const pendingId = `pending-${content.id}`;
   const now = new Date().toISOString();
-  const title = (info.input.title as string) || "Creating…";
+  const title = (content.input.title as string) || "Creating…";
   sidekick.pushTask({
     task_id: pendingId,
     project_id: projectId,
-    spec_id: (info.input.spec_id as string) || "",
+    spec_id: (content.input.spec_id as string) || "",
     title,
-    description: (info.input.description as string) || "",
+    description: (content.input.description as string) || "",
     status: "pending",
     order_index: orderIndexFromTitle(title) ?? Date.now(),
     dependency_ids: [],
@@ -150,10 +153,10 @@ function removePendingArtifact(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Callback builders                                                  */
+/*  Event dispatcher                                                   */
 /* ------------------------------------------------------------------ */
 
-interface CallbackDeps {
+interface DispatchDeps {
   projectId: string;
   refs: ReturnType<typeof useStreamCore>["refs"];
   setters: ReturnType<typeof useStreamCore>["setters"];
@@ -166,65 +169,92 @@ interface CallbackDeps {
   pendingTaskIdsRef: React.MutableRefObject<string[]>;
 }
 
-function buildToolCallbacks(deps: CallbackDeps): Pick<ChatStreamCallbacks, "onToolCall" | "onToolResult"> {
-  const { projectId, refs, setters, sidekickRef, pendingSpecIdsRef, pendingTaskIdsRef } = deps;
-  return {
-    onToolCall: (info) => {
-      coreHandleToolCall(refs, setters, info);
-      if (info.name === "create_spec") pushPendingSpec(info, projectId, sidekickRef.current, pendingSpecIdsRef);
-      if (info.name === "create_task") pushPendingTask(info, projectId, sidekickRef.current, pendingTaskIdsRef);
-    },
-    onToolResult: (info) => {
-      coreHandleToolResult(refs, setters, info);
-      if (info.name === "create_spec" && info.is_error) removePendingArtifact(info.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
-      if (info.name === "create_task" && info.is_error) removePendingArtifact(info.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
-      if (info.name === "delete_spec" && !info.is_error) {
-        try {
-          const parsed = JSON.parse(info.result) as { deleted?: string };
-          if (typeof parsed?.deleted === "string") sidekickRef.current.removeSpec(parsed.deleted);
-        } catch { /* ignore */ }
+function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
+  const {
+    projectId, refs, setters, abortRef, coreKey,
+    setProgressText, sidekickRef, projectCtxRef,
+    pendingSpecIdsRef, pendingTaskIdsRef,
+  } = deps;
+
+  const onEvent = (event: AuraEvent) => {
+    switch (event.type) {
+      case EventType.Delta:
+        handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), event.content.text);
+        break;
+      case EventType.ThinkingDelta:
+        handleThinkingDelta(refs, setters, event.content.text);
+        break;
+      case EventType.Progress:
+        setProgressText(event.content.stage);
+        break;
+      case EventType.ToolCallStarted:
+        handleToolCallStarted(refs, setters, event.content);
+        break;
+      case EventType.ToolCallSnapshot:
+        handleToolCallSnapshot(refs, setters, event.content);
+        break;
+      case EventType.ToolCall: {
+        const c = event.content;
+        coreHandleToolCall(refs, setters, c);
+        if (c.name === "create_spec") pushPendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);
+        if (c.name === "create_task") pushPendingTask(c, projectId, sidekickRef.current, pendingTaskIdsRef);
+        break;
       }
-    },
+      case EventType.ToolResult: {
+        const c = event.content;
+        coreHandleToolResult(refs, setters, c);
+        if (c.name === "create_spec" && c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
+        if (c.name === "create_task" && c.is_error) removePendingArtifact(c.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
+        if (c.name === "delete_spec" && !c.is_error) {
+          try {
+            const parsed = JSON.parse(c.result) as { deleted?: string };
+            if (typeof parsed?.deleted === "string") sidekickRef.current.removeSpec(parsed.deleted);
+          } catch { /* ignore */ }
+        }
+        break;
+      }
+      case EventType.SpecSaved: {
+        const pendingId = pendingSpecIdsRef.current.shift();
+        if (pendingId) sidekickRef.current.removeSpec(pendingId);
+        sidekickRef.current.pushSpec(event.content.spec);
+        break;
+      }
+      case EventType.SpecsTitle: {
+        const pctx = projectCtxRef.current;
+        if (pctx) pctx.setProject((prev) => ({ ...prev, specs_title: event.content.title }));
+        break;
+      }
+      case EventType.SpecsSummary: {
+        const pctx = projectCtxRef.current;
+        if (pctx) pctx.setProject((prev) => ({ ...prev, specs_summary: event.content.summary }));
+        break;
+      }
+      case EventType.TaskSaved: {
+        const pendingId = pendingTaskIdsRef.current.shift();
+        if (pendingId) sidekickRef.current.removeTask(pendingId);
+        sidekickRef.current.pushTask(event.content.task);
+        break;
+      }
+      case EventType.MessageEnd:
+        handleMessageSaved(refs, setters, event.content.message);
+        break;
+      case EventType.AgentInstanceUpdated:
+        sidekickRef.current.notifyAgentInstanceUpdate(event.content.agent_instance);
+        break;
+      case EventType.TokenUsage:
+        break;
+      case EventType.Error:
+        handleStreamError(refs, setters, event.content.message);
+        break;
+      case EventType.Done:
+        finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
+        sidekickRef.current.setStreamingAgentInstanceId(null);
+        break;
+    }
   };
-}
 
-function buildArtifactCallbacks(deps: CallbackDeps): Pick<ChatStreamCallbacks, "onSpecSaved" | "onSpecsTitle" | "onSpecsSummary" | "onTaskSaved"> {
-  const { sidekickRef, projectCtxRef, pendingSpecIdsRef, pendingTaskIdsRef } = deps;
   return {
-    onSpecSaved(spec) {
-      const pendingId = pendingSpecIdsRef.current.shift();
-      if (pendingId) sidekickRef.current.removeSpec(pendingId);
-      sidekickRef.current.pushSpec(spec);
-    },
-    onSpecsTitle(title) {
-      const pctx = projectCtxRef.current;
-      if (pctx) pctx.setProject((prev) => ({ ...prev, specs_title: title }));
-    },
-    onSpecsSummary(summary) {
-      const pctx = projectCtxRef.current;
-      if (pctx) pctx.setProject((prev) => ({ ...prev, specs_summary: summary }));
-    },
-    onTaskSaved(task) {
-      const pendingId = pendingTaskIdsRef.current.shift();
-      if (pendingId) sidekickRef.current.removeTask(pendingId);
-      sidekickRef.current.pushTask(task);
-    },
-  };
-}
-
-function buildStreamCallbacks(deps: CallbackDeps): ChatStreamCallbacks {
-  const { refs, setters, abortRef, coreKey, setProgressText, sidekickRef } = deps;
-  return {
-    onProgress: (stage) => setProgressText(stage),
-    onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
-    onDelta: (text) => handleTextDelta(refs, setters, getThinkingDurationMs(coreKey), text),
-    onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
-    onToolCallSnapshot: (info) => handleToolCallSnapshot(refs, setters, info),
-    ...buildToolCallbacks(deps),
-    ...buildArtifactCallbacks(deps),
-    onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
-    onAgentInstanceUpdated: (instance) => sidekickRef.current.notifyAgentInstanceUpdate(instance),
-    onTokenUsage() {},
+    onEvent,
     onError: (message) => handleStreamError(refs, setters, message),
     onDone: () => {
       finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
@@ -282,10 +312,14 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
 
       const controller = new AbortController();
       abortRef.current = controller;
-      const callbacks = buildStreamCallbacks({ projectId, refs, setters, abortRef, coreKey: core.key, setProgressText: core.setProgressText, sidekickRef, projectCtxRef, pendingSpecIdsRef, pendingTaskIdsRef });
+      const handler = buildStreamHandler({
+        projectId, refs, setters, abortRef, coreKey: core.key,
+        setProgressText: core.setProgressText, sidekickRef, projectCtxRef,
+        pendingSpecIdsRef, pendingTaskIdsRef,
+      });
 
       try {
-        await api.sendMessageStream(projectId, agentInstanceId, userMsg.content, action, null, attachments, callbacks, controller.signal);
+        await api.sendMessageStream(projectId, agentInstanceId, userMsg.content, action, null, attachments, handler, controller.signal);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));

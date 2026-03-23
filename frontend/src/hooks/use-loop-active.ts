@@ -2,12 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import type { ProjectId } from "../types";
 import { api } from "../api/client";
 import { useEventStore } from "../stores/event-store";
+import { EventType } from "../types/aura-events";
 
-/**
- * Returns whether the automation loop has active agents for the project.
- * When false, tasks with status "in_progress" in storage should be shown as
- * stale (e.g. "ready") so we don't show spinners after restart or loop error.
- */
 export function useLoopActive(projectId: ProjectId | undefined): boolean {
   const subscribe = useEventStore((s) => s.subscribe);
   const [loopActive, setLoopActive] = useState(false);
@@ -41,20 +37,18 @@ export function useLoopActive(projectId: ProjectId | undefined): boolean {
 
   useEffect(() => {
     if (!projectId) return;
-    const isForProject = (e: { project_id?: string }) =>
-      e.project_id === projectId;
     const unsubs = [
-      subscribe("loop_started", (e) => {
-        if (isForProject(e)) setLoopActive(true);
+      subscribe(EventType.LoopStarted, (e) => {
+        if (e.project_id === projectId) setLoopActive(true);
       }),
-      subscribe("loop_stopped", (e) => {
-        if (isForProject(e)) setLoopActive(false);
+      subscribe(EventType.LoopStopped, (e) => {
+        if (e.project_id === projectId) setLoopActive(false);
       }),
-      subscribe("loop_paused", (e) => {
-        if (isForProject(e)) setLoopActive(true); // Paused still has an agent
+      subscribe(EventType.LoopPaused, (e) => {
+        if (e.project_id === projectId) setLoopActive(true);
       }),
-      subscribe("loop_finished", (e) => {
-        if (isForProject(e)) setLoopActive(false);
+      subscribe(EventType.LoopFinished, (e) => {
+        if (e.project_id === projectId) setLoopActive(false);
       }),
     ];
     return () => unsubs.forEach((u) => u());

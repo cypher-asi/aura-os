@@ -1,7 +1,11 @@
-import type { Message } from "../types";
+import type { Message, ChatContentBlock } from "../types";
 import type { DisplayMessage } from "../types/stream";
 import { extractToolCalls, extractArtifactRefs } from "./chat-history";
 import { buildTimelineFromBlocks } from "./build-timeline";
+
+function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { type: "text" } | { type: "image" }> {
+  return b.type === "text" || b.type === "image";
+}
 
 export function buildDisplayMessages(msgs: Message[]): DisplayMessage[] {
   return msgs
@@ -15,11 +19,11 @@ export function buildDisplayMessages(msgs: Message[]): DisplayMessage[] {
     .map((m) => {
       const allBlocks = m.content_blocks ?? [];
       const displayBlocks = allBlocks
-        .filter((b) => b.type === "text" || b.type === "image")
+        .filter(isTextOrImage)
         .map((b) =>
           b.type === "text"
-            ? { type: "text" as const, text: b.text ?? "" }
-            : { type: "image" as const, media_type: b.media_type ?? "image/png", data: b.data ?? "" },
+            ? { type: "text" as const, text: b.text }
+            : { type: "image" as const, media_type: b.media_type, data: b.data },
         );
       const thinking = m.thinking || undefined;
       return {

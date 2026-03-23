@@ -1,7 +1,9 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
-import type { ChatAttachment } from "../api/streams";
+import type { ChatAttachment, StreamEventHandler } from "../api/streams";
 import type { Spec, Task } from "../types";
+import type { AuraEvent } from "../types/aura-events";
+import { EventType } from "../types/aura-events";
 import {
   useStreamCore,
   resetStreamBuffers,
@@ -73,6 +75,53 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const handler: StreamEventHandler = {
+        onEvent(event: AuraEvent) {
+          switch (event.type) {
+            case EventType.Delta:
+              handleTextDelta(refs, setters, getThinkingDurationMs(core.key), event.content.text);
+              break;
+            case EventType.ThinkingDelta:
+              handleThinkingDelta(refs, setters, event.content.text);
+              break;
+            case EventType.Progress:
+              core.setProgressText(event.content.stage);
+              break;
+            case EventType.ToolCallStarted:
+              handleToolCallStarted(refs, setters, event.content);
+              break;
+            case EventType.ToolCallSnapshot:
+              handleToolCallSnapshot(refs, setters, event.content);
+              break;
+            case EventType.ToolCall:
+              handleToolCall(refs, setters, event.content);
+              break;
+            case EventType.ToolResult:
+              handleToolResult(refs, setters, event.content);
+              break;
+            case EventType.SpecSaved:
+              onSpecSavedRef.current?.(event.content.spec);
+              break;
+            case EventType.TaskSaved:
+              onTaskSavedRef.current?.(event.content.task);
+              break;
+            case EventType.MessageEnd:
+              handleMessageSaved(refs, setters, event.content.message);
+              break;
+            case EventType.TokenUsage:
+              break;
+            case EventType.Error:
+              handleStreamError(refs, setters, event.content.message);
+              break;
+            case EventType.Done:
+              finalizeStream(refs, setters, abortRef, getIsStreaming(core.key));
+              break;
+          }
+        },
+        onError: (message) => handleStreamError(refs, setters, message),
+        onDone: () => finalizeStream(refs, setters, abortRef, getIsStreaming(core.key)),
+      };
+
       try {
         await api.agents.sendMessageStream(
           agentId,
@@ -80,21 +129,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
           action,
           null,
           attachments,
-          {
-            onProgress: (stage) => core.setProgressText(stage),
-            onThinkingDelta: (text) => handleThinkingDelta(refs, setters, text),
-            onDelta: (text) => handleTextDelta(refs, setters, getThinkingDurationMs(core.key), text),
-            onToolCallStarted: (info) => handleToolCallStarted(refs, setters, info),
-            onToolCallSnapshot: (info) => handleToolCallSnapshot(refs, setters, info),
-            onToolCall: (info) => handleToolCall(refs, setters, info),
-            onToolResult: (info) => handleToolResult(refs, setters, info),
-            onSpecSaved: (spec) => onSpecSavedRef.current?.(spec),
-            onTaskSaved: (task) => onTaskSavedRef.current?.(task),
-            onMessageSaved: (msg) => handleMessageSaved(refs, setters, msg),
-            onTokenUsage() {},
-            onError: (message) => handleStreamError(refs, setters, message),
-            onDone: () => finalizeStream(refs, setters, abortRef, getIsStreaming(core.key)),
-          },
+          handler,
           controller.signal,
         );
       } catch (err: unknown) {

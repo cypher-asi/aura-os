@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import type { ProjectId, Task } from "../../types";
+import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
@@ -47,30 +48,30 @@ export function useTaskFeedData(projectId: ProjectId): TaskFeedData {
       setTasks((prev) => prev.map((t) => (t.task_id === taskId ? { ...t, status } : t)));
 
     const unsubs = [
-      subscribe("task_started", (e) => {
-        setActiveTaskId(e.task_id || null);
-        if (e.task_id) setStatus(e.task_id, "in_progress");
+      subscribe(EventType.TaskStarted, (e) => {
+        setActiveTaskId(e.content.task_id || null);
+        if (e.content.task_id) setStatus(e.content.task_id, "in_progress");
       }),
-      subscribe("task_completed", (e) => {
-        setActiveTaskId((curr) => (curr === e.task_id ? null : curr));
-        if (e.task_id) setStatus(e.task_id, "done");
+      subscribe(EventType.TaskCompleted, (e) => {
+        setActiveTaskId((curr) => (curr === e.content.task_id ? null : curr));
+        if (e.content.task_id) setStatus(e.content.task_id, "done");
       }),
-      subscribe("task_failed", (e) => {
-        setActiveTaskId((curr) => (curr === e.task_id ? null : curr));
-        if (e.task_id) setStatus(e.task_id, "failed");
+      subscribe(EventType.TaskFailed, (e) => {
+        setActiveTaskId((curr) => (curr === e.content.task_id ? null : curr));
+        if (e.content.task_id) setStatus(e.content.task_id, "failed");
       }),
-      subscribe("task_became_ready", (e) => {
-        if (e.task_id) setStatus(e.task_id, "ready");
+      subscribe(EventType.TaskBecameReady, (e) => {
+        if (e.content.task_id) setStatus(e.content.task_id, "ready");
       }),
-      subscribe("tasks_became_ready", (e) => {
-        if (!e.task_ids?.length) return;
-        const readySet = new Set(e.task_ids);
+      subscribe(EventType.TasksBecameReady, (e) => {
+        if (!e.content.task_ids?.length) return;
+        const readySet = new Set(e.content.task_ids);
         setTasks((prev) => prev.map((t) => readySet.has(t.task_id) ? { ...t, status: "ready" as const } : t));
       }),
-      subscribe("follow_up_task_created", (e) => { if (e.task_id) refetch(); }),
-      subscribe("loop_stopped", () => { setActiveTaskId(null); refetch(); }),
-      subscribe("loop_paused", () => { setActiveTaskId(null); refetch(); }),
-      subscribe("loop_finished", () => { setActiveTaskId(null); refetch(); }),
+      subscribe(EventType.FollowUpTaskCreated, (e) => { if (e.content.task_id) refetch(); }),
+      subscribe(EventType.LoopStopped, () => { setActiveTaskId(null); refetch(); }),
+      subscribe(EventType.LoopPaused, () => { setActiveTaskId(null); refetch(); }),
+      subscribe(EventType.LoopFinished, () => { setActiveTaskId(null); refetch(); }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe, projectId]);

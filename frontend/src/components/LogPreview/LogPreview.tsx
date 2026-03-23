@@ -1,62 +1,65 @@
 import { Text } from "@cypher-asi/zui";
 import { EVENT_LABELS, type LogEntry } from "../../hooks/use-log-stream";
-import type { EngineEvent } from "../../types/events";
+import type { AuraEvent } from "../../types/aura-events";
 import { fmtMs } from "../../utils/format";
 import styles from "../Preview/Preview.module.css";
 
-function logDetailPairs(event: EngineEvent): [string, string][] {
+function logDetailPairs(event: AuraEvent): [string, string][] {
   const pairs: [string, string][] = [];
+  const c = event.content as Record<string, unknown>;
 
-  if (event.task_id) pairs.push(["Task ID", event.task_id]);
-  if (event.task_title) pairs.push(["Title", event.task_title]);
-  if (event.reason) pairs.push(["Reason", event.reason]);
-  if (event.attempt != null) pairs.push(["Attempt", String(event.attempt)]);
-  if (event.execution_notes) pairs.push(["Notes", event.execution_notes]);
+  if (c.task_id) pairs.push(["Task ID", String(c.task_id)]);
+  if (c.task_title) pairs.push(["Title", String(c.task_title)]);
+  if (c.reason) pairs.push(["Reason", String(c.reason)]);
+  if (c.attempt != null) pairs.push(["Attempt", String(c.attempt)]);
+  if (c.execution_notes) pairs.push(["Notes", String(c.execution_notes)]);
   if (event.project_id) pairs.push(["Project", event.project_id]);
-  if (event.agent_instance_id) pairs.push(["Agent", event.agent_instance_id]);
-  if (event.old_session_id) pairs.push(["Old Session", event.old_session_id]);
-  if (event.new_session_id) pairs.push(["New Session", event.new_session_id]);
-  if (event.completed_count != null) pairs.push(["Completed", String(event.completed_count)]);
-  if (event.outcome) pairs.push(["Outcome", event.outcome]);
-  if (event.stage) pairs.push(["Stage", event.stage]);
-  if (event.spec_count != null) pairs.push(["Spec Count", String(event.spec_count)]);
-  if (event.files_written != null) pairs.push(["Files Written", String(event.files_written)]);
-  if (event.files_deleted != null) pairs.push(["Files Deleted", String(event.files_deleted)]);
-  if (event.delta) pairs.push(["Delta", event.delta]);
-  if (event.message) pairs.push(["Message", event.message]);
-  if (event.spec) pairs.push(["Spec", event.spec.title]);
-  if (event.files && event.files.length > 0) {
-    pairs.push(["Files", event.files.map((f) => `${f.op}: ${f.path}`).join("\n")]);
+  if (event.agent_id) pairs.push(["Agent", event.agent_id]);
+  if (c.old_session_id) pairs.push(["Old Session", String(c.old_session_id)]);
+  if (c.new_session_id) pairs.push(["New Session", String(c.new_session_id)]);
+  if (c.completed_count != null) pairs.push(["Completed", String(c.completed_count)]);
+  if (c.outcome) pairs.push(["Outcome", String(c.outcome)]);
+  if (c.stage) pairs.push(["Stage", String(c.stage)]);
+  if (c.spec_count != null) pairs.push(["Spec Count", String(c.spec_count)]);
+  if (c.files_written != null) pairs.push(["Files Written", String(c.files_written)]);
+  if (c.files_deleted != null) pairs.push(["Files Deleted", String(c.files_deleted)]);
+  if (c.delta) pairs.push(["Delta", String(c.delta)]);
+  if (c.message) pairs.push(["Message", String(c.message)]);
+  if (c.spec && typeof c.spec === "object" && "title" in (c.spec as Record<string, unknown>)) {
+    pairs.push(["Spec", String((c.spec as Record<string, unknown>).title)]);
+  }
+  if (Array.isArray(c.files) && c.files.length > 0) {
+    pairs.push(["Files", (c.files as { op: string; path: string }[]).map((f) => `${f.op}: ${f.path}`).join("\n")]);
   }
 
-  if (event.duration_ms != null) pairs.push(["Duration", fmtMs(event.duration_ms)]);
-  if (event.llm_duration_ms != null) pairs.push(["LLM Duration", fmtMs(event.llm_duration_ms)]);
-  if (event.build_verify_duration_ms != null) pairs.push(["Build Verify Duration", fmtMs(event.build_verify_duration_ms)]);
-  if (event.summary_duration_ms != null) pairs.push(["Summary Duration", fmtMs(event.summary_duration_ms)]);
-  if (event.total_duration_ms != null) pairs.push(["Total Duration", fmtMs(event.total_duration_ms)]);
-  if (event.input_tokens != null) pairs.push(["Input Tokens", event.input_tokens.toLocaleString()]);
-  if (event.output_tokens != null) pairs.push(["Output Tokens", event.output_tokens.toLocaleString()]);
-  if (event.prompt_tokens_estimate != null) pairs.push(["Prompt Tokens (est)", event.prompt_tokens_estimate.toLocaleString()]);
-  if (event.total_input_tokens != null) pairs.push(["Total Input Tokens", event.total_input_tokens.toLocaleString()]);
-  if (event.total_output_tokens != null) pairs.push(["Total Output Tokens", event.total_output_tokens.toLocaleString()]);
-  if (event.codebase_snapshot_bytes != null) pairs.push(["Snapshot Size", `${(event.codebase_snapshot_bytes / 1024).toFixed(0)} KB`]);
-  if (event.codebase_file_count != null) pairs.push(["File Count", String(event.codebase_file_count)]);
-  if (event.files_changed_count != null) pairs.push(["Files Changed", String(event.files_changed_count)]);
-  if (event.parse_retries != null && event.parse_retries > 0) pairs.push(["Parse Retries", String(event.parse_retries)]);
-  if (event.build_fix_attempts != null && event.build_fix_attempts > 0) pairs.push(["Build Fix Attempts", String(event.build_fix_attempts)]);
-  if (event.model) pairs.push(["Model", event.model]);
-  if (event.phase) pairs.push(["Phase", event.phase]);
-  if (event.error_hash) pairs.push(["Error Hash", event.error_hash]);
-  if (event.context_usage_pct != null) pairs.push(["Context Usage", `${event.context_usage_pct.toFixed(0)}%`]);
-  if (event.tasks_completed != null) pairs.push(["Tasks Completed", String(event.tasks_completed)]);
-  if (event.tasks_failed != null) pairs.push(["Tasks Failed", String(event.tasks_failed)]);
-  if (event.tasks_retried != null) pairs.push(["Tasks Retried", String(event.tasks_retried)]);
-  if (event.sessions_used != null) pairs.push(["Sessions Used", String(event.sessions_used)]);
-  if (event.total_parse_retries != null && event.total_parse_retries > 0) pairs.push(["Total Parse Retries", String(event.total_parse_retries)]);
-  if (event.total_build_fix_attempts != null && event.total_build_fix_attempts > 0) pairs.push(["Total Build Fix Attempts", String(event.total_build_fix_attempts)]);
-  if (event.duplicate_error_bailouts != null && event.duplicate_error_bailouts > 0) pairs.push(["Duplicate Error Bailouts", String(event.duplicate_error_bailouts)]);
-  if (event.phase_timings && event.phase_timings.length > 0) {
-    pairs.push(["Phase Timings", event.phase_timings.map((p) => `${p.phase}: ${fmtMs(p.duration_ms)}`).join(", ")]);
+  if (c.duration_ms != null) pairs.push(["Duration", fmtMs(c.duration_ms as number)]);
+  if (c.llm_duration_ms != null) pairs.push(["LLM Duration", fmtMs(c.llm_duration_ms as number)]);
+  if (c.build_verify_duration_ms != null) pairs.push(["Build Verify Duration", fmtMs(c.build_verify_duration_ms as number)]);
+  if (c.summary_duration_ms != null) pairs.push(["Summary Duration", fmtMs(c.summary_duration_ms as number)]);
+  if (c.total_duration_ms != null) pairs.push(["Total Duration", fmtMs(c.total_duration_ms as number)]);
+  if (c.input_tokens != null) pairs.push(["Input Tokens", (c.input_tokens as number).toLocaleString()]);
+  if (c.output_tokens != null) pairs.push(["Output Tokens", (c.output_tokens as number).toLocaleString()]);
+  if (c.prompt_tokens_estimate != null) pairs.push(["Prompt Tokens (est)", (c.prompt_tokens_estimate as number).toLocaleString()]);
+  if (c.total_input_tokens != null) pairs.push(["Total Input Tokens", (c.total_input_tokens as number).toLocaleString()]);
+  if (c.total_output_tokens != null) pairs.push(["Total Output Tokens", (c.total_output_tokens as number).toLocaleString()]);
+  if (c.codebase_snapshot_bytes != null) pairs.push(["Snapshot Size", `${((c.codebase_snapshot_bytes as number) / 1024).toFixed(0)} KB`]);
+  if (c.codebase_file_count != null) pairs.push(["File Count", String(c.codebase_file_count)]);
+  if (c.files_changed_count != null) pairs.push(["Files Changed", String(c.files_changed_count)]);
+  if (c.parse_retries != null && (c.parse_retries as number) > 0) pairs.push(["Parse Retries", String(c.parse_retries)]);
+  if (c.build_fix_attempts != null && (c.build_fix_attempts as number) > 0) pairs.push(["Build Fix Attempts", String(c.build_fix_attempts)]);
+  if (c.model) pairs.push(["Model", String(c.model)]);
+  if (c.phase) pairs.push(["Phase", String(c.phase)]);
+  if (c.error_hash) pairs.push(["Error Hash", String(c.error_hash)]);
+  if (c.context_usage_pct != null) pairs.push(["Context Usage", `${(c.context_usage_pct as number).toFixed(0)}%`]);
+  if (c.tasks_completed != null) pairs.push(["Tasks Completed", String(c.tasks_completed)]);
+  if (c.tasks_failed != null) pairs.push(["Tasks Failed", String(c.tasks_failed)]);
+  if (c.tasks_retried != null) pairs.push(["Tasks Retried", String(c.tasks_retried)]);
+  if (c.sessions_used != null) pairs.push(["Sessions Used", String(c.sessions_used)]);
+  if (c.total_parse_retries != null && (c.total_parse_retries as number) > 0) pairs.push(["Total Parse Retries", String(c.total_parse_retries)]);
+  if (c.total_build_fix_attempts != null && (c.total_build_fix_attempts as number) > 0) pairs.push(["Total Build Fix Attempts", String(c.total_build_fix_attempts)]);
+  if (c.duplicate_error_bailouts != null && (c.duplicate_error_bailouts as number) > 0) pairs.push(["Duplicate Error Bailouts", String(c.duplicate_error_bailouts)]);
+  if (Array.isArray(c.phase_timings) && c.phase_timings.length > 0) {
+    pairs.push(["Phase Timings", (c.phase_timings as { phase: string; duration_ms: number }[]).map((p) => `${p.phase}: ${fmtMs(p.duration_ms)}`).join(", ")]);
   }
 
   return pairs;

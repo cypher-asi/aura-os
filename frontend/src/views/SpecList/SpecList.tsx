@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { api } from "../../api/client";
 import type { Spec } from "../../types";
-import type { EngineEvent } from "../../types/events";
+import type { AuraEvent } from "../../types/aura-events";
+import { EventType } from "../../types/aura-events";
 import { useEventStore } from "../../stores/event-store";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
@@ -72,15 +73,15 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
 
   useEffect(() => {
     const unsubs = [
-      subscribe("spec_gen_started", (e: EngineEvent) => {
+      subscribe(EventType.SpecGenStarted, (e: AuraEvent) => {
         if (e.project_id === projectId) {
           setLocalSpecs([]);
           setSelectedId(null);
           sidekickRef.current.clearDeletedSpecs();
         }
       }),
-      subscribe("spec_saved", (e: EngineEvent) => {
-        const spec = e.spec;
+      subscribe(EventType.SpecSaved, (e) => {
+        const spec = e.content.spec;
         if (e.project_id === projectId && spec) {
           setLocalSpecs((prev) => {
             if (prev.some((s) => s.spec_id === spec.spec_id)) return prev;
@@ -88,7 +89,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
           });
         }
       }),
-      subscribe("spec_gen_completed", (e: EngineEvent) => {
+      subscribe(EventType.SpecGenCompleted, (e: AuraEvent) => {
         if (e.project_id === projectId) {
           fetchSpecs(true);
         }
@@ -117,7 +118,6 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     [mergedSpecs, ctx?.project?.specs_title],
   );
 
-  /* Stable ref - SpecList has single root, avoids ExplorerContext re-merge on sidekick updates */
   const defaultExpandedIds = useMemo(() => ["__specs_root__"], []);
 
   const defaultSelectedIds = useMemo(
