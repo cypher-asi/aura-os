@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../../api/client";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import type { ApiKeyInfo } from "../../types";
 
 interface SettingsData {
-  info: ApiKeyInfo | null;
   loading: boolean;
   updateChannel: "stable" | "nightly";
   currentVersion: string;
@@ -14,7 +12,6 @@ interface SettingsData {
 
 export function useSettingsData(isOpen: boolean): SettingsData {
   const { features } = useAuraCapabilities();
-  const [info, setInfo] = useState<ApiKeyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [updateChannel, setUpdateChannel] = useState<"stable" | "nightly">("stable");
   const [currentVersion, setCurrentVersion] = useState("");
@@ -22,7 +19,7 @@ export function useSettingsData(isOpen: boolean): SettingsData {
   useEffect(() => {
     if (!isOpen) return;
     const frame = window.requestAnimationFrame(() => setLoading(true));
-    const requests = [api.getApiKeyInfo().then(setInfo)];
+    const requests: Promise<unknown>[] = [];
     if (features.nativeUpdater) {
       requests.push(
         api.getUpdateStatus().then((s) => {
@@ -48,7 +45,7 @@ export function useSettingsData(isOpen: boolean): SettingsData {
   );
 
   return {
-    info, loading, updateChannel, currentVersion,
+    loading, updateChannel, currentVersion,
     showUpdater: !!features.nativeUpdater, handleChannelChange,
   };
 }

@@ -12,7 +12,7 @@ export function SettingsModal({
   onClose: () => void;
 }) {
   const { logout } = useAuth();
-  const { info, loading, updateChannel, currentVersion, showUpdater, handleChannelChange } =
+  const { loading, updateChannel, currentVersion, showUpdater, handleChannelChange } =
     useSettingsData(isOpen);
 
   return (
@@ -22,21 +22,6 @@ export function SettingsModal({
           <Spinner />
         ) : (
           <>
-            <Heading level={4}>Claude API Key</Heading>
-
-            <div className={styles.infoGrid}>
-              <Text variant="muted" size="sm" as="span">Status</Text>
-              <Text size="sm" as="span" className={styles.monoText}>
-                {info?.configured ? "Configured" : "Not configured"}
-              </Text>
-            </div>
-
-            {!info?.configured && (
-              <Text variant="muted" size="sm">
-                Set <code>ANTHROPIC_API_KEY</code> in your <code>.env</code> file and restart the server.
-              </Text>
-            )}
-
             {showUpdater && (
               <>
                 <div className={styles.divider} />

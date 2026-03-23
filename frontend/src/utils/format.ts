@@ -87,10 +87,6 @@ export function formatCurrency(n: number): string {
   return "$0.00";
 }
 
-export function formatModelName(model: string): string {
-  return model.replace(/^claude-/, "").replace(/-(\d)$/, " $1");
-}
-
 export function formatCost(usd: number): string {
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
   return `$${usd.toFixed(2)}`;
