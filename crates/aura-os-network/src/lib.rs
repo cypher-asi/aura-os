@@ -9,5 +9,5 @@ pub use error::NetworkError;
 pub use types::{
     LeaderboardEntry, MemberUsageStats, NetworkAgent, NetworkComment, NetworkFeedEvent,
     NetworkFollow, NetworkOrg, NetworkOrgInvite, NetworkOrgMember, NetworkProfile, NetworkProject,
-    NetworkUser, PlatformStats, UsageStats,
+    NetworkUser, PlatformStats, UpdateProjectRequest, UsageStats,
 };
