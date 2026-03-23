@@ -13,7 +13,7 @@ fn get_auth_session(state: &AppState) -> Result<ZeroAuthSession, (StatusCode, Js
         .store
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("not authenticated"))?;
-    serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))
+    serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))
 }
 
 fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>) {
@@ -38,7 +38,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
                 details: Some(e.to_string()),
             }))
         }
-        _ => ApiError::internal(e.to_string()),
+        _ => ApiError::internal(format!("billing operation failed: {e}")),
     }
 }
 

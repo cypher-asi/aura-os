@@ -28,7 +28,7 @@ pub async fn list_orbit_repos(
         .orbit_client
         .list_repos(base_url, &jwt, query.q.as_deref())
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing orbit repos: {e}")))?;
 
     let repos_with_url: Vec<aura_os_orbit::OrbitRepo> = repos
         .into_iter()
@@ -80,7 +80,7 @@ pub async fn get_project_orbit_collaborators(
         .orbit_client
         .list_collaborators(base_url, owner, repo, &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing orbit collaborators: {e}")))?;
 
     Ok(axum::Json(collaborators))
 }

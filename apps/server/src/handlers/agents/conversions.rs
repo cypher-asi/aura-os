@@ -22,7 +22,7 @@ pub(crate) fn get_user_id(state: &AppState) -> Result<String, (StatusCode, Json<
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("not authenticated"))?;
     let session: ZeroAuthSession =
-        serde_json::from_slice(&session_bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        serde_json::from_slice(&session_bytes).map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
     Ok(session.user_id)
 }
 

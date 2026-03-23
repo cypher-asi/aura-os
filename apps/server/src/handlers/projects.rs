@@ -98,7 +98,7 @@ async fn create_project_impl(
         .create_project(input)
         .map_err(|e| match &e {
             aura_os_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("creating project: {e}")),
         })?;
     Ok((StatusCode::CREATED, Json(project)))
 }
@@ -204,14 +204,14 @@ pub async fn list_projects(
         let projects = state
             .project_service
             .list_projects_by_org(org_id)
-            .map_err(|e| ApiError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(format!("listing projects by org: {e}")))?;
         return Ok(Json(projects));
     }
 
     let projects = state
         .project_service
         .list_projects()
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing projects: {e}")))?;
     Ok(Json(projects))
 }
 
@@ -236,7 +236,7 @@ pub async fn get_project(
         .get_project(&project_id)
         .map_err(|e| match &e {
             aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("fetching project: {e}")),
         })?;
     Ok(Json(project))
 }
@@ -261,7 +261,7 @@ pub async fn update_project(
         .map_err(|e| match &e {
             aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
             aura_os_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("updating project: {e}")),
         })?;
 
     if let Some(client) = &state.network_client {
@@ -302,7 +302,7 @@ pub async fn delete_project(
         .get_project(&project_id)
         .map_err(|e| match &e {
             aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("verifying project exists: {e}")),
         })?;
 
     // Delete remotely first so that a rejection (e.g. project has agent
@@ -318,7 +318,7 @@ pub async fn delete_project(
     state
         .project_service
         .delete_project(&project_id)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("deleting project: {e}")))?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -332,7 +332,7 @@ pub async fn archive_project(
         .archive_project(&project_id)
         .map_err(|e| match &e {
             aura_os_projects::ProjectError::NotFound(_) => ApiError::not_found("project not found"),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("archiving project: {e}")),
         })?;
     Ok(Json(project))
 }

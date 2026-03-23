@@ -10,6 +10,6 @@ pub async fn get_api_key_info(State(state): State<AppState>) -> ApiResult<Json<A
     let info = state
         .settings_service
         .get_api_key_info()
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("fetching api key info: {e}")))?;
     Ok(Json(info))
 }

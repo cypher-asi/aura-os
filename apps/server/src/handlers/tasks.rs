@@ -26,7 +26,7 @@ pub async fn list_tasks(
     let storage_tasks = storage
         .list_tasks(&project_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing tasks: {e}")))?;
     let mut tasks: Vec<Task> = storage_tasks
         .into_iter()
         .filter_map(|s| storage_task_to_task(s).ok())
@@ -44,7 +44,7 @@ pub async fn list_tasks_by_spec(
     let storage_tasks = storage
         .list_tasks(&project_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing tasks by spec: {e}")))?;
     let mut tasks: Vec<Task> = storage_tasks
         .into_iter()
         .filter_map(|s| storage_task_to_task(s).ok())
@@ -66,13 +66,13 @@ pub async fn extract_tasks(
         .swarm_client
         .install("task-extract", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing task extraction agent: {e}")))?;
 
     let mut rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to task extraction events: {e}")))?;
 
     while let Some(event) = rx.recv().await {
         match event.event_type.as_str() {
@@ -113,14 +113,14 @@ pub async fn transition_task(
             aura_os_storage::StorageError::Server { status: 404, .. } => {
                 ApiError::not_found("task not found")
             }
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("fetching task for transition: {e}")),
         })?;
     let task = storage_task_to_task(current).map_err(ApiError::internal)?;
     TaskService::validate_transition(task.status, req.new_status)
-        .map_err(|e| ApiError::bad_request(e.to_string()))?;
+        .map_err(|e| ApiError::bad_request(format!("validating task transition: {e}")))?;
 
     let status_str = serde_json::to_value(req.new_status)
-        .map_err(|e| ApiError::internal(e.to_string()))?
+        .map_err(|e| ApiError::internal(format!("serializing task status: {e}")))?
         .as_str()
         .unwrap_or("pending")
         .to_string();
@@ -139,13 +139,13 @@ pub async fn transition_task(
             aura_os_storage::StorageError::Server { status: 400, body } => {
                 ApiError::bad_request(body.clone())
             }
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("transitioning task: {e}")),
         })?;
 
     let updated = storage
         .get_task(&task_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("fetching updated task: {e}")))?;
     let task = storage_task_to_task(updated).map_err(ApiError::internal)?;
     Ok(Json(task))
 }
@@ -164,11 +164,11 @@ pub async fn retry_task(
             aura_os_storage::StorageError::Server { status: 404, .. } => {
                 ApiError::not_found("task not found")
             }
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("fetching task for retry: {e}")),
         })?;
     let task = storage_task_to_task(current).map_err(ApiError::internal)?;
     TaskService::validate_transition(task.status, TaskStatus::Ready)
-        .map_err(|e| ApiError::bad_request(e.to_string()))?;
+        .map_err(|e| ApiError::bad_request(format!("validating task retry: {e}")))?;
 
     storage
         .transition_task(
@@ -186,13 +186,13 @@ pub async fn retry_task(
             aura_os_storage::StorageError::Server { status: 400, body } => {
                 ApiError::bad_request(body.clone())
             }
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("retrying task: {e}")),
         })?;
 
     let updated = storage
         .get_task(&task_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("fetching retried task: {e}")))?;
     let task = storage_task_to_task(updated).map_err(ApiError::internal)?;
     Ok(Json(task))
 }

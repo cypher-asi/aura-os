@@ -30,7 +30,7 @@ fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
         } else {
             message.clone()
         }),
-        _ => ApiError::internal(e.to_string()),
+        _ => ApiError::internal(format!("authentication failed: {e}")),
     }
 }
 
@@ -105,7 +105,7 @@ pub async fn get_access_token(
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("no active session"))?;
     let session: ZeroAuthSession =
-        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
     Ok(Json(AccessTokenResponse {
         access_token: session.access_token,
     }))
@@ -132,7 +132,7 @@ pub async fn get_jwt_issuer(State(state): State<AppState>) -> ApiResult<Json<Jwt
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("no active session"))?;
     let session: ZeroAuthSession =
-        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
+        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session for jwt issuer: {e}")))?;
     let token = session.access_token.trim();
     let parts: Vec<&str> = token.split('.').collect();
     let payload_b64 = parts

@@ -161,13 +161,13 @@ pub async fn send_agent_message_stream(
         .swarm_client
         .install("chat", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing agent chat agent: {e}")))?;
 
     let events_rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to agent chat events: {e}")))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
         .map(|evt| super::super::sse::automaton_event_to_sse(&evt));
@@ -231,13 +231,13 @@ pub async fn send_message_stream(
         .swarm_client
         .install("chat", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing instance chat agent: {e}")))?;
 
     let events_rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to instance chat events: {e}")))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
         .map(|evt| super::super::sse::automaton_event_to_sse(&evt));

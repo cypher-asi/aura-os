@@ -24,7 +24,7 @@ pub async fn create_agent_instance(
         .await
         .map_err(|e| match &e {
             aura_os_agents::AgentError::NotFound => ApiError::not_found("agent template not found"),
-            _ => ApiError::internal(e.to_string()),
+            _ => ApiError::internal(format!("looking up agent template: {e}")),
         })?;
 
     let req = aura_os_storage::CreateProjectAgentRequest {
@@ -116,7 +116,7 @@ pub async fn update_agent_instance(
             .unwrap_or(AgentStatus::Idle);
 
         AgentInstanceService::validate_transition(current, target)
-            .map_err(|e| ApiError::bad_request(e.to_string()))?;
+            .map_err(|e| ApiError::bad_request(format!("validating agent status transition: {e}")))?;
 
         let req = aura_os_storage::UpdateProjectAgentRequest {
             status: status_str.clone(),

@@ -36,7 +36,7 @@ pub async fn start_loop(
         .swarm_client
         .install("dev-loop", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing dev loop agent: {e}")))?;
 
     info!(
         %project_id,
@@ -105,7 +105,7 @@ pub async fn pause_loop(
             .swarm_client
             .pause(automaton_id)
             .await
-            .map_err(|e| ApiError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(format!("pausing dev loop: {e}")))?;
     }
 
     let active_agent_instances = {
@@ -148,7 +148,7 @@ pub async fn stop_loop(
             .swarm_client
             .stop(automaton_id)
             .await
-            .map_err(|e| ApiError::internal(e.to_string()))?;
+            .map_err(|e| ApiError::internal(format!("stopping dev loop: {e}")))?;
         reg.remove(aiid);
     }
 
@@ -226,7 +226,7 @@ pub async fn run_single_task(
         .swarm_client
         .install("task-run", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing single task runner: {e}")))?;
 
     // Forward events to broadcast in background
     if let Ok(mut events_rx) = state.swarm_client.events(&resp.automaton_id).await {

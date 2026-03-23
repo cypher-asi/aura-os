@@ -22,7 +22,7 @@ pub async fn list_specs(
     let storage_specs = storage
         .list_specs(&project_id.to_string(), &jwt)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("listing specs: {e}")))?;
     let mut specs: Vec<Spec> = storage_specs
         .into_iter()
         .filter_map(|s| Spec::try_from(s).ok())
@@ -44,13 +44,13 @@ pub async fn generate_specs_summary(
         .swarm_client
         .install("spec-summary", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing spec summary agent: {e}")))?;
 
     let mut rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to spec summary events: {e}")))?;
 
     while let Some(event) = rx.recv().await {
         match event.event_type.as_str() {
@@ -89,7 +89,7 @@ pub async fn get_spec(
                 aura_os_storage::StorageError::Server { status: 404, .. } => {
                     ApiError::not_found("spec not found")
                 }
-                _ => ApiError::internal(e.to_string()),
+                _ => ApiError::internal(format!("fetching spec: {e}")),
             })?;
     let spec = Spec::try_from(storage_spec).map_err(ApiError::internal)?;
     Ok(Json(spec))
@@ -110,13 +110,13 @@ pub async fn generate_specs(
         .swarm_client
         .install("spec-gen", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing spec generation agent: {e}")))?;
 
     let mut rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to spec generation events: {e}")))?;
 
     while let Some(event) = rx.recv().await {
         match event.event_type.as_str() {
@@ -167,13 +167,13 @@ pub async fn generate_specs_stream(
         .swarm_client
         .install("spec-gen", config)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("installing streaming spec generation agent: {e}")))?;
 
     let events_rx = state
         .swarm_client
         .events(&resp.automaton_id)
         .await
-        .map_err(|e| ApiError::internal(e.to_string()))?;
+        .map_err(|e| ApiError::internal(format!("subscribing to streaming spec generation events: {e}")))?;
 
     let stream = UnboundedReceiverStream::new(events_rx)
         .map(|evt| super::sse::automaton_event_to_sse(&evt));

@@ -112,7 +112,7 @@ impl From<NetworkOrgInvite> for InviteResponse {
 fn map_org_err(e: aura_os_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
     match &e {
         aura_os_orgs::OrgError::NotFound(_) => ApiError::not_found("org not found"),
-        _ => ApiError::internal(e.to_string()),
+        _ => ApiError::internal(format!("org operation failed: {e}")),
     }
 }
 
