@@ -87,7 +87,7 @@ struct DecodedContent {
     text: String,
     content_blocks: Option<Vec<ChatContentBlock>>,
     thinking: Option<String>,
-    thinking_duration_ms: Option<u64>,
+    thinking_duration_ms: Option<i64>,
 }
 
 /// Decode a stored message content string into structured parts.
@@ -111,7 +111,7 @@ fn decode_message_content(raw: &str) -> DecodedContent {
                 .map(String::from);
             let thinking_duration_ms = map
                 .get("thinking_duration_ms")
-                .and_then(|v| v.as_u64());
+                .and_then(|v| v.as_i64());
             return DecodedContent {
                 text,
                 content_blocks,
@@ -152,15 +152,26 @@ pub(crate) fn storage_message_to_message(sm: &StorageMessage) -> Message {
     let raw_content = sm.content.as_deref().unwrap_or_default();
     let decoded = decode_message_content(raw_content);
 
+    let thinking = sm.thinking.clone().or(decoded.thinking);
+    let thinking_duration_ms = sm
+        .thinking_duration_ms
+        .or(decoded.thinking_duration_ms)
+        .and_then(|v| u64::try_from(v).ok());
+    let content_blocks = sm
+        .content_blocks
+        .as_ref()
+        .and_then(|vals| serde_json::from_value::<Vec<ChatContentBlock>>(serde_json::Value::Array(vals.clone())).ok())
+        .or(decoded.content_blocks);
+
     Message {
         message_id,
         agent_instance_id,
         project_id,
         role,
         content: decoded.text,
-        content_blocks: decoded.content_blocks,
-        thinking: decoded.thinking,
-        thinking_duration_ms: decoded.thinking_duration_ms,
+        content_blocks,
+        thinking,
+        thinking_duration_ms,
         created_at: parse_dt(&sm.created_at),
     }
 }

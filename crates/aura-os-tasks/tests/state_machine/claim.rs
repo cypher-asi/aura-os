@@ -99,6 +99,7 @@ async fn claim_ordering_multi_spec() {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec B".into(),
+                org_id: None,
                 order_index: Some(1),
                 markdown_contents: None,
             },
@@ -111,6 +112,7 @@ async fn claim_ordering_multi_spec() {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec A".into(),
+                org_id: None,
                 order_index: Some(0),
                 markdown_contents: None,
             },

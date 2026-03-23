@@ -30,6 +30,7 @@ pub(crate) async fn create_agent_instance(
     let req = aura_os_storage::CreateProjectAgentRequest {
         agent_id: body.agent_id.to_string(),
         name: agent.name.clone(),
+        org_id: None,
         role: Some(agent.role.clone()),
         personality: Some(agent.personality.clone()),
         system_prompt: Some(agent.system_prompt.clone()),

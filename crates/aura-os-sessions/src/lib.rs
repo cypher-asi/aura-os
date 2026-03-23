@@ -105,6 +105,7 @@ impl SessionService {
             let jwt = self.get_jwt()?;
             let req = aura_os_storage::CreateSessionRequest {
                 project_id: project_id.to_string(),
+                org_id: None,
                 status: Some("active".to_string()),
                 context_usage_estimate: Some(0.0),
                 summary_of_previous_context: if summary.is_empty() {

@@ -432,6 +432,7 @@ impl TaskService {
         let req = aura_os_storage::CreateTaskRequest {
             spec_id: originating_task.spec_id.to_string(),
             title: title.clone(),
+            org_id: None,
             description: Some(description),
             status: Some(status.to_string()),
             order_index: Some((originating_task.order_index + 1) as i32),

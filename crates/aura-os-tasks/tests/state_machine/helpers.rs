@@ -36,6 +36,7 @@ pub(crate) async fn setup() -> TestCtx {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec A".into(),
+                org_id: None,
                 order_index: Some(0),
                 markdown_contents: None,
             },
@@ -74,6 +75,7 @@ pub(crate) async fn create_task(params: CreateTestTask<'_>) -> String {
             &aura_os_storage::CreateTaskRequest {
                 spec_id: params.spec_id.into(),
                 title: params.title.into(),
+                org_id: None,
                 description: Some(format!("Desc for {}", params.title)),
                 status: Some(params.status.into()),
                 order_index: Some(params.order_index),

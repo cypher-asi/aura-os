@@ -24,6 +24,7 @@ async fn create_session_handler(
         id: SessionId::new().to_string(),
         project_agent_id: Some(project_agent_id),
         project_id: Some(req.project_id),
+        org_id: req.org_id,
         status: req.status.or(Some("active".to_string())),
         context_usage_estimate: req.context_usage_estimate,
         summary_of_previous_context: req.summary_of_previous_context,

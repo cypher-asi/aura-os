@@ -11,6 +11,8 @@ pub struct StorageProjectAgent {
     #[serde(default)]
     pub project_id: Option<String>,
     #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
     pub agent_id: Option<String>,
     #[serde(default)]
     pub name: Option<String>,
@@ -46,6 +48,8 @@ pub struct CreateProjectAgentRequest {
     pub agent_id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub personality: Option<String>,
@@ -76,6 +80,8 @@ pub struct StorageSpec {
     #[serde(default)]
     pub project_id: Option<String>,
     #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
     pub title: Option<String>,
     #[serde(default)]
     pub order_index: Option<i32>,
@@ -91,6 +97,8 @@ pub struct StorageSpec {
 #[serde(rename_all = "camelCase")]
 pub struct CreateSpecRequest {
     pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub order_index: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -130,6 +138,8 @@ pub struct StorageTask {
     #[serde(default)]
     pub project_id: Option<String>,
     #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
     pub spec_id: Option<String>,
     #[serde(default)]
     pub title: Option<String>,
@@ -166,6 +176,8 @@ pub struct StorageTask {
 pub struct CreateTaskRequest {
     pub spec_id: String,
     pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -222,6 +234,8 @@ pub struct StorageSession {
     #[serde(default)]
     pub project_id: Option<String>,
     #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
     pub status: Option<String>,
     #[serde(default)]
     pub context_usage_estimate: Option<f64>,
@@ -241,6 +255,8 @@ pub struct StorageSession {
 #[serde(rename_all = "camelCase")]
 pub struct CreateSessionRequest {
     pub project_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -277,19 +293,23 @@ pub struct StorageMessage {
     #[serde(default)]
     pub project_id: Option<String>,
     #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default)]
+    pub created_by: Option<String>,
+    #[serde(default)]
     pub role: Option<String>,
     #[serde(default)]
     pub content: Option<String>,
     #[serde(default)]
     pub content_blocks: Option<Vec<serde_json::Value>>,
     #[serde(default)]
-    pub input_tokens: Option<u64>,
+    pub input_tokens: Option<i64>,
     #[serde(default)]
-    pub output_tokens: Option<u64>,
+    pub output_tokens: Option<i64>,
     #[serde(default)]
     pub thinking: Option<String>,
     #[serde(default)]
-    pub thinking_duration_ms: Option<u64>,
+    pub thinking_duration_ms: Option<i64>,
     #[serde(default)]
     pub created_at: Option<String>,
 }
@@ -302,15 +322,19 @@ pub struct CreateMessageRequest {
     pub role: String,
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content_blocks: Option<Vec<serde_json::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_tokens: Option<u64>,
+    pub input_tokens: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_tokens: Option<u64>,
+    pub output_tokens: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_duration_ms: Option<u64>,
+    pub thinking_duration_ms: Option<i64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -324,6 +348,8 @@ pub struct StorageLogEntry {
     pub id: Option<String>,
     #[serde(default)]
     pub project_id: Option<String>,
+    #[serde(default)]
+    pub org_id: Option<String>,
     #[serde(default)]
     pub level: Option<String>,
     #[serde(default)]
@@ -340,5 +366,54 @@ pub struct CreateLogEntryRequest {
     pub level: String,
     pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<serde_json::Value>,
+}
+
+// ---------------------------------------------------------------------------
+// Session Event types
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageSessionEvent {
+    pub id: String,
+    #[serde(default)]
+    pub session_id: Option<String>,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub agent_id: Option<String>,
+    #[serde(default)]
+    pub sender: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub org_id: Option<String>,
+    #[serde(default, rename = "type")]
+    pub event_type: Option<String>,
+    #[serde(default)]
+    pub content: Option<serde_json::Value>,
+    #[serde(default)]
+    pub created_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSessionEventRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sender: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(rename = "type")]
+    pub event_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<serde_json::Value>,
 }

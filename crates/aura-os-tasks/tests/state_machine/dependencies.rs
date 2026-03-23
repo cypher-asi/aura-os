@@ -27,6 +27,7 @@ async fn dependency_promotion_on_completion() {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec".into(),
+                org_id: None,
                 order_index: Some(0),
                 markdown_contents: None,
             },
@@ -148,6 +149,7 @@ async fn initial_readiness_promotes_all_satisfiable() {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec".into(),
+                org_id: None,
                 order_index: Some(0),
                 markdown_contents: None,
             },
@@ -236,6 +238,7 @@ async fn concurrent_claims_produce_different_tasks() {
             &jwt,
             &aura_os_storage::CreateSpecRequest {
                 title: "Spec".into(),
+                org_id: None,
                 order_index: Some(0),
                 markdown_contents: None,
             },
