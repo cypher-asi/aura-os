@@ -22,7 +22,7 @@ pub fn open_ide_window<E: 'static>(
     root_path: Option<&str>,
     icon: Option<Icon>,
     make_ipc: impl FnOnce(WindowId) -> Box<dyn Fn(wry::http::Request<String>) + 'static>,
-) -> (Window, WebView) {
+) -> Result<(Window, WebView), Box<dyn std::error::Error>> {
     let filename = filename_from_path(file_path);
     let title = format!("{filename} \u{2014} AURA IDE");
 
@@ -36,7 +36,7 @@ pub fn open_ide_window<E: 'static>(
         wb = wb.with_window_icon(Some(ic));
     }
 
-    let window = wb.build(event_loop).expect("failed to build IDE window");
+    let window = wb.build(event_loop)?;
     let ipc = make_ipc(window.id());
 
     let encoded_path = urlencoding::encode(file_path);
@@ -62,8 +62,7 @@ pub fn open_ide_window<E: 'static>(
             let _ = open::that(&uri);
             wry::NewWindowResponse::Deny
         })
-        .build(&window)
-        .expect("failed to build IDE webview");
+        .build(&window)?;
 
-    (window, webview)
+    Ok((window, webview))
 }

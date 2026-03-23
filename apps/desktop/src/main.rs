@@ -163,7 +163,8 @@ fn spawn_server(
         rt.block_on(async move {
             let update_state = UpdateState::new(UpdateChannel::Stable);
 
-            let app_state = aura_os_server::build_app_state(&db_path);
+            let app_state = aura_os_server::build_app_state(&db_path)
+                .expect("failed to open database");
             let app = aura_os_server::create_router_with_frontend(app_state, frontend_dir)
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
@@ -417,22 +418,28 @@ fn main() {
                     root_path,
                 } => {
                     let p = proxy.clone();
-                    let (win, wv) = aura_os_ide::open_ide_window(
+                    match aura_os_ide::open_ide_window(
                         elwt,
                         &base_url,
                         &file_path,
                         root_path.as_deref(),
                         Some(icon_data.to_icon()),
                         move |wid| Box::new(ipc_handler(p, wid)),
-                    );
-                    let ide_wid = win.id();
-                    ide_windows.insert(ide_wid, (win, wv));
-                    let fallback_proxy = proxy.clone();
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_millis(500));
-                        let _ =
-                            fallback_proxy.send_event(UserEvent::ShowWindow { window_id: ide_wid });
-                    });
+                    ) {
+                        Ok((win, wv)) => {
+                            let ide_wid = win.id();
+                            ide_windows.insert(ide_wid, (win, wv));
+                            let fallback_proxy = proxy.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_millis(500));
+                                let _ = fallback_proxy
+                                    .send_event(UserEvent::ShowWindow { window_id: ide_wid });
+                            });
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, "failed to open IDE window");
+                        }
+                    }
                 }
                 UserEvent::ShowWindow { window_id } => {
                     if window_id == main_window_id {

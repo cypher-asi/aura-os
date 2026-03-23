@@ -16,7 +16,7 @@ use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_settings::SettingsService;
 use aura_os_storage::StorageClient;
-use aura_os_store::RocksStore;
+use aura_os_store::{RocksStore, StoreError};
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
@@ -65,12 +65,12 @@ fn env_opt(key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|s| !s.trim().is_empty())
 }
 
-pub fn build_app_state(db_path: &Path) -> AppState {
+pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let data_dir = db_path
         .parent()
         .map(Path::to_path_buf)
         .unwrap_or_else(|| Path::new(".").to_path_buf());
-    let store = Arc::new(RocksStore::open(db_path).expect("failed to open RocksDB"));
+    let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
 
@@ -121,7 +121,7 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         );
     }
 
-    AppState {
+    Ok(AppState {
         data_dir,
         store,
         org_service,
@@ -146,5 +146,5 @@ pub fn build_app_state(db_path: &Path) -> AppState {
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true),
-    }
+    })
 }

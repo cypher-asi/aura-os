@@ -35,7 +35,7 @@ async fn main() {
     std::fs::create_dir_all(&data_dir).expect("failed to create data directory");
 
     let db_path = data_dir.join("db");
-    let state = aura_os_server::build_app_state(&db_path);
+    let state = aura_os_server::build_app_state(&db_path).expect("failed to open database");
 
     let frontend_dir = find_frontend_dir();
     if let Some(ref dir) = frontend_dir {
