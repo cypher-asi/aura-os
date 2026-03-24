@@ -1,4 +1,5 @@
 mod app_builder;
+mod auth_guard;
 pub(crate) mod channel_ext;
 pub(crate) mod dto;
 pub(crate) mod error;

@@ -95,11 +95,6 @@ impl AppState {
             .map_err(|_| ApiError::unauthorized("no active session"))?;
         let session: ZeroAuthSession =
             serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
-
-        if self.require_zero_pro && !session.is_zero_pro {
-            return Err(ApiError::forbidden("ZERO Pro subscription required"));
-        }
-
         Ok(session)
     }
 

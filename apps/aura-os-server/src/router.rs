@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use axum::http::HeaderValue;
+use axum::middleware;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use tower::ServiceBuilder;
@@ -21,8 +22,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let api_router = Router::new()
-        .merge(auth_routes())
+    let protected_api_router = Router::new()
         .merge(user_routes())
         .merge(org_routes())
         .merge(billing_routes())
@@ -32,6 +32,14 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .merge(agent_routes())
         .merge(social_routes())
         .merge(system_routes())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            crate::auth_guard::require_verified_session,
+        ));
+
+    let api_router = Router::new()
+        .merge(auth_routes())
+        .merge(protected_api_router)
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
