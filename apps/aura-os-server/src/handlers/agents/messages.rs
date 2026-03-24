@@ -14,7 +14,7 @@ use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, Session
 use aura_os_storage::StorageClient;
 
 use crate::dto::SendMessageRequest;
-use crate::error::{ApiError, ApiResult};
+use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
 
@@ -303,13 +303,15 @@ async fn collect_session_messages(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     sessions: &[aura_os_storage::StorageSession],
-) -> Vec<Message> {
+) -> MessageCollectOutcome {
     let msg_futs: Vec<_> = sessions
         .iter()
         .map(|s| storage.list_messages(&s.id, jwt, None, None))
         .collect();
     let msg_results: Vec<Result<Vec<aura_os_storage::StorageMessage>, _>> = join_all(msg_futs).await;
     let mut messages = Vec::new();
+    let mut failed_sessions = 0usize;
+    let mut first_error: Option<aura_os_storage::StorageError> = None;
     for (result, session) in msg_results.into_iter().zip(sessions.iter()) {
         match result {
             Ok(session_msgs) => {
@@ -321,34 +323,113 @@ async fn collect_session_messages(
                 }
             }
             Err(e) => {
+                failed_sessions += 1;
                 tracing::debug!(session_id = %session.id, error = %e, "Failed to list session messages");
+                if first_error.is_none() {
+                    first_error = Some(e);
+                }
             }
         }
     }
-    messages
+    MessageCollectOutcome {
+        messages,
+        total_sessions: sessions.len(),
+        failed_sessions,
+        first_error,
+    }
+}
+
+struct MessageCollectOutcome {
+    messages: Vec<Message>,
+    total_sessions: usize,
+    failed_sessions: usize,
+    first_error: Option<aura_os_storage::StorageError>,
+}
+
+impl MessageCollectOutcome {
+    fn all_failed(&self) -> bool {
+        self.total_sessions > 0 && self.failed_sessions == self.total_sessions
+    }
+}
+
+struct SessionFetchOutcome {
+    sessions: Vec<aura_os_storage::StorageSession>,
+    total_agents: usize,
+    failed_agents: usize,
+    first_error: Option<aura_os_storage::StorageError>,
+}
+
+impl SessionFetchOutcome {
+    fn all_failed(&self) -> bool {
+        self.total_agents > 0 && self.failed_agents == self.total_agents
+    }
 }
 
 async fn fetch_all_sessions(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     agents: &[aura_os_storage::StorageProjectAgent],
-) -> Vec<aura_os_storage::StorageSession> {
+) -> SessionFetchOutcome {
     let futs: Vec<_> = agents
         .iter()
         .map(|pa| storage.list_sessions(&pa.id, jwt))
         .collect();
     let results: Vec<Result<Vec<aura_os_storage::StorageSession>, _>> = join_all(futs).await;
-    results
-        .into_iter()
-        .zip(agents.iter())
-        .flat_map(|(result, agent)| match result {
+    let mut sessions = Vec::new();
+    let mut failed_agents = 0usize;
+    let mut first_error: Option<aura_os_storage::StorageError> = None;
+
+    for (result, agent) in results.into_iter().zip(agents.iter()) {
+        match result {
             Ok(sessions) => sessions,
             Err(e) => {
+                failed_agents += 1;
                 warn!(project_agent_id = %agent.id, error = %e, "Failed to list sessions");
+                if first_error.is_none() {
+                    first_error = Some(e);
+                }
                 Vec::new()
             }
-        })
-        .collect()
+        }
+        .into_iter()
+        .for_each(|session| sessions.push(session));
+    }
+
+    SessionFetchOutcome {
+        sessions,
+        total_agents: agents.len(),
+        failed_agents,
+        first_error,
+    }
+}
+
+async fn aggregate_agent_messages_from_storage_result(
+    state: &AppState,
+    agent_id: &AgentId,
+) -> Result<Vec<Message>, aura_os_storage::StorageError> {
+    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
+        return Ok(Vec::new());
+    };
+    let agent_id_str = agent_id.to_string();
+    let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
+    let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
+
+    if sessions_outcome.all_failed() {
+        if let Some(err) = sessions_outcome.first_error {
+            return Err(err);
+        }
+    }
+
+    let mut message_outcome = collect_session_messages(storage, &jwt, &sessions_outcome.sessions).await;
+    if message_outcome.all_failed() {
+        if let Some(err) = message_outcome.first_error {
+            return Err(err);
+        }
+    }
+    message_outcome
+        .messages
+        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    Ok(message_outcome.messages)
 }
 
 async fn load_project_chat_history(
@@ -362,9 +443,9 @@ async fn load_project_chat_history(
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
         .unwrap_or_default();
-    let mut messages = collect_session_messages(storage, &jwt, &sessions).await;
-    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    messages
+    let mut outcome = collect_session_messages(storage, &jwt, &sessions).await;
+    outcome.messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    outcome.messages
 }
 
 /// Aggregate agent-level messages from aura-storage (all project-agents for
@@ -373,15 +454,13 @@ pub(crate) async fn aggregate_agent_messages_from_storage(
     state: &AppState,
     agent_id: &AgentId,
 ) -> Vec<Message> {
-    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
-        return Vec::new();
-    };
-    let agent_id_str = agent_id.to_string();
-    let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
-    let sessions = fetch_all_sessions(storage, &jwt, &matching).await;
-    let mut messages = collect_session_messages(storage, &jwt, &sessions).await;
-    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    messages
+    match aggregate_agent_messages_from_storage_result(state, agent_id).await {
+        Ok(messages) => messages,
+        Err(e) => {
+            warn!(error = %e, %agent_id, "failed to aggregate agent messages from storage");
+            Vec::new()
+        }
+    }
 }
 
 pub(crate) async fn list_agent_messages(
@@ -390,7 +469,9 @@ pub(crate) async fn list_agent_messages(
 ) -> ApiResult<Json<Vec<Message>>> {
     let _ = state.require_storage_client()?;
     let _ = state.get_jwt()?;
-    let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
+    let messages = aggregate_agent_messages_from_storage_result(&state, &agent_id)
+        .await
+        .map_err(map_storage_error)?;
     Ok(Json(messages))
 }
 
@@ -538,14 +619,19 @@ pub(crate) async fn list_messages(
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
-        .unwrap_or_else(|e| {
-            warn!(agent_instance_id = %agent_instance_id, error = %e, "failed to list sessions");
-            Vec::new()
-        });
+        .map_err(map_storage_error)?;
 
-    let mut messages = collect_session_messages(&storage, &jwt, &sessions).await;
-    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    Ok(Json(messages))
+    let mut outcome = collect_session_messages(&storage, &jwt, &sessions).await;
+    if outcome.all_failed() {
+        if let Some(err) = outcome.first_error {
+            return Err(map_storage_error(err));
+        }
+    }
+
+    outcome
+        .messages
+        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    Ok(Json(outcome.messages))
 }
 
 pub(crate) async fn send_message_stream(
