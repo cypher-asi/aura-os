@@ -45,6 +45,17 @@
   text-align: center;
 }
 
+/* Queue section — sits above the input area */
+.queueSection {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  padding: 0 calc(var(--space-3) + 60px);
+  pointer-events: auto;
+}
+
 /* Input area — floats over messages with fade-to-dark gradient */
 .inputWrapper {
   position: absolute;
