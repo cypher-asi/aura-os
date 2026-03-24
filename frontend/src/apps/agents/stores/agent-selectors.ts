@@ -3,12 +3,12 @@ import { useShallow } from "zustand/react/shallow";
 import { useAgentStore } from "./agent-store";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import type { Agent } from "../../../types";
-import type { DisplayMessage } from "../../../types/stream";
+import type { DisplaySessionEvent } from "../../../types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
-const EMPTY_MESSAGES: DisplayMessage[] = [];
-const IDLE_HISTORY = { messages: EMPTY_MESSAGES, status: "idle" as const, error: null };
+const EMPTY_EVENTS: DisplaySessionEvent[] = [];
+const IDLE_HISTORY = { events: EMPTY_EVENTS, status: "idle" as const, error: null };
 
 type AgentsSlice = {
   agents: Agent[];
@@ -29,7 +29,7 @@ export function useAgents(): AgentsSlice {
 }
 
 type HistorySlice = {
-  messages: DisplayMessage[];
+  events: DisplaySessionEvent[];
   status: FetchStatus;
   error: string | null;
 };
@@ -40,7 +40,7 @@ export function useAgentHistory(agentId: string | undefined): HistorySlice {
       if (!agentId) return IDLE_HISTORY;
       const entry = s.history[agentId];
       return entry
-        ? { messages: entry.messages, status: entry.status, error: entry.error }
+        ? { events: entry.events, status: entry.status, error: entry.error }
         : IDLE_HISTORY;
     }),
   );

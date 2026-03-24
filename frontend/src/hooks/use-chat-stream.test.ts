@@ -33,7 +33,7 @@ vi.mock("../stores/project-action-store", () => ({
 
 vi.mock("../api/client", () => ({
   api: {
-    sendMessageStream: vi.fn().mockResolvedValue(undefined),
+    sendEventStream: vi.fn().mockResolvedValue(undefined),
     getAgentInstance: vi.fn().mockResolvedValue({}),
   },
   isInsufficientCreditsError: vi.fn(() => false),
@@ -47,10 +47,10 @@ describe("useChatStream", () => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
     vi.clearAllMocks();
-    vi.mocked(api.sendMessageStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(api.sendEventStream).mockReset().mockResolvedValue(undefined);
   });
 
-  it("returns streamKey, sendMessage, stopStreaming, resetMessages", () => {
+  it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
     );
@@ -58,7 +58,7 @@ describe("useChatStream", () => {
     expect(result.current.streamKey).toBeTruthy();
     expect(typeof result.current.sendMessage).toBe("function");
     expect(typeof result.current.stopStreaming).toBe("function");
-    expect(typeof result.current.resetMessages).toBe("function");
+    expect(typeof result.current.resetEvents).toBe("function");
   });
 
   it("does nothing when projectId is undefined", async () => {
@@ -70,7 +70,7 @@ describe("useChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(api.sendMessageStream).not.toHaveBeenCalled();
+    expect(api.sendEventStream).not.toHaveBeenCalled();
   });
 
   it("does nothing when agentInstanceId is undefined", async () => {
@@ -82,7 +82,7 @@ describe("useChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(api.sendMessageStream).not.toHaveBeenCalled();
+    expect(api.sendEventStream).not.toHaveBeenCalled();
   });
 
   it("sends a message and creates a user message", async () => {
@@ -94,10 +94,10 @@ describe("useChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(api.sendMessageStream).toHaveBeenCalled();
+    expect(api.sendEventStream).toHaveBeenCalled();
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    expect(entry.messages[0].role).toBe("user");
-    expect(entry.messages[0].content).toBe("hello");
+    expect(entry.events[0].role).toBe("user");
+    expect(entry.events[0].content).toBe("hello");
   });
 
   it("does nothing for empty content without action", async () => {
@@ -109,7 +109,7 @@ describe("useChatStream", () => {
       await result.current.sendMessage("   ");
     });
 
-    expect(api.sendMessageStream).not.toHaveBeenCalled();
+    expect(api.sendEventStream).not.toHaveBeenCalled();
   });
 
   it("sets streaming agent instance ID during send", async () => {
@@ -138,7 +138,7 @@ describe("useChatStream", () => {
   });
 
   it("handles stream errors gracefully", async () => {
-    vi.mocked(api.sendMessageStream).mockRejectedValue(new Error("fail"));
+    vi.mocked(api.sendEventStream).mockRejectedValue(new Error("fail"));
 
     const { result } = renderHook(() =>
       useChatStream({ projectId: "p-1", agentInstanceId: "ai-1" }),
@@ -149,12 +149,12 @@ describe("useChatStream", () => {
     });
 
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    const errorMsg = entry.messages.find((m) => m.content.includes("Error"));
+    const errorMsg = entry.events.find((m) => m.content.includes("Error"));
     expect(errorMsg).toBeTruthy();
   });
 
   it("ignores AbortError", async () => {
-    vi.mocked(api.sendMessageStream).mockRejectedValue(
+    vi.mocked(api.sendEventStream).mockRejectedValue(
       new DOMException("Aborted", "AbortError"),
     );
 
@@ -167,7 +167,7 @@ describe("useChatStream", () => {
     });
 
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    const errorMsgs = entry.messages.filter((m) => m.content.includes("Error"));
+    const errorMsgs = entry.events.filter((m) => m.content.includes("Error"));
     expect(errorMsgs).toHaveLength(0);
   });
 

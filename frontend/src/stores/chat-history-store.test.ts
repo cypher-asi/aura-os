@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Message } from "../types";
-import type { DisplayMessage } from "../types/stream";
+import type { SessionEvent } from "../types";
+import type { DisplaySessionEvent } from "../types/stream";
 
 vi.mock("../utils/build-display-messages", () => ({
-  buildDisplayMessages: (msgs: Message[]): DisplayMessage[] =>
-    msgs.map((m) => ({ id: m.message_id, role: m.role, text: m.content })) as unknown as DisplayMessage[],
+  buildDisplayEvents: (msgs: SessionEvent[]): DisplaySessionEvent[] =>
+    msgs.map((m) => ({ id: m.event_id, role: m.role, text: m.content })) as unknown as DisplaySessionEvent[],
 }));
 
 import {
@@ -13,13 +13,13 @@ import {
   projectChatHistoryKey,
 } from "./chat-history-store";
 
-function makeFetchFn(msgs: Message[] = []): () => Promise<Message[]> {
-  return vi.fn<() => Promise<Message[]>>().mockResolvedValue(msgs);
+function makeFetchFn(msgs: SessionEvent[] = []): () => Promise<SessionEvent[]> {
+  return vi.fn<() => Promise<SessionEvent[]>>().mockResolvedValue(msgs);
 }
 
-function makeMsg(id: string): Message {
+function makeMsg(id: string): SessionEvent {
   return {
-    message_id: id,
+    event_id: id,
     agent_instance_id: "ai1",
     project_id: "p1",
     role: "user",
@@ -46,12 +46,12 @@ describe("chat-history-store", () => {
 
       const entry = useChatHistoryStore.getState().entries["k1"];
       expect(entry.status).toBe("ready");
-      expect(entry.messages).toHaveLength(1);
+      expect(entry.events).toHaveLength(1);
       expect(entry.error).toBeNull();
     });
 
     it("sets error status on failure", async () => {
-      const fetchFn = vi.fn<() => Promise<Message[]>>().mockRejectedValue(new Error("boom"));
+      const fetchFn = vi.fn<() => Promise<SessionEvent[]>>().mockRejectedValue(new Error("boom"));
       await useChatHistoryStore.getState().fetchHistory("k2", fetchFn);
 
       const entry = useChatHistoryStore.getState().entries["k2"];
@@ -74,8 +74,8 @@ describe("chat-history-store", () => {
     });
 
     it("deduplicates concurrent requests for the same key", async () => {
-      let resolveP: (v: Message[]) => void;
-      const fetchFn = vi.fn<() => Promise<Message[]>>(
+      let resolveP: (v: SessionEvent[]) => void;
+      const fetchFn = vi.fn<() => Promise<SessionEvent[]>>(
         () => new Promise((r) => { resolveP = r; }),
       );
       const p1 = useChatHistoryStore.getState().fetchHistory("k5", fetchFn);

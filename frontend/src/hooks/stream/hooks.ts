@@ -1,12 +1,12 @@
 import { useStreamStore } from "./store";
-import type { DisplayMessage, ToolCallEntry, TimelineItem } from "../../types/stream";
+import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../types/stream";
 
-const EMPTY_MESSAGES: DisplayMessage[] = [];
+const EMPTY_EVENTS: DisplaySessionEvent[] = [];
 const EMPTY_TOOL_CALLS: ToolCallEntry[] = [];
 const EMPTY_TIMELINE: TimelineItem[] = [];
 
-export function useStreamMessages(key: string): DisplayMessage[] {
-  return useStreamStore((s) => s.entries[key]?.messages ?? EMPTY_MESSAGES);
+export function useStreamEvents(key: string): DisplaySessionEvent[] {
+  return useStreamStore((s) => s.entries[key]?.events ?? EMPTY_EVENTS);
 }
 
 export function useIsStreaming(key: string): boolean {

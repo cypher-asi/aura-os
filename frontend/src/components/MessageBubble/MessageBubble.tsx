@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
 import { FileText } from "lucide-react";
-import type { ArtifactRef, DisplayMessage } from "../../types/stream";
+import type { ArtifactRef, DisplaySessionEvent } from "../../types/stream";
 import { stripEmojis, normalizeMidSentenceBreaks } from "../../utils/text-normalize";
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
@@ -13,7 +13,7 @@ import { ToolCallsList } from "../ToolRow";
 import { ActivityTimeline } from "../ActivityTimeline";
 
 interface Props {
-  message: DisplayMessage;
+  message: DisplaySessionEvent;
 }
 
 function ArtifactRefsList({ refs }: { refs: ArtifactRef[] }) {

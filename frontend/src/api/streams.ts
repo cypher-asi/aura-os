@@ -124,7 +124,7 @@ export function generateSpecsStream(
 
 /* ── Chat / agent message streams ────────────────────────────────── */
 
-export function sendAgentMessageStream(
+export function sendAgentEventStream(
   agentId: string,
   content: string,
   action: string | null,
@@ -138,7 +138,7 @@ export function sendAgentMessageStream(
     body.attachments = attachments;
   }
   return streamSSE<string>(
-    `${BASE_URL}/api/agents/${agentId}/messages/stream`,
+    `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -149,7 +149,7 @@ export function sendAgentMessageStream(
   );
 }
 
-export function sendMessageStream(
+export function sendEventStream(
   projectId: ProjectId,
   agentInstanceId: string,
   content: string,
@@ -164,7 +164,7 @@ export function sendMessageStream(
     body.attachments = attachments;
   }
   return streamSSE<string>(
-    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/messages/stream`,
+    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

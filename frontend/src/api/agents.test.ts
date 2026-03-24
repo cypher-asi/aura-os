@@ -69,13 +69,13 @@ describe("agentTemplatesApi", () => {
     );
   });
 
-  it("listMessages fetches messages with signal", async () => {
-    const messages = [{ id: "m1", content: "hello" }];
-    const fetchMock = mockFetch(200, messages);
+  it("listEvents fetches events with signal", async () => {
+    const events = [{ id: "m1", content: "hello" }];
+    const fetchMock = mockFetch(200, events);
     globalThis.fetch = fetchMock;
-    const result = await agentTemplatesApi.listMessages("a1" as string);
-    expect(result).toEqual(messages);
-    expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/messages", expect.any(Object));
+    const result = await agentTemplatesApi.listEvents("a1" as string);
+    expect(result).toEqual(events);
+    expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/events", expect.any(Object));
   });
 
   it("propagates ApiClientError on failure", async () => {
@@ -137,12 +137,12 @@ describe("agentInstancesApi", () => {
     );
   });
 
-  it("getMessages fetches messages for agent instance", async () => {
+  it("getEvents fetches events for agent instance", async () => {
     const fetchMock = mockFetch(200, [{ id: "m1" }]);
     globalThis.fetch = fetchMock;
-    await agentInstancesApi.getMessages("p1" as string, "ai1" as string);
+    await agentInstancesApi.getEvents("p1" as string, "ai1" as string);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/p1/agents/ai1/messages",
+      "/api/projects/p1/agents/ai1/events",
       expect.any(Object),
     );
   });
@@ -190,12 +190,12 @@ describe("sessionsApi", () => {
     );
   });
 
-  it("listSessionMessages fetches messages for session", async () => {
+  it("listSessionEvents fetches events for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;
-    await sessionsApi.listSessionMessages("p1" as string, "ai1" as string, "s1");
+    await sessionsApi.listSessionEvents("p1" as string, "ai1" as string, "s1");
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/p1/agents/ai1/sessions/s1/messages",
+      "/api/projects/p1/agents/ai1/sessions/s1/events",
       expect.any(Object),
     );
   });

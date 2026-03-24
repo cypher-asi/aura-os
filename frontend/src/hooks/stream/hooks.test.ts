@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { useStreamStore, ensureEntry, streamMetaMap, createSetters } from "./store";
 import {
-  useStreamMessages,
+  useStreamEvents,
   useIsStreaming,
   useStreamingText,
   useThinkingText,
@@ -17,25 +17,25 @@ describe("stream/hooks", () => {
     useStreamStore.setState({ entries: {} });
   });
 
-  describe("useStreamMessages", () => {
+  describe("useStreamEvents", () => {
     it("returns empty array for missing key", () => {
-      const { result } = renderHook(() => useStreamMessages("missing"));
+      const { result } = renderHook(() => useStreamEvents("missing"));
       expect(result.current).toEqual([]);
     });
 
     it("returns messages from the store", () => {
       ensureEntry("k1");
       const setters = createSetters("k1");
-      setters.setMessages([{ id: "m1", role: "user", content: "hi" }]);
+      setters.setEvents([{ id: "m1", role: "user", content: "hi" }]);
 
-      const { result } = renderHook(() => useStreamMessages("k1"));
+      const { result } = renderHook(() => useStreamEvents("k1"));
       expect(result.current).toHaveLength(1);
       expect(result.current[0].content).toBe("hi");
     });
 
     it("returns stable reference for missing key", () => {
       const { result, rerender } = renderHook(() =>
-        useStreamMessages("missing"),
+        useStreamEvents("missing"),
       );
       const first = result.current;
       rerender();

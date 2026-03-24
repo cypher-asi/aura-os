@@ -14,14 +14,14 @@ import {
   handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
-  handleMessageSaved,
+  handleEventSaved,
   handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
   getIsStreaming,
   getThinkingDurationMs,
 } from "./use-stream-core";
-import type { DisplayMessage } from "../types/stream";
+import type { DisplaySessionEvent } from "../types/stream";
 
 interface UseAgentChatStreamOptions {
   agentId: string | undefined;
@@ -38,7 +38,7 @@ interface UseAgentChatStreamResult {
     attachments?: ChatAttachment[],
   ) => Promise<void>;
   stopStreaming: () => void;
-  resetMessages: (msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => void;
+  resetEvents: (msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => void;
 }
 
 export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAgentChatStreamOptions): UseAgentChatStreamResult {
@@ -63,13 +63,13 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const hasAttachments = attachments && attachments.length > 0;
       if (!trimmed && !action && !hasAttachments) return;
 
-      const userMsg: DisplayMessage = {
+      const userMsg: DisplaySessionEvent = {
         id: `temp-${Date.now()}`,
         role: "user",
         content: trimmed || "",
       };
 
-      core.setMessages((prev) => [...prev, userMsg]);
+      core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);
       resetStreamBuffers(refs, setters);
       refs.needsSeparator.current = false;
@@ -113,7 +113,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               onTaskSavedRef.current?.(event.content.task);
               break;
             case EventType.MessageEnd:
-              handleMessageSaved(refs, setters, event.content.message);
+              handleEventSaved(refs, setters, event.content.event);
               break;
             case EventType.AssistantMessageEnd: {
               handleAssistantTurnBoundary(refs, setters);
@@ -141,7 +141,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       };
 
       try {
-        await api.agents.sendMessageStream(
+        await api.agents.sendEventStream(
           agentId,
           userMsg.content,
           action,
@@ -164,13 +164,13 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         }
       }
     },
-    [agentId, core.key, refs, setters, abortRef, core.setMessages, core.setIsStreaming, core.setProgressText],
+    [agentId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],
   );
 
   return {
     streamKey: core.key,
     sendMessage,
     stopStreaming: core.baseStopStreaming,
-    resetMessages: core.resetMessages,
+    resetEvents: core.resetEvents,
   };
 }

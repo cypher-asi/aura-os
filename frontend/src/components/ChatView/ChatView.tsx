@@ -18,13 +18,13 @@ export function ChatView() {
     ? projectChatHistoryKey(projectId, agentInstanceId)
     : undefined;
 
-  const { messages: historyMessages, status: historyStatus } = useChatHistory(historyKey);
+  const { events: historyMessages, status: historyStatus } = useChatHistory(historyKey);
 
   const {
     streamKey,
     sendMessage,
     stopStreaming,
-    resetMessages,
+    resetEvents,
   } = useChatStream({ projectId, agentInstanceId });
   const isStreaming = useIsStreaming(streamKey);
 
@@ -32,8 +32,8 @@ export function ChatView() {
   const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
 
   const metadataLoadIdRef = useRef(0);
-  const resetMessagesRef = useRef(resetMessages);
-  useEffect(() => { resetMessagesRef.current = resetMessages; }, [resetMessages]);
+  const resetEventsRef = useRef(resetEvents);
+  useEffect(() => { resetEventsRef.current = resetEvents; }, [resetEvents]);
 
   // Fetch agent instance metadata (name)
   useEffect(() => {
@@ -94,7 +94,7 @@ export function ChatView() {
   useEffect(() => {
     if (!projectId || !agentInstanceId) {
       queueMicrotask(() => {
-        resetMessagesRef.current([], { allowWhileStreaming: true });
+        resetEventsRef.current([], { allowWhileStreaming: true });
         setContextUsagePercent(null);
       });
       return;
@@ -102,14 +102,14 @@ export function ChatView() {
     const key = projectChatHistoryKey(projectId, agentInstanceId);
     useChatHistoryStore.getState().fetchHistory(
       key,
-      () => api.getMessages(projectId, agentInstanceId),
+      () => api.getEvents(projectId, agentInstanceId),
     );
   }, [projectId, agentInstanceId]);
 
   // Sync history messages to stream store
   useEffect(() => {
     if (historyStatus !== "ready") return;
-    resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
+    resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
   }, [historyMessages, historyStatus]);
 
   const wrappedSend = useCallback(

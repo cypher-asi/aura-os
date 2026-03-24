@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { useStreamCore } from "./use-stream-core";
 import { useStreamStore, streamMetaMap, ensureEntry } from "./stream/store";
-import type { DisplayMessage } from "../types/stream";
+import type { DisplaySessionEvent } from "../types/stream";
 
 describe("useStreamCore", () => {
   beforeEach(() => {
@@ -15,9 +15,9 @@ describe("useStreamCore", () => {
     expect(result.current.key).toBe("project-1:agent-1");
     expect(result.current.refs).toBeDefined();
     expect(result.current.setters).toBeDefined();
-    expect(typeof result.current.resetMessages).toBe("function");
+    expect(typeof result.current.resetEvents).toBe("function");
     expect(typeof result.current.baseStopStreaming).toBe("function");
-    expect(typeof result.current.setMessages).toBe("function");
+    expect(typeof result.current.setEvents).toBe("function");
     expect(typeof result.current.setIsStreaming).toBe("function");
     expect(typeof result.current.setProgressText).toBe("function");
   });
@@ -28,7 +28,7 @@ describe("useStreamCore", () => {
     const entry = useStreamStore.getState().entries["k1"];
     expect(entry).toBeDefined();
     expect(entry.isStreaming).toBe(false);
-    expect(entry.messages).toEqual([]);
+    expect(entry.events).toEqual([]);
   });
 
   it("filters falsy values from key", () => {
@@ -37,75 +37,75 @@ describe("useStreamCore", () => {
     expect(result.current.key).toBe("project-1:agent-1");
   });
 
-  it("setMessages updates store", () => {
+  it("setEvents updates store", () => {
     const { result } = renderHook(() => useStreamCore(["test"]));
 
-    const msg: DisplayMessage = {
+    const msg: DisplaySessionEvent = {
       id: "m1",
       role: "user",
       content: "hello",
     };
 
     act(() => {
-      result.current.setMessages([msg]);
+      result.current.setEvents([msg]);
     });
 
     const entry = useStreamStore.getState().entries["test"];
-    expect(entry.messages).toHaveLength(1);
-    expect(entry.messages[0].content).toBe("hello");
+    expect(entry.events).toHaveLength(1);
+    expect(entry.events[0].content).toBe("hello");
   });
 
-  it("resetMessages updates store when not streaming", () => {
+  it("resetEvents updates store when not streaming", () => {
     const { result } = renderHook(() => useStreamCore(["test"]));
 
     act(() => {
-      result.current.setMessages([
+      result.current.setEvents([
         { id: "m1", role: "user", content: "hello" },
       ]);
     });
 
     act(() => {
-      result.current.resetMessages([]);
+      result.current.resetEvents([]);
     });
 
     const entry = useStreamStore.getState().entries["test"];
-    expect(entry.messages).toEqual([]);
+    expect(entry.events).toEqual([]);
   });
 
-  it("resetMessages does not update when streaming", () => {
-    const { result } = renderHook(() => useStreamCore(["test"]));
-
-    act(() => {
-      result.current.setIsStreaming(true);
-      result.current.setMessages([
-        { id: "m1", role: "user", content: "hello" },
-      ]);
-    });
-
-    act(() => {
-      result.current.resetMessages([]);
-    });
-
-    const entry = useStreamStore.getState().entries["test"];
-    expect(entry.messages).toHaveLength(1);
-  });
-
-  it("resetMessages with allowWhileStreaming bypasses guard", () => {
+  it("resetEvents does not update when streaming", () => {
     const { result } = renderHook(() => useStreamCore(["test"]));
 
     act(() => {
       result.current.setIsStreaming(true);
-      result.current.setMessages([
+      result.current.setEvents([
         { id: "m1", role: "user", content: "hello" },
       ]);
     });
 
     act(() => {
-      result.current.resetMessages([], { allowWhileStreaming: true });
+      result.current.resetEvents([]);
     });
 
     const entry = useStreamStore.getState().entries["test"];
-    expect(entry.messages).toEqual([]);
+    expect(entry.events).toHaveLength(1);
+  });
+
+  it("resetEvents with allowWhileStreaming bypasses guard", () => {
+    const { result } = renderHook(() => useStreamCore(["test"]));
+
+    act(() => {
+      result.current.setIsStreaming(true);
+      result.current.setEvents([
+        { id: "m1", role: "user", content: "hello" },
+      ]);
+    });
+
+    act(() => {
+      result.current.resetEvents([], { allowWhileStreaming: true });
+    });
+
+    const entry = useStreamStore.getState().entries["test"];
+    expect(entry.events).toEqual([]);
   });
 
   it("baseStopStreaming aborts and resets stream buffers", () => {

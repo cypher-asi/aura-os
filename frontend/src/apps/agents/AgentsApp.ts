@@ -23,7 +23,7 @@ export const AgentsApp: AuraApp = {
     if (lastId) {
       useChatHistoryStore.getState().prefetchHistory(
         agentHistoryKey(lastId),
-        () => api.agents.listMessages(lastId),
+        () => api.agents.listEvents(lastId),
       );
     }
   },

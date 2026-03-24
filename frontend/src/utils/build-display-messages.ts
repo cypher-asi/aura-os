@@ -1,5 +1,5 @@
-import type { Message, ChatContentBlock } from "../types";
-import type { DisplayMessage } from "../types/stream";
+import type { SessionEvent, ChatContentBlock } from "../types";
+import type { DisplaySessionEvent } from "../types/stream";
 import { extractToolCalls, extractArtifactRefs } from "./chat-history";
 import { buildTimelineFromBlocks } from "./build-timeline";
 
@@ -7,7 +7,7 @@ function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { ty
   return b.type === "text" || b.type === "image";
 }
 
-export function buildDisplayMessages(msgs: Message[]): DisplayMessage[] {
+export function buildDisplayEvents(msgs: SessionEvent[]): DisplaySessionEvent[] {
   return msgs
     .filter((m) => {
       if (m.content && m.content.trim().length > 0) return true;
@@ -27,7 +27,7 @@ export function buildDisplayMessages(msgs: Message[]): DisplayMessage[] {
         );
       const thinking = m.thinking || undefined;
       return {
-        id: m.message_id,
+        id: m.event_id,
         role: m.role,
         content: m.content,
         contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,

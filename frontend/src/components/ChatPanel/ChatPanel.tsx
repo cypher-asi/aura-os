@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
-import { useIsStreaming, useStreamMessages } from "../../hooks/stream/hooks";
+import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -53,7 +53,7 @@ export function ChatPanel({
   // Prevent scroll-jank: keep the message area at opacity 0 until
   // useAutoScroll has scrolled to the bottom AND the virtualizer's
   // measure → render cascade has settled (scrollHeight stable).
-  const messages = useStreamMessages(streamKey);
+  const messages = useStreamEvents(streamKey);
   const hasMessages = messages.length > 0;
   const hasMessagesRef = useRef(hasMessages);
   hasMessagesRef.current = hasMessages;

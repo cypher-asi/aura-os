@@ -5,7 +5,7 @@ import { useStreamStore, streamMetaMap } from "./stream/store";
 vi.mock("../api/client", () => ({
   api: {
     agents: {
-      sendMessageStream: vi.fn().mockResolvedValue(undefined),
+      sendEventStream: vi.fn().mockResolvedValue(undefined),
     },
   },
   isInsufficientCreditsError: vi.fn(() => false),
@@ -18,10 +18,10 @@ describe("useAgentChatStream", () => {
   beforeEach(() => {
     streamMetaMap.clear();
     useStreamStore.setState({ entries: {} });
-    vi.mocked(api.agents.sendMessageStream).mockReset().mockResolvedValue(undefined);
+    vi.mocked(api.agents.sendEventStream).mockReset().mockResolvedValue(undefined);
   });
 
-  it("returns streamKey, sendMessage, stopStreaming, resetMessages", () => {
+  it("returns streamKey, sendMessage, stopStreaming, resetEvents", () => {
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1" }),
     );
@@ -29,7 +29,7 @@ describe("useAgentChatStream", () => {
     expect(result.current.streamKey).toBeTruthy();
     expect(typeof result.current.sendMessage).toBe("function");
     expect(typeof result.current.stopStreaming).toBe("function");
-    expect(typeof result.current.resetMessages).toBe("function");
+    expect(typeof result.current.resetEvents).toBe("function");
   });
 
   it("sends a message and creates a user message in the store", async () => {
@@ -41,11 +41,11 @@ describe("useAgentChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(api.agents.sendMessageStream).toHaveBeenCalled();
+    expect(api.agents.sendEventStream).toHaveBeenCalled();
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    expect(entry.messages.length).toBeGreaterThanOrEqual(1);
-    expect(entry.messages[0].role).toBe("user");
-    expect(entry.messages[0].content).toBe("hello");
+    expect(entry.events.length).toBeGreaterThanOrEqual(1);
+    expect(entry.events[0].role).toBe("user");
+    expect(entry.events[0].content).toBe("hello");
   });
 
   it("does nothing when agentId is undefined", async () => {
@@ -57,7 +57,7 @@ describe("useAgentChatStream", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(api.agents.sendMessageStream).not.toHaveBeenCalled();
+    expect(api.agents.sendEventStream).not.toHaveBeenCalled();
   });
 
   it("does nothing for empty message without action", async () => {
@@ -69,11 +69,11 @@ describe("useAgentChatStream", () => {
       await result.current.sendMessage("   ");
     });
 
-    expect(api.agents.sendMessageStream).not.toHaveBeenCalled();
+    expect(api.agents.sendEventStream).not.toHaveBeenCalled();
   });
 
   it("handles stream errors gracefully", async () => {
-    vi.mocked(api.agents.sendMessageStream).mockRejectedValue(new Error("connection lost"));
+    vi.mocked(api.agents.sendEventStream).mockRejectedValue(new Error("connection lost"));
 
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1" }),
@@ -84,13 +84,13 @@ describe("useAgentChatStream", () => {
     });
 
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    const errorMsg = entry.messages.find((m) => m.content.includes("Error"));
+    const errorMsg = entry.events.find((m) => m.content.includes("Error"));
     expect(errorMsg).toBeTruthy();
   });
 
   it("calls onTaskSaved callback", async () => {
     const onTaskSaved = vi.fn();
-    vi.mocked(api.agents.sendMessageStream).mockImplementation(
+    vi.mocked(api.agents.sendEventStream).mockImplementation(
       async (_id, _content, _action, _model, _attachments, callbacks) => {
         callbacks?.onTaskSaved?.({
           task_id: "t-1",
@@ -129,7 +129,7 @@ describe("useAgentChatStream", () => {
 
   it("ignores AbortError when stream is cancelled", async () => {
     const abortError = new DOMException("Aborted", "AbortError");
-    vi.mocked(api.agents.sendMessageStream).mockRejectedValue(abortError);
+    vi.mocked(api.agents.sendEventStream).mockRejectedValue(abortError);
 
     const { result } = renderHook(() =>
       useAgentChatStream({ agentId: "agent-1" }),
@@ -140,7 +140,7 @@ describe("useAgentChatStream", () => {
     });
 
     const entry = useStreamStore.getState().entries[result.current.streamKey];
-    const errorMsgs = entry.messages.filter((m) => m.content.includes("Error"));
+    const errorMsgs = entry.events.filter((m) => m.content.includes("Error"));
     expect(errorMsgs).toHaveLength(0);
   });
 });

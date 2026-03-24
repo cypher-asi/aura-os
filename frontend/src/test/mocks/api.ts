@@ -72,8 +72,8 @@ export function mockAgentTemplatesApi(): Record<string, ReturnType<typeof vi.fn>
     get: stub(),
     update: stub(),
     delete: stub(),
-    listMessages: stub(),
-    sendMessageStream: stub(),
+    listEvents: stub(),
+    sendEventStream: stub(),
   };
 }
 
@@ -84,8 +84,8 @@ export function mockAgentInstancesApi(): Record<string, ReturnType<typeof vi.fn>
     getAgentInstance: stub(),
     updateAgentInstance: stub(),
     deleteAgentInstance: stub(),
-    getMessages: stub(),
-    sendMessageStream: stub(),
+    getEvents: stub(),
+    sendEventStream: stub(),
   };
 }
 
@@ -95,7 +95,7 @@ export function mockSessionsApi(): Record<string, ReturnType<typeof vi.fn>> {
     listSessions: stub(),
     getSession: stub(),
     listSessionTasks: stub(),
-    listSessionMessages: stub(),
+    listSessionEvents: stub(),
   };
 }
 

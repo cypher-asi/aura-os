@@ -1,7 +1,7 @@
 import { Bot } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
-import type { DisplayMessage } from "../../../types/stream";
+import type { DisplaySessionEvent } from "../../../types/stream";
 import styles from "./AgentConversationRow.module.css";
 
 function stripMarkdown(text: string): string {
@@ -15,7 +15,7 @@ function stripMarkdown(text: string): string {
 
 interface AgentConversationRowProps {
   agent: Agent;
-  lastMessage: DisplayMessage | undefined;
+  lastMessage: DisplaySessionEvent | undefined;
   isSelected: boolean;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;

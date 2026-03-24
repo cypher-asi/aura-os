@@ -16,7 +16,7 @@ import {
   handleToolCallSnapshot,
   handleToolCall as coreHandleToolCall,
   handleToolResult as coreHandleToolResult,
-  handleMessageSaved,
+  handleEventSaved,
   handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
@@ -30,7 +30,7 @@ export type {
   DisplayImageBlock,
   DisplayContentBlockUnion,
   ArtifactRef,
-  DisplayMessage,
+  DisplaySessionEvent,
   ToolCallEntry,
 } from "../types/stream";
 
@@ -321,7 +321,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       }
       case EventType.MessageEnd:
-        handleMessageSaved(refs, setters, event.content.message);
+        handleEventSaved(refs, setters, event.content.event);
         break;
       case EventType.AssistantMessageEnd: {
         handleAssistantTurnBoundary(refs, setters);
@@ -396,7 +396,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         content: trimmed || (action === "generate_specs" ? "Generate specs for this project" : trimmed) || buildAttachmentLabel(attachments),
         contentBlocks: buildContentBlocks(trimmed, attachments),
       };
-      core.setMessages((prev) => [...prev, userMsg]);
+      core.setEvents((prev) => [...prev, userMsg]);
       core.setIsStreaming(true);
       sidekickRef.current.setStreamingAgentInstanceId(agentInstanceId);
       resetStreamBuffers(refs, setters);
@@ -419,7 +419,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       });
 
       try {
-        await api.sendMessageStream(projectId, agentInstanceId, userMsg.content, action, null, attachments, handler, controller.signal);
+        await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, null, attachments, handler, controller.signal);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
@@ -437,7 +437,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         }
       }
     },
-    [projectId, agentInstanceId, core.key, refs, setters, abortRef, core.setMessages, core.setIsStreaming, core.setProgressText],
+    [projectId, agentInstanceId, core.key, refs, setters, abortRef, core.setEvents, core.setIsStreaming, core.setProgressText],
   );
 
   const stopStreaming = useCallback(() => {
@@ -454,5 +454,5 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
     }
   }, [projectId, agentInstanceId, core.baseStopStreaming]);
 
-  return { streamKey: core.key, sendMessage, stopStreaming, resetMessages: core.resetMessages };
+  return { streamKey: core.key, sendMessage, stopStreaming, resetEvents: core.resetEvents };
 }

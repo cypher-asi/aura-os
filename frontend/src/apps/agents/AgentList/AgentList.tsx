@@ -58,7 +58,7 @@ export function AgentList() {
     if (lastId && !agentId) {
       useChatHistoryStore.getState().prefetchHistory(
         agentHistoryKey(lastId),
-        () => api.agents.listMessages(lastId),
+        () => api.agents.listEvents(lastId),
       );
     }
   }, [status, agentId]);
@@ -102,7 +102,7 @@ export function AgentList() {
       if (target) {
         useChatHistoryStore.getState().prefetchHistory(
           agentHistoryKey(target.id),
-          () => api.agents.listMessages(target.id),
+          () => api.agents.listEvents(target.id),
         );
       }
     },
@@ -192,7 +192,7 @@ export function AgentList() {
       <div onContextMenu={handleContextMenu} onMouseOver={handleHoverPrefetch}>
         {filteredAgents.map((agent) => {
           const entry = entries[agentHistoryKey(agent.agent_id)];
-          const msgs = entry?.messages;
+          const msgs = entry?.events;
           const lastMessage = msgs?.length ? msgs[msgs.length - 1] : undefined;
           return (
             <AgentConversationRow

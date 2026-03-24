@@ -50,7 +50,7 @@ function makeSetters(): StreamSetters & { calls: Record<string, unknown[]> } {
     setThinkingText: track("setThinkingText") as StreamSetters["setThinkingText"],
     setThinkingDurationMs: track("setThinkingDurationMs") as StreamSetters["setThinkingDurationMs"],
     setActiveToolCalls: track("setActiveToolCalls") as StreamSetters["setActiveToolCalls"],
-    setMessages: track("setMessages") as StreamSetters["setMessages"],
+    setEvents: track("setEvents") as StreamSetters["setEvents"],
     setIsStreaming: track("setIsStreaming") as StreamSetters["setIsStreaming"],
     setProgressText: track("setProgressText") as StreamSetters["setProgressText"],
     setTimeline: track("setTimeline") as StreamSetters["setTimeline"],
@@ -390,8 +390,8 @@ describe("stream/handlers", () => {
 
       handleStreamError(refs, setters, "something broke");
 
-      const setMessagesCalls = setters.calls.setMessages;
-      expect(setMessagesCalls).toBeDefined();
+      const setEventsCalls = setters.calls.setEvents;
+      expect(setEventsCalls).toBeDefined();
     });
 
     it("includes buffered content as prefix", () => {
@@ -401,7 +401,7 @@ describe("stream/handlers", () => {
 
       handleStreamError(refs, setters, "connection lost");
 
-      const lastCall = setters.calls.setMessages[setters.calls.setMessages.length - 1];
+      const lastCall = setters.calls.setEvents[setters.calls.setEvents.length - 1];
       const updater = lastCall as (prev: unknown[]) => unknown[];
       const result = updater([]) as Array<{ content: string }>;
       expect(result[0].content).toContain("partial response");
@@ -418,7 +418,7 @@ describe("stream/handlers", () => {
 
       finalizeStream(refs, setters, abortRef, false);
 
-      expect(setters.calls.setMessages).toBeDefined();
+      expect(setters.calls.setEvents).toBeDefined();
       expect(setters.calls.setIsStreaming).toBeDefined();
     });
 
@@ -453,7 +453,7 @@ describe("stream/handlers", () => {
 
       finalizeStream(refs, setters, abortRef, false);
 
-      const msgCalls = setters.calls.setMessages;
+      const msgCalls = setters.calls.setEvents;
       expect(msgCalls).toBeUndefined();
     });
   });

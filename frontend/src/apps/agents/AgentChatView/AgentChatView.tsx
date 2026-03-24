@@ -11,19 +11,19 @@ export function AgentChatView() {
   const { agentId } = useParams<{ agentId: string }>();
   const historyKey = agentId ? agentHistoryKey(agentId) : undefined;
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
-  const { messages: historyMessages, status: historyStatus, error: historyError } = useChatHistory(historyKey);
+  const { events: historyMessages, status: historyStatus, error: historyError } = useChatHistory(historyKey);
   const showHistoryLoading = historyStatus === "loading" || historyStatus === "idle";
 
   const {
     streamKey,
     sendMessage,
     stopStreaming,
-    resetMessages,
+    resetEvents,
   } = useAgentChatStream({ agentId });
   const isStreaming = useIsStreaming(streamKey);
 
-  const resetMessagesRef = useRef(resetMessages);
-  useEffect(() => { resetMessagesRef.current = resetMessages; }, [resetMessages]);
+  const resetEventsRef = useRef(resetEvents);
+  useEffect(() => { resetEventsRef.current = resetEvents; }, [resetEvents]);
 
   // Invalidate stale cache when streaming stops so the next navigation gets
   // fresh data even if the user leaves before the finally-block runs.
@@ -42,14 +42,14 @@ export function AgentChatView() {
   // the fetch completes, avoiding stale-data flashes.
   useEffect(() => {
     if (!agentId) {
-      resetMessagesRef.current([], { allowWhileStreaming: true });
+      resetEventsRef.current([], { allowWhileStreaming: true });
       return;
     }
     const key = agentHistoryKey(agentId);
     useChatHistoryStore.getState().invalidateHistory(key);
     useChatHistoryStore.getState().fetchHistory(
       key,
-      () => api.agents.listMessages(agentId),
+      () => api.agents.listEvents(agentId),
     );
     setSelectedAgent(agentId);
     localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
@@ -58,7 +58,7 @@ export function AgentChatView() {
   // Sync fetched history into the stream store for rendering.
   useEffect(() => {
     if (historyStatus !== "ready") return;
-    resetMessagesRef.current(historyMessages, { allowWhileStreaming: true });
+    resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
   }, [historyMessages, historyStatus]);
 
   // Invalidate cache before sending so navigating away mid-stream and back

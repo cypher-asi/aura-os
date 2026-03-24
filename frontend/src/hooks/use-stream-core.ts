@@ -1,7 +1,7 @@
 import { useRef, useCallback, useLayoutEffect, useMemo } from "react";
 import type { MutableRefObject, SetStateAction } from "react";
 import type {
-  DisplayMessage,
+  DisplaySessionEvent,
   StreamRefs as StreamRefsType,
   StreamSetters,
 } from "../types/stream";
@@ -26,7 +26,7 @@ export type {
   DisplayImageBlock,
   DisplayContentBlockUnion,
   ArtifactRef,
-  DisplayMessage,
+  DisplaySessionEvent,
   ToolCallEntry,
   TimelineItem,
   StreamRefs,
@@ -44,7 +44,7 @@ export {
   handleToolCallSnapshot,
   handleToolCall,
   handleToolResult,
-  handleMessageSaved,
+  handleEventSaved,
   handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
@@ -61,10 +61,10 @@ export interface StreamCoreResult {
   refs: StreamRefsType;
   setters: StreamSetters;
   abortRef: MutableRefObject<AbortController | null>;
-  setMessages: (action: SetStateAction<DisplayMessage[]>) => void;
+  setEvents: (action: SetStateAction<DisplaySessionEvent[]>) => void;
   setIsStreaming: (action: SetStateAction<boolean>) => void;
   setProgressText: (action: SetStateAction<string>) => void;
-  resetMessages: (msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => void;
+  resetEvents: (msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => void;
   baseStopStreaming: () => void;
 }
 
@@ -114,11 +114,11 @@ export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, resetDeps);
 
-  const resetMessages = useCallback((msgs: DisplayMessage[], options?: { allowWhileStreaming?: boolean }) => {
+  const resetEvents = useCallback((msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => {
     if (getIsStreaming(key) && !options?.allowWhileStreaming) return;
     const m = streamMetaMap.get(key);
     if (m) m.lastAccessedAt = Date.now();
-    setters.setMessages(msgs);
+    setters.setEvents(msgs);
   }, [key, setters]);
 
   const baseStopStreaming = useCallback(() => {
@@ -127,7 +127,7 @@ export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
     m.abort?.abort();
     if (m.refs.streamBuffer.current) {
       const snap = snapshotThinking(m.refs);
-      setters.setMessages((prev) => [
+      setters.setEvents((prev) => [
         ...prev,
         {
           id: `stopped-${Date.now()}`,
@@ -150,10 +150,10 @@ export function useStreamCore(resetDeps: unknown[]): StreamCoreResult {
     refs: meta.refs,
     setters,
     abortRef,
-    setMessages: setters.setMessages,
+    setEvents: setters.setEvents,
     setIsStreaming: setters.setIsStreaming,
     setProgressText: setters.setProgressText,
-    resetMessages,
+    resetEvents,
     baseStopStreaming,
   };
 }

@@ -28,7 +28,7 @@ export type TimelineItem =
   | { kind: "text"; content: string; id: string }
   | { kind: "tool"; toolCallId: string; id: string };
 
-export interface DisplayMessage {
+export interface DisplaySessionEvent {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
@@ -70,7 +70,7 @@ export interface StreamSetters {
   setThinkingText: Dispatch<SetStateAction<string>>;
   setThinkingDurationMs: Dispatch<SetStateAction<number | null>>;
   setActiveToolCalls: Dispatch<SetStateAction<ToolCallEntry[]>>;
-  setMessages: Dispatch<SetStateAction<DisplayMessage[]>>;
+  setEvents: Dispatch<SetStateAction<DisplaySessionEvent[]>>;
   setIsStreaming: Dispatch<SetStateAction<boolean>>;
   setProgressText: Dispatch<SetStateAction<string>>;
   setTimeline: Dispatch<SetStateAction<TimelineItem[]>>;
