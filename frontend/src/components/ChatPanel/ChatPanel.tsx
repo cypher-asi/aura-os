@@ -58,7 +58,9 @@ export function ChatPanel({
   const messages = useStreamMessages(streamKey);
   const hasMessages = messages.length > 0;
   const hasMessagesRef = useRef(hasMessages);
-  hasMessagesRef.current = hasMessages;
+  useEffect(() => {
+    hasMessagesRef.current = hasMessages;
+  }, [hasMessages]);
 
   const [contentVisible, setContentVisible] = useState(false);
   const contentVisibleRef = useRef(false);
