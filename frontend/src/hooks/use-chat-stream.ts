@@ -339,6 +339,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         if (abortRef.current === controller) {
           core.setIsStreaming(false);
           sidekickRef.current.setStreamingAgentInstanceId(null);
+          controller.abort();
           abortRef.current = null;
         }
         if (projectId && agentInstanceId) {

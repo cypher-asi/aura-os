@@ -149,6 +149,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       } finally {
         if (abortRef.current === controller) {
           core.setIsStreaming(false);
+          controller.abort();
           abortRef.current = null;
         }
         if (agentId) {

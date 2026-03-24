@@ -71,6 +71,7 @@ function makeRefs(): StreamRefs {
     raf: { current: null },
     thinkingRaf: { current: null },
     timeline: { current: [] },
+    finalized: { current: false },
   };
 }
 
