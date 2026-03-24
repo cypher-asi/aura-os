@@ -9,8 +9,8 @@ use futures_util::future::join_all;
 use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
-use aura_os_core::{AgentId, AgentInstanceId, HarnessMode, Message, ProjectId};
-use aura_os_link::{HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
+use aura_os_core::{AgentId, AgentInstanceId, ChatRole, HarnessMode, Message, ProjectId};
+use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
 use aura_os_storage::StorageClient;
 
 use crate::dto::SendMessageRequest;
@@ -231,6 +231,35 @@ async fn setup_agent_chat_persistence(
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
     [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
+fn has_live_session(state: &AppState, key: &str) -> bool {
+    if let Ok(reg) = state.chat_sessions.try_lock() {
+        if let Some(s) = reg.get(key) {
+            return s.is_alive();
+        }
+    }
+    false
+}
+
+fn messages_to_conversation_history(messages: &[Message]) -> Vec<ConversationMessage> {
+    messages
+        .iter()
+        .filter_map(|m| {
+            let role = match m.role {
+                ChatRole::User => "user",
+                ChatRole::Assistant => "assistant",
+                _ => return None,
+            };
+            if m.content.is_empty() {
+                return None;
+            }
+            Some(ConversationMessage {
+                role: role.to_string(),
+                content: m.content.clone(),
+            })
+        })
+        .collect()
+}
+
 async fn find_matching_project_agents(
     state: &AppState,
     storage: &aura_os_storage::StorageClient,
@@ -292,7 +321,7 @@ async fn collect_session_messages(
                 }
             }
             Err(e) => {
-                warn!(session_id = %session.id, error = %e, "Failed to list messages");
+                tracing::debug!(session_id = %session.id, error = %e, "Failed to list session messages");
             }
         }
     }
@@ -320,6 +349,22 @@ async fn fetch_all_sessions(
             }
         })
         .collect()
+}
+
+async fn load_project_chat_history(
+    state: &AppState,
+    agent_instance_id: &AgentInstanceId,
+) -> Vec<Message> {
+    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
+        return Vec::new();
+    };
+    let sessions = storage
+        .list_sessions(&agent_instance_id.to_string(), &jwt)
+        .await
+        .unwrap_or_default();
+    let mut messages = collect_session_messages(storage, &jwt, &sessions).await;
+    messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    messages
 }
 
 /// Aggregate agent-level messages from aura-storage (all project-agents for
@@ -463,15 +508,23 @@ pub(crate) async fn send_agent_message_stream(
 
     let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name).await;
 
+    let session_key = format!("agent:{agent_id}");
+    let conversation_messages = if !has_live_session(&state, &session_key) {
+        let stored = aggregate_agent_messages_from_storage(&state, &agent_id).await;
+        if stored.is_empty() { None } else { Some(messages_to_conversation_history(&stored)) }
+    } else {
+        None
+    };
+
     let jwt = state.get_jwt().ok();
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(agent_id.to_string()),
         token: jwt,
+        conversation_messages,
         ..Default::default()
     };
 
-    let session_key = format!("agent:{agent_id}");
     open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, persist_ctx).await
 }
 
@@ -515,14 +568,22 @@ pub(crate) async fn send_message_stream(
     let persist_ctx =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id).await;
 
+    let session_key = format!("instance:{agent_instance_id}");
+    let conversation_messages = if !has_live_session(&state, &session_key) {
+        let stored = load_project_chat_history(&state, &agent_instance_id).await;
+        if stored.is_empty() { None } else { Some(messages_to_conversation_history(&stored)) }
+    } else {
+        None
+    };
+
     let jwt = state.get_jwt().ok();
     let config = SessionConfig {
         system_prompt: Some(instance.system_prompt.clone()),
         agent_id: Some(instance.agent_id.to_string()),
         token: jwt,
+        conversation_messages,
         ..Default::default()
     };
 
-    let session_key = format!("instance:{agent_instance_id}");
     open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, persist_ctx).await
 }

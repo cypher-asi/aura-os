@@ -46,6 +46,7 @@ impl HarnessLink for LocalHarness {
             installed_tools: None,
             workspace: config.workspace,
             token: config.token,
+            conversation_messages: config.conversation_messages,
         }))?;
 
         let mut rx = events_tx.subscribe();

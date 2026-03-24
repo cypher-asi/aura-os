@@ -187,15 +187,30 @@ fn maybe_spawn_local_harness() {
         "Local harness not running — spawning from source"
     );
 
-    match std::process::Command::new("cargo")
-        .args(["run", "--release", "--", "run", "--ui", "none"])
+    let mut cmd = std::process::Command::new("cargo");
+    cmd.args(["run", "--release", "--", "run", "--ui", "none"])
         .current_dir(&harness_dir)
         .env("BIND_ADDR", &host_port)
+        .env("BIND_PORT", addr.port().to_string())
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-    {
+        // Do not pipe stderr unless we actively consume it; otherwise the
+        // child can block once the pipe buffer fills, which stalls tool calls.
+        .stderr(std::process::Stdio::null());
+
+    // Load default installed tools (create_spec, list_specs, create_task, etc.)
+    // when spawning harness from source so session_ready advertises project tools.
+    let tools_config = harness_dir.join("tools.toml");
+    if tools_config.exists() {
+        cmd.env("TOOLS_CONFIG", tools_config);
+    } else {
+        warn!(
+            dir = %harness_dir.display(),
+            "tools.toml not found; harness will start without installed project tools"
+        );
+    }
+
+    match cmd.spawn() {
         Ok(child) => {
             info!(pid = child.id(), "aura-harness child process spawned (building in background)");
 

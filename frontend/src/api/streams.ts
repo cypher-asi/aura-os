@@ -36,7 +36,7 @@ export interface ToolCallInfo {
 }
 
 export interface ToolResultInfo {
-  id: string;
+  id?: string;
   name: string;
   result: string;
   is_error: boolean;

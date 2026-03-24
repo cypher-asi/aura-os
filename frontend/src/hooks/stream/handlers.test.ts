@@ -368,6 +368,19 @@ describe("stream/handlers", () => {
 
       expect(refs.needsSeparator.current).toBe(true);
     });
+
+    it("resolves latest pending tool by name when id is missing", () => {
+      const refs = makeRefs();
+      const setters = makeSetters();
+
+      handleToolCall(refs, setters, { id: "tc1", name: "write_file", input: { path: "a.txt" } });
+      handleToolCall(refs, setters, { id: "tc2", name: "write_file", input: { path: "b.txt" } });
+      handleToolResult(refs, setters, { name: "write_file", result: "ok", is_error: false });
+
+      expect(refs.toolCalls.current[0].pending).toBe(true);
+      expect(refs.toolCalls.current[1].pending).toBe(false);
+      expect(refs.toolCalls.current[1].result).toBe("ok");
+    });
   });
 
   describe("handleStreamError", () => {
