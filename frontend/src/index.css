@@ -98,7 +98,7 @@ body:has([role="dialog"][aria-modal="true"]) {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: var(--color-bg-secondary, rgba(255, 255, 255, 0.03));
 }
 ::-webkit-scrollbar-thumb {
   background: var(--color-border);
