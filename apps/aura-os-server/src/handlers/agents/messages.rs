@@ -48,9 +48,6 @@ async fn resolve_chat_session(
             match storage.list_messages(&session.id, jwt, Some(1), None).await {
                 Ok(_) => return Some(session.id.clone()),
                 Err(e) => {
-                    // #region agent log
-                    { use std::io::Write; if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-23e999.log") { let _ = writeln!(f, r#"{{"sessionId":"23e999","hypothesisId":"H-F","location":"messages.rs:resolve_chat_session","message":"skipping stale session","data":{{"session_id":"{}","error":"{}"}},"timestamp":{}}}"#, session.id, e, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()); } }
-                    // #endregion
                     tracing::debug!(
                         session_id = %session.id,
                         error = %e,
@@ -68,12 +65,7 @@ async fn resolve_chat_session(
         summary_of_previous_context: None,
     };
     match storage.create_session(project_agent_id, jwt, &req).await {
-        Ok(session) => {
-            // #region agent log
-            { use std::io::Write; if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-23e999.log") { let _ = writeln!(f, r#"{{"sessionId":"23e999","hypothesisId":"H-F","location":"messages.rs:resolve_new_session","message":"created fresh session","data":{{"session_id":"{}","project_agent_id":"{}"}},"timestamp":{}}}"#, session.id, project_agent_id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()); } }
-            // #endregion
-            Some(session.id)
-        }
+        Ok(session) => Some(session.id),
         Err(e) => {
             warn!(error = %e, "Failed to create chat session in storage");
             None
@@ -429,18 +421,11 @@ async fn aggregate_agent_messages_from_storage_result(
     agent_id: &AgentId,
 ) -> Result<Vec<Message>, aura_os_storage::StorageError> {
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
-        // #region agent log
-        { use std::io::Write; if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-23e999.log") { let _ = writeln!(f, r#"{{"sessionId":"23e999","hypothesisId":"H-E","location":"messages.rs:aggregate_early_return","message":"no storage or jwt","data":{{"agent_id":"{}"}},"timestamp":{}}}"#, agent_id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()); } }
-        // #endregion
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
     let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
-
-    // #region agent log
-    { use std::io::Write; if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-23e999.log") { let _ = writeln!(f, r#"{{"sessionId":"23e999","hypothesisId":"H-A","location":"messages.rs:aggregate_sessions","message":"session fetch done","data":{{"agent_id":"{}","matching_agents":{},"total_sessions":{},"failed_agents":{},"all_failed":{}}},"timestamp":{}}}"#, agent_id, matching.len(), sessions_outcome.sessions.len(), sessions_outcome.failed_agents, sessions_outcome.all_failed(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()); } }
-    // #endregion
 
     if sessions_outcome.all_failed() {
         if let Some(err) = sessions_outcome.first_error {
@@ -449,11 +434,6 @@ async fn aggregate_agent_messages_from_storage_result(
     }
 
     let mut message_outcome = collect_session_messages(storage, &jwt, &sessions_outcome.sessions).await;
-
-    // #region agent log
-    { use std::io::Write; if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-23e999.log") { let _ = writeln!(f, r#"{{"sessionId":"23e999","hypothesisId":"H-A","location":"messages.rs:aggregate_messages","message":"message collect done","data":{{"agent_id":"{}","total_sessions":{},"failed_sessions":{},"messages_count":{},"all_failed":{}}},"timestamp":{}}}"#, agent_id, message_outcome.total_sessions, message_outcome.failed_sessions, message_outcome.messages.len(), message_outcome.all_failed(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis()); } }
-    // #endregion
-
     if message_outcome.all_failed() {
         if let Some(err) = message_outcome.first_error {
             return Err(err);
