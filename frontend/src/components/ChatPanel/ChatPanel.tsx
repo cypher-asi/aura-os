@@ -51,6 +51,22 @@ export function ChatPanel({
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll, scrollToBottom } = useAutoScroll(messageAreaRef, scrollResetKey);
 
+  // Prevent scroll-jank: hide the message area until auto-scroll has
+  // positioned to the bottom after messages first render.
+  const [contentVisible, setContentVisible] = useState(false);
+  useEffect(() => {
+    if (!historyResolved || contentVisible) return;
+    let raf2: number | undefined;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setContentVisible(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2 !== undefined) cancelAnimationFrame(raf2);
+    };
+  }, [historyResolved, contentVisible]);
+  const messageAreaVisible = !historyResolved || contentVisible;
+
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
 
@@ -165,6 +181,7 @@ export function ChatPanel({
           className={styles.messageArea}
           ref={messageAreaRef}
           onScroll={handleScroll}
+          style={messageAreaVisible ? undefined : { opacity: 0 }}
         >
           <div className={styles.messageContent}>
             <ChatMessageList
