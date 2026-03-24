@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
-import { useIsStreaming } from "../../hooks/stream/hooks";
+import { useIsStreaming, useStreamMessages } from "../../hooks/stream/hooks";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -51,20 +51,28 @@ export function ChatPanel({
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll, scrollToBottom } = useAutoScroll(messageAreaRef, scrollResetKey);
 
-  // Prevent scroll-jank: hide the message area until auto-scroll has
-  // positioned to the bottom after messages first render.
+  // Prevent scroll-jank: keep the message area at opacity 0 until we have
+  // scrolled to the bottom.  useLayoutEffect fires *before* the browser
+  // paints, so we can set scrollTop and flip visibility in the same
+  // commit — the user never sees the un-scrolled intermediate frame.
+  const messages = useStreamMessages(streamKey);
+  const hasMessages = messages.length > 0;
   const [contentVisible, setContentVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    if (contentVisible || !hasMessages) return;
+    const el = messageAreaRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    setContentVisible(true);
+  }, [hasMessages, contentVisible]);
+
+  // Fallback: reveal for empty conversations once history resolves.
   useEffect(() => {
-    if (!historyResolved || contentVisible) return;
-    let raf2: number | undefined;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setContentVisible(true));
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      if (raf2 !== undefined) cancelAnimationFrame(raf2);
-    };
-  }, [historyResolved, contentVisible]);
+    if (contentVisible || hasMessages || !historyResolved) return;
+    const raf = requestAnimationFrame(() => setContentVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [historyResolved, hasMessages, contentVisible]);
+
   const messageAreaVisible = !historyResolved || contentVisible;
 
   const isStreaming = useIsStreaming(streamKey);
