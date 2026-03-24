@@ -244,7 +244,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         handleMessageSaved(refs, setters, event.content.message);
         break;
       case EventType.AssistantMessageEnd:
-        finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
+        finalizeStream(refs, setters, abortRef, false);
         sidekickRef.current.setStreamingAgentInstanceId(null);
         break;
       case EventType.AgentInstanceUpdated:
@@ -258,7 +258,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         handleStreamError(refs, setters, event.content.message);
         break;
       case EventType.Done:
-        finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
+        finalizeStream(refs, setters, abortRef, false);
         sidekickRef.current.setStreamingAgentInstanceId(null);
         break;
     }
@@ -268,7 +268,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
     onEvent,
     onError: (message) => handleStreamError(refs, setters, message),
     onDone: () => {
-      finalizeStream(refs, setters, abortRef, getIsStreaming(coreKey));
+      finalizeStream(refs, setters, abortRef, false);
       sidekickRef.current.setStreamingAgentInstanceId(null);
     },
   };
@@ -321,6 +321,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         sidekickRef.current.setActiveTab("specs");
       }
 
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
       const handler = buildStreamHandler({
@@ -335,9 +336,12 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
       } finally {
-        core.setIsStreaming(false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
-        abortRef.current = null;
+        if (abortRef.current === controller) {
+          core.setIsStreaming(false);
+          sidekickRef.current.setStreamingAgentInstanceId(null);
+          controller.abort();
+          abortRef.current = null;
+        }
         if (projectId && agentInstanceId) {
           useChatHistoryStore.getState().invalidateHistory(
             projectChatHistoryKey(projectId, agentInstanceId),

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AgentInstance, Project } from "../types";
+import type { Agent, AgentInstance, Project } from "../types";
 import { api } from "../api/client";
 import { useOrgStore } from "./org-store";
 
@@ -31,6 +31,7 @@ interface ProjectsListState {
       | ((prev: Record<string, AgentInstance[]>) => Record<string, AgentInstance[]>),
   ) => void;
   refreshProjectAgents: (projectId: string) => Promise<AgentInstance[]>;
+  patchAgentTemplateFields: (agent: Agent) => void;
   openNewProjectModal: () => void;
   closeNewProjectModal: () => void;
 }
@@ -116,6 +117,30 @@ export const useProjectsListStore = create<ProjectsListState>()((set, get) => ({
     }
 
     return result;
+  },
+
+  patchAgentTemplateFields: (agent: Agent) => {
+    set((state) => {
+      const next: Record<string, AgentInstance[]> = {};
+      let changed = false;
+      for (const [pid, instances] of Object.entries(state.agentsByProject)) {
+        const updated = instances.map((inst) => {
+          if (inst.agent_id !== agent.agent_id) return inst;
+          changed = true;
+          return {
+            ...inst,
+            name: agent.name,
+            role: agent.role,
+            personality: agent.personality,
+            system_prompt: agent.system_prompt,
+            skills: agent.skills,
+            icon: agent.icon,
+          };
+        });
+        next[pid] = updated;
+      }
+      return changed ? { agentsByProject: next } : {};
+    });
   },
 
   openNewProjectModal: () => set({ newProjectModalOpen: true }),

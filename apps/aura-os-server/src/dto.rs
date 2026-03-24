@@ -95,6 +95,7 @@ pub(crate) struct UpdateAgentRequest {
     pub system_prompt: Option<String>,
     pub skills: Option<Vec<String>>,
     pub icon: Option<Option<String>>,
+    pub harness: Option<String>,
     pub machine_type: Option<String>,
 }
 

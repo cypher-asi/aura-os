@@ -4,8 +4,5 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable both-edges;
+  overflow: hidden;
 }

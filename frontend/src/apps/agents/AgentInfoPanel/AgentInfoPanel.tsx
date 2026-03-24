@@ -10,6 +10,7 @@ import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { api, ApiClientError } from "../../../api/client";
 import { useSelectedAgent, useAgentStore } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./AgentInfoPanel.module.css";
 
 export function AgentInfoPanel() {
@@ -151,9 +152,11 @@ export function AgentInfoPanel() {
 
       <AgentEditorModal
         isOpen={showEditor}
-        agent={selectedAgent}
+        agent={selectedAgent ?? undefined}
         onClose={() => setShowEditor(false)}
         onSaved={(updated) => {
+          useAgentStore.getState().patchAgent(updated);
+          useProjectsListStore.getState().patchAgentTemplateFields(updated);
           setSelectedAgent(updated.agent_id);
           useAgentStore.getState().fetchAgents();
         }}

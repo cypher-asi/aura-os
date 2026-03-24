@@ -73,6 +73,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       resetStreamBuffers(refs, setters);
       refs.needsSeparator.current = false;
 
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -114,7 +115,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               handleMessageSaved(refs, setters, event.content.message);
               break;
             case EventType.AssistantMessageEnd:
-              finalizeStream(refs, setters, abortRef, getIsStreaming(core.key));
+              finalizeStream(refs, setters, abortRef, false);
               break;
             case EventType.AssistantMessageStart:
             case EventType.SessionReady:
@@ -124,12 +125,12 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
               handleStreamError(refs, setters, event.content.message);
               break;
             case EventType.Done:
-              finalizeStream(refs, setters, abortRef, getIsStreaming(core.key));
+              finalizeStream(refs, setters, abortRef, false);
               break;
           }
         },
         onError: (message) => handleStreamError(refs, setters, message),
-        onDone: () => finalizeStream(refs, setters, abortRef, getIsStreaming(core.key)),
+        onDone: () => finalizeStream(refs, setters, abortRef, false),
       };
 
       try {
@@ -146,8 +147,11 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
       } finally {
-        core.setIsStreaming(false);
-        abortRef.current = null;
+        if (abortRef.current === controller) {
+          core.setIsStreaming(false);
+          controller.abort();
+          abortRef.current = null;
+        }
         if (agentId) {
           useChatHistoryStore.getState().invalidateHistory(agentHistoryKey(agentId));
         }

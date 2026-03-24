@@ -314,7 +314,9 @@ export function finalizeStream(
   abortRef: MutableRefObject<AbortController | null>,
   closureIsStreaming: boolean,
 ): void {
-  if (refs.streamBuffer.current && !closureIsStreaming) {
+  const hasBuffer = !!refs.streamBuffer.current;
+
+  if (hasBuffer && !closureIsStreaming) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
     setters.setMessages((prev) => [
       ...prev,
@@ -334,12 +336,22 @@ export function finalizeStream(
     setters.setActiveToolCalls([]);
     refs.timeline.current = [];
     setters.setTimeline([]);
+    setters.setThinkingText("");
+    refs.thinkingBuffer.current = "";
+    refs.thinkingStart.current = null;
+    setters.setThinkingDurationMs(null);
+  } else if (!hasBuffer && !refs.thinkingBuffer.current) {
+    setters.setThinkingText("");
+    refs.thinkingBuffer.current = "";
+    refs.thinkingStart.current = null;
+    setters.setThinkingDurationMs(null);
   }
-  setters.setThinkingText("");
-  refs.thinkingBuffer.current = "";
-  refs.thinkingStart.current = null;
-  setters.setThinkingDurationMs(null);
+  // When hasBuffer is true but closureIsStreaming prevents saving,
+  // preserve thinking so it is included when the message is saved
+  // on the subsequent call (e.g. onDone after AssistantMessageEnd).
+
   setters.setProgressText("");
   setters.setIsStreaming(false);
+  abortRef.current?.abort();
   abortRef.current = null;
 }

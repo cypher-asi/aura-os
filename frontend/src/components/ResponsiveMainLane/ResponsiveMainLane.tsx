@@ -11,8 +11,6 @@ interface ResponsiveMainLaneProps {
   mobileFooter?: ReactNode | null;
   className?: string;
   style?: CSSProperties;
-  showBorder?: boolean;
-  showBorderOnMobile?: boolean;
 }
 
 export function ResponsiveMainLane({
@@ -23,20 +21,14 @@ export function ResponsiveMainLane({
   mobileFooter = null,
   className,
   style,
-  showBorder = true,
-  showBorderOnMobile = false,
 }: ResponsiveMainLaneProps) {
   const { isMobileLayout } = useAuraCapabilities();
-  const showBorderLeft = showBorder && (!isMobileLayout || showBorderOnMobile);
 
   return (
     <Lane
       flex
       className={className}
-      style={{
-        ...style,
-        ...(showBorderLeft ? { borderLeft: "1px solid var(--color-border)" } : {}),
-      }}
+      style={style}
       taskbar={isMobileLayout ? mobileTaskbar : taskbar}
       footer={isMobileLayout ? mobileFooter : footer}
     >

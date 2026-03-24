@@ -33,7 +33,7 @@ impl SwarmHarness {
 
     pub fn from_env() -> Self {
         let base_url =
-            std::env::var("SWARM_BASE_URL").unwrap_or_else(|_| "http://localhost:9800".to_string());
+            std::env::var("SWARM_BASE_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
         let auth_token = std::env::var("SWARM_AUTH_TOKEN").ok();
         Self::new(base_url, auth_token)
     }

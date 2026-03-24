@@ -17,7 +17,7 @@
 
 .messageArea {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   scrollbar-gutter: stable;
   padding: var(--space-3) calc(var(--space-3) * 2);
   padding-bottom: 140px;
@@ -45,13 +45,24 @@
   text-align: center;
 }
 
+/* Queue section — sits above the input area */
+.queueSection {
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  z-index: 11;
+  padding: 0 var(--space-3);
+  pointer-events: auto;
+}
+
 /* Input area — floats over messages with fade-to-dark gradient */
 .inputWrapper {
   position: absolute;
   bottom: 0;
-  left: -60px;
-  right: -60px;
-  padding: 0 calc(var(--space-3) + 60px) var(--space-3);
+  left: 0;
+  right: 8px;
+  padding: 0 var(--space-3) var(--space-3);
   z-index: 10;
   background: var(--color-bg, #111);
 }
@@ -65,17 +76,6 @@
   height: 80px;
   pointer-events: none;
   background: linear-gradient(to bottom, transparent, var(--color-bg, #111));
-}
-
-.inputWrapper::after {
-  content: "";
-  position: absolute;
-  top: -80px;
-  right: 60px;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  pointer-events: none;
 }
 
 .inputContainer {

@@ -104,8 +104,14 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
 
   invalidateHistory: (key): void => {
     set((s) => {
-      const { [key]: _, ...rest } = s.entries;
-      return { entries: rest };
+      const entry = s.entries[key];
+      if (!entry) return s;
+      return {
+        entries: {
+          ...s.entries,
+          [key]: { ...entry, fetchedAt: 0 },
+        },
+      };
     });
   },
 }));

@@ -70,9 +70,13 @@ pub(crate) async fn update_agent(
         personality: body.personality,
         system_prompt: body.system_prompt,
         skills: body.skills,
-        icon: body.icon.flatten(),
+        icon: match body.icon {
+            Some(Some(url)) => Some(url),
+            Some(None) => Some(String::new()),
+            None => None,
+        },
         machine_type: body.machine_type,
-        harness: None,
+        harness: body.harness,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)

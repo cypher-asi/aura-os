@@ -24,6 +24,7 @@ type AgentState = {
   selectedAgentId: string | null;
 
   fetchAgents: () => Promise<void>;
+  patchAgent: (agent: Agent) => void;
   fetchHistory: (agentId: string, opts?: { force?: boolean }) => Promise<void>;
   prefetchHistory: (agentId: string) => void;
   invalidateHistory: (agentId: string) => void;
@@ -69,6 +70,14 @@ export const useAgentStore = create<AgentState>()(
           });
 
         return agentsFetchPromise;
+      },
+
+      patchAgent: (updated): void => {
+        set((s) => ({
+          agents: s.agents.map((a) =>
+            a.agent_id === updated.agent_id ? updated : a,
+          ),
+        }));
       },
 
       fetchHistory: async (agentId, opts): Promise<void> => {

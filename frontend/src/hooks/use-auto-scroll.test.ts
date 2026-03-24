@@ -127,6 +127,16 @@ describe("useAutoScroll", () => {
     return MockResizeObserver.instances[MockResizeObserver.instances.length - 1];
   }
 
+  /** The container-width ResizeObserver (first created per setup round). */
+  function containerRO(round = 0): MockResizeObserver {
+    return MockResizeObserver.instances[round * 2];
+  }
+
+  /** The content-height ResizeObserver (second created per setup round). */
+  function contentRO(round = 0): MockResizeObserver {
+    return MockResizeObserver.instances[round * 2 + 1];
+  }
+
   // ---------------------------------------------------------------------------
   // API & lifecycle
   // ---------------------------------------------------------------------------
@@ -138,11 +148,11 @@ describe("useAutoScroll", () => {
     expect(typeof result.current.scrollToBottom).toBe("function");
   });
 
-  it("sets up MutationObserver and ResizeObserver on mount", () => {
+  it("sets up MutationObserver and ResizeObservers on mount", () => {
     const ref = { current: makeEl() };
     renderHook(() => useAutoScroll(ref));
     expect(MockMutationObserver.instances).toHaveLength(1);
-    expect(MockResizeObserver.instances).toHaveLength(1);
+    expect(MockResizeObserver.instances).toHaveLength(2);
     expect(latestMO().observe).toHaveBeenCalledWith(ref.current, {
       childList: true,
       subtree: true,
@@ -154,10 +164,12 @@ describe("useAutoScroll", () => {
     const ref = { current: makeEl() };
     const { unmount } = renderHook(() => useAutoScroll(ref));
     const mo = latestMO();
-    const ro = latestRO();
+    const cRO = containerRO();
+    const ctRO = contentRO();
     unmount();
     expect(mo.disconnect).toHaveBeenCalled();
-    expect(ro.disconnect).toHaveBeenCalled();
+    expect(cRO.disconnect).toHaveBeenCalled();
+    expect(ctRO.disconnect).toHaveBeenCalled();
   });
 
   it("handles null ref without throwing", () => {
@@ -461,7 +473,7 @@ describe("useAutoScroll", () => {
 
     (el as any).clientWidth = 500;
     (el as any).scrollHeight = 1400;
-    act(() => latestRO().trigger());
+    act(() => containerRO().trigger());
 
     expect(el.scrollTop).toBe(1400);
   });
@@ -479,7 +491,7 @@ describe("useAutoScroll", () => {
     // Width changes causing content reflow
     (el as any).clientWidth = 500;
     (el as any).scrollHeight = 2000;
-    act(() => latestRO().trigger());
+    act(() => containerRO().trigger());
 
     // 300 * (2000 / 1000) = 600
     expect(el.scrollTop).toBe(600);
@@ -494,9 +506,62 @@ describe("useAutoScroll", () => {
     const scrollTopBefore = el.scrollTop;
     (el as any).scrollHeight = 1500;
     // clientWidth stays 300 — resize observer fires but should bail out
-    act(() => latestRO().trigger());
+    act(() => containerRO().trigger());
 
     expect(el.scrollTop).toBe(scrollTopBefore);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Content ResizeObserver (virtualizer measurement corrections)
+  // ---------------------------------------------------------------------------
+
+  it("scrolls to bottom when content child resizes and scrollHeight increases", () => {
+    const el = makeEl();
+    const child = document.createElement("div");
+    el.appendChild(child);
+    const ref = { current: el };
+    renderHook(() => useAutoScroll(ref));
+    flushRafs();
+
+    // Simulate virtualizer correcting estimated heights: scrollHeight grows
+    // but no DOM nodes are added/removed (only style attributes change).
+    (el as any).scrollHeight = 1800;
+    act(() => contentRO().trigger());
+    flushRafs();
+    expect(el.scrollTop).toBe(1800);
+  });
+
+  it("does NOT scroll on content resize when user has scrolled up", () => {
+    const el = makeEl();
+    const child = document.createElement("div");
+    el.appendChild(child);
+    const ref = { current: el };
+    const { result } = renderHook(() => useAutoScroll(ref));
+    flushRafs();
+
+    // User scrolls up
+    (el as any).scrollTop = 100;
+    act(() => result.current.handleScroll());
+
+    (el as any).scrollHeight = 1800;
+    act(() => contentRO().trigger());
+    flushRafs();
+    expect(el.scrollTop).toBe(100);
+  });
+
+  it("observes content children with the content ResizeObserver", () => {
+    const el = makeEl();
+    const child1 = document.createElement("div");
+    const child2 = document.createElement("div");
+    el.appendChild(child1);
+    el.appendChild(child2);
+    const ref = { current: el };
+    renderHook(() => useAutoScroll(ref));
+
+    const cro = contentRO();
+    expect(cro.observe).toHaveBeenCalledTimes(2);
+    expect(cro.observe).toHaveBeenCalledWith(child1);
+    expect(cro.observe).toHaveBeenCalledWith(child2);
   });
 
   // ---------------------------------------------------------------------------
@@ -517,7 +582,8 @@ describe("useAutoScroll", () => {
     act(() => result.current.handleScroll());
 
     const oldMO = latestMO();
-    const oldRO = latestRO();
+    const oldContainerRO = containerRO(0);
+    const oldContentRO = contentRO(0);
 
     // Switch conversation
     rerender({ key: "b" });
@@ -525,9 +591,10 @@ describe("useAutoScroll", () => {
 
     // Old observers disconnected, new ones created
     expect(oldMO.disconnect).toHaveBeenCalled();
-    expect(oldRO.disconnect).toHaveBeenCalled();
+    expect(oldContainerRO.disconnect).toHaveBeenCalled();
+    expect(oldContentRO.disconnect).toHaveBeenCalled();
     expect(MockMutationObserver.instances).toHaveLength(2);
-    expect(MockResizeObserver.instances).toHaveLength(2);
+    expect(MockResizeObserver.instances).toHaveLength(4);
 
     // auto-scroll was re-enabled → should be at the bottom
     expect(el.scrollTop).toBe(1000);
@@ -537,6 +604,32 @@ describe("useAutoScroll", () => {
     act(() => latestMO().trigger());
     flushRafs();
     expect(el.scrollTop).toBe(1300);
+  });
+
+  it("scrolls to bottom after resetKey change even with a pending RAF from old observers", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { rerender } = renderHook(
+      ({ key }: { key: string }) => useAutoScroll(ref, key),
+      { initialProps: { key: "a" } },
+    );
+    flushRafs();
+
+    // Simulate what happens in the browser: DOM changes (chat switch)
+    // trigger the PREVIOUS MutationObserver before React runs effect cleanup.
+    // This schedules a RAF via scheduleScroll, setting scrollRafRef.
+    (el as any).scrollHeight = 1500;
+    act(() => MockMutationObserver.instances[0].trigger());
+    // Don't flush — leave the RAF pending.
+
+    // Now switch conversations. The effect cleanup cancels the pending RAF.
+    // Without the fix, scrollRafRef stays stale and blocks the new scroll.
+    (el as any).scrollTop = 0;
+    (el as any).scrollHeight = 2000;
+    rerender({ key: "b" });
+    flushRafs();
+
+    expect(el.scrollTop).toBe(2000);
   });
 
   // ---------------------------------------------------------------------------

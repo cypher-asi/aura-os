@@ -5,7 +5,6 @@ import type {
   AssistantMessageEnd as HarnessAssistantMessageEnd,
   TextDelta as HarnessTextDelta,
   ToolUseStart as HarnessToolUseStart,
-  ErrorMsg as HarnessErrorMsg,
 } from "./harness-protocol";
 
 /* ── PhaseTimingEntry ─────────────────────────────────────────────── */

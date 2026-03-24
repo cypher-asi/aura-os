@@ -2,9 +2,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
+import { useIsStreaming } from "../../hooks/stream/hooks";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
+import { MessageQueue } from "../MessageQueue";
+import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queue-store";
+import type { QueuedMessage } from "../../stores/message-queue-store";
 import type { ChatAttachment } from "../../api/streams";
 import styles from "../ChatView/ChatView.module.css";
 
@@ -47,6 +51,25 @@ export function ChatPanel({
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   const { handleScroll, scrollToBottom } = useAutoScroll(messageAreaRef, scrollResetKey);
 
+  // Prevent scroll-jank: hide the message area until auto-scroll has
+  // positioned to the bottom after messages first render.
+  const [contentVisible, setContentVisible] = useState(false);
+  useEffect(() => {
+    if (!historyResolved || contentVisible) return;
+    let raf2: number | undefined;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setContentVisible(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2 !== undefined) cancelAnimationFrame(raf2);
+    };
+  }, [historyResolved, contentVisible]);
+  const messageAreaVisible = !historyResolved || contentVisible;
+
+  const isStreaming = useIsStreaming(streamKey);
+  const queue = useMessageQueue(streamKey);
+
   useEffect(() => {
     requestAnimationFrame(() => inputBarRef.current?.focus());
   }, [scrollResetKey]);
@@ -56,11 +79,10 @@ export function ChatPanel({
     [],
   );
 
-  const handleSend = useCallback(
-    (content: string, action?: string, atts?: AttachmentItem[]) => {
-      setInput("");
+  const buildApiAttachments = useCallback(
+    (atts?: AttachmentItem[]): ChatAttachment[] | undefined => {
       const toSend = atts ?? attachmentsRef.current;
-      const apiAttachments: ChatAttachment[] | undefined = toSend.length > 0
+      return toSend.length > 0
         ? toSend.map((a) => ({
             type: a.attachmentType,
             media_type: a.mediaType,
@@ -68,11 +90,62 @@ export function ChatPanel({
             name: a.name,
           }))
         : undefined;
-      onSend(content, action ?? null, null, apiAttachments);
+    },
+    [],
+  );
+
+  const handleSend = useCallback(
+    (content: string, action?: string, atts?: AttachmentItem[]) => {
+      setInput("");
+      const apiAttachments = buildApiAttachments(atts);
       setAttachments([]);
+
+      if (isStreaming) {
+        useMessageQueueStore.getState().enqueue(streamKey, {
+          content,
+          action: action ?? null,
+          attachments: apiAttachments,
+        });
+      } else {
+        onSend(content, action ?? null, null, apiAttachments);
+      }
       scrollToBottom();
     },
-    [onSend, scrollToBottom],
+    [onSend, scrollToBottom, isStreaming, streamKey, buildApiAttachments],
+  );
+
+  // Auto-send next queued message when streaming stops
+  const prevStreamingRef = useRef(false);
+  const onSendRef = useRef(onSend);
+  useEffect(() => { onSendRef.current = onSend; }, [onSend]);
+
+  useEffect(() => {
+    if (prevStreamingRef.current && !isStreaming) {
+      const next = useMessageQueueStore.getState().dequeue(streamKey);
+      if (next) {
+        onSendRef.current(next.content, next.action, null, next.attachments);
+      }
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming, streamKey]);
+
+  const handleQueueEdit = useCallback(
+    (item: QueuedMessage) => {
+      useMessageQueueStore.getState().remove(streamKey, item.id);
+      setInput(item.content);
+      requestAnimationFrame(() => inputBarRef.current?.focus());
+    },
+    [streamKey],
+  );
+
+  const handleQueueMoveUp = useCallback(
+    (id: string) => useMessageQueueStore.getState().moveUp(streamKey, id),
+    [streamKey],
+  );
+
+  const handleQueueRemove = useCallback(
+    (id: string) => useMessageQueueStore.getState().remove(streamKey, id),
+    [streamKey],
   );
 
   let emptyState: React.ReactNode = null;
@@ -108,6 +181,7 @@ export function ChatPanel({
           className={styles.messageArea}
           ref={messageAreaRef}
           onScroll={handleScroll}
+          style={messageAreaVisible ? undefined : { opacity: 0 }}
         >
           <div className={styles.messageContent}>
             <ChatMessageList
@@ -117,6 +191,17 @@ export function ChatPanel({
             />
           </div>
         </div>
+
+        {queue.length > 0 && (
+          <div className={styles.queueSection}>
+            <MessageQueue
+              streamKey={streamKey}
+              onEdit={handleQueueEdit}
+              onMoveUp={handleQueueMoveUp}
+              onRemove={handleQueueRemove}
+            />
+          </div>
+        )}
 
         <ChatInputBar
           ref={inputBarRef}

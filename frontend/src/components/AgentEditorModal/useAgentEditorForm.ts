@@ -95,7 +95,8 @@ export function useAgentEditorForm(
       const payload = {
         name: name.trim(), role: role.trim(),
         personality: personality.trim(), system_prompt: systemPrompt.trim(),
-        icon: icon || undefined, harness,
+        icon: icon || (agent?.icon ? null : undefined),
+        harness,
         machine_type: machineType,
       };
       const saved = agent
