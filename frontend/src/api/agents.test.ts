@@ -2,6 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { agentTemplatesApi, agentInstancesApi, sessionsApi } from "./agents";
 import { ApiClientError } from "./core";
 
+function createStorageMock() {
+  const store = new Map<string, string>();
+  return {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    get length() {
+      return store.size;
+    },
+  };
+}
+
 function mockFetch(status: number, body: unknown) {
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -14,8 +34,21 @@ function mockFetch(status: number, body: unknown) {
 
 describe("agentTemplatesApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("list fetches GET /api/agents", async () => {
     const agents = [{ id: "a1", name: "Bot" }];
@@ -69,13 +102,13 @@ describe("agentTemplatesApi", () => {
     );
   });
 
-  it("listMessages fetches messages with signal", async () => {
-    const messages = [{ id: "m1", content: "hello" }];
-    const fetchMock = mockFetch(200, messages);
+  it("listEvents fetches events with signal", async () => {
+    const events = [{ id: "m1", content: "hello" }];
+    const fetchMock = mockFetch(200, events);
     globalThis.fetch = fetchMock;
-    const result = await agentTemplatesApi.listMessages("a1" as string);
-    expect(result).toEqual(messages);
-    expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/messages", expect.any(Object));
+    const result = await agentTemplatesApi.listEvents("a1" as string);
+    expect(result).toEqual(events);
+    expect(fetchMock).toHaveBeenCalledWith("/api/agents/a1/events", expect.any(Object));
   });
 
   it("propagates ApiClientError on failure", async () => {
@@ -86,8 +119,21 @@ describe("agentTemplatesApi", () => {
 
 describe("agentInstancesApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("createAgentInstance sends POST with agent_id", async () => {
     const fetchMock = mockFetch(200, { id: "ai1" });
@@ -137,12 +183,12 @@ describe("agentInstancesApi", () => {
     );
   });
 
-  it("getMessages fetches messages for agent instance", async () => {
+  it("getEvents fetches events for agent instance", async () => {
     const fetchMock = mockFetch(200, [{ id: "m1" }]);
     globalThis.fetch = fetchMock;
-    await agentInstancesApi.getMessages("p1" as string, "ai1" as string);
+    await agentInstancesApi.getEvents("p1" as string, "ai1" as string);
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/p1/agents/ai1/messages",
+      "/api/projects/p1/agents/ai1/events",
       expect.any(Object),
     );
   });
@@ -150,8 +196,21 @@ describe("agentInstancesApi", () => {
 
 describe("sessionsApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("listProjectSessions fetches by projectId", async () => {
     const fetchMock = mockFetch(200, []);
@@ -190,12 +249,12 @@ describe("sessionsApi", () => {
     );
   });
 
-  it("listSessionMessages fetches messages for session", async () => {
+  it("listSessionEvents fetches events for session", async () => {
     const fetchMock = mockFetch(200, []);
     globalThis.fetch = fetchMock;
-    await sessionsApi.listSessionMessages("p1" as string, "ai1" as string, "s1");
+    await sessionsApi.listSessionEvents("p1" as string, "ai1" as string, "s1");
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/projects/p1/agents/ai1/sessions/s1/messages",
+      "/api/projects/p1/agents/ai1/sessions/s1/events",
       expect.any(Object),
     );
   });

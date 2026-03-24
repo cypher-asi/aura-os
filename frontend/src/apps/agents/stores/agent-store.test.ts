@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import type { Agent, Message } from "../../../types";
-import type { DisplayMessage } from "../../../types/stream";
+import type { Agent, SessionEvent } from "../../../types";
+import type { DisplaySessionEvent } from "../../../types/stream";
 
 const mockAgents: Agent[] = [
   {
@@ -33,7 +33,7 @@ const { mockApi } = vi.hoisted(() => ({
   mockApi: {
     agents: {
       list: vi.fn(),
-      listMessages: vi.fn(),
+      listEvents: vi.fn(),
     },
   },
 }));
@@ -41,8 +41,8 @@ const { mockApi } = vi.hoisted(() => ({
 vi.mock("../../../api/client", () => ({ api: mockApi }));
 
 vi.mock("../../../utils/build-display-messages", () => ({
-  buildDisplayMessages: (msgs: Message[]): DisplayMessage[] =>
-    msgs.map((m) => ({ id: m.message_id, role: m.role, text: m.content })) as unknown as DisplayMessage[],
+  buildDisplayEvents: (msgs: SessionEvent[]): DisplaySessionEvent[] =>
+    msgs.map((m) => ({ id: m.event_id, role: m.role, text: m.content })) as unknown as DisplaySessionEvent[],
 }));
 
 import { useAgentStore } from "./agent-store";
@@ -117,26 +117,26 @@ describe("agent-store", () => {
   });
 
   describe("fetchHistory", () => {
-    it("loads messages for an agent", async () => {
-      const msg: Message = {
-        message_id: "m1",
+    it("loads events for an agent", async () => {
+      const msg: SessionEvent = {
+        event_id: "m1",
         agent_instance_id: "ai1",
         project_id: "p1",
         role: "user",
         content: "Hello",
         created_at: "2025-06-01T00:00:00Z",
       };
-      mockApi.agents.listMessages.mockResolvedValue([msg]);
+      mockApi.agents.listEvents.mockResolvedValue([msg]);
 
       await useAgentStore.getState().fetchHistory("a1");
 
       const entry = useAgentStore.getState().history["a1"];
       expect(entry.status).toBe("ready");
-      expect(entry.messages).toHaveLength(1);
+      expect(entry.events).toHaveLength(1);
     });
 
     it("sets error on failure", async () => {
-      mockApi.agents.listMessages.mockRejectedValue(new Error("fail"));
+      mockApi.agents.listEvents.mockRejectedValue(new Error("fail"));
 
       await useAgentStore.getState().fetchHistory("a1");
 
@@ -145,42 +145,42 @@ describe("agent-store", () => {
     });
 
     it("skips fetch when cache is fresh", async () => {
-      mockApi.agents.listMessages.mockResolvedValue([]);
+      mockApi.agents.listEvents.mockResolvedValue([]);
       await useAgentStore.getState().fetchHistory("a1");
       await useAgentStore.getState().fetchHistory("a1");
-      expect(mockApi.agents.listMessages).toHaveBeenCalledTimes(1);
+      expect(mockApi.agents.listEvents).toHaveBeenCalledTimes(1);
     });
 
     it("force re-fetches", async () => {
-      mockApi.agents.listMessages.mockResolvedValue([]);
+      mockApi.agents.listEvents.mockResolvedValue([]);
       await useAgentStore.getState().fetchHistory("a1");
       await useAgentStore.getState().fetchHistory("a1", { force: true });
-      expect(mockApi.agents.listMessages).toHaveBeenCalledTimes(2);
+      expect(mockApi.agents.listEvents).toHaveBeenCalledTimes(2);
     });
 
     it("deduplicates concurrent requests", async () => {
-      let resolveP: (v: Message[]) => void;
-      mockApi.agents.listMessages.mockImplementation(
+      let resolveP: (v: SessionEvent[]) => void;
+      mockApi.agents.listEvents.mockImplementation(
         () => new Promise((r) => { resolveP = r; }),
       );
       const p1 = useAgentStore.getState().fetchHistory("a1");
       const p2 = useAgentStore.getState().fetchHistory("a1");
       resolveP!([]);
       await Promise.all([p1, p2]);
-      expect(mockApi.agents.listMessages).toHaveBeenCalledTimes(1);
+      expect(mockApi.agents.listEvents).toHaveBeenCalledTimes(1);
     });
   });
 
   describe("prefetchHistory", () => {
     it("calls fetchHistory without throwing", () => {
-      mockApi.agents.listMessages.mockResolvedValue([]);
+      mockApi.agents.listEvents.mockResolvedValue([]);
       expect(() => useAgentStore.getState().prefetchHistory("a1")).not.toThrow();
     });
   });
 
   describe("invalidateHistory", () => {
     it("removes the history entry for the agent", async () => {
-      mockApi.agents.listMessages.mockResolvedValue([]);
+      mockApi.agents.listEvents.mockResolvedValue([]);
       await useAgentStore.getState().fetchHistory("a1");
       expect(useAgentStore.getState().history["a1"]).toBeDefined();
 

@@ -8,7 +8,14 @@ import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { api, ApiClientError } from "../../../api/client";
-import { useAgents, useSelectedAgent, useAgentStore, useSortedAgents } from "../stores";
+import {
+  useAgents,
+  useSelectedAgent,
+  useAgentStore,
+  useSortedAgents,
+  LAST_AGENT_ID_KEY,
+} from "../stores";
+import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
 import { useSidebarSearch } from "../../../context/SidebarSearchContext";
 
 import type { Agent } from "../../../types";
@@ -51,12 +58,22 @@ export function AgentList() {
     return () => setAction("agents", null);
   }, [setAction]);
 
+  useEffect(() => {
+    if (status !== "ready") return;
+    const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);
+    if (lastId && !agentId) {
+      useChatHistoryStore.getState().prefetchHistory(
+        agentHistoryKey(lastId),
+        () => api.agents.listEvents(lastId),
+      );
+    }
+  }, [status, agentId]);
+
   const agentMap = useMemo(
     () => new Map(agents.map((a) => [a.agent_id, a])),
     [agents],
   );
 
-  // Dismiss context menu on outside click or Escape
   useEffect(() => {
     if (!ctxMenu) return;
     const handleMouseDown = (e: MouseEvent) => {
@@ -83,6 +100,15 @@ export function AgentList() {
     },
     [fetchAgents, navigate],
   );
+
+  const handleHoverPrefetch = useCallback((e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest("button[id]");
+    if (!target) return;
+    useChatHistoryStore.getState().prefetchHistory(
+      agentHistoryKey(target.id),
+      () => api.agents.listEvents(target.id),
+    );
+  }, []);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -133,6 +159,7 @@ export function AgentList() {
   }, [deleteTarget, agentId, setSelectedAgent, navigate]);
 
   const sortedAgents = useSortedAgents();
+  const entries = useChatHistoryStore((s) => s.entries);
 
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return sortedAgents;
@@ -166,16 +193,23 @@ export function AgentList() {
 
   return (
     <div className={styles.list}>
-      <div onContextMenu={handleContextMenu}>
-        {filteredAgents.map((agent) => (
-          <AgentConversationRow
-            key={agent.agent_id}
-            agent={agent}
-            isSelected={agent.agent_id === agentId}
-            onClick={() => navigate(`/agents/${agent.agent_id}`)}
-            onContextMenu={handleContextMenu}
-          />
-        ))}
+      <div onContextMenu={handleContextMenu} onMouseOver={handleHoverPrefetch}>
+        {filteredAgents.map((agent) => {
+          const entry = entries[agentHistoryKey(agent.agent_id)];
+          const msgs = entry?.events;
+          const lastMessage = msgs?.length ? msgs[msgs.length - 1] : undefined;
+          return (
+            <AgentConversationRow
+              key={agent.agent_id}
+              agent={agent}
+              lastMessage={lastMessage}
+              isSelected={agent.agent_id === agentId}
+              onClick={() => navigate(`/agents/${agent.agent_id}`)}
+              onContextMenu={handleContextMenu}
+              onMouseOver={handleHoverPrefetch}
+            />
+          );
+        })}
       </div>
 
       {ctxMenu &&
@@ -200,15 +234,32 @@ export function AgentList() {
 
       <Modal
         isOpen={!!deleteTarget}
-        onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
+        onClose={() => {
+          setDeleteTarget(null);
+          setDeleteError(null);
+        }}
         title="Delete Agent"
         size="sm"
         footer={
           <div className={styles.confirmFooter}>
-            <Button variant="ghost" size="sm" onClick={() => { setDeleteTarget(null); setDeleteError(null); }} disabled={deleteLoading}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDeleteTarget(null);
+                setDeleteError(null);
+              }}
+              disabled={deleteLoading}
+            >
               Cancel
             </Button>
-            <Button variant="primary" size="sm" onClick={handleDelete} disabled={deleteLoading} className={styles.dangerButton}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              className={styles.dangerButton}
+            >
               {deleteLoading ? "Deleting..." : "Delete"}
             </Button>
           </div>

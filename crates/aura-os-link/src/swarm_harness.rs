@@ -102,11 +102,12 @@ impl HarnessLink for SwarmHarness {
         let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url).await?;
 
         // 4. Spawn bridge
-        let (events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
+        let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
         Ok(HarnessSession {
             session_id: session_resp.session_id,
             events_tx,
+            raw_events_tx,
             commands_tx,
         })
     }

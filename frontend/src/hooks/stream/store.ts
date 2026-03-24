@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { SetStateAction } from "react";
 import type {
-  DisplayMessage,
+  DisplaySessionEvent,
   ToolCallEntry,
   TimelineItem,
   StreamRefs,
@@ -18,7 +18,7 @@ import type {
 
 export interface StreamEntryState {
   isStreaming: boolean;
-  messages: DisplayMessage[];
+  events: DisplaySessionEvent[];
   streamingText: string;
   thinkingText: string;
   thinkingDurationMs: number | null;
@@ -40,7 +40,7 @@ interface StreamStore {
 
 const INITIAL_ENTRY: StreamEntryState = {
   isStreaming: false,
-  messages: [],
+  events: [],
   streamingText: "",
   thinkingText: "",
   thinkingDurationMs: null,
@@ -177,10 +177,10 @@ export function createSetters(key: string): StreamSetters {
       const cur = getStreamEntry(key);
       updateStreamEntry(key, { activeToolCalls: resolve(v, cur?.activeToolCalls ?? []) });
     },
-    setMessages(v) {
+    setEvents(v) {
       touchEntry(key);
       const cur = getStreamEntry(key);
-      updateStreamEntry(key, { messages: resolve(v, cur?.messages ?? []) });
+      updateStreamEntry(key, { events: resolve(v, cur?.events ?? []) });
     },
     setIsStreaming(v) {
       touchEntry(key);

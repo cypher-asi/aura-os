@@ -1,6 +1,6 @@
-import type { ProjectId, AgentId, AgentInstanceId, Agent, AgentInstance, Session, Message, Task } from "../types";
+import type { ProjectId, AgentId, AgentInstanceId, Agent, AgentInstance, Session, SessionEvent, Task } from "../types";
 import { apiFetch } from "./core";
-import { sendAgentMessageStream, sendMessageStream } from "./streams";
+import { sendAgentEventStream, sendEventStream } from "./streams";
 
 type ApiRequestOptions = {
   signal?: AbortSignal;
@@ -15,9 +15,9 @@ export const agentTemplatesApi = {
   update: (agentId: AgentId, data: { name?: string; role?: string; personality?: string; system_prompt?: string; skills?: string[]; icon?: string | null; harness?: "local" | "swarm"; machine_type?: string }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
-  listMessages: (agentId: AgentId, options?: ApiRequestOptions) =>
-    apiFetch<Message[]>(`/api/agents/${agentId}/messages`, { signal: options?.signal }),
-  sendMessageStream: sendAgentMessageStream,
+  listEvents: (agentId: AgentId, options?: ApiRequestOptions) =>
+    apiFetch<SessionEvent[]>(`/api/agents/${agentId}/events`, { signal: options?.signal }),
+  sendEventStream: sendAgentEventStream,
 };
 
 export const agentInstancesApi = {
@@ -39,12 +39,12 @@ export const agentInstancesApi = {
     apiFetch<void>(`/api/projects/${projectId}/agents/${agentInstanceId}`, {
       method: "DELETE",
     }),
-  getMessages: (projectId: ProjectId, agentInstanceId: AgentInstanceId, options?: ApiRequestOptions) =>
-    apiFetch<Message[]>(
-      `/api/projects/${projectId}/agents/${agentInstanceId}/messages`,
+  getEvents: (projectId: ProjectId, agentInstanceId: AgentInstanceId, options?: ApiRequestOptions) =>
+    apiFetch<SessionEvent[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/events`,
       { signal: options?.signal },
     ),
-  sendMessageStream,
+  sendEventStream,
 };
 
 export const sessionsApi = {
@@ -62,8 +62,8 @@ export const sessionsApi = {
     apiFetch<Task[]>(
       `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/tasks`,
     ),
-  listSessionMessages: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
-    apiFetch<Message[]>(
-      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/messages`,
+  listSessionEvents: (projectId: ProjectId, agentInstanceId: AgentInstanceId, sessionId: string) =>
+    apiFetch<SessionEvent[]>(
+      `/api/projects/${projectId}/agents/${agentInstanceId}/sessions/${sessionId}/events`,
     ),
 };

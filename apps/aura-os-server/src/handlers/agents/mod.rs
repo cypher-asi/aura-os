@@ -15,3 +15,12 @@ pub(crate) use chat::{
 pub(crate) use sessions::{
     get_session, list_project_sessions, list_session_events, list_session_tasks, list_sessions,
 };
+
+pub mod conversions_pub {
+    pub use super::conversions::events_to_session_history;
+}
+pub mod chat_pub {
+    pub use super::chat::session_events_to_conversation_history;
+}
+
+pub(crate) use chat::build_project_system_prompt_pub;

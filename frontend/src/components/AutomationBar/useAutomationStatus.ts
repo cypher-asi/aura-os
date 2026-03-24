@@ -65,12 +65,20 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   useEffect(() => {
     const unsubs = [
       subscribe(EventType.LoopStarted, (e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:LoopStarted',message:'LoopStarted event received',data:{project_id:e.project_id,agent_id:e.agent_id,isForProject:isForProject(e),hookProjectId:projectId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         if (!isForProject(e)) return;
         const agentId = e.agent_id;
         if (agentId) setActiveAgents((prev) => prev.includes(agentId) ? prev : [...prev, agentId]);
         setPaused(false); setStarting(false); setPreparing(true);
       }),
-      subscribe(EventType.TaskStarted, (e) => { if (!isForProject(e)) return; setPreparing(false); }),
+      subscribe(EventType.TaskStarted, (e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:TaskStarted',message:'TaskStarted event received',data:{project_id:e.project_id,agent_id:e.agent_id,isForProject:isForProject(e),hookProjectId:projectId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        if (!isForProject(e)) return; setPreparing(false);
+      }),
       subscribe(EventType.LoopPaused, (e) => { if (!isForProject(e)) return; setPaused(true); setPreparing(false); }),
       subscribe(EventType.LoopStopped, (e) => {
         if (!isForProject(e)) return;
@@ -80,6 +88,9 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         setPaused(false); setStarting(false); setPreparing(false);
       }),
       subscribe(EventType.LoopFinished, (e) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:LoopFinished',message:'LoopFinished event received',data:{project_id:e.project_id,agent_id:e.agent_id,isForProject:isForProject(e),hookProjectId:projectId},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         if (!isForProject(e)) return;
         const agentId = e.agent_id;
         if (agentId) setActiveAgents((prev) => prev.filter((id) => id !== agentId));
@@ -100,12 +111,21 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
   else if (running) status = "active";
 
   const handleStart = useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:handleStart',message:'handleStart called',data:{projectId,agentInstanceId},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     try {
       setStarting(true); setActiveTab("tasks");
       const res = await api.startLoop(projectId, agentInstanceId);
+      // #region agent log
+      fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:handleStart:success',message:'startLoop API succeeded',data:{res},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (res.active_agent_instances) setActiveAgents(res.active_agent_instances);
-      setPaused(false); setStarting(false); setPreparing(true);
+      setPaused(false); setStarting(false);
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'useAutomationStatus.ts:handleStart:error',message:'startLoop API FAILED',data:{error:String(err)},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       setStarting(false); setPreparing(false);
       if (isInsufficientCreditsError(err)) dispatchInsufficientCredits();
       console.error("Failed to start loop", err);

@@ -117,6 +117,7 @@ pub(crate) struct UpdateAgentInstanceRequest {
 pub(crate) struct SendChatRequest {
     pub content: String,
     pub action: Option<String>,
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

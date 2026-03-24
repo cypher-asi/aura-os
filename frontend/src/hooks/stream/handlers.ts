@@ -6,7 +6,7 @@ import type {
   ToolCallInfo,
   ToolResultInfo,
 } from "../../api/streams";
-import type { Message, ChatContentBlock } from "../../types";
+import type { SessionEvent, ChatContentBlock } from "../../types";
 import { extractToolCalls, extractArtifactRefs } from "../../utils/chat-history";
 import type {
   DisplayContentBlockUnion,
@@ -257,10 +257,10 @@ function isTextOrImage(b: ChatContentBlock): b is Extract<ChatContentBlock, { ty
   return b.type === "text" || b.type === "image";
 }
 
-export function handleMessageSaved(
+export function handleEventSaved(
   refs: StreamRefs,
   setters: StreamSetters,
-  msg: Message,
+  msg: SessionEvent,
 ): void {
   const allBlocks = msg.content_blocks ?? [];
   const displayBlocks: DisplayContentBlockUnion[] = allBlocks
@@ -280,10 +280,10 @@ export function handleMessageSaved(
   const savedThinking = msg.thinking || refs.thinkingBuffer.current || undefined;
   const savedThinkingDuration = msg.thinking_duration_ms
     ?? (refs.thinkingStart.current != null ? Date.now() - refs.thinkingStart.current : null);
-  setters.setMessages((prev) => [
+  setters.setEvents((prev) => [
     ...prev,
     {
-      id: msg.message_id,
+      id: msg.event_id,
       role: "assistant",
       content: msg.content,
       contentBlocks: displayBlocks.length > 0 ? displayBlocks : undefined,
@@ -310,7 +310,7 @@ export function handleAssistantTurnBoundary(
   const hasBuffer = !!refs.streamBuffer.current;
   if (hasBuffer) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
-    setters.setMessages((prev) => [
+    setters.setEvents((prev) => [
       ...prev,
       {
         id: `stream-${Date.now()}`,
@@ -360,7 +360,7 @@ export function handleStreamError(
   const prefix = refs.streamBuffer.current
     ? refs.streamBuffer.current + "\n\n"
     : "";
-  setters.setMessages((prev) => [
+  setters.setEvents((prev) => [
     ...prev,
     {
       id: `error-${Date.now()}`,
@@ -388,7 +388,7 @@ export function finalizeStream(
 
   if (hasBuffer && !closureIsStreaming) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
-    setters.setMessages((prev) => [
+    setters.setEvents((prev) => [
       ...prev,
       {
         id: `stream-${Date.now()}`,

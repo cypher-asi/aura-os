@@ -106,9 +106,26 @@ describe("ChatInputBar", () => {
     expect(onStop).toHaveBeenCalledOnce();
   });
 
-  it("shows model label", () => {
-    render(<ChatInputBar {...makeProps()} />);
+  it("shows default model label when selectedModel provided", () => {
+    render(<ChatInputBar {...makeProps({ selectedModel: "claude-opus-4-6" })} />);
     expect(screen.getByText("Opus 4.6")).toBeInTheDocument();
+  });
+
+  it("shows selected model label", () => {
+    render(<ChatInputBar {...makeProps({ selectedModel: "claude-sonnet-4-6" })} />);
+    expect(screen.getByText("Sonnet 4.6")).toBeInTheDocument();
+  });
+
+  it("opens model dropdown on click and calls onModelChange", async () => {
+    const user = userEvent.setup();
+    const onModelChange = vi.fn();
+    render(<ChatInputBar {...makeProps({ selectedModel: "claude-opus-4-6", onModelChange })} />);
+
+    await user.click(screen.getByText("Opus 4.6"));
+    expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Sonnet 4.6"));
+    expect(onModelChange).toHaveBeenCalledWith("claude-sonnet-4-6");
   });
 
   it("shows context usage when provided", () => {

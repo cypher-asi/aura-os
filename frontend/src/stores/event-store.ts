@@ -255,6 +255,12 @@ function connectEventSocket() {
     (data: string) => {
       try {
         const raw = JSON.parse(data) as Record<string, unknown>;
+        // #region agent log
+        const _rt = raw.type as string;
+        if (_rt && (_rt.startsWith("loop_") || _rt.startsWith("task_"))) {
+          fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'event-store.ts:ws_onmessage',message:'WS received domain event',data:{type:_rt,project_id:raw.project_id,agent_instance_id:raw.agent_instance_id,raw_keys:Object.keys(raw)},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
         const event = parseAuraEvent(
           raw.type as string,
           raw,
@@ -264,12 +270,22 @@ function connectEventSocket() {
             agent_id: raw.agent_instance_id as string | undefined,
           },
         );
+        // #region agent log
+        if (_rt && (_rt.startsWith("loop_") || _rt.startsWith("task_"))) {
+          fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'event-store.ts:after_parse',message:'parsed AuraEvent',data:{type:event.type,project_id:event.project_id,agent_id:event.agent_id},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
         handleEngineEvent(event);
       } catch {
         // ignore malformed events
       }
     },
-    (connected: boolean) => useEventStore.setState({ connected }),
+    (connected: boolean) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7888/ingest/89d88b3b-9aca-4e16-8ac5-ebaceae56093',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'926b20'},body:JSON.stringify({sessionId:'926b20',location:'event-store.ts:ws_connected',message:'WS connection state changed',data:{connected},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      useEventStore.setState({ connected });
+    },
   );
 }
 

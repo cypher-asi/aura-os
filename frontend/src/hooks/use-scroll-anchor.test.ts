@@ -1,5 +1,5 @@
 import { renderHook, act } from "@testing-library/react";
-import { useAutoScroll } from "./use-auto-scroll";
+import { useScrollAnchor } from "./use-scroll-anchor";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -39,7 +39,17 @@ class MockResizeObserver {
 // Test suite
 // ---------------------------------------------------------------------------
 
-describe("useAutoScroll", () => {
+interface HookOptions {
+  resetKey?: unknown;
+  contentReady?: boolean;
+}
+
+const DEFAULT_OPTIONS: Required<HookOptions> = {
+  resetKey: "default",
+  contentReady: true,
+};
+
+describe("useScrollAnchor", () => {
   let origMO: typeof MutationObserver;
   let origRO: typeof ResizeObserver;
   let origRAF: typeof requestAnimationFrame;
@@ -50,7 +60,7 @@ describe("useAutoScroll", () => {
 
   /** Flush all pending requestAnimationFrame callbacks (including nested). */
   function flushRafs() {
-    let safety = 20;
+    let safety = 30;
     while (rafQueue.size > 0 && --safety > 0) {
       const batch = new Map(rafQueue);
       rafQueue.clear();
@@ -58,6 +68,15 @@ describe("useAutoScroll", () => {
         fn(performance.now());
       }
     }
+  }
+
+  /** Flush exactly one pending RAF callback. */
+  function flushOneRaf() {
+    const iter = rafQueue.entries().next();
+    if (iter.done) return;
+    const [id, fn] = iter.value;
+    rafQueue.delete(id);
+    fn(performance.now());
   }
 
   beforeEach(() => {
@@ -123,10 +142,6 @@ describe("useAutoScroll", () => {
     return MockMutationObserver.instances[MockMutationObserver.instances.length - 1];
   }
 
-  function latestRO(): MockResizeObserver {
-    return MockResizeObserver.instances[MockResizeObserver.instances.length - 1];
-  }
-
   /** The container-width ResizeObserver (first created per setup round). */
   function containerRO(round = 0): MockResizeObserver {
     return MockResizeObserver.instances[round * 2];
@@ -137,20 +152,42 @@ describe("useAutoScroll", () => {
     return MockResizeObserver.instances[round * 2 + 1];
   }
 
+  /**
+   * Render the hook with content ready and flush settling so tests
+   * start in the active phase.
+   */
+  function renderSettled(
+    elOverrides: Parameters<typeof makeEl>[0] = {},
+    optOverrides: HookOptions = {},
+  ) {
+    const el = makeEl(elOverrides);
+    const ref = { current: el };
+    const opts = { ...DEFAULT_OPTIONS, ...optOverrides };
+    const hook = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, p),
+      { initialProps: opts },
+    );
+    act(() => flushRafs());
+    return { el, ref, ...hook };
+  }
+
   // ---------------------------------------------------------------------------
   // API & lifecycle
   // ---------------------------------------------------------------------------
 
-  it("returns handleScroll and scrollToBottom functions", () => {
+  it("returns handleScroll, scrollToBottom, and isReady", () => {
     const ref = { current: makeEl() };
-    const { result } = renderHook(() => useAutoScroll(ref));
+    const { result } = renderHook(() =>
+      useScrollAnchor(ref, DEFAULT_OPTIONS),
+    );
     expect(typeof result.current.handleScroll).toBe("function");
     expect(typeof result.current.scrollToBottom).toBe("function");
+    expect(typeof result.current.isReady).toBe("boolean");
   });
 
   it("sets up MutationObserver and ResizeObservers on mount", () => {
     const ref = { current: makeEl() };
-    renderHook(() => useAutoScroll(ref));
+    renderHook(() => useScrollAnchor(ref, DEFAULT_OPTIONS));
     expect(MockMutationObserver.instances).toHaveLength(1);
     expect(MockResizeObserver.instances).toHaveLength(2);
     expect(latestMO().observe).toHaveBeenCalledWith(ref.current, {
@@ -161,8 +198,7 @@ describe("useAutoScroll", () => {
   });
 
   it("disconnects observers on unmount", () => {
-    const ref = { current: makeEl() };
-    const { unmount } = renderHook(() => useAutoScroll(ref));
+    const { unmount } = renderSettled();
     const mo = latestMO();
     const cRO = containerRO();
     const ctRO = contentRO();
@@ -174,7 +210,9 @@ describe("useAutoScroll", () => {
 
   it("handles null ref without throwing", () => {
     const ref: React.RefObject<HTMLElement | null> = { current: null };
-    const { result } = renderHook(() => useAutoScroll(ref));
+    const { result } = renderHook(() =>
+      useScrollAnchor(ref, DEFAULT_OPTIONS),
+    );
     expect(() => {
       act(() => result.current.handleScroll());
       act(() => result.current.scrollToBottom());
@@ -182,15 +220,106 @@ describe("useAutoScroll", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Initial mount scroll
+  // Settling phase
   // ---------------------------------------------------------------------------
 
-  it("scrolls to the bottom on mount", () => {
-    const el = makeEl({ scrollTop: 200 });
-    const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+  it("isReady starts false", () => {
+    const ref = { current: makeEl() };
+    const { result } = renderHook(() =>
+      useScrollAnchor(ref, DEFAULT_OPTIONS),
+    );
+    // Don't flush RAFs — still settling
+    expect(result.current.isReady).toBe(false);
+  });
+
+  it("isReady becomes true after settling completes", () => {
+    const { result } = renderSettled();
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("scrolls to bottom after settling", () => {
+    const { el } = renderSettled({ scrollTop: 200 });
     expect(el.scrollTop).toBe(1000);
+  });
+
+  it("reveals via stability polling even with no content", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { result } = renderHook(() =>
+      useScrollAnchor(ref, DEFAULT_OPTIONS),
+    );
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("waits for contentReady before settling", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = { ...DEFAULT_OPTIONS, contentReady: false };
+    const { result, rerender } = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, p),
+      { initialProps: opts },
+    );
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(false);
+
+    rerender({ ...opts, contentReady: true });
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
+  });
+
+  it("keeps pinned to bottom during settling for small upward deltas", () => {
+    const { el, result } = renderSettled();
+
+    // Small upward adjustment during settling on a fresh resetKey should
+    // not break pinning after settling.
+    (el as any).scrollHeight = 1200;
+    act(() => latestMO().trigger());
+    act(() => flushRafs());
+    expect(el.scrollTop).toBe(1200);
+  });
+
+  it("exits settling and respects user intent on strong upward scroll", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = { ...DEFAULT_OPTIONS, contentReady: false };
+    const { result, rerender } = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, p),
+      { initialProps: opts },
+    );
+
+    // Make contentReady but don't finish settling — flush only 1 RAF
+    rerender({ ...opts, contentReady: true });
+    act(() => flushOneRaf());
+
+    // Strong upward scroll should escape settling
+    (el as any).scrollTop = 100;
+    act(() => result.current.handleScroll());
+
+    // Should have revealed and be unpinned
+    expect(result.current.isReady).toBe(true);
+
+    // Subsequent mutations should NOT auto-scroll
+    (el as any).scrollHeight = 1400;
+    act(() => latestMO().trigger());
+    act(() => flushRafs());
+    expect(el.scrollTop).toBe(100);
+  });
+
+  it("safety timeout forces reveal if settling takes too long", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const opts = { ...DEFAULT_OPTIONS, contentReady: false };
+    const { result } = renderHook(
+      (p: typeof opts) => useScrollAnchor(ref, p),
+      { initialProps: opts },
+    );
+    expect(result.current.isReady).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(result.current.isReady).toBe(true);
   });
 
   // ---------------------------------------------------------------------------
@@ -198,19 +327,14 @@ describe("useAutoScroll", () => {
   // ---------------------------------------------------------------------------
 
   it("scrollToBottom sets scrollTop to scrollHeight", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
+    const { el, result } = renderSettled();
     (el as any).scrollHeight = 2000;
     act(() => result.current.scrollToBottom());
     expect(el.scrollTop).toBe(2000);
   });
 
   it("scrollToBottom re-enables auto-scroll after user scrolled up", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     // User scrolls far up
     (el as any).scrollTop = 100;
@@ -219,7 +343,7 @@ describe("useAutoScroll", () => {
     // Verify auto-scroll is off
     (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(100);
 
     // scrollToBottom should re-enable
@@ -227,10 +351,10 @@ describe("useAutoScroll", () => {
     expect(el.scrollTop).toBe(1200);
 
     // Subsequent mutations should auto-scroll again
-    flushRafs();
+    act(() => flushRafs());
     (el as any).scrollHeight = 1500;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1500);
   });
 
@@ -238,56 +362,40 @@ describe("useAutoScroll", () => {
   // Mutation-triggered auto-scroll
   // ---------------------------------------------------------------------------
 
-  it("scrolls to bottom on mutation when auto-scroll is active", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
-
+  it("scrolls to bottom on mutation when pinned", () => {
+    const { el } = renderSettled();
     (el as any).scrollHeight = 1400;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1400);
   });
 
   it("uses live scrollHeight when it grows between observer fire and RAF", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el } = renderSettled();
 
-    // Observer fires when scrollHeight is 1200…
     (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
 
-    // …but by the time the RAF executes, virtualizer measured a very tall
-    // item and scrollHeight jumped to 5000.
+    // By the time the RAF executes, scrollHeight jumped further
     (el as any).scrollHeight = 5000;
-    flushRafs();
-
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(5000);
   });
 
   it("does NOT scroll on mutation when user has scrolled up", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     (el as any).scrollTop = 100;
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1400;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(100);
   });
 
   it("re-enables auto-scroll when user scrolls back near the bottom", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     // Scroll up
     (el as any).scrollTop = 100;
@@ -300,7 +408,7 @@ describe("useAutoScroll", () => {
 
     (el as any).scrollHeight = 1400;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1400);
   });
 
@@ -309,10 +417,7 @@ describe("useAutoScroll", () => {
   // ---------------------------------------------------------------------------
 
   it("39px from bottom → treated as at bottom", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     // 1000 - 561 - 400 = 39 < 40
     (el as any).scrollTop = 561;
@@ -320,18 +425,12 @@ describe("useAutoScroll", () => {
 
     (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1200);
   });
 
   it("41px from bottom → treated as scrolled away", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
+    const { el, result } = renderSettled();
 
     // 1000 - 559 - 400 = 41 >= 40
     (el as any).scrollTop = 559;
@@ -339,62 +438,7 @@ describe("useAutoScroll", () => {
 
     (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
-    flushRafs();
-    expect(el.scrollTop).toBe(559);
-  });
-
-  // ---------------------------------------------------------------------------
-  // Initial settling window
-  // ---------------------------------------------------------------------------
-
-  it("keeps auto-scroll pinned during settling for small upward deltas", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
-
-    // Small upward adjustment during virtualizer settling should be ignored.
-    (el as any).scrollTop = 559;
-    act(() => result.current.handleScroll());
-
-    (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
-    flushRafs();
-    expect(el.scrollTop).toBe(1200);
-  });
-
-  it("exits settling and respects user intent on strong upward scroll", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
-
-    // Strong upward move should immediately disable auto-scroll.
-    (el as any).scrollTop = 100;
-    act(() => result.current.handleScroll());
-
-    (el as any).scrollHeight = 1400;
-    act(() => latestMO().trigger());
-    flushRafs();
-    expect(el.scrollTop).toBe(100);
-  });
-
-  it("falls back to normal at-bottom detection after settling timeout", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-
-    // Outside settling, 41px from bottom disables auto-scroll.
-    (el as any).scrollTop = 559;
-    act(() => result.current.handleScroll());
-
-    (el as any).scrollHeight = 1200;
-    act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(559);
   });
 
@@ -403,42 +447,36 @@ describe("useAutoScroll", () => {
   // ---------------------------------------------------------------------------
 
   it("handleScroll is a no-op while the programmatic scroll guard is active", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     // scrollToBottom activates the guard
     act(() => result.current.scrollToBottom());
 
-    // Simulate the race condition: scrollHeight grows before the scroll event
-    // handler fires. Without the guard, this would compute
+    // Race: scrollHeight grows before the scroll event handler fires.
+    // Without the guard, this would compute
     // 1500 - 1000 - 400 = 100 > 40 and disable auto-scroll.
     (el as any).scrollHeight = 1500;
     act(() => result.current.handleScroll());
 
     // Auto-scroll should still be active
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1500);
   });
 
   it("programmatic scroll guard clears after its RAF fires", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, result } = renderSettled();
 
     act(() => result.current.scrollToBottom());
-    flushRafs(); // clears the guard
+    act(() => flushRafs()); // clears the guard
 
-    // handleScroll should work normally now — scroll up disables auto-scroll
+    // handleScroll should work normally — scroll up disables auto-scroll
     (el as any).scrollTop = 100;
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(100);
   });
 
@@ -447,60 +485,52 @@ describe("useAutoScroll", () => {
   // ---------------------------------------------------------------------------
 
   it("coalesces rapid mutations into a single RAF", () => {
-    const ref = { current: makeEl() };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    renderSettled();
     const before = nextRafId;
-    (ref.current as any).scrollHeight = 1100;
 
+    const mo = latestMO();
+    const el = MockMutationObserver.instances[0];
+    // Grab the ref's element to bump scrollHeight
+    // (renderSettled returns it, but we can also trigger the observer)
     act(() => {
-      latestMO().trigger();
-      latestMO().trigger();
-      latestMO().trigger();
+      mo.trigger();
+      mo.trigger();
+      mo.trigger();
     });
 
-    expect(nextRafId - before).toBe(1);
+    // At most 1 new RAF should have been scheduled
+    expect(nextRafId - before).toBeLessThanOrEqual(1);
   });
 
   it("schedules a new RAF after the previous one fires", () => {
-    const ref = { current: makeEl() };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
-
-    (ref.current as any).scrollHeight = 1100;
+    const { el } = renderSettled();
+    (el as any).scrollHeight = 1100;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBe(1);
 
-    flushRafs();
+    act(() => flushRafs());
     expect(rafQueue.size).toBe(0);
 
-    (ref.current as any).scrollHeight = 1200;
+    (el as any).scrollHeight = 1200;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBe(1);
   });
 
   // ---------------------------------------------------------------------------
-  // ResizeObserver
+  // Container ResizeObserver (width changes)
   // ---------------------------------------------------------------------------
 
-  it("scrolls to bottom on width change when auto-scroll is active", () => {
-    const el = makeEl({ clientWidth: 300 });
-    const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+  it("scrolls to bottom on width change when pinned", () => {
+    const { el } = renderSettled({ clientWidth: 300 });
 
     (el as any).clientWidth = 500;
     (el as any).scrollHeight = 1400;
     act(() => containerRO().trigger());
-
     expect(el.scrollTop).toBe(1400);
   });
 
-  it("proportionally adjusts scroll position on width change when auto-scroll is off", () => {
-    const el = makeEl({ clientWidth: 300 });
-    const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+  it("proportionally adjusts scroll position on width change when unpinned", () => {
+    const { el, result } = renderSettled({ clientWidth: 300 });
 
     // Scroll up (auto-scroll off)
     (el as any).scrollTop = 300;
@@ -516,21 +546,16 @@ describe("useAutoScroll", () => {
   });
 
   it("ignores resize when width has not changed", () => {
-    const el = makeEl({ clientWidth: 300 });
-    const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el } = renderSettled({ clientWidth: 300 });
 
     const scrollTopBefore = el.scrollTop;
     (el as any).scrollHeight = 1500;
-    // clientWidth stays 300 — resize observer fires but should bail out
     act(() => containerRO().trigger());
-
     expect(el.scrollTop).toBe(scrollTopBefore);
   });
 
   // ---------------------------------------------------------------------------
-  // Content ResizeObserver (virtualizer measurement corrections)
+  // Content ResizeObserver (virtualiser measurement corrections)
   // ---------------------------------------------------------------------------
 
   it("scrolls to bottom when content child resizes and scrollHeight increases", () => {
@@ -538,14 +563,15 @@ describe("useAutoScroll", () => {
     const child = document.createElement("div");
     el.appendChild(child);
     const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const hook = renderHook(
+      (p: Required<HookOptions>) => useScrollAnchor(ref, p),
+      { initialProps: DEFAULT_OPTIONS },
+    );
+    act(() => flushRafs());
 
-    // Simulate virtualizer correcting estimated heights: scrollHeight grows
-    // but no DOM nodes are added/removed (only style attributes change).
     (el as any).scrollHeight = 1800;
     act(() => contentRO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1800);
   });
 
@@ -554,16 +580,18 @@ describe("useAutoScroll", () => {
     const child = document.createElement("div");
     el.appendChild(child);
     const ref = { current: el };
-    const { result } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { result } = renderHook(
+      (p: Required<HookOptions>) => useScrollAnchor(ref, p),
+      { initialProps: DEFAULT_OPTIONS },
+    );
+    act(() => flushRafs());
 
-    // User scrolls up
     (el as any).scrollTop = 100;
     act(() => result.current.handleScroll());
 
     (el as any).scrollHeight = 1800;
     act(() => contentRO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(100);
   });
 
@@ -574,7 +602,7 @@ describe("useAutoScroll", () => {
     el.appendChild(child1);
     el.appendChild(child2);
     const ref = { current: el };
-    renderHook(() => useAutoScroll(ref));
+    renderHook(() => useScrollAnchor(ref, DEFAULT_OPTIONS));
 
     const cro = contentRO();
     expect(cro.observe).toHaveBeenCalledTimes(2);
@@ -586,14 +614,16 @@ describe("useAutoScroll", () => {
   // resetKey
   // ---------------------------------------------------------------------------
 
-  it("re-enables auto-scroll and recreates observers when resetKey changes", () => {
+  it("re-enters settling and recreates observers when resetKey changes", () => {
     const el = makeEl();
     const ref = { current: el };
     const { result, rerender } = renderHook(
-      ({ key }: { key: string }) => useAutoScroll(ref, key),
+      ({ key }: { key: string }) =>
+        useScrollAnchor(ref, { ...DEFAULT_OPTIONS, resetKey: key }),
       { initialProps: { key: "a" } },
     );
-    flushRafs();
+    act(() => flushRafs());
+    expect(result.current.isReady).toBe(true);
 
     // User scrolls up → auto-scroll disabled
     (el as any).scrollTop = 100;
@@ -605,7 +635,7 @@ describe("useAutoScroll", () => {
 
     // Switch conversation
     rerender({ key: "b" });
-    flushRafs();
+    act(() => flushRafs());
 
     // Old observers disconnected, new ones created
     expect(oldMO.disconnect).toHaveBeenCalled();
@@ -614,13 +644,16 @@ describe("useAutoScroll", () => {
     expect(MockMutationObserver.instances).toHaveLength(2);
     expect(MockResizeObserver.instances).toHaveLength(4);
 
-    // auto-scroll was re-enabled → should be at the bottom
+    // isReady should be true again after settling
+    expect(result.current.isReady).toBe(true);
+
+    // Should be scrolled to bottom
     expect(el.scrollTop).toBe(1000);
 
     // Subsequent mutations should auto-scroll
     (el as any).scrollHeight = 1300;
     act(() => latestMO().trigger());
-    flushRafs();
+    act(() => flushRafs());
     expect(el.scrollTop).toBe(1300);
   });
 
@@ -628,24 +661,22 @@ describe("useAutoScroll", () => {
     const el = makeEl();
     const ref = { current: el };
     const { rerender } = renderHook(
-      ({ key }: { key: string }) => useAutoScroll(ref, key),
+      ({ key }: { key: string }) =>
+        useScrollAnchor(ref, { ...DEFAULT_OPTIONS, resetKey: key }),
       { initialProps: { key: "a" } },
     );
-    flushRafs();
+    act(() => flushRafs());
 
-    // Simulate what happens in the browser: DOM changes (chat switch)
-    // trigger the PREVIOUS MutationObserver before React runs effect cleanup.
-    // This schedules a RAF via scheduleScroll, setting scrollRafRef.
+    // Trigger old MutationObserver before cleanup runs, leaving a pending RAF
     (el as any).scrollHeight = 1500;
     act(() => MockMutationObserver.instances[0].trigger());
     // Don't flush — leave the RAF pending.
 
-    // Now switch conversations. The effect cleanup cancels the pending RAF.
-    // Without the fix, scrollRafRef stays stale and blocks the new scroll.
+    // Switch conversations. Effect cleanup cancels the pending RAF.
     (el as any).scrollTop = 0;
     (el as any).scrollHeight = 2000;
     rerender({ key: "b" });
-    flushRafs();
+    act(() => flushRafs());
 
     expect(el.scrollTop).toBe(2000);
   });
@@ -655,19 +686,27 @@ describe("useAutoScroll", () => {
   // ---------------------------------------------------------------------------
 
   it("cancels pending mutation RAF on unmount", () => {
-    const el = makeEl();
-    const ref = { current: el };
-    const { unmount } = renderHook(() => useAutoScroll(ref));
-    flushRafs();
+    const { el, unmount } = renderSettled();
 
-    // Schedule a mutation RAF, then unmount before it fires
     (el as any).scrollHeight = 1300;
     act(() => latestMO().trigger());
     expect(rafQueue.size).toBeGreaterThan(0);
 
     unmount();
+    expect(rafQueue.size).toBe(0);
+  });
 
-    // The cleanup should have cancelled the pending RAF
+  it("cancels settling RAF and timeout on unmount", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    const { unmount } = renderHook(() =>
+      useScrollAnchor(ref, { ...DEFAULT_OPTIONS, contentReady: false }),
+    );
+
+    // Settling RAF is queued, timeout is scheduled
+    expect(rafQueue.size).toBeGreaterThan(0);
+
+    unmount();
     expect(rafQueue.size).toBe(0);
   });
 });

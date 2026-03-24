@@ -89,7 +89,7 @@ pub(crate) async fn resolve_single_agent(
 /// produce `SessionEvent` objects.  Incremental events (`text_delta`, `tool_use_start`,
 /// etc.) are stored for replay but skipped here — the `assistant_message_end`
 /// event contains the full synthesis (text, thinking, content_blocks, usage).
-pub(crate) fn events_to_session_history(
+pub fn events_to_session_history(
     events: &[StorageSessionEvent],
     project_agent_id: &str,
     project_id: &str,

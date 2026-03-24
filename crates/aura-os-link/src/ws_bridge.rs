@@ -9,6 +9,7 @@ pub(crate) fn spawn_ws_bridge<S>(
     ws_stream: S,
 ) -> (
     broadcast::Sender<OutboundMessage>,
+    broadcast::Sender<serde_json::Value>,
     mpsc::UnboundedSender<InboundMessage>,
 )
 where
@@ -19,11 +20,13 @@ where
     <S as futures_util::Sink<WsMessage>>::Error: std::fmt::Display + Send,
 {
     let (outbound_tx, _) = broadcast::channel::<OutboundMessage>(256);
+    let (raw_tx, _) = broadcast::channel::<serde_json::Value>(256);
     let (inbound_tx, mut inbound_rx) = mpsc::unbounded_channel::<InboundMessage>();
 
     let (mut ws_sink, mut ws_stream_read) = ws_stream.split();
 
     let reader_tx = outbound_tx.clone();
+    let reader_raw_tx = raw_tx.clone();
     tokio::spawn(async move {
         while let Some(msg_result) = ws_stream_read.next().await {
             match msg_result {
@@ -32,12 +35,15 @@ where
                     match serde_json::from_str::<OutboundMessage>(&text) {
                         Ok(event) => {
                             debug!(?event, "Parsed harness event");
-                            // broadcast::send fails only when there are no receivers;
-                            // that's fine — events before anyone subscribes are dropped.
                             let _ = reader_tx.send(event);
                         }
-                        Err(e) => {
-                            warn!(raw = %text, "Failed to deserialize harness message: {e}");
+                        Err(_) => {
+                            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+                                debug!(raw = %text, "Forwarding untyped harness event");
+                                let _ = reader_raw_tx.send(value);
+                            } else {
+                                warn!(raw = %text, "Non-JSON harness message, dropping");
+                            }
                         }
                     }
                 }
@@ -67,5 +73,5 @@ where
         let _ = ws_sink.close().await;
     });
 
-    (outbound_tx, inbound_tx)
+    (outbound_tx, raw_tx, inbound_tx)
 }

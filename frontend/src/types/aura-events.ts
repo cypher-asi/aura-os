@@ -1,4 +1,4 @@
-import type { AgentInstance, Message, Spec, Task } from "./entities";
+import type { AgentInstance, SessionEvent, Spec, Task } from "./entities";
 import type {
   SessionReady as HarnessSessionReady,
   AssistantMessageStart as HarnessAssistantMessageStart,
@@ -145,7 +145,7 @@ export type AuraEvent = AuraEventBase & (
     } }
   | { type: EventType.MessageEnd; content: {
       message_id: string;
-      message: Message;
+      event: SessionEvent;
     } }
 
   // ── Streaming (within MessageStart..MessageEnd) ─────────────

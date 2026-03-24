@@ -1,10 +1,9 @@
 import { useRef, useState, useImperativeHandle, forwardRef, memo, useCallback, useEffect } from "react";
-import { ArrowUp, Plus, X, FileText } from "lucide-react";
+import { ArrowUp, Plus, X, FileText, ChevronDown } from "lucide-react";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
+import { AVAILABLE_MODELS, modelLabel } from "../../constants/models";
 import styles from "../ChatView/ChatView.module.css";
-
-const ACTIVE_MODEL_LABEL = "Opus 4.6";
 
 export interface ChatInputBarHandle {
   focus: () => void;
@@ -52,10 +51,13 @@ function AttachmentPreviews({ attachments, onRemove }: { attachments: Attachment
 
 export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function ChatInputBar({
   input, onInputChange, onSend, onStop, streamKey,
+  selectedModel, onModelChange,
   attachments = [], onAttachmentsChange, onRemoveAttachment, contextUsagePercent,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,6 +79,17 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
 
   useEffect(() => { autoResizeTextarea(); }, [input, autoResizeTextarea]);
 
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [modelMenuOpen]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(input); }
   };
@@ -97,7 +110,25 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         </div>
       </div>
       <div className={styles.inputInfoBar}>
-        <span className={styles.modelButton}>{ACTIVE_MODEL_LABEL}</span>
+        <div className={styles.modelMenuWrap} ref={modelMenuRef}>
+          <button type="button" className={styles.modelButton} onClick={() => setModelMenuOpen((v) => !v)}>
+            {modelLabel(selectedModel ?? "")}<ChevronDown size={10} />
+          </button>
+          {modelMenuOpen && (
+            <div className={styles.modelMenu}>
+              {AVAILABLE_MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
+                  onClick={() => { onModelChange?.(m.id); setModelMenuOpen(false); }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <span className={styles.infoDot}>·</span>
         <span className={styles.infoText}>/ for commands</span>
         {contextUsagePercent !== undefined && (

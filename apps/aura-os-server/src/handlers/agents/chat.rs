@@ -306,7 +306,7 @@ fn has_live_session(state: &AppState, key: &str) -> bool {
     false
 }
 
-fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<ConversationMessage> {
+pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<ConversationMessage> {
     events
         .iter()
         .filter_map(|m| {
@@ -542,13 +542,24 @@ async fn get_or_create_chat_session(
     key: &str,
     harness_mode: HarnessMode,
     session_config: SessionConfig,
+    requested_model: Option<String>,
 ) -> ApiResult<(bool, tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>, tokio::sync::mpsc::UnboundedSender<HarnessInbound>)> {
     {
-        let reg = state.chat_sessions.lock().await;
+        let mut reg = state.chat_sessions.lock().await;
         if let Some(session) = reg.get(key) {
             if session.is_alive() {
-                let rx = session.events_tx.subscribe();
-                return Ok((false, rx, session.commands_tx.clone()));
+                let model_changed = match (&session.model, &requested_model) {
+                    (Some(current), Some(requested)) => current != requested,
+                    (None, Some(_)) => true,
+                    _ => false,
+                };
+                if model_changed {
+                    info!(key, "Model changed; closing existing chat session");
+                    reg.remove(key);
+                } else {
+                    let rx = session.events_tx.subscribe();
+                    return Ok((false, rx, session.commands_tx.clone()));
+                }
             }
         }
     }
@@ -568,6 +579,7 @@ async fn get_or_create_chat_session(
             session_id: session.session_id,
             commands_tx: session.commands_tx,
             events_tx: session.events_tx,
+            model: requested_model,
         });
     }
 
@@ -580,13 +592,14 @@ async fn open_harness_chat_stream(
     harness_mode: HarnessMode,
     session_config: SessionConfig,
     user_content: String,
+    requested_model: Option<String>,
     persist_ctx: Option<ChatPersistCtx>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
 )> {
     let (is_new, rx, commands_tx) =
-        get_or_create_chat_session(state, session_key, harness_mode, session_config).await?;
+        get_or_create_chat_session(state, session_key, harness_mode, session_config, requested_model).await?;
 
     // Subscribe the persistence receiver *before* sending the user message so
     // we don't miss early harness events in a fast-response scenario.
@@ -663,12 +676,13 @@ pub(crate) async fn send_agent_event_stream(
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(agent_id.to_string()),
+        model: body.model.clone(),
         token: jwt,
         conversation_messages,
         ..Default::default()
     };
 
-    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, persist_ctx).await
+    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, body.model, persist_ctx).await
 }
 
 pub(crate) async fn list_events(
@@ -736,6 +750,7 @@ pub(crate) async fn send_event_stream(
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(instance.agent_id.to_string()),
+        model: body.model.clone(),
         token: jwt,
         conversation_messages,
         project_id: Some(pid_str),
@@ -743,7 +758,15 @@ pub(crate) async fn send_event_stream(
         ..Default::default()
     };
 
-    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, persist_ctx).await
+    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, body.model, persist_ctx).await
+}
+
+pub(crate) fn build_project_system_prompt_pub(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_prompt: &str,
+) -> String {
+    build_project_system_prompt(state, project_id, agent_prompt)
 }
 
 fn build_project_system_prompt(

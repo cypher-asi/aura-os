@@ -1,16 +1,16 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import { buildDisplayMessages } from "../utils/build-display-messages";
-import type { Message } from "../types";
-import type { DisplayMessage } from "../types/stream";
+import { buildDisplayEvents } from "../utils/build-display-messages";
+import type { SessionEvent } from "../types";
+import type { DisplaySessionEvent } from "../types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
-const EMPTY_MESSAGES: DisplayMessage[] = [];
-const IDLE_HISTORY = { messages: EMPTY_MESSAGES, status: "idle" as const, error: null };
+const EMPTY_EVENTS: DisplaySessionEvent[] = [];
+const IDLE_HISTORY = { events: EMPTY_EVENTS, status: "idle" as const, error: null };
 
 type HistoryEntry = {
-  messages: DisplayMessage[];
+  events: DisplaySessionEvent[];
   status: FetchStatus;
   fetchedAt: number;
   error: string | null;
@@ -21,10 +21,10 @@ type ChatHistoryState = {
   entries: Record<string, HistoryEntry>;
   fetchHistory: (
     key: string,
-    fetchFn: () => Promise<Message[]>,
+    fetchFn: () => Promise<SessionEvent[]>,
     opts?: { force?: boolean },
   ) => Promise<void>;
-  prefetchHistory: (key: string, fetchFn: () => Promise<Message[]>) => void;
+  prefetchHistory: (key: string, fetchFn: () => Promise<SessionEvent[]>) => void;
   invalidateHistory: (key: string) => void;
 };
 
@@ -64,7 +64,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
         entries: {
           ...s.entries,
           [key]: {
-            messages: entry?.messages ?? EMPTY_MESSAGES,
+            events: entry?.events ?? EMPTY_EVENTS,
             status: "loading",
             fetchedAt: entry?.fetchedAt ?? 0,
             error: null,
@@ -76,12 +76,12 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
 
     const promise = fetchFn()
       .then((raw) => {
-        const messages = buildDisplayMessages(raw);
+        const events = buildDisplayEvents(raw);
         const lastMessageAt = raw.length > 0 ? raw[raw.length - 1].created_at : null;
         set((s) => ({
           entries: {
             ...s.entries,
-            [key]: { messages, status: "ready", fetchedAt: Date.now(), error: null, lastMessageAt },
+            [key]: { events, status: "ready", fetchedAt: Date.now(), error: null, lastMessageAt },
           },
         }));
       })
@@ -91,7 +91,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
           entries: {
             ...s.entries,
             [key]: {
-              messages: entry?.messages ?? EMPTY_MESSAGES,
+              events: entry?.events ?? EMPTY_EVENTS,
               status: "error",
               fetchedAt: Date.now(),
               error: message,
@@ -127,7 +127,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
 }));
 
 export function useChatHistory(key: string | undefined): {
-  messages: DisplayMessage[];
+  events: DisplaySessionEvent[];
   status: FetchStatus;
   error: string | null;
 } {
@@ -136,7 +136,7 @@ export function useChatHistory(key: string | undefined): {
       if (!key) return IDLE_HISTORY;
       const entry = s.entries[key];
       return entry
-        ? { messages: entry.messages, status: entry.status, error: entry.error }
+        ? { events: entry.events, status: entry.status, error: entry.error }
         : IDLE_HISTORY;
     }),
   );

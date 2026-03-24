@@ -295,7 +295,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
         storage_client,
-        internal_service_token: env_opt("INTERNAL_SERVICE_TOKEN"),
         event_broadcast,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")

@@ -360,6 +360,7 @@ pub struct CreateLogEntryRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StorageSessionEvent {
+    #[serde(alias = "eventId")]
     pub id: String,
     #[serde(default)]
     pub session_id: Option<String>,
@@ -373,11 +374,11 @@ pub struct StorageSessionEvent {
     pub project_id: Option<String>,
     #[serde(default)]
     pub org_id: Option<String>,
-    #[serde(default, rename = "type")]
+    #[serde(default, rename = "type", alias = "eventType")]
     pub event_type: Option<String>,
     #[serde(default)]
     pub content: Option<serde_json::Value>,
-    #[serde(default)]
+    #[serde(default, alias = "timestamp")]
     pub created_at: Option<String>,
 }
 

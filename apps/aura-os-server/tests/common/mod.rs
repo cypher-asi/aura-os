@@ -242,6 +242,8 @@ pub fn build_test_app_from_store(
         local_harness,
         swarm_harness,
         harness_sessions: Arc::new(Mutex::new(HashMap::new())),
+        chat_sessions: Arc::new(Mutex::new(HashMap::new())),
+        credit_cache: Arc::new(Mutex::new(None)),
         event_broadcast,
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
         network_client,

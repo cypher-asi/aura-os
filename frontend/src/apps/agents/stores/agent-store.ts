@@ -1,14 +1,14 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { api } from "../../../api/client";
-import { buildDisplayMessages } from "../../../utils/build-display-messages";
+import { buildDisplayEvents } from "../../../utils/build-display-messages";
 import type { Agent } from "../../../types";
-import type { DisplayMessage } from "../../../types/stream";
+import type { DisplaySessionEvent } from "../../../types/stream";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
 type HistoryEntry = {
-  messages: DisplayMessage[];
+  events: DisplaySessionEvent[];
   status: FetchStatus;
   fetchedAt: number;
   error: string | null;
@@ -100,7 +100,7 @@ export const useAgentStore = create<AgentState>()(
             history: {
               ...s.history,
               [agentId]: {
-                messages: entry?.messages ?? [],
+                events: entry?.events ?? [],
                 status: "loading",
                 fetchedAt: entry?.fetchedAt ?? 0,
                 error: null,
@@ -110,14 +110,14 @@ export const useAgentStore = create<AgentState>()(
         }
 
         const promise = api.agents
-          .listMessages(agentId)
+          .listEvents(agentId)
           .then((raw) => {
-            const messages = buildDisplayMessages(raw);
+            const events = buildDisplayEvents(raw);
             set((s) => ({
               history: {
                 ...s.history,
                 [agentId]: {
-                  messages,
+                  events,
                   status: "ready",
                   fetchedAt: Date.now(),
                   error: null,
@@ -132,7 +132,7 @@ export const useAgentStore = create<AgentState>()(
               history: {
                 ...s.history,
                 [agentId]: {
-                  messages: entry?.messages ?? [],
+                  events: entry?.events ?? [],
                   status: "error",
                   fetchedAt: entry?.fetchedAt ?? 0,
                   error: message,

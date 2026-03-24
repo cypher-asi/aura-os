@@ -43,7 +43,7 @@ describe("stream/store", () => {
       const storeEntry = useStreamStore.getState().entries["k1"];
       expect(storeEntry).toBeDefined();
       expect(storeEntry.isStreaming).toBe(false);
-      expect(storeEntry.messages).toEqual([]);
+      expect(storeEntry.events).toEqual([]);
     });
 
     it("returns existing meta on second call", () => {
@@ -131,7 +131,7 @@ describe("stream/store", () => {
       expect(typeof setters.setThinkingText).toBe("function");
       expect(typeof setters.setThinkingDurationMs).toBe("function");
       expect(typeof setters.setActiveToolCalls).toBe("function");
-      expect(typeof setters.setMessages).toBe("function");
+      expect(typeof setters.setEvents).toBe("function");
       expect(typeof setters.setIsStreaming).toBe("function");
       expect(typeof setters.setProgressText).toBe("function");
       expect(typeof setters.setTimeline).toBe("function");
@@ -148,25 +148,25 @@ describe("stream/store", () => {
       expect(getIsStreaming("k1")).toBe(false);
     });
 
-    it("setMessages updates store", () => {
+    it("setEvents updates store", () => {
       ensureEntry("k1");
       const setters = createSetters("k1");
 
-      setters.setMessages([{ id: "m1", role: "user", content: "hello" }]);
-      expect(getStreamEntry("k1")!.messages).toHaveLength(1);
+      setters.setEvents([{ id: "m1", role: "user", content: "hello" }]);
+      expect(getStreamEntry("k1")!.events).toHaveLength(1);
     });
 
-    it("setMessages with function updater", () => {
+    it("setEvents with function updater", () => {
       ensureEntry("k1");
       const setters = createSetters("k1");
 
-      setters.setMessages([{ id: "m1", role: "user", content: "hello" }]);
-      setters.setMessages((prev) => [
+      setters.setEvents([{ id: "m1", role: "user", content: "hello" }]);
+      setters.setEvents((prev) => [
         ...prev,
         { id: "m2", role: "assistant", content: "hi" },
       ]);
 
-      expect(getStreamEntry("k1")!.messages).toHaveLength(2);
+      expect(getStreamEntry("k1")!.events).toHaveLength(2);
     });
 
     it("setStreamingText updates store", () => {

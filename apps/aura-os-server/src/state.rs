@@ -32,11 +32,12 @@ pub struct ActiveHarnessSession {
 pub(crate) type HarnessSessionRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveHarnessSession>>>;
 
 /// Reusable chat session for agent / instance chat endpoints.
-pub(crate) struct ChatSession {
+pub struct ChatSession {
     #[allow(dead_code)]
     pub session_id: String,
     pub commands_tx: mpsc::UnboundedSender<HarnessInbound>,
     pub events_tx: broadcast::Sender<HarnessOutbound>,
+    pub model: Option<String>,
 }
 
 impl ChatSession {
@@ -45,14 +46,14 @@ impl ChatSession {
     }
 }
 
-pub(crate) type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
+pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 
 /// Simple time-based cache for billing credit checks.
-pub(crate) struct CreditCache {
+pub struct CreditCache {
     pub last_check: Instant,
     pub has_credits: bool,
 }
-pub(crate) type CreditCacheRef = Arc<Mutex<Option<CreditCache>>>;
+pub type CreditCacheRef = Arc<Mutex<Option<CreditCache>>>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -79,9 +80,9 @@ pub struct AppState {
     /// When true, non-Pro users are blocked from API access.
     pub require_zero_pro: bool,
     /// Reusable chat sessions keyed by agent_id or agent_instance_id.
-    pub(crate) chat_sessions: ChatSessionRegistry,
+    pub chat_sessions: ChatSessionRegistry,
     /// Cached billing credit check result.
-    pub(crate) credit_cache: CreditCacheRef,
+    pub credit_cache: CreditCacheRef,
 }
 
 impl AppState {

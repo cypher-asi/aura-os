@@ -37,6 +37,10 @@ impl Default for SessionConfig {
 pub struct HarnessSession {
     pub session_id: String,
     pub events_tx: broadcast::Sender<OutboundMessage>,
+    /// Raw JSON events that did not match the typed `OutboundMessage` enum.
+    /// This lets domain-level events from the harness pass through even when
+    /// the protocol crate has not been updated with those variants.
+    pub raw_events_tx: broadcast::Sender<serde_json::Value>,
     pub commands_tx: mpsc::UnboundedSender<InboundMessage>,
 }
 

@@ -124,21 +124,22 @@ export function generateSpecsStream(
 
 /* ── Chat / agent message streams ────────────────────────────────── */
 
-export function sendAgentMessageStream(
+export function sendAgentEventStream(
   agentId: string,
   content: string,
   action: string | null,
-  _model?: string | null,
+  model?: string | null,
   attachments?: ChatAttachment[],
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
 ) {
   const body: Record<string, unknown> = { content, action };
+  if (model) body.model = model;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
   return streamSSE<string>(
-    `${BASE_URL}/api/agents/${agentId}/messages/stream`,
+    `${BASE_URL}/api/agents/${agentId}/events/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -149,22 +150,23 @@ export function sendAgentMessageStream(
   );
 }
 
-export function sendMessageStream(
+export function sendEventStream(
   projectId: ProjectId,
   agentInstanceId: string,
   content: string,
   action: string | null,
-  _model?: string | null,
+  model?: string | null,
   attachments?: ChatAttachment[],
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
 ) {
   const body: Record<string, unknown> = { content, action };
+  if (model) body.model = model;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
   }
   return streamSSE<string>(
-    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/messages/stream`,
+    `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

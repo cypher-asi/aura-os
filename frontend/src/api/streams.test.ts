@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   generateSpecsStream,
-  sendAgentMessageStream,
-  sendMessageStream,
+  sendAgentEventStream,
+  sendEventStream,
 } from "./streams";
 import type {
   SpecGenStreamCallbacks,
@@ -109,7 +109,7 @@ describe("generateSpecsStream", () => {
   });
 });
 
-describe("sendAgentMessageStream", () => {
+describe("sendAgentEventStream", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("calls streamSSE with agent message URL", async () => {
@@ -118,10 +118,10 @@ describe("sendAgentMessageStream", () => {
       onError: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hello", "chat", undefined, undefined, handler);
+    await sendAgentEventStream("a1", "hello", "chat", undefined, undefined, handler);
 
     const [url, init] = streamSSE.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/agents/a1/messages/stream");
+    expect(url).toBe("/api/agents/a1/events/stream");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ content: "hello", action: "chat" });
   });
@@ -133,7 +133,7 @@ describe("sendAgentMessageStream", () => {
     };
     const attachments = [{ type: "image" as const, media_type: "image/png", data: "base64data" }];
 
-    await sendAgentMessageStream("a1", "look", null, undefined, attachments, handler);
+    await sendAgentEventStream("a1", "look", null, undefined, attachments, handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toEqual(attachments);
@@ -145,7 +145,7 @@ describe("sendAgentMessageStream", () => {
       onError: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hi", "ask", undefined, [], handler);
+    await sendAgentEventStream("a1", "hi", "ask", undefined, [], handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toBeUndefined();
@@ -158,7 +158,7 @@ describe("sendAgentMessageStream", () => {
       onDone: vi.fn(),
     };
 
-    await sendAgentMessageStream("a1", "hi", null, undefined, undefined, handler);
+    await sendAgentEventStream("a1", "hi", null, undefined, undefined, handler);
 
     const sseCallbacks = streamSSE.mock.calls[0][2] as {
       onEvent: (type: string, data: unknown) => void;
@@ -176,7 +176,7 @@ describe("sendAgentMessageStream", () => {
   });
 });
 
-describe("sendMessageStream", () => {
+describe("sendEventStream", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("calls streamSSE with project agent instance URL", async () => {
@@ -185,10 +185,10 @@ describe("sendMessageStream", () => {
       onError: vi.fn(),
     };
 
-    await sendMessageStream("p1" as string, "ai1", "msg", "plan", undefined, undefined, handler);
+    await sendEventStream("p1" as string, "ai1", "msg", "plan", undefined, undefined, handler);
 
     const [url, init] = streamSSE.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/projects/p1/agents/ai1/messages/stream");
+    expect(url).toBe("/api/projects/p1/agents/ai1/events/stream");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ content: "msg", action: "plan" });
   });
@@ -200,7 +200,7 @@ describe("sendMessageStream", () => {
     };
     const attachments = [{ type: "text" as const, media_type: "text/plain", data: "content", name: "file.txt" }];
 
-    await sendMessageStream("p1" as string, "ai1", "check", null, undefined, attachments, handler);
+    await sendEventStream("p1" as string, "ai1", "check", null, undefined, attachments, handler);
 
     const body = JSON.parse((streamSSE.mock.calls[0] as [string, RequestInit])[1].body as string);
     expect(body.attachments).toEqual(attachments);
@@ -213,7 +213,7 @@ describe("sendMessageStream", () => {
       onError: vi.fn(),
     };
 
-    await sendMessageStream("p1" as string, "ai1", "x", null, undefined, undefined, handler, controller.signal);
+    await sendEventStream("p1" as string, "ai1", "x", null, undefined, undefined, handler, controller.signal);
     expect(streamSSE.mock.calls[0][3]).toBe(controller.signal);
   });
 });

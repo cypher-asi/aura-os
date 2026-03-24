@@ -5,7 +5,7 @@ import { RequireAuth } from "./components/RequireAuth";
 import { AppShell } from "./components/AppShell";
 import { HomeView } from "./views/HomeView";
 import { ProjectLayout } from "./views/ProjectLayout";
-import { ChatView } from "./components/ChatView";
+import { AgentChatView } from "./components/AgentChatView";
 import { SettingsView } from "./views/SettingsView";
 import { ExecutionView } from "./views/ExecutionView";
 import { LoginView } from "./views/LoginView";
@@ -39,7 +39,7 @@ export default function App() {
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<ProjectRootRedirectView />} />
               <Route path="agent" element={<ProjectAgentRedirectView />} />
-              <Route path="agents/:agentInstanceId" element={<ChatView />} />
+              <Route path="agents/:agentInstanceId" element={<AgentChatView />} />
               <Route path="execution" element={<ExecutionView />} />
               <Route path="work" element={<ProjectWorkView />} />
               <Route path="files" element={<ProjectFilesView />} />

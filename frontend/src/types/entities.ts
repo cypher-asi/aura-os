@@ -1,4 +1,4 @@
-import type { ProjectId, SpecId, TaskId, AgentId, AgentInstanceId, SessionId, MessageId } from "./ids";
+import type { ProjectId, SpecId, TaskId, AgentId, AgentInstanceId, SessionId, SessionEventId } from "./ids";
 import type {
   ProjectStatus,
   TaskStatus,
@@ -153,8 +153,8 @@ export type ChatContentBlock =
   | { type: "task_ref"; task_id: string; title: string }
   | { type: "spec_ref"; spec_id: string; title: string };
 
-export interface Message {
-  message_id: MessageId;
+export interface SessionEvent {
+  event_id: SessionEventId;
   agent_instance_id: AgentInstanceId;
   project_id: ProjectId;
   role: "user" | "assistant" | "system";

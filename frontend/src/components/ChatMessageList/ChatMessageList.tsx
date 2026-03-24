@@ -4,7 +4,7 @@ import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
 
 import {
-  useStreamMessages,
+  useStreamEvents,
   useIsStreaming,
   useStreamingText,
   useThinkingText,
@@ -24,7 +24,7 @@ interface ChatMessageListProps {
 }
 
 export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessageListProps) {
-  const messages = useStreamMessages(streamKey);
+  const messages = useStreamEvents(streamKey);
   const isStreaming = useIsStreaming(streamKey);
   const streamingText = useStreamingText(streamKey);
   const thinkingText = useThinkingText(streamKey);

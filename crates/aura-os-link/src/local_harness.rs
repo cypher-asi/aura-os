@@ -35,7 +35,7 @@ impl HarnessLink for LocalHarness {
     async fn open_session(&self, config: SessionConfig) -> anyhow::Result<HarnessSession> {
         let (ws_stream, _) = tokio_tungstenite::connect_async(&self.ws_url()).await?;
 
-        let (events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
+        let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
         commands_tx.send(InboundMessage::SessionInit(SessionInit {
             system_prompt: config.system_prompt,
@@ -76,6 +76,7 @@ impl HarnessLink for LocalHarness {
         Ok(HarnessSession {
             session_id,
             events_tx,
+            raw_events_tx,
             commands_tx,
         })
     }
