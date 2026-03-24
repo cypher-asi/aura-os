@@ -67,9 +67,16 @@ export function ChatPanel({
 
   const onScrollApplied = useCallback(() => {
     if (!hasMessagesRef.current || contentVisibleRef.current) return;
+    // Double-RAF: the outer frame lets the virtualizer process the scroll
+    // event and re-render items at the new offset.  If that triggers
+    // measurement corrections (ResizeObserver → scheduleScroll →
+    // onScrollApplied again), the pending inner RAF is cancelled and the
+    // cycle restarts, so the reveal always follows the *last* adjustment.
     cancelAnimationFrame(revealRafRef.current);
     revealRafRef.current = requestAnimationFrame(() => {
-      setContentVisible(true);
+      revealRafRef.current = requestAnimationFrame(() => {
+        setContentVisible(true);
+      });
     });
   }, []);
 
