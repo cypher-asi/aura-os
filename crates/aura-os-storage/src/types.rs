@@ -385,6 +385,8 @@ pub struct StorageSessionEvent {
 #[serde(rename_all = "camelCase")]
 pub struct CreateSessionEventRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_id: Option<String>,

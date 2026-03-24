@@ -137,6 +137,7 @@ async fn persist_task_output_message(params: &PersistTaskParams<'_>) {
     };
 
     let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(entry.session_id.to_string()),
         user_id: None,
         agent_id: Some(entry.agent_instance_id.to_string()),
         sender: Some("agent".to_string()),
@@ -178,6 +179,7 @@ async fn persist_task_steps(params: &PersistTaskParams<'_>) {
     };
 
     let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(entry.session_id.to_string()),
         user_id: None,
         agent_id: Some(entry.agent_instance_id.to_string()),
         sender: Some("agent".to_string()),

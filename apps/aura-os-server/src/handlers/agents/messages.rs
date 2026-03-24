@@ -74,6 +74,7 @@ fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
     let content = content.to_string();
     tokio::spawn(async move {
         let req = aura_os_storage::CreateSessionEventRequest {
+            session_id: Some(ctx.session_id.clone()),
             user_id: None,
             agent_id: Some(ctx.project_agent_id.clone()),
             sender: Some("user".to_string()),
@@ -107,6 +108,7 @@ fn spawn_chat_persist_task(
             let event_type = event_type.to_string();
             async move {
                 let req = aura_os_storage::CreateSessionEventRequest {
+                    session_id: Some(ctx.session_id.clone()),
                     user_id: None,
                     agent_id: Some(ctx.project_agent_id.clone()),
                     sender: Some("agent".to_string()),
