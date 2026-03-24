@@ -8,7 +8,7 @@ use aura_os_sessions::storage_session_to_session;
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::AppState;
 
-use super::conversions::storage_message_to_message;
+use super::conversions::events_to_messages;
 
 pub(crate) async fn list_project_sessions(
     State(state): State<AppState>,
@@ -130,15 +130,15 @@ pub(crate) async fn list_session_messages(
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
 
-    let storage_msgs = storage
-        .list_messages(&session_id.to_string(), &jwt, None, None)
+    let events = storage
+        .list_events(&session_id.to_string(), &jwt, None, None)
         .await
         .map_err(map_storage_error)?;
 
-    let messages: Vec<Message> = storage_msgs
-        .iter()
-        .filter(|sm| sm.role.as_deref() != Some("system"))
-        .map(storage_message_to_message)
-        .collect();
+    let messages = events_to_messages(
+        &events,
+        &_agent_instance_id.to_string(),
+        &_project_id.to_string(),
+    );
     Ok(Json(messages))
 }

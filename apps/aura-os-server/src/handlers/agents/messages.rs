@@ -18,7 +18,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
 
-use super::conversions::storage_message_to_message;
+use super::conversions::events_to_messages;
 
 // ---------------------------------------------------------------------------
 // Chat persistence helpers
@@ -40,12 +40,8 @@ async fn resolve_chat_session(
     project_id: &str,
 ) -> Option<String> {
     if let Ok(sessions) = storage.list_sessions(project_agent_id, jwt).await {
-        // Walk backwards to find the most recent session whose messages
-        // endpoint is still functional.  Sessions that return 404 on
-        // list_messages have been purged upstream and must be skipped —
-        // get_session may still return 200 for the record itself.
         for session in sessions.iter().rev() {
-            match storage.list_messages(&session.id, jwt, Some(1), None).await {
+            match storage.list_events(&session.id, jwt, Some(1), None).await {
                 Ok(_) => return Some(session.id.clone()),
                 Err(e) => {
                     tracing::debug!(
@@ -77,21 +73,17 @@ fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
     let ctx = ctx.clone();
     let content = content.to_string();
     tokio::spawn(async move {
-        let req = aura_os_storage::CreateMessageRequest {
-            project_agent_id: ctx.project_agent_id,
-            project_id: ctx.project_id,
-            role: "user".to_string(),
-            content,
+        let req = aura_os_storage::CreateSessionEventRequest {
+            user_id: None,
+            agent_id: Some(ctx.project_agent_id.clone()),
+            sender: Some("user".to_string()),
+            project_id: Some(ctx.project_id.clone()),
             org_id: None,
-            created_by: None,
-            content_blocks: None,
-            input_tokens: None,
-            output_tokens: None,
-            thinking: None,
-            thinking_duration_ms: None,
+            event_type: "user_message".to_string(),
+            content: Some(serde_json::json!({ "text": content })),
         };
-        if let Err(e) = ctx.storage.create_message(&ctx.session_id, &ctx.jwt, &req).await {
-            warn!(error = %e, "Failed to persist user chat message");
+        if let Err(e) = ctx.storage.create_event(&ctx.session_id, &ctx.jwt, &req).await {
+            warn!(error = %e, "Failed to persist user message event");
         }
     });
 }
@@ -102,72 +94,131 @@ fn spawn_chat_persist_task(
 ) {
     tokio::spawn(async move {
         let mut rx = rx;
-        let mut text_buf = String::new();
+        let mut full_text = String::new();
+        let mut text_segment = String::new();
         let mut thinking_buf = String::new();
+        let mut content_blocks: Vec<serde_json::Value> = Vec::new();
+        let mut message_id = String::new();
+        let mut seq: u32 = 0;
+        let mut last_tool_use_id = String::new();
+
+        let persist = |event_type: &str, content: serde_json::Value| {
+            let ctx = ctx.clone();
+            let event_type = event_type.to_string();
+            async move {
+                let req = aura_os_storage::CreateSessionEventRequest {
+                    user_id: None,
+                    agent_id: Some(ctx.project_agent_id.clone()),
+                    sender: Some("agent".to_string()),
+                    project_id: Some(ctx.project_id.clone()),
+                    org_id: None,
+                    event_type,
+                    content: Some(content),
+                };
+                if let Err(e) = ctx.storage.create_event(&ctx.session_id, &ctx.jwt, &req).await {
+                    warn!(error = %e, "Failed to persist chat event");
+                }
+            }
+        };
 
         loop {
             match rx.recv().await {
                 Ok(evt) => {
-                    let json = serde_json::to_value(&evt).unwrap_or_default();
-                    let event_type = json
-                        .get("type")
-                        .and_then(|t| t.as_str())
-                        .unwrap_or("");
-
-                    match event_type {
-                        "text_delta" => {
-                            if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
-                                text_buf.push_str(text);
-                            }
+                    seq += 1;
+                    match evt {
+                        HarnessOutbound::SessionReady(_) => {}
+                        HarnessOutbound::AssistantMessageStart(ref start) => {
+                            message_id = start.message_id.clone();
+                            persist("assistant_message_start", serde_json::json!({
+                                "message_id": &start.message_id,
+                                "seq": seq,
+                            })).await;
                         }
-                        "thinking_delta" => {
-                            if let Some(t) = json.get("thinking").and_then(|t| t.as_str()) {
-                                thinking_buf.push_str(t);
-                            }
+                        HarnessOutbound::TextDelta(ref delta) => {
+                            full_text.push_str(&delta.text);
+                            text_segment.push_str(&delta.text);
+                            persist("text_delta", serde_json::json!({
+                                "message_id": &message_id,
+                                "text": &delta.text,
+                                "seq": seq,
+                            })).await;
                         }
-                        "assistant_message_end" => {
-                            let input_tokens = json
-                                .get("usage")
-                                .and_then(|u| u.get("input_tokens"))
-                                .and_then(|v| v.as_i64());
-                            let output_tokens = json
-                                .get("usage")
-                                .and_then(|u| u.get("output_tokens"))
-                                .and_then(|v| v.as_i64());
-
-                            let msg_req = aura_os_storage::CreateMessageRequest {
-                                project_agent_id: ctx.project_agent_id.clone(),
-                                project_id: ctx.project_id.clone(),
-                                role: "assistant".to_string(),
-                                content: text_buf,
-                                org_id: None,
-                                created_by: None,
-                                content_blocks: None,
-                                input_tokens,
-                                output_tokens,
-                                thinking: if thinking_buf.is_empty() {
-                                    None
-                                } else {
-                                    Some(thinking_buf)
+                        HarnessOutbound::ThinkingDelta(ref delta) => {
+                            thinking_buf.push_str(&delta.thinking);
+                            persist("thinking_delta", serde_json::json!({
+                                "message_id": &message_id,
+                                "thinking": &delta.thinking,
+                                "seq": seq,
+                            })).await;
+                        }
+                        HarnessOutbound::ToolUseStart(ref tool) => {
+                            if !text_segment.is_empty() {
+                                content_blocks.push(serde_json::json!({
+                                    "type": "text", "text": &text_segment
+                                }));
+                                text_segment.clear();
+                            }
+                            last_tool_use_id = tool.id.clone();
+                            content_blocks.push(serde_json::json!({
+                                "type": "tool_use",
+                                "id": &tool.id,
+                                "name": &tool.name,
+                                "input": {}
+                            }));
+                            persist("tool_use_start", serde_json::json!({
+                                "message_id": &message_id,
+                                "id": &tool.id,
+                                "name": &tool.name,
+                                "seq": seq,
+                            })).await;
+                        }
+                        HarnessOutbound::ToolResult(ref result) => {
+                            content_blocks.push(serde_json::json!({
+                                "type": "tool_result",
+                                "tool_use_id": &last_tool_use_id,
+                                "content": &result.result,
+                                "is_error": result.is_error
+                            }));
+                            persist("tool_result", serde_json::json!({
+                                "message_id": &message_id,
+                                "tool_use_id": &last_tool_use_id,
+                                "name": &result.name,
+                                "result": &result.result,
+                                "is_error": result.is_error,
+                                "seq": seq,
+                            })).await;
+                        }
+                        HarnessOutbound::AssistantMessageEnd(ref end) => {
+                            if !text_segment.is_empty() {
+                                content_blocks.push(serde_json::json!({
+                                    "type": "text", "text": &text_segment
+                                }));
+                            }
+                            persist("assistant_message_end", serde_json::json!({
+                                "message_id": &end.message_id,
+                                "text": &full_text,
+                                "thinking": if thinking_buf.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(thinking_buf) },
+                                "content_blocks": &content_blocks,
+                                "usage": {
+                                    "input_tokens": end.usage.input_tokens,
+                                    "output_tokens": end.usage.output_tokens,
                                 },
-                                thinking_duration_ms: None,
-                            };
-                            if let Err(e) = ctx
-                                .storage
-                                .create_message(&ctx.session_id, &ctx.jwt, &msg_req)
-                                .await
-                            {
-                                warn!(error = %e, "Failed to persist assistant chat message");
-                            } else {
-                                info!(
-                                    session_id = %ctx.session_id,
-                                    "Persisted assistant chat message"
-                                );
-                            }
+                                "stop_reason": &end.stop_reason,
+                                "seq": seq,
+                            })).await;
+                            info!(session_id = %ctx.session_id, "Persisted assistant turn events");
                             break;
                         }
-                        "error" => break,
-                        _ => {}
+                        HarnessOutbound::Error(ref err) => {
+                            persist("error", serde_json::json!({
+                                "message_id": &message_id,
+                                "code": &err.code,
+                                "message": &err.message,
+                                "recoverable": err.recoverable,
+                                "seq": seq,
+                            })).await;
+                            break;
+                        }
                     }
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
@@ -317,27 +368,25 @@ async fn collect_session_messages(
     jwt: &str,
     sessions: &[aura_os_storage::StorageSession],
 ) -> MessageCollectOutcome {
-    let msg_futs: Vec<_> = sessions
+    let evt_futs: Vec<_> = sessions
         .iter()
-        .map(|s| storage.list_messages(&s.id, jwt, None, None))
+        .map(|s| storage.list_events(&s.id, jwt, None, None))
         .collect();
-    let msg_results: Vec<Result<Vec<aura_os_storage::StorageMessage>, _>> = join_all(msg_futs).await;
+    let evt_results: Vec<Result<Vec<aura_os_storage::StorageSessionEvent>, _>> =
+        join_all(evt_futs).await;
     let mut messages = Vec::new();
     let mut failed_sessions = 0usize;
     let mut first_error: Option<aura_os_storage::StorageError> = None;
-    for (result, session) in msg_results.into_iter().zip(sessions.iter()) {
+    for (result, session) in evt_results.into_iter().zip(sessions.iter()) {
         match result {
-            Ok(session_msgs) => {
-                for sm in session_msgs
-                    .iter()
-                    .filter(|sm| sm.role.as_deref() != Some("system"))
-                {
-                    messages.push(storage_message_to_message(sm));
-                }
+            Ok(events) => {
+                let pai = session.project_agent_id.as_deref().unwrap_or_default();
+                let pid = session.project_id.as_deref().unwrap_or_default();
+                messages.extend(events_to_messages(&events, pai, pid));
             }
             Err(e) => {
                 failed_sessions += 1;
-                tracing::debug!(session_id = %session.id, error = %e, "Failed to list session messages");
+                tracing::debug!(session_id = %session.id, error = %e, "Failed to list session events");
                 if first_error.is_none() {
                     first_error = Some(e);
                 }

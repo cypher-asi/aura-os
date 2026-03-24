@@ -320,65 +320,6 @@ pub struct UpdateSessionRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Message types
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageMessage {
-    pub id: String,
-    #[serde(default)]
-    pub session_id: Option<String>,
-    #[serde(default)]
-    pub project_agent_id: Option<String>,
-    #[serde(default)]
-    pub project_id: Option<String>,
-    #[serde(default)]
-    pub org_id: Option<String>,
-    #[serde(default)]
-    pub created_by: Option<String>,
-    #[serde(default)]
-    pub role: Option<String>,
-    #[serde(default)]
-    pub content: Option<String>,
-    #[serde(default)]
-    pub content_blocks: Option<Vec<serde_json::Value>>,
-    #[serde(default)]
-    pub input_tokens: Option<i64>,
-    #[serde(default)]
-    pub output_tokens: Option<i64>,
-    #[serde(default)]
-    pub thinking: Option<String>,
-    #[serde(default)]
-    pub thinking_duration_ms: Option<i64>,
-    #[serde(default)]
-    pub created_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateMessageRequest {
-    pub project_agent_id: String,
-    pub project_id: String,
-    pub role: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub org_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content_blocks: Option<Vec<serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_tokens: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_tokens: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_duration_ms: Option<i64>,
-}
-
-// ---------------------------------------------------------------------------
 // Log Entry types
 // ---------------------------------------------------------------------------
 
