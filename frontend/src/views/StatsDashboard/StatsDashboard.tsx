@@ -50,12 +50,12 @@ export function StatsDashboard() {
         </Text>
       </div>
       <div className={styles.statsGrid}>
-        <StatCard value={stats.tasks_pending} label="Pending" />
-        <StatCard value={stats.tasks_ready} label="Ready" />
-        <StatCard value={stats.tasks_in_progress} label="In Progress" />
-        <StatCard value={stats.tasks_blocked} label="Blocked" />
-        <StatCard value={stats.tasks_done} label="Done" />
-        <StatCard value={stats.tasks_failed} label="Failed" />
+        <StatCard value={stats.pending_tasks} label="Pending" />
+        <StatCard value={stats.ready_tasks} label="Ready" />
+        <StatCard value={stats.in_progress_tasks} label="In Progress" />
+        <StatCard value={stats.blocked_tasks} label="Blocked" />
+        <StatCard value={stats.done_tasks} label="Done" />
+        <StatCard value={stats.failed_tasks} label="Failed" />
       </div>
 
       {/* Overview */}
@@ -72,7 +72,7 @@ export function StatsDashboard() {
         <StatCard value={stats.total_time_seconds} label="Time Spent" fmtFn={formatSeconds} />
         <StatCard value={stats.lines_changed} label="Lines Changed" fmt />
         <StatCard value={stats.total_specs} label="Specs" />
-        <StatCard value={stats.contributors.length} label="Contributors" />
+        <StatCard value={stats.contributors} label="Contributors" />
       </div>
     </div>
   );

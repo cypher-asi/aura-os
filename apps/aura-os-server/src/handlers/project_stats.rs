@@ -11,12 +11,12 @@ use crate::state::AppState;
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectStatsResponse {
     pub total_tasks: u64,
-    pub tasks_pending: u64,
-    pub tasks_ready: u64,
-    pub tasks_in_progress: u64,
-    pub tasks_blocked: u64,
-    pub tasks_done: u64,
-    pub tasks_failed: u64,
+    pub pending_tasks: u64,
+    pub ready_tasks: u64,
+    pub in_progress_tasks: u64,
+    pub blocked_tasks: u64,
+    pub done_tasks: u64,
+    pub failed_tasks: u64,
     pub completion_percentage: f64,
     pub total_tokens: u64,
     pub total_events: u64,
@@ -25,19 +25,19 @@ pub(crate) struct ProjectStatsResponse {
     pub total_time_seconds: f64,
     pub lines_changed: u64,
     pub total_specs: u64,
-    pub contributors: Vec<String>,
+    pub contributors: u64,
 }
 
 impl From<ProjectStats> for ProjectStatsResponse {
     fn from(s: ProjectStats) -> Self {
         Self {
             total_tasks: s.total_tasks,
-            tasks_pending: s.tasks_pending,
-            tasks_ready: s.tasks_ready,
-            tasks_in_progress: s.tasks_in_progress,
-            tasks_blocked: s.tasks_blocked,
-            tasks_done: s.tasks_done,
-            tasks_failed: s.tasks_failed,
+            pending_tasks: s.pending_tasks,
+            ready_tasks: s.ready_tasks,
+            in_progress_tasks: s.in_progress_tasks,
+            blocked_tasks: s.blocked_tasks,
+            done_tasks: s.done_tasks,
+            failed_tasks: s.failed_tasks,
             completion_percentage: s.completion_percentage,
             total_tokens: s.total_tokens,
             total_events: s.total_events,

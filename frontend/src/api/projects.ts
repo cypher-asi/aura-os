@@ -66,12 +66,12 @@ export interface CreateImportedProjectRequest {
 
 export interface ProjectStatsData {
   total_tasks: number;
-  tasks_pending: number;
-  tasks_ready: number;
-  tasks_in_progress: number;
-  tasks_blocked: number;
-  tasks_done: number;
-  tasks_failed: number;
+  pending_tasks: number;
+  ready_tasks: number;
+  in_progress_tasks: number;
+  blocked_tasks: number;
+  done_tasks: number;
+  failed_tasks: number;
   completion_percentage: number;
   total_tokens: number;
   total_events: number;
@@ -80,7 +80,7 @@ export interface ProjectStatsData {
   total_time_seconds: number;
   lines_changed: number;
   total_specs: number;
-  contributors: string[];
+  contributors: number;
 }
 
 export const projectsApi = {

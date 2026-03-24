@@ -10,17 +10,17 @@ pub struct ProjectStats {
     #[serde(default)]
     pub total_tasks: u64,
     #[serde(default)]
-    pub tasks_pending: u64,
+    pub pending_tasks: u64,
     #[serde(default)]
-    pub tasks_ready: u64,
+    pub ready_tasks: u64,
     #[serde(default)]
-    pub tasks_in_progress: u64,
+    pub in_progress_tasks: u64,
     #[serde(default)]
-    pub tasks_blocked: u64,
+    pub blocked_tasks: u64,
     #[serde(default)]
-    pub tasks_done: u64,
+    pub done_tasks: u64,
     #[serde(default)]
-    pub tasks_failed: u64,
+    pub failed_tasks: u64,
     #[serde(default)]
     pub completion_percentage: f64,
     #[serde(default)]
@@ -38,7 +38,7 @@ pub struct ProjectStats {
     #[serde(default)]
     pub total_specs: u64,
     #[serde(default)]
-    pub contributors: Vec<String>,
+    pub contributors: u64,
 }
 
 // ---------------------------------------------------------------------------
