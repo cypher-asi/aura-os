@@ -34,6 +34,7 @@ const mockSession: AuthSession = {
   primary_zid: "zid-1",
   zero_wallet: "0xabc",
   wallets: ["0xabc"],
+  is_zero_pro: false,
   created_at: "2025-01-01T00:00:00Z",
   validated_at: "2025-01-01T00:00:00Z",
 };
@@ -51,6 +52,7 @@ function expectedUser(session: AuthSession): ZeroUser {
     primary_zid: session.primary_zid,
     zero_wallet: session.zero_wallet,
     wallets: session.wallets,
+    is_zero_pro: session.is_zero_pro,
   };
 }
 
@@ -78,6 +80,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -87,7 +90,10 @@ describe("auth-store", () => {
 
       await useAuthStore.getState().restoreSession();
 
-      expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().user).toEqual(
+        expectedUser(mockSession),
+      );
+      expect(useAuthStore.getState().zeroProRefreshError).toBe("validation failed");
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -97,6 +103,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -107,6 +114,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
   });
@@ -124,6 +132,33 @@ describe("auth-store", () => {
     it("propagates errors", async () => {
       mockApi.auth.login.mockRejectedValue(new Error("bad creds"));
       await expect(useAuthStore.getState().login("a@b.com", "x")).rejects.toThrow("bad creds");
+    });
+  });
+
+  describe("refreshSession", () => {
+    it("updates the user from validate", async () => {
+      const validatedSession = {
+        ...mockSession,
+        is_zero_pro: true,
+      };
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
+      mockApi.auth.validate.mockResolvedValue(validatedSession);
+
+      await useAuthStore.getState().refreshSession();
+
+      expect(useAuthStore.getState().user).toEqual(expectedUser(validatedSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("clears the user on 401", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
+      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+
+      await expect(useAuthStore.getState().refreshSession()).rejects.toThrow("unauth");
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBe("unauth");
+      expect(useAuthStore.getState().isLoading).toBe(false);
     });
   });
 

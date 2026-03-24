@@ -1,16 +1,34 @@
+import { useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spinner } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
 import styles from "./RequireAuth.module.css";
 
 export function RequireAuth() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, zeroProRefreshError, refreshSession, logout } = useAuth();
   const location = useLocation();
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
-  if (isLoading) {
+  async function handleRefreshStatus(): Promise<void> {
+    setIsRefreshingStatus(true);
+    try {
+      await refreshSession();
+    } finally {
+      setIsRefreshingStatus(false);
+    }
+  }
+
+  if (isLoading || isRefreshingStatus) {
     return (
       <div className={styles.loadingScreen}>
-        <Spinner size="lg" />
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <Spinner size="lg" />
+          {isRefreshingStatus ? (
+            <p style={{ color: "var(--color-text-secondary)", marginTop: 16 }}>
+              Checking your ZERO Pro status...
+            </p>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -20,29 +38,60 @@ export function RequireAuth() {
   }
 
   if (!user?.is_zero_pro) {
+    const isVerificationError = Boolean(zeroProRefreshError);
     return (
       <div className={styles.loadingScreen}>
         <div style={{ textAlign: "center", maxWidth: 400 }}>
-          <h2 style={{ marginBottom: 12 }}>ZERO Pro Required</h2>
+          <h2 style={{ marginBottom: 12 }}>
+            {isVerificationError ? "Unable To Verify ZERO Pro" : "ZERO Pro Required"}
+          </h2>
           <p style={{ color: "var(--color-text-secondary)", marginBottom: 24 }}>
-            AURA is currently available to ZERO Pro subscribers. Upgrade your
-            account to get access.
+            {isVerificationError
+              ? "AURA could not verify your ZERO Pro subscription right now. Please try refreshing your status."
+              : "AURA is currently available to ZERO Pro subscribers. Upgrade your account to get access."}
           </p>
-          <button
-            onClick={() => logout()}
-            style={{
-              padding: "10px 24px",
-              background: "var(--color-accent, #7c3aed)",
-              color: "#fff",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14,
-            }}
-          >
-            Log Out
-          </button>
+          {!isVerificationError ? (
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: 24 }}>
+              If you recently upgraded, refresh your status to check again.
+            </p>
+          ) : null}
+          {zeroProRefreshError ? (
+            <p style={{ color: "var(--color-danger, #f87171)", marginBottom: 24 }}>
+              {zeroProRefreshError}
+            </p>
+          ) : null}
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            <button
+              onClick={() => void handleRefreshStatus()}
+              style={{
+                padding: "10px 24px",
+                background: "transparent",
+                color: "var(--color-text-primary)",
+                borderRadius: 8,
+                border: "1px solid var(--color-border-default, rgba(255,255,255,0.2))",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              Refresh Status
+            </button>
+            <button
+              onClick={() => logout()}
+              style={{
+                padding: "10px 24px",
+                background: "var(--color-accent, #7c3aed)",
+                color: "#fff",
+                borderRadius: 8,
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              Log Out
+            </button>
+          </div>
         </div>
       </div>
     );

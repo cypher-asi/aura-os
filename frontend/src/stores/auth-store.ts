@@ -20,7 +20,9 @@ function sessionToUser(session: AuthSession): ZeroUser {
 interface AuthState {
   user: ZeroUser | null;
   isLoading: boolean;
+  zeroProRefreshError: string | null;
   restoreSession: () => Promise<void>;
+  refreshSession: () => Promise<AuthSession>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -29,20 +31,49 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   isLoading: true,
+  zeroProRefreshError: null,
 
   restoreSession: async () => {
     try {
       const session = await api.auth.getSession();
       try {
         const validated = await api.auth.validate();
-        set({ user: sessionToUser(validated) });
-      } catch {
-        set({ user: sessionToUser(session) });
+        set({ user: sessionToUser(validated), zeroProRefreshError: null });
+      } catch (err) {
+        set({
+          user: sessionToUser(session),
+          zeroProRefreshError:
+            err instanceof Error
+              ? err.message
+              : "Unable to verify ZERO Pro status right now.",
+        });
       }
+    } catch (err) {
+      if (err instanceof ApiClientError && err.status === 401) {
+        set({ user: null, zeroProRefreshError: null });
+      }
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  refreshSession: async () => {
+    set({ isLoading: true, zeroProRefreshError: null });
+    try {
+      const validated = await api.auth.validate();
+      set({ user: sessionToUser(validated), zeroProRefreshError: null });
+      return validated;
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 401) {
         set({ user: null });
       }
+      set({
+        zeroProRefreshError:
+          err instanceof Error
+            ? err.message
+            : "Unable to verify ZERO Pro status right now.",
+      });
+      throw err;
     } finally {
       set({ isLoading: false });
     }
@@ -50,17 +81,17 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   login: async (email: string, password: string) => {
     const session = await api.auth.login(email, password);
-    set({ user: sessionToUser(session) });
+    set({ user: sessionToUser(session), zeroProRefreshError: null });
   },
 
   register: async (email: string, password: string) => {
     const session = await api.auth.register(email, password);
-    set({ user: sessionToUser(session) });
+    set({ user: sessionToUser(session), zeroProRefreshError: null });
   },
 
   logout: async () => {
     await api.auth.logout();
-    set({ user: null });
+    set({ user: null, zeroProRefreshError: null });
   },
 }));
 
@@ -74,6 +105,8 @@ export function useAuth() {
       user: s.user,
       isAuthenticated: s.user !== null,
       isLoading: s.isLoading,
+      zeroProRefreshError: s.zeroProRefreshError,
+      refreshSession: s.refreshSession,
       login: s.login,
       register: s.register,
       logout: s.logout,
