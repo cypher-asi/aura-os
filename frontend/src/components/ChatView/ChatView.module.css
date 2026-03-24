@@ -67,17 +67,6 @@
   background: linear-gradient(to bottom, transparent, var(--color-bg, #111));
 }
 
-.inputWrapper::after {
-  content: "";
-  position: absolute;
-  top: -80px;
-  right: 60px;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
-  pointer-events: none;
-}
-
 .inputContainer {
   display: flex;
   flex-direction: column;
