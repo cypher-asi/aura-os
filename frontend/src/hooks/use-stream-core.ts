@@ -45,6 +45,7 @@ export {
   handleToolCall,
   handleToolResult,
   handleMessageSaved,
+  handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
 } from "./stream/handlers";

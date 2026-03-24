@@ -297,6 +297,41 @@ export function handleMessageSaved(
   resetStreamBuffers(refs, setters);
 }
 
+/**
+ * Lightweight handler for AssistantMessageEnd during a harness stream.
+ * Saves the current text buffer as a message but does NOT abort the SSE
+ * connection or clear tool calls — tool_result events and subsequent agent
+ * loop iterations arrive AFTER assistant_message_end.
+ */
+export function handleAssistantTurnBoundary(
+  refs: StreamRefs,
+  setters: StreamSetters,
+): void {
+  const hasBuffer = !!refs.streamBuffer.current;
+  if (hasBuffer) {
+    const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
+    setters.setMessages((prev) => [
+      ...prev,
+      {
+        id: `stream-${Date.now()}`,
+        role: "assistant",
+        content: refs.streamBuffer.current,
+        toolCalls: snapshotToolCalls(refs),
+        thinkingText: savedThinking,
+        thinkingDurationMs: savedThinkingDuration,
+        timeline: snapshotTimeline(refs),
+      },
+    ]);
+    setters.setStreamingText("");
+    refs.streamBuffer.current = "";
+    setters.setThinkingText("");
+    refs.thinkingBuffer.current = "";
+    refs.thinkingStart.current = null;
+    setters.setThinkingDurationMs(null);
+    refs.needsSeparator.current = false;
+  }
+}
+
 function failPendingToolCalls(refs: StreamRefs, reason: string): void {
   const hasPending = refs.toolCalls.current.some((tc) => tc.pending);
   if (!hasPending) return;

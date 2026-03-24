@@ -17,6 +17,7 @@ import {
   handleToolCall as coreHandleToolCall,
   handleToolResult as coreHandleToolResult,
   handleMessageSaved,
+  handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
   getIsStreaming,
@@ -244,8 +245,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         handleMessageSaved(refs, setters, event.content.message);
         break;
       case EventType.AssistantMessageEnd:
-        finalizeStream(refs, setters, abortRef, false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
+        handleAssistantTurnBoundary(refs, setters);
         break;
       case EventType.AgentInstanceUpdated:
         sidekickRef.current.notifyAgentInstanceUpdate(event.content.agent_instance);
