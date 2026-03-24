@@ -77,6 +77,7 @@ export function AgentChatView() {
 
   return (
     <ChatPanel
+      key={agentId}
       streamKey={streamKey}
       onSend={wrappedSend}
       onStop={stopStreaming}
