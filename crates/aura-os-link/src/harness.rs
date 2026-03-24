@@ -13,6 +13,8 @@ pub struct SessionConfig {
     pub token: Option<String>,
     pub conversation_messages: Option<Vec<ConversationMessage>>,
     pub project_id: Option<String>,
+    /// Absolute path to the project directory on the local filesystem.
+    pub project_path: Option<String>,
 }
 
 impl Default for SessionConfig {
@@ -27,6 +29,7 @@ impl Default for SessionConfig {
             token: None,
             conversation_messages: None,
             project_id: None,
+            project_path: None,
         }
     }
 }

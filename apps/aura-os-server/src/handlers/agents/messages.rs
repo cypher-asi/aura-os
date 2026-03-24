@@ -9,7 +9,7 @@ use futures_util::future::join_all;
 use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
-use aura_os_core::{AgentId, AgentInstanceId, ChatRole, HarnessMode, Message, ProjectId};
+use aura_os_core::{AgentId, AgentInstanceId, ChatRole, HarnessMode, ProjectId, SessionEvent};
 use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
 use aura_os_storage::StorageClient;
 
@@ -18,7 +18,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
 
-use super::conversions::events_to_messages;
+use super::conversions::events_to_session_history;
 
 // ---------------------------------------------------------------------------
 // Chat persistence helpers
@@ -306,8 +306,8 @@ fn has_live_session(state: &AppState, key: &str) -> bool {
     false
 }
 
-fn messages_to_conversation_history(messages: &[Message]) -> Vec<ConversationMessage> {
-    messages
+fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<ConversationMessage> {
+    events
         .iter()
         .filter_map(|m| {
             let role = match m.role {
@@ -365,11 +365,11 @@ async fn find_matching_project_agents(
         .collect()
 }
 
-async fn collect_session_messages(
+async fn collect_session_events(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     sessions: &[aura_os_storage::StorageSession],
-) -> MessageCollectOutcome {
+) -> EventCollectOutcome {
     let evt_futs: Vec<_> = sessions
         .iter()
         .map(|s| storage.list_events(&s.id, jwt, None, None))
@@ -384,7 +384,7 @@ async fn collect_session_messages(
             Ok(events) => {
                 let pai = session.project_agent_id.as_deref().unwrap_or_default();
                 let pid = session.project_id.as_deref().unwrap_or_default();
-                messages.extend(events_to_messages(&events, pai, pid));
+                messages.extend(events_to_session_history(&events, pai, pid));
             }
             Err(e) => {
                 failed_sessions += 1;
@@ -395,7 +395,7 @@ async fn collect_session_messages(
             }
         }
     }
-    MessageCollectOutcome {
+    EventCollectOutcome {
         messages,
         total_sessions: sessions.len(),
         failed_sessions,
@@ -403,14 +403,14 @@ async fn collect_session_messages(
     }
 }
 
-struct MessageCollectOutcome {
-    messages: Vec<Message>,
+struct EventCollectOutcome {
+    messages: Vec<SessionEvent>,
     total_sessions: usize,
     failed_sessions: usize,
     first_error: Option<aura_os_storage::StorageError>,
 }
 
-impl MessageCollectOutcome {
+impl EventCollectOutcome {
     fn all_failed(&self) -> bool {
         self.total_sessions > 0 && self.failed_sessions == self.total_sessions
     }
@@ -467,10 +467,10 @@ async fn fetch_all_sessions(
     }
 }
 
-async fn aggregate_agent_messages_from_storage_result(
+async fn aggregate_agent_events_from_storage_result(
     state: &AppState,
     agent_id: &AgentId,
-) -> Result<Vec<Message>, aura_os_storage::StorageError> {
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
         return Ok(Vec::new());
     };
@@ -484,7 +484,7 @@ async fn aggregate_agent_messages_from_storage_result(
         }
     }
 
-    let mut message_outcome = collect_session_messages(storage, &jwt, &sessions_outcome.sessions).await;
+    let mut message_outcome = collect_session_events(storage, &jwt, &sessions_outcome.sessions).await;
     if message_outcome.all_failed() {
         if let Some(err) = message_outcome.first_error {
             return Err(err);
@@ -496,10 +496,10 @@ async fn aggregate_agent_messages_from_storage_result(
     Ok(message_outcome.messages)
 }
 
-async fn load_project_chat_history(
+async fn load_project_session_history(
     state: &AppState,
     agent_instance_id: &AgentInstanceId,
-) -> Vec<Message> {
+) -> Vec<SessionEvent> {
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
         return Vec::new();
     };
@@ -507,18 +507,18 @@ async fn load_project_chat_history(
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
         .unwrap_or_default();
-    let mut outcome = collect_session_messages(storage, &jwt, &sessions).await;
+    let mut outcome = collect_session_events(storage, &jwt, &sessions).await;
     outcome.messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
     outcome.messages
 }
 
 /// Aggregate agent-level messages from aura-storage (all project-agents for
 /// this agent_id -> sessions -> messages).
-pub(crate) async fn aggregate_agent_messages_from_storage(
+pub(crate) async fn aggregate_agent_events_from_storage(
     state: &AppState,
     agent_id: &AgentId,
-) -> Vec<Message> {
-    match aggregate_agent_messages_from_storage_result(state, agent_id).await {
+) -> Vec<SessionEvent> {
+    match aggregate_agent_events_from_storage_result(state, agent_id).await {
         Ok(messages) => messages,
         Err(e) => {
             warn!(error = %e, %agent_id, "failed to aggregate agent messages from storage");
@@ -527,13 +527,13 @@ pub(crate) async fn aggregate_agent_messages_from_storage(
     }
 }
 
-pub(crate) async fn list_agent_messages(
+pub(crate) async fn list_agent_events(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
-) -> ApiResult<Json<Vec<Message>>> {
+) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
     let _ = state.get_jwt()?;
-    let messages = aggregate_agent_messages_from_storage(&state, &agent_id).await;
+    let messages = aggregate_agent_events_from_storage(&state, &agent_id).await;
     Ok(Json(messages))
 }
 
@@ -632,7 +632,7 @@ async fn open_harness_chat_stream(
     ))
 }
 
-pub(crate) async fn send_agent_message_stream(
+pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendMessageRequest>,
@@ -653,8 +653,8 @@ pub(crate) async fn send_agent_message_stream(
 
     let session_key = format!("agent:{agent_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
-        let stored = aggregate_agent_messages_from_storage(&state, &agent_id).await;
-        if stored.is_empty() { None } else { Some(messages_to_conversation_history(&stored)) }
+        let stored = aggregate_agent_events_from_storage(&state, &agent_id).await;
+        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
     };
@@ -671,10 +671,10 @@ pub(crate) async fn send_agent_message_stream(
     open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, persist_ctx).await
 }
 
-pub(crate) async fn list_messages(
+pub(crate) async fn list_events(
     State(state): State<AppState>,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
-) -> ApiResult<Json<Vec<Message>>> {
+) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
 
@@ -686,14 +686,14 @@ pub(crate) async fn list_messages(
             Vec::new()
         });
 
-    let mut outcome = collect_session_messages(&storage, &jwt, &sessions).await;
+    let mut outcome = collect_session_events(&storage, &jwt, &sessions).await;
     outcome
         .messages
         .sort_by(|a, b| a.created_at.cmp(&b.created_at));
     Ok(Json(outcome.messages))
 }
 
-pub(crate) async fn send_message_stream(
+pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendMessageRequest>,
@@ -715,8 +715,8 @@ pub(crate) async fn send_message_stream(
 
     let session_key = format!("instance:{agent_instance_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
-        let stored = load_project_chat_history(&state, &agent_instance_id).await;
-        if stored.is_empty() { None } else { Some(messages_to_conversation_history(&stored)) }
+        let stored = load_project_session_history(&state, &agent_instance_id).await;
+        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
     };
@@ -726,12 +726,20 @@ pub(crate) async fn send_message_stream(
 
     let system_prompt = build_project_system_prompt(&state, &project_id, &instance.system_prompt);
 
+    let project_path = state
+        .project_service
+        .get_project(&project_id)
+        .ok()
+        .map(|p| p.linked_folder_path)
+        .filter(|s| !s.is_empty());
+
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(instance.agent_id.to_string()),
         token: jwt,
         conversation_messages,
         project_id: Some(pid_str),
+        project_path,
         ..Default::default()
     };
 
