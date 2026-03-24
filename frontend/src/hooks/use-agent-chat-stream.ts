@@ -73,6 +73,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       resetStreamBuffers(refs, setters);
       refs.needsSeparator.current = false;
 
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -146,8 +147,10 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
       } finally {
-        core.setIsStreaming(false);
-        abortRef.current = null;
+        if (abortRef.current === controller) {
+          core.setIsStreaming(false);
+          abortRef.current = null;
+        }
         if (agentId) {
           useChatHistoryStore.getState().invalidateHistory(agentHistoryKey(agentId));
         }

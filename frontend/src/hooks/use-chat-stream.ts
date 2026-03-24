@@ -321,6 +321,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         sidekickRef.current.setActiveTab("specs");
       }
 
+      abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
       const handler = buildStreamHandler({
@@ -335,9 +336,11 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
       } finally {
-        core.setIsStreaming(false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
-        abortRef.current = null;
+        if (abortRef.current === controller) {
+          core.setIsStreaming(false);
+          sidekickRef.current.setStreamingAgentInstanceId(null);
+          abortRef.current = null;
+        }
         if (projectId && agentInstanceId) {
           useChatHistoryStore.getState().invalidateHistory(
             projectChatHistoryKey(projectId, agentInstanceId),
