@@ -74,8 +74,6 @@ pub struct AppState {
     pub network_client: Option<Arc<NetworkClient>>,
     /// Optional aura-storage client. `None` when `AURA_STORAGE_URL` is not set.
     pub storage_client: Option<Arc<StorageClient>>,
-    /// Shared internal token used for service-to-service calls.
-    pub internal_service_token: Option<String>,
     /// Broadcast channel for network/social events (JSON payloads).
     pub event_broadcast: broadcast::Sender<serde_json::Value>,
     /// When true, non-Pro users are blocked from API access.
