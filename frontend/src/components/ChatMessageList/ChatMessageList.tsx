@@ -57,7 +57,7 @@ export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessag
 
   return (
     <>
-      <div style={{ position: "relative", height: virtualizer.getTotalSize() }}>
+      <div style={{ position: "relative", height: virtualizer.getTotalSize(), flexShrink: 0 }}>
         {virtualItems.map((virtualRow) => (
           <div
             key={virtualRow.key}
