@@ -64,6 +64,25 @@ export interface CreateImportedProjectRequest {
   orbit_repo?: string;
 }
 
+export interface ProjectStatsData {
+  total_tasks: number;
+  pending_tasks: number;
+  ready_tasks: number;
+  in_progress_tasks: number;
+  blocked_tasks: number;
+  done_tasks: number;
+  failed_tasks: number;
+  completion_percentage: number;
+  total_tokens: number;
+  total_events: number;
+  total_agents: number;
+  total_sessions: number;
+  total_time_seconds: number;
+  lines_changed: number;
+  total_specs: number;
+  contributors: number;
+}
+
 export const projectsApi = {
   listProjects: (orgId?: string) =>
     apiFetch<Project[]>(orgId ? `/api/projects?org_id=${orgId}` : "/api/projects"),
@@ -101,4 +120,6 @@ export const projectsApi = {
       method: "POST",
     }),
   generateSpecsStream,
+  getProjectStats: (projectId: ProjectId) =>
+    apiFetch<ProjectStatsData>(`/api/projects/${projectId}/stats`),
 };

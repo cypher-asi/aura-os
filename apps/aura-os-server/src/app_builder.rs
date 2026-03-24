@@ -187,15 +187,38 @@ fn maybe_spawn_local_harness() {
         "Local harness not running — spawning from source"
     );
 
-    match std::process::Command::new("cargo")
-        .args(["run", "--release", "--", "run", "--ui", "none"])
+    let mut cmd = std::process::Command::new("cargo");
+    cmd.args(["run", "--release", "--", "run", "--ui", "none"])
         .current_dir(&harness_dir)
         .env("BIND_ADDR", &host_port)
+        .env("BIND_PORT", addr.port().to_string())
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-    {
+        .stderr(std::process::Stdio::null());
+
+    // Load the harness's own .env so the child gets its configured values
+    // (INTERNAL_SERVICE_TOKEN, service URLs, etc.) regardless of what the
+    // parent process has in its environment.
+    let harness_env_file = harness_dir.join(".env");
+    if harness_env_file.exists() {
+        if let Ok(contents) = std::fs::read_to_string(&harness_env_file) {
+            for line in contents.lines() {
+                let line = line.trim();
+                if line.starts_with('#') || line.is_empty() {
+                    continue;
+                }
+                if let Some((key, val)) = line.split_once('=') {
+                    let key = key.trim();
+                    let val = val.trim();
+                    if !val.is_empty() {
+                        cmd.env(key, val);
+                    }
+                }
+            }
+        }
+    }
+
+    match cmd.spawn() {
         Ok(child) => {
             info!(pid = child.id(), "aura-harness child process spawned (building in background)");
 
@@ -270,7 +293,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         terminal_manager: Arc::new(TerminalManager::new()),
         network_client,
         storage_client,
-        internal_service_token: env_opt("INTERNAL_SERVICE_TOKEN"),
         event_broadcast,
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")

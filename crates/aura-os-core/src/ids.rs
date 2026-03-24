@@ -62,7 +62,7 @@ define_id!(TaskId);
 define_id!(AgentId);
 define_id!(AgentInstanceId);
 define_id!(SessionId);
-define_id!(MessageId);
+define_id!(SessionEventId);
 define_id!(OrgId);
 define_id!(UserId);
 define_id!(ProfileId);

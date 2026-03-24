@@ -246,7 +246,6 @@ pub fn build_test_app_from_store(
         terminal_manager: Arc::new(aura_os_terminal::TerminalManager::new()),
         network_client,
         storage_client,
-        internal_service_token: None,
         require_zero_pro: false,
     };
 

@@ -18,6 +18,7 @@
 .messageArea {
   flex: 1;
   overflow-y: scroll;
+  overflow-anchor: none;
   scrollbar-gutter: stable;
   padding: var(--space-3) calc(var(--space-3) * 2);
   padding-bottom: 140px;

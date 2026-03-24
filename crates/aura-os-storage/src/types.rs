@@ -1,6 +1,47 @@
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
+// Project Stats
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectStats {
+    #[serde(default)]
+    pub total_tasks: u64,
+    #[serde(default)]
+    pub pending_tasks: u64,
+    #[serde(default)]
+    pub ready_tasks: u64,
+    #[serde(default)]
+    pub in_progress_tasks: u64,
+    #[serde(default)]
+    pub blocked_tasks: u64,
+    #[serde(default)]
+    pub done_tasks: u64,
+    #[serde(default)]
+    pub failed_tasks: u64,
+    #[serde(default)]
+    pub completion_percentage: f64,
+    #[serde(default)]
+    pub total_tokens: u64,
+    #[serde(default)]
+    pub total_events: u64,
+    #[serde(default)]
+    pub total_agents: u64,
+    #[serde(default)]
+    pub total_sessions: u64,
+    #[serde(default)]
+    pub total_time_seconds: f64,
+    #[serde(default)]
+    pub lines_changed: u64,
+    #[serde(default)]
+    pub total_specs: u64,
+    #[serde(default)]
+    pub contributors: u64,
+}
+
+// ---------------------------------------------------------------------------
 // Project Agent types
 // ---------------------------------------------------------------------------
 
@@ -279,65 +320,6 @@ pub struct UpdateSessionRequest {
 }
 
 // ---------------------------------------------------------------------------
-// Message types
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StorageMessage {
-    pub id: String,
-    #[serde(default)]
-    pub session_id: Option<String>,
-    #[serde(default)]
-    pub project_agent_id: Option<String>,
-    #[serde(default)]
-    pub project_id: Option<String>,
-    #[serde(default)]
-    pub org_id: Option<String>,
-    #[serde(default)]
-    pub created_by: Option<String>,
-    #[serde(default)]
-    pub role: Option<String>,
-    #[serde(default)]
-    pub content: Option<String>,
-    #[serde(default)]
-    pub content_blocks: Option<Vec<serde_json::Value>>,
-    #[serde(default)]
-    pub input_tokens: Option<i64>,
-    #[serde(default)]
-    pub output_tokens: Option<i64>,
-    #[serde(default)]
-    pub thinking: Option<String>,
-    #[serde(default)]
-    pub thinking_duration_ms: Option<i64>,
-    #[serde(default)]
-    pub created_at: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateMessageRequest {
-    pub project_agent_id: String,
-    pub project_id: String,
-    pub role: String,
-    pub content: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub org_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_by: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub content_blocks: Option<Vec<serde_json::Value>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_tokens: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_tokens: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub thinking_duration_ms: Option<i64>,
-}
-
-// ---------------------------------------------------------------------------
 // Log Entry types
 // ---------------------------------------------------------------------------
 
@@ -402,6 +384,8 @@ pub struct StorageSessionEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateSessionEventRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

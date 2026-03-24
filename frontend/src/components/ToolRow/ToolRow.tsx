@@ -17,7 +17,7 @@ export function ToolCallBlock({
 }) {
   const isSpec = entry.name === "create_spec" || entry.name === "update_spec";
   const isTask = entry.name === "create_task";
-  const autoExpand = defaultExpanded ?? (isSpec && !entry.started);
+  const autoExpand = defaultExpanded ?? (isSpec && !entry.pending && !entry.started);
   const [expanded, setExpanded] = useState(autoExpand);
   const label = TOOL_LABELS[entry.name] || entry.name;
   const inputSummary = entry.started ? "" : summarizeInput(entry.name, entry.input);
@@ -29,9 +29,11 @@ export function ToolCallBlock({
       ? toolStyles.taskError
       : toolStyles.taskDone;
 
+  const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
+  const showGeneratingHint = entry.pending && !hasPartialContent;
+
   const renderBody = () => {
-    if (entry.started) {
-      const hasPartialContent = isSpec && typeof entry.input.markdown_contents === "string" && entry.input.markdown_contents !== "";
+    if (entry.pending) {
       if (hasPartialContent) {
         return (
           <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
@@ -41,15 +43,7 @@ export function ToolCallBlock({
           </div>
         );
       }
-      return (
-        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.startedWrap}`}>
-          <div className={toolStyles.toolBody}>
-            <span className={toolStyles.generatingHint}>
-              Generating…
-            </span>
-          </div>
-        </div>
-      );
+      return null;
     }
     if (isTask) {
       return (
@@ -112,9 +106,15 @@ export function ToolCallBlock({
       >
         <span className={toolStyles.taskCheck} />
         <span className={toolStyles.toolName}>{label}</span>
-        {inputSummary && (
+        {entry.isError && entry.result ? (
+          <span className={toolStyles.headerErrorText}>
+            {entry.result.length > 100 ? entry.result.slice(0, 100) + "…" : entry.result}
+          </span>
+        ) : showGeneratingHint ? (
+          <span className={toolStyles.generatingHint}>Generating…</span>
+        ) : inputSummary ? (
           <span className={toolStyles.toolSummary}>{inputSummary}</span>
-        )}
+        ) : null}
         <span className={`${toolStyles.toolChevron} ${expanded ? toolStyles.toolChevronExpanded : ""}`}>
           <ChevronRight size={12} />
         </span>

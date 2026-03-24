@@ -45,7 +45,10 @@ impl HarnessLink for LocalHarness {
             max_turns: config.max_turns,
             installed_tools: None,
             workspace: config.workspace,
+            project_path: config.project_path,
             token: config.token,
+            project_id: config.project_id,
+            conversation_messages: config.conversation_messages,
         }))?;
 
         let mut rx = events_tx.subscribe();

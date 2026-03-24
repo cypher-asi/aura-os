@@ -111,10 +111,10 @@ pub(crate) struct UpdateAgentInstanceRequest {
     pub status: Option<String>,
 }
 
-// -- Message DTOs --
+// -- Chat DTOs --
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct SendMessageRequest {
+pub(crate) struct SendChatRequest {
     pub content: String,
     pub action: Option<String>,
 }

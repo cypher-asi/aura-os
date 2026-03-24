@@ -64,7 +64,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-full, 50%);
-  background: var(--color-accent-subtle, rgba(124, 58, 237, 0.12));
+  background: var(--color-accent-subtle, rgba(255, 255, 255, 0.12));
   color: var(--color-accent);
   font-size: 22px;
   font-weight: 600;

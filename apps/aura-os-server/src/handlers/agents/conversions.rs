@@ -7,11 +7,11 @@ use axum::Json;
 
 use aura_os_core::parse_dt;
 use aura_os_core::{
-    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, Message, MessageId, ProfileId,
-    ProjectId, ZeroAuthSession,
+    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, ProfileId, ProjectId,
+    SessionEvent, SessionEventId, ZeroAuthSession,
 };
 use aura_os_network::NetworkAgent;
-use aura_os_storage::StorageMessage;
+use aura_os_storage::StorageSessionEvent;
 
 use crate::error::ApiError;
 use crate::state::AppState;
@@ -83,95 +83,111 @@ pub(crate) async fn resolve_single_agent(
     Some(agent_from_network(&net_agent))
 }
 
-struct DecodedContent {
-    text: String,
-    content_blocks: Option<Vec<ChatContentBlock>>,
-    thinking: Option<String>,
-    thinking_duration_ms: Option<i64>,
-}
-
-/// Decode a stored message content string into structured parts.
+/// Reconstruct `Vec<SessionEvent>` from persisted session events.
 ///
-/// The content may be a JSON object with `text`, `content_blocks`, `thinking`,
-/// and `thinking_duration_ms` fields, or plain text.
-fn decode_message_content(raw: &str) -> DecodedContent {
-    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(raw) {
-        if let Some(map) = obj.as_object() {
-            let text = map
-                .get("text")
-                .and_then(|v| v.as_str())
-                .unwrap_or(raw)
-                .to_string();
-            let content_blocks: Option<Vec<ChatContentBlock>> = map
-                .get("content_blocks")
-                .and_then(|v| serde_json::from_value(v.clone()).ok());
-            let thinking = map
-                .get("thinking")
-                .and_then(|v| v.as_str())
-                .map(String::from);
-            let thinking_duration_ms = map
-                .get("thinking_duration_ms")
-                .and_then(|v| v.as_i64());
-            return DecodedContent {
-                text,
-                content_blocks,
-                thinking,
-                thinking_duration_ms,
-            };
+/// Only `user_message`, `assistant_message_end`, and `task_output` events
+/// produce `SessionEvent` objects.  Incremental events (`text_delta`, `tool_use_start`,
+/// etc.) are stored for replay but skipped here — the `assistant_message_end`
+/// event contains the full synthesis (text, thinking, content_blocks, usage).
+pub(crate) fn events_to_session_history(
+    events: &[StorageSessionEvent],
+    project_agent_id: &str,
+    project_id: &str,
+) -> Vec<SessionEvent> {
+    let agent_instance_id = project_agent_id
+        .parse::<AgentInstanceId>()
+        .unwrap_or_else(|_| AgentInstanceId::nil());
+    let pid = project_id
+        .parse::<ProjectId>()
+        .unwrap_or_else(|_| ProjectId::nil());
+
+    let mut sorted = events.to_vec();
+    sorted.sort_by(|a, b| {
+        let ta = a.created_at.as_deref().unwrap_or("");
+        let tb = b.created_at.as_deref().unwrap_or("");
+        ta.cmp(tb).then_with(|| a.id.cmp(&b.id))
+    });
+
+    let mut messages = Vec::new();
+
+    for event in &sorted {
+        let event_type = event.event_type.as_deref().unwrap_or("");
+        let content = event.content.as_ref();
+
+        match event_type {
+            "user_message" => {
+                let text = content
+                    .and_then(|c| c.get("text"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
+                    agent_instance_id,
+                    project_id: pid,
+                    role: ChatRole::User,
+                    content: text.to_string(),
+                    content_blocks: None,
+                    thinking: None,
+                    thinking_duration_ms: None,
+                    created_at: parse_dt(&event.created_at),
+                });
+            }
+            "assistant_message_end" => {
+                let text = content
+                    .and_then(|c| c.get("text"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+
+                let thinking = content
+                    .and_then(|c| c.get("thinking"))
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .map(String::from);
+
+                let content_blocks: Option<Vec<ChatContentBlock>> = content
+                    .and_then(|c| c.get("content_blocks"))
+                    .and_then(|v| serde_json::from_value(v.clone()).ok());
+
+                if text.is_empty() && content_blocks.is_none() && thinking.is_none() {
+                    continue;
+                }
+
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
+                    agent_instance_id,
+                    project_id: pid,
+                    role: ChatRole::Assistant,
+                    content: text,
+                    content_blocks,
+                    thinking,
+                    thinking_duration_ms: None,
+                    created_at: parse_dt(&event.created_at),
+                });
+            }
+            "task_output" => {
+                let text = content
+                    .and_then(|c| c.get("text"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if text.is_empty() {
+                    continue;
+                }
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
+                    agent_instance_id,
+                    project_id: pid,
+                    role: ChatRole::Assistant,
+                    content: text.to_string(),
+                    content_blocks: None,
+                    thinking: None,
+                    thinking_duration_ms: None,
+                    created_at: parse_dt(&event.created_at),
+                });
+            }
+            _ => {}
         }
     }
-    DecodedContent {
-        text: raw.to_string(),
-        content_blocks: None,
-        thinking: None,
-        thinking_duration_ms: None,
-    }
-}
 
-pub(crate) fn storage_message_to_message(sm: &StorageMessage) -> Message {
-    let message_id = sm
-        .id
-        .parse::<MessageId>()
-        .unwrap_or_else(|_| MessageId::new());
-    let agent_instance_id = sm
-        .project_agent_id
-        .as_deref()
-        .and_then(|s| s.parse::<AgentInstanceId>().ok())
-        .unwrap_or_else(AgentInstanceId::nil);
-    let project_id = sm
-        .project_id
-        .as_deref()
-        .and_then(|s| s.parse::<ProjectId>().ok())
-        .unwrap_or_else(ProjectId::nil);
-    let role = match sm.role.as_deref() {
-        Some("user") => ChatRole::User,
-        Some("assistant") => ChatRole::Assistant,
-        _ => ChatRole::User,
-    };
-
-    let raw_content = sm.content.as_deref().unwrap_or_default();
-    let decoded = decode_message_content(raw_content);
-
-    let thinking = sm.thinking.clone().or(decoded.thinking);
-    let thinking_duration_ms = sm
-        .thinking_duration_ms
-        .or(decoded.thinking_duration_ms)
-        .and_then(|v| u64::try_from(v).ok());
-    let content_blocks = sm
-        .content_blocks
-        .as_ref()
-        .and_then(|vals| serde_json::from_value::<Vec<ChatContentBlock>>(serde_json::Value::Array(vals.clone())).ok())
-        .or(decoded.content_blocks);
-
-    Message {
-        message_id,
-        agent_instance_id,
-        project_id,
-        role,
-        content: decoded.text,
-        content_blocks,
-        thinking,
-        thinking_duration_ms,
-        created_at: parse_dt(&sm.created_at),
-    }
+    messages
 }

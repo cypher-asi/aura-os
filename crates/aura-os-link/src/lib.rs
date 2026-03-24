@@ -11,8 +11,8 @@ pub use local_harness::LocalHarness;
 pub use aura_protocol::{
     InboundMessage as HarnessInbound,
     OutboundMessage as HarnessOutbound,
-    UserMessage, SessionInit, ApprovalResponse,
+    UserMessage, SessionInit, ApprovalResponse, ConversationMessage,
     SessionReady, AssistantMessageStart, TextDelta, ThinkingDelta,
     ToolUseStart, ToolResultMsg, AssistantMessageEnd, ErrorMsg,
-    SessionUsage, FilesChanged, FileOp, ToolInfo, InstalledTool, ToolAuth,
+    SessionUsage, FilesChanged, FileOp, ToolInfo,
 };

@@ -8,12 +8,13 @@
   [role="button"],
   [tabindex]:not([tabindex="-1"])
 ):focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent, #7c3aed) 82%, white 18%);
+  outline: 2px solid color-mix(in srgb, var(--color-accent, #ffffff) 82%, white 18%);
   outline-offset: 2px;
 }
 
 :root {
   color-scheme: dark;
+  --color-accent: #ffffff !important;
   --font-sans: 'Inter Variable', sans-serif;
   --color-spinner: #fff;
   --color-text-muted: #555;

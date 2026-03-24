@@ -31,6 +31,11 @@ export interface InstalledTool {
 // Inbound Messages (Client → Server)
 // ============================================================================
 
+export interface ConversationMessage {
+  role: string;
+  content: string;
+}
+
 export interface SessionInit {
   system_prompt?: string | null;
   model?: string | null;
@@ -40,6 +45,8 @@ export interface SessionInit {
   installed_tools?: InstalledTool[] | null;
   workspace?: string | null;
   token?: string | null;
+  project_id?: string | null;
+  conversation_messages?: ConversationMessage[] | null;
 }
 
 export interface UserMessage {

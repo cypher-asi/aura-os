@@ -76,7 +76,7 @@
 .tab.active {
   color: var(--color-text-primary, #e6edf3);
   background: var(--color-bg, #0d1117);
-  border-bottom: 2px solid var(--color-accent, #a371f7);
+  border-bottom: 2px solid var(--color-accent, #ffffff);
 }
 
 .tabDot {
@@ -88,7 +88,7 @@
 }
 
 .tab.dirty .tabDot {
-  background: var(--color-accent, #a371f7);
+  background: var(--color-accent, #ffffff);
 }
 
 .tabClose {

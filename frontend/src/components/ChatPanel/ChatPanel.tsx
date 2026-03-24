@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useAutoScroll } from "../../hooks/use-auto-scroll";
-import { useIsStreaming } from "../../hooks/stream/hooks";
+import { useIsStreaming, useStreamMessages } from "../../hooks/stream/hooks";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -49,22 +49,71 @@ export function ChatPanel({
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const attachmentsRef = useRef(attachments);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
-  const { handleScroll, scrollToBottom } = useAutoScroll(messageAreaRef, scrollResetKey);
 
-  // Prevent scroll-jank: hide the message area until auto-scroll has
-  // positioned to the bottom after messages first render.
+  // Prevent scroll-jank: keep the message area at opacity 0 until
+  // useAutoScroll has scrolled to the bottom AND the virtualizer's
+  // measure → render cascade has settled (scrollHeight stable).
+  const messages = useStreamMessages(streamKey);
+  const hasMessages = messages.length > 0;
+  const hasMessagesRef = useRef(hasMessages);
+  hasMessagesRef.current = hasMessages;
+
   const [contentVisible, setContentVisible] = useState(false);
-  useEffect(() => {
-    if (!historyResolved || contentVisible) return;
-    let raf2: number | undefined;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setContentVisible(true));
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      if (raf2 !== undefined) cancelAnimationFrame(raf2);
+  const contentVisibleRef = useRef(false);
+  useEffect(() => { contentVisibleRef.current = contentVisible; }, [contentVisible]);
+
+  const revealRafRef = useRef(0);
+  const lastRevealHeightRef = useRef(0);
+  const stableFramesRef = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(revealRafRef.current), []);
+
+  const STABLE_FRAMES_REQUIRED = 2;
+
+  const onScrollApplied = useCallback(() => {
+    if (!hasMessagesRef.current || contentVisibleRef.current) return;
+
+    // A new scroll correction just landed — reset the stability counter
+    // and (re)start the polling loop.
+    stableFramesRef.current = 0;
+    cancelAnimationFrame(revealRafRef.current);
+
+    const el = messageAreaRef.current;
+    if (!el) return;
+    lastRevealHeightRef.current = el.scrollHeight;
+
+    // Poll until scrollHeight is unchanged for STABLE_FRAMES_REQUIRED
+    // consecutive frames. This adapts to the virtualizer's deferred
+    // measurement pipeline (mount items → measureElement → batch state
+    // update → re-render) which can take 2-3+ frames for very tall items.
+    const poll = () => {
+      if (contentVisibleRef.current) return;
+      const h = messageAreaRef.current?.scrollHeight ?? 0;
+      if (h === lastRevealHeightRef.current) {
+        stableFramesRef.current++;
+      } else {
+        stableFramesRef.current = 0;
+        lastRevealHeightRef.current = h;
+      }
+      if (stableFramesRef.current >= STABLE_FRAMES_REQUIRED) {
+        setContentVisible(true);
+      } else {
+        revealRafRef.current = requestAnimationFrame(poll);
+      }
     };
-  }, [historyResolved, contentVisible]);
+    revealRafRef.current = requestAnimationFrame(poll);
+  }, []);
+
+  const { handleScroll, scrollToBottom } = useAutoScroll(
+    messageAreaRef, scrollResetKey, onScrollApplied,
+  );
+
+  // Fallback: reveal for empty conversations once history resolves.
+  useEffect(() => {
+    if (contentVisible || hasMessages || !historyResolved) return;
+    const raf = requestAnimationFrame(() => setContentVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [historyResolved, hasMessages, contentVisible]);
+
   const messageAreaVisible = !historyResolved || contentVisible;
 
   const isStreaming = useIsStreaming(streamKey);
@@ -124,10 +173,11 @@ export function ChatPanel({
       const next = useMessageQueueStore.getState().dequeue(streamKey);
       if (next) {
         onSendRef.current(next.content, next.action, null, next.attachments);
+        scrollToBottom();
       }
     }
     prevStreamingRef.current = isStreaming;
-  }, [isStreaming, streamKey]);
+  }, [isStreaming, streamKey, scrollToBottom]);
 
   const handleQueueEdit = useCallback(
     (item: QueuedMessage) => {

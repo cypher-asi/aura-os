@@ -11,8 +11,8 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orgs, projects,
-    specs, tasks, terminal, users, ws,
+    agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orgs, project_stats,
+    projects, specs, tasks, terminal, tool_callbacks, users, ws,
 };
 use crate::state::AppState;
 
@@ -30,6 +30,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .merge(spec_routes())
         .merge(task_routes())
         .merge(agent_routes())
+        .merge(tool_callback_routes())
         .merge(social_routes())
         .merge(system_routes())
         .layer(middleware::from_fn_with_state(
@@ -142,6 +143,10 @@ fn project_routes() -> Router<AppState> {
             "/api/projects/:project_id/archive",
             post(projects::archive_project),
         )
+        .route(
+            "/api/projects/:project_id/stats",
+            get(project_stats::get_project_stats),
+        )
         .route("/api/list-directory", post(files::list_directory))
 }
 
@@ -208,12 +213,12 @@ fn agent_routes() -> Router<AppState> {
                 .delete(agents::delete_agent),
         )
         .route(
-            "/api/agents/:agent_id/messages",
-            get(agents::list_agent_messages),
+            "/api/agents/:agent_id/events",
+            get(agents::list_agent_events),
         )
         .route(
-            "/api/agents/:agent_id/messages/stream",
-            post(agents::send_agent_message_stream),
+            "/api/agents/:agent_id/events/stream",
+            post(agents::send_agent_event_stream),
         )
         .route(
             "/api/projects/:project_id/agents",
@@ -226,12 +231,12 @@ fn agent_routes() -> Router<AppState> {
                 .delete(agents::delete_agent_instance),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_instance_id/messages",
-            get(agents::list_messages),
+            "/api/projects/:project_id/agents/:agent_instance_id/events",
+            get(agents::list_events),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_instance_id/messages/stream",
-            post(agents::send_message_stream),
+            "/api/projects/:project_id/agents/:agent_instance_id/events/stream",
+            post(agents::send_event_stream),
         )
         .route(
             "/api/projects/:project_id/agents/:agent_instance_id/sessions",
@@ -246,13 +251,20 @@ fn agent_routes() -> Router<AppState> {
             get(agents::list_session_tasks),
         )
         .route(
-            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/messages",
-            get(agents::list_session_messages),
+            "/api/projects/:project_id/agents/:agent_instance_id/sessions/:session_id/events",
+            get(agents::list_session_events),
         )
         .route(
             "/api/projects/:project_id/sessions",
             get(agents::list_project_sessions),
         )
+}
+
+fn tool_callback_routes() -> Router<AppState> {
+    Router::new().route(
+        "/api/tool-callbacks/:project_id/:tool_name",
+        post(tool_callbacks::handle_tool_callback),
+    )
 }
 
 fn social_routes() -> Router<AppState> {

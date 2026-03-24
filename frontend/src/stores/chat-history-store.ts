@@ -29,6 +29,7 @@ type ChatHistoryState = {
 };
 
 const HISTORY_TTL_MS = 30_000;
+const ERROR_TTL_MS = 10_000;
 const inflightPromises = new Map<string, Promise<void>>();
 
 export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
@@ -42,6 +43,15 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
       !opts?.force &&
       entry?.status === "ready" &&
       now - entry.fetchedAt < HISTORY_TTL_MS
+    ) {
+      return;
+    }
+
+    if (
+      !opts?.force &&
+      entry?.status === "error" &&
+      entry.fetchedAt > 0 &&
+      now - entry.fetchedAt < ERROR_TTL_MS
     ) {
       return;
     }
@@ -83,7 +93,7 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
             [key]: {
               messages: entry?.messages ?? EMPTY_MESSAGES,
               status: "error",
-              fetchedAt: entry?.fetchedAt ?? 0,
+              fetchedAt: Date.now(),
               error: message,
               lastMessageAt: entry?.lastMessageAt ?? null,
             },

@@ -233,42 +233,43 @@ async fn fetch_task_output_from_storage(
 ) -> Option<TaskOutputResponse> {
     let task = storage.get_task(&task_id.to_string(), jwt).await.ok()?;
     let session_id = task.session_id?;
-    let msgs = storage
-        .list_messages(&session_id, jwt, None, None)
+    let events = storage
+        .list_events(&session_id, jwt, None, None)
         .await
         .ok()?;
 
-    let content: String = msgs
+    let output: String = events
         .iter()
-        .filter(|m| m.role.as_deref() == Some("assistant"))
-        .filter_map(|m| m.content.as_deref())
+        .filter(|e| e.event_type.as_deref() == Some("task_output"))
+        .filter_map(|e| {
+            e.content
+                .as_ref()
+                .and_then(|c| c.get("text"))
+                .and_then(|v| v.as_str())
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
     let (mut build_steps, mut test_steps) = (Vec::new(), Vec::new());
-    for msg in &msgs {
-        if msg.role.as_deref() != Some("system") {
+    for evt in &events {
+        if evt.event_type.as_deref() != Some("task_steps") {
             continue;
         }
-        if let Some(content) = msg.content.as_deref() {
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(content) {
-                if val.get("_type").and_then(|t| t.as_str()) == Some("task_steps") {
-                    if let Some(bs) = val.get("build_steps").and_then(|v| v.as_array()) {
-                        build_steps = bs.clone();
-                    }
-                    if let Some(ts) = val.get("test_steps").and_then(|v| v.as_array()) {
-                        test_steps = ts.clone();
-                    }
-                }
+        if let Some(content) = evt.content.as_ref() {
+            if let Some(bs) = content.get("build_steps").and_then(|v| v.as_array()) {
+                build_steps = bs.clone();
+            }
+            if let Some(ts) = content.get("test_steps").and_then(|v| v.as_array()) {
+                test_steps = ts.clone();
             }
         }
     }
 
-    if content.is_empty() && build_steps.is_empty() && test_steps.is_empty() {
+    if output.is_empty() && build_steps.is_empty() && test_steps.is_empty() {
         return None;
     }
     Some(TaskOutputResponse {
-        output: content,
+        output,
         build_steps,
         test_steps,
     })

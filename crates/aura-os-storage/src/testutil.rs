@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
-    routing::{get, post, put},
+    routing::{get, post},
     Json, Router,
 };
 use chrono::Utc;
@@ -25,7 +25,6 @@ pub struct MockStorageDb {
     pub sessions: Vec<StorageSession>,
     pub tasks: Vec<StorageTask>,
     pub specs: Vec<StorageSpec>,
-    pub messages: Vec<StorageMessage>,
     pub project_agents: Vec<StorageProjectAgent>,
     pub events: Vec<StorageSessionEvent>,
 }
@@ -307,50 +306,6 @@ async fn list_specs(
 }
 
 // ---------------------------------------------------------------------------
-// Message handlers
-// ---------------------------------------------------------------------------
-
-async fn create_message(
-    Path(session_id): Path<String>,
-    State(db): State<SharedDb>,
-    Json(req): Json<CreateMessageRequest>,
-) -> Json<StorageMessage> {
-    let msg = StorageMessage {
-        id: new_id(),
-        session_id: Some(session_id),
-        project_agent_id: Some(req.project_agent_id),
-        project_id: Some(req.project_id),
-        org_id: req.org_id,
-        created_by: req.created_by,
-        role: Some(req.role),
-        content: Some(req.content),
-        content_blocks: req.content_blocks,
-        input_tokens: req.input_tokens,
-        output_tokens: req.output_tokens,
-        thinking: req.thinking,
-        thinking_duration_ms: req.thinking_duration_ms,
-        created_at: Some(Utc::now().to_rfc3339()),
-    };
-    let mut db = db.lock().await;
-    db.messages.push(msg.clone());
-    Json(msg)
-}
-
-async fn list_messages(
-    Path(session_id): Path<String>,
-    State(db): State<SharedDb>,
-) -> Json<Vec<StorageMessage>> {
-    let db = db.lock().await;
-    let msgs: Vec<_> = db
-        .messages
-        .iter()
-        .filter(|m| m.session_id.as_deref() == Some(&session_id))
-        .cloned()
-        .collect();
-    Json(msgs)
-}
-
-// ---------------------------------------------------------------------------
 // Project Agent handlers
 // ---------------------------------------------------------------------------
 
@@ -511,11 +466,6 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             post(create_spec).get(list_specs),
         )
         .route("/api/specs/:spec_id", get(get_spec))
-        // Messages
-        .route(
-            "/api/sessions/:session_id/messages",
-            post(create_message).get(list_messages),
-        )
         // Events
         .route(
             "/api/sessions/:session_id/events",

@@ -250,6 +250,24 @@ describe("useAutoScroll", () => {
     expect(el.scrollTop).toBe(1400);
   });
 
+  it("uses live scrollHeight when it grows between observer fire and RAF", () => {
+    const el = makeEl();
+    const ref = { current: el };
+    renderHook(() => useAutoScroll(ref));
+    flushRafs();
+
+    // Observer fires when scrollHeight is 1200…
+    (el as any).scrollHeight = 1200;
+    act(() => latestMO().trigger());
+
+    // …but by the time the RAF executes, virtualizer measured a very tall
+    // item and scrollHeight jumped to 5000.
+    (el as any).scrollHeight = 5000;
+    flushRafs();
+
+    expect(el.scrollTop).toBe(5000);
+  });
+
   it("does NOT scroll on mutation when user has scrolled up", () => {
     const el = makeEl();
     const ref = { current: el };

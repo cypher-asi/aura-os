@@ -15,6 +15,7 @@ import {
   handleToolCall,
   handleToolResult,
   handleMessageSaved,
+  handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
   getIsStreaming,
@@ -114,9 +115,15 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             case EventType.MessageEnd:
               handleMessageSaved(refs, setters, event.content.message);
               break;
-            case EventType.AssistantMessageEnd:
-              finalizeStream(refs, setters, abortRef, false);
+            case EventType.AssistantMessageEnd: {
+              handleAssistantTurnBoundary(refs, setters);
+              const stopReason = (event.content as { stop_reason?: string }).stop_reason;
+              if (stopReason !== "tool_use") {
+                resetStreamBuffers(refs, setters);
+                core.setIsStreaming(false);
+              }
               break;
+            }
             case EventType.AssistantMessageStart:
             case EventType.SessionReady:
             case EventType.TokenUsage:

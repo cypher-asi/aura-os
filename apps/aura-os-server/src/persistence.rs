@@ -136,28 +136,30 @@ async fn persist_task_output_message(params: &PersistTaskParams<'_>) {
         _ => (None, None),
     };
 
-    let msg_req = aura_os_storage::CreateMessageRequest {
-        project_agent_id: entry.agent_instance_id.to_string(),
-        project_id: entry.project_id.to_string(),
-        role: "assistant".to_string(),
-        content: params.live_output.to_string(),
+    let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(entry.session_id.to_string()),
+        user_id: None,
+        agent_id: Some(entry.agent_instance_id.to_string()),
+        sender: Some("agent".to_string()),
+        project_id: Some(entry.project_id.to_string()),
         org_id: None,
-        created_by: None,
-        content_blocks: None,
-        input_tokens: input_tokens.map(|v| v as i64),
-        output_tokens: output_tokens.map(|v| v as i64),
-        thinking: None,
-        thinking_duration_ms: None,
+        event_type: "task_output".to_string(),
+        content: Some(serde_json::json!({
+            "task_id": task_id.to_string(),
+            "text": params.live_output,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+        })),
     };
 
     if let Err(e) = params
         .storage
-        .create_message(&entry.session_id.to_string(), params.jwt, &msg_req)
+        .create_event(&entry.session_id.to_string(), params.jwt, &req)
         .await
     {
-        warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task output as session message");
+        warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task output event");
     } else {
-        info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task output as session message");
+        info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task output event");
     }
 }
 
@@ -175,32 +177,30 @@ async fn persist_task_steps(params: &PersistTaskParams<'_>) {
         }
         _ => return,
     };
-    let steps_payload = serde_json::json!({
-        "_type": "task_steps",
-        "build_steps": params.build_steps,
-        "test_steps": params.test_steps,
-    });
-    let steps_msg = aura_os_storage::CreateMessageRequest {
-        project_agent_id: entry.agent_instance_id.to_string(),
-        project_id: entry.project_id.to_string(),
-        role: "system".to_string(),
-        content: steps_payload.to_string(),
+
+    let req = aura_os_storage::CreateSessionEventRequest {
+        session_id: Some(entry.session_id.to_string()),
+        user_id: None,
+        agent_id: Some(entry.agent_instance_id.to_string()),
+        sender: Some("agent".to_string()),
+        project_id: Some(entry.project_id.to_string()),
         org_id: None,
-        created_by: None,
-        content_blocks: None,
-        input_tokens: None,
-        output_tokens: None,
-        thinking: None,
-        thinking_duration_ms: None,
+        event_type: "task_steps".to_string(),
+        content: Some(serde_json::json!({
+            "task_id": task_id.to_string(),
+            "build_steps": params.build_steps,
+            "test_steps": params.test_steps,
+        })),
     };
+
     if let Err(e) = params
         .storage
-        .create_message(&entry.session_id.to_string(), params.jwt, &steps_msg)
+        .create_event(&entry.session_id.to_string(), params.jwt, &req)
         .await
     {
-        warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task steps as session message");
+        warn!(task_id = %task_id, session_id = %entry.session_id, error = %e, "Failed to persist task steps event");
     } else {
-        info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task build/test steps as session message");
+        info!(task_id = %task_id, session_id = %entry.session_id, "Persisted task steps event");
     }
 }
 
@@ -380,8 +380,8 @@ mod tests {
             Some("Should update task but not create messages")
         );
         assert!(
-            guard.messages.is_empty(),
-            "no messages should be persisted without session entry"
+            guard.events.is_empty(),
+            "no events should be persisted without session entry"
         );
     }
 }

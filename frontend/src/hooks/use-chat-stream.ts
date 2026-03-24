@@ -17,6 +17,7 @@ import {
   handleToolCall as coreHandleToolCall,
   handleToolResult as coreHandleToolResult,
   handleMessageSaved,
+  handleAssistantTurnBoundary,
   handleStreamError,
   finalizeStream,
   getIsStreaming,
@@ -153,6 +154,79 @@ function removePendingArtifact(
   }
 }
 
+function promotePendingSpec(
+  content: { id: string; result: string },
+  projectId: string,
+  sidekick: ReturnType<typeof useSidekick>,
+  pendingSpecIdsRef: { current: string[] },
+) {
+  try {
+    const parsed = JSON.parse(content.result);
+    const raw = parsed?.spec ?? parsed;
+    if (!raw || typeof raw !== "object") return;
+
+    const specId = raw.spec_id ?? raw.id;
+    if (!specId || typeof specId !== "string") return;
+
+    const now = new Date().toISOString();
+    const title = raw.title ?? "Untitled";
+
+    removePendingArtifact(content.id, pendingSpecIdsRef, (id) => sidekick.removeSpec(id));
+
+    sidekick.pushSpec({
+      spec_id: specId,
+      project_id: raw.project_id ?? projectId,
+      title,
+      order_index: raw.order_index ?? raw.order ?? orderIndexFromTitle(title) ?? 0,
+      markdown_contents: raw.markdown_contents ?? raw.content ?? "",
+      created_at: raw.created_at ?? now,
+      updated_at: raw.updated_at ?? now,
+    });
+  } catch { /* result wasn't parseable JSON – leave pending for SpecSaved fallback */ }
+}
+
+function promotePendingTask(
+  content: { id: string; result: string },
+  projectId: string,
+  sidekick: ReturnType<typeof useSidekick>,
+  pendingTaskIdsRef: { current: string[] },
+) {
+  try {
+    const parsed = JSON.parse(content.result);
+    const raw = parsed?.task ?? parsed;
+    if (!raw || typeof raw !== "object") return;
+
+    const taskId = raw.task_id ?? raw.id;
+    if (!taskId || typeof taskId !== "string") return;
+
+    const now = new Date().toISOString();
+
+    removePendingArtifact(content.id, pendingTaskIdsRef, (id) => sidekick.removeTask(id));
+
+    sidekick.pushTask({
+      task_id: taskId,
+      project_id: raw.project_id ?? projectId,
+      spec_id: raw.spec_id ?? "",
+      title: raw.title ?? "Untitled",
+      description: raw.description ?? "",
+      status: raw.status ?? "pending",
+      order_index: raw.order_index ?? raw.order ?? 0,
+      dependency_ids: raw.dependency_ids ?? raw.dependencies ?? [],
+      parent_task_id: raw.parent_task_id ?? null,
+      assigned_agent_instance_id: raw.assigned_agent_instance_id ?? null,
+      completed_by_agent_instance_id: raw.completed_by_agent_instance_id ?? null,
+      session_id: raw.session_id ?? null,
+      execution_notes: raw.execution_notes ?? "",
+      files_changed: raw.files_changed ?? [],
+      live_output: raw.live_output ?? "",
+      total_input_tokens: raw.total_input_tokens ?? 0,
+      total_output_tokens: raw.total_output_tokens ?? 0,
+      created_at: raw.created_at ?? now,
+      updated_at: raw.updated_at ?? now,
+    });
+  } catch { /* result wasn't parseable JSON – leave pending for TaskSaved fallback */ }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Event dispatcher                                                   */
 /* ------------------------------------------------------------------ */
@@ -208,8 +282,14 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.ToolResult: {
         const c = event.content as { id: string; name: string; result: string; is_error: boolean };
         coreHandleToolResult(refs, setters, c);
-        if (c.name === "create_spec" && c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
-        if (c.name === "create_task" && c.is_error) removePendingArtifact(c.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
+        if (c.name === "create_spec") {
+          if (c.is_error) removePendingArtifact(c.id, pendingSpecIdsRef, (id) => sidekickRef.current.removeSpec(id));
+          else promotePendingSpec(c, projectId, sidekickRef.current, pendingSpecIdsRef);
+        }
+        if (c.name === "create_task") {
+          if (c.is_error) removePendingArtifact(c.id, pendingTaskIdsRef, (id) => sidekickRef.current.removeTask(id));
+          else promotePendingTask(c, projectId, sidekickRef.current, pendingTaskIdsRef);
+        }
         if (c.name === "delete_spec" && !c.is_error) {
           try {
             const parsed = JSON.parse(c.result) as { deleted?: string };
@@ -243,15 +323,23 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
       case EventType.MessageEnd:
         handleMessageSaved(refs, setters, event.content.message);
         break;
-      case EventType.AssistantMessageEnd:
-        finalizeStream(refs, setters, abortRef, false);
-        sidekickRef.current.setStreamingAgentInstanceId(null);
+      case EventType.AssistantMessageEnd: {
+        handleAssistantTurnBoundary(refs, setters);
+        const stopReason = (event.content as { stop_reason?: string }).stop_reason;
+        if (stopReason !== "tool_use") {
+          resetStreamBuffers(refs, setters);
+          setters.setIsStreaming(false);
+          sidekickRef.current.setStreamingAgentInstanceId(null);
+        }
         break;
+      }
       case EventType.AgentInstanceUpdated:
         sidekickRef.current.notifyAgentInstanceUpdate(event.content.agent_instance);
         break;
       case EventType.AssistantMessageStart:
+        break;
       case EventType.SessionReady:
+        break;
       case EventType.TokenUsage:
         break;
       case EventType.Error:

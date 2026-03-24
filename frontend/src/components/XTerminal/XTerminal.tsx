@@ -26,7 +26,7 @@ const THEME = {
   green: "#6a9955",
   yellow: "#d7ba7d",
   blue: "#569cd6",
-  magenta: "#c586c0",
+  magenta: "#ffffff",
   cyan: "#4ec9b0",
   white: "#d4d4d4",
   brightBlack: "#808080",
@@ -34,7 +34,7 @@ const THEME = {
   brightGreen: "#6a9955",
   brightYellow: "#d7ba7d",
   brightBlue: "#569cd6",
-  brightMagenta: "#c586c0",
+  brightMagenta: "#ffffff",
   brightCyan: "#4ec9b0",
   brightWhite: "#ffffff",
 };

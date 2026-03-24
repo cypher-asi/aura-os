@@ -181,7 +181,7 @@ export type AuraEvent = AuraEventBase & (
     } }
   | { type: EventType.ToolResult; content: {
       message_id?: string;
-      id: string;
+      id?: string;
       name: string;
       result: string;
       is_error: boolean;

@@ -2,13 +2,13 @@ use axum::extract::{Path, State};
 use axum::Json;
 use tracing::warn;
 
-use aura_os_core::{AgentInstanceId, Message, ProjectId, Session, SessionId, Task};
+use aura_os_core::{AgentInstanceId, ProjectId, Session, SessionEvent, SessionId, Task};
 use aura_os_sessions::storage_session_to_session;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::AppState;
 
-use super::conversions::storage_message_to_message;
+use super::conversions::events_to_session_history;
 
 pub(crate) async fn list_project_sessions(
     State(state): State<AppState>,
@@ -119,26 +119,26 @@ pub(crate) async fn list_session_tasks(
     Ok(Json(tasks))
 }
 
-pub(crate) async fn list_session_messages(
+pub(crate) async fn list_session_events(
     State(state): State<AppState>,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
     )>,
-) -> ApiResult<Json<Vec<Message>>> {
+) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
 
-    let storage_msgs = storage
-        .list_messages(&session_id.to_string(), &jwt, None, None)
+    let events = storage
+        .list_events(&session_id.to_string(), &jwt, None, None)
         .await
         .map_err(map_storage_error)?;
 
-    let messages: Vec<Message> = storage_msgs
-        .iter()
-        .filter(|sm| sm.role.as_deref() != Some("system"))
-        .map(storage_message_to_message)
-        .collect();
+    let messages = events_to_session_history(
+        &events,
+        &_agent_instance_id.to_string(),
+        &_project_id.to_string(),
+    );
     Ok(Json(messages))
 }

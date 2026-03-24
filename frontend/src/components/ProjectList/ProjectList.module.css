@@ -80,7 +80,7 @@
   color: #ffffff;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-accent, #7c3aed);
+  border-bottom: 1px solid var(--color-accent, #ffffff);
   border-radius: 0;
   outline: none;
   overflow: hidden;

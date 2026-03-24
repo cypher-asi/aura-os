@@ -321,14 +321,10 @@
   color: var(--color-text, #ddd);
 }
 
-.startedWrap {
-  max-height: 28px;
-  overflow: hidden;
-}
-
 .generatingHint {
   font-size: 11px;
   color: var(--color-text-muted, #888);
+  white-space: nowrap;
 }
 
 .noMaxHeight {
@@ -338,6 +334,16 @@
 .showAllButton {
   padding-left: 18px;
   opacity: 0.7;
+}
+
+.headerErrorText {
+  color: #f87171;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .inlineError {

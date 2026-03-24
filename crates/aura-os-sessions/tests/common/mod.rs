@@ -132,7 +132,6 @@ pub fn store_test_jwt(store: &aura_os_store::RocksStore) {
         zero_wallet: "w1".into(),
         wallets: vec![],
         access_token: "test-jwt".into(),
-        is_zero_pro: false,
         created_at: Utc::now(),
         validated_at: Utc::now(),
     })

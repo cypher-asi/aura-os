@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::enums::{AgentStatus, ChatRole, HarnessMode, ProjectStatus, SessionStatus, TaskStatus};
 use crate::ids::{
-    AgentId, AgentInstanceId, MessageId, OrgId, ProfileId, ProjectId, SessionId, SpecId, TaskId,
-    UserId,
+    AgentId, AgentInstanceId, OrgId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId,
+    TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -264,20 +264,16 @@ impl Session {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Message {
-    pub message_id: MessageId,
+pub struct SessionEvent {
+    pub event_id: SessionEventId,
     pub agent_instance_id: AgentInstanceId,
     pub project_id: ProjectId,
     pub role: ChatRole,
     pub content: String,
-    /// Ephemeral: decoded from `content` via `decode_message_content`;
-    /// not stored as a separate field in aura-storage.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_blocks: Option<Vec<ChatContentBlock>>,
-    /// Ephemeral: decoded from `content` via `decode_message_content`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking: Option<String>,
-    /// Ephemeral: decoded from `content` via `decode_message_content`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thinking_duration_ms: Option<u64>,
     pub created_at: DateTime<Utc>,
