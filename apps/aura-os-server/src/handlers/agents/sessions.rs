@@ -2,13 +2,13 @@ use axum::extract::{Path, State};
 use axum::Json;
 use tracing::warn;
 
-use aura_os_core::{AgentInstanceId, Message, ProjectId, Session, SessionId, Task};
+use aura_os_core::{AgentInstanceId, ProjectId, Session, SessionEvent, SessionId, Task};
 use aura_os_sessions::storage_session_to_session;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::state::AppState;
 
-use super::conversions::events_to_messages;
+use super::conversions::events_to_session_history;
 
 pub(crate) async fn list_project_sessions(
     State(state): State<AppState>,
@@ -119,14 +119,14 @@ pub(crate) async fn list_session_tasks(
     Ok(Json(tasks))
 }
 
-pub(crate) async fn list_session_messages(
+pub(crate) async fn list_session_events(
     State(state): State<AppState>,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
         SessionId,
     )>,
-) -> ApiResult<Json<Vec<Message>>> {
+) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
     let jwt = state.get_jwt()?;
 
@@ -135,7 +135,7 @@ pub(crate) async fn list_session_messages(
         .await
         .map_err(map_storage_error)?;
 
-    let messages = events_to_messages(
+    let messages = events_to_session_history(
         &events,
         &_agent_instance_id.to_string(),
         &_project_id.to_string(),

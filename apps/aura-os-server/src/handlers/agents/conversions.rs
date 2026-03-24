@@ -7,8 +7,8 @@ use axum::Json;
 
 use aura_os_core::parse_dt;
 use aura_os_core::{
-    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, Message, MessageId, ProfileId,
-    ProjectId, ZeroAuthSession,
+    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, ProfileId, ProjectId,
+    SessionEvent, SessionEventId, ZeroAuthSession,
 };
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageSessionEvent;
@@ -83,17 +83,17 @@ pub(crate) async fn resolve_single_agent(
     Some(agent_from_network(&net_agent))
 }
 
-/// Reconstruct `Vec<Message>` from persisted session events.
+/// Reconstruct `Vec<SessionEvent>` from persisted session events.
 ///
 /// Only `user_message`, `assistant_message_end`, and `task_output` events
-/// produce `Message` objects.  Incremental events (`text_delta`, `tool_use_start`,
+/// produce `SessionEvent` objects.  Incremental events (`text_delta`, `tool_use_start`,
 /// etc.) are stored for replay but skipped here — the `assistant_message_end`
 /// event contains the full synthesis (text, thinking, content_blocks, usage).
-pub(crate) fn events_to_messages(
+pub(crate) fn events_to_session_history(
     events: &[StorageSessionEvent],
     project_agent_id: &str,
     project_id: &str,
-) -> Vec<Message> {
+) -> Vec<SessionEvent> {
     let agent_instance_id = project_agent_id
         .parse::<AgentInstanceId>()
         .unwrap_or_else(|_| AgentInstanceId::nil());
@@ -120,8 +120,8 @@ pub(crate) fn events_to_messages(
                     .and_then(|c| c.get("text"))
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
-                messages.push(Message {
-                    message_id: MessageId::new(),
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
                     agent_instance_id,
                     project_id: pid,
                     role: ChatRole::User,
@@ -153,8 +153,8 @@ pub(crate) fn events_to_messages(
                     continue;
                 }
 
-                messages.push(Message {
-                    message_id: MessageId::new(),
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
                     agent_instance_id,
                     project_id: pid,
                     role: ChatRole::Assistant,
@@ -173,8 +173,8 @@ pub(crate) fn events_to_messages(
                 if text.is_empty() {
                     continue;
                 }
-                messages.push(Message {
-                    message_id: MessageId::new(),
+                messages.push(SessionEvent {
+                    event_id: SessionEventId::new(),
                     agent_instance_id,
                     project_id: pid,
                     role: ChatRole::Assistant,

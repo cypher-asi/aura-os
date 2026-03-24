@@ -13,7 +13,7 @@ use aura_os_core::{AgentId, AgentInstanceId, ChatRole, HarnessMode, ProjectId, S
 use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
 use aura_os_storage::StorageClient;
 
-use crate::dto::SendMessageRequest;
+use crate::dto::SendChatRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
@@ -635,7 +635,7 @@ async fn open_harness_chat_stream(
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
     Path(agent_id): Path<AgentId>,
-    Json(body): Json<SendMessageRequest>,
+    Json(body): Json<SendChatRequest>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
@@ -696,7 +696,7 @@ pub(crate) async fn list_events(
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
-    Json(body): Json<SendMessageRequest>,
+    Json(body): Json<SendChatRequest>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
