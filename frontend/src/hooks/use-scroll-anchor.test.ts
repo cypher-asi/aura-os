@@ -41,13 +41,11 @@ class MockResizeObserver {
 
 interface HookOptions {
   resetKey?: unknown;
-  hasContent?: boolean;
   contentReady?: boolean;
 }
 
 const DEFAULT_OPTIONS: Required<HookOptions> = {
   resetKey: "default",
-  hasContent: true,
   contentReady: true,
 };
 
@@ -244,11 +242,11 @@ describe("useScrollAnchor", () => {
     expect(el.scrollTop).toBe(1000);
   });
 
-  it("reveals immediately for empty chat when contentReady", () => {
+  it("reveals via stability polling even with no content", () => {
     const el = makeEl();
     const ref = { current: el };
     const { result } = renderHook(() =>
-      useScrollAnchor(ref, { ...DEFAULT_OPTIONS, hasContent: false }),
+      useScrollAnchor(ref, DEFAULT_OPTIONS),
     );
     act(() => flushRafs());
     expect(result.current.isReady).toBe(true);

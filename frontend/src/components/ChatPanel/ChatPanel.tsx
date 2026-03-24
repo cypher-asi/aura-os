@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
-import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
+import { useIsStreaming } from "../../hooks/stream/hooks";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
 import type { ChatInputBarHandle, AttachmentItem } from "../ChatInputBar";
@@ -50,13 +50,10 @@ export function ChatPanel({
   const attachmentsRef = useRef(attachments);
   useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
 
-  const messages = useStreamEvents(streamKey);
-
   const { handleScroll, scrollToBottom, isReady } = useScrollAnchor(
     messageAreaRef,
     {
       resetKey: scrollResetKey,
-      hasContent: messages.length > 0,
       contentReady: historyResolved,
     },
   );

@@ -41,8 +41,6 @@ export function useScrollAnchor(
   ref: React.RefObject<HTMLElement | null>,
   options: {
     resetKey?: unknown;
-    /** Whether there are messages to display. */
-    hasContent: boolean;
     /** Whether history has resolved (ready or error). */
     contentReady: boolean;
   },
@@ -51,7 +49,7 @@ export function useScrollAnchor(
   scrollToBottom: () => void;
   isReady: boolean;
 } {
-  const { resetKey, hasContent, contentReady } = options;
+  const { resetKey, contentReady } = options;
 
   const pinnedRef = useRef(true);
   const phaseRef = useRef<"settling" | "active">("settling");
@@ -64,9 +62,7 @@ export function useScrollAnchor(
   const [isReady, setIsReady] = useState(false);
   const isReadyRef = useRef(false);
 
-  const hasContentRef = useRef(hasContent);
   const contentReadyRef = useRef(contentReady);
-  useLayoutEffect(() => { hasContentRef.current = hasContent; }, [hasContent]);
   useLayoutEffect(() => { contentReadyRef.current = contentReady; }, [contentReady]);
 
   // ── Settling phase ──────────────────────────────────────────────────
@@ -87,14 +83,24 @@ export function useScrollAnchor(
     let prevHeight = 0;
     let stableFrames = 0;
     let raf = 0;
+    let correctionRaf = 0;
 
     const reveal = () => {
       if (isReadyRef.current) return;
-      el.scrollTop = el.scrollHeight;
+      guardedScroll(el, el.scrollHeight, guardRef);
       prevScrollHeightRef.current = el.scrollHeight;
       phaseRef.current = "active";
       setIsReady(true);
       isReadyRef.current = true;
+      // Post-reveal correction: the React re-render that removes
+      // opacity:0 can trigger virtualiser recalculations. One extra
+      // guarded scroll absorbs them before the user sees anything.
+      correctionRaf = requestAnimationFrame(() => {
+        if (pinnedRef.current) {
+          guardedScroll(el, el.scrollHeight, guardRef);
+          prevScrollHeightRef.current = el.scrollHeight;
+        }
+      });
     };
 
     const poll = () => {
@@ -102,10 +108,6 @@ export function useScrollAnchor(
 
       if (!contentReadyRef.current) {
         raf = requestAnimationFrame(poll);
-        return;
-      }
-      if (!hasContentRef.current) {
-        reveal();
         return;
       }
 
@@ -133,6 +135,7 @@ export function useScrollAnchor(
 
     return () => {
       cancelAnimationFrame(raf);
+      cancelAnimationFrame(correctionRaf);
       clearTimeout(timeout);
     };
   }, [ref, resetKey]);
