@@ -28,7 +28,6 @@ export interface ChatPanelProps {
   historyResolved?: boolean;
   errorMessage?: string | null;
   emptyMessage?: string;
-  contextUsagePercent?: number | null;
   scrollResetKey?: unknown;
 }
 
@@ -41,7 +40,6 @@ export function ChatPanel({
   historyResolved = true,
   errorMessage,
   emptyMessage,
-  contextUsagePercent,
   scrollResetKey,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
@@ -224,7 +222,6 @@ export function ChatPanel({
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onRemoveAttachment={handleRemoveAttachment}
-          contextUsagePercent={contextUsagePercent}
         />
       </div>
     </div>

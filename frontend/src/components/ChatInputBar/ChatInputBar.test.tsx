@@ -128,16 +128,6 @@ describe("ChatInputBar", () => {
     expect(onModelChange).toHaveBeenCalledWith("claude-sonnet-4-6");
   });
 
-  it("shows context usage when provided", () => {
-    render(<ChatInputBar {...makeProps({ contextUsagePercent: 42 })} />);
-    expect(screen.getByText("Context 42%")).toBeInTheDocument();
-  });
-
-  it("shows context dash when percent is null", () => {
-    render(<ChatInputBar {...makeProps({ contextUsagePercent: null })} />);
-    expect(screen.getByText(/Context —/)).toBeInTheDocument();
-  });
-
   it("renders attachment previews", () => {
     const attachment: AttachmentItem = {
       id: "a1",

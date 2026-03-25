@@ -188,7 +188,6 @@ function summariseSessionEvent(e: AuraEvent): string {
     case EventType.SessionRolledOver: {
       const c = e.content;
       const parts: string[] = [];
-      if (c.context_usage_pct != null) parts.push(`usage: ${c.context_usage_pct.toFixed(0)}%`);
       if (c.summary_duration_ms != null) parts.push(`summary took ${fmtDuration(c.summary_duration_ms)}`);
       const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
       return `Context rotated${detail} → Session ${c.new_session_id?.slice(0, 8)}`;

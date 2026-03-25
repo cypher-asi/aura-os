@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
 import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
 import { api } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
@@ -59,8 +56,6 @@ export function SessionPreview({ session }: { session: Session }) {
 
   const loading = !!requestKey && loadedKey !== requestKey;
 
-  const contextPct = Math.round(session.context_usage_estimate * 100);
-
   return (
     <>
       <div className={styles.taskMeta}>
@@ -88,10 +83,6 @@ export function SessionPreview({ session }: { session: Session }) {
           </Text>
         </div>
         <div className={styles.taskField}>
-          <Text variant="muted" size="sm">Context Usage</Text>
-          <Text size="sm">{contextPct}%</Text>
-        </div>
-        <div className={styles.taskField}>
           <Text variant="muted" size="sm">Tokens Used</Text>
           <Text size="sm">
             {formatTokens(session.total_input_tokens + session.total_output_tokens)} total
@@ -109,18 +100,6 @@ export function SessionPreview({ session }: { session: Session }) {
           </div>
         )}
       </div>
-
-      {session.summary_of_previous_context && (
-        <GroupCollapsible label="Context Summary" defaultOpen className={styles.section}>
-          <div className={styles.notesContent}>
-            <div className={styles.markdown}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                {session.summary_of_previous_context}
-              </ReactMarkdown>
-            </div>
-          </div>
-        </GroupCollapsible>
-      )}
 
       <GroupCollapsible
         label="Tasks"

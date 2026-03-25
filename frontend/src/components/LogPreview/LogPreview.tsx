@@ -50,7 +50,6 @@ function logDetailPairs(event: AuraEvent): [string, string][] {
   if (c.model) pairs.push(["Model", String(c.model)]);
   if (c.phase) pairs.push(["Phase", String(c.phase)]);
   if (c.error_hash) pairs.push(["Error Hash", String(c.error_hash)]);
-  if (c.context_usage_pct != null) pairs.push(["Context Usage", `${(c.context_usage_pct as number).toFixed(0)}%`]);
   if (c.tasks_completed != null) pairs.push(["Tasks Completed", String(c.tasks_completed)]);
   if (c.tasks_failed != null) pairs.push(["Tasks Failed", String(c.tasks_failed)]);
   if (c.tasks_retried != null) pairs.push(["Tasks Retried", String(c.tasks_retried)]);

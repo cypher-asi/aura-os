@@ -31,7 +31,6 @@ interface Props {
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (items: AttachmentItem[]) => void;
   onRemoveAttachment?: (id: string) => void;
-  contextUsagePercent?: number | null;
 }
 
 function AttachmentPreviews({ attachments, onRemove }: { attachments: AttachmentItem[]; onRemove: (id: string) => void }) {
@@ -52,7 +51,7 @@ function AttachmentPreviews({ attachments, onRemove }: { attachments: Attachment
 export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function ChatInputBar({
   input, onInputChange, onSend, onStop, streamKey,
   selectedModel, onModelChange,
-  attachments = [], onAttachmentsChange, onRemoveAttachment, contextUsagePercent,
+  attachments = [], onAttachmentsChange, onRemoveAttachment,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -131,9 +130,6 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         </div>
         <span className={styles.infoDot}>·</span>
         <span className={styles.infoText}>/ for commands</span>
-        {contextUsagePercent !== undefined && (
-          <span className={styles.contextWidget}>{typeof contextUsagePercent === "number" ? `Context ${contextUsagePercent}%` : "Context —"}</span>
-        )}
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { api } from "../../api/client";
 import { useChatStreamAdapter } from "../../hooks/use-chat-stream-adapter";
 import { useChatHistorySync } from "../../hooks/use-chat-history-sync";
-import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useDelayedLoading } from "../../hooks/use-delayed-loading";
 import { setLastAgent, setLastProject } from "../../utils/storage";
 import { ChatPanel } from "../ChatPanel";
@@ -25,8 +24,6 @@ export function AgentChatView() {
   // ── Stream hook (calls both, only active one receives real IDs) ─────
   const { streamKey, sendMessage, stopStreaming, resetEvents } =
     useChatStreamAdapter(mode, { projectId, agentInstanceId, agentId });
-
-  const isStreaming = useIsStreaming(streamKey);
 
   // ── History key ─────────────────────────────────────────────────────
   const historyKey = useMemo(() => {
@@ -58,9 +55,7 @@ export function AgentChatView() {
     localStorage.setItem(LAST_AGENT_ID_KEY, agentId);
   }, [mode, agentId, setSelectedAgent]);
 
-  // ── Project-mode: storage + context usage ───────────────────────────
-  const [contextUsagePercent, setContextUsagePercent] = useState<number | null>(null);
-
+  // ── Project-mode: storage ──────────────────────────────────────────
   const onProjectSwitch = useCallback(() => {
     if (mode !== "project" || !projectId || !agentInstanceId) return;
     setLastProject(projectId);
@@ -69,7 +64,6 @@ export function AgentChatView() {
 
   const onClear = useCallback(() => {
     resetEvents([], { allowWhileStreaming: true });
-    setContextUsagePercent(null);
   }, [resetEvents]);
 
   // ── Shared history sync ─────────────────────────────────────────────
@@ -109,35 +103,6 @@ export function AgentChatView() {
     return () => { controller.abort(); };
   }, [mode, projectId, agentInstanceId]);
 
-  // ── Project-mode: context usage meter ───────────────────────────────
-  const fetchActiveSessionContext = useCallback(async () => {
-    if (mode !== "project" || !projectId || !agentInstanceId) return null;
-    try {
-      const sessions = await api.listSessions(projectId, agentInstanceId);
-      const active = sessions.find((s) => s.status === "active");
-      if (active != null && typeof active.context_usage_estimate === "number") {
-        return Math.round(active.context_usage_estimate * 100);
-      }
-    } catch { /* ignore */ }
-    return null;
-  }, [mode, projectId, agentInstanceId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
-    return () => { cancelled = true; };
-  }, [fetchActiveSessionContext]);
-
-  const prevIsStreamingRef = useRef(false);
-  useEffect(() => {
-    let cancelled = false;
-    if (prevIsStreamingRef.current && !isStreaming && mode === "project") {
-      void fetchActiveSessionContext().then((p) => { if (!cancelled) setContextUsagePercent(p); });
-    }
-    prevIsStreamingRef.current = isStreaming;
-    return () => { cancelled = true; };
-  }, [isStreaming, fetchActiveSessionContext, mode]);
-
   // ── Render ──────────────────────────────────────────────────────────
   if (!entityId) return null;
 
@@ -154,7 +119,6 @@ export function AgentChatView() {
       historyResolved={historyResolved}
       errorMessage={historyError ? historyError : null}
       emptyMessage={mode === "agent" ? "Send a message" : undefined}
-      contextUsagePercent={mode === "project" ? contextUsagePercent : undefined}
       scrollResetKey={entityId}
     />
   );
