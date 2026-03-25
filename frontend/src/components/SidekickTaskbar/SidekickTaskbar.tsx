@@ -12,8 +12,8 @@ import styles from "../Sidekick/Sidekick.module.css";
 const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
   { id: "specs", icon: <File size={16} />, title: "Specs" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
-  { id: "log", icon: <Logs size={16} />, title: "Log" },
   { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
+  { id: "log", icon: <Logs size={16} />, title: "Log" },
   { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
   { id: "files", icon: <Code size={16} />, title: "Files" },
 ];
