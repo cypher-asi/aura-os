@@ -24,50 +24,66 @@ function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
 }
 
 export function FileExplorer({ rootPath, searchQuery, onFileSelect }: FileExplorerProps) {
-  const [entries, setEntries] = useState<DirEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [directoryState, setDirectoryState] = useState<{
+    key: string | null;
+    entries: DirEntry[];
+    error: string | null;
+  }>({
+    key: null,
+    entries: [],
+    error: null,
+  });
   const { features, isMobileLayout } = useAuraCapabilities();
   const canBrowseWorkspace = Boolean(rootPath);
 
   useEffect(() => {
     if (!rootPath) {
-      setEntries([]);
-      setError(null);
-      setLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     api
       .listDirectory(rootPath)
       .then((res) => {
         if (cancelled) return;
         if (res.ok && res.entries) {
-          setEntries(res.entries);
+          setDirectoryState({
+            key: rootPath,
+            entries: res.entries,
+            error: null,
+          });
           return;
         }
-        setEntries([]);
-        setError(res.error ?? "Failed to list directory");
+        setDirectoryState({
+          key: rootPath,
+          entries: [],
+          error: res.error ?? "Failed to list directory",
+        });
       })
       .catch((e) => {
         if (cancelled) return;
-        setEntries([]);
-        setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setDirectoryState({
+          key: rootPath,
+          entries: [],
+          error: e.message,
+        });
       });
 
     return () => {
       cancelled = true;
     };
   }, [features.linkedWorkspace, rootPath]);
+
+  const loading = Boolean(rootPath) && directoryState.key !== rootPath;
+  const entries = useMemo(
+    () => (rootPath && directoryState.key === rootPath ? directoryState.entries : []),
+    [directoryState.entries, directoryState.key, rootPath],
+  );
+  const error = useMemo(
+    () => (rootPath && directoryState.key === rootPath ? directoryState.error : null),
+    [directoryState.error, directoryState.key, rootPath],
+  );
 
   const explorerData: ExplorerNode[] = useMemo(() => {
     if (!rootPath) return [];
