@@ -50,6 +50,8 @@ fn forward_automaton_events(
     let aiid = agent_instance_id.to_string();
 
     tokio::spawn(async move {
+        let mut first_work_seen = false;
+
         loop {
             match rx.recv().await {
                 Ok(event) => {
@@ -57,6 +59,34 @@ fn forward_automaton_events(
                         .get("type")
                         .and_then(|t| t.as_str())
                         .unwrap_or("unknown");
+
+                    // If we see any work event before a task_started, emit a
+                    // synthetic task_started so the UI exits "Preparing" state.
+                    // This handles the race where the real task_started was
+                    // emitted before our WebSocket connected.
+                    if !first_work_seen {
+                        let is_work = matches!(
+                            event_type,
+                            "task_started"
+                                | "text_delta"
+                                | "thinking_delta"
+                                | "tool_call_started"
+                                | "tool_result"
+                                | "log_line"
+                        );
+                        if is_work {
+                            first_work_seen = true;
+                            if event_type != "task_started" {
+                                emit_domain_event(
+                                    &app_broadcast,
+                                    "task_started",
+                                    project_id,
+                                    agent_instance_id,
+                                    serde_json::json!({}),
+                                );
+                            }
+                        }
+                    }
 
                     let mapped_type = match event_type {
                         "started" => Some("loop_started"),
@@ -68,6 +98,12 @@ fn forward_automaton_events(
                         "task_failed" => Some("task_failed"),
                         "task_retrying" => Some("task_retrying"),
                         "loop_finished" => Some("loop_finished"),
+                        "token_usage" => Some("token_usage"),
+                        "text_delta" => Some("text_delta"),
+                        "thinking_delta" => Some("thinking_delta"),
+                        "tool_call_started" => Some("tool_use_start"),
+                        "tool_result" => Some("tool_result"),
+                        "progress" => Some("progress"),
                         "done" => {
                             emit_domain_event(
                                 &app_broadcast,
@@ -155,12 +191,6 @@ pub(crate) async fn start_loop(
         "Dev loop automaton started"
     );
 
-    let events_tx = state
-        .automaton_client
-        .connect_event_stream(&automaton_id)
-        .await
-        .map_err(|e| ApiError::internal(format!("connecting event stream: {e}")))?;
-
     emit_domain_event(
         &state.event_broadcast,
         "loop_started",
@@ -168,6 +198,15 @@ pub(crate) async fn start_loop(
         agent_instance_id,
         serde_json::json!({"automaton_id": &automaton_id}),
     );
+
+    // Connect to the automaton event stream and start forwarding.
+    // Note: events emitted before the WebSocket connects are lost, so we
+    // emit a synthetic task_started if the first real one was missed.
+    let events_tx = state
+        .automaton_client
+        .connect_event_stream(&automaton_id)
+        .await
+        .map_err(|e| ApiError::internal(format!("connecting event stream: {e}")))?;
 
     forward_automaton_events(
         events_tx,
