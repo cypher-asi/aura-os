@@ -94,6 +94,9 @@ pub struct AppState {
     pub automaton_client: Arc<AutomatonClient>,
     /// Active automatons (dev loops, task runs) per agent instance.
     pub automaton_registry: AutomatonRegistry,
+    /// Base URL for the aura-swarm gateway (e.g. `http://gateway:8080`).
+    /// `None` when `SWARM_BASE_URL` is not set.
+    pub swarm_base_url: Option<String>,
 }
 
 impl AppState {

@@ -17,5 +17,6 @@ pub(crate) mod tasks;
 pub(crate) mod terminal;
 pub(crate) mod tool_callbacks;
 pub(crate) mod users;
+pub(crate) mod swarm;
 pub(crate) mod system;
 pub(crate) mod ws;

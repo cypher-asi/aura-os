@@ -66,6 +66,12 @@ impl NetworkClient {
         &self.base_url
     }
 
+    /// Access the underlying HTTP client for making custom requests
+    /// (e.g. proxying to other services like the swarm gateway).
+    pub fn http_client(&self) -> &Client {
+        &self.http
+    }
+
     /// Returns the WebSocket URL for the aura-network events stream.
     pub fn ws_events_url(&self, jwt: &str) -> String {
         let ws_base = self

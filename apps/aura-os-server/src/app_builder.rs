@@ -304,5 +304,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
                 .unwrap_or_else(|_| "http://localhost:8080".to_string()),
         )),
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
+        swarm_base_url: env_opt("SWARM_BASE_URL"),
     })
 }
