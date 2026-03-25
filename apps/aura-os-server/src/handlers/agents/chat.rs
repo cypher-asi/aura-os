@@ -250,8 +250,20 @@ async fn setup_agent_chat_persistence(
     agent_id: &AgentId,
     agent_name: &str,
 ) -> Option<ChatPersistCtx> {
-    let storage = state.storage_client.as_ref()?.clone();
-    let jwt = state.get_jwt().ok()?;
+    let storage = match state.storage_client.as_ref() {
+        Some(s) => s.clone(),
+        None => {
+            warn!(%agent_id, "agent chat persistence: no storage client configured");
+            return None;
+        }
+    };
+    let jwt = match state.get_jwt() {
+        Ok(j) => j,
+        Err(_) => {
+            warn!(%agent_id, "agent chat persistence: failed to obtain JWT");
+            return None;
+        }
+    };
     let matching =
         find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
 
@@ -261,11 +273,24 @@ async fn setup_agent_chat_persistence(
             warn!(%agent_id, "No project_id for agent; skipping chat persistence");
             return None;
         }
+        info!(%agent_id, project_agent_id = %pa.id, %pid, "agent chat persistence: matched existing project agent");
         (pa.id.clone(), pid)
     } else {
-        // No project_agent exists — auto-create one in the first available project.
-        let all_projects = projects::list_all_projects_from_network(state).await.ok()?;
-        let project = all_projects.first()?;
+        warn!(%agent_id, "agent chat persistence: no matching project agents found, attempting auto-create");
+        let all_projects = match projects::list_all_projects_from_network(state).await {
+            Ok(p) => p,
+            Err((status, body)) => {
+                warn!(%agent_id, ?status, ?body, "agent chat persistence: failed to list projects for auto-create");
+                return None;
+            }
+        };
+        let project = match all_projects.first() {
+            Some(p) => p,
+            None => {
+                warn!(%agent_id, "agent chat persistence: no projects available for auto-create");
+                return None;
+            }
+        };
         let project_id_str = project.project_id.to_string();
         let req = aura_os_storage::CreateProjectAgentRequest {
             agent_id: agent_id.to_string(),
@@ -281,6 +306,7 @@ async fn setup_agent_chat_persistence(
         match storage.create_project_agent(&project_id_str, &jwt, &req).await {
             Ok(pa) => {
                 let pid = pa.project_id.clone().unwrap_or(project_id_str);
+                info!(%agent_id, project_agent_id = %pa.id, %pid, "agent chat persistence: auto-created project agent");
                 (pa.id, pid)
             }
             Err(e) => {
@@ -290,7 +316,13 @@ async fn setup_agent_chat_persistence(
         }
     };
 
-    let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
+    let session_id = match resolve_chat_session(&storage, &jwt, &pai, &pid).await {
+        Some(sid) => sid,
+        None => {
+            warn!(%agent_id, %pai, %pid, "agent chat persistence: failed to resolve/create chat session");
+            return None;
+        }
+    };
     Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
 }
 
@@ -333,9 +365,12 @@ async fn find_matching_project_agents(
     agent_id_str: &str,
 ) -> Vec<aura_os_storage::StorageProjectAgent> {
     let all_projects = match projects::list_all_projects_from_network(state).await {
-        Ok(p) => p,
+        Ok(p) => {
+            info!(count = p.len(), %agent_id_str, "agent matching: projects discovered from network");
+            p
+        }
         Err((status, body)) => {
-            warn!(?status, ?body, "failed to list projects for agent matching");
+            warn!(?status, ?body, %agent_id_str, "agent matching: failed to list projects from network");
             return Vec::new();
         }
     };
@@ -349,20 +384,33 @@ async fn find_matching_project_agents(
         .collect();
     let results = join_all(futs).await;
 
-    results
+    let matched: Vec<_> = results
         .into_iter()
         .zip(pids.iter())
         .flat_map(|(result, pid)| match result {
-            Ok(agents) => agents
-                .into_iter()
-                .filter(|a| a.agent_id.as_deref() == Some(agent_id_str))
-                .collect::<Vec<_>>(),
+            Ok(agents) => {
+                let total = agents.len();
+                let filtered: Vec<_> = agents
+                    .into_iter()
+                    .filter(|a| a.agent_id.as_deref() == Some(agent_id_str))
+                    .collect();
+                if total > 0 || filtered.len() > 0 {
+                    info!(
+                        project_id = %pid, total_agents = total, matched = filtered.len(),
+                        %agent_id_str, "agent matching: project agents listed"
+                    );
+                }
+                filtered
+            }
             Err(e) => {
-                warn!(project_id = %pid, error = %e, "Failed to list project agents");
+                warn!(project_id = %pid, error = %e, "agent matching: failed to list project agents");
                 Vec::new()
             }
         })
-        .collect()
+        .collect();
+
+    info!(matched = matched.len(), %agent_id_str, "agent matching: total project agents matched");
+    matched
 }
 
 async fn collect_session_events(
@@ -472,11 +520,23 @@ async fn aggregate_agent_events_from_storage_result(
     agent_id: &AgentId,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
+        warn!(%agent_id, "aggregate events: no storage client or JWT available");
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
     let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
+    if matching.is_empty() {
+        warn!(%agent_id, "aggregate events: no matching project agents — returning empty history");
+        return Ok(Vec::new());
+    }
     let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
+    info!(
+        %agent_id,
+        matched_agents = matching.len(),
+        sessions = sessions_outcome.sessions.len(),
+        failed_agents = sessions_outcome.failed_agents,
+        "aggregate events: sessions fetched"
+    );
 
     if sessions_outcome.all_failed() {
         if let Some(err) = sessions_outcome.first_error {
@@ -663,6 +723,11 @@ pub(crate) async fn send_agent_event_stream(
         .map_err(|e| ApiError::internal(format!("looking up agent: {e}")))?;
 
     let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name).await;
+    if persist_ctx.is_none() {
+        warn!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
+    } else {
+        info!(%agent_id, "agent chat: persistence context ready");
+    }
 
     let session_key = format!("agent:{agent_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
