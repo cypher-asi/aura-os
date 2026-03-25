@@ -111,7 +111,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         </div>
       </div>
       <div className={styles.inputInfoBar}>
-        {machineType && <><AgentEnvironment machineType={machineType} /><span className={styles.infoText}>·</span></>}
+        {machineType && <><AgentEnvironment machineType={machineType} /><span className={styles.infoText} style={{ marginRight: 2 }}>·</span></>}
         <span className={styles.infoText}>/ for commands</span>
         <div className={styles.modelMenuWrap} ref={modelMenuRef}>
           <button type="button" className={styles.modelButton} onClick={() => setModelMenuOpen((v) => !v)}>
