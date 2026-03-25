@@ -145,6 +145,8 @@ pub(crate) struct AuthSessionResponse {
     pub zero_wallet: String,
     pub wallets: Vec<String>,
     pub is_zero_pro: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub zero_pro_refresh_error: Option<String>,
     pub created_at: DateTime<Utc>,
     pub validated_at: DateTime<Utc>,
 }
@@ -203,8 +205,17 @@ impl From<ZeroAuthSession> for AuthSessionResponse {
             zero_wallet: s.zero_wallet,
             wallets: s.wallets,
             is_zero_pro: s.is_zero_pro,
+            zero_pro_refresh_error: None,
             created_at: s.created_at,
             validated_at: s.validated_at,
         }
+    }
+}
+
+impl AuthSessionResponse {
+    pub(crate) fn from_auth_result(result: aura_os_auth::AuthSessionResult) -> Self {
+        let mut response = Self::from(result.session);
+        response.zero_pro_refresh_error = result.zero_pro_refresh_error;
+        response
     }
 }

@@ -79,6 +79,15 @@ struct ZosProfileResponse {
     is_zero_pro: bool,
 }
 
+pub struct AuthSessionResult {
+    pub session: ZeroAuthSession,
+    pub zero_pro_refresh_error: Option<String>,
+}
+
+fn zero_pro_refresh_error_message() -> String {
+    "Unable to verify ZERO Pro status right now.".to_string()
+}
+
 pub struct AuthService {
     store: Arc<RocksStore>,
     http: Client,
@@ -96,7 +105,7 @@ impl AuthService {
         }
     }
 
-    pub async fn login(&self, email: &str, password: &str) -> Result<ZeroAuthSession, AuthError> {
+    pub async fn login(&self, email: &str, password: &str) -> Result<AuthSessionResult, AuthError> {
         debug!("Logging in via zOS-api");
         let res = self
             .http
@@ -120,7 +129,7 @@ impl AuthService {
         &self,
         email: &str,
         password: &str,
-    ) -> Result<ZeroAuthSession, AuthError> {
+    ) -> Result<AuthSessionResult, AuthError> {
         debug!("Registering via zOS-api");
         let res = self
             .http
@@ -151,7 +160,7 @@ impl AuthService {
         }
     }
 
-    pub async fn validate(&self) -> Result<Option<ZeroAuthSession>, AuthError> {
+    pub async fn validate(&self) -> Result<Option<AuthSessionResult>, AuthError> {
         let session = match self.get_session().await? {
             Some(s) => s,
             None => return Ok(None),
@@ -160,8 +169,8 @@ impl AuthService {
         debug!("Validating stored auth token against zOS-api");
         match self.fetch_user_info(&session.access_token).await {
             Ok(user) => {
-                let is_zero_pro = self.fetch_is_zero_pro(&session.access_token).await;
-                let updated = ZeroAuthSession {
+                let now = Utc::now();
+                let mut updated = ZeroAuthSession {
                     user_id: user.id,
                     network_user_id: session.network_user_id,
                     profile_id: session.profile_id,
@@ -180,13 +189,32 @@ impl AuthService {
                         .map(|w| w.public_address)
                         .collect(),
                     access_token: session.access_token,
-                    is_zero_pro,
+                    is_zero_pro: session.is_zero_pro,
                     created_at: session.created_at,
-                    validated_at: Utc::now(),
+                    validated_at: now,
                 };
+
+                let mut zero_pro_refresh_error = None;
+                match self.fetch_is_zero_pro(&updated.access_token).await {
+                    Ok(is_zero_pro) => {
+                        updated.is_zero_pro = is_zero_pro;
+                    }
+                    Err(err) => {
+                        zero_pro_refresh_error = Some(zero_pro_refresh_error_message());
+                        warn!(
+                            error = %err,
+                            user_id = %updated.user_id,
+                            "validated auth session but could not refresh ZERO Pro entitlement"
+                        );
+                    }
+                }
+
                 let bytes = serde_json::to_vec(&updated)?;
                 self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
-                Ok(Some(updated))
+                Ok(Some(AuthSessionResult {
+                    session: updated,
+                    zero_pro_refresh_error,
+                }))
             }
             Err(AuthError::ZosApi { status: 401, .. }) => {
                 warn!("Stored auth token is invalid/expired, clearing session");
@@ -229,32 +257,34 @@ impl AuthService {
         res.json().await.map_err(AuthError::Http)
     }
 
-    async fn fetch_is_zero_pro(&self, token: &str) -> bool {
+    async fn fetch_is_zero_pro(&self, token: &str) -> Result<bool, AuthError> {
         let res = self
             .http
             .get(format!("{ZOS_API_URL}/api/v2/users/me"))
             .bearer_auth(token)
             .send()
-            .await;
+            .await
+            .map_err(AuthError::Http)?;
 
-        match res {
-            Ok(resp) if resp.status().is_success() => resp
-                .json::<ZosProfileResponse>()
-                .await
-                .map(|p| p.is_zero_pro)
-                .unwrap_or(false),
-            _ => false,
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let body = res.text().await.unwrap_or_default();
+            return Err(parse_zos_error(status, &body));
         }
+
+        res.json::<ZosProfileResponse>()
+            .await
+            .map(|p| p.is_zero_pro)
+            .map_err(AuthError::Http)
     }
 
     async fn fetch_and_store_session(
         &self,
         access_token: &str,
-    ) -> Result<ZeroAuthSession, AuthError> {
+    ) -> Result<AuthSessionResult, AuthError> {
         let user = self.fetch_user_info(access_token).await?;
-        let is_zero_pro = self.fetch_is_zero_pro(access_token).await;
         let now = Utc::now();
-        let session = ZeroAuthSession {
+        let mut session = ZeroAuthSession {
             user_id: user.id,
             network_user_id: None,
             profile_id: None,
@@ -269,13 +299,32 @@ impl AuthService {
                 .map(|w| w.public_address)
                 .collect(),
             access_token: access_token.to_string(),
-            is_zero_pro,
+            is_zero_pro: false,
             created_at: now,
             validated_at: now,
         };
+        let mut zero_pro_refresh_error = None;
+
+        match self.fetch_is_zero_pro(access_token).await {
+            Ok(is_zero_pro) => {
+                session.is_zero_pro = is_zero_pro;
+            }
+            Err(err) => {
+                zero_pro_refresh_error = Some(zero_pro_refresh_error_message());
+                warn!(
+                    error = %err,
+                    user_id = %session.user_id,
+                    "authenticated session but could not verify ZERO Pro entitlement"
+                );
+            }
+        }
+
         let bytes = serde_json::to_vec(&session)?;
         self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
-        Ok(session)
+        Ok(AuthSessionResult {
+            session,
+            zero_pro_refresh_error,
+        })
     }
 }
 

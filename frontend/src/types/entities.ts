@@ -187,6 +187,7 @@ export interface AuthSession {
   zero_wallet: string;
   wallets: string[];
   is_zero_pro?: boolean;
+  zero_pro_refresh_error?: string;
   created_at: string;
   validated_at: string;
 }

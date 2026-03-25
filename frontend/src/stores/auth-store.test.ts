@@ -34,8 +34,14 @@ const mockSession: AuthSession = {
   primary_zid: "zid-1",
   zero_wallet: "0xabc",
   wallets: ["0xabc"],
+  is_zero_pro: false,
   created_at: "2025-01-01T00:00:00Z",
   validated_at: "2025-01-01T00:00:00Z",
+};
+
+const sessionWithZeroProError: AuthSession = {
+  ...mockSession,
+  zero_pro_refresh_error: "Unable to verify ZERO Pro status right now.",
 };
 
 import { useAuthStore } from "./auth-store";
@@ -51,6 +57,7 @@ function expectedUser(session: AuthSession): ZeroUser {
     primary_zid: session.primary_zid,
     zero_wallet: session.zero_wallet,
     wallets: session.wallets,
+    is_zero_pro: session.is_zero_pro,
   };
 }
 
@@ -78,6 +85,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -87,7 +95,21 @@ describe("auth-store", () => {
 
       await useAuthStore.getState().restoreSession();
 
-      expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().user).toEqual(
+        expectedUser(mockSession),
+      );
+      expect(useAuthStore.getState().zeroProRefreshError).toBe("validation failed");
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("clears the cached user when validate returns 401", async () => {
+      mockApi.auth.getSession.mockResolvedValue(mockSession);
+      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+
+      await useAuthStore.getState().restoreSession();
+
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -97,6 +119,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
@@ -107,6 +130,7 @@ describe("auth-store", () => {
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
   });
@@ -125,6 +149,57 @@ describe("auth-store", () => {
       mockApi.auth.login.mockRejectedValue(new Error("bad creds"));
       await expect(useAuthStore.getState().login("a@b.com", "x")).rejects.toThrow("bad creds");
     });
+
+    it("preserves a zero pro verification error from the session response", async () => {
+      mockApi.auth.login.mockResolvedValue(sessionWithZeroProError);
+
+      await useAuthStore.getState().login("a@b.com", "pass");
+
+      expect(useAuthStore.getState().user).toEqual(expectedUser(sessionWithZeroProError));
+      expect(useAuthStore.getState().zeroProRefreshError).toBe(
+        "Unable to verify ZERO Pro status right now.",
+      );
+    });
+  });
+
+  describe("refreshSession", () => {
+    it("updates the user from validate", async () => {
+      const validatedSession = {
+        ...mockSession,
+        is_zero_pro: true,
+      };
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
+      mockApi.auth.validate.mockResolvedValue(validatedSession);
+
+      await useAuthStore.getState().refreshSession();
+
+      expect(useAuthStore.getState().user).toEqual(expectedUser(validatedSession));
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("keeps a verification error from validate without logging the user out", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
+      mockApi.auth.validate.mockResolvedValue(sessionWithZeroProError);
+
+      await useAuthStore.getState().refreshSession();
+
+      expect(useAuthStore.getState().user).toEqual(expectedUser(sessionWithZeroProError));
+      expect(useAuthStore.getState().zeroProRefreshError).toBe(
+        "Unable to verify ZERO Pro status right now.",
+      );
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
+
+    it("clears the user on 401", async () => {
+      useAuthStore.setState({ user: expectedUser(mockSession), isLoading: false });
+      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
+
+      await expect(useAuthStore.getState().refreshSession()).rejects.toThrow("unauth");
+      expect(useAuthStore.getState().user).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
+      expect(useAuthStore.getState().isLoading).toBe(false);
+    });
   });
 
   describe("register", () => {
@@ -134,6 +209,17 @@ describe("auth-store", () => {
       await useAuthStore.getState().register("a@b.com", "pass");
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
+    });
+
+    it("preserves a zero pro verification error from registration", async () => {
+      mockApi.auth.register.mockResolvedValue(sessionWithZeroProError);
+
+      await useAuthStore.getState().register("a@b.com", "pass");
+
+      expect(useAuthStore.getState().user).toEqual(expectedUser(sessionWithZeroProError));
+      expect(useAuthStore.getState().zeroProRefreshError).toBe(
+        "Unable to verify ZERO Pro status right now.",
+      );
     });
   });
 

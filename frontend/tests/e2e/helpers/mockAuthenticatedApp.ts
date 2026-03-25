@@ -59,6 +59,7 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       primary_zid: "0://test-user",
       zero_wallet: "0x123",
       wallets: ["0x123"],
+      is_zero_pro: true,
       created_at: "2026-03-17T01:00:00.000Z",
       validated_at: "2026-03-17T01:00:00.000Z",
     };

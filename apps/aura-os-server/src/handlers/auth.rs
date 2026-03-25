@@ -38,33 +38,35 @@ pub(crate) async fn login(
     State(state): State<AppState>,
     Json(req): Json<AuthLoginRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let mut session = state
+    let mut result = state
         .auth_service
         .login(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
 
-    sync_user_to_network(&state, &mut session).await;
+    sync_user_to_network(&state, &mut result.session).await;
 
-    Ok(Json(AuthSessionResponse::from(session)))
+    Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
 pub(crate) async fn register(
     State(state): State<AppState>,
     Json(req): Json<AuthRegisterRequest>,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let mut session = state
+    let mut result = state
         .auth_service
         .register(&req.email, &req.password)
         .await
         .map_err(map_auth_error)?;
 
-    sync_user_to_network(&state, &mut session).await;
+    sync_user_to_network(&state, &mut result.session).await;
 
-    Ok(Json(AuthSessionResponse::from(session)))
+    Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
-pub(crate) async fn get_session(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
+pub(crate) async fn get_session(
+    State(state): State<AppState>,
+) -> ApiResult<Json<AuthSessionResponse>> {
     let session = state
         .auth_service
         .get_session()
@@ -74,17 +76,19 @@ pub(crate) async fn get_session(State(state): State<AppState>) -> ApiResult<Json
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
-pub(crate) async fn validate(State(state): State<AppState>) -> ApiResult<Json<AuthSessionResponse>> {
-    let mut session = state
+pub(crate) async fn validate(
+    State(state): State<AppState>,
+) -> ApiResult<Json<AuthSessionResponse>> {
+    let mut result = state
         .auth_service
         .validate()
         .await
         .map_err(map_auth_error)?
         .ok_or_else(|| ApiError::unauthorized("session expired or invalid"))?;
 
-    sync_user_to_network(&state, &mut session).await;
+    sync_user_to_network(&state, &mut result.session).await;
 
-    Ok(Json(AuthSessionResponse::from(session)))
+    Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
 pub(crate) async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
@@ -104,8 +108,8 @@ pub(crate) async fn get_access_token(
         .store
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("no active session"))?;
-    let session: ZeroAuthSession =
-        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
+    let session: ZeroAuthSession = serde_json::from_slice(&bytes)
+        .map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
     Ok(Json(AccessTokenResponse {
         access_token: session.access_token,
     }))
@@ -126,13 +130,16 @@ pub(crate) struct JwtIssuerResponse {
 /// GET /api/auth/jwt-issuer — return the issuer and suggested JWKS URL from the current
 /// session's JWT. Used to configure Orbit's TRUSTED_JWT_* without pasting the token into jwt.io.
 /// Returns only public claims (iss); the token itself is never sent.
-pub(crate) async fn get_jwt_issuer(State(state): State<AppState>) -> ApiResult<Json<JwtIssuerResponse>> {
+pub(crate) async fn get_jwt_issuer(
+    State(state): State<AppState>,
+) -> ApiResult<Json<JwtIssuerResponse>> {
     let bytes = state
         .store
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("no active session"))?;
-    let session: ZeroAuthSession =
-        serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session for jwt issuer: {e}")))?;
+    let session: ZeroAuthSession = serde_json::from_slice(&bytes).map_err(|e| {
+        ApiError::internal(format!("deserializing auth session for jwt issuer: {e}"))
+    })?;
     let token = session.access_token.trim();
     let parts: Vec<&str> = token.split('.').collect();
     let payload_b64 = parts

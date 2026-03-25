@@ -95,10 +95,7 @@ export function AgentChatView() {
   const metadataLoadIdRef = useRef(0);
 
   useEffect(() => {
-    if (mode !== "project" || !projectId || !agentInstanceId) {
-      setAgentName(undefined);
-      return;
-    }
+    if (mode !== "project" || !projectId || !agentInstanceId) return;
     const loadId = ++metadataLoadIdRef.current;
     const controller = new AbortController();
     api

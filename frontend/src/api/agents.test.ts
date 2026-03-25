@@ -2,6 +2,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { agentTemplatesApi, agentInstancesApi, sessionsApi } from "./agents";
 import { ApiClientError } from "./core";
 
+function createStorageMock() {
+  const store = new Map<string, string>();
+  return {
+    getItem: vi.fn((key: string) => store.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => {
+      store.set(key, value);
+    }),
+    removeItem: vi.fn((key: string) => {
+      store.delete(key);
+    }),
+    clear: vi.fn(() => {
+      store.clear();
+    }),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
+    get length() {
+      return store.size;
+    },
+  };
+}
+
 function mockFetch(status: number, body: unknown) {
   return vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -14,8 +34,21 @@ function mockFetch(status: number, body: unknown) {
 
 describe("agentTemplatesApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("list fetches GET /api/agents", async () => {
     const agents = [{ id: "a1", name: "Bot" }];
@@ -86,8 +119,21 @@ describe("agentTemplatesApi", () => {
 
 describe("agentInstancesApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("createAgentInstance sends POST with agent_id", async () => {
     const fetchMock = mockFetch(200, { id: "ai1" });
@@ -150,8 +196,21 @@ describe("agentInstancesApi", () => {
 
 describe("sessionsApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
-  afterEach(() => { globalThis.fetch = originalFetch; });
+  const originalLocalStorage = window.localStorage;
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      configurable: true,
+    });
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      configurable: true,
+    });
+  });
 
   it("listProjectSessions fetches by projectId", async () => {
     const fetchMock = mockFetch(200, []);
