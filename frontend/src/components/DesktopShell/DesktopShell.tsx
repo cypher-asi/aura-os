@@ -114,12 +114,23 @@ export function DesktopShell() {
   useEffect(() => {
     const el = leftPanelRef.current;
     if (!el) return;
+    let rafId: number | null = null;
+    let lastWidth = -1;
     const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
-      document.documentElement.style.setProperty("--left-panel-width", `${w}px`);
+      const rawWidth = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+      const nextWidth = Math.round(rawWidth);
+      if (nextWidth === lastWidth) return;
+      lastWidth = nextWidth;
+      if (rafId != null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty("--left-panel-width", `${nextWidth}px`);
+      });
     });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
