@@ -5,7 +5,7 @@ export type MobileNavId = "agent" | "tasks" | "files";
 
 const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Brain }> = [
   { id: "agent", label: "Agent", icon: Brain },
-  { id: "tasks", label: "Tasks", icon: CheckSquare },
+  { id: "tasks", label: "Execution", icon: CheckSquare },
   { id: "files", label: "Files", icon: FolderOpen },
 ];
 

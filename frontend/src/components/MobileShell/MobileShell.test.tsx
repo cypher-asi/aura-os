@@ -182,7 +182,7 @@ describe("MobileShell", () => {
   it("renders project bottom navigation with 3 items", () => {
     renderMobile("/projects/proj-1/agent");
     expect(screen.getByText("Agent")).toBeInTheDocument();
-    expect(screen.getByText("Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Execution")).toBeInTheDocument();
     expect(screen.getByText("Files")).toBeInTheDocument();
     expect(screen.queryByText("Feed")).not.toBeInTheDocument();
   });

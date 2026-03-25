@@ -47,7 +47,7 @@ export function useMobileShellState() {
   const isPrimaryProjectDestination = mobileDestination === "agent" || mobileDestination === "tasks" || mobileDestination === "files";
   const showProjectTitle = mobileShellMode === "project" && hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute;
   const showProjectBack = hasResolvedCurrentProject && Boolean(currentProjectId) && isProjectRoute && location.pathname !== currentProjectRootPath && !isPrimaryProjectDestination;
-  const showProjectResponsiveControls = activeApp.id !== "projects";
+  const showProjectResponsiveControls = activeApp.id === "agents";
   const showGlobalTitle = mobileShellMode === "global";
   const globalTitle = location.pathname === "/projects" ? "Projects" : activeApp.label;
 

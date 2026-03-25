@@ -1,15 +1,18 @@
 import { useEffect, useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Lane } from "../../../components/Lane";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
 import { useFollowStore } from "../../../stores/follow-store";
 import { formatTokens, formatCurrency } from "../../../utils/format";
+import { LEADERBOARD_FILTERS } from "../leaderboardFilters";
 import styles from "./LeaderboardMainPanel.module.css";
 
 export function LeaderboardMainPanel() {
   const init = useLeaderboardStore((s) => s.init);
   useEffect(() => { init(); }, [init]);
-  const { filter, selectedUserId, selectUser, entries } = useLeaderboard();
+  const { isMobileLayout } = useAuraCapabilities();
+  const { filter, setFilter, selectedUserId, selectUser, entries } = useLeaderboard();
   const followedProfileIds = useFollowStore((s) => s.followedProfileIds);
 
   const users = useMemo(() => {
@@ -37,6 +40,24 @@ export function LeaderboardMainPanel() {
     <Lane flex className={styles.borderLeft}>
       <div className={styles.container}>
         <div className={styles.chartWrap}>
+          {isMobileLayout ? (
+            <div className={styles.mobileFilterBar} aria-label="Leaderboard filters">
+              {LEADERBOARD_FILTERS.map((leaderboardFilter) => {
+                const isSelected = leaderboardFilter.id === filter;
+                return (
+                  <button
+                    key={leaderboardFilter.id}
+                    type="button"
+                    className={`${styles.mobileFilterChip} ${isSelected ? styles.mobileFilterChipActive : ""}`}
+                    aria-pressed={isSelected}
+                    onClick={() => setFilter(leaderboardFilter.id)}
+                  >
+                    {leaderboardFilter.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           <div className={styles.chartInner}>
             {users.map((user, i) => {
               const barPct = (user.tokens / maxTokens) * 100;
