@@ -98,7 +98,7 @@ export function AgentChatView() {
       .then((inst) => {
         if (loadId !== metadataLoadIdRef.current) return;
         setAgentName(inst.name);
-        setMachineType(inst.harness === "swarm" ? "remote" : "local");
+        setMachineType(inst.machine_type === "remote" ? "remote" : "local");
       })
       .catch((err: unknown) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
