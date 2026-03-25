@@ -300,11 +300,6 @@
   margin-right: auto;
 }
 
-.infoDot {
-  color: var(--color-text-secondary);
-  font-size: 11px;
-}
-
 .infoText {
   color: var(--color-text-secondary);
   font-size: 11px;
@@ -343,6 +338,7 @@
 
 .modelMenuWrap {
   position: relative;
+  margin-left: auto;
 }
 
 .modelButton {
@@ -369,7 +365,7 @@
 .modelMenu {
   position: absolute;
   bottom: calc(100% + 4px);
-  left: 0;
+  right: 0;
   z-index: 100;
   background: var(--color-bg-secondary, #1a1a1a);
   border: 1px solid var(--color-border);

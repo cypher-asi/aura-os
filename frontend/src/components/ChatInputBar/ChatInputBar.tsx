@@ -109,6 +109,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         </div>
       </div>
       <div className={styles.inputInfoBar}>
+        <span className={styles.infoText}>/ for commands</span>
         <div className={styles.modelMenuWrap} ref={modelMenuRef}>
           <button type="button" className={styles.modelButton} onClick={() => setModelMenuOpen((v) => !v)}>
             {modelLabel(selectedModel ?? "")}<ChevronDown size={10} />
@@ -128,8 +129,6 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
             </div>
           )}
         </div>
-        <span className={styles.infoDot}>·</span>
-        <span className={styles.infoText}>/ for commands</span>
       </div>
     </div>
   );
