@@ -80,6 +80,7 @@ export function useAutomationStatus(projectId: ProjectId): AutomationStatusData 
         if (!isForProject(e)) return; setPreparing(false);
       }),
       subscribe(EventType.LoopPaused, (e) => { if (!isForProject(e)) return; setPaused(true); setPreparing(false); }),
+      subscribe(EventType.LoopResumed, (e) => { if (!isForProject(e)) return; setPaused(false); }),
       subscribe(EventType.LoopStopped, (e) => {
         if (!isForProject(e)) return;
         const agentId = e.agent_id;

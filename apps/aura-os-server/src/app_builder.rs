@@ -299,5 +299,10 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         require_zero_pro: std::env::var("REQUIRE_ZERO_PRO")
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true),
+        automaton_client: Arc::new(aura_os_link::AutomatonClient::new(
+            &std::env::var("LOCAL_HARNESS_URL")
+                .unwrap_or_else(|_| "http://localhost:8080".to_string()),
+        )),
+        automaton_registry: Arc::new(Mutex::new(HashMap::new())),
     })
 }

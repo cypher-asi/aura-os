@@ -49,6 +49,7 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.FileOpsApplied]: "Files",
   [EventType.LoopStarted]: "Loop",
   [EventType.LoopPaused]: "Loop",
+  [EventType.LoopResumed]: "Loop",
   [EventType.LoopStopped]: "Loop",
   [EventType.LoopFinished]: "Loop",
   [EventType.LoopIterationSummary]: "Loop",

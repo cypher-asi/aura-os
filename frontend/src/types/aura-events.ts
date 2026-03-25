@@ -81,6 +81,7 @@ export enum EventType {
   // Loop lifecycle
   LoopStarted           = "loop_started",
   LoopPaused            = "loop_paused",
+  LoopResumed           = "loop_resumed",
   LoopStopped           = "loop_stopped",
   LoopFinished          = "loop_finished",
   LoopIterationSummary  = "loop_iteration_summary",
@@ -274,10 +275,13 @@ export type AuraEvent = AuraEventBase & (
     } }
 
   // ── Loop lifecycle ─────────────────────────────────────────
-  | { type: EventType.LoopStarted; content: Record<string, never> }
+  | { type: EventType.LoopStarted; content: {
+      automaton_id?: string;
+    } }
   | { type: EventType.LoopPaused; content: {
       completed_count?: number;
     } }
+  | { type: EventType.LoopResumed; content: Record<string, never> }
   | { type: EventType.LoopStopped; content: {
       completed_count?: number;
       tasks_completed?: number;

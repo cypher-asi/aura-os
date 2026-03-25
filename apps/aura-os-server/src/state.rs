@@ -11,7 +11,7 @@ use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, ZeroAuthSession};
-use aura_os_link::{HarnessInbound, HarnessLink, HarnessOutbound};
+use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -30,6 +30,13 @@ pub struct ActiveHarnessSession {
     pub project_id: ProjectId,
 }
 pub(crate) type HarnessSessionRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveHarnessSession>>>;
+
+/// Active automaton (dev loop or single-task run) tracked per agent instance.
+pub struct ActiveAutomaton {
+    pub automaton_id: String,
+    pub project_id: ProjectId,
+}
+pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveAutomaton>>>;
 
 /// Reusable chat session for agent / instance chat endpoints.
 pub struct ChatSession {
@@ -83,6 +90,10 @@ pub struct AppState {
     pub chat_sessions: ChatSessionRegistry,
     /// Cached billing credit check result.
     pub credit_cache: CreditCacheRef,
+    /// REST client for the harness automaton API.
+    pub automaton_client: Arc<AutomatonClient>,
+    /// Active automatons (dev loops, task runs) per agent instance.
+    pub automaton_registry: AutomatonRegistry,
 }
 
 impl AppState {

@@ -2,31 +2,14 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use tracing::info;
+use tracing::{info, warn};
 
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, TaskId};
-use aura_os_link::{HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
+use aura_os_core::{AgentInstanceId, ProjectId, TaskId};
+use aura_os_link::AutomatonStartParams;
 
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
-use crate::state::{ActiveHarnessSession, AppState};
-
-// #region agent log
-fn _dbg_log(location: &str, message: &str, data: &serde_json::Value, hypothesis: &str) {
-    use std::io::Write;
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("debug-926b20.log") {
-        let entry = serde_json::json!({
-            "sessionId": "926b20",
-            "location": location,
-            "message": message,
-            "data": data,
-            "hypothesisId": hypothesis,
-            "timestamp": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
-        });
-        let _ = writeln!(f, "{}", entry);
-    }
-}
-// #endregion
+use crate::state::{ActiveAutomaton, AppState};
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct LoopQueryParams {
@@ -54,78 +37,40 @@ fn emit_domain_event(
     let _ = broadcast_tx.send(event);
 }
 
-/// Forward typed harness events to the global broadcast, enriching each with
-/// project/agent context. Also emits synthetic domain events:
-/// - `task_started` on the first `AssistantMessageStart`
-/// - `loop_finished` when the harness session closes
-fn forward_harness_events(
-    events_tx: &tokio::sync::broadcast::Sender<HarnessOutbound>,
-    raw_events_tx: &tokio::sync::broadcast::Sender<serde_json::Value>,
-    broadcast_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
+/// Forward automaton events from the harness WebSocket to the app's global
+/// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
+fn forward_automaton_events(
+    automaton_events_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
+    app_broadcast: tokio::sync::broadcast::Sender<serde_json::Value>,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
 ) {
-    let mut typed_rx = events_tx.subscribe();
-    let mut raw_rx = raw_events_tx.subscribe();
-    let bc = broadcast_tx.clone();
+    let mut rx = automaton_events_tx.subscribe();
     let pid = project_id.to_string();
     let aiid = agent_instance_id.to_string();
 
     tokio::spawn(async move {
-        let mut first_message_seen = false;
-        // #region agent log
-        _dbg_log("dev_loop.rs:forwarder:started", "event forwarder task spawned", &serde_json::json!({
-            "project_id": pid, "agent_instance_id": aiid,
-        }), "F");
-        // #endregion
         loop {
-            tokio::select! {
-                result = typed_rx.recv() => {
-                    match result {
-                        Ok(event) => {
-                            let ejson = serde_json::to_value(&event).unwrap_or_default();
-                            let etype = ejson.get("type").and_then(|t| t.as_str()).unwrap_or_default().to_string();
-                            // #region agent log
-                            _dbg_log("dev_loop.rs:forwarder:typed_event", "received typed harness event", &serde_json::json!({
-                                "event_type": &etype, "first_message_seen": first_message_seen,
-                                "detail": if etype == "error" { ejson.clone() } else { serde_json::json!(null) },
-                            }), "F");
-                            // #endregion
-                            if !first_message_seen {
-                                let is_work_event = matches!(
-                                    event,
-                                    HarnessOutbound::AssistantMessageStart(_)
-                                    | HarnessOutbound::TextDelta(_)
-                                    | HarnessOutbound::ThinkingDelta(_)
-                                    | HarnessOutbound::ToolUseStart(_)
-                                );
-                                if is_work_event {
-                                    first_message_seen = true;
-                                    // #region agent log
-                                    _dbg_log("dev_loop.rs:forwarder:task_started_emit", "emitting task_started", &serde_json::json!({"trigger": &etype}), "F");
-                                    // #endregion
-                                    emit_domain_event(
-                                        &bc,
-                                        "task_started",
-                                        project_id,
-                                        agent_instance_id,
-                                        serde_json::json!({}),
-                                    );
-                                }
-                            }
-                            let mut json = serde_json::to_value(&event).unwrap_or_default();
-                            if let Some(obj) = json.as_object_mut() {
-                                obj.insert("project_id".into(), serde_json::Value::String(pid.clone()));
-                                obj.insert("agent_instance_id".into(), serde_json::Value::String(aiid.clone()));
-                            }
-                            let _ = bc.send(json);
-                        }
-                        Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                            // #region agent log
-                            _dbg_log("dev_loop.rs:forwarder:closed", "typed channel closed, emitting loop_finished", &serde_json::json!({}), "F");
-                            // #endregion
+            match rx.recv().await {
+                Ok(event) => {
+                    let event_type = event
+                        .get("type")
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("unknown");
+
+                    let mapped_type = match event_type {
+                        "started" => Some("loop_started"),
+                        "stopped" => Some("loop_stopped"),
+                        "paused" => Some("loop_paused"),
+                        "resumed" => Some("loop_resumed"),
+                        "task_started" => Some("task_started"),
+                        "task_completed" => Some("task_completed"),
+                        "task_failed" => Some("task_failed"),
+                        "task_retrying" => Some("task_retrying"),
+                        "loop_finished" => Some("loop_finished"),
+                        "done" => {
                             emit_domain_event(
-                                &bc,
+                                &app_broadcast,
                                 "loop_finished",
                                 project_id,
                                 agent_instance_id,
@@ -133,42 +78,42 @@ fn forward_harness_events(
                             );
                             break;
                         }
-                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                    }
-                }
-                result = raw_rx.recv() => {
-                    match result {
-                        Ok(mut value) => {
-                            // #region agent log
-                            let raw_type = value.get("type").and_then(|t| t.as_str()).unwrap_or("unknown");
-                            _dbg_log("dev_loop.rs:forwarder:raw_event", "received raw harness event", &serde_json::json!({
-                                "event_type": raw_type,
-                            }), "F");
-                            // #endregion
-                            if let Some(obj) = value.as_object_mut() {
-                                obj.entry("project_id").or_insert_with(|| serde_json::Value::String(pid.clone()));
-                                obj.entry("agent_instance_id").or_insert_with(|| serde_json::Value::String(aiid.clone()));
-                            }
-                            let _ = bc.send(value);
+                        _ => None,
+                    };
+
+                    let mut forwarded = event.clone();
+                    if let Some(obj) = forwarded.as_object_mut() {
+                        obj.insert(
+                            "project_id".into(),
+                            serde_json::Value::String(pid.clone()),
+                        );
+                        obj.insert(
+                            "agent_instance_id".into(),
+                            serde_json::Value::String(aiid.clone()),
+                        );
+                        if let Some(mapped) = mapped_type {
+                            obj.insert(
+                                "type".into(),
+                                serde_json::Value::String(mapped.into()),
+                            );
                         }
-                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                     }
+                    let _ = app_broadcast.send(forwarded);
                 }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    emit_domain_event(
+                        &app_broadcast,
+                        "loop_finished",
+                        project_id,
+                        agent_instance_id,
+                        serde_json::json!({}),
+                    );
+                    break;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
             }
         }
     });
-}
-
-async fn active_instances_for_project_harness(
-    state: &AppState,
-    project_id: ProjectId,
-) -> Vec<AgentInstanceId> {
-    let reg = state.harness_sessions.lock().await;
-    reg.iter()
-        .filter(|(_, s)| s.project_id == project_id)
-        .map(|(aiid, _)| *aiid)
-        .collect()
 }
 
 pub(crate) async fn start_loop(
@@ -176,38 +121,12 @@ pub(crate) async fn start_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
-    // #region agent log
-    _dbg_log("dev_loop.rs:start_loop:entry", "start_loop called", &serde_json::json!({
-        "project_id": project_id.to_string(),
-        "agent_instance_id_param": params.agent_instance_id.map(|id| id.to_string()),
-    }), "A");
-    // #endregion
-
     super::billing::require_credits(&state).await?;
 
     let agent_instance_id = params
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let harness_mode = if let Some(aiid) = params.agent_instance_id {
-        state
-            .agent_instance_service
-            .get_instance(&project_id, &aiid)
-            .await
-            .map(|inst| inst.harness_mode())
-            .unwrap_or(HarnessMode::Local)
-    } else {
-        HarnessMode::Local
-    };
-    let instance = if let Some(aiid) = params.agent_instance_id {
-        state.agent_instance_service.get_instance(&project_id, &aiid).await.ok()
-    } else {
-        None
-    };
-    let system_prompt = {
-        let agent_prompt = instance.as_ref().map(|i| i.system_prompt.as_str()).unwrap_or("");
-        super::agents::build_project_system_prompt_pub(&state, &project_id, agent_prompt)
-    };
     let jwt = state.get_jwt().ok();
     let project_path = state
         .project_service
@@ -216,106 +135,59 @@ pub(crate) async fn start_loop(
         .map(|p| p.linked_folder_path)
         .filter(|s| !s.is_empty());
 
-    // #region agent log
-    _dbg_log("dev_loop.rs:start_loop:session_config", "opening session with full config", &serde_json::json!({
-        "has_system_prompt": true,
-        "has_token": jwt.is_some(),
-        "project_id": project_id.to_string(),
-        "project_path": &project_path,
-    }), "H");
-    // #endregion
-
-    let harness = state.harness_for(harness_mode);
-    let session = match harness
-        .open_session(SessionConfig {
-            system_prompt: Some(system_prompt),
-            agent_id: Some(agent_instance_id.to_string()),
-            token: jwt,
-            project_id: Some(project_id.to_string()),
-            project_path,
-            ..Default::default()
+    let result = state
+        .automaton_client
+        .start(AutomatonStartParams {
+            project_id: project_id.to_string(),
+            auth_token: jwt,
+            model: None,
+            workspace_root: project_path,
+            task_id: None,
         })
         .await
-    {
-        Ok(s) => {
-            // #region agent log
-            _dbg_log("dev_loop.rs:start_loop:session_ok", "harness session opened successfully", &serde_json::json!({
-                "session_id": &s.session_id,
-                "broadcast_receiver_count": state.event_broadcast.receiver_count(),
-            }), "A");
-            // #endregion
-            s
-        }
-        Err(e) => {
-            // #region agent log
-            _dbg_log("dev_loop.rs:start_loop:session_err", "harness session FAILED to open", &serde_json::json!({
-                "error": format!("{e}"),
-            }), "A");
-            // #endregion
-            return Err(ApiError::internal(format!("opening dev loop session: {e}")));
-        }
-    };
+        .map_err(|e| ApiError::internal(format!("starting dev loop: {e}")))?;
 
-    let session_id = session.session_id.clone();
-    let commands_tx = session.commands_tx.clone();
-
+    let automaton_id = result.automaton_id.clone();
     info!(
         %project_id,
         %agent_instance_id,
-        %session_id,
-        "Dev loop harness session opened"
+        %automaton_id,
+        "Dev loop automaton started"
     );
 
-    commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: format!("Start dev loop for project {project_id}"),
-        }))
-        .map_err(|e| ApiError::internal(format!("sending dev loop start: {e}")))?;
-
-    // #region agent log
-    _dbg_log("dev_loop.rs:start_loop:before_emit", "about to emit loop_started", &serde_json::json!({
-        "project_id": project_id.to_string(),
-        "agent_instance_id": agent_instance_id.to_string(),
-        "ws_subscriber_count": state.event_broadcast.receiver_count(),
-    }), "B");
-    // #endregion
+    let events_tx = state
+        .automaton_client
+        .connect_event_stream(&automaton_id)
+        .await
+        .map_err(|e| ApiError::internal(format!("connecting event stream: {e}")))?;
 
     emit_domain_event(
         &state.event_broadcast,
         "loop_started",
         project_id,
         agent_instance_id,
-        serde_json::json!({}),
+        serde_json::json!({"automaton_id": &automaton_id}),
     );
 
-    // #region agent log
-    _dbg_log("dev_loop.rs:start_loop:after_emit", "loop_started emitted, starting forwarder", &serde_json::json!({
-        "ws_subscriber_count_after": state.event_broadcast.receiver_count(),
-    }), "B");
-    // #endregion
-
-    forward_harness_events(
-        &session.events_tx,
-        &session.raw_events_tx,
+    forward_automaton_events(
+        events_tx,
         state.event_broadcast.clone(),
         project_id,
         agent_instance_id,
     );
-    {
-        let mut reg = state.harness_sessions.lock().await;
-        reg.insert(agent_instance_id, ActiveHarnessSession {
-            session_id,
-            commands_tx,
-            project_id,
-        });
-    }
-    let active_agent_instances = active_instances_for_project_harness(&state, project_id).await;
 
-    // #region agent log
-    _dbg_log("dev_loop.rs:start_loop:response", "returning 201 CREATED", &serde_json::json!({
-        "active_agent_instances": active_agent_instances.iter().map(|a| a.to_string()).collect::<Vec<_>>(),
-    }), "A");
-    // #endregion
+    {
+        let mut reg = state.automaton_registry.lock().await;
+        reg.insert(
+            agent_instance_id,
+            ActiveAutomaton {
+                automaton_id: automaton_id.clone(),
+                project_id,
+            },
+        );
+    }
+
+    let active_agent_instances = active_instances(&state, project_id).await;
 
     Ok((
         StatusCode::CREATED,
@@ -334,13 +206,12 @@ pub(crate) async fn pause_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    let reg = state.harness_sessions.lock().await;
-
-    let targets: Vec<AgentInstanceId> = reg
+    let reg = state.automaton_registry.lock().await;
+    let targets: Vec<(AgentInstanceId, String)> = reg
         .iter()
-        .filter(|(_, s)| s.project_id == project_id)
+        .filter(|(_, a)| a.project_id == project_id)
         .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
-        .map(|(aiid, _)| *aiid)
+        .map(|(aiid, a)| (*aiid, a.automaton_id.clone()))
         .collect();
     drop(reg);
 
@@ -348,10 +219,9 @@ pub(crate) async fn pause_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    for aiid in &targets {
-        let reg = state.harness_sessions.lock().await;
-        if let Some(session) = reg.get(aiid) {
-            let _ = session.commands_tx.send(HarnessInbound::Cancel);
+    for (aiid, automaton_id) in &targets {
+        if let Err(e) = state.automaton_client.pause(automaton_id).await {
+            warn!(automaton_id, error = %e, "Failed to pause automaton");
         }
         emit_domain_event(
             &state.event_broadcast,
@@ -362,7 +232,7 @@ pub(crate) async fn pause_loop(
         );
     }
 
-    let active_agent_instances = active_instances_for_project_harness(&state, project_id).await;
+    let active_agent_instances = active_instances(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: true,
@@ -378,23 +248,24 @@ pub(crate) async fn stop_loop(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    let mut reg = state.harness_sessions.lock().await;
-
-    let targets: Vec<AgentInstanceId> = reg
+    let mut reg = state.automaton_registry.lock().await;
+    let targets: Vec<(AgentInstanceId, String)> = reg
         .iter()
-        .filter(|(_, s)| s.project_id == project_id)
+        .filter(|(_, a)| a.project_id == project_id)
         .filter(|(aiid, _)| params.agent_instance_id.is_none_or(|t| **aiid == t))
-        .map(|(aiid, _)| *aiid)
+        .map(|(aiid, a)| (*aiid, a.automaton_id.clone()))
         .collect();
 
     if targets.is_empty() {
+        drop(reg);
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    for aiid in &targets {
-        if let Some(session) = reg.remove(aiid) {
-            let _ = session.commands_tx.send(HarnessInbound::Cancel);
+    for (aiid, automaton_id) in &targets {
+        if let Err(e) = state.automaton_client.stop(automaton_id).await {
+            warn!(automaton_id, error = %e, "Failed to stop automaton");
         }
+        reg.remove(aiid);
         emit_domain_event(
             &state.event_broadcast,
             "loop_stopped",
@@ -406,7 +277,7 @@ pub(crate) async fn stop_loop(
 
     let remaining: Vec<AgentInstanceId> = reg
         .iter()
-        .filter(|(_, s)| s.project_id == project_id)
+        .filter(|(_, a)| a.project_id == project_id)
         .map(|(aiid, _)| *aiid)
         .collect();
     drop(reg);
@@ -424,24 +295,7 @@ pub(crate) async fn get_loop_status(
     State(state): State<AppState>,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
-    let mut reg = state.harness_sessions.lock().await;
-
-    let mut to_remove = Vec::new();
-    for (aiid, session) in reg.iter() {
-        if session.project_id == project_id && session.commands_tx.is_closed() {
-            to_remove.push(*aiid);
-        }
-    }
-    for aiid in &to_remove {
-        reg.remove(aiid);
-    }
-
-    let active: Vec<AgentInstanceId> = reg
-        .iter()
-        .filter(|(_, s)| s.project_id == project_id)
-        .map(|(aiid, _)| *aiid)
-        .collect();
-    drop(reg);
+    let active = active_instances(&state, project_id).await;
 
     Ok(Json(LoopStatusResponse {
         running: !active.is_empty(),
@@ -463,26 +317,6 @@ pub(crate) async fn run_single_task(
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let harness_mode = if let Some(aiid) = params.agent_instance_id {
-        state
-            .agent_instance_service
-            .get_instance(&project_id, &aiid)
-            .await
-            .map(|inst| inst.harness_mode())
-            .unwrap_or(HarnessMode::Local)
-    } else {
-        HarnessMode::Local
-    };
-
-    let instance = if let Some(aiid) = params.agent_instance_id {
-        state.agent_instance_service.get_instance(&project_id, &aiid).await.ok()
-    } else {
-        None
-    };
-    let system_prompt = {
-        let agent_prompt = instance.as_ref().map(|i| i.system_prompt.as_str()).unwrap_or("");
-        super::agents::build_project_system_prompt_pub(&state, &project_id, agent_prompt)
-    };
     let jwt = state.get_jwt().ok();
     let project_path = state
         .project_service
@@ -491,33 +325,41 @@ pub(crate) async fn run_single_task(
         .map(|p| p.linked_folder_path)
         .filter(|s| !s.is_empty());
 
-    let harness = state.harness_for(harness_mode);
-    let session = harness
-        .open_session(SessionConfig {
-            system_prompt: Some(system_prompt),
-            agent_id: params.agent_instance_id.map(|id| id.to_string()),
-            token: jwt,
-            project_id: Some(project_id.to_string()),
-            project_path,
-            ..Default::default()
+    let result = state
+        .automaton_client
+        .start(AutomatonStartParams {
+            project_id: project_id.to_string(),
+            auth_token: jwt,
+            model: None,
+            workspace_root: project_path,
+            task_id: Some(task_id.to_string()),
         })
         .await
-        .map_err(|e| ApiError::internal(format!("opening task runner session: {e}")))?;
+        .map_err(|e| ApiError::internal(format!("starting task runner: {e}")))?;
 
-    session
-        .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: format!("Execute task {task_id} in project {project_id}"),
-        }))
-        .map_err(|e| ApiError::internal(format!("sending task run command: {e}")))?;
+    let automaton_id = result.automaton_id;
+    info!(%project_id, %task_id, %automaton_id, "Single task automaton started");
 
-    forward_harness_events(
-        &session.events_tx,
-        &session.raw_events_tx,
-        state.event_broadcast.clone(),
-        project_id,
-        agent_instance_id,
-    );
+    if let Ok(events_tx) = state
+        .automaton_client
+        .connect_event_stream(&automaton_id)
+        .await
+    {
+        forward_automaton_events(
+            events_tx,
+            state.event_broadcast.clone(),
+            project_id,
+            agent_instance_id,
+        );
+    }
 
     Ok(StatusCode::ACCEPTED)
+}
+
+async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentInstanceId> {
+    let reg = state.automaton_registry.lock().await;
+    reg.iter()
+        .filter(|(_, a)| a.project_id == project_id)
+        .map(|(aiid, _)| *aiid)
+        .collect()
 }
