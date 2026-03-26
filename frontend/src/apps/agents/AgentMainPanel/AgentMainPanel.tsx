@@ -25,10 +25,13 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
     }
   }, [agentId, setSelectedAgent]);
 
+  const { status } = useAgents();
+
   useEffect(() => {
+    if (status !== "ready") return;
     const isRemote = selectedAgent?.machine_type === "remote";
     setRemoteAgentId(isRemote ? selectedAgent?.agent_id : undefined);
-  }, [selectedAgent, setRemoteAgentId]);
+  }, [selectedAgent, status, setRemoteAgentId]);
 
   return (
     <ResponsiveMainLane

@@ -43,6 +43,8 @@ interface TerminalPanelState {
   cwd?: string;
   /** When set, terminals connect to this remote agent's VM shell. */
   remoteAgentId?: string;
+  /** False until the owning panel has resolved whether this is local or remote. */
+  modeReady: boolean;
 
   setCwd: (cwd: string | undefined) => void;
   setRemoteAgentId: (id: string | undefined) => void;
@@ -55,33 +57,33 @@ interface TerminalPanelState {
 }
 
 const saved = loadPanelState();
-const firstKey = `term-${Date.now()}-${nextNum++}`;
 
 export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => ({
-  terminals: [{ id: firstKey, title: "Terminal 1", hook: null! }],
-  activeId: firstKey,
+  terminals: [],
+  activeId: null,
   panelHeight: saved.height,
   collapsed: true,
   contentReady: false,
   cwd: undefined,
   remoteAgentId: undefined,
+  modeReady: false,
 
   setCwd: (cwd) => {
     set({ cwd });
   },
 
   setRemoteAgentId: (id) => {
-    const prev = get().remoteAgentId;
-    if (prev === id) return;
-    // Kill every existing terminal so they respawn with the new target.
-    for (const [tid, hook] of hookRefs) {
+    const { remoteAgentId: prev, modeReady } = get();
+    if (modeReady && prev === id) return;
+    for (const [, hook] of hookRefs) {
       hook.kill();
-      hookRefs.delete(tid);
     }
+    hookRefs.clear();
     nextNum = 1;
     const firstId = `term-${Date.now()}-${nextNum++}`;
     set({
       remoteAgentId: id,
+      modeReady: true,
       terminals: [{ id: firstId, title: "Terminal 1", hook: null! }],
       activeId: firstId,
     });

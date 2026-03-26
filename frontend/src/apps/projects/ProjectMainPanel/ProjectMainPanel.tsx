@@ -14,13 +14,13 @@ export function ProjectMainPanel({ children }: { children?: ReactNode }) {
   const setCwd = useTerminalPanelStore((s) => s.setCwd);
   const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
 
-  const remoteAgentId = useProjectTerminalMode(projectId);
+  const { remoteAgentId, resolved } = useProjectTerminalMode(projectId);
 
   useEffect(() => { setCwd(cwd); }, [cwd, setCwd]);
 
   useEffect(() => {
-    setRemoteAgentId(remoteAgentId);
-  }, [remoteAgentId, setRemoteAgentId]);
+    if (resolved) setRemoteAgentId(remoteAgentId);
+  }, [remoteAgentId, resolved, setRemoteAgentId]);
 
   return (
     <ResponsiveMainLane
