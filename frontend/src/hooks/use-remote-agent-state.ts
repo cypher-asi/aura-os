@@ -2,9 +2,19 @@ import { useState, useEffect } from "react";
 import { api } from "../api/client";
 import type { RemoteVmState } from "../types";
 import { useEventStore } from "../stores/event-store";
+import { useProfileStatusStore } from "../stores/profile-status-store";
 import { EventType } from "../types/aura-events";
 
 const POLL_INTERVAL_MS = 30_000;
+
+function syncToProfileStore(agentId: string, state: string) {
+  const store = useProfileStatusStore.getState();
+  if (store.statuses[agentId] !== state) {
+    useProfileStatusStore.setState((s) => ({
+      statuses: { ...s.statuses, [agentId]: state },
+    }));
+  }
+}
 
 export function useRemoteAgentState(agentId: string | undefined) {
   const [data, setData] = useState<RemoteVmState | null>(null);
@@ -23,6 +33,7 @@ export function useRemoteAgentState(agentId: string | undefined) {
           if (!cancelled) {
             setData(state);
             setError(null);
+            syncToProfileStore(agentId, state.state);
           }
         })
         .catch((e) => {
@@ -44,6 +55,7 @@ export function useRemoteAgentState(agentId: string | undefined) {
           active_sessions: event.content.active_sessions,
           error_message: event.content.error_message,
         });
+        syncToProfileStore(agentId, event.content.state);
       }
     });
 

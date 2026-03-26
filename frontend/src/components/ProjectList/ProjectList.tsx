@@ -5,6 +5,7 @@ import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Gauge, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
 import { Avatar } from "../Avatar";
+import { useProfileStatusStore } from "../../stores/profile-status-store";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
 import {
   getMobileProjectDestination,
@@ -100,6 +101,7 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
 function buildExplorerNode(
   p: { project_id: string; name: string },
   data: ReturnType<typeof useProjectListData>,
+  statusMap: Record<string, string>,
 ): ExplorerNode {
   const { agentsByProject, automatingProjectId, automatingAgentInstanceId, isMobileLayout, actions, sidekick } = data;
   const { streamingAgentInstanceId } = sidekick;
@@ -110,6 +112,7 @@ function buildExplorerNode(
         ...(isMobileLayout ? [{ id: executionNodeId(p.project_id), label: "Execution", icon: <Gauge size={16} />, metadata: { type: "execution", projectId: p.project_id } }] : []),
         ...projectAgents.map((s) => {
           const isAutomating = automatingProjectId === p.project_id && automatingAgentInstanceId === s.agent_instance_id;
+          const resolvedStatus = statusMap[s.agent_instance_id] ?? statusMap[s.agent_id] ?? s.status;
           return {
             id: s.agent_instance_id, label: s.name,
             icon: (
@@ -118,7 +121,7 @@ function buildExplorerNode(
                 name={s.name}
                 type="agent"
                 size={18}
-                status={s.status}
+                status={resolvedStatus}
               />
             ),
             suffix: isAutomating
@@ -158,9 +161,22 @@ export function ProjectList() {
     actions, projectMap, agentMeta, refreshProjectAgents,
   } = data;
 
+  const statusMap = useProfileStatusStore((s) => s.statuses);
+  const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
+
+  useEffect(() => {
+    const remoteAgents: { agent_id: string }[] = [];
+    for (const agents of Object.values(agentsByProject)) {
+      for (const inst of agents) {
+        if (inst.machine_type === "remote") remoteAgents.push({ agent_id: inst.agent_id });
+      }
+    }
+    if (remoteAgents.length > 0) registerRemote(remoteAgents);
+  }, [agentsByProject, registerRemote]);
+
   const explorerData: ExplorerNode[] = useMemo(
-    () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data)),
-    [projects, data],
+    () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap)),
+    [projects, data, statusMap],
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);

@@ -20,6 +20,7 @@ import { ProjectStatsView } from "./views/ProjectStatsView";
 
 import "./stores/event-store";
 import "./stores/follow-store";
+import "./stores/profile-status-store";
 
 export default function App() {
   const restoreSession = useAuthStore((s) => s.restoreSession);

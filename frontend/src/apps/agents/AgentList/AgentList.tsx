@@ -7,7 +7,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
-import { useAgentStatuses } from "../hooks/useAgentStatuses";
+import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import { api, ApiClientError } from "../../../api/client";
 import {
   useAgents,
@@ -160,8 +160,14 @@ export function AgentList() {
   }, [deleteTarget, agentId, setSelectedAgent, navigate]);
 
   const sortedAgents = useSortedAgents();
-  const agentStatuses = useAgentStatuses(agents);
+  const statusMap = useProfileStatusStore((s) => s.statuses);
+  const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
   const entries = useChatHistoryStore((s) => s.entries);
+
+  useEffect(() => {
+    const remote = agents.filter((a) => a.machine_type === "remote" && a.network_agent_id);
+    if (remote.length > 0) registerRemote(remote);
+  }, [agents, registerRemote]);
 
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return sortedAgents;
@@ -206,7 +212,7 @@ export function AgentList() {
               agent={agent}
               lastMessage={lastMessage}
               isSelected={agent.agent_id === agentId}
-              status={agentStatuses[agent.agent_id]}
+              status={statusMap[agent.agent_id]}
               onClick={() => navigate(`/agents/${agent.agent_id}`)}
               onContextMenu={handleContextMenu}
               onMouseOver={handleHoverPrefetch}
