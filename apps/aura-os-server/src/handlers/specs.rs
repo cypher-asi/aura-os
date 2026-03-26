@@ -62,6 +62,7 @@ pub(crate) async fn generate_specs_summary(
     let session = harness
         .open_session(SessionConfig {
             agent_id: Some(format!("spec-summary-{project_id}")),
+            agent_name: Some("spec-summary".to_string()),
             ..Default::default()
         })
         .await
@@ -127,6 +128,7 @@ async fn open_spec_gen_session(
     let session = harness
         .open_session(SessionConfig {
             agent_id: Some(format!("spec-gen-{project_id}")),
+            agent_name: Some("spec-gen".to_string()),
             ..Default::default()
         })
         .await

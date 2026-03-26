@@ -79,6 +79,7 @@ pub(crate) async fn extract_tasks(
     let session = harness
         .open_session(SessionConfig {
             agent_id: Some(format!("task-extract-{project_id}")),
+            agent_name: Some("task-extract".to_string()),
             ..Default::default()
         })
         .await

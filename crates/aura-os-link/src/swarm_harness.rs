@@ -138,9 +138,16 @@ impl HarnessLink for SwarmHarness {
             .or(self.auth_token.as_deref());
         let headers = self.bearer_headers(token);
 
-        // 1. Create agent (idempotent when agent_id is supplied for ID parity)
+        // 1. Create agent (idempotent when agent_id is supplied for ID parity).
+        //    Use the explicit agent_name when provided; fall back to agent_id
+        //    so existing callers that only set agent_id keep working.
+        let agent_display_name = config
+            .agent_name
+            .as_deref()
+            .or(config.agent_id.as_deref())
+            .unwrap_or("default");
         let mut agent_body = serde_json::json!({
-            "name": config.agent_id.as_deref().unwrap_or("default"),
+            "name": agent_display_name,
         });
         if let Some(ref aid) = config.agent_id {
             agent_body["agent_id"] = serde_json::Value::String(aid.clone());

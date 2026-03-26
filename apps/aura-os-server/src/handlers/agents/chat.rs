@@ -741,6 +741,7 @@ pub(crate) async fn send_agent_event_stream(
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(agent_id.to_string()),
+        agent_name: Some(agent.name.clone()),
         model: body.model.clone(),
         token: jwt,
         conversation_messages,
@@ -815,6 +816,7 @@ pub(crate) async fn send_event_stream(
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(instance.agent_id.to_string()),
+        agent_name: Some(instance.name.clone()),
         model: body.model.clone(),
         token: jwt,
         conversation_messages,

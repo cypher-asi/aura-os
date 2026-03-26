@@ -10,6 +10,9 @@ pub struct SessionConfig {
     pub max_turns: Option<u32>,
     pub workspace: Option<String>,
     pub agent_id: Option<String>,
+    /// Human-readable display name for the remote agent.
+    /// When omitted the swarm harness falls back to `agent_id`.
+    pub agent_name: Option<String>,
     pub token: Option<String>,
     pub conversation_messages: Option<Vec<ConversationMessage>>,
     pub project_id: Option<String>,
@@ -26,6 +29,7 @@ impl Default for SessionConfig {
             max_turns: None,
             workspace: None,
             agent_id: None,
+            agent_name: None,
             token: None,
             conversation_messages: None,
             project_id: None,
