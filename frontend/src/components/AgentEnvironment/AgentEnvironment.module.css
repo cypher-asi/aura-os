@@ -13,7 +13,7 @@
   color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 11px;
-  cursor: default;
+  cursor: pointer;
   white-space: nowrap;
   transition: color 0.15s ease;
 }
@@ -29,13 +29,38 @@
   flex-shrink: 0;
 }
 
-.dotLocal {
+.dot[data-status="running"] {
+  background: var(--color-success, #4c9);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-success, #4c9) 40%, transparent);
+}
+
+.dot[data-status="idle"] {
+  background: #06b6d4;
+  box-shadow: 0 0 4px rgba(6, 182, 212, 0.3);
+}
+
+.dot[data-status="provisioning"] {
+  background: #06b6d4;
+  box-shadow: 0 0 4px rgba(6, 182, 212, 0.3);
+}
+
+.dot[data-status="hibernating"] {
+  background: #a855f7;
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.3);
+}
+
+.dot[data-status="stopping"] {
+  background: #06b6d4;
+  box-shadow: 0 0 4px rgba(6, 182, 212, 0.3);
+}
+
+.dot[data-status="stopped"] {
   background: var(--color-text-tertiary, #6b7280);
 }
 
-.dotRemote {
-  background: var(--color-success, #4c9);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--color-success, #4c9) 40%, transparent);
+.dot[data-status="error"] {
+  background: #ef4444;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
 }
 
 .statusCard {
@@ -71,4 +96,62 @@
 .statusValue {
   color: var(--color-text);
   word-break: break-all;
+}
+
+.actionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.actionsWait {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.actionBtn {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.actionBtn:hover:not(:disabled) {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+  color: var(--color-text);
+  border-color: var(--color-text-tertiary);
+}
+
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtnPrimary {
+  color: var(--color-text);
+  border-color: var(--color-text-tertiary);
+}
+
+.actionHint {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.actionError {
+  font-size: 10px;
+  color: #ef4444;
+  flex-basis: 100%;
 }

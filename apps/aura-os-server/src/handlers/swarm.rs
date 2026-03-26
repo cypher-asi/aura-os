@@ -7,6 +7,14 @@ use aura_os_core::HarnessMode;
 use crate::error::{ApiError, ApiResult, map_network_error};
 use crate::state::AppState;
 
+const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake", "start"];
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct LifecycleActionResponse {
+    pub agent_id: String,
+    pub status: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct RemoteAgentStateResponse {
     pub state: String,
@@ -91,4 +99,71 @@ pub(crate) async fn get_remote_agent_state(
     }));
 
     Ok(Json(gateway_state))
+}
+
+/// Proxy a lifecycle action (hibernate, stop, restart, wake, start) to the
+/// swarm gateway for a remote agent.
+pub(crate) async fn remote_agent_lifecycle(
+    State(state): State<AppState>,
+    Path((agent_id, action)): Path<(String, String)>,
+) -> ApiResult<Json<LifecycleActionResponse>> {
+    if !VALID_LIFECYCLE_ACTIONS.contains(&action.as_str()) {
+        return Err(ApiError::bad_request(format!(
+            "invalid action '{action}'; must be one of: {}",
+            VALID_LIFECYCLE_ACTIONS.join(", ")
+        )));
+    }
+
+    let jwt = state.get_jwt()?;
+
+    let network = state.require_network_client()?;
+    let net_agent = network
+        .get_agent(&agent_id, &jwt)
+        .await
+        .map_err(map_network_error)?;
+
+    let machine_type = net_agent.machine_type.as_deref().unwrap_or("local");
+    if HarnessMode::from_machine_type(machine_type) != HarnessMode::Swarm {
+        return Err(ApiError::bad_request("agent is not a remote agent"));
+    }
+
+    let base_url = state
+        .swarm_base_url
+        .as_deref()
+        .ok_or_else(|| ApiError::service_unavailable("swarm gateway is not configured"))?;
+
+    let url = format!("{}/v1/agents/{}/{}", base_url, agent_id, action);
+
+    let resp = network
+        .http_client()
+        .post(&url)
+        .header("Authorization", format!("Bearer {jwt}"))
+        .send()
+        .await
+        .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(match status {
+            404 => ApiError::not_found("remote agent not found on swarm gateway"),
+            401 => ApiError::unauthorized("swarm gateway rejected auth token"),
+            409 => ApiError::conflict(format!("invalid state transition: {body}")),
+            _ => ApiError::bad_gateway(format!("swarm gateway returned {status}: {body}")),
+        });
+    }
+
+    let result: LifecycleActionResponse = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
+
+    let _ = state.event_broadcast.send(serde_json::json!({
+        "type": "remote_agent_state_changed",
+        "agent_id": agent_id,
+        "state": result.status,
+        "action": action,
+    }));
+
+    Ok(Json(result))
 }
