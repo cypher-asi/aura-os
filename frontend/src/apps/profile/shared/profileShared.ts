@@ -35,7 +35,12 @@ export function formatTokenCount(n: number): string {
 }
 
 export function isOwnProfile(user: ZeroUser | null, profile: UserProfileData): boolean {
-  return !!user && (
+  if (!user) return false;
+  if (user.profile_id && profile.id) return user.profile_id === profile.id;
+  if (user.network_user_id && profile.networkUserId) {
+    return user.network_user_id === profile.networkUserId;
+  }
+  return (
     user.display_name === profile.name ||
     profile.handle === `@${user.primary_zid}`
   );
