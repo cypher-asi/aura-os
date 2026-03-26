@@ -57,10 +57,10 @@ export function useAgentEditorForm(
       setMachineType(agent.machine_type ?? "local");
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
-      setMachineType(isMobileLayout ? "remote" : "local");
+      setMachineType("remote");
     }
     setError(""); setNameError("");
-  }, [isOpen, agent, isMobileLayout]);
+  }, [isOpen, agent]);
 
   const handleClose = useCallback(() => {
     setError(""); setNameError(""); setSaving(false); onClose();
