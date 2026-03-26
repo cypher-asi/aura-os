@@ -7,6 +7,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
+import { useAgentStatuses } from "../hooks/useAgentStatuses";
 import { api, ApiClientError } from "../../../api/client";
 import {
   useAgents,
@@ -159,6 +160,7 @@ export function AgentList() {
   }, [deleteTarget, agentId, setSelectedAgent, navigate]);
 
   const sortedAgents = useSortedAgents();
+  const agentStatuses = useAgentStatuses(agents);
   const entries = useChatHistoryStore((s) => s.entries);
 
   const filteredAgents = useMemo(() => {
@@ -204,6 +206,7 @@ export function AgentList() {
               agent={agent}
               lastMessage={lastMessage}
               isSelected={agent.agent_id === agentId}
+              status={agentStatuses[agent.agent_id]}
               onClick={() => navigate(`/agents/${agent.agent_id}`)}
               onContextMenu={handleContextMenu}
               onMouseOver={handleHoverPrefetch}

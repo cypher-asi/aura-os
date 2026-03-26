@@ -77,7 +77,7 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
         const pid = instance.project_id;
         const list = prev[pid];
         if (!list) return prev;
-        return { ...prev, [pid]: list.map((s) => s.agent_instance_id === instance.agent_instance_id ? { ...s, name: instance.name, updated_at: instance.updated_at } : s) };
+        return { ...prev, [pid]: list.map((s) => s.agent_instance_id === instance.agent_instance_id ? { ...s, name: instance.name, status: instance.status, updated_at: instance.updated_at } : s) };
       });
     });
   }, [setAgentsByProject, sidekick]);
