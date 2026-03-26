@@ -5,13 +5,22 @@ import { TerminalPanelHeader } from "../../../components/TerminalPanelHeader";
 import { TerminalPanelBody } from "../../../components/TerminalPanelBody";
 import { useTerminalPanelStore } from "../../../stores/terminal-panel-store";
 import { useProjectContext } from "../../../stores/project-action-store";
+import { useProjectTerminalMode } from "../../../hooks/use-project-terminal-mode";
 
 export function ProjectMainPanel({ children }: { children?: ReactNode }) {
   const ctx = useProjectContext();
   const cwd = ctx?.project?.linked_folder_path;
+  const projectId = ctx?.project?.project_id;
   const setCwd = useTerminalPanelStore((s) => s.setCwd);
+  const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
+
+  const remoteAgentId = useProjectTerminalMode(projectId);
 
   useEffect(() => { setCwd(cwd); }, [cwd, setCwd]);
+
+  useEffect(() => {
+    setRemoteAgentId(remoteAgentId);
+  }, [remoteAgentId, setRemoteAgentId]);
 
   return (
     <ResponsiveMainLane

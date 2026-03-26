@@ -41,8 +41,11 @@ interface TerminalPanelState {
   collapsed: boolean;
   contentReady: boolean;
   cwd?: string;
+  /** When set, terminals connect to this remote agent's VM shell. */
+  remoteAgentId?: string;
 
   setCwd: (cwd: string | undefined) => void;
+  setRemoteAgentId: (id: string | undefined) => void;
   addTerminal: () => void;
   removeTerminal: (id: string) => void;
   registerHook: (id: string, hook: UseTerminalReturn) => void;
@@ -61,9 +64,27 @@ export const useTerminalPanelStore = create<TerminalPanelState>()((set, get) => 
   collapsed: true,
   contentReady: false,
   cwd: undefined,
+  remoteAgentId: undefined,
 
   setCwd: (cwd) => {
     set({ cwd });
+  },
+
+  setRemoteAgentId: (id) => {
+    const prev = get().remoteAgentId;
+    if (prev === id) return;
+    // Kill every existing terminal so they respawn with the new target.
+    for (const [tid, hook] of hookRefs) {
+      hook.kill();
+      hookRefs.delete(tid);
+    }
+    nextNum = 1;
+    const firstId = `term-${Date.now()}-${nextNum++}`;
+    set({
+      remoteAgentId: id,
+      terminals: [{ id: firstId, title: "Terminal 1", hook: null! }],
+      activeId: firstId,
+    });
   },
 
   addTerminal: () => {

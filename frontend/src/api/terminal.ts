@@ -14,6 +14,10 @@ export interface SpawnTerminalResponse {
   shell: string;
 }
 
+// ---------------------------------------------------------------------------
+// Local terminal (PTY on the aura-os-server host)
+// ---------------------------------------------------------------------------
+
 export async function spawnTerminal(opts: {
   cols: number;
   rows: number;
@@ -46,4 +50,18 @@ export async function killTerminal(id: string): Promise<void> {
 
 export function terminalWsUrl(id: string): string {
   return resolveWsUrl(`/ws/terminal/${id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Remote terminal (shell inside the agent VM/pod via swarm gateway)
+//
+// The entire lifecycle (spawn, I/O, kill) runs over a single WebSocket.
+// The client sends a `spawn` message as the first frame; the pod responds
+// with `spawned`. Closing the socket kills the terminal.
+// ---------------------------------------------------------------------------
+
+export function remoteTerminalWsUrl(agentId: string): string {
+  return resolveWsUrl(
+    `/ws/agents/${agentId}/remote_agent/terminal`,
+  );
 }

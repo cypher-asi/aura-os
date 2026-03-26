@@ -8,13 +8,15 @@ import styles from "../TerminalPanel/TerminalPanel.module.css";
 function TerminalWrapper({
   visible,
   cwd,
+  remoteAgentId,
   onHook,
 }: {
   visible: boolean;
   cwd?: string;
+  remoteAgentId?: string;
   onHook: (hook: UseTerminalReturn) => void;
 }) {
-  const hook = useTerminal({ cwd });
+  const hook = useTerminal({ cwd, remoteAgentId });
 
   useEffect(() => {
     onHook(hook);
@@ -34,6 +36,7 @@ export function TerminalPanelBody() {
     handleMouseDown,
     registerHook,
     cwd,
+    remoteAgentId,
   } = useTerminalPanel();
 
   return (
@@ -55,6 +58,7 @@ export function TerminalPanelBody() {
             key={t.id}
             visible={t.id === activeId}
             cwd={cwd}
+            remoteAgentId={remoteAgentId}
             onHook={(hook) => registerHook(t.id, hook)}
           />
         ))}

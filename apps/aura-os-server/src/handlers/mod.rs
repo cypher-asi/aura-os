@@ -14,6 +14,7 @@ mod projects_helpers;
 pub(crate) mod specs;
 pub(crate) mod sse;
 pub(crate) mod tasks;
+pub(crate) mod remote_terminal;
 pub(crate) mod terminal;
 pub(crate) mod tool_callbacks;
 pub(crate) mod users;

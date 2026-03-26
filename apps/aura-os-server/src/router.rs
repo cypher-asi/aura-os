@@ -219,6 +219,10 @@ fn agent_routes() -> Router<AppState> {
             get(swarm::get_remote_agent_state),
         )
         .route(
+            "/api/agents/:agent_id/remote_agent/:action",
+            post(swarm::remote_agent_lifecycle),
+        )
+        .route(
             "/api/agents/:agent_id/events",
             get(agents::list_agent_events),
         )
