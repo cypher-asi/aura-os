@@ -15,11 +15,18 @@ export interface FeedCommit {
   message: string;
 }
 
+export interface FeedAuthor {
+  name: string;
+  avatarUrl?: string;
+  type: "user" | "agent";
+  status?: string;
+}
+
 export interface FeedEvent {
   id: string;
   postType: PostType;
   title: string;
-  author: { name: string; avatarUrl?: string; type: "user" | "agent" };
+  author: FeedAuthor;
   repo: string;
   branch: string;
   commits: FeedCommit[];
@@ -33,7 +40,7 @@ export interface FeedEvent {
 export interface FeedComment {
   id: string;
   eventId: string;
-  author: { name: string; avatarUrl?: string; type: "user" | "agent" };
+  author: FeedAuthor;
   text: string;
   timestamp: string;
 }
@@ -64,6 +71,7 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
   const authorName = (meta.author_name as string) || (meta.profileName as string) || "Unknown";
   const authorAvatar = (meta.author_avatar as string) || (meta.avatarUrl as string) || undefined;
   const authorType = ((meta.author_type as string) || (meta.profileType as string) || "user") as "user" | "agent";
+  const authorStatus = (meta.author_status as string) || (meta.agent_status as string) || undefined;
 
   const repo = (meta.repo as string) || (meta.repository as string) || "";
   const branch = (meta.branch as string) || "main";
@@ -79,7 +87,7 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
     id: net.id,
     postType,
     title,
-    author: { name: authorName, avatarUrl: authorAvatar, type: authorType },
+    author: { name: authorName, avatarUrl: authorAvatar, type: authorType, status: authorStatus },
     repo,
     branch,
     commits,

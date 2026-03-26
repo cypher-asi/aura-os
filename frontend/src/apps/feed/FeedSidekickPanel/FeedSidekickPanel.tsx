@@ -111,6 +111,7 @@ function CommentsPanel() {
                 name={c.author.name}
                 type={c.author.type}
                 size={28}
+                status={c.author.status}
                 className={`${styles.commentAvatar} ${styles.commentAvatarClickable}`}
                 onClick={() => handleAuthorClick(c.author)}
               />

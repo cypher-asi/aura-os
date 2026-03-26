@@ -120,6 +120,7 @@ export function ActivityCard({ event, isLast, isSelected, comments, onSelect, on
           name={event.author.name}
           type={event.author.type}
           size={36}
+          status={event.author.status}
           className={`${styles.avatar} ${onSelectProfile ? styles.avatarClickable : ""}`}
           onClick={handleAvatarClick}
         />

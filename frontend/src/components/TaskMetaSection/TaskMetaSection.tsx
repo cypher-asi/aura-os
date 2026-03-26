@@ -4,6 +4,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Button, Text } from "@cypher-asi/zui";
 import { RotateCcw } from "lucide-react";
 import { TaskStatusIcon } from "../TaskStatusIcon";
+import { Avatar } from "../Avatar";
 import { toBullets, formatTokens } from "../../utils/format";
 import type { Task, AgentInstance } from "../../types";
 import styles from "../Preview/Preview.module.css";
@@ -86,9 +87,13 @@ export function TaskMetaSection({
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Assigned to</span>
           <span className={styles.agentInline}>
-            {agentInstance.icon && (
-              <img src={agentInstance.icon} alt="" className={styles.agentAvatar} />
-            )}
+            <Avatar
+              avatarUrl={agentInstance.icon ?? undefined}
+              name={agentInstance.name}
+              type="agent"
+              size={16}
+              status={agentInstance.status}
+            />
             <Text size="sm">{agentInstance.name}</Text>
           </span>
         </div>
@@ -97,9 +102,13 @@ export function TaskMetaSection({
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Completed by</span>
           <span className={styles.agentInline}>
-            {completedByAgent.icon && (
-              <img src={completedByAgent.icon} alt="" className={styles.agentAvatar} />
-            )}
+            <Avatar
+              avatarUrl={completedByAgent.icon ?? undefined}
+              name={completedByAgent.name}
+              type="agent"
+              size={16}
+              status={completedByAgent.status}
+            />
             <Text size="sm">{completedByAgent.name}</Text>
           </span>
         </div>

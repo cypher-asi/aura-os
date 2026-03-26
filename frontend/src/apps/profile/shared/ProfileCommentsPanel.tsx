@@ -48,6 +48,7 @@ export function ProfileCommentsPanel({
                 name={comment.author.name}
                 type={comment.author.type}
                 size={variant === "drawer" ? 32 : 28}
+                status={comment.author.status}
                 className={styles.commentAvatar}
               />
               <div className={styles.commentContent}>

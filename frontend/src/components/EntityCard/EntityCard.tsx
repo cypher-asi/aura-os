@@ -9,6 +9,7 @@ interface EntityCardProps {
   fallbackIcon: ReactNode;
   name: string;
   subtitle?: string;
+  status?: string;
   nameAction?: ReactNode;
   children?: ReactNode;
   stats?: { value: string | number; label: string }[];
@@ -36,6 +37,7 @@ export function EntityCard({
   fallbackIcon,
   name,
   subtitle,
+  status,
   nameAction,
   children,
   stats,
@@ -51,7 +53,10 @@ export function EntityCard({
           )}
         </div>
 
-        <ImageBlock image={image} name={name} fallbackIcon={fallbackIcon} />
+        <div className={styles.imageBlockWrap}>
+          <ImageBlock image={image} name={name} fallbackIcon={fallbackIcon} />
+          {status && <span className={styles.statusDot} data-status={status} />}
+        </div>
 
         <div className={styles.nameRow}>
           <div className={styles.nameText}>

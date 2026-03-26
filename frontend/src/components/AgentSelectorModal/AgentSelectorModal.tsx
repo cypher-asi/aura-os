@@ -1,6 +1,6 @@
 import { Modal, Button, Spinner, Text } from "@cypher-asi/zui";
-import { Bot } from "lucide-react";
 import { EmptyState } from "../EmptyState";
+import { Avatar } from "../Avatar";
 import type { AgentInstance } from "../../types";
 import { AgentEditorModal } from "../AgentEditorModal";
 import { useAgentSelectorData } from "./useAgentSelectorData";
@@ -16,7 +16,7 @@ interface AgentSelectorModalProps {
 export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: AgentSelectorModalProps) {
   const {
     agents, loading, creating, error, showEditor, setShowEditor,
-    failedIcons, setFailedIcons, handleSelect, handleAgentSaved, handleClose,
+    handleSelect, handleAgentSaved, handleClose,
   } = useAgentSelectorData(isOpen, projectId, onCreated, onClose);
 
   return (
@@ -56,16 +56,12 @@ export function AgentSelectorModal({ isOpen, projectId, onClose, onCreated }: Ag
                   disabled={!!creating}
                 >
                   <div className={styles.cardIcon}>
-                    {agent.icon && !failedIcons.has(agent.agent_id) ? (
-                      <img
-                        src={agent.icon}
-                        alt=""
-                        className={styles.cardIconImg}
-                        onError={() => setFailedIcons((s) => new Set(s).add(agent.agent_id))}
-                      />
-                    ) : (
-                      <Bot size={24} />
-                    )}
+                    <Avatar
+                      avatarUrl={agent.icon ?? undefined}
+                      name={agent.name}
+                      type="agent"
+                      size={48}
+                    />
                   </div>
                   <div className={styles.cardName}>{agent.name}</div>
                   {agent.role && <div className={styles.cardRole}>{agent.role}</div>}

@@ -1,7 +1,7 @@
-import { Bot } from "lucide-react";
 import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
 import type { DisplaySessionEvent } from "../../../types/stream";
+import { Avatar } from "../../../components/Avatar";
 import styles from "./AgentConversationRow.module.css";
 
 function stripMarkdown(text: string): string {
@@ -17,6 +17,7 @@ interface AgentConversationRowProps {
   agent: Agent;
   lastMessage: DisplaySessionEvent | undefined;
   isSelected: boolean;
+  status?: string;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onMouseOver: (e: React.MouseEvent) => void;
@@ -26,6 +27,7 @@ export function AgentConversationRow({
   agent,
   lastMessage,
   isSelected,
+  status,
   onClick,
   onContextMenu,
   onMouseOver,
@@ -44,13 +46,14 @@ export function AgentConversationRow({
       onContextMenu={onContextMenu}
       onMouseOver={onMouseOver}
     >
-      <span className={styles.avatar}>
-        {agent.icon ? (
-          <img src={agent.icon} alt="" className={styles.avatarImg} />
-        ) : (
-          <Bot size={20} />
-        )}
-      </span>
+      <Avatar
+        avatarUrl={agent.icon ?? undefined}
+        name={agent.name}
+        type="agent"
+        size={36}
+        status={status}
+        className={styles.avatar}
+      />
 
       <span className={styles.body}>
         <span className={styles.top}>

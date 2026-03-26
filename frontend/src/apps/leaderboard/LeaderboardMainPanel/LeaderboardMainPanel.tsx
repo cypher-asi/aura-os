@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Text } from "@cypher-asi/zui";
 import { Lane } from "../../../components/Lane";
+import { Avatar } from "../../../components/Avatar";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard-store";
 import { useFollowStore } from "../../../stores/follow-store";
@@ -71,9 +72,12 @@ export function LeaderboardMainPanel() {
                     <span className={styles.rankBadge}>{i + 1}</span>
                   </div>
                   <div className={styles.nameCell}>
-                    {user.avatarUrl && (
-                      <img src={user.avatarUrl} alt="" className={styles.avatar} />
-                    )}
+                    <Avatar
+                      avatarUrl={user.avatarUrl}
+                      name={user.name}
+                      type={user.type === "agent" ? "agent" : "user"}
+                      size={20}
+                    />
                     <Text size="sm" className={styles.nameBold}>{user.name}</Text>
                     {user.type === "agent" && (
                       <span className={styles.typeBadge}>agent</span>

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Gauge, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
+import { Avatar } from "../Avatar";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
 import {
   getMobileProjectDestination,
@@ -100,7 +101,7 @@ function buildExplorerNode(
   p: { project_id: string; name: string },
   data: ReturnType<typeof useProjectListData>,
 ): ExplorerNode {
-  const { agentsByProject, automatingProjectId, automatingAgentInstanceId, failedIcons, setFailedIcons, isMobileLayout, actions, sidekick } = data;
+  const { agentsByProject, automatingProjectId, automatingAgentInstanceId, isMobileLayout, actions, sidekick } = data;
   const { streamingAgentInstanceId } = sidekick;
   const projectAgents = agentsByProject[p.project_id];
 
@@ -111,9 +112,15 @@ function buildExplorerNode(
           const isAutomating = automatingProjectId === p.project_id && automatingAgentInstanceId === s.agent_instance_id;
           return {
             id: s.agent_instance_id, label: s.name,
-            icon: s.icon && !failedIcons.has(s.agent_instance_id)
-              ? <img src={s.icon} alt="" className={styles.agentAvatar} onError={() => setFailedIcons((prev) => new Set(prev).add(s.agent_instance_id))} />
-              : <Bot size={16} />,
+            icon: (
+              <Avatar
+                avatarUrl={s.icon ?? undefined}
+                name={s.name}
+                type="agent"
+                size={18}
+                status={s.status}
+              />
+            ),
             suffix: isAutomating
               ? <span className={styles.sessionIndicator}><Loader2 size={10} className={styles.automationSpinner} /></span>
               : streamingAgentInstanceId === s.agent_instance_id
