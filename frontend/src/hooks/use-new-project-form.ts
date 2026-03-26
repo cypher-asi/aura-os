@@ -179,11 +179,10 @@ export function useNewProjectForm(
     if (orgLoading || (!activeOrg && loadingProjects && projects.length === 0)) return "Loading your team...";
     if (!isAuthenticated) return "Sign in to create a project with an Orbit repo.";
     if (!resolvedOrgId) return "No team found. Log out and back in to create a default team.";
-    if (!name.trim()) return "Project name is required.";
     if (orbitRepoMode === "existing" && !selectedOrbitRepo) return "Select an existing Orbit repo to continue.";
     return "";
   }, [activeOrg, isAuthenticated, loadingProjects, name, orbitRepoMode, orgLoading, projects.length, resolvedOrgId, selectedOrbitRepo]);
-  const canSubmit = !loading && !submitBlocker;
+  const canSubmit = !loading && !submitBlocker && !!name.trim();
 
   return {
     name, setName,

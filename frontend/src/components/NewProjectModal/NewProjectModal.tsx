@@ -80,6 +80,9 @@ export function NewProjectModal({ isOpen, onClose, onCreated }: NewProjectModalP
             form.setName(e.target.value);
             form.setNameError("");
           }}
+          onBlur={() => {
+            if (!form.name.trim()) form.setNameError("Required");
+          }}
           placeholder="Project name"
           validationMessage={form.nameError}
         />

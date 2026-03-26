@@ -2,7 +2,6 @@ import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
 import type { Agent } from "../../types";
 import { useAgentEditorForm } from "./useAgentEditorForm";
-import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "./AgentEditorModal.module.css";
 
 interface AgentEditorModalProps {
@@ -13,7 +12,6 @@ interface AgentEditorModalProps {
 }
 
 export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEditorModalProps) {
-  const { isMobileLayout } = useAuraCapabilities();
   const {
     name, setName, role, setRole, personality, setPersonality,
     systemPrompt, setSystemPrompt, icon, setIcon, machineType, setMachineType,
@@ -23,7 +21,6 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
   } = useAgentEditorForm(isOpen, agent, onClose, onSaved);
 
   const isEditing = !!agent;
-  const hideMachineTypeToggle = isMobileLayout && !isEditing;
 
   return (
     <Modal
@@ -95,30 +92,24 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
 
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Machine Type</label>
-          {hideMachineTypeToggle ? (
-            <Text variant="muted" size="sm">
-              Remote only on mobile. New mobile agents run on Aura Swarm.
-            </Text>
-          ) : (
-            <div className={styles.machineTypeToggle}>
-              <button
-                type="button"
-                className={`${styles.machineTypeOption} ${machineType === "local" ? styles.machineTypeActive : ""}`}
-                onClick={() => setMachineType("local")}
-              >
-                <Monitor size={14} />
-                Local
-              </button>
-              <button
-                type="button"
-                className={`${styles.machineTypeOption} ${machineType === "remote" ? styles.machineTypeActive : ""}`}
-                onClick={() => setMachineType("remote")}
-              >
-                <Cloud size={14} />
-                Remote
-              </button>
-            </div>
-          )}
+          <div className={styles.machineTypeToggle}>
+            <button
+              type="button"
+              className={`${styles.machineTypeOption} ${machineType === "remote" ? styles.machineTypeActive : ""}`}
+              onClick={() => setMachineType("remote")}
+            >
+              <Cloud size={14} />
+              Remote
+            </button>
+            <button
+              type="button"
+              className={`${styles.machineTypeOption} ${machineType === "local" ? styles.machineTypeActive : ""}`}
+              onClick={() => setMachineType("local")}
+            >
+              <Monitor size={14} />
+              Local
+            </button>
+          </div>
         </div>
 
         <div className={styles.fieldGroup}>
