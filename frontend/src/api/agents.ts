@@ -8,11 +8,11 @@ type ApiRequestOptions = {
 
 export const agentTemplatesApi = {
   list: () => apiFetch<Agent[]>("/api/agents"),
-  create: (data: { name: string; role: string; personality: string; system_prompt: string; skills?: string[]; icon?: string; harness?: "local" | "swarm"; machine_type?: string }) =>
+  create: (data: { name: string; role: string; personality: string; system_prompt: string; skills?: string[]; icon?: string; machine_type?: string }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { signal: options?.signal }),
-  update: (agentId: AgentId, data: { name?: string; role?: string; personality?: string; system_prompt?: string; skills?: string[]; icon?: string | null; harness?: "local" | "swarm"; machine_type?: string }) =>
+  update: (agentId: AgentId, data: { name?: string; role?: string; personality?: string; system_prompt?: string; skills?: string[]; icon?: string | null; machine_type?: string }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
   listEvents: (agentId: AgentId, options?: ApiRequestOptions) =>

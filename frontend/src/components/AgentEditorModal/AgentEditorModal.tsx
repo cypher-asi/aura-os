@@ -14,7 +14,7 @@ interface AgentEditorModalProps {
 export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEditorModalProps) {
   const {
     name, setName, role, setRole, personality, setPersonality,
-    systemPrompt, setSystemPrompt, icon, setIcon, harness, setHarness, machineType, setMachineType,
+    systemPrompt, setSystemPrompt, icon, setIcon, machineType, setMachineType,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,
     handleSave, handleClose, handleImageSelect,
@@ -131,26 +131,6 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
             rows={6}
             mono
           />
-        </div>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Harness</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Button
-              variant={harness === "swarm" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setHarness("swarm")}
-            >
-              Swarm
-            </Button>
-            <Button
-              variant={harness === "local" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setHarness("local")}
-            >
-              Local
-            </Button>
-          </div>
         </div>
 
         {error && <Text variant="muted" size="sm" className={styles.error}>{error}</Text>}

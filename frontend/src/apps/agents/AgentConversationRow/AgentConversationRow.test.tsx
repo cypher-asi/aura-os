@@ -12,7 +12,6 @@ const baseAgent: Agent = {
   system_prompt: "",
   skills: [],
   icon: null,
-  harness: "local",
   machine_type: "local",
   created_at: "2026-03-20T00:00:00Z",
   updated_at: "2026-03-20T00:00:00Z",

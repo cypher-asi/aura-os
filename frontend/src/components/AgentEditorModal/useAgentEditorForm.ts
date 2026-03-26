@@ -14,8 +14,6 @@ interface AgentEditorFormResult {
   setSystemPrompt: (v: string) => void;
   icon: string;
   setIcon: (v: string) => void;
-  harness: "local" | "swarm";
-  setHarness: (v: "local" | "swarm") => void;
   machineType: string;
   setMachineType: (v: string) => void;
   saving: boolean;
@@ -41,7 +39,6 @@ export function useAgentEditorForm(
   const [personality, setPersonality] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [icon, setIcon] = useState("");
-  const [harness, setHarness] = useState<"local" | "swarm">("swarm");
   const [machineType, setMachineType] = useState("local");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -55,11 +52,9 @@ export function useAgentEditorForm(
       setName(agent.name); setRole(agent.role);
       setPersonality(agent.personality); setSystemPrompt(agent.system_prompt);
       setIcon(agent.icon ?? "");
-      setHarness(agent.harness ?? "swarm");
       setMachineType(agent.machine_type ?? "local");
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
-      setHarness("swarm");
       setMachineType("local");
     }
     setError(""); setNameError("");
@@ -96,7 +91,6 @@ export function useAgentEditorForm(
         name: name.trim(), role: role.trim(),
         personality: personality.trim(), system_prompt: systemPrompt.trim(),
         icon: icon || (agent?.icon ? null : undefined),
-        harness,
         machine_type: machineType,
       };
       const saved = agent
@@ -106,11 +100,11 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, harness, machineType, agent, onSaved, onClose]);
+  }, [name, role, personality, systemPrompt, icon, machineType, agent, onSaved, onClose]);
 
   return {
     name, setName, role, setRole, personality, setPersonality,
-    systemPrompt, setSystemPrompt, icon, setIcon, harness, setHarness, machineType, setMachineType,
+    systemPrompt, setSystemPrompt, icon, setIcon, machineType, setMachineType,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,
     handleSave, handleClose, handleImageSelect,

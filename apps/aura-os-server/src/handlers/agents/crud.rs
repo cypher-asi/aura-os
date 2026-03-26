@@ -76,7 +76,7 @@ pub(crate) async fn update_agent(
             None => None,
         },
         machine_type: body.machine_type,
-        harness: body.harness,
+        harness: None,
     };
     let net_agent = client
         .update_agent(&agent_id.to_string(), &jwt, &net_req)
