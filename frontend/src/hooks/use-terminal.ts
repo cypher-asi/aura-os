@@ -49,11 +49,13 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
     let cancelled = false;
     let ws: WebSocket | null = null;
 
-    function wireWs(socket: WebSocket) {
+    function wireWs(socket: WebSocket, isRemote: boolean) {
       ws = socket;
       wsRef.current = socket;
+      let receivedData = false;
 
       socket.onmessage = (event) => {
+        receivedData = true;
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === "output" && msg.data) {
@@ -66,7 +68,14 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
       };
 
       socket.onclose = () => {
-        if (!cancelled) setConnected(false);
+        if (cancelled) return;
+        setConnected(false);
+        if (!receivedData && isRemote) {
+          emitError(
+            outputListeners.current,
+            `Could not connect to the remote agent VM terminal.\r\n\r\n${ANSI_YELLOW}       Make sure the agent is running and the swarm gateway is reachable.${ANSI_RESET}`,
+          );
+        }
       };
 
       socket.onerror = () => {
@@ -89,7 +98,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
       setTerminalId(resp.id);
 
       const socket = new WebSocket(terminalWsUrl(resp.id));
-      wireWs(socket);
+      wireWs(socket, false);
 
       socket.onopen = () => {
         if (!cancelled) setConnected(true);
@@ -101,7 +110,7 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
       const rows = opts.rows ?? 24;
 
       const socket = new WebSocket(remoteTerminalWsUrl(agentId));
-      wireWs(socket);
+      wireWs(socket, true);
 
       socket.onopen = () => {
         if (cancelled) {
