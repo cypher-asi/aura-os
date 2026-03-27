@@ -88,8 +88,9 @@ async function expectProjectMobileChrome(
   const navigation = page.getByRole("navigation", { name: "Primary mobile navigation" });
   await expect(page.getByRole("button", { name: /Open project navigation/i })).toBeVisible();
   await expect(navigation.getByRole("button", { name: "Agent", exact: true })).toBeVisible();
-  await expect(navigation.getByRole("button", { name: "Tasks", exact: true })).toBeVisible();
-  await expect(navigation.getByRole("button", { name: "Files", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("button", { name: "Execution", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("button", { name: "Stats", exact: true })).toBeVisible();
+  await expect(navigation.getByRole("button", { name: "Files", exact: true })).toHaveCount(0);
   await expect(navigation.getByRole("button", { name: "Feed", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toHaveCount(0);
 }

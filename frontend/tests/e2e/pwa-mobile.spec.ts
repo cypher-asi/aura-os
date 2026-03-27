@@ -133,7 +133,7 @@ async function openAppSwitcher(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Open apps" }).click();
 }
 
-async function tapPrimaryNav(page: import("@playwright/test").Page, label: "Agent" | "Tasks" | "Files") {
+async function tapPrimaryNav(page: import("@playwright/test").Page, label: "Agent" | "Execution" | "Stats") {
   await page
     .getByRole("navigation", { name: "Primary mobile navigation" })
     .getByRole("button", { name: label })
@@ -170,11 +170,14 @@ test("mobile root uses project drawer plus the three-tab project navigation", as
     page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Agent", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Tasks", exact: true }),
+    page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Execution", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Stats", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Files", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("button", { name: "Feed", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Projects", exact: true })).toHaveCount(0);
 
@@ -184,7 +187,7 @@ test("mobile root uses project drawer plus the three-tab project navigation", as
   await expect(page.getByText("Current project")).toBeVisible();
 });
 
-test("mobile project navigation opens shared agent, work, and files routes", async ({ page }) => {
+test("mobile project navigation opens shared agent, work, and stats routes", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/projects");
 
@@ -192,21 +195,15 @@ test("mobile project navigation opens shared agent, work, and files routes", asy
   await expect(page).toHaveURL(/\/projects\/proj-1\/agents\/agent-inst-1$/);
   await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible({ timeout: 10000 });
 
-  await tapPrimaryNav(page, "Tasks");
+  await tapPrimaryNav(page, "Execution");
   await expect(page).toHaveURL(/\/projects\/proj-1\/work$/);
   await expect(page.getByText("Execution", { exact: true })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText("Specs")).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("main").getByRole("button", { name: "Tasks" })).toBeVisible();
 
-  const directoryLoaded = page.waitForResponse((response) =>
-    response.url().includes("/api/list-directory") && response.request().method() === "POST",
-  );
-  await tapPrimaryNav(page, "Files");
-  await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
-  await expect(page.getByPlaceholder("Search files...")).toBeVisible({ timeout: 10000 });
-  expect((await directoryLoaded).ok()).toBeTruthy();
-  await expect(page.getByText("Could not load files")).toHaveCount(0);
-  await expect(page.getByText("No linked workspace")).toHaveCount(0);
+  await tapPrimaryNav(page, "Stats");
+  await expect(page).toHaveURL(/\/projects\/proj-1\/stats$/);
+  await expect(page.getByText("Stats", { exact: true })).toBeVisible({ timeout: 10000 });
 });
 
 test("mobile project agent tab surfaces the active project agent and switches instances", async ({ page }) => {
@@ -272,7 +269,8 @@ test("mobile global app switcher opens feed, leaderboard, and profile", async ({
   await expect(page.getByRole("button", { name: "Profile" })).toBeVisible();
 
   await page.getByRole("button", { name: "Agent library" }).click();
-  await expect(page).toHaveURL(/\/agents\/agent-1$/);
+  await expect(page).toHaveURL(/\/agents$/);
+  await expect(page.getByText("Select an agent from your library.")).toBeVisible();
   await expect(page.getByText("Builder Bot")).toBeVisible();
   await expect(page.getByText("Helpful")).toBeVisible();
   await expect(page.getByPlaceholder("Add a follow-up")).toHaveCount(0);
@@ -281,19 +279,34 @@ test("mobile global app switcher opens feed, leaderboard, and profile", async ({
   await openAppSwitcher(page);
   await page.getByRole("button", { name: "Feed" }).click();
   await expect(page).toHaveURL(/\/feed$/);
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toHaveCount(0);
 
   await openAppSwitcher(page);
   await page.getByRole("button", { name: "Leaderboard" }).click();
   await expect(page).toHaveURL(/\/leaderboard$/);
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible();
 
   await openAppSwitcher(page);
   await page.getByRole("button", { name: "Profile" }).click();
   await expect(page).toHaveURL(/\/profile$/);
   await expect(page.getByRole("button", { name: "All activity" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Demo Project" })).toBeVisible();
+});
+
+test("mobile agent library toggles the selected standalone chat open and closed", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+  await page.goto("/agents");
+
+  await expect(page).toHaveURL(/\/agents$/);
+  await expect(page.getByText("Select an agent from your library.")).toBeVisible();
+
+  await page.getByRole("button", { name: /Builder Bot/i }).click();
+  await expect(page).toHaveURL(/\/agents\/agent-1$/);
+
+  await page.getByRole("button", { name: /Builder Bot/i }).click();
+  await expect(page).toHaveURL(/\/agents$/);
+  await expect(page.getByText("Select an agent from your library.")).toBeVisible();
 });
 
 test("mobile global surfaces use the app switcher to return to project mode", async ({ page }) => {
@@ -405,7 +418,7 @@ test("mobile agent tab shows a project empty state when no agent exists", async 
   await expect(page).toHaveURL(/\/projects\/proj-1\/agent$/);
   await expect(page.getByText("No agent is assigned yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Tasks" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Files" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible();
 });
 
 test("mobile project title opens the drawer from the primary project tabs", async ({ page }) => {
@@ -421,6 +434,7 @@ test("mobile project title opens the drawer from the primary project tabs", asyn
   await expect(projectNavigation.getByRole("button", { name: "Agent", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Tasks", exact: true })).toHaveCount(0);
   await expect(projectNavigation.getByRole("button", { name: "Files", exact: true })).toHaveCount(0);
+  await expect(projectNavigation.getByRole("button", { name: "Stats", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Close drawer" }).dispatchEvent("click");
   await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toBeVisible();
 
@@ -438,7 +452,7 @@ test("mobile new project modal opens from the project drawer", async ({ page, br
   await page.locator('button[title="New Project"]:visible').click();
 
   await expect(page.getByPlaceholder("Project name")).toBeVisible();
-  await expect(page.getByText("Linked folder")).toBeVisible();
+  await expect(page.getByText("Project path")).toBeVisible();
   await expect(page.getByText("Environment")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create Project" })).toBeDisabled();
 });

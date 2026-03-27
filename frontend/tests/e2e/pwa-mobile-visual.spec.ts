@@ -189,6 +189,14 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
     path: `test-artifacts/review-shots/${projectName}-${browserName}-global-switcher-mobile-ia.png`,
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: "Agent library" }).click();
+  await expect(page).toHaveURL(/\/agents$/);
+  await expect(page.getByText("Select an agent from your library.")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-library-root-mobile-ia.png`,
+    fullPage: true,
+  });
 });
 
 test("capture mobile work, files, and account sheet", async ({ page, browserName }, testInfo) => {
@@ -220,17 +228,13 @@ test("capture mobile work, files, and account sheet", async ({ page, browserName
     fullPage: true,
   });
 
-  const directoryLoaded = page.waitForResponse((response) =>
-    response.url().includes("/api/list-directory") && response.request().method() === "POST",
-  );
   await page.goto("/projects/proj-1/files");
   await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
-  await expect(page.getByPlaceholder("Search files...")).toBeVisible({ timeout: 15000 });
-  expect((await directoryLoaded).ok()).toBeTruthy();
-  await expect(page.getByText("Workspace snapshot")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("File preview")).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Could not load files")).toHaveCount(0);
-  await expect(page.getByText("No linked workspace")).toHaveCount(0);
+  await expect(page.getByText("Files stay on the remote agent")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("Remote workspace", { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open Agent" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open Execution" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible({ timeout: 10000 });
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-${browserName}-project-files-mobile-ia.png`,
     fullPage: true,
