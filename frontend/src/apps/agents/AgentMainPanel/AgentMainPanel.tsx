@@ -7,10 +7,11 @@ import { TerminalPanelBody } from "../../../components/TerminalPanelBody";
 import { useTerminalPanelStore } from "../../../stores/terminal-panel-store";
 import { AgentInfoPanel } from "../AgentInfoPanel";
 import { LAST_AGENT_ID_KEY, useAgents, useSelectedAgent } from "../stores";
+import { useTerminalTarget } from "../../../hooks/use-terminal-target";
 
 export function AgentMainPanel({ children }: { children?: ReactNode }) {
   const { agentId } = useParams<{ agentId: string }>();
-  const { fetchAgents } = useAgents();
+  const { fetchAgents, status: agentsStatus } = useAgents();
   const { setSelectedAgent, selectedAgent } = useSelectedAgent();
   const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
 
@@ -25,13 +26,16 @@ export function AgentMainPanel({ children }: { children?: ReactNode }) {
     }
   }, [agentId, setSelectedAgent]);
 
-  const { status } = useAgents();
+  const { remoteAgentId, status } = useTerminalTarget({
+    agentId,
+    selectedAgent,
+    agentsStatus,
+  });
 
   useEffect(() => {
     if (status !== "ready") return;
-    const isRemote = selectedAgent?.machine_type === "remote";
-    setRemoteAgentId(isRemote ? selectedAgent?.agent_id : undefined);
-  }, [selectedAgent, status, setRemoteAgentId]);
+    setRemoteAgentId(remoteAgentId);
+  }, [remoteAgentId, status, setRemoteAgentId]);
 
   return (
     <ResponsiveMainLane
