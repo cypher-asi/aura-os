@@ -9,6 +9,7 @@ import { AgentEditorModal } from "../../../components/AgentEditorModal";
 import { AgentConversationRow } from "../AgentConversationRow";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import { api, ApiClientError } from "../../../api/client";
+import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import {
   useAgents,
   useSelectedAgent,
@@ -35,6 +36,7 @@ interface CtxMenuState {
 export function AgentList() {
   const { agents, status, fetchAgents } = useAgents();
   const { setSelectedAgent } = useSelectedAgent();
+  const { isMobileLayout } = useAuraCapabilities();
   const loading = status === "loading" || status === "idle";
   const { query: searchQuery, setAction } = useSidebarSearch();
   const navigate = useNavigate();
@@ -101,6 +103,15 @@ export function AgentList() {
     },
     [fetchAgents, navigate],
   );
+
+  const handleAgentRowClick = useCallback((selectedAgentId: string) => {
+    if (isMobileLayout && selectedAgentId === agentId) {
+      navigate("/agents");
+      return;
+    }
+
+    navigate(`/agents/${selectedAgentId}`);
+  }, [agentId, isMobileLayout, navigate]);
 
   const handleHoverPrefetch = useCallback((e: React.MouseEvent) => {
     const target = (e.target as HTMLElement).closest("button[id]");
@@ -213,7 +224,7 @@ export function AgentList() {
               lastMessage={lastMessage}
               isSelected={agent.agent_id === agentId}
               status={statusMap[agent.agent_id]}
-              onClick={() => navigate(`/agents/${agent.agent_id}`)}
+              onClick={() => handleAgentRowClick(agent.agent_id)}
               onContextMenu={handleContextMenu}
               onMouseOver={handleHoverPrefetch}
             />
