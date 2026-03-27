@@ -121,4 +121,3 @@ pub fn store_zero_auth_session(store: &RocksStore) {
     .unwrap();
     store.put_setting("zero_auth_session", &session).unwrap();
 }
-

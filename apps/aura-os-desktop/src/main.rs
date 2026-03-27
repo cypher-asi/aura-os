@@ -144,7 +144,10 @@ fn bind_listener() -> (StdTcpListener, u16, String) {
     std_listener
         .set_nonblocking(true)
         .expect("failed to set non-blocking");
-    let port = std_listener.local_addr().expect("listener must have local address").port();
+    let port = std_listener
+        .local_addr()
+        .expect("listener must have local address")
+        .port();
     let url = format!("http://127.0.0.1:{port}");
     info!(%url, "server binding ready");
     (std_listener, port, url)
@@ -163,8 +166,8 @@ fn spawn_server(
         rt.block_on(async move {
             let update_state = UpdateState::new(UpdateChannel::Stable);
 
-            let app_state = aura_os_server::build_app_state(&db_path)
-                .expect("failed to open database");
+            let app_state =
+                aura_os_server::build_app_state(&db_path).expect("failed to open database");
             let app = aura_os_server::create_router_with_frontend(app_state, frontend_dir)
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))

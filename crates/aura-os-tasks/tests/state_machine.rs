@@ -2,9 +2,9 @@ use aura_os_core::*;
 use aura_os_tasks::{CompleteTaskParams, TaskService};
 use chrono::Utc;
 
-mod helpers;
 mod claim;
 mod dependencies;
+mod helpers;
 
 // ---------------------------------------------------------------------------
 // 1. Valid and invalid state transitions (pure validation logic)

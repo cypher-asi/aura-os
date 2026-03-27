@@ -330,7 +330,6 @@ pub struct OrgBilling {
     pub plan: String,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreditBalance {
     pub balance_cents: i64,

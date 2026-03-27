@@ -40,9 +40,8 @@ pub(crate) async fn create_agent(
     let agent_id_str = net_agent.id.clone();
     let mut agent = agent_from_network(&net_agent);
 
-    let is_remote = HarnessMode::from_machine_type(
-        machine_type.as_deref().unwrap_or("remote"),
-    ) == HarnessMode::Swarm;
+    let is_remote = HarnessMode::from_machine_type(machine_type.as_deref().unwrap_or("remote"))
+        == HarnessMode::Swarm;
 
     if is_remote {
         let swarm_base_url = state.swarm_base_url.as_deref().ok_or_else(|| {

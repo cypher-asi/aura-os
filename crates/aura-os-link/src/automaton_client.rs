@@ -73,12 +73,10 @@ impl AutomatonClient {
             let automaton_id = serde_json::from_str::<serde_json::Value>(&body)
                 .ok()
                 .and_then(|v| {
-                    v.get("error")
-                        .and_then(|e| e.as_str())
-                        .and_then(|msg| {
-                            msg.find("automaton_id: ")
-                                .map(|pos| msg[pos + 14..].trim_end_matches(')').to_string())
-                        })
+                    v.get("error").and_then(|e| e.as_str()).and_then(|msg| {
+                        msg.find("automaton_id: ")
+                            .map(|pos| msg[pos + 14..].trim_end_matches(')').to_string())
+                    })
                 });
             return Err(AutomatonStartError::Conflict(automaton_id));
         }

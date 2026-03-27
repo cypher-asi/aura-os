@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { PanelSearch } from "../PanelSearch";
 import { StatusBadge } from "../StatusBadge";
+import { api } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { SpecList } from "../../views/SpecList";
@@ -13,11 +14,32 @@ import { SessionList } from "../../views/SessionList";
 import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { getLinkedWorkspaceRoot, getProjectWorkspaceDisplay } from "../../utils/projectWorkspace";
+import { getLinkedWorkspaceRoot, getProjectWorkspaceDisplay, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
 function InfoPanel({ project, onClose }: { project: import("../../types").Project; onClose: () => void }) {
   const workspaceLabel = getProjectWorkspaceDisplay(project) ?? "—";
+  const workspacePath = getProjectWorkspaceRoot(project);
+  const [openingWorkspace, setOpeningWorkspace] = useState(false);
+  const [openWorkspaceError, setOpenWorkspaceError] = useState<string | null>(null);
+
+  const handleOpenWorkspace = async () => {
+    if (!workspacePath || openingWorkspace) {
+      return;
+    }
+    setOpenWorkspaceError(null);
+    setOpeningWorkspace(true);
+    try {
+      const result = await api.openPath(workspacePath);
+      if (!result.ok) {
+        setOpenWorkspaceError(result.error ?? "Could not open workspace folder.");
+      }
+    } catch {
+      setOpenWorkspaceError("Could not open workspace folder.");
+    } finally {
+      setOpeningWorkspace(false);
+    }
+  };
 
   return (
     <div className={styles.infoArea}>
@@ -29,7 +51,24 @@ function InfoPanel({ project, onClose }: { project: import("../../types").Projec
         <Text variant="muted" size="sm" as="span">Status</Text>
         <span><StatusBadge status={project.current_status} /></span>
         <Text variant="muted" size="sm" as="span">Workspace</Text>
-        <Text size="sm" as="span">{workspaceLabel}</Text>
+        <span className={styles.infoWorkspaceCell}>
+          {workspacePath ? (
+            <button
+              type="button"
+              className={styles.infoWorkspaceLink}
+              onClick={handleOpenWorkspace}
+              disabled={openingWorkspace}
+              title={workspacePath}
+            >
+              {workspaceLabel}
+            </button>
+          ) : (
+            <Text size="sm" as="span">{workspaceLabel}</Text>
+          )}
+          {openWorkspaceError ? (
+            <Text size="xs" variant="muted" as="span">{openWorkspaceError}</Text>
+          ) : null}
+        </span>
         <Text variant="muted" size="sm" as="span">Created</Text>
         <Text size="sm" as="span">{new Date(project.created_at).toLocaleString()}</Text>
       </div>

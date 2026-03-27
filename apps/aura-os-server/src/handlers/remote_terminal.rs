@@ -14,7 +14,7 @@ use tracing::{info, warn};
 
 use aura_os_core::HarnessMode;
 
-use crate::error::{ApiError, map_network_error};
+use crate::error::{map_network_error, ApiError};
 use crate::state::AppState;
 
 /// `GET /ws/agents/:agent_id/remote_agent/terminal`
@@ -47,8 +47,7 @@ pub(crate) async fn ws_remote_terminal(
     let base_url = match state.swarm_base_url.as_deref() {
         Some(u) => u,
         None => {
-            return ApiError::service_unavailable("swarm gateway is not configured")
-                .into_response()
+            return ApiError::service_unavailable("swarm gateway is not configured").into_response()
         }
     };
 

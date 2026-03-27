@@ -98,7 +98,9 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
         .collect()
 }
 
-pub(crate) async fn list_directory(Json(req): Json<ListDirectoryRequest>) -> Json<serde_json::Value> {
+pub(crate) async fn list_directory(
+    Json(req): Json<ListDirectoryRequest>,
+) -> Json<serde_json::Value> {
     let target = std::path::Path::new(&req.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,
@@ -193,8 +195,8 @@ fn preview_content_type(path: &std::path::Path) -> &'static str {
         Some("webp") => "image/webp",
         Some("svg") => "image/svg+xml",
         Some("md") | Some("txt") | Some("rs") | Some("ts") | Some("tsx") | Some("js")
-        | Some("jsx") | Some("json") | Some("yaml") | Some("yml") | Some("toml")
-        | Some("css") | Some("html") => "text/plain; charset=utf-8",
+        | Some("jsx") | Some("json") | Some("yaml") | Some("yml") | Some("toml") | Some("css")
+        | Some("html") => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
     }
 }

@@ -13,7 +13,8 @@ fn get_auth_session(state: &AppState) -> Result<ZeroAuthSession, (StatusCode, Js
         .store
         .get_setting("zero_auth_session")
         .map_err(|_| ApiError::unauthorized("not authenticated"))?;
-    serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))
+    serde_json::from_slice(&bytes)
+        .map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))
 }
 
 fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>) {
@@ -47,8 +48,8 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
 /// Results are cached for 60 seconds when credits are available to avoid
 /// hitting the billing API on every chat message.
 pub(crate) async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<ApiError>)> {
-    use std::time::{Duration, Instant};
     use crate::state::CreditCache;
+    use std::time::{Duration, Instant};
 
     const CACHE_TTL: Duration = Duration::from_secs(60);
 

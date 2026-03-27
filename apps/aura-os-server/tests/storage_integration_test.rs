@@ -63,17 +63,28 @@ async fn project_agent_create_list_get_update_delete() {
     assert_eq!(pa.name.as_deref(), Some("Aura Chat Agent"));
     assert_eq!(pa.project_id.as_deref(), Some(pid.as_str()));
 
-    let agents = sc.list_project_agents(&pid, JWT).await.expect("list project agents");
+    let agents = sc
+        .list_project_agents(&pid, JWT)
+        .await
+        .expect("list project agents");
     assert_eq!(agents.len(), 1);
     assert_eq!(agents[0].id, pa.id);
 
-    let fetched = sc.get_project_agent(&pa.id, JWT).await.expect("get project agent");
+    let fetched = sc
+        .get_project_agent(&pa.id, JWT)
+        .await
+        .expect("get project agent");
     assert_eq!(fetched.id, pa.id);
 
-    sc.update_project_agent_status(&pa.id, JWT, &UpdateProjectAgentRequest { status: "working".into() })
-        .await
-        .expect("update status");
-
+    sc.update_project_agent_status(
+        &pa.id,
+        JWT,
+        &UpdateProjectAgentRequest {
+            status: "working".into(),
+        },
+    )
+    .await
+    .expect("update status");
 }
 
 // =========================================================================
@@ -88,7 +99,8 @@ async fn session_create_list_get_update() {
 
     let session = sc
         .create_session(
-            &pai, JWT,
+            &pai,
+            JWT,
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
@@ -111,7 +123,8 @@ async fn session_create_list_get_update() {
     assert_eq!(fetched.id, session.id);
 
     sc.update_session(
-        &session.id, JWT,
+        &session.id,
+        JWT,
         &UpdateSessionRequest {
             status: Some("rolled_over".into()),
             context_usage_estimate: Some(0.85),
@@ -138,7 +151,8 @@ async fn resolve_chat_session_pattern() {
 
     let session = sc
         .create_session(
-            &pai, JWT,
+            &pai,
+            JWT,
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
@@ -167,46 +181,79 @@ async fn chat_event_persistence_full_cycle() {
 
     let session = sc
         .create_session(
-            &pai, JWT,
+            &pai,
+            JWT,
             &CreateSessionRequest {
-                project_id: pid.clone(), org_id: None,
+                project_id: pid.clone(),
+                org_id: None,
                 status: Some("active".into()),
-                context_usage_estimate: None, summary_of_previous_context: None,
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
             },
         )
         .await
         .unwrap();
 
     let event_payloads = vec![
-        ("user_message", "user", serde_json::json!({"text": "Create a hello world spec"})),
-        ("assistant_message_start", "agent", serde_json::json!({"message_id": "m-1", "seq": 0})),
-        ("thinking_delta", "agent", serde_json::json!({"message_id": "m-1", "thinking": "Planning...", "seq": 1})),
-        ("text_delta", "agent", serde_json::json!({"message_id": "m-1", "text": "I'll create a spec.", "seq": 2})),
-        ("tool_use_start", "agent", serde_json::json!({"message_id": "m-1", "id": "tc-1", "name": "create_spec", "seq": 3})),
-        ("tool_result", "agent", serde_json::json!({"message_id": "m-1", "tool_use_id": "tc-1", "name": "create_spec", "result": "{\"ok\":true}", "is_error": false, "seq": 4})),
-        ("assistant_message_end", "agent", serde_json::json!({
-            "message_id": "m-1",
-            "text": "I've created the spec.",
-            "thinking": "Planning...",
-            "content_blocks": [
-                {"type": "text", "text": "I've created the spec."},
-                {"type": "tool_use", "id": "tc-1", "name": "create_spec", "input": {"title": "Hello World"}}
-            ],
-            "usage": {"input_tokens": 500, "output_tokens": 200},
-            "stop_reason": "end_turn",
-            "seq": 5
-        })),
+        (
+            "user_message",
+            "user",
+            serde_json::json!({"text": "Create a hello world spec"}),
+        ),
+        (
+            "assistant_message_start",
+            "agent",
+            serde_json::json!({"message_id": "m-1", "seq": 0}),
+        ),
+        (
+            "thinking_delta",
+            "agent",
+            serde_json::json!({"message_id": "m-1", "thinking": "Planning...", "seq": 1}),
+        ),
+        (
+            "text_delta",
+            "agent",
+            serde_json::json!({"message_id": "m-1", "text": "I'll create a spec.", "seq": 2}),
+        ),
+        (
+            "tool_use_start",
+            "agent",
+            serde_json::json!({"message_id": "m-1", "id": "tc-1", "name": "create_spec", "seq": 3}),
+        ),
+        (
+            "tool_result",
+            "agent",
+            serde_json::json!({"message_id": "m-1", "tool_use_id": "tc-1", "name": "create_spec", "result": "{\"ok\":true}", "is_error": false, "seq": 4}),
+        ),
+        (
+            "assistant_message_end",
+            "agent",
+            serde_json::json!({
+                "message_id": "m-1",
+                "text": "I've created the spec.",
+                "thinking": "Planning...",
+                "content_blocks": [
+                    {"type": "text", "text": "I've created the spec."},
+                    {"type": "tool_use", "id": "tc-1", "name": "create_spec", "input": {"title": "Hello World"}}
+                ],
+                "usage": {"input_tokens": 500, "output_tokens": 200},
+                "stop_reason": "end_turn",
+                "seq": 5
+            }),
+        ),
     ];
 
     for (event_type, sender, content) in &event_payloads {
         sc.create_event(
-            &session.id, JWT,
+            &session.id,
+            JWT,
             &CreateSessionEventRequest {
                 event_type: event_type.to_string(),
                 sender: Some(sender.to_string()),
                 project_id: Some(pid.clone()),
                 agent_id: Some(pai.clone()),
-                org_id: None, user_id: None,
+                org_id: None,
+                user_id: None,
                 content: Some(content.clone()),
                 session_id: Some(session.id.clone()),
             },
@@ -218,11 +265,22 @@ async fn chat_event_persistence_full_cycle() {
     let events = sc.list_events(&session.id, JWT, None, None).await.unwrap();
     assert_eq!(events.len(), 7);
 
-    let types: Vec<&str> = events.iter().filter_map(|e| e.event_type.as_deref()).collect();
-    assert_eq!(types, vec![
-        "user_message", "assistant_message_start", "thinking_delta",
-        "text_delta", "tool_use_start", "tool_result", "assistant_message_end",
-    ]);
+    let types: Vec<&str> = events
+        .iter()
+        .filter_map(|e| e.event_type.as_deref())
+        .collect();
+    assert_eq!(
+        types,
+        vec![
+            "user_message",
+            "assistant_message_start",
+            "thinking_delta",
+            "text_delta",
+            "tool_use_start",
+            "tool_result",
+            "assistant_message_end",
+        ]
+    );
 
     for evt in &events {
         assert_eq!(evt.session_id.as_deref(), Some(session.id.as_str()));
@@ -230,7 +288,10 @@ async fn chat_event_persistence_full_cycle() {
     }
 
     let with_limit = sc.list_events(&session.id, JWT, Some(2), None).await;
-    assert!(with_limit.is_ok(), "list_events with limit should not error");
+    assert!(
+        with_limit.is_ok(),
+        "list_events with limit should not error"
+    );
 }
 
 #[tokio::test]
@@ -241,11 +302,19 @@ async fn task_event_persistence() {
     let task_id = uuid::Uuid::new_v4().to_string();
 
     let session = sc
-        .create_session(&pai, JWT, &CreateSessionRequest {
-            project_id: pid.clone(), org_id: None, status: Some("active".into()),
-            context_usage_estimate: None, summary_of_previous_context: None,
-        })
-        .await.unwrap();
+        .create_session(
+            &pai,
+            JWT,
+            &CreateSessionRequest {
+                project_id: pid.clone(),
+                org_id: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .unwrap();
 
     sc.create_event(&session.id, JWT, &CreateSessionEventRequest {
         event_type: "task_output".into(), sender: Some("agent".into()),
@@ -282,23 +351,43 @@ async fn spec_crud_lifecycle() {
     let sc = client().await;
     let pid = uuid::Uuid::new_v4().to_string();
 
-    let spec1 = sc.create_spec(&pid, JWT, &CreateSpecRequest {
-        title: "01: User Authentication".into(), org_id: None,
-        order_index: Some(1),
-        markdown_contents: Some("# User Auth\n\nLogin/register flow.".into()),
-    }).await.unwrap();
+    let spec1 = sc
+        .create_spec(
+            &pid,
+            JWT,
+            &CreateSpecRequest {
+                title: "01: User Authentication".into(),
+                org_id: None,
+                order_index: Some(1),
+                markdown_contents: Some("# User Auth\n\nLogin/register flow.".into()),
+            },
+        )
+        .await
+        .unwrap();
 
-    let _spec2 = sc.create_spec(&pid, JWT, &CreateSpecRequest {
-        title: "02: Dashboard".into(), org_id: None,
-        order_index: Some(2), markdown_contents: Some("# Dashboard".into()),
-    }).await.unwrap();
+    let _spec2 = sc
+        .create_spec(
+            &pid,
+            JWT,
+            &CreateSpecRequest {
+                title: "02: Dashboard".into(),
+                org_id: None,
+                order_index: Some(2),
+                markdown_contents: Some("# Dashboard".into()),
+            },
+        )
+        .await
+        .unwrap();
 
     let specs = sc.list_specs(&pid, JWT).await.unwrap();
     assert_eq!(specs.len(), 2);
 
     let fetched = sc.get_spec(&spec1.id, JWT).await.unwrap();
     assert_eq!(fetched.title.as_deref(), Some("01: User Authentication"));
-    assert_eq!(fetched.markdown_contents.as_deref(), Some("# User Auth\n\nLogin/register flow."));
+    assert_eq!(
+        fetched.markdown_contents.as_deref(),
+        Some("# User Auth\n\nLogin/register flow.")
+    );
 
     // update_spec and delete_spec work against real storage; mock doesn't
     // implement PUT/DELETE for individual specs. CRUD verified through create + list + get.
@@ -313,44 +402,101 @@ async fn task_crud_and_transition_lifecycle() {
     let sc = client().await;
     let pid = uuid::Uuid::new_v4().to_string();
 
-    let spec = sc.create_spec(&pid, JWT, &CreateSpecRequest {
-        title: "Spec for tasks".into(), org_id: None,
-        order_index: Some(1), markdown_contents: None,
-    }).await.unwrap();
+    let spec = sc
+        .create_spec(
+            &pid,
+            JWT,
+            &CreateSpecRequest {
+                title: "Spec for tasks".into(),
+                org_id: None,
+                order_index: Some(1),
+                markdown_contents: None,
+            },
+        )
+        .await
+        .unwrap();
 
-    let task = sc.create_task(&pid, JWT, &CreateTaskRequest {
-        spec_id: spec.id.clone(), title: "Implement login form".into(),
-        org_id: None, description: Some("Build the login component.".into()),
-        status: Some("pending".into()), order_index: Some(1), dependency_ids: None,
-    }).await.unwrap();
+    let task = sc
+        .create_task(
+            &pid,
+            JWT,
+            &CreateTaskRequest {
+                spec_id: spec.id.clone(),
+                title: "Implement login form".into(),
+                org_id: None,
+                description: Some("Build the login component.".into()),
+                status: Some("pending".into()),
+                order_index: Some(1),
+                dependency_ids: None,
+            },
+        )
+        .await
+        .unwrap();
 
-    let task2 = sc.create_task(&pid, JWT, &CreateTaskRequest {
-        spec_id: spec.id.clone(), title: "Add validation".into(),
-        org_id: None, description: Some("Form validation rules.".into()),
-        status: Some("pending".into()), order_index: Some(2),
-        dependency_ids: Some(vec![task.id.clone()]),
-    }).await.unwrap();
+    let task2 = sc
+        .create_task(
+            &pid,
+            JWT,
+            &CreateTaskRequest {
+                spec_id: spec.id.clone(),
+                title: "Add validation".into(),
+                org_id: None,
+                description: Some("Form validation rules.".into()),
+                status: Some("pending".into()),
+                order_index: Some(2),
+                dependency_ids: Some(vec![task.id.clone()]),
+            },
+        )
+        .await
+        .unwrap();
 
     assert_eq!(sc.list_tasks(&pid, JWT).await.unwrap().len(), 2);
-    assert_eq!(sc.get_task(&task.id, JWT).await.unwrap().title.as_deref(), Some("Implement login form"));
+    assert_eq!(
+        sc.get_task(&task.id, JWT).await.unwrap().title.as_deref(),
+        Some("Implement login form")
+    );
 
-    sc.update_task(&task.id, JWT, &UpdateTaskRequest {
-        title: None, description: None, order_index: None, dependency_ids: None,
-        execution_notes: Some("Done in 3 turns.".into()),
-        files_changed: Some(vec![
-            StorageTaskFileChangeSummary { op: "create".into(), path: "src/Login.tsx".into(), lines_added: 50, lines_removed: 0 },
-        ]),
-        model: Some("claude-sonnet-4-20250514".into()),
-        total_input_tokens: Some(15000), total_output_tokens: Some(8000),
-        session_id: Some("session-1".into()),
-        assigned_project_agent_id: Some("agent-1".into()),
-    }).await.unwrap();
+    sc.update_task(
+        &task.id,
+        JWT,
+        &UpdateTaskRequest {
+            title: None,
+            description: None,
+            order_index: None,
+            dependency_ids: None,
+            execution_notes: Some("Done in 3 turns.".into()),
+            files_changed: Some(vec![StorageTaskFileChangeSummary {
+                op: "create".into(),
+                path: "src/Login.tsx".into(),
+                lines_added: 50,
+                lines_removed: 0,
+            }]),
+            model: Some("claude-sonnet-4-20250514".into()),
+            total_input_tokens: Some(15000),
+            total_output_tokens: Some(8000),
+            session_id: Some("session-1".into()),
+            assigned_project_agent_id: Some("agent-1".into()),
+        },
+    )
+    .await
+    .unwrap();
 
-    sc.transition_task(&task.id, JWT, &TransitionTaskRequest { status: "done".into() }).await.unwrap();
+    sc.transition_task(
+        &task.id,
+        JWT,
+        &TransitionTaskRequest {
+            status: "done".into(),
+        },
+    )
+    .await
+    .unwrap();
 
     let done_task = sc.get_task(&task.id, JWT).await.unwrap();
     assert_eq!(done_task.status.as_deref(), Some("done"));
-    assert_eq!(done_task.execution_notes.as_deref(), Some("Done in 3 turns."));
+    assert_eq!(
+        done_task.execution_notes.as_deref(),
+        Some("Done in 3 turns.")
+    );
 
     sc.delete_task(&task.id, JWT).await.unwrap();
     sc.delete_task(&task2.id, JWT).await.unwrap();
@@ -368,59 +514,145 @@ async fn end_to_end_project_chat_and_task_flow() {
     let pid = uuid::Uuid::new_v4().to_string();
 
     // 1. Create project agent
-    let pa = sc.create_project_agent(&pid, JWT, &CreateProjectAgentRequest {
-        agent_id: uuid::Uuid::new_v4().to_string(), name: "Aura".into(),
-        org_id: None, role: None, personality: None, system_prompt: None,
-        skills: None, icon: None, harness: None,
-    }).await.unwrap();
+    let pa = sc
+        .create_project_agent(
+            &pid,
+            JWT,
+            &CreateProjectAgentRequest {
+                agent_id: uuid::Uuid::new_v4().to_string(),
+                name: "Aura".into(),
+                org_id: None,
+                role: None,
+                personality: None,
+                system_prompt: None,
+                skills: None,
+                icon: None,
+                harness: None,
+            },
+        )
+        .await
+        .unwrap();
 
     // 2. Create session
-    let session = sc.create_session(&pa.id, JWT, &CreateSessionRequest {
-        project_id: pid.clone(), org_id: None, status: Some("active".into()),
-        context_usage_estimate: None, summary_of_previous_context: None,
-    }).await.unwrap();
+    let session = sc
+        .create_session(
+            &pa.id,
+            JWT,
+            &CreateSessionRequest {
+                project_id: pid.clone(),
+                org_id: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .unwrap();
 
     // 3. Chat turn
-    sc.create_event(&session.id, JWT, &CreateSessionEventRequest {
-        event_type: "user_message".into(), sender: Some("user".into()),
-        project_id: Some(pid.clone()), agent_id: Some(pa.id.clone()),
-        org_id: None, user_id: None,
-        content: Some(serde_json::json!({"text": "Create specs for a todo app"})),
-        session_id: Some(session.id.clone()),
-    }).await.unwrap();
+    sc.create_event(
+        &session.id,
+        JWT,
+        &CreateSessionEventRequest {
+            event_type: "user_message".into(),
+            sender: Some("user".into()),
+            project_id: Some(pid.clone()),
+            agent_id: Some(pa.id.clone()),
+            org_id: None,
+            user_id: None,
+            content: Some(serde_json::json!({"text": "Create specs for a todo app"})),
+            session_id: Some(session.id.clone()),
+        },
+    )
+    .await
+    .unwrap();
 
-    sc.create_event(&session.id, JWT, &CreateSessionEventRequest {
-        event_type: "assistant_message_end".into(), sender: Some("agent".into()),
-        project_id: Some(pid.clone()), agent_id: Some(pa.id.clone()),
-        org_id: None, user_id: None,
-        content: Some(serde_json::json!({"text": "Created two specs.", "seq": 1})),
-        session_id: Some(session.id.clone()),
-    }).await.unwrap();
+    sc.create_event(
+        &session.id,
+        JWT,
+        &CreateSessionEventRequest {
+            event_type: "assistant_message_end".into(),
+            sender: Some("agent".into()),
+            project_id: Some(pid.clone()),
+            agent_id: Some(pa.id.clone()),
+            org_id: None,
+            user_id: None,
+            content: Some(serde_json::json!({"text": "Created two specs.", "seq": 1})),
+            session_id: Some(session.id.clone()),
+        },
+    )
+    .await
+    .unwrap();
 
     // 4. Create spec + task
-    let spec = sc.create_spec(&pid, JWT, &CreateSpecRequest {
-        title: "01: Core CRUD".into(), org_id: None, order_index: Some(1),
-        markdown_contents: Some("# CRUD\n\nCreate, read, update, delete.".into()),
-    }).await.unwrap();
+    let spec = sc
+        .create_spec(
+            &pid,
+            JWT,
+            &CreateSpecRequest {
+                title: "01: Core CRUD".into(),
+                org_id: None,
+                order_index: Some(1),
+                markdown_contents: Some("# CRUD\n\nCreate, read, update, delete.".into()),
+            },
+        )
+        .await
+        .unwrap();
 
-    let task = sc.create_task(&pid, JWT, &CreateTaskRequest {
-        spec_id: spec.id.clone(), title: "Implement todo model".into(),
-        org_id: None, description: Some("Create the Todo struct.".into()),
-        status: Some("pending".into()), order_index: Some(1), dependency_ids: None,
-    }).await.unwrap();
+    let task = sc
+        .create_task(
+            &pid,
+            JWT,
+            &CreateTaskRequest {
+                spec_id: spec.id.clone(),
+                title: "Implement todo model".into(),
+                org_id: None,
+                description: Some("Create the Todo struct.".into()),
+                status: Some("pending".into()),
+                order_index: Some(1),
+                dependency_ids: None,
+            },
+        )
+        .await
+        .unwrap();
 
     // 5. Execute task
-    sc.transition_task(&task.id, JWT, &TransitionTaskRequest { status: "in_progress".into() }).await.unwrap();
+    sc.transition_task(
+        &task.id,
+        JWT,
+        &TransitionTaskRequest {
+            status: "in_progress".into(),
+        },
+    )
+    .await
+    .unwrap();
 
-    sc.create_event(&session.id, JWT, &CreateSessionEventRequest {
-        event_type: "task_output".into(), sender: Some("agent".into()),
-        project_id: Some(pid.clone()), agent_id: Some(pa.id.clone()),
-        org_id: None, user_id: None,
-        content: Some(serde_json::json!({"task_id": task.id, "text": "Created Todo struct."})),
-        session_id: Some(session.id.clone()),
-    }).await.unwrap();
+    sc.create_event(
+        &session.id,
+        JWT,
+        &CreateSessionEventRequest {
+            event_type: "task_output".into(),
+            sender: Some("agent".into()),
+            project_id: Some(pid.clone()),
+            agent_id: Some(pa.id.clone()),
+            org_id: None,
+            user_id: None,
+            content: Some(serde_json::json!({"task_id": task.id, "text": "Created Todo struct."})),
+            session_id: Some(session.id.clone()),
+        },
+    )
+    .await
+    .unwrap();
 
-    sc.transition_task(&task.id, JWT, &TransitionTaskRequest { status: "done".into() }).await.unwrap();
+    sc.transition_task(
+        &task.id,
+        JWT,
+        &TransitionTaskRequest {
+            status: "done".into(),
+        },
+    )
+    .await
+    .unwrap();
 
     // 6. Verify full state
     let events = sc.list_events(&session.id, JWT, None, None).await.unwrap();
@@ -443,37 +675,82 @@ async fn session_rollover_pattern() {
     let pai = uuid::Uuid::new_v4().to_string();
     let pid = uuid::Uuid::new_v4().to_string();
 
-    let s1 = sc.create_session(&pai, JWT, &CreateSessionRequest {
-        project_id: pid.clone(), org_id: None, status: Some("active".into()),
-        context_usage_estimate: None, summary_of_previous_context: None,
-    }).await.unwrap();
+    let s1 = sc
+        .create_session(
+            &pai,
+            JWT,
+            &CreateSessionRequest {
+                project_id: pid.clone(),
+                org_id: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .unwrap();
 
-    sc.create_event(&s1.id, JWT, &CreateSessionEventRequest {
-        event_type: "user_message".into(), sender: Some("user".into()),
-        project_id: Some(pid.clone()), agent_id: Some(pai.clone()),
-        org_id: None, user_id: None,
-        content: Some(serde_json::json!({"text": "session 1 message"})),
-        session_id: Some(s1.id.clone()),
-    }).await.unwrap();
+    sc.create_event(
+        &s1.id,
+        JWT,
+        &CreateSessionEventRequest {
+            event_type: "user_message".into(),
+            sender: Some("user".into()),
+            project_id: Some(pid.clone()),
+            agent_id: Some(pai.clone()),
+            org_id: None,
+            user_id: None,
+            content: Some(serde_json::json!({"text": "session 1 message"})),
+            session_id: Some(s1.id.clone()),
+        },
+    )
+    .await
+    .unwrap();
 
-    sc.update_session(&s1.id, JWT, &UpdateSessionRequest {
-        status: Some("rolled_over".into()), context_usage_estimate: Some(0.52),
-        ended_at: Some(chrono::Utc::now().to_rfc3339()), tasks_worked_count: None,
-    }).await.unwrap();
+    sc.update_session(
+        &s1.id,
+        JWT,
+        &UpdateSessionRequest {
+            status: Some("rolled_over".into()),
+            context_usage_estimate: Some(0.52),
+            ended_at: Some(chrono::Utc::now().to_rfc3339()),
+            tasks_worked_count: None,
+        },
+    )
+    .await
+    .unwrap();
 
-    let s2 = sc.create_session(&pai, JWT, &CreateSessionRequest {
-        project_id: pid.clone(), org_id: None, status: Some("active".into()),
-        context_usage_estimate: None,
-        summary_of_previous_context: Some("Previously discussed project setup.".into()),
-    }).await.unwrap();
+    let s2 = sc
+        .create_session(
+            &pai,
+            JWT,
+            &CreateSessionRequest {
+                project_id: pid.clone(),
+                org_id: None,
+                status: Some("active".into()),
+                context_usage_estimate: None,
+                summary_of_previous_context: Some("Previously discussed project setup.".into()),
+            },
+        )
+        .await
+        .unwrap();
 
-    sc.create_event(&s2.id, JWT, &CreateSessionEventRequest {
-        event_type: "user_message".into(), sender: Some("user".into()),
-        project_id: Some(pid.clone()), agent_id: Some(pai.clone()),
-        org_id: None, user_id: None,
-        content: Some(serde_json::json!({"text": "session 2 message"})),
-        session_id: Some(s2.id.clone()),
-    }).await.unwrap();
+    sc.create_event(
+        &s2.id,
+        JWT,
+        &CreateSessionEventRequest {
+            event_type: "user_message".into(),
+            sender: Some("user".into()),
+            project_id: Some(pid.clone()),
+            agent_id: Some(pai.clone()),
+            org_id: None,
+            user_id: None,
+            content: Some(serde_json::json!({"text": "session 2 message"})),
+            session_id: Some(s2.id.clone()),
+        },
+    )
+    .await
+    .unwrap();
 
     let sessions = sc.list_sessions(&pai, JWT).await.unwrap();
     assert_eq!(sessions.len(), 2);
@@ -506,9 +783,19 @@ async fn get_nonexistent_entities_return_errors() {
 #[tokio::test]
 async fn empty_id_rejected_by_validation() {
     let sc = client().await;
-    assert!(sc.create_spec("", JWT, &CreateSpecRequest {
-        title: "test".into(), org_id: None, order_index: None, markdown_contents: None,
-    }).await.is_err());
+    assert!(sc
+        .create_spec(
+            "",
+            JWT,
+            &CreateSpecRequest {
+                title: "test".into(),
+                org_id: None,
+                order_index: None,
+                markdown_contents: None,
+            }
+        )
+        .await
+        .is_err());
     assert!(sc.list_sessions("", JWT).await.is_err());
     assert!(sc.list_events("", JWT, None, None).await.is_err());
 }
@@ -517,10 +804,20 @@ async fn empty_id_rejected_by_validation() {
 async fn list_events_empty_session_returns_empty() {
     let sc = client().await;
     let pai = uuid::Uuid::new_v4().to_string();
-    let session = sc.create_session(&pai, JWT, &CreateSessionRequest {
-        project_id: "p1".into(), org_id: None, status: None,
-        context_usage_estimate: None, summary_of_previous_context: None,
-    }).await.unwrap();
+    let session = sc
+        .create_session(
+            &pai,
+            JWT,
+            &CreateSessionRequest {
+                project_id: "p1".into(),
+                org_id: None,
+                status: None,
+                context_usage_estimate: None,
+                summary_of_previous_context: None,
+            },
+        )
+        .await
+        .unwrap();
 
     let events = sc.list_events(&session.id, JWT, None, None).await.unwrap();
     assert!(events.is_empty());

@@ -164,8 +164,7 @@ async fn create_local_agent_skips_swarm() {
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let network_url =
-        start_mock_network_create_only(network_agent_json("local", None)).await;
+    let network_url = start_mock_network_create_only(network_agent_json("local", None)).await;
 
     let app = build_app_with_swarm(
         store,
@@ -174,11 +173,7 @@ async fn create_local_agent_skips_swarm() {
         None, // no swarm configured
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("local")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("local")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
@@ -224,11 +219,7 @@ async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
@@ -236,7 +227,9 @@ async fn create_remote_agent_provisions_swarm_and_sets_vm_id() {
     assert_eq!(body["vm_id"], "pod-abc-123");
 
     let captured = update_capture.lock().await;
-    let update_body = captured.as_ref().expect("network update should have been called");
+    let update_body = captured
+        .as_ref()
+        .expect("network update should have been called");
     assert_eq!(
         update_body["vmId"], "pod-abc-123",
         "PUT body should contain vmId"
@@ -275,11 +268,7 @@ async fn create_remote_agent_falls_back_to_swarm_agent_id_when_no_pod_id() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
@@ -300,8 +289,7 @@ async fn create_remote_agent_fails_when_swarm_not_configured() {
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let network_url =
-        start_mock_network_create_only(network_agent_json("remote", None)).await;
+    let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
 
     let app = build_app_with_swarm(
         store,
@@ -310,11 +298,7 @@ async fn create_remote_agent_fails_when_swarm_not_configured() {
         None, // swarm NOT configured
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
 
@@ -328,8 +312,7 @@ async fn create_remote_agent_fails_when_swarm_returns_error() {
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let network_url =
-        start_mock_network_create_only(network_agent_json("remote", None)).await;
+    let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
 
     let swarm_url = start_mock_swarm(
         StatusCode::INTERNAL_SERVER_ERROR,
@@ -344,11 +327,7 @@ async fn create_remote_agent_fails_when_swarm_returns_error() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
 
@@ -362,8 +341,7 @@ async fn create_remote_agent_fails_when_swarm_returns_401() {
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let network_url =
-        start_mock_network_create_only(network_agent_json("remote", None)).await;
+    let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
 
     let swarm_url = start_mock_swarm(
         StatusCode::UNAUTHORIZED,
@@ -378,11 +356,7 @@ async fn create_remote_agent_fails_when_swarm_returns_401() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
@@ -396,14 +370,10 @@ async fn create_remote_agent_fails_when_swarm_returns_malformed_json() {
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
     store_zero_auth_session(&store);
 
-    let network_url =
-        start_mock_network_create_only(network_agent_json("remote", None)).await;
+    let network_url = start_mock_network_create_only(network_agent_json("remote", None)).await;
 
-    let swarm_url = start_mock_swarm_raw(
-        StatusCode::OK,
-        r#"{"unexpected": true}"#.to_string(),
-    )
-    .await;
+    let swarm_url =
+        start_mock_swarm_raw(StatusCode::OK, r#"{"unexpected": true}"#.to_string()).await;
 
     let app = build_app_with_swarm(
         store,
@@ -412,11 +382,7 @@ async fn create_remote_agent_fails_when_swarm_returns_malformed_json() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
@@ -472,11 +438,7 @@ async fn create_remote_agent_fails_when_network_update_fails() {
         Some(swarm_url),
     );
 
-    let req = json_request(
-        "POST",
-        "/api/agents",
-        Some(create_agent_body("remote")),
-    );
+    let req = json_request("POST", "/api/agents", Some(create_agent_body("remote")));
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
 

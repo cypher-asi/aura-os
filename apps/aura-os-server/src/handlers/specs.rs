@@ -19,7 +19,11 @@ pub(crate) struct SpecQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
 }
 
-async fn resolve_harness_mode(state: &AppState, project_id: &ProjectId, params: &SpecQueryParams) -> HarnessMode {
+async fn resolve_harness_mode(
+    state: &AppState,
+    project_id: &ProjectId,
+    params: &SpecQueryParams,
+) -> HarnessMode {
     if let Some(aiid) = params.agent_instance_id {
         state
             .agent_instance_service

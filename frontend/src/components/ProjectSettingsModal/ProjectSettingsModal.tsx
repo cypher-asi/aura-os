@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Input, Spinner, Text } from "@cypher-asi/zui";
 import { api, type OrbitCollaborator } from "../../api/client";
 import type { Project } from "../../types";
+import { PathInput } from "../PathInput";
 import styles from "./ProjectSettingsModal.module.css";
 
 interface ProjectSettingsModalProps {
@@ -12,6 +13,7 @@ interface ProjectSettingsModalProps {
 
 export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettingsModalProps) {
   const [project, setProject] = useState<Project | null>(null);
+  const [linkedFolderPath, setLinkedFolderPath] = useState("");
   const [gitRepoUrl, setGitRepoUrl] = useState("");
   const [gitBranch, setGitBranch] = useState("main");
   const [collaborators, setCollaborators] = useState<OrbitCollaborator[] | null>(null);
@@ -32,6 +34,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
       .getProject(target.project_id)
       .then((p) => {
         setProject(p);
+        setLinkedFolderPath(p.linked_folder_path ?? "");
         setGitRepoUrl(p.git_repo_url ?? "");
         setGitBranch(p.git_branch ?? "main");
       })
@@ -58,6 +61,8 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
     setError("");
     try {
       const updated = await api.updateProject(project.project_id, {
+        linked_folder_path: linkedFolderPath.trim() || undefined,
+        workspace_display_path: linkedFolderPath.trim() || undefined,
         git_repo_url: gitRepoUrl.trim() || undefined,
         git_branch: gitBranch.trim() || undefined,
       });
@@ -68,7 +73,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
     } finally {
       setSaving(false);
     }
-  }, [project, gitRepoUrl, gitBranch, onSaved, onClose]);
+  }, [project, linkedFolderPath, gitRepoUrl, gitBranch, onSaved, onClose]);
 
   return (
     <Modal
@@ -93,6 +98,16 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
         </div>
       ) : (
         <div className={styles.formColumn}>
+          <Text variant="muted" size="sm" className={styles.sectionLabel}>
+            Workspace
+          </Text>
+          <PathInput
+            value={linkedFolderPath}
+            onChange={setLinkedFolderPath}
+            placeholder="Choose workspace folder"
+            mode="folder"
+          />
+
           <Text variant="muted" size="sm" className={styles.sectionLabel}>
             Git / Orbit
           </Text>

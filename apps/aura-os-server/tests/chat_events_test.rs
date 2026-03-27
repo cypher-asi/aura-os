@@ -194,10 +194,9 @@ async fn events_to_session_history_reconstructs_correctly() {
         },
     ];
 
-    let reconstructed =
-        aura_os_server::handlers_test_support::events_to_session_history_pub(
-            &events, "agent-1", "proj-1",
-        );
+    let reconstructed = aura_os_server::handlers_test_support::events_to_session_history_pub(
+        &events, "agent-1", "proj-1",
+    );
 
     assert_eq!(reconstructed.len(), 3, "text_delta should be skipped");
     assert_eq!(reconstructed[0].role, ChatRole::User);
@@ -269,7 +268,11 @@ async fn session_events_to_conversation_history_correct_roles() {
     let history =
         aura_os_server::handlers_test_support::session_events_to_conversation_history_pub(&events);
 
-    assert_eq!(history.len(), 2, "system role and empty content should be filtered");
+    assert_eq!(
+        history.len(),
+        2,
+        "system role and empty content should be filtered"
+    );
     assert_eq!(history[0].role, "user");
     assert_eq!(history[0].content, "Hello");
     assert_eq!(history[1].role, "assistant");
@@ -348,13 +351,12 @@ async fn events_endpoint_returns_session_event_shape() {
 
 #[tokio::test]
 async fn system_prompt_includes_project_context() {
-    let prompt =
-        aura_os_server::handlers_test_support::build_project_system_prompt_for_test(
-            "test-project-id",
-            "My Project",
-            "A test project for integration testing",
-            "You are a helpful assistant.",
-        );
+    let prompt = aura_os_server::handlers_test_support::build_project_system_prompt_for_test(
+        "test-project-id",
+        "My Project",
+        "A test project for integration testing",
+        "You are a helpful assistant.",
+    );
 
     assert!(
         prompt.contains("<project_context>"),
@@ -364,10 +366,7 @@ async fn system_prompt_includes_project_context() {
         prompt.contains("test-project-id"),
         "should contain project_id"
     );
-    assert!(
-        prompt.contains("My Project"),
-        "should contain project name"
-    );
+    assert!(prompt.contains("My Project"), "should contain project name");
     assert!(
         prompt.contains("A test project for integration testing"),
         "should contain description"

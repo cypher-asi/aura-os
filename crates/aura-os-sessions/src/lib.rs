@@ -402,7 +402,6 @@ impl SessionService {
             .await?
             .len())
     }
-
 }
 
 #[cfg(test)]

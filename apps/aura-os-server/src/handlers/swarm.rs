@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use aura_os_core::HarnessMode;
 
-use crate::error::{ApiError, ApiResult, map_network_error};
+use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake", "start"];

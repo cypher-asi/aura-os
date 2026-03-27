@@ -78,6 +78,7 @@ export function StatsDashboard({ variant = "sidekick" }: StatsDashboardProps) {
         </Text>
       </div>
       <div className={cx(styles.statsGrid, isMobile && mobileStyles.mobileStatsGrid)}>
+        <StatCard value={stats.total_tasks} label="Total" variant={variant} />
         <StatCard value={stats.pending_tasks} label="Pending" variant={variant} />
         <StatCard value={stats.ready_tasks} label="Ready" variant={variant} />
         <StatCard value={stats.in_progress_tasks} label="Active" variant={variant} />
