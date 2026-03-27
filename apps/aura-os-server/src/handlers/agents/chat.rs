@@ -10,9 +10,7 @@ use tokio_stream::StreamExt;
 use tracing::{info, warn};
 
 use aura_os_core::{AgentId, AgentInstanceId, ChatRole, HarnessMode, ProjectId, SessionEvent};
-use aura_os_link::{
-    ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage,
-};
+use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
 use aura_os_storage::StorageClient;
 
 use crate::dto::SendChatRequest;
@@ -85,11 +83,7 @@ fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
             event_type: "user_message".to_string(),
             content: Some(serde_json::json!({ "text": content })),
         };
-        if let Err(e) = ctx
-            .storage
-            .create_event(&ctx.session_id, &ctx.jwt, &req)
-            .await
-        {
+        if let Err(e) = ctx.storage.create_event(&ctx.session_id, &ctx.jwt, &req).await {
             warn!(error = %e, "Failed to persist user message event");
         }
     });
@@ -123,11 +117,7 @@ fn spawn_chat_persist_task(
                     event_type,
                     content: Some(content),
                 };
-                if let Err(e) = ctx
-                    .storage
-                    .create_event(&ctx.session_id, &ctx.jwt, &req)
-                    .await
-                {
+                if let Err(e) = ctx.storage.create_event(&ctx.session_id, &ctx.jwt, &req).await {
                     warn!(error = %e, "Failed to persist chat event");
                 }
             }
@@ -141,39 +131,27 @@ fn spawn_chat_persist_task(
                         HarnessOutbound::SessionReady(_) => {}
                         HarnessOutbound::AssistantMessageStart(ref start) => {
                             message_id = start.message_id.clone();
-                            persist(
-                                "assistant_message_start",
-                                serde_json::json!({
-                                    "message_id": &start.message_id,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("assistant_message_start", serde_json::json!({
+                                "message_id": &start.message_id,
+                                "seq": seq,
+                            })).await;
                         }
                         HarnessOutbound::TextDelta(ref delta) => {
                             full_text.push_str(&delta.text);
                             text_segment.push_str(&delta.text);
-                            persist(
-                                "text_delta",
-                                serde_json::json!({
-                                    "message_id": &message_id,
-                                    "text": &delta.text,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("text_delta", serde_json::json!({
+                                "message_id": &message_id,
+                                "text": &delta.text,
+                                "seq": seq,
+                            })).await;
                         }
                         HarnessOutbound::ThinkingDelta(ref delta) => {
                             thinking_buf.push_str(&delta.thinking);
-                            persist(
-                                "thinking_delta",
-                                serde_json::json!({
-                                    "message_id": &message_id,
-                                    "thinking": &delta.thinking,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("thinking_delta", serde_json::json!({
+                                "message_id": &message_id,
+                                "thinking": &delta.thinking,
+                                "seq": seq,
+                            })).await;
                         }
                         HarnessOutbound::ToolUseStart(ref tool) => {
                             if !text_segment.is_empty() {
@@ -189,16 +167,12 @@ fn spawn_chat_persist_task(
                                 "name": &tool.name,
                                 "input": {}
                             }));
-                            persist(
-                                "tool_use_start",
-                                serde_json::json!({
-                                    "message_id": &message_id,
-                                    "id": &tool.id,
-                                    "name": &tool.name,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("tool_use_start", serde_json::json!({
+                                "message_id": &message_id,
+                                "id": &tool.id,
+                                "name": &tool.name,
+                                "seq": seq,
+                            })).await;
                         }
                         HarnessOutbound::ToolResult(ref result) => {
                             content_blocks.push(serde_json::json!({
@@ -207,18 +181,14 @@ fn spawn_chat_persist_task(
                                 "content": &result.result,
                                 "is_error": result.is_error
                             }));
-                            persist(
-                                "tool_result",
-                                serde_json::json!({
-                                    "message_id": &message_id,
-                                    "tool_use_id": &last_tool_use_id,
-                                    "name": &result.name,
-                                    "result": &result.result,
-                                    "is_error": result.is_error,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("tool_result", serde_json::json!({
+                                "message_id": &message_id,
+                                "tool_use_id": &last_tool_use_id,
+                                "name": &result.name,
+                                "result": &result.result,
+                                "is_error": result.is_error,
+                                "seq": seq,
+                            })).await;
                         }
                         HarnessOutbound::AssistantMessageEnd(ref end) => {
                             if !text_segment.is_empty() {
@@ -242,17 +212,13 @@ fn spawn_chat_persist_task(
                             break;
                         }
                         HarnessOutbound::Error(ref err) => {
-                            persist(
-                                "error",
-                                serde_json::json!({
-                                    "message_id": &message_id,
-                                    "code": &err.code,
-                                    "message": &err.message,
-                                    "recoverable": err.recoverable,
-                                    "seq": seq,
-                                }),
-                            )
-                            .await;
+                            persist("error", serde_json::json!({
+                                "message_id": &message_id,
+                                "code": &err.code,
+                                "message": &err.message,
+                                "recoverable": err.recoverable,
+                                "seq": seq,
+                            })).await;
                             break;
                         }
                     }
@@ -276,13 +242,7 @@ async fn setup_project_chat_persistence(
     let pai = agent_instance_id.to_string();
     let pid = project_id.to_string();
     let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
-    Some(ChatPersistCtx {
-        storage,
-        jwt,
-        session_id,
-        project_agent_id: pai,
-        project_id: pid,
-    })
+    Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
 }
 
 async fn setup_agent_chat_persistence(
@@ -304,7 +264,8 @@ async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    let matching = find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let matching =
+        find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
 
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
@@ -342,10 +303,7 @@ async fn setup_agent_chat_persistence(
             icon: None,
             harness: None,
         };
-        match storage
-            .create_project_agent(&project_id_str, &jwt, &req)
-            .await
-        {
+        match storage.create_project_agent(&project_id_str, &jwt, &req).await {
             Ok(pa) => {
                 let pid = pa.project_id.clone().unwrap_or(project_id_str);
                 info!(%agent_id, project_agent_id = %pa.id, %pid, "agent chat persistence: auto-created project agent");
@@ -365,13 +323,7 @@ async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    Some(ChatPersistCtx {
-        storage,
-        jwt,
-        session_id,
-        project_agent_id: pai,
-        project_id: pid,
-    })
+    Some(ChatPersistCtx { storage, jwt, session_id, project_agent_id: pai, project_id: pid })
 }
 
 const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
@@ -592,8 +544,7 @@ async fn aggregate_agent_events_from_storage_result(
         }
     }
 
-    let mut message_outcome =
-        collect_session_events(storage, &jwt, &sessions_outcome.sessions).await;
+    let mut message_outcome = collect_session_events(storage, &jwt, &sessions_outcome.sessions).await;
     if message_outcome.all_failed() {
         if let Some(err) = message_outcome.first_error {
             return Err(err);
@@ -617,9 +568,7 @@ async fn load_project_session_history(
         .await
         .unwrap_or_default();
     let mut outcome = collect_session_events(storage, &jwt, &sessions).await;
-    outcome
-        .messages
-        .sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    outcome.messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
     outcome.messages
 }
 
@@ -654,11 +603,7 @@ async fn get_or_create_chat_session(
     harness_mode: HarnessMode,
     session_config: SessionConfig,
     requested_model: Option<String>,
-) -> ApiResult<(
-    bool,
-    tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>,
-    tokio::sync::mpsc::UnboundedSender<HarnessInbound>,
-)> {
+) -> ApiResult<(bool, tokio::sync::broadcast::Receiver<aura_os_link::HarnessOutbound>, tokio::sync::mpsc::UnboundedSender<HarnessInbound>)> {
     {
         let mut reg = state.chat_sessions.lock().await;
         if let Some(session) = reg.get(key) {
@@ -690,15 +635,12 @@ async fn get_or_create_chat_session(
 
     {
         let mut reg = state.chat_sessions.lock().await;
-        reg.insert(
-            key.to_string(),
-            ChatSession {
-                session_id: session.session_id,
-                commands_tx: session.commands_tx,
-                events_tx: session.events_tx,
-                model: requested_model,
-            },
-        );
+        reg.insert(key.to_string(), ChatSession {
+            session_id: session.session_id,
+            commands_tx: session.commands_tx,
+            events_tx: session.events_tx,
+            model: requested_model,
+        });
     }
 
     Ok((true, rx, commands_tx))
@@ -716,14 +658,8 @@ async fn open_harness_chat_stream(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
 )> {
-    let (is_new, rx, commands_tx) = get_or_create_chat_session(
-        state,
-        session_key,
-        harness_mode,
-        session_config,
-        requested_model,
-    )
-    .await?;
+    let (is_new, rx, commands_tx) =
+        get_or_create_chat_session(state, session_key, harness_mode, session_config, requested_model).await?;
 
     // Subscribe the persistence receiver *before* sending the user message so
     // we don't miss early harness events in a fast-response scenario.
@@ -796,11 +732,7 @@ pub(crate) async fn send_agent_event_stream(
     let session_key = format!("agent:{agent_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
         let stored = aggregate_agent_events_from_storage(&state, &agent_id).await;
-        if stored.is_empty() {
-            None
-        } else {
-            Some(session_events_to_conversation_history(&stored))
-        }
+        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
     };
@@ -816,16 +748,7 @@ pub(crate) async fn send_agent_event_stream(
         ..Default::default()
     };
 
-    open_harness_chat_stream(
-        &state,
-        &session_key,
-        agent.harness_mode(),
-        config,
-        body.content,
-        body.model,
-        persist_ctx,
-    )
-    .await
+    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, body.model, persist_ctx).await
 }
 
 pub(crate) async fn list_events(
@@ -867,16 +790,13 @@ pub(crate) async fn send_event_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
 
-    let persist_ctx = setup_project_chat_persistence(&state, &project_id, &agent_instance_id).await;
+    let persist_ctx =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id).await;
 
     let session_key = format!("instance:{agent_instance_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
         let stored = load_project_session_history(&state, &agent_instance_id).await;
-        if stored.is_empty() {
-            None
-        } else {
-            Some(session_events_to_conversation_history(&stored))
-        }
+        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
     };
@@ -884,20 +804,15 @@ pub(crate) async fn send_event_stream(
     let jwt = state.get_jwt().ok();
     let pid_str = project_id.to_string();
 
-    let project = state.project_service.get_project(&project_id).ok();
-    let workspace = super::conversions::resolve_workspace_path(
-        &instance.machine_type,
-        project.as_ref().map(|p| p.linked_folder_path.as_str()),
-        &state.data_dir,
-        project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
-    );
-    let is_local = instance.machine_type == "local";
-    let system_prompt = build_project_system_prompt(
-        &state,
-        &project_id,
-        &instance.system_prompt,
-        is_local,
-    );
+    let system_prompt = build_project_system_prompt(&state, &project_id, &instance.system_prompt);
+
+    let project_path = state
+        .project_service
+        .get_project(&project_id)
+        .ok()
+        .map(|p| p.linked_folder_path)
+        .filter(|s| !s.is_empty());
+
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(instance.agent_id.to_string()),
@@ -906,31 +821,22 @@ pub(crate) async fn send_event_stream(
         token: jwt,
         conversation_messages,
         project_id: Some(pid_str),
-        project_path: Some(workspace),
+        project_path,
         ..Default::default()
     };
 
-    open_harness_chat_stream(
-        &state,
-        &session_key,
-        instance.harness_mode(),
-        config,
-        body.content,
-        body.model,
-        persist_ctx,
-    )
-    .await
+    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, body.model, persist_ctx).await
 }
 
 fn build_project_system_prompt(
     state: &AppState,
     project_id: &ProjectId,
     agent_prompt: &str,
-    is_local: bool,
 ) -> String {
     let project_ctx = match state.project_service.get_project(project_id) {
         Ok(p) => {
             let desc: &str = &p.description;
+            let folder: &str = &p.linked_folder_path;
             let mut ctx = format!(
                 "<project_context>\nproject_id: {}\nproject_name: {}\n",
                 project_id, p.name,
@@ -938,11 +844,8 @@ fn build_project_system_prompt(
             if !desc.is_empty() {
                 ctx.push_str(&format!("description: {}\n", desc));
             }
-            if is_local {
-                let folder: &str = &p.linked_folder_path;
-                if !folder.is_empty() {
-                    ctx.push_str(&format!("workspace: {}\n", folder));
-                }
+            if !folder.is_empty() {
+                ctx.push_str(&format!("workspace: {}\n", folder));
             }
             ctx.push_str("</project_context>\n\n");
             ctx.push_str("IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id from the project_context above.\n\n");
