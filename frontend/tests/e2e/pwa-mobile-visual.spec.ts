@@ -197,6 +197,16 @@ test("capture mobile root and project drawer", async ({ page, browserName }, tes
     path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-library-root-mobile-ia.png`,
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: /Builder Bot/i }).click();
+  await expect(page).toHaveURL(/\/agents\/agent-1$/);
+  await expect(page.getByRole("button", { name: "Open agent details" })).toBeVisible({ timeout: 10000 });
+  await page.getByRole("button", { name: "Open agent details" }).click();
+  await expect(page.getByText("System Prompt")).toBeVisible({ timeout: 10000 });
+  await page.screenshot({
+    path: `test-artifacts/review-shots/${projectName}-${browserName}-agent-library-details-mobile-ia.png`,
+    fullPage: true,
+  });
 });
 
 test("capture mobile work, files, and account sheet", async ({ page, browserName }, testInfo) => {

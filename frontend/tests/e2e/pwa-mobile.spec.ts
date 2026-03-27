@@ -309,6 +309,18 @@ test("mobile agent library toggles the selected standalone chat open and closed"
   await expect(page.getByText("Select an agent from your library.")).toBeVisible();
 });
 
+test("mobile agent library opens the agent details sheet", async ({ page }) => {
+  await mockAuthenticatedMobileApp(page);
+  await page.goto("/agents/agent-1");
+
+  await expect(page.getByRole("button", { name: "Open agent details" })).toBeVisible();
+  await page.getByRole("button", { name: "Open agent details" }).click();
+
+  await expect(page.getByText("Personality")).toBeVisible();
+  await expect(page.getByText("System Prompt")).toBeVisible();
+  await expect(page.getByText("Build features carefully.")).toBeVisible();
+});
+
 test("mobile global surfaces use the app switcher to return to project mode", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/feed");
