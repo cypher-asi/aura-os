@@ -55,6 +55,7 @@ fn forward_automaton_events(
 
     tokio::spawn(async move {
         let mut first_work_seen = false;
+        let mut current_task_id: Option<String> = task_id;
         let clear_active_automaton = |registry: AutomatonRegistry, project_id: ProjectId, agent_instance_id: AgentInstanceId| async move {
             let mut reg = registry.lock().await;
             if reg
@@ -77,12 +78,21 @@ fn forward_automaton_events(
                     // synthetic task_started so the UI exits "Preparing" state.
                     // This handles the race where the real task_started was
                     // emitted before our WebSocket connected.
+                    // Track the active task_id from lifecycle events so
+                    // streaming events (text_delta, etc.) that don't carry
+                    // task_id in their payload still get stamped correctly.
+                    if event_type == "task_started" {
+                        if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
+                            current_task_id = Some(tid.to_owned());
+                        }
+                    }
+
                     if !first_work_seen {
                         let event_task_id = event
                             .get("task_id")
                             .and_then(|v| v.as_str())
                             .map(str::to_owned);
-                        let effective_task_id = task_id.clone().or(event_task_id);
+                        let effective_task_id = current_task_id.clone().or(event_task_id);
                         let is_work = matches!(
                             event_type,
                             "task_started"
@@ -152,7 +162,7 @@ fn forward_automaton_events(
                             .get("task_id")
                             .and_then(|v| v.as_str())
                             .map(str::to_owned);
-                        let effective_task_id = task_id.clone().or(event_task_id);
+                        let effective_task_id = current_task_id.clone().or(event_task_id);
                         obj.insert("project_id".into(), serde_json::Value::String(pid.clone()));
                         obj.insert(
                             "agent_instance_id".into(),
