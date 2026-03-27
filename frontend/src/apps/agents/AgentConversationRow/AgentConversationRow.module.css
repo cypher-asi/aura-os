@@ -14,18 +14,20 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-.row:hover {
-  background: var(--color-overlay-subtle);
-  color: var(--color-text-secondary);
-}
-
 .selected {
   background: var(--color-overlay-medium);
   color: var(--color-text-primary);
 }
 
-.selected:hover {
-  background: var(--color-overlay-heavy);
+@media (hover: hover) and (pointer: fine) {
+  .row:hover {
+    background: var(--color-overlay-subtle);
+    color: var(--color-text-secondary);
+  }
+
+  .selected:hover {
+    background: var(--color-overlay-heavy);
+  }
 }
 
 .avatar {

@@ -106,6 +106,9 @@ export function AgentList() {
 
   const handleAgentRowClick = useCallback((selectedAgentId: string) => {
     if (isMobileLayout && selectedAgentId === agentId) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       navigate("/agents");
       return;
     }

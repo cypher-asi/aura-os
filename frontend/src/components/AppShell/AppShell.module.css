@@ -147,7 +147,8 @@
   justify-content: flex-end;
   gap: 6px;
   min-width: 44px;
-  flex: 0 0 44px;
+  padding-right: 4px;
+  flex: 0 0 auto;
 }
 
 .mobileMain {
