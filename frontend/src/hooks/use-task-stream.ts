@@ -73,6 +73,13 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
         handleAssistantTurnBoundary(refs, setters);
       }),
 
+      subscribe(EventType.Progress, (e) => {
+        const c = e.content as unknown as Record<string, unknown>;
+        if (c.task_id !== taskId) return;
+        const stage = (c.stage as string) ?? "";
+        if (stage) setters.setProgressText(stage);
+      }),
+
       subscribe(EventType.TaskCompleted, (e) => {
         if (e.content.task_id !== taskId) return;
         finalizeStream(refs, setters, abortRef, isStreamingRef.current);

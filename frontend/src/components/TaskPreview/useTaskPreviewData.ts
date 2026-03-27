@@ -4,7 +4,6 @@ import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "..
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useTaskOutput } from "../../stores/event-store";
-import { useLoopActive } from "../../hooks/use-loop-active";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import { useTaskAgentInstances } from "../../hooks/use-task-agent-instances";
 import { useTaskStream } from "../../hooks/use-task-stream";
@@ -33,14 +32,12 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const sidekick = useSidekick();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const loopActive = useLoopActive(projectId);
   const [retrying, setRetrying] = useState(false);
 
   const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id);
   const { agentInstance, completedByAgent } = useTaskAgentInstances(projectId, task);
 
-  const rawStatus = liveStatus ?? task.status;
-  const effectiveStatus = rawStatus === "in_progress" && !loopActive && liveStatus === null ? "ready" : rawStatus;
+  const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
@@ -101,7 +98,6 @@ export function useRunTaskData(task: import("../../types").Task) {
   const ctx = useProjectContext();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const loopActive = useLoopActive(projectId);
   const { liveStatus } = useTaskStatus(task.task_id);
   const [running, setRunning] = useState(false);
 
@@ -117,8 +113,7 @@ export function useRunTaskData(task: import("../../types").Task) {
     }
   }, [running, agentInstanceId, projectId, task.task_id]);
 
-  const effectiveStatus = (liveStatus ?? task.status) === "in_progress" && !loopActive && liveStatus === null
-    ? "ready" : liveStatus ?? task.status;
+  const effectiveStatus = liveStatus ?? task.status;
 
   return { running, handleRun, visible: effectiveStatus === "ready" };
 }

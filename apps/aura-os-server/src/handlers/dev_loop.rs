@@ -77,6 +77,11 @@ fn forward_automaton_events(
                     // This handles the race where the real task_started was
                     // emitted before our WebSocket connected.
                     if !first_work_seen {
+                        let event_task_id = event
+                            .get("task_id")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_owned);
+                        let effective_task_id = task_id.clone().or(event_task_id);
                         let is_work = matches!(
                             event_type,
                             "task_started"
@@ -85,11 +90,12 @@ fn forward_automaton_events(
                                 | "tool_call_started"
                                 | "tool_result"
                                 | "log_line"
+                                | "progress"
                         );
                         if is_work {
                             first_work_seen = true;
                             if event_type != "task_started" {
-                                let extra = match &task_id {
+                                let extra = match &effective_task_id {
                                     Some(tid) => serde_json::json!({"task_id": tid}),
                                     None => serde_json::json!({}),
                                 };
@@ -141,12 +147,17 @@ fn forward_automaton_events(
 
                     let mut forwarded = event.clone();
                     if let Some(obj) = forwarded.as_object_mut() {
+                        let event_task_id = obj
+                            .get("task_id")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_owned);
+                        let effective_task_id = task_id.clone().or(event_task_id);
                         obj.insert("project_id".into(), serde_json::Value::String(pid.clone()));
                         obj.insert(
                             "agent_instance_id".into(),
                             serde_json::Value::String(aiid.clone()),
                         );
-                        if let Some(ref tid) = task_id {
+                        if let Some(ref tid) = effective_task_id {
                             obj.insert("task_id".into(), serde_json::Value::String(tid.clone()));
                         }
                         if let Some(mapped) = mapped_type {

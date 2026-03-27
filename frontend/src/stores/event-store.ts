@@ -265,8 +265,10 @@ function connectEventSocket() {
           },
         );
         handleEngineEvent(event);
-      } catch {
-        // ignore malformed events
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("Dropped malformed WS event payload", { error, data });
+        }
       }
     },
     (connected: boolean) => {

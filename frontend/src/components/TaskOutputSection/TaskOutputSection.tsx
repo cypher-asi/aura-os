@@ -28,7 +28,8 @@ export function TaskOutputSection({ isActive, streamKey }: TaskOutputSectionProp
   const timeline = useTimeline(streamKey);
   const progressText = useProgressText(streamKey);
 
-  const hasLiveContent = isStreaming || !!streamingText || !!thinkingText || activeToolCalls.length > 0;
+  const hasLiveContent =
+    isStreaming || !!streamingText || !!thinkingText || !!progressText || activeToolCalls.length > 0;
   const hasContent = events.length > 0 || hasLiveContent;
 
   if (!hasContent && !isActive) return null;
