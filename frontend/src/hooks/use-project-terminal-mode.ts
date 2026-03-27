@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
-import type { AgentInstance, ProjectId } from "../types";
+import type { AgentInstance, AgentStatus, ProjectId } from "../types";
 
 export type TerminalModeStatus = "loading" | "ready" | "error";
 
@@ -9,8 +9,14 @@ export interface ProjectTerminalMode {
   status: TerminalModeStatus;
 }
 
+const CONNECTABLE_STATUSES: Set<AgentStatus> = new Set(["idle", "working", "blocked"]);
+
 /**
  * Resolves whether a project should use a remote agent terminal or a local one.
+ *
+ * Only remote instances in a connectable state (idle / working / blocked) are
+ * considered — stopped or errored agents are skipped so the terminal falls back
+ * to local mode instead of showing a connection failure.
  *
  * Returns `status: "ready"` only after the check completes so callers can gate
  * side-effects (like `setRemoteAgentId`) and avoid acting on stale / transient
@@ -43,7 +49,9 @@ export function useProjectTerminalMode(projectId: ProjectId | undefined): Projec
       .listAgentInstances(projectId)
       .then((instances: AgentInstance[]) => {
         if (cancelled) return;
-        const remote = instances.find((i) => i.machine_type === "remote");
+        const remote = instances.find(
+          (i) => i.machine_type === "remote" && CONNECTABLE_STATUSES.has(i.status),
+        );
         lastResolvedProjectId.current = projectId;
         setState({ remoteAgentId: remote?.agent_id, status: "ready" });
       })

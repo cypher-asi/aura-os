@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
 import { ConnectionTaskbar } from "../../../components/ConnectionTaskbar";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { TerminalPanelHeader } from "../../../components/TerminalPanelHeader";
@@ -9,9 +8,9 @@ import { useProjectContext } from "../../../stores/project-action-store";
 import { useProjectTerminalMode } from "../../../hooks/use-project-terminal-mode";
 
 export function ProjectMainPanel({ children }: { children?: ReactNode }) {
-  const { projectId } = useParams<{ projectId: string }>();
   const ctx = useProjectContext();
   const cwd = ctx?.project?.linked_folder_path;
+  const projectId = ctx?.project?.project_id;
   const setCwd = useTerminalPanelStore((s) => s.setCwd);
   const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
 
