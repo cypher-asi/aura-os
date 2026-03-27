@@ -197,7 +197,7 @@ fn maybe_spawn_local_harness() {
         .stderr(std::process::Stdio::null());
 
     // Load the harness's own .env so the child gets its configured values
-    // (INTERNAL_SERVICE_TOKEN, service URLs, etc.) regardless of what the
+    // (service URLs, etc.) regardless of what the
     // parent process has in its environment.
     let harness_env_file = harness_dir.join(".env");
     if harness_env_file.exists() {
