@@ -65,6 +65,20 @@ async fn create_project_impl(
         req.linked_folder_path = canonical.to_string_lossy().to_string();
     }
 
+    if let (Some(owner), Some(repo)) = (&req.orbit_owner, &req.orbit_repo) {
+        if !owner.is_empty() && !repo.is_empty() {
+            if let Ok(Some(existing)) = state
+                .project_service
+                .find_project_by_orbit_repo(owner, repo)
+            {
+                return Err(ApiError::conflict(format!(
+                    "Orbit repo '{owner}/{repo}' is already used by project '{}'",
+                    existing.name
+                )));
+            }
+        }
+    }
+
     if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
 
