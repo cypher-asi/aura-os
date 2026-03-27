@@ -5,6 +5,7 @@ import { Button, Text } from "@cypher-asi/zui";
 import { RotateCcw } from "lucide-react";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { Avatar } from "../Avatar";
+import { useAvatarState } from "../../hooks/use-avatar-state";
 import { toBullets, formatTokens } from "../../utils/format";
 import type { Task, AgentInstance } from "../../types";
 import styles from "../Preview/Preview.module.css";
@@ -24,6 +25,20 @@ function formatElapsed(seconds: number): string {
   if (min < 60) return `${min}m ${sec}s`;
   const hr = Math.floor(min / 60);
   return `${hr}h ${min % 60}m`;
+}
+
+function AgentAvatar({ agent }: { agent: AgentInstance }) {
+  const { status, isLocal } = useAvatarState(agent.agent_instance_id);
+  return (
+    <Avatar
+      avatarUrl={agent.icon ?? undefined}
+      name={agent.name}
+      type="agent"
+      size={16}
+      status={status}
+      isLocal={isLocal}
+    />
+  );
 }
 
 export interface TaskMetaSectionProps {
@@ -87,13 +102,7 @@ export function TaskMetaSection({
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Assigned to</span>
           <span className={styles.agentInline}>
-            <Avatar
-              avatarUrl={agentInstance.icon ?? undefined}
-              name={agentInstance.name}
-              type="agent"
-              size={16}
-              status={agentInstance.status}
-            />
+            <AgentAvatar agent={agentInstance} />
             <Text size="sm">{agentInstance.name}</Text>
           </span>
         </div>
@@ -102,13 +111,7 @@ export function TaskMetaSection({
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Completed by</span>
           <span className={styles.agentInline}>
-            <Avatar
-              avatarUrl={completedByAgent.icon ?? undefined}
-              name={completedByAgent.name}
-              type="agent"
-              size={16}
-              status={completedByAgent.status}
-            />
+            <AgentAvatar agent={completedByAgent} />
             <Text size="sm">{completedByAgent.name}</Text>
           </span>
         </div>

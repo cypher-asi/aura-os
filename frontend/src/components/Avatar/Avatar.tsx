@@ -2,41 +2,27 @@ import { useState } from "react";
 import { Bot, User } from "lucide-react";
 import styles from "./Avatar.module.css";
 
-const STATUS_MAP: Record<string, string> = {
-  running: "running",
-  working: "running",
-  idle: "idle",
-  provisioning: "provisioning",
-  hibernating: "hibernating",
-  stopping: "stopping",
-  stopped: "stopped",
-  error: "error",
-  blocked: "error",
-};
-
-function normalizeStatus(status?: string): string | undefined {
-  if (!status) return undefined;
-  return STATUS_MAP[status.toLowerCase()];
-}
-
 export interface AvatarProps {
   avatarUrl?: string;
   name?: string;
   type: "user" | "agent";
   size: number;
+  /** Pre-resolved dot status (e.g. "running", "idle", "error"). */
   status?: string;
+  /** When true, dot renders purple regardless of status. */
+  isLocal?: boolean;
   className?: string;
   style?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
 }
 
-export function Avatar({ avatarUrl, name, type, size, status, className, style, onClick }: AvatarProps) {
+export function Avatar({ avatarUrl, name, type, size, status, isLocal, className, style, onClick }: AvatarProps) {
   const iconSize = Math.round(size * 0.5);
   const isAgent = type === "agent";
   const [broken, setBroken] = useState(false);
   const showImage = avatarUrl && !broken;
   const fallback = isAgent ? <Bot size={iconSize} /> : <User size={iconSize} />;
-  const resolvedStatus = normalizeStatus(status);
+  const showDot = !!status || isLocal;
 
   return (
     <div
@@ -51,8 +37,12 @@ export function Avatar({ avatarUrl, name, type, size, status, className, style, 
           fallback
         )}
       </div>
-      {resolvedStatus && (
-        <span className={styles.statusDot} data-status={resolvedStatus} />
+      {showDot && (
+        <span
+          className={styles.statusDot}
+          data-status={status ?? "idle"}
+          data-machine={isLocal ? "local" : undefined}
+        />
       )}
     </div>
   );

@@ -7,9 +7,13 @@ import { EventType } from "../types/aura-events";
 
 const REMOTE_POLL_MS = 30_000;
 
+type MachineType = "local" | "remote";
+
 interface ProfileStatusState {
   statuses: Record<string, string>;
+  machineTypes: Record<string, MachineType>;
   init: () => void;
+  registerAgents: (agents: { id: string; machineType: string }[]) => void;
   registerRemoteAgents: (agents: { agent_id: string }[]) => void;
 }
 
@@ -20,6 +24,10 @@ const _remoteAgentIds = new Set<string>();
 
 /** Agent IDs with at least one active task (frontend-tracked). */
 const _activeTaskAgents = new Set<string>();
+
+function normalizeMachineType(mt: string | undefined): MachineType {
+  return mt === "remote" ? "remote" : "local";
+}
 
 function setStatus(id: string, status: string) {
   useProfileStatusStore.setState((s) => {
@@ -36,6 +44,17 @@ function setStatuses(updates: Record<string, string>) {
     }
     if (!changed) return s;
     return { statuses: { ...s.statuses, ...updates } };
+  });
+}
+
+function setMachineTypes(updates: Record<string, MachineType>) {
+  useProfileStatusStore.setState((s) => {
+    let changed = false;
+    for (const [k, v] of Object.entries(updates)) {
+      if (s.machineTypes[k] !== v) { changed = true; break; }
+    }
+    if (!changed) return s;
+    return { machineTypes: { ...s.machineTypes, ...updates } };
   });
 }
 
@@ -57,6 +76,7 @@ function pollRemoteAgents() {
 
 export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
   statuses: {},
+  machineTypes: {},
 
   init: () => {
     if (_initialized) return;
@@ -173,15 +193,27 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
     syncUserOnlineStatus();
   },
 
+  registerAgents: (agents) => {
+    const updates: Record<string, MachineType> = {};
+    for (const a of agents) {
+      const mt = normalizeMachineType(a.machineType);
+      updates[a.id] = mt;
+    }
+    setMachineTypes(updates);
+  },
+
   registerRemoteAgents: (agents) => {
     let newAgents = false;
+    const mtUpdates: Record<string, MachineType> = {};
     for (const a of agents) {
+      mtUpdates[a.agent_id] = "remote";
       if (!_polledAgentIds.has(a.agent_id)) {
         _polledAgentIds.add(a.agent_id);
         _remoteAgentIds.add(a.agent_id);
         newAgents = true;
       }
     }
+    setMachineTypes(mtUpdates);
     if (!newAgents) return;
 
     pollRemoteAgents();
@@ -191,10 +223,6 @@ export const useProfileStatusStore = create<ProfileStatusState>()((_, get) => ({
     }
   },
 }));
-
-export function useProfileStatus(id: string | undefined): string | undefined {
-  return useProfileStatusStore((s) => (id ? s.statuses[id] : undefined));
-}
 
 if (typeof window !== "undefined") {
   useProfileStatusStore.getState().init();

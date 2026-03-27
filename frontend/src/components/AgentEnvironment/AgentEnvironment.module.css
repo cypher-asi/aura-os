@@ -58,6 +58,11 @@
   background: var(--color-text-tertiary, #6b7280);
 }
 
+.dot[data-status="local"] {
+  background: #a855f7;
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.3);
+}
+
 .dot[data-status="error"] {
   background: #ef4444;
   box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);

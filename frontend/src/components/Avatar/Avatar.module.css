@@ -72,3 +72,8 @@
   background: #ef4444;
   box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
 }
+
+.statusDot[data-machine="local"] {
+  background: #a855f7;
+  box-shadow: 0 0 4px rgba(168, 85, 247, 0.3);
+}

@@ -171,14 +171,16 @@ export function AgentList() {
   }, [deleteTarget, agentId, setSelectedAgent, navigate]);
 
   const sortedAgents = useSortedAgents();
-  const statusMap = useProfileStatusStore((s) => s.statuses);
+  const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
   const entries = useChatHistoryStore((s) => s.entries);
 
   useEffect(() => {
+    if (agents.length === 0) return;
+    registerAgents(agents.map((a) => ({ id: a.agent_id, machineType: a.machine_type })));
     const remote = agents.filter((a) => a.machine_type === "remote" && a.network_agent_id);
     if (remote.length > 0) registerRemote(remote);
-  }, [agents, registerRemote]);
+  }, [agents, registerAgents, registerRemote]);
 
   const filteredAgents = useMemo(() => {
     if (!searchQuery) return sortedAgents;

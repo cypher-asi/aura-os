@@ -98,10 +98,28 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId]);
 }
 
+const STATUS_MAP: Record<string, string> = {
+  running: "running",
+  working: "running",
+  idle: "idle",
+  provisioning: "provisioning",
+  hibernating: "hibernating",
+  stopping: "stopping",
+  stopped: "stopped",
+  error: "error",
+  blocked: "error",
+};
+
+function resolveStatus(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return STATUS_MAP[raw.toLowerCase()] ?? raw;
+}
+
 function buildExplorerNode(
   p: { project_id: string; name: string },
   data: ReturnType<typeof useProjectListData>,
   statusMap: Record<string, string>,
+  machineTypesMap: Record<string, string>,
 ): ExplorerNode {
   const { agentsByProject, automatingProjectId, automatingAgentInstanceId, isMobileLayout, actions, sidekick } = data;
   const { streamingAgentInstanceId } = sidekick;
@@ -112,7 +130,10 @@ function buildExplorerNode(
         ...(isMobileLayout ? [{ id: executionNodeId(p.project_id), label: "Execution", icon: <Gauge size={16} />, metadata: { type: "execution", projectId: p.project_id } }] : []),
         ...projectAgents.map((s) => {
           const isAutomating = automatingProjectId === p.project_id && automatingAgentInstanceId === s.agent_instance_id;
-          const resolvedStatus = statusMap[s.agent_instance_id] ?? statusMap[s.agent_id] ?? s.status;
+          const rawStatus = statusMap[s.agent_instance_id] ?? statusMap[s.agent_id] ?? s.status;
+          const mt = machineTypesMap[s.agent_instance_id] ?? machineTypesMap[s.agent_id];
+          const isLocal = !mt || mt === "local";
+          const resolved = resolveStatus(rawStatus) ?? (isLocal ? "idle" : undefined);
           return {
             id: s.agent_instance_id, label: s.name,
             icon: (
@@ -121,7 +142,8 @@ function buildExplorerNode(
                 name={s.name}
                 type="agent"
                 size={18}
-                status={resolvedStatus}
+                status={resolved}
+                isLocal={isLocal}
               />
             ),
             suffix: isAutomating
@@ -162,21 +184,27 @@ export function ProjectList() {
   } = data;
 
   const statusMap = useProfileStatusStore((s) => s.statuses);
+  const machineTypesMap = useProfileStatusStore((s) => s.machineTypes);
+  const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
 
   useEffect(() => {
+    const allAgents: { id: string; machineType: string }[] = [];
     const remoteAgents: { agent_id: string }[] = [];
     for (const agents of Object.values(agentsByProject)) {
       for (const inst of agents) {
+        allAgents.push({ id: inst.agent_id, machineType: inst.machine_type });
+        allAgents.push({ id: inst.agent_instance_id, machineType: inst.machine_type });
         if (inst.machine_type === "remote") remoteAgents.push({ agent_id: inst.agent_id });
       }
     }
+    if (allAgents.length > 0) registerAgents(allAgents);
     if (remoteAgents.length > 0) registerRemote(remoteAgents);
-  }, [agentsByProject, registerRemote]);
+  }, [agentsByProject, registerAgents, registerRemote]);
 
   const explorerData: ExplorerNode[] = useMemo(
-    () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap)),
-    [projects, data, statusMap],
+    () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap, machineTypesMap)),
+    [projects, data, statusMap, machineTypesMap],
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);

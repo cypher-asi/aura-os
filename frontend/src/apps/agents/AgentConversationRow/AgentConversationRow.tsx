@@ -2,6 +2,7 @@ import { formatChatTime } from "../../../utils/format";
 import type { Agent } from "../../../types";
 import type { DisplaySessionEvent } from "../../../types/stream";
 import { Avatar } from "../../../components/Avatar";
+import { useAvatarState } from "../../../hooks/use-avatar-state";
 import styles from "./AgentConversationRow.module.css";
 
 function stripMarkdown(text: string): string {
@@ -17,7 +18,6 @@ interface AgentConversationRowProps {
   agent: Agent;
   lastMessage: DisplaySessionEvent | undefined;
   isSelected: boolean;
-  status?: string;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onMouseOver: (e: React.MouseEvent) => void;
@@ -27,7 +27,6 @@ export function AgentConversationRow({
   agent,
   lastMessage,
   isSelected,
-  status,
   onClick,
   onContextMenu,
   onMouseOver,
@@ -37,6 +36,7 @@ export function AgentConversationRow({
     ? `${lastMessage.role === "user" ? "You: " : ""}${stripMarkdown(lastMessage.content)}`
     : "";
   const preview = agentDescription || messagePreview || "Open this agent";
+  const { status, isLocal } = useAvatarState(agent.agent_id);
 
   return (
     <button
@@ -52,6 +52,7 @@ export function AgentConversationRow({
         type="agent"
         size={36}
         status={status}
+        isLocal={isLocal}
         className={styles.avatar}
       />
 
