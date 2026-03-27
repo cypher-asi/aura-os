@@ -75,7 +75,6 @@ export enum EventType {
   TaskRetrying          = "task_retrying",
   TaskBecameReady       = "task_became_ready",
   TasksBecameReady      = "tasks_became_ready",
-  TaskOutputDelta       = "task_output_delta",
   FollowUpTaskCreated   = "follow_up_task_created",
   FileOpsApplied        = "file_ops_applied",
 
@@ -267,10 +266,6 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.TaskBecameReady; content: { task_id: string } }
   | { type: EventType.TasksBecameReady; content: {
       task_ids: string[];
-    } }
-  | { type: EventType.TaskOutputDelta; content: {
-      task_id: string;
-      delta: string;
     } }
   | { type: EventType.FollowUpTaskCreated; content: {
       task_id: string;
