@@ -140,7 +140,7 @@ export function DesktopShell() {
           className="titlebar-drag"
           onDoubleClick={() => windowCommand("maximize")}
           icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
-          title={<span className="titlebar-center"><Link to="/projects" className={styles.titleLink}>AURA</Link></span>}
+          title={<span className="titlebar-center"><Link to="/projects" className={styles.titleLink}><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></Link></span>}
           actions={(
             <div className={styles.titleActions}>
               {features.hostRetargeting && (

@@ -142,7 +142,7 @@ describe("DesktopShell", () => {
 
   it("renders the AURA title link", () => {
     renderShell();
-    expect(screen.getByText("AURA")).toBeInTheDocument();
+    expect(screen.getByAltText("AURA")).toBeInTheDocument();
   });
 
   it("renders update banner", () => {

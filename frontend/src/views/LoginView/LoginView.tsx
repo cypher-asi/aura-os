@@ -151,7 +151,7 @@ export function LoginView() {
           className="titlebar-drag"
           onDoubleClick={() => windowCommand("maximize")}
           icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
-          title={<span className="titlebar-center">AURA</span>}
+          title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></span>}
           actions={<WindowControls />}
         />
       )}

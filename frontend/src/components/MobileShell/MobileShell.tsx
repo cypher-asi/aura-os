@@ -382,7 +382,7 @@ function MobileTopbar({ state }: { state: ReturnType<typeof useMobileShellState>
             </span>
           ) : (
             <span className={styles.mobileTopbarTitleButton} aria-label="Aura">
-              <span className={styles.mobileTopbarTitleText}>AURA</span>
+              <img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} />
             </span>
           )}
         </span>
