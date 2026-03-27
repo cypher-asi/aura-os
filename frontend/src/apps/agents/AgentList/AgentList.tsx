@@ -225,7 +225,6 @@ export function AgentList() {
               agent={agent}
               lastMessage={lastMessage}
               isSelected={agent.agent_id === agentId}
-              status={statusMap[agent.agent_id]}
               onClick={() => handleAgentRowClick(agent.agent_id)}
               onContextMenu={handleContextMenu}
               onMouseOver={handleHoverPrefetch}

@@ -6,8 +6,6 @@ import { useProjectsList } from "../apps/projects/useProjectsList";
 import { clearNewProjectDraftFiles } from "../lib/new-project-draft";
 import { useNewProjectDraft } from "./use-new-project-draft";
 import { useOrbitRepos } from "./use-orbit-repos";
-import { useAuraCapabilities } from "./use-aura-capabilities";
-
 function slugFromName(name: string): string {
   return name
     .trim()
@@ -98,7 +96,6 @@ export function useNewProjectForm(
   const orgLoading = useOrgStore((s) => s.isLoading);
   const { user, isAuthenticated } = useAuth();
   const { projects, loadingProjects, refreshProjects } = useProjectsList();
-  const { isMobileLayout } = useAuraCapabilities();
 
   const [name, setNameRaw] = useState("");
   const [orbitRepoName, setOrbitRepoName] = useState("");
