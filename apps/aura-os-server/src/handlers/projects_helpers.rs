@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tracing::{debug, warn};
 
 use aura_os_core::{OrgId, Project, ProjectId, ProjectStatus};
+use aura_os_link::SessionConfig;
 use aura_os_network::NetworkProject;
 use aura_os_projects::CreateProjectInput;
 
@@ -200,6 +201,21 @@ pub(crate) fn folder_name_from_path(path: &str) -> Option<String> {
         .file_name()
         .and_then(|name| name.to_str())
         .map(|name| name.to_string())
+}
+
+/// Build a standard project tool session config with required JWT propagation.
+pub(crate) fn project_tool_session_config(
+    state: &AppState,
+    project_id: &ProjectId,
+    tool_agent_name: &'static str,
+) -> ApiResult<SessionConfig> {
+    let jwt = state.get_jwt()?;
+    Ok(SessionConfig {
+        agent_id: Some(format!("{tool_agent_name}-{project_id}")),
+        agent_name: Some(tool_agent_name.to_string()),
+        token: Some(jwt),
+        ..Default::default()
+    })
 }
 
 pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput {

@@ -3,13 +3,14 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SpecId, Task, TaskId, TaskStatus};
-use aura_os_link::{HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
+use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 use aura_os_storage::StorageTask;
 use aura_os_tasks::TaskService;
 
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
+use super::projects_helpers::project_tool_session_config;
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct TaskQueryParams {
@@ -76,12 +77,9 @@ pub(crate) async fn extract_tasks(
         HarnessMode::Local
     };
     let harness = state.harness_for(harness_mode);
+    let session_config = project_tool_session_config(&state, &project_id, "task-extract")?;
     let session = harness
-        .open_session(SessionConfig {
-            agent_id: Some(format!("task-extract-{project_id}")),
-            agent_name: Some("task-extract".to_string()),
-            ..Default::default()
-        })
+        .open_session(session_config)
         .await
         .map_err(|e| ApiError::internal(format!("opening task extraction session: {e}")))?;
 
