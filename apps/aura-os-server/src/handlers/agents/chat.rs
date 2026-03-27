@@ -904,8 +904,8 @@ pub(crate) async fn send_event_stream(
         token: jwt,
         conversation_messages,
         project_id: Some(pid_str),
-        project_path: Some(workspace.clone()),
-        workspace: Some(workspace),
+        project_path: Some(workspace),
+        workspace: None,
         installed_tools: Some(tools),
         ..Default::default()
     };
