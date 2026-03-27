@@ -46,6 +46,7 @@ fn forward_automaton_events(
     automaton_registry: AutomatonRegistry,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
+    task_id: Option<String>,
 ) {
     let mut rx = automaton_events_tx.subscribe();
     let pid = project_id.to_string();
@@ -88,12 +89,16 @@ fn forward_automaton_events(
                         if is_work {
                             first_work_seen = true;
                             if event_type != "task_started" {
+                                let extra = match &task_id {
+                                    Some(tid) => serde_json::json!({"task_id": tid}),
+                                    None => serde_json::json!({}),
+                                };
                                 emit_domain_event(
                                     &app_broadcast,
                                     "task_started",
                                     project_id,
                                     agent_instance_id,
-                                    serde_json::json!({}),
+                                    extra,
                                 );
                             }
                         }
@@ -141,6 +146,9 @@ fn forward_automaton_events(
                             "agent_instance_id".into(),
                             serde_json::Value::String(aiid.clone()),
                         );
+                        if let Some(ref tid) = task_id {
+                            obj.insert("task_id".into(), serde_json::Value::String(tid.clone()));
+                        }
                         if let Some(mapped) = mapped_type {
                             obj.insert("type".into(), serde_json::Value::String(mapped.into()));
                         }
@@ -256,6 +264,7 @@ pub(crate) async fn start_loop(
         state.automaton_registry.clone(),
         project_id,
         agent_instance_id,
+        None,
     );
 
     emit_domain_event(
@@ -456,6 +465,7 @@ pub(crate) async fn run_single_task(
             state.automaton_registry.clone(),
             project_id,
             agent_instance_id,
+            Some(task_id.to_string()),
         );
     }
 
