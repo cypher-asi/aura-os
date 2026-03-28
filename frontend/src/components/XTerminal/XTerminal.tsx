@@ -15,29 +15,40 @@ function getThemeBg(): string {
   return getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim() || "#111";
 }
 
-const THEME = {
-  background: getThemeBg(),
-  foreground: "#d4d4d4",
-  cursor: "#d4d4d4",
-  cursorAccent: getThemeBg(),
-  selectionBackground: "rgba(255, 255, 255, 0.15)",
-  black: "#1e1e1e",
-  red: "#f44747",
-  green: "#6a9955",
-  yellow: "#d7ba7d",
-  blue: "#569cd6",
-  magenta: "#ffffff",
-  cyan: "#4ec9b0",
-  white: "#d4d4d4",
-  brightBlack: "#808080",
-  brightRed: "#f44747",
-  brightGreen: "#6a9955",
-  brightYellow: "#d7ba7d",
-  brightBlue: "#569cd6",
-  brightMagenta: "#ffffff",
-  brightCyan: "#4ec9b0",
-  brightWhite: "#ffffff",
-};
+function getThemeColor(variable: string, fallback: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim() || fallback;
+}
+
+function getTheme() {
+  const background = getThemeBg();
+  const appGreen = getThemeColor("--color-success", "#4aeaa8");
+  const appBlue = getThemeColor("--status-ready", "#45aaf2");
+
+  return {
+    background,
+    foreground: "#d4d4d4",
+    cursor: appBlue,
+    cursorAccent: background,
+    selectionBackground: "rgba(69, 170, 242, 0.32)",
+    selectionInactiveBackground: "rgba(74, 234, 168, 0.22)",
+    black: "#1e1e1e",
+    red: "#f44747",
+    green: appGreen,
+    yellow: "#d7ba7d",
+    blue: appBlue,
+    magenta: "#ffffff",
+    cyan: appBlue,
+    white: "#d4d4d4",
+    brightBlack: "#808080",
+    brightRed: "#f44747",
+    brightGreen: appGreen,
+    brightYellow: "#d7ba7d",
+    brightBlue: appBlue,
+    brightMagenta: "#ffffff",
+    brightCyan: appBlue,
+    brightWhite: "#ffffff",
+  };
+}
 
 export function XTerminal({ terminal: hook, visible }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,7 +60,7 @@ export function XTerminal({ terminal: hook, visible }: XTerminalProps) {
     if (!container) return;
 
     const xterm = new Terminal({
-      theme: THEME,
+      theme: getTheme(),
       fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Menlo, monospace",
       fontSize: 13,
       lineHeight: 1.3,
