@@ -227,6 +227,49 @@ Notes:
 - Desktop and browser builds still fall back to their current origin when no host override is configured.
 - Native mobile auth is cross-origin, so the Aura API must allow credentialed CORS for native localhost origins. Add any deployed frontend origins with `AURA_ALLOWED_ORIGINS`.
 
+#### Local native fastlane commands
+
+For day-to-day native validation, use the wrapper commands from `frontend/`:
+
+```bash
+npm run mobile:android:local
+npm run mobile:ios:local
+```
+
+Or build both in sequence:
+
+```bash
+npm run mobile:local:all
+```
+
+What these commands do:
+
+- rebuild the web app
+- sync Capacitor assets into the native shell
+- build the local Android APK or iOS simulator app through `fastlane`
+- auto-detect the local gem bin, and for Android also pick up `JAVA_HOME` / `ANDROID_HOME` when available
+
+Backend env needed for a useful local mobile session:
+
+- Minimum for remote-backed projects/orgs:
+  - `AURA_NETWORK_URL`
+- Recommended full remote-backed setup:
+  - `AURA_NETWORK_URL=https://aura-network.onrender.com`
+  - `AURA_STORAGE_URL=https://aura-storage.onrender.com`
+  - `AURA_ROUTER_URL=https://aura-router.onrender.com`
+  - `Z_BILLING_URL=https://z-billing.onrender.com`
+  - `ORBIT_BASE_URL=https://orbit-sfvu.onrender.com`
+  - `SWARM_BASE_URL=http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com`
+
+Native build env used by the local wrappers:
+
+- `VITE_ANDROID_DEFAULT_HOST`
+  - default: `http://10.0.2.2:3100`
+- `VITE_IOS_DEFAULT_HOST`
+  - default: `http://127.0.0.1:3100`
+
+You only need to override those `VITE_*` values if your backend is running on a different host or port.
+
 #### iOS TestFlight / App Store pipeline
 
 The iOS branch now includes a `fastlane` setup under [`frontend/ios`](./frontend/ios) and a GitHub Actions workflow in [`.github/workflows/ios-mobile.yml`](./.github/workflows/ios-mobile.yml).
