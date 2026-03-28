@@ -2,6 +2,20 @@ fastlane_version "2.229.0"
 default_platform(:ios)
 
 require "base64"
+require "json"
+require "shellwords"
+
+def frontend_root
+  File.expand_path("../..", __dir__)
+end
+
+def ios_root
+  File.expand_path("..", __dir__)
+end
+
+def xcodeproj_path
+  File.join(ios_root, "App/App.xcodeproj")
+end
 
 def required_env!(name)
   value = ENV[name]
@@ -44,6 +58,11 @@ def app_store_api_key
   )
 end
 
+def booted_simulator_id
+  devices = JSON.parse(`xcrun simctl list devices booted --json`)
+  devices.fetch("devices", {}).values.flatten.find { |device| device["state"] == "Booted" }&.fetch("udid", nil)
+end
+
 def sync_signing!(api_key:, readonly:)
   # We keep signing in match so CI can reproduce the same archive that local
   # release runs use, instead of depending on one developer machine's keychain.
@@ -61,17 +80,17 @@ end
 
 private_lane :build_store_archive do
   increment_build_number(
-    xcodeproj: "App/App.xcodeproj",
+    xcodeproj: xcodeproj_path,
     build_number: build_number
   )
 
   build_app(
-    project: "App/App.xcodeproj",
+    project: xcodeproj_path,
     scheme: "App",
     configuration: "Release",
     clean: true,
     export_method: "app-store",
-    output_directory: "./build",
+    output_directory: File.join(ios_root, "build"),
     output_name: "AURA.ipa",
     # The Xcode project already uses automatic signing, so we let fastlane
     # archive with the provisioning assets that match synced into the runner.
@@ -82,7 +101,36 @@ private_lane :build_store_archive do
   )
 end
 
+private_lane :sync_ios_web_assets do
+  # Local simulator builds should package the same bundled web assets that CI
+  # would archive for a store build.
+  root = frontend_root.shellescape
+  sh("cd #{root} && npm run build")
+  sh("cd #{root} && npx cap sync ios")
+end
+
 platform :ios do
+  desc "Build a local simulator app bundle that can be installed with simctl"
+  lane :local_simulator do
+    sync_ios_web_assets
+
+    simulator_id = ENV["IOS_SIMULATOR_ID"].to_s.empty? ? booted_simulator_id : ENV["IOS_SIMULATOR_ID"]
+    UI.user_error!("Boot an iOS simulator or set IOS_SIMULATOR_ID before running local_simulator.") if simulator_id.to_s.empty?
+
+    derived_data = File.join(ios_root, "build/local-simulator")
+    app_path = File.join(derived_data, "Build/Products/Debug-iphonesimulator/App.app")
+
+    sh("rm -rf #{derived_data.shellescape}")
+    sh(
+      "xcodebuild -project #{xcodeproj_path.shellescape} -scheme App -configuration Debug " \
+      "-destination 'platform=iOS Simulator,id=#{simulator_id}' " \
+      "-derivedDataPath #{derived_data.shellescape} build"
+    )
+
+    UI.success("Local simulator app ready at #{app_path}")
+    app_path
+  end
+
   desc "Create or refresh App Store signing assets in the match repo"
   lane :bootstrap_signing do
     sync_signing!(api_key: app_store_api_key, readonly: false)
