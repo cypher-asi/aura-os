@@ -8,6 +8,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use tokio::time::Duration;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
 #[derive(Debug, Clone, Serialize)]
@@ -197,37 +198,24 @@ impl AutomatonClient {
         let url = self.resolve_event_stream_url(automaton_id, event_stream_url);
         info!(automaton_id, %url, "Connecting to automaton event stream");
 
-        let (ws_stream, _) = if let Some(ref token) = self.auth_token {
-            let request = tokio_tungstenite::tungstenite::http::Request::builder()
-                .uri(&url)
-                .header("Authorization", format!("Bearer {token}"))
-                .header("Connection", "Upgrade")
-                .header("Upgrade", "websocket")
-                .header("Sec-WebSocket-Version", "13")
-                .header(
-                    "Sec-WebSocket-Key",
-                    tokio_tungstenite::tungstenite::handshake::client::generate_key(),
-                )
-                .body(())
-                .map_err(|e| anyhow::anyhow!("failed to build WS request: {e}"))?;
-            tokio::time::timeout(
-                Duration::from_secs(8),
-                tokio_tungstenite::connect_async(request),
-            )
-            .await
-            .map_err(|_| {
-                anyhow::anyhow!("timed out connecting to automaton event stream: {url}")
-            })??
-        } else {
-            tokio::time::timeout(
-                Duration::from_secs(8),
-                tokio_tungstenite::connect_async(&url),
-            )
-            .await
-            .map_err(|_| {
-                anyhow::anyhow!("timed out connecting to automaton event stream: {url}")
-            })??
-        };
+        let mut request = url
+            .clone()
+            .into_client_request()
+            .map_err(|e| anyhow::anyhow!("failed to build WS request: {e}"))?;
+        if let Some(ref token) = self.auth_token {
+            request.headers_mut().insert(
+                "Authorization",
+                format!("Bearer {token}")
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("bad auth header value: {e}"))?,
+            );
+        }
+        let (ws_stream, _) = tokio::time::timeout(
+            Duration::from_secs(8),
+            tokio_tungstenite::connect_async(request),
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("timed out connecting to automaton event stream: {url}"))??;
         info!(automaton_id, "Connected to automaton event stream");
 
         let (broadcast_tx, _) = broadcast::channel(256);
