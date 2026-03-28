@@ -221,6 +221,45 @@ Notes:
 - Store-safe mobile builds currently disable in-app credit purchases. Buy or manage credits on the web app, then return to mobile.
 - If you regenerate native assets after changing the web UI, run `npm run build:native` again before archiving or uploading a store build.
 
+#### Android Play pipeline
+
+The Android branch now includes a `fastlane` setup under [`frontend/android`](./frontend/android) and a GitHub Actions workflow in [`.github/workflows/android-mobile.yml`](./.github/workflows/android-mobile.yml).
+
+Local release commands from `frontend/android/`:
+
+```bash
+bundle install
+bundle exec fastlane android beta
+bundle exec fastlane android release
+```
+
+GitHub Actions release input:
+
+- Run `Android Mobile`
+- Choose lane `beta` for Play Internal Testing or `release` for a release candidate
+- Choose the Play track (`internal`, `closed`, or `production`)
+- Leave `release_status=draft` until you are ready for a real rollout
+
+Required Android secrets for CI:
+
+- `ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64`
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- Optional overrides:
+  - `ANDROID_PACKAGE_NAME`
+
+Still needed before a real Google Play submission:
+
+- A Google Play Console app record for the final package name
+- A Play service account with release permissions for that app
+- The Android upload keystore used to sign release bundles
+- Store listing copy, screenshots, and high-res app icon
+- Privacy policy URL, Data safety answers, and content rating
+- App access / review instructions if login is required
+- A live production Aura backend/API that Play reviewers can reach
+
 ### Run desktop app
 
 Build the frontend once, then run the desktop shell (it embeds the server and frontend):
