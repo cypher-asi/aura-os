@@ -71,8 +71,9 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
 ///
 /// - **local**: prefer the stored absolute `project_folder`; fall back to the
 ///   canonical `{data_dir}/workspaces/{slug}` path derived from the project name.
-/// - **remote / swarm**: `/state/workspaces/{slug}` — under the pod's PVC mount
-///   (`AURA_DATA_DIR=/state`, writable by uid 1000 / fs_group 1000).
+/// - **remote / swarm**: `/home/aura/{slug}` — the harness is the authority for
+///   the final path (via `AURA_PROJECT_BASE`) but we send a matching hint so
+///   that API responses reflect the actual execution directory.
 pub(crate) fn resolve_workspace_path(
     machine_type: &str,
     project_folder: Option<&str>,
@@ -91,7 +92,7 @@ pub(crate) fn resolve_workspace_path(
             })
     } else {
         let slug = super::super::projects_helpers::slugify(project_name);
-        format!("/state/workspaces/{slug}")
+        format!("/home/aura/{slug}")
     }
 }
 
