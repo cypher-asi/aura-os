@@ -67,8 +67,8 @@ pub(crate) async fn list_remote_directory(
 
     let resp = network
         .http_client()
-        .get(&url)
-        .query(&[("path", &req.path)])
+        .post(&url)
+        .json(&serde_json::json!({ "path": req.path, "depth": 20 }))
         .header("Authorization", format!("Bearer {jwt}"))
         .send()
         .await
@@ -106,8 +106,8 @@ pub(crate) async fn read_remote_file(
 
     let resp = network
         .http_client()
-        .get(&url)
-        .query(&[("path", &req.path)])
+        .post(&url)
+        .json(&serde_json::json!({ "path": req.path }))
         .header("Authorization", format!("Bearer {jwt}"))
         .send()
         .await
