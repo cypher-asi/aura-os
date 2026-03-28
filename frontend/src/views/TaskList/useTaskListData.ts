@@ -125,8 +125,8 @@ export function useTaskListData(): TaskListData {
     return () => unsubs.forEach((u) => u());
   }, [subscribe, updateTaskStatus, refetchTasks]);
 
-  const specs = useMemo(() => mergeById(sidekick.specs, localSpecs, "spec_id").sort(compareSpecs), [localSpecs, sidekick.specs]);
-  const tasks = useMemo(() => mergeById(sidekick.tasks, localTasks, "task_id"), [localTasks, sidekick.tasks]);
+  const specs = useMemo(() => mergeById(localSpecs, sidekick.specs, "spec_id").sort(compareSpecs), [localSpecs, sidekick.specs]);
+  const tasks = useMemo(() => mergeById(localTasks, sidekick.tasks, "task_id"), [localTasks, sidekick.tasks]);
 
   return { specs, tasks, liveTaskIds, loopActive, loading, sidekick };
 }
