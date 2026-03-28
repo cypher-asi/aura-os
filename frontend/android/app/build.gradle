@@ -1,14 +1,57 @@
 apply plugin: 'com.android.application'
 
+def releaseKeyProperties = new Properties()
+def releaseKeyPropertiesFile = rootProject.file('key.properties')
+if (releaseKeyPropertiesFile.exists()) {
+    releaseKeyProperties.load(new FileInputStream(releaseKeyPropertiesFile))
+}
+
+def envOrProperty = { String envName, String propertyName = envName ->
+    def envValue = System.getenv(envName)
+    if (envValue != null && !envValue.trim().isEmpty()) {
+        return envValue
+    }
+
+    def propValue = releaseKeyProperties.getProperty(propertyName)
+    if (propValue != null && !propValue.trim().isEmpty()) {
+        return propValue
+    }
+
+    return null
+}
+
+def releaseStoreFile = envOrProperty("ANDROID_KEYSTORE_PATH", "storeFile")
+def releaseStorePassword = envOrProperty("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+def releaseKeyAlias = envOrProperty("ANDROID_KEY_ALIAS", "keyAlias")
+def releaseKeyPassword = envOrProperty("ANDROID_KEY_PASSWORD", "keyPassword")
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it != null }
+
+def configuredVersionCode = (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInteger()
+def configuredVersionName = System.getenv("ANDROID_VERSION_NAME") ?: "1.0"
+
 android {
     namespace = "tech.zero.aura"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                // Accept signing credentials from env vars in CI, while still
+                // allowing a local key.properties file for manual release runs.
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "tech.zero.aura"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode configuredVersionCode
+        versionName configuredVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,6 +63,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
