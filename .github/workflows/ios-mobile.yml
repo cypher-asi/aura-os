@@ -1,0 +1,132 @@
+name: iOS Mobile
+
+on:
+  push:
+    branches:
+      - main
+      - codex/mobile-ios-shell-clean
+    paths:
+      - .github/workflows/ios-mobile.yml
+      - frontend/**
+      - README.md
+  pull_request:
+    paths:
+      - .github/workflows/ios-mobile.yml
+      - frontend/**
+      - README.md
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "fastlane lane to run"
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - release
+      submit_for_review:
+        description: "Only applies to the release lane"
+        required: false
+        default: false
+        type: boolean
+      changelog:
+        description: "Optional TestFlight changelog"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-ios-shell:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend and sync Capacitor iOS
+        working-directory: frontend
+        run: |
+          npm run build
+          npx cap sync ios
+
+      - name: Build iOS simulator app
+        working-directory: frontend
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath /tmp/aura-ios-validate \
+            build
+
+  ship-ios:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    env:
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      IOS_APP_STORE_CONNECT_KEY_ID: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_ID }}
+      IOS_APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.IOS_APP_STORE_CONNECT_ISSUER_ID }}
+      IOS_APP_STORE_CONNECT_KEY_BASE64: ${{ secrets.IOS_APP_STORE_CONNECT_KEY_BASE64 }}
+      IOS_APP_STORE_CONNECT_TEAM_ID: ${{ secrets.IOS_APP_STORE_CONNECT_TEAM_ID }}
+      IOS_APPLE_ID: ${{ secrets.IOS_APPLE_ID }}
+      IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+      IOS_BUILD_NUMBER: ${{ github.run_number }}
+      IOS_CHANGELOG: ${{ inputs.changelog }}
+      IOS_DEVELOPER_TEAM_ID: ${{ secrets.IOS_DEVELOPER_TEAM_ID }}
+      IOS_MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.IOS_MATCH_GIT_BASIC_AUTHORIZATION }}
+      IOS_MATCH_GIT_BRANCH: ${{ secrets.IOS_MATCH_GIT_BRANCH }}
+      IOS_MATCH_GIT_PRIVATE_KEY: ${{ secrets.IOS_MATCH_GIT_PRIVATE_KEY }}
+      IOS_MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
+      IOS_SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review && '1' || '0' }}
+      MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install fastlane gems
+        working-directory: frontend/ios
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Build frontend and sync Capacitor iOS
+        working-directory: frontend
+        run: |
+          npm run build
+          npx cap sync ios
+
+      - name: Upload build with fastlane
+        working-directory: frontend/ios
+        run: bundle exec fastlane ios ${{ inputs.lane }}

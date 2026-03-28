@@ -13,6 +13,14 @@ def build_number
   ENV["IOS_BUILD_NUMBER"] || ENV["GITHUB_RUN_NUMBER"] || Time.now.utc.strftime("%Y%m%d%H%M")
 end
 
+def bundle_id
+  ENV["IOS_BUNDLE_ID"].to_s.empty? ? "tech.zero.aura" : ENV["IOS_BUNDLE_ID"]
+end
+
+def match_branch
+  ENV["IOS_MATCH_GIT_BRANCH"].to_s.empty? ? "main" : ENV["IOS_MATCH_GIT_BRANCH"]
+end
+
 def match_auth_options
   private_key = ENV["IOS_MATCH_GIT_PRIVATE_KEY"]
   basic_auth = ENV["IOS_MATCH_GIT_BASIC_AUTHORIZATION"]
@@ -43,9 +51,9 @@ def sync_signing!(api_key:, readonly:)
     type: "appstore",
     api_key: api_key,
     readonly: readonly,
-    app_identifier: ENV.fetch("IOS_BUNDLE_ID", "tech.zero.aura"),
+    app_identifier: bundle_id,
     git_url: required_env!("IOS_MATCH_GIT_URL"),
-    git_branch: ENV.fetch("IOS_MATCH_GIT_BRANCH", "main"),
+    git_branch: match_branch,
     team_id: ENV["IOS_DEVELOPER_TEAM_ID"],
     **match_auth_options
   )
