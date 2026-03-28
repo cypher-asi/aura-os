@@ -7,6 +7,13 @@
     "dev": "vite",
     "dev:mobile": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
+    "build:native": "npm run build && npx cap sync",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:copy": "npx cap copy",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:sync": "npx cap sync",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,6 +22,9 @@
     "codegen:protocol": "cd ../../aura-harness && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts ../aura-app/frontend/src/types/harness-protocol.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
     "@cypher-asi/zui": "file:../../zui",
     "@fontsource-variable/inter": "^5.2.8",
     "@tanstack/react-virtual": "^3.13.23",
@@ -34,6 +44,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
     "@eslint/js": "^9.39.4",
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",

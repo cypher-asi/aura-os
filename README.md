@@ -197,6 +197,30 @@ Notes:
 - If you need different ports, set `AURA_SERVER_PORT` and/or `AURA_FRONTEND_PORT` before running the script.
 - For simulator/local-only use, the defaults still bind to `127.0.0.1`, which is the simplest setup.
 
+### Build native mobile shells (Capacitor)
+
+Aura's mobile store builds now use Capacitor on top of the existing Vite app.
+
+From `frontend/`:
+
+```bash
+npm install
+npm run build:native
+```
+
+Then open the native project you want:
+
+```bash
+npm run cap:open:ios
+npm run cap:open:android
+```
+
+Notes:
+
+- `npm run build:native` rebuilds the web app and syncs it into the native iOS and Android shells.
+- Store-safe mobile builds currently disable in-app credit purchases. Buy or manage credits on the web app, then return to mobile.
+- If you regenerate native assets after changing the web UI, run `npm run build:native` again before archiving or uploading a store build.
+
 ### Run desktop app
 
 Build the frontend once, then run the desktop shell (it embeds the server and frontend):
