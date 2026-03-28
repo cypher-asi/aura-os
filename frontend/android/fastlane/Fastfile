@@ -2,6 +2,11 @@ fastlane_version "2.229.0"
 default_platform(:android)
 
 require "base64"
+require "shellwords"
+
+def frontend_root
+  File.expand_path("../..", __dir__)
+end
 
 def required_env!(name)
   value = ENV[name]
@@ -67,7 +72,30 @@ def upload_bundle(track:, release_status:)
   )
 end
 
+private_lane :sync_android_web_assets do
+  # Keep local fastlane runs aligned with CI by rebuilding the bundled web app
+  # before Gradle packages the native shell.
+  root = frontend_root.shellescape
+  sh("cd #{root} && npm run build")
+  sh("cd #{root} && npx cap sync android")
+end
+
 platform :android do
+  desc "Build a local debug APK that can be installed on an emulator"
+  lane :local_debug do
+    sync_android_web_assets
+
+    gradle(
+      task: "assemble",
+      build_type: "Debug",
+      project_dir: "."
+    )
+
+    apk_path = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH] || "./app/build/outputs/apk/debug/app-debug.apk"
+    UI.success("Local debug APK ready at #{apk_path}")
+    apk_path
+  end
+
   desc "Build and upload an internal testing build to Google Play"
   lane :beta do
     upload_bundle(
