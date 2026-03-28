@@ -244,6 +244,8 @@ fn forward_automaton_events(params: ForwardParams) {
                         "tool_call_started" => Some("tool_use_start"),
                         "tool_result" => Some("tool_result"),
                         "progress" => Some("progress"),
+                        "git_pushed" => Some("git_pushed"),
+                        "git_committed" => Some("git_committed"),
                         "done" => {
                             clear_active_automaton(
                                 automaton_registry.clone(),

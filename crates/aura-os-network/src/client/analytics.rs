@@ -64,4 +64,22 @@ impl NetworkClient {
         self.get_authed(&format!("{}/api/stats", self.base_url), jwt)
             .await
     }
+
+    pub async fn report_usage(
+        &self,
+        req: &crate::types::ReportUsageRequest,
+        jwt: &str,
+    ) -> Result<(), NetworkError> {
+        let url = format!("{}/api/usage", self.base_url);
+        let resp = self.http.post(&url).bearer_auth(jwt).json(req).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(NetworkError::Server {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        Ok(())
+    }
 }

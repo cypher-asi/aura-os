@@ -95,6 +95,7 @@ pub(crate) struct AddCommentRequest {
 #[derive(Debug, Deserialize)]
 pub(crate) struct CreatePostRequest {
     pub post_type: Option<String>,
+    pub event_type: Option<String>,
     pub title: String,
     pub summary: Option<String>,
     pub metadata: Option<serde_json::Value>,
@@ -124,9 +125,16 @@ pub(crate) async fn create_post(
     let post = client
         .create_post(&aura_os_network::client::CreatePostParams {
             title: &req.title,
+            event_type: req.event_type.as_deref().unwrap_or("post"),
             summary: req.summary.as_deref(),
             post_type: req.post_type.as_deref(),
             metadata: req.metadata.clone(),
+            project_id: None,
+            agent_id: None,
+            user_id: None,
+            org_id: None,
+            push_id: None,
+            commit_ids: None,
             jwt: &jwt,
         })
         .await
