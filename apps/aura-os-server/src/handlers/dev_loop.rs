@@ -387,13 +387,41 @@ pub(crate) async fn start_loop(
             ))
         })?;
 
+    // Resolve the first task the automaton will pick so that events
+    // arriving before the real task_started get stamped with a task_id.
+    // Without this, text_delta events have no task_id and the frontend
+    // silently discards them.
+    let first_task_id = state
+        .task_service
+        .select_next_task(&project_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|t| t.task_id.to_string());
+
+    if let Some(ref tid) = first_task_id {
+        emit_domain_event(
+            &state.event_broadcast,
+            "task_started",
+            project_id,
+            agent_instance_id,
+            serde_json::json!({"task_id": tid}),
+        );
+        let mut cache = state.task_output_cache.lock().await;
+        cache.insert(tid.clone(), CachedTaskOutput {
+            project_id: Some(project_id.to_string()),
+            agent_instance_id: Some(agent_instance_id.to_string()),
+            ..Default::default()
+        });
+    }
+
     forward_automaton_events(ForwardParams {
         automaton_events_tx: events_tx,
         app_broadcast: state.event_broadcast.clone(),
         automaton_registry: state.automaton_registry.clone(),
         project_id,
         agent_instance_id,
-        task_id: None,
+        task_id: first_task_id,
         task_output_cache: state.task_output_cache.clone(),
         storage_client: state.storage_client.clone(),
         jwt: jwt_for_persist,
