@@ -93,7 +93,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   canGoBack: false,
 
   setActiveTab: (tab) => {
-    set({ activeTab: tab, showInfo: false });
+    set({ activeTab: tab, showInfo: false, previewItem: null, previewHistory: [], canGoBack: false });
   },
 
   viewSpec: (spec) => {

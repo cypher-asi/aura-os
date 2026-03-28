@@ -89,10 +89,26 @@
 }
 
 .sidekickBody {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  z-index: 10;
+  animation: overlaySlideIn 200ms ease-out;
+}
+
+@keyframes overlaySlideIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .sidekickContent {

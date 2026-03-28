@@ -12,7 +12,7 @@ import { PanelSearch } from "../PanelSearch";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
-import { useSidekick } from "../../stores/sidekick-store";
+
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -79,28 +79,6 @@ function SidekickLane() {
   );
 }
 
-function PreviewLane() {
-  const activeApp = useAppStore((s) => s.activeApp);
-  const { PreviewPanel, PreviewHeader: PreviewHeaderComp } = activeApp;
-  const { previewItem } = useSidekick();
-
-  return (
-    <Lane
-      resizable
-      resizePosition="left"
-      defaultWidth={320}
-      maxWidth={1200}
-      storageKey="aura-preview"
-      collapsible
-      collapsed={!previewItem}
-      header={PreviewHeaderComp && <PreviewHeaderComp />}
-      className={styles.laneLeftBorder}
-    >
-      {PreviewPanel && <PreviewPanel />}
-    </Lane>
-  );
-}
-
 export function DesktopShell() {
   const activeApp = useAppStore((s) => s.activeApp);
   const { features } = useAuraCapabilities();
@@ -108,7 +86,7 @@ export function DesktopShell() {
   const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const { MainPanel, PreviewPanel } = activeApp;
+  const { MainPanel } = activeApp;
 
 
   useEffect(() => {
@@ -193,11 +171,6 @@ export function DesktopShell() {
           <ErrorBoundary name="sidekick">
             <SidekickLane />
           </ErrorBoundary>
-          {PreviewPanel && (
-            <ErrorBoundary name="preview">
-              <PreviewLane />
-            </ErrorBoundary>
-          )}
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { Button, Text } from "@cypher-asi/zui";
 import { ArrowLeft } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { PanelSearch } from "../PanelSearch";
+import { PreviewContent, PreviewHeader } from "../Preview";
 import { StatusBadge } from "../StatusBadge";
 import { api } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
@@ -87,7 +88,7 @@ const SEARCH_PLACEHOLDERS: Record<string, string> = {
 };
 
 export function SidekickContent() {
-  const { activeTab, showInfo, toggleInfo } = useSidekick();
+  const { activeTab, showInfo, toggleInfo, previewItem } = useSidekick();
   const ctx = useProjectContext();
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
@@ -162,6 +163,12 @@ export function SidekickContent() {
           <SidekickLog searchQuery={searchQuery} />
         </div>
       </div>
+      {previewItem && (
+        <div className={styles.previewOverlay}>
+          <PreviewHeader />
+          <PreviewContent />
+        </div>
+      )}
     </div>
   );
 }
