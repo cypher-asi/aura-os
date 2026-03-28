@@ -85,6 +85,64 @@ pub(crate) async fn list_remote_directory(
         .json()
         .await
         .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
+    let path_rejected = !body
+        .get("ok")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let entries_empty = body
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.is_empty())
+        .unwrap_or(true);
+    let should_fallback = path_rejected || (entries_empty && !req.path.is_empty() && req.path != "." && req.path != "");
+    if should_fallback {
+        let fallback_resp = network
+            .http_client()
+            .post(&url)
+            .json(&serde_json::json!({ "path": ".", "depth": 20 }))
+            .header("Authorization", format!("Bearer {jwt}"))
+            .send()
+            .await
+            .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+        if !fallback_resp.status().is_success() {
+            let status = fallback_resp.status().as_u16();
+            let fallback_body = fallback_resp.text().await.unwrap_or_default();
+            return Err(map_gateway_status(status, &fallback_body));
+        }
+        let fallback_json: serde_json::Value = fallback_resp
+            .json()
+            .await
+            .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
+        // Some swarm deployments expose workspace root on empty path rather than "."
+        // while still rejecting absolute paths. Probe and prefer it when populated.
+        let empty_root_resp = network
+            .http_client()
+            .post(&url)
+            .json(&serde_json::json!({ "path": "", "depth": 20 }))
+            .header("Authorization", format!("Bearer {jwt}"))
+            .send()
+            .await
+            .map_err(|e| ApiError::bad_gateway(format!("swarm gateway unreachable: {e}")))?;
+        if empty_root_resp.status().is_success() {
+            let empty_root_json: serde_json::Value = empty_root_resp
+                .json()
+                .await
+                .map_err(|e| ApiError::internal(format!("failed to parse gateway response: {e}")))?;
+            if empty_root_json
+                .get("ok")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+                && empty_root_json
+                    .get("entries")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| !arr.is_empty())
+                    .unwrap_or(false)
+            {
+                return Ok(Json(empty_root_json));
+            }
+        }
+        return Ok(Json(fallback_json));
+    }
 
     Ok(Json(body))
 }
