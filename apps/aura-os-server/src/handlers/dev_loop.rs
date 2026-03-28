@@ -466,6 +466,8 @@ pub(crate) async fn start_loop(
         model: None,
         workspace_root: Some(project_path),
         task_id: None,
+        git_repo_url: project.as_ref().and_then(|p| p.git_repo_url.clone()),
+        git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
     };
 
     let (automaton_id, adopted, event_stream_url) = match automaton_client.start(start_params.clone()).await {
@@ -860,6 +862,8 @@ pub(crate) async fn run_single_task(
             model: None,
             workspace_root: Some(project_path),
             task_id: Some(task_id.to_string()),
+            git_repo_url: project.as_ref().and_then(|p| p.git_repo_url.clone()),
+            git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
         })
         .await
         .map_err(|e| match e {
