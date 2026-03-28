@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/mobile-android-shell-clean
+      - codex/mobile-store-integration
     paths:
       - .github/workflows/android-mobile.yml
       - frontend/**
@@ -105,6 +106,8 @@ jobs:
       ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
       ANDROID_PLAY_TRACK: ${{ inputs.track }}
       ANDROID_VERSION_CODE: ${{ github.run_number }}
+      VITE_ANDROID_DEFAULT_HOST: ${{ secrets.VITE_ANDROID_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ secrets.VITE_NATIVE_DEFAULT_HOST }}
 
     steps:
       - uses: actions/checkout@v4
@@ -143,12 +146,6 @@ jobs:
       - name: Install fastlane gems
         working-directory: frontend/android
         run: bundle install --jobs 4 --retry 3
-
-      - name: Build frontend and sync Capacitor Android
-        working-directory: frontend
-        run: |
-          npm run build
-          npx cap sync android
 
       - name: Materialize Android upload keystore
         run: |

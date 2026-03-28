@@ -40,6 +40,7 @@ def ensure_signing!
 end
 
 def build_release_bundle
+  sync_android_web_assets
   ensure_signing!
 
   # Feed versioning and signing through env-backed Gradle config so local and CI

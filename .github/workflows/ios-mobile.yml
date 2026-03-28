@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/mobile-ios-shell-clean
+      - codex/mobile-store-integration
     paths:
       - .github/workflows/ios-mobile.yml
       - frontend/**
@@ -97,6 +98,8 @@ jobs:
       IOS_MATCH_GIT_URL: ${{ secrets.IOS_MATCH_GIT_URL }}
       IOS_SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review && '1' || '0' }}
       MATCH_PASSWORD: ${{ secrets.IOS_MATCH_PASSWORD }}
+      VITE_IOS_DEFAULT_HOST: ${{ secrets.VITE_IOS_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ secrets.VITE_NATIVE_DEFAULT_HOST }}
 
     steps:
       - uses: actions/checkout@v4
@@ -120,12 +123,6 @@ jobs:
       - name: Install fastlane gems
         working-directory: frontend/ios
         run: bundle install --jobs 4 --retry 3
-
-      - name: Build frontend and sync Capacitor iOS
-        working-directory: frontend
-        run: |
-          npm run build
-          npx cap sync ios
 
       - name: Upload build with fastlane
         working-directory: frontend/ios
