@@ -9,6 +9,7 @@ import styles from "./XTerminal.module.css";
 interface XTerminalProps {
   terminal: UseTerminalReturn;
   visible: boolean;
+  focused: boolean;
 }
 
 function getThemeBg(): string {
@@ -50,7 +51,7 @@ function getTheme() {
   };
 }
 
-export function XTerminal({ terminal: hook, visible }: XTerminalProps) {
+export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -119,6 +120,15 @@ export function XTerminal({ terminal: hook, visible }: XTerminalProps) {
       });
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (focused && xtermRef.current) {
+      requestAnimationFrame(() => {
+        fitRef.current?.fit();
+        xtermRef.current?.focus();
+      });
+    }
+  }, [focused]);
 
   return (
     <div
