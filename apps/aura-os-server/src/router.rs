@@ -47,13 +47,21 @@ fn is_allowed_cors_origin(origin: &HeaderValue) -> bool {
     std::env::var("AURA_ALLOWED_ORIGINS")
         .ok()
         .into_iter()
-        .flat_map(|value| value.split(',').map(str::trim).map(str::to_owned).collect::<Vec<_>>())
+        .flat_map(|value| {
+            value
+                .split(',')
+                .map(str::trim)
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        })
         .any(|allowed| !allowed.is_empty() && allowed == origin)
 }
 
 pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf>) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::predicate(|origin, _| is_allowed_cors_origin(origin)))
+        .allow_origin(AllowOrigin::predicate(|origin, _| {
+            is_allowed_cors_origin(origin)
+        }))
         .allow_credentials(true)
         .allow_methods(AllowMethods::mirror_request())
         .allow_headers(AllowHeaders::mirror_request());
@@ -99,6 +107,10 @@ fn auth_routes() -> Router<AppState> {
     Router::new()
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
+        .route(
+            "/api/auth/import-access-token",
+            post(auth::import_access_token),
+        )
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/logout", post(auth::logout))

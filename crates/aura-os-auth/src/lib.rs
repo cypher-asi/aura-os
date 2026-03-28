@@ -149,6 +149,14 @@ impl AuthService {
         self.fetch_and_store_session(&login_data.access_token).await
     }
 
+    pub async fn import_access_token(
+        &self,
+        access_token: &str,
+    ) -> Result<AuthSessionResult, AuthError> {
+        debug!("Importing existing zOS access token");
+        self.fetch_and_store_session(access_token).await
+    }
+
     pub async fn get_session(&self) -> Result<Option<ZeroAuthSession>, AuthError> {
         match self.store.get_setting(AUTH_SESSION_KEY) {
             Ok(bytes) => {

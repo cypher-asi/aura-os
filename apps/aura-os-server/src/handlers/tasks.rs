@@ -7,10 +7,10 @@ use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 use aura_os_storage::StorageTask;
 use aura_os_tasks::TaskService;
 
+use super::projects_helpers::project_tool_session_config;
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-use super::projects_helpers::project_tool_session_config;
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct TaskQueryParams {
@@ -87,7 +87,6 @@ pub(crate) async fn extract_tasks(
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Extract tasks for project {project_id}"),
-            tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
 
@@ -283,7 +282,10 @@ pub(crate) async fn get_task_output(
     {
         let cache = state.task_output_cache.lock().await;
         if let Some(entry) = cache.get(&task_id.to_string()) {
-            if !entry.live_output.is_empty() || !entry.build_steps.is_empty() || !entry.test_steps.is_empty() {
+            if !entry.live_output.is_empty()
+                || !entry.build_steps.is_empty()
+                || !entry.test_steps.is_empty()
+            {
                 return Ok(Json(TaskOutputResponse {
                     output: entry.live_output.clone(),
                     build_steps: entry.build_steps.clone(),

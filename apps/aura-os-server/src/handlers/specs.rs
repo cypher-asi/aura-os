@@ -11,16 +11,20 @@ use tracing::info;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec, SpecId};
 use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 
+use super::projects_helpers::project_tool_session_config;
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
-use super::projects_helpers::project_tool_session_config;
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct SpecQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
 }
 
-async fn resolve_harness_mode(state: &AppState, project_id: &ProjectId, params: &SpecQueryParams) -> HarnessMode {
+async fn resolve_harness_mode(
+    state: &AppState,
+    project_id: &ProjectId,
+    params: &SpecQueryParams,
+) -> HarnessMode {
     if let Some(aiid) = params.agent_instance_id {
         state
             .agent_instance_service
@@ -70,7 +74,6 @@ pub(crate) async fn generate_specs_summary(
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Generate specs summary for project {project_id}"),
-            tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending spec summary command: {e}")))?;
 
@@ -134,7 +137,6 @@ async fn open_spec_gen_session(
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Generate specs for project {project_id}"),
-            tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending spec gen command: {e}")))?;
 

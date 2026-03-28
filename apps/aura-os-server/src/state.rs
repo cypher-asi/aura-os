@@ -62,6 +62,8 @@ pub struct CachedTaskOutput {
     pub live_output: String,
     pub build_steps: Vec<serde_json::Value>,
     pub test_steps: Vec<serde_json::Value>,
+    pub total_input_tokens: u64,
+    pub total_output_tokens: u64,
     pub session_id: Option<String>,
     pub agent_instance_id: Option<String>,
     pub project_id: Option<String>,

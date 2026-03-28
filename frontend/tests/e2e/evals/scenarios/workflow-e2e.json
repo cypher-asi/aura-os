@@ -1,0 +1,131 @@
+[
+  {
+    "id": "hello-world-deterministic-lifecycle",
+    "suite": "workflow",
+    "kind": "deterministic_lifecycle",
+    "title": "Deterministic hello world workflow",
+    "devices": ["eval-workflow-desktop"],
+    "fixtureDir": "hello-world-static-site",
+    "org": {
+      "name": "Aura Workflow Eval Org"
+    },
+    "agentTemplate": {
+      "name": "Workflow Builder",
+      "role": "Engineer",
+      "personality": "Careful and deterministic.",
+      "systemPrompt": "Build the requested project, keep build and test commands green, and leave clear output."
+    },
+    "project": {
+      "name": "Aura Workflow Eval Project",
+      "description": "Deterministic workflow scenario using the hello world fixture.",
+      "buildCommand": "npm run build",
+      "testCommand": "npm run test"
+    },
+    "generatedSpec": {
+      "title": "Hello world benchmark spec"
+    },
+    "extractedTasks": [
+      {
+        "title": "Create the benchmark page",
+        "description": "Implement the requested hello world page from requirements.md."
+      },
+      {
+        "title": "Verify build and tests",
+        "description": "Run the project's build and test commands and confirm they pass."
+      }
+    ],
+    "verification": {
+      "statsTexts": ["Completion", "Tokens", "Specs", "Cost"],
+      "taskOutputContains": [
+        "Build completed successfully.",
+        "All tests passed."
+      ]
+    }
+  },
+  {
+    "id": "node-server-deterministic-lifecycle",
+    "suite": "workflow",
+    "kind": "deterministic_lifecycle",
+    "title": "Deterministic node server workflow",
+    "devices": ["eval-workflow-desktop"],
+    "fixtureDir": "hello-world-node-server",
+    "org": {
+      "name": "Aura Workflow Eval Org"
+    },
+    "agentTemplate": {
+      "name": "Workflow Builder",
+      "role": "Engineer",
+      "personality": "Careful and deterministic.",
+      "systemPrompt": "Build the requested project, keep build and test commands green, and leave clear output."
+    },
+    "project": {
+      "name": "Aura Workflow Node Server Eval",
+      "description": "Deterministic workflow scenario using the node server fixture.",
+      "buildCommand": "npm run build",
+      "testCommand": "npm run test"
+    },
+    "generatedSpec": {
+      "title": "Node server benchmark spec"
+    },
+    "extractedTasks": [
+      {
+        "title": "Build the node server",
+        "description": "Implement the dependency-free server from requirements.md."
+      },
+      {
+        "title": "Verify routes and tests",
+        "description": "Run the project's build and test commands and confirm the runtime checks pass."
+      }
+    ],
+    "verification": {
+      "statsTexts": ["Completion", "Tokens", "Specs", "Cost"],
+      "taskOutputContains": [
+        "Build completed successfully.",
+        "All tests passed."
+      ]
+    }
+  },
+  {
+    "id": "existing-server-patch-deterministic-lifecycle",
+    "suite": "workflow",
+    "kind": "deterministic_lifecycle",
+    "title": "Deterministic existing server patch workflow",
+    "devices": ["eval-workflow-desktop"],
+    "fixtureDir": "existing-node-server-patch",
+    "org": {
+      "name": "Aura Workflow Eval Org"
+    },
+    "agentTemplate": {
+      "name": "Workflow Builder",
+      "role": "Engineer",
+      "personality": "Careful and deterministic.",
+      "systemPrompt": "Build the requested project, keep build and test commands green, and leave clear output."
+    },
+    "project": {
+      "name": "Aura Workflow Existing Server Eval",
+      "description": "Deterministic workflow scenario that patches an existing server fixture.",
+      "buildCommand": "npm run build",
+      "testCommand": "npm run test"
+    },
+    "generatedSpec": {
+      "title": "Existing server patch benchmark spec"
+    },
+    "extractedTasks": [
+      {
+        "title": "Patch the existing server",
+        "description": "Update the existing server implementation to satisfy the patch requirements."
+      },
+      {
+        "title": "Verify patched routes",
+        "description": "Run the project's build and test commands and confirm the patched server passes validation."
+      }
+    ],
+    "verification": {
+      "statsTexts": ["Completion", "Tokens", "Specs", "Cost"],
+      "taskOutputContains": [
+        "Build completed successfully.",
+        "All tests passed."
+      ]
+    }
+  }
+]

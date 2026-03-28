@@ -1,0 +1,12 @@
+{
+  "name": "aura-promptfoo-evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "promptfoo eval -c promptfooconfig.yaml",
+    "eval:ci": "mkdir -p ../reports && promptfoo eval -c promptfooconfig.yaml -o ../reports/promptfoo-results.json"
+  },
+  "devDependencies": {
+    "promptfoo": "0.121.3"
+  }
+}

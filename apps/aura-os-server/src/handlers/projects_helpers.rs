@@ -210,10 +210,27 @@ pub(crate) fn project_tool_session_config(
     tool_agent_name: &'static str,
 ) -> ApiResult<SessionConfig> {
     let jwt = state.get_jwt()?;
+    let project = state.project_service.get_project(project_id).ok();
+    let project_path = project.as_ref().and_then(|project| {
+        let linked = project.linked_folder_path.trim();
+        if !linked.is_empty() {
+            Some(linked.to_string())
+        } else if !project.name.trim().is_empty() {
+            Some(
+                canonical_workspace_path(&state.data_dir, &project.name)
+                    .display()
+                    .to_string(),
+            )
+        } else {
+            None
+        }
+    });
     Ok(SessionConfig {
         agent_id: Some(format!("{tool_agent_name}-{project_id}")),
         agent_name: Some(tool_agent_name.to_string()),
         token: Some(jwt),
+        project_id: Some(project_id.to_string()),
+        project_path,
         ..Default::default()
     })
 }

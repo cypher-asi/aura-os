@@ -1,0 +1,140 @@
+[
+  {
+    "id": "desktop-login-host-connection",
+    "suite": "smoke",
+    "kind": "browser_core",
+    "title": "Desktop login screen exposes the host connection controls",
+    "devices": ["eval-desktop-chromium"],
+    "bootstrap": "guest",
+    "steps": [
+      {
+        "label": "open_login",
+        "navigate": "/login",
+        "expect": {
+          "visibleRoles": [
+            { "role": "button", "name": "Change host", "exact": true }
+          ]
+        }
+      },
+      {
+        "label": "open_host_modal",
+        "action": {
+          "clickRole": { "role": "button", "name": "Change host", "exact": true }
+        },
+        "expect": {
+          "visibleTexts": ["Host Connection"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "mobile-login-host-connection",
+    "suite": "smoke",
+    "kind": "browser_core",
+    "title": "Mobile login screen exposes the host connection controls",
+    "devices": [
+      "eval-mobile-chromium",
+      "eval-mobile-webkit"
+    ],
+    "bootstrap": "guest",
+    "steps": [
+      {
+        "label": "open_login",
+        "navigate": "/login",
+        "expect": {
+          "visibleRoles": [
+            { "role": "button", "name": "Host", "exact": false }
+          ]
+        }
+      },
+      {
+        "label": "open_host_modal",
+        "action": {
+          "clickRole": { "role": "button", "name": "Host", "exact": false }
+        },
+        "expect": {
+          "visibleTexts": ["Host Connection"]
+        }
+      }
+    ]
+  },
+  {
+    "id": "desktop-project-shell",
+    "suite": "smoke",
+    "kind": "browser_core",
+    "title": "Desktop project shell loads the project explorer and execution view",
+    "devices": ["eval-desktop-chromium"],
+    "bootstrap": "mock_authenticated_app",
+    "steps": [
+      {
+        "label": "open_projects",
+        "navigate": "/projects",
+        "expect": {
+          "urlMatches": "/projects$",
+          "visibleTexts": ["Welcome to AURA"],
+          "visibleRoles": [
+            { "role": "treeitem", "name": "Demo Project" }
+          ]
+        }
+      },
+      {
+        "label": "open_execution",
+        "navigate": "/projects/proj-1/work",
+        "expect": {
+          "visibleRoles": [
+            { "role": "treeitem", "name": "Demo Project" },
+            { "role": "heading", "name": "Task Feed", "exact": false },
+            { "role": "button", "name": "Specs", "exact": true },
+            { "role": "button", "name": "Tasks", "exact": true },
+            { "role": "button", "name": "Stats", "exact": true }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "mobile-project-shell",
+    "suite": "smoke",
+    "kind": "browser_core",
+    "title": "Mobile project shell keeps the drawer and project tabs available",
+    "devices": [
+      "eval-mobile-chromium",
+      "eval-mobile-webkit"
+    ],
+    "bootstrap": "mock_authenticated_app",
+    "steps": [
+      {
+        "label": "open_projects",
+        "navigate": "/projects",
+        "expect": {
+          "urlMatches": "/projects/proj-1/agents/agent-inst-1$",
+          "visibleRoles": [
+            { "role": "button", "name": "Open apps", "exact": true },
+            { "role": "button", "name": "Agent", "exact": true },
+            { "role": "button", "name": "Execution", "exact": true },
+            { "role": "button", "name": "Stats", "exact": true }
+          ]
+        }
+      },
+      {
+        "label": "open_project_drawer",
+        "action": {
+          "clickRole": { "role": "button", "name": "Open project navigation", "exact": false }
+        },
+        "expect": {
+          "visibleTexts": ["Current project"],
+          "visibleRoles": [
+            { "role": "treeitem", "name": "Demo Project" }
+          ]
+        }
+      },
+      {
+        "label": "open_stats",
+        "navigate": "/projects/proj-1/stats",
+        "expect": {
+          "visibleTexts": ["Stats", "Completion", "Tokens"]
+        }
+      }
+    ]
+  }
+]

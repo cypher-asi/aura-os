@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-03-28T20:12:34.587Z",
+  "scenarios": [
+    {
+      "scenarioId": "existing-server-patch-deterministic-lifecycle",
+      "title": "Deterministic existing server patch workflow",
+      "suite": "workflow",
+      "kind": "deterministic_lifecycle",
+      "device": "eval-workflow-desktop",
+      "bundleId": "workflow-mock-default",
+      "success": true,
+      "counts": {
+        "specs": 1,
+        "tasks": 2,
+        "doneTasks": 2,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 783,
+        "totalSteps": 13,
+        "totalTokens": 1035,
+        "estimatedCostUsd": 0.12,
+        "buildSteps": 1,
+        "testSteps": 1,
+        "completionPercentage": 100,
+        "totalTimeSeconds": 42
+      }
+    },
+    {
+      "scenarioId": "hello-world-deterministic-lifecycle",
+      "title": "Deterministic hello world workflow",
+      "suite": "workflow",
+      "kind": "deterministic_lifecycle",
+      "device": "eval-workflow-desktop",
+      "bundleId": "workflow-mock-default",
+      "success": true,
+      "counts": {
+        "specs": 1,
+        "tasks": 2,
+        "doneTasks": 2,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 820,
+        "totalSteps": 13,
+        "totalTokens": 1035,
+        "estimatedCostUsd": 0.12,
+        "buildSteps": 1,
+        "testSteps": 1,
+        "completionPercentage": 100,
+        "totalTimeSeconds": 42
+      }
+    },
+    {
+      "scenarioId": "node-server-deterministic-lifecycle",
+      "title": "Deterministic node server workflow",
+      "suite": "workflow",
+      "kind": "deterministic_lifecycle",
+      "device": "eval-workflow-desktop",
+      "bundleId": "workflow-mock-default",
+      "success": true,
+      "counts": {
+        "specs": 1,
+        "tasks": 2,
+        "doneTasks": 2,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 882,
+        "totalSteps": 13,
+        "totalTokens": 1035,
+        "estimatedCostUsd": 0.12,
+        "buildSteps": 1,
+        "testSteps": 1,
+        "completionPercentage": 100,
+        "totalTimeSeconds": 42
+      }
+    }
+  ]
+}

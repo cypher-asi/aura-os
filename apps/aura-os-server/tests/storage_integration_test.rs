@@ -104,6 +104,7 @@ async fn session_create_list_get_update() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -127,7 +128,10 @@ async fn session_create_list_get_update() {
         JWT,
         &UpdateSessionRequest {
             status: Some("rolled_over".into()),
+            total_input_tokens: Some(0),
+            total_output_tokens: Some(0),
             context_usage_estimate: Some(0.85),
+            summary_of_previous_context: None,
             ended_at: Some(chrono::Utc::now().to_rfc3339()),
             tasks_worked_count: Some(3),
         },
@@ -156,6 +160,7 @@ async fn resolve_chat_session_pattern() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -186,6 +191,7 @@ async fn chat_event_persistence_full_cycle() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -308,6 +314,7 @@ async fn task_event_persistence() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -541,6 +548,7 @@ async fn end_to_end_project_chat_and_task_flow() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -682,6 +690,7 @@ async fn session_rollover_pattern() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -712,7 +721,10 @@ async fn session_rollover_pattern() {
         JWT,
         &UpdateSessionRequest {
             status: Some("rolled_over".into()),
+            total_input_tokens: Some(0),
+            total_output_tokens: Some(0),
             context_usage_estimate: Some(0.52),
+            summary_of_previous_context: None,
             ended_at: Some(chrono::Utc::now().to_rfc3339()),
             tasks_worked_count: None,
         },
@@ -727,6 +739,7 @@ async fn session_rollover_pattern() {
             &CreateSessionRequest {
                 project_id: pid.clone(),
                 org_id: None,
+                model: None,
                 status: Some("active".into()),
                 context_usage_estimate: None,
                 summary_of_previous_context: Some("Previously discussed project setup.".into()),
@@ -811,6 +824,7 @@ async fn list_events_empty_session_returns_empty() {
             &CreateSessionRequest {
                 project_id: "p1".into(),
                 org_id: None,
+                model: None,
                 status: None,
                 context_usage_estimate: None,
                 summary_of_previous_context: None,

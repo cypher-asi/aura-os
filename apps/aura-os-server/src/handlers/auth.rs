@@ -7,7 +7,9 @@ use serde::Serialize;
 use aura_os_auth::AuthError;
 use aura_os_core::ZeroAuthSession;
 
-use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
+use crate::dto::{
+    AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse, ImportAccessTokenRequest,
+};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
 use crate::state::AppState;
@@ -56,6 +58,35 @@ pub(crate) async fn register(
     let mut result = state
         .auth_service
         .register(&req.email, &req.password)
+        .await
+        .map_err(map_auth_error)?;
+
+    sync_user_to_network(&state, &mut result.session).await;
+
+    Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+pub(crate) async fn import_access_token(
+    State(state): State<AppState>,
+    Json(req): Json<ImportAccessTokenRequest>,
+) -> ApiResult<Json<AuthSessionResponse>> {
+    let auth_import_enabled = matches!(
+        std::env::var("AURA_ALLOW_AUTH_TOKEN_IMPORT").as_deref(),
+        Ok("1") | Ok("true") | Ok("TRUE")
+    );
+    if !auth_import_enabled {
+        return Err(ApiError::forbidden(
+            "auth token import is disabled for this Aura server",
+        ));
+    }
+
+    if req.access_token.trim().is_empty() {
+        return Err(ApiError::bad_request("access_token is required"));
+    }
+
+    let mut result = state
+        .auth_service
+        .import_access_token(req.access_token.trim())
         .await
         .map_err(map_auth_error)?;
 

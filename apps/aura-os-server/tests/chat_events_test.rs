@@ -57,6 +57,7 @@ async fn storage_create_and_list_events() {
             &CreateSessionRequest {
                 project_id: "proj-1".into(),
                 org_id: None,
+                model: None,
                 status: None,
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
@@ -298,6 +299,7 @@ async fn events_endpoint_returns_session_event_shape() {
             &CreateSessionRequest {
                 project_id: pid.to_string(),
                 org_id: None,
+                model: None,
                 status: None,
                 context_usage_estimate: None,
                 summary_of_previous_context: None,
