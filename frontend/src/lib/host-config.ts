@@ -41,6 +41,9 @@ function getNativePlatform(): string | null {
 function inferNativePlatformFromUserAgent(): string | null {
   if (!hasWindow() || !requiresExplicitHostOrigin()) return null;
 
+  if (window.location.protocol === "capacitor:") return "ios";
+  if (window.location.origin === "http://localhost" || window.location.origin === "https://localhost") return "android";
+
   const userAgent = window.navigator.userAgent.toLowerCase();
   if (userAgent.includes("android")) return "android";
   if (userAgent.includes("iphone") || userAgent.includes("ipad") || userAgent.includes("ipod")) return "ios";

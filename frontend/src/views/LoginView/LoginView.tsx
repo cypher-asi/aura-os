@@ -265,54 +265,54 @@ export function LoginView() {
             ) : null
           )}
 
-          <Tabs
-            items={AUTH_TABS}
-            activeId={activeTab}
-            onChange={handleTabChange}
-            className={styles.tabs}
-          />
+          <div className={styles.tabs}>
+            <Tabs tabs={AUTH_TABS} value={activeTab} onChange={handleTabChange} />
+          </div>
 
           <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.field}>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                type="email"
-                autoComplete="email"
-              />
-            </div>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              type="email"
+              autoComplete="email"
+              disabled={loading}
+            />
 
-            <div className={styles.field}>
-              <Input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                type="password"
-                autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
-              />
-            </div>
+            <Input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              type="password"
+              autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
+              disabled={loading}
+            />
 
             {activeTab === "register" && (
-              <div className={styles.field}>
-                <Input
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm Password"
-                  type="password"
-                  autoComplete="new-password"
-                />
-              </div>
+              <Input
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                type="password"
+                autoComplete="new-password"
+                disabled={loading}
+              />
             )}
 
-            {error && (
-              <Text variant="muted" size="sm" className={styles.error}>
-                {error}
-              </Text>
-            )}
+            {error && <div className={styles.error}>{error}</div>}
 
-            <Button type="submit" variant="primary" fullWidth disabled={loading}>
-              {loading ? <><Spinner size="sm" /> {activeTab === "signin" ? "Signing in..." : "Creating Account..."}</> : activeTab === "signin" ? "Sign In" : "Create Account"}
+            <Button
+              type="submit"
+              variant="primary"
+              className={styles.submit}
+              disabled={loading}
+              icon={loading ? <Spinner size="sm" className={styles.spinnerWhite} /> : undefined}
+            >
+              {loading
+                ? "Please wait..."
+                : activeTab === "signin"
+                  ? "Sign In"
+                  : "Create Account"}
             </Button>
           </form>
         </Panel>
