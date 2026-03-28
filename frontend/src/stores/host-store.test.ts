@@ -42,7 +42,6 @@ beforeEach(async () => {
     headers: { get: () => "application/json" },
   });
   useHostStore.setState({ hostOrigin: null, status: "checking", lastCheckedAt: null });
-  await flushProbes();
 });
 
 describe("host-store", () => {

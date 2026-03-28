@@ -225,6 +225,7 @@ fn set_square_corners(_window: &tao::window::Window) {
 
     #[cfg(target_os = "macos")]
     {
+        use objc::{sel, sel_impl};
         use tao::platform::macos::WindowExtMacOS;
 
         unsafe {
