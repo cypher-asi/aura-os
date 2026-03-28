@@ -16,12 +16,13 @@ export function IdeView() {
   const [params] = useSearchParams();
   const initialFile = params.get("file") ?? "";
   const rootPath = params.get("root") ?? (initialFile ? initialFile.replace(/[\\/][^\\/]+$/, "") : "");
+  const remoteAgentId = params.get("remoteAgentId") ?? undefined;
 
-  const ide = useIdeViewTabs(initialFile);
+  const ide = useIdeViewTabs(initialFile, remoteAgentId);
 
   const handleFileSelect = useCallback((path: string) => ide.openTab(path), [ide.openTab]);
 
-  if (!features.ideIntegration) {
+  if (!features.ideIntegration && !remoteAgentId) {
     return <PageEmptyState title="IDE stays on desktop" description="This device does not expose local file editing or IDE workflows." />;
   }
 
@@ -38,7 +39,7 @@ export function IdeView() {
       <div className={styles.body}>
         {rootPath && (
           <Lane resizable resizePosition="right" defaultWidth={220} minWidth={120} maxWidth={480} storageKey="ide-sidebar-width" className={styles.sidebar}>
-            <FileExplorer rootPath={rootPath} onFileSelect={handleFileSelect} />
+            <FileExplorer rootPath={rootPath} onFileSelect={handleFileSelect} remoteAgentId={remoteAgentId} />
           </Lane>
         )}
 

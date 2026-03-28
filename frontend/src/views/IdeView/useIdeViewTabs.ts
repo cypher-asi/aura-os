@@ -13,7 +13,7 @@ export interface TabState {
   error: string | null;
 }
 
-export function useIdeViewTabs(initialFile: string) {
+export function useIdeViewTabs(initialFile: string, remoteAgentId?: string) {
   const [tabs, setTabs] = useState<TabState[]>([]);
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -27,7 +27,10 @@ export function useIdeViewTabs(initialFile: string) {
     setTabs((prev) => {
       if (prev.find((t) => t.path === path)) return prev;
       const newTab: TabState = { path, content: null, savedContent: null, loading: true, error: null };
-      api.readFile(path)
+      const readPromise = remoteAgentId
+        ? api.swarm.readRemoteFile(remoteAgentId, path)
+        : api.readFile(path);
+      readPromise
         .then((res) => {
           setTabs((prev2) => prev2.map((t) => {
             if (t.path !== path) return t;
@@ -42,7 +45,7 @@ export function useIdeViewTabs(initialFile: string) {
       return [...prev, newTab];
     });
     setActiveTabPath(path);
-  }, []);
+  }, [remoteAgentId]);
 
   const closeTab = useCallback((path: string) => {
     setTabs((prev) => {

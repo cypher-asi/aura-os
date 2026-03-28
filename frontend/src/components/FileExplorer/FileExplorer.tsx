@@ -3,7 +3,7 @@ import { api, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Folder, File, FolderOpen, RefreshCw } from "lucide-react";
+import { Folder, File, FolderOpen } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store";
 import { EventType } from "../../types/aura-events";
@@ -14,6 +14,8 @@ interface FileExplorerProps {
   searchQuery?: string;
   onFileSelect?: (path: string) => void;
   remoteAgentId?: string;
+  /** Increment externally to trigger a refresh (e.g. from a button in PanelSearch). */
+  refreshTrigger?: number;
 }
 
 function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
@@ -26,7 +28,7 @@ function toExplorerNodes(entries: DirEntry[]): ExplorerNode[] {
   }));
 }
 
-export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentId }: FileExplorerProps) {
+export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentId, refreshTrigger }: FileExplorerProps) {
   const [directoryState, setDirectoryState] = useState<{
     key: string | null;
     entries: DirEntry[];
@@ -46,6 +48,13 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => setRefreshKey((k) => k + 1), 500);
   }, []);
+
+  // External refresh trigger from parent (e.g. button in PanelSearch)
+  useEffect(() => {
+    if (refreshTrigger != null && refreshTrigger > 0) {
+      setRefreshKey((k) => k + 1);
+    }
+  }, [refreshTrigger]);
 
   // Event-driven refresh: re-fetch when agent modifies files
   useEffect(() => {
@@ -146,7 +155,7 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
       if (node && !node.children) {
         if (onFileSelect) {
           onFileSelect(id);
-        } else if (!isRemote) {
+        } else {
           api.openIde(id, rootPath);
         }
       }
@@ -192,22 +201,9 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
     );
   }
 
-  const refreshButton = (
-    <button
-      type="button"
-      className={styles.refreshButton}
-      onClick={() => setRefreshKey((k) => k + 1)}
-      title="Refresh file tree"
-      aria-label="Refresh file tree"
-    >
-      <RefreshCw size={14} />
-    </button>
-  );
-
   if (isMobileLayout) {
     return (
       <div className={styles.mobileScrollContainer}>
-        <div className={styles.refreshBar}>{refreshButton}</div>
         <div className={styles.mobileFileList}>
           {renderMobileNodes({
             nodes: filteredData,
@@ -223,7 +219,6 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
 
   return (
     <div className={styles.explorerContainer}>
-      <div className={styles.refreshBar}>{refreshButton}</div>
       <Explorer
         data={filteredData}
         expandOnSelect

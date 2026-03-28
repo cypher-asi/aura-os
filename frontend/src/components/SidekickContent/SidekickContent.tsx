@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button, Text } from "@cypher-asi/zui";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { PanelSearch } from "../PanelSearch";
 import { PreviewContent, PreviewHeader } from "../Preview";
@@ -94,6 +94,17 @@ export function SidekickContent() {
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const { remoteAgentId, remoteWorkspacePath } = useTerminalTarget({ projectId, agentInstanceId });
+  const navigate = useNavigate();
+  const [fileRefreshKey, setFileRefreshKey] = useState(0);
+
+  const handleRemoteFileSelect = useCallback(
+    (filePath: string) => {
+      if (remoteAgentId) {
+        navigate(`/ide?file=${encodeURIComponent(filePath)}&remoteAgentId=${encodeURIComponent(remoteAgentId)}`);
+      }
+    },
+    [remoteAgentId, navigate],
+  );
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setSearchQuery(""));
@@ -124,6 +135,8 @@ export function SidekickContent() {
         rootPath={workspaceRoot ?? undefined}
         searchQuery={searchQuery}
         remoteAgentId={remoteAgentId}
+        onFileSelect={remoteAgentId ? handleRemoteFileSelect : undefined}
+        refreshTrigger={fileRefreshKey}
       />
     )
     : (
@@ -151,6 +164,21 @@ export function SidekickContent() {
           placeholder={SEARCH_PLACEHOLDERS[activeTab] ?? ""}
           value={searchQuery}
           onChange={setSearchQuery}
+          action={activeTab === "files" ? (
+            <button
+              type="button"
+              onClick={() => setFileRefreshKey((k) => k + 1)}
+              title="Refresh file tree"
+              aria-label="Refresh file tree"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 24, height: 24, border: "none", borderRadius: "var(--radius-sm)",
+                background: "transparent", color: "var(--color-text-muted)", cursor: "pointer",
+              }}
+            >
+              <RefreshCw size={14} />
+            </button>
+          ) : undefined}
         />
       )}
       <div className={styles.sidekickContent}>
