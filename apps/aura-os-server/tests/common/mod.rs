@@ -45,6 +45,7 @@ pub fn store_zero_auth_session(store: &RocksStore) {
     store.put_setting("zero_auth_session", &session).unwrap();
 }
 
+#[allow(dead_code)]
 pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());
@@ -260,6 +261,7 @@ pub fn build_test_app_from_store(
     (app, state)
 }
 
+#[allow(dead_code)]
 pub fn build_test_app() -> (Router, AppState, tempfile::TempDir) {
     let db_dir = tempfile::tempdir().unwrap();
     let store = Arc::new(RocksStore::open(db_dir.path()).unwrap());

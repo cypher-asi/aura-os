@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 mod handlers;
 mod updater;
 
