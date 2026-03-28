@@ -119,5 +119,23 @@ describe("ToolCallBlock", () => {
 
       expect(screen.getByText("Generating…")).toBeInTheDocument();
     });
+
+    it("shows structured input context for empty input payloads", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "list_files",
+            pending: false,
+            started: false,
+            input: {},
+          })}
+          defaultExpanded
+        />,
+      );
+
+      expect(screen.getByText(/"explicitInput": \{\}/)).toBeInTheDocument();
+      expect(screen.getByText(/"resolvedContext": \{/)).toBeInTheDocument();
+      expect(screen.getByText(/"resolution": "implicit_defaults_possible"/)).toBeInTheDocument();
+    });
   });
 });

@@ -347,6 +347,28 @@
   white-space: nowrap;
 }
 
+/* ── Copy output button ── */
+
+.copyOutputButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-muted, #6b7280);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+.copyOutputButton:hover {
+  color: var(--color-text-default);
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
 /* ── Live Output activity feed ── */
 
 .liveOutputSection {

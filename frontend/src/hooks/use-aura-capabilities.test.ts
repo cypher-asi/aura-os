@@ -3,6 +3,26 @@ import { useAuraCapabilities, AURA_BREAKPOINTS } from "./use-aura-capabilities";
 
 type MediaQueryHandler = (e: { matches: boolean }) => void;
 
+const originalLocation = window.location;
+
+function setLocation(url: string) {
+  const parsed = new URL(url, "http://app.local");
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      href: parsed.toString(),
+      origin: parsed.origin,
+      protocol: parsed.protocol,
+      host: parsed.host,
+      hostname: parsed.hostname,
+      pathname: parsed.pathname,
+      search: parsed.search,
+      hash: parsed.hash,
+    } satisfies Partial<Location>,
+  });
+}
+
 function createMockMatchMedia() {
   const listeners = new Map<string, Set<MediaQueryHandler>>();
 
@@ -32,10 +52,12 @@ describe("useAuraCapabilities", () => {
 
   beforeEach(() => {
     origMatchMedia = window.matchMedia;
+    setLocation("/login");
   });
 
   afterEach(() => {
     window.matchMedia = origMatchMedia;
+    setLocation("/login");
   });
 
   it("returns default desktop capabilities", () => {
@@ -48,6 +70,7 @@ describe("useAuraCapabilities", () => {
     expect(result.current.isPhoneLayout).toBe(false);
     expect(result.current.isTabletLayout).toBe(false);
     expect(result.current.hasDesktopBridge).toBe(false);
+    expect(result.current.isNativeApp).toBe(false);
     expect(result.current.features.hostRetargeting).toBe(true);
   });
 
@@ -70,6 +93,30 @@ describe("useAuraCapabilities", () => {
     expect(result.current.isPhoneLayout).toBe(true);
     expect(result.current.isTabletLayout).toBe(true);
     expect(result.current.isMobileLayout).toBe(true);
+  });
+
+  it("detects a Capacitor native shell", () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    (window as Window & { Capacitor?: { isNativePlatform: () => boolean } }).Capacitor = {
+      isNativePlatform: () => true,
+    };
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.isNativeApp).toBe(true);
+
+    delete (window as Window & { Capacitor?: { isNativePlatform: () => boolean } }).Capacitor;
+  });
+
+  it("treats Android localhost webviews as native before the bridge is ready", () => {
+    const { matchMedia } = createMockMatchMedia();
+    window.matchMedia = matchMedia as unknown as typeof window.matchMedia;
+    setLocation("http://localhost/login");
+
+    const { result } = renderHook(() => useAuraCapabilities());
+
+    expect(result.current.isNativeApp).toBe(true);
   });
 
   it("cleans up listeners on unmount", () => {

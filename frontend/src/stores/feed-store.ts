@@ -35,6 +35,7 @@ export interface FeedEvent {
   timestamp: string;
   summary?: string;
   eventType: string;
+  profileId: string;
 }
 
 export interface FeedComment {
@@ -96,6 +97,7 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
     timestamp: net.created_at || new Date().toISOString(),
     summary,
     eventType: net.event_type,
+    profileId: net.profile_id,
   };
 }
 
@@ -119,7 +121,7 @@ function applyFilter(
       return events.filter((e) => e.author.type === "agent");
     case "following":
       if (!followedNames || followedNames.size === 0) return [];
-      return events.filter((e) => followedNames.has(e.author.name));
+      return events.filter((e) => followedNames.has(e.profileId));
     case "organization":
     case "everything":
     default:
@@ -182,6 +184,7 @@ function handleGitPushed(event: AuraEvent, set: FeedSetter): void {
     timestamp: new Date().toISOString(),
     summary: c.summary,
     eventType: "push",
+    profileId: "",
   };
   if (_seenIds.has(feedEvent.id)) return;
   _seenIds.add(feedEvent.id);
@@ -205,7 +208,7 @@ function handleNetworkEvent(event: AuraEvent, set: FeedSetter): void {
 export const useFeedStore = create<FeedState>()((set, get) => ({
   liveEvents: null,
   userAvatarUrl: undefined,
-  filter: "my-agents",
+  filter: "everything",
   selectedEventId: null,
   selectedProfile: null,
   comments: [],

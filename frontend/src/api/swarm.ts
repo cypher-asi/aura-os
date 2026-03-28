@@ -1,4 +1,5 @@
 import type { RemoteVmState } from "../types"
+import type { DirEntry } from "./desktop"
 import { apiFetch } from "./core"
 
 export interface LifecycleActionResult {
@@ -16,5 +17,17 @@ export const swarmApi = {
     apiFetch<LifecycleActionResult>(
       `/api/agents/${agentId}/remote_agent/${action}`,
       { method: "POST" },
+    ),
+
+  listRemoteDirectory: (agentId: string, path: string) =>
+    apiFetch<{ ok: boolean; entries?: DirEntry[]; error?: string }>(
+      `/api/agents/${agentId}/remote_agent/files`,
+      { method: "POST", body: JSON.stringify({ path }) },
+    ),
+
+  readRemoteFile: (agentId: string, path: string) =>
+    apiFetch<{ ok: boolean; content?: string; path?: string; error?: string }>(
+      `/api/agents/${agentId}/remote_agent/read-file`,
+      { method: "POST", body: JSON.stringify({ path }) },
     ),
 }

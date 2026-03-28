@@ -5,22 +5,58 @@ use axum::middleware;
 use axum::routing::{delete, get, post, put};
 use axum::Router;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
     agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orgs, project_stats,
-    projects, remote_terminal, specs, swarm, system, tasks, terminal, users, ws,
+    projects, remote_files, remote_terminal, specs, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
+const LOCAL_CORS_HOSTS: &[&str] = &["localhost", "127.0.0.1"];
+
+fn is_local_cors_origin(origin: &str) -> bool {
+    let Some((scheme, remainder)) = origin.split_once("://") else {
+        return false;
+    };
+    let host = remainder.split('/').next().unwrap_or(remainder);
+
+    match scheme {
+        "http" | "https" => LOCAL_CORS_HOSTS
+            .iter()
+            .any(|expected| host == *expected || host.starts_with(&format!("{expected}:"))),
+        "capacitor" => host == "localhost",
+        _ => false,
+    }
+}
+
+fn is_allowed_cors_origin(origin: &HeaderValue) -> bool {
+    let Ok(origin) = origin.to_str() else {
+        return false;
+    };
+
+    // Native mobile shells authenticate cross-origin from localhost-like webview
+    // origins, so cookie-based API access must allow those explicit origins.
+    if is_local_cors_origin(origin) {
+        return true;
+    }
+
+    std::env::var("AURA_ALLOWED_ORIGINS")
+        .ok()
+        .into_iter()
+        .flat_map(|value| value.split(',').map(str::trim).map(str::to_owned).collect::<Vec<_>>())
+        .any(|allowed| !allowed.is_empty() && allowed == origin)
+}
+
 pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf>) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(AllowOrigin::predicate(|origin, _| is_allowed_cors_origin(origin)))
+        .allow_credentials(true)
+        .allow_methods(AllowMethods::mirror_request())
+        .allow_headers(AllowHeaders::mirror_request());
 
     let protected_api_router = Router::new()
         .merge(user_routes())
@@ -216,6 +252,14 @@ fn agent_routes() -> Router<AppState> {
         .route(
             "/api/agents/:agent_id/remote_agent/state",
             get(swarm::get_remote_agent_state),
+        )
+        .route(
+            "/api/agents/:agent_id/remote_agent/files",
+            post(remote_files::list_remote_directory),
+        )
+        .route(
+            "/api/agents/:agent_id/remote_agent/read-file",
+            post(remote_files::read_remote_file),
         )
         .route(
             "/api/agents/:agent_id/remote_agent/:action",

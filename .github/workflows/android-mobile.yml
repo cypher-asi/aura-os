@@ -1,0 +1,157 @@
+name: Android Mobile
+
+on:
+  push:
+    branches:
+      - main
+      - codex/mobile-android-shell-clean
+      - codex/mobile-store-integration
+    paths:
+      - .github/workflows/android-mobile.yml
+      - frontend/**
+      - README.md
+  pull_request:
+    paths:
+      - .github/workflows/android-mobile.yml
+      - frontend/**
+      - README.md
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "fastlane lane to run"
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - release
+      track:
+        description: "Google Play track"
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - closed
+          - production
+      release_status:
+        description: "Only applies to the release lane"
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-mobile-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-android-shell:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend and sync Capacitor Android
+        working-directory: frontend
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Build Android debug app
+        working-directory: frontend/android
+        run: ./gradlew assembleDebug
+
+  ship-android:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
+      ANDROID_PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
+      ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+      ANDROID_PLAY_TRACK: ${{ inputs.track }}
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+      VITE_ANDROID_DEFAULT_HOST: ${{ secrets.VITE_ANDROID_DEFAULT_HOST }}
+      VITE_NATIVE_DEFAULT_HOST: ${{ secrets.VITE_NATIVE_DEFAULT_HOST }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install fastlane gems
+        working-directory: frontend/android
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Materialize Android upload keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/aura-android-upload.jks
+          echo "ANDROID_KEYSTORE_PATH=/tmp/aura-android-upload.jks" >> "$GITHUB_ENV"
+
+      - name: Upload bundle with fastlane
+        working-directory: frontend/android
+        run: bundle exec fastlane android ${{ inputs.lane }}

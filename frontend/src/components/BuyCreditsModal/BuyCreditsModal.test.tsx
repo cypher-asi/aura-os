@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 const mockHandlePurchase = vi.fn();
 const mockLoadBalance = vi.fn();
+const mockUseAuraCapabilities = vi.fn(() => ({ isNativeApp: false }));
 
 vi.mock("./useBuyCreditsData", () => ({
   useBuyCreditsData: () => ({
@@ -17,6 +18,10 @@ vi.mock("./useBuyCreditsData", () => ({
     loadBalance: mockLoadBalance,
     handlePurchase: mockHandlePurchase,
   }),
+}));
+
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => mockUseAuraCapabilities(),
 }));
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -49,7 +54,7 @@ beforeEach(() => {
 describe("BuyCreditsModal", () => {
   it("renders the modal with title", () => {
     renderModal();
-    expect(screen.getByText("Buy More Credits")).toBeInTheDocument();
+    expect(screen.getByText("BUY CREDITS")).toBeInTheDocument();
   });
 
   it("shows the current balance", () => {
@@ -82,5 +87,16 @@ describe("BuyCreditsModal", () => {
   it("defaults to $100 preset selected", () => {
     renderModal();
     expect(screen.getByText("Purchase $100")).toBeInTheDocument();
+  });
+
+  it("shows a web-only billing message in native apps", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isNativeApp: true });
+
+    renderModal();
+
+    expect(screen.getByText(/aren't available in the mobile app/i)).toBeInTheDocument();
+    expect(screen.queryByText("$25")).not.toBeInTheDocument();
+    expect(screen.queryByText("Purchase $100")).not.toBeInTheDocument();
+    expect(screen.queryByText("Billing Settings")).not.toBeInTheDocument();
   });
 });

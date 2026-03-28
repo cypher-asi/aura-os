@@ -8,6 +8,29 @@ import { SpecPreviewCard } from "./SpecPreviewCard";
 import { TaskCreatedIndicator } from "./TaskCreatedIndicator";
 import toolStyles from "../ToolCallBlock.module.css";
 
+function buildInputDisplay(entry: ToolCallEntry): Record<string, unknown> {
+  const explicitInput = entry.input ?? {};
+  const hasExplicitKeys = Object.keys(explicitInput).length > 0;
+
+  return {
+    explicitInput,
+    resolvedInput: explicitInput,
+    resolvedContext: {
+      toolCallId: entry.id,
+      toolName: entry.name,
+      resolution: hasExplicitKeys ? "explicit_only" : "implicit_defaults_possible",
+    },
+    ...(hasExplicitKeys
+      ? {}
+      : {
+        notes: [
+          "No explicit arguments were provided by the model.",
+          "Runtime defaults and ambient context may still have been applied.",
+        ],
+      }),
+  };
+}
+
 export function ToolCallBlock({
   entry,
   defaultExpanded,
@@ -80,7 +103,7 @@ export function ToolCallBlock({
           <div className={toolStyles.section}>
             <div className={toolStyles.sectionLabel}>Input</div>
             <pre className={toolStyles.json}>
-              {JSON.stringify(entry.input, null, 2)}
+              {JSON.stringify(buildInputDisplay(entry), null, 2)}
             </pre>
           </div>
           {entry.result != null && (

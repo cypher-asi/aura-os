@@ -6,9 +6,16 @@ use super::NetworkClient;
 #[derive(Debug)]
 pub struct CreatePostParams<'a> {
     pub title: &'a str,
+    pub event_type: &'a str,
     pub summary: Option<&'a str>,
     pub post_type: Option<&'a str>,
     pub metadata: Option<serde_json::Value>,
+    pub project_id: Option<&'a str>,
+    pub agent_id: Option<&'a str>,
+    pub user_id: Option<&'a str>,
+    pub org_id: Option<&'a str>,
+    pub push_id: Option<&'a str>,
+    pub commit_ids: Option<&'a [String]>,
     pub jwt: &'a str,
 }
 
@@ -77,7 +84,10 @@ impl NetworkClient {
         &self,
         params: &CreatePostParams<'_>,
     ) -> Result<NetworkFeedEvent, NetworkError> {
-        let mut body = serde_json::json!({ "title": params.title });
+        let mut body = serde_json::json!({
+            "title": params.title,
+            "eventType": params.event_type,
+        });
         if let Some(summary_val) = params.summary {
             body["summary"] = serde_json::Value::String(summary_val.to_string());
         }
@@ -86,6 +96,24 @@ impl NetworkClient {
         }
         if let Some(ref meta) = params.metadata {
             body["metadata"] = meta.clone();
+        }
+        if let Some(pid) = params.project_id {
+            body["projectId"] = serde_json::Value::String(pid.to_string());
+        }
+        if let Some(aid) = params.agent_id {
+            body["agentId"] = serde_json::Value::String(aid.to_string());
+        }
+        if let Some(uid) = params.user_id {
+            body["userId"] = serde_json::Value::String(uid.to_string());
+        }
+        if let Some(oid) = params.org_id {
+            body["orgId"] = serde_json::Value::String(oid.to_string());
+        }
+        if let Some(pid) = params.push_id {
+            body["pushId"] = serde_json::Value::String(pid.to_string());
+        }
+        if let Some(cids) = params.commit_ids {
+            body["commitIds"] = serde_json::json!(cids);
         }
         self.post_authed(&format!("{}/api/posts", self.base_url), params.jwt, &body)
             .await

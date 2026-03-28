@@ -4,6 +4,9 @@ import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import { AVAILABLE_MODELS, modelLabel } from "../../constants/models";
 import { AgentEnvironment } from "../AgentEnvironment";
+import { SlashCommandMenu } from "./SlashCommandMenu";
+import { CommandChips } from "./CommandChips";
+import type { SlashCommand } from "../../constants/commands";
 import styles from "../ChatView/ChatView.module.css";
 
 export interface ChatInputBarHandle {
@@ -35,6 +38,8 @@ interface Props {
   attachments?: AttachmentItem[];
   onAttachmentsChange?: (items: AttachmentItem[]) => void;
   onRemoveAttachment?: (id: string) => void;
+  selectedCommands?: SlashCommand[];
+  onCommandsChange?: (commands: SlashCommand[]) => void;
 }
 
 function AttachmentPreviews({ attachments, onRemove }: { attachments: AttachmentItem[]; onRemove: (id: string) => void }) {
@@ -56,10 +61,14 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   input, onInputChange, onSend, onStop, streamKey,
   selectedModel, onModelChange, machineType, templateAgentId, agentId,
   attachments = [], onAttachmentsChange, onRemoveAttachment,
+  selectedCommands = [], onCommandsChange,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
   const [isDragOver, setIsDragOver] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const slashStartRef = useRef<number | null>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,22 +102,73 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [modelMenuOpen]);
 
+  const excludeIds = new Set(selectedCommands.map((c) => c.id));
+
+  const handleCommandSelect = useCallback((cmd: SlashCommand) => {
+    onCommandsChange?.([...selectedCommands, cmd]);
+    if (slashStartRef.current !== null) {
+      const before = input.slice(0, slashStartRef.current);
+      const afterSlash = input.slice(slashStartRef.current);
+      const spaceIdx = afterSlash.indexOf(" ");
+      const after = spaceIdx === -1 ? "" : afterSlash.slice(spaceIdx + 1);
+      onInputChange(before + after);
+    }
+    setSlashMenuOpen(false);
+    setSlashQuery("");
+    slashStartRef.current = null;
+    textareaRef.current?.focus();
+  }, [selectedCommands, onCommandsChange, input, onInputChange]);
+
+  const handleCommandRemove = useCallback((id: string) => {
+    onCommandsChange?.(selectedCommands.filter((c) => c.id !== id));
+  }, [selectedCommands, onCommandsChange]);
+
+  const handleInputChange = useCallback((value: string) => {
+    onInputChange(value);
+    const el = textareaRef.current;
+    if (!el) return;
+    const cursor = el.selectionStart;
+    const textBefore = value.slice(0, cursor);
+    const slashMatch = textBefore.match(/(^|\s)\/(\S*)$/);
+    if (slashMatch) {
+      slashStartRef.current = textBefore.lastIndexOf("/");
+      setSlashQuery(slashMatch[2]);
+      setSlashMenuOpen(true);
+    } else if (slashMenuOpen) {
+      setSlashMenuOpen(false);
+      setSlashQuery("");
+      slashStartRef.current = null;
+    }
+  }, [onInputChange, slashMenuOpen]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(input); }
   };
 
   return (
     <div className={styles.inputWrapper}>
       <div className={`${styles.inputContainer} ${isDragOver ? styles.dropZoneActive : ""}`} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+        {slashMenuOpen && (
+          <SlashCommandMenu
+            query={slashQuery}
+            excludeIds={excludeIds}
+            onSelect={handleCommandSelect}
+            onClose={() => { setSlashMenuOpen(false); setSlashQuery(""); slashStartRef.current = null; }}
+          />
+        )}
         <input ref={fileInputRef} type="file" accept="*/*" multiple className={styles.fileInputHidden} onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
         <AttachmentPreviews attachments={attachments} onRemove={handleRemove} />
+        <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
         <div className={styles.inputRow}>
           <button type="button" className={styles.attachButton} onClick={() => fileInputRef.current?.click()} disabled={!canAddMore} aria-label="Attach file"><Plus size={16} strokeWidth={1} /></button>
-          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => onInputChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Add a follow-up" rows={1} />
+          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => handleInputChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Add a follow-up" rows={1} />
           {isStreaming ? (
             <button type="button" className={`${styles.sendButton} ${styles.stopButton}`} onClick={onStop} aria-label="Stop"><span className={styles.stopIcon} /></button>
           ) : (
-            <button type="button" className={styles.sendButton} onClick={() => onSend(input)} disabled={!input.trim() && attachments.length === 0} aria-label="Send"><ArrowUp size={16} /></button>
+            <button type="button" className={styles.sendButton} onClick={() => onSend(input)} disabled={!input.trim() && attachments.length === 0 && selectedCommands.length === 0} aria-label="Send"><ArrowUp size={16} /></button>
           )}
         </div>
       </div>

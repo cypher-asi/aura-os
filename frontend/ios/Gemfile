@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+
+# Keep the iOS release pipeline pinned to a known fastlane series so local runs
+# and CI resolve the same commands.
+gem "fastlane", "~> 2.229"

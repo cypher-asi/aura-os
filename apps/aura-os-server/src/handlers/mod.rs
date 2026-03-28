@@ -11,6 +11,7 @@ pub(crate) mod orgs;
 pub(crate) mod project_stats;
 pub(crate) mod projects;
 mod projects_helpers;
+pub(crate) mod remote_files;
 pub(crate) mod remote_terminal;
 pub(crate) mod specs;
 pub(crate) mod sse;

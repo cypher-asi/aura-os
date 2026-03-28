@@ -415,7 +415,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   }, [projectId, agentInstanceId, core.key]);
 
   const sendMessage = useCallback(
-    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[]) => {
+    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[]) => {
       if (!projectId || !agentInstanceId || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
@@ -449,7 +449,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       });
 
       try {
-        await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, selectedModel, attachments, handler, controller.signal);
+        await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, selectedModel, attachments, handler, controller.signal, commands);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));

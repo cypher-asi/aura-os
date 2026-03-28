@@ -1,0 +1,3 @@
+# Resolve the Play package name from env so CI and local release runs can share
+# the same configuration without hard-coding per-account values.
+package_name(ENV["ANDROID_PACKAGE_NAME"].to_s.empty? ? "tech.zero.aura" : ENV["ANDROID_PACKAGE_NAME"])

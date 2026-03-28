@@ -14,7 +14,7 @@ use aura_os_link::{ConversationMessage, HarnessInbound, HarnessOutbound, Session
 use aura_os_storage::StorageClient;
 
 use crate::dto::SendChatRequest;
-use crate::error::{ApiError, ApiResult};
+use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;
 use crate::state::{AppState, ChatSession};
 use super::super::projects_helpers::{optional_jwt, with_optional_jwt};
@@ -226,7 +226,12 @@ fn spawn_chat_persist_task(
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    warn!(skipped = n, "Chat persistence receiver lagged");
+                    warn!(
+                        session_id = %ctx.session_id,
+                        skipped = n,
+                        "Chat persistence receiver lagged; aborting this turn persistence to avoid partial replay"
+                    );
+                    break;
                 }
             }
         }
@@ -560,17 +565,21 @@ async fn aggregate_agent_events_from_storage_result(
 async fn load_project_session_history(
     state: &AppState,
     agent_instance_id: &AgentInstanceId,
-) -> Vec<SessionEvent> {
+) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
     let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
-        .await
-        .unwrap_or_default();
+        .await?;
     let mut outcome = collect_session_events(storage, &jwt, &sessions).await;
+    if outcome.all_failed() {
+        if let Some(err) = outcome.first_error {
+            return Err(err);
+        }
+    }
     outcome.messages.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-    outcome.messages
+    Ok(outcome.messages)
 }
 
 /// Aggregate agent-level messages from aura-storage (all project-agents for
@@ -655,6 +664,7 @@ async fn open_harness_chat_stream(
     user_content: String,
     requested_model: Option<String>,
     persist_ctx: Option<ChatPersistCtx>,
+    _commands: Option<Vec<String>>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
@@ -747,7 +757,7 @@ pub(crate) async fn send_agent_event_stream(
         ..Default::default()
     });
 
-    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, body.model, persist_ctx).await
+    open_harness_chat_stream(&state, &session_key, agent.harness_mode(), config, body.content, body.model, persist_ctx, body.commands).await
 }
 
 pub(crate) async fn list_events(
@@ -760,12 +770,14 @@ pub(crate) async fn list_events(
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
-        .unwrap_or_else(|e| {
-            warn!(agent_instance_id = %agent_instance_id, error = %e, "failed to list sessions");
-            Vec::new()
-        });
+        .map_err(map_storage_error)?;
 
     let mut outcome = collect_session_events(&storage, &jwt, &sessions).await;
+    if outcome.all_failed() {
+        if let Some(err) = outcome.first_error {
+            return Err(map_storage_error(err));
+        }
+    }
     outcome
         .messages
         .sort_by(|a, b| a.created_at.cmp(&b.created_at));
@@ -794,7 +806,9 @@ pub(crate) async fn send_event_stream(
 
     let session_key = format!("instance:{agent_instance_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
-        let stored = load_project_session_history(&state, &agent_instance_id).await;
+        let stored = load_project_session_history(&state, &agent_instance_id)
+            .await
+            .map_err(map_storage_error)?;
         if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
@@ -825,7 +839,7 @@ pub(crate) async fn send_event_stream(
         ..Default::default()
     });
 
-    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, body.model, persist_ctx).await
+    open_harness_chat_stream(&state, &session_key, instance.harness_mode(), config, body.content, body.model, persist_ctx, body.commands).await
 }
 
 fn build_project_system_prompt(

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { Button, Text } from "@cypher-asi/zui";
 import { ArrowLeft } from "lucide-react";
 import { EmptyState } from "../EmptyState";
@@ -14,6 +15,7 @@ import { SessionList } from "../../views/SessionList";
 import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { getLinkedWorkspaceRoot, getProjectWorkspaceDisplay, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
@@ -89,6 +91,8 @@ export function SidekickContent() {
   const ctx = useProjectContext();
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
+  const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
+  const { remoteAgentId, remoteWorkspacePath } = useTerminalTarget({ projectId, agentInstanceId });
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setSearchQuery(""));
@@ -101,7 +105,11 @@ export function SidekickContent() {
 
   const { project } = ctx;
   const linkedWorkspaceRoot = getLinkedWorkspaceRoot(project);
-  const canBrowseFiles = features.linkedWorkspace && Boolean(linkedWorkspaceRoot);
+  const remoteRoot = remoteWorkspacePath ?? null;
+  const workspaceRoot = remoteAgentId ? remoteRoot : linkedWorkspaceRoot;
+  const canBrowseLocal = features.linkedWorkspace && Boolean(linkedWorkspaceRoot);
+  const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteRoot);
+  const canBrowseFiles = canBrowseLocal || canBrowseRemote;
 
   if (showInfo) {
     return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
@@ -109,22 +117,30 @@ export function SidekickContent() {
 
   const searchable = activeTab !== "stats";
 
+  const filesContent = canBrowseFiles
+    ? (
+      <FileExplorer
+        rootPath={workspaceRoot ?? undefined}
+        searchQuery={searchQuery}
+        remoteAgentId={remoteAgentId}
+      />
+    )
+    : (
+      <div className={styles.emptyState}>
+        <Text variant="muted" size="sm">
+          {features.linkedWorkspace
+            ? "Imported workspaces do not expose live host files."
+            : "File browsing stays in the desktop app for now."}
+        </Text>
+      </div>
+    );
+
   const tabContent: Record<string, React.ReactNode> = {
     specs: <SpecList searchQuery={searchQuery} />,
     tasks: <TaskList searchQuery={searchQuery} />,
     stats: <StatsDashboard />,
     sessions: <SessionList searchQuery={searchQuery} />,
-    files: canBrowseFiles
-      ? <FileExplorer rootPath={linkedWorkspaceRoot ?? undefined} searchQuery={searchQuery} />
-      : (
-        <div className={styles.emptyState}>
-          <Text variant="muted" size="sm">
-            {features.linkedWorkspace
-              ? "Imported workspaces do not expose live host files."
-              : "File browsing stays in the desktop app for now."}
-          </Text>
-        </div>
-      ),
+    files: filesContent,
   };
 
   return (

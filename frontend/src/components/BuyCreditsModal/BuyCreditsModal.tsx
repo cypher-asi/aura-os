@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Modal, Button, Input } from "@cypher-asi/zui";
 import { useBuyCreditsData } from "./useBuyCreditsData";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 import styles from "./BuyCreditsModal.module.css";
 
 interface Props {
@@ -14,6 +16,7 @@ const MIN_USD = 1;
 const MAX_USD = 1000;
 
 export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
+  const { isNativeApp } = useAuraCapabilities();
   const {
     balanceError, checkoutError,
     pollingStatus, isPolling, balanceDisplay,
@@ -57,7 +60,7 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
 
   const footer = (
     <div className={styles.footer}>
-      {onOpenBilling && (
+      {onOpenBilling && !isNativeApp && (
         <button className={styles.billingLink} onClick={handleOpenBilling} type="button">
           Billing Settings
         </button>
@@ -82,49 +85,57 @@ export function BuyCreditsModal({ isOpen, onClose, onOpenBilling }: Props) {
           </div>
         )}
 
-        <div className={styles.presetGrid}>
-          {PRESETS.map((amount) => (
-            <button
-              key={amount}
-              type="button"
-              className={`${styles.presetCard} ${selectedPreset === amount ? styles.presetSelected : ""}`}
-              onClick={() => handlePresetClick(amount)}
-              disabled={isPolling}
+        {isNativeApp ? (
+          // Native mobile keeps the balance visible but removes all purchase
+          // calls to action to stay aligned with the companion-app policy.
+          <div className={styles.infoState}>{NATIVE_BILLING_MESSAGE}</div>
+        ) : (
+          <>
+            <div className={styles.presetGrid}>
+              {PRESETS.map((amount) => (
+                <button
+                  key={amount}
+                  type="button"
+                  className={`${styles.presetCard} ${selectedPreset === amount ? styles.presetSelected : ""}`}
+                  onClick={() => handlePresetClick(amount)}
+                  disabled={isPolling}
+                >
+                  <div className={styles.presetPrice}>${amount}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.customRow}>
+              <Input
+                ref={inputRef}
+                size="sm"
+                type="number"
+                min={MIN_USD}
+                max={MAX_USD}
+                step="1"
+                value={customAmount}
+                onChange={(e) => handleCustomChange(e.target.value)}
+                placeholder="Custom amount ($)"
+                disabled={isPolling}
+              />
+            </div>
+
+            <Button
+              variant="primary"
+              className={styles.purchaseButton}
+              onClick={handlePurchaseClick}
+              disabled={effectiveAmount === null || isPolling}
             >
-              <div className={styles.presetPrice}>${amount}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.customRow}>
-          <Input
-            ref={inputRef}
-            size="sm"
-            type="number"
-            min={MIN_USD}
-            max={MAX_USD}
-            step="1"
-            value={customAmount}
-            onChange={(e) => handleCustomChange(e.target.value)}
-            placeholder="Custom amount ($)"
-            disabled={isPolling}
-          />
-        </div>
-
-        <Button
-          variant="primary"
-          className={styles.purchaseButton}
-          onClick={handlePurchaseClick}
-          disabled={effectiveAmount === null || isPolling}
-        >
-          {isPolling ? "Processing..." : effectiveAmount !== null ? `Purchase $${effectiveAmount}` : "Select an amount"}
-        </Button>
+              {isPolling ? "Processing..." : effectiveAmount !== null ? `Purchase $${effectiveAmount}` : "Select an amount"}
+            </Button>
+          </>
+        )}
 
         {checkoutError && (
           <div className={styles.errorState}>{checkoutError}</div>
         )}
 
-        {pollingStatus !== "idle" && (
+        {!isNativeApp && pollingStatus !== "idle" && (
           <div className={styles.pollingStatus}>
             {pollingStatus === "polling" && "Waiting for payment confirmation..."}
             {pollingStatus === "success" && "Payment confirmed! Credits updated."}

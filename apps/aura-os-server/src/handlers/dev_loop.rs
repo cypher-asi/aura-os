@@ -11,7 +11,8 @@ use super::agents::conversions_pub::resolve_workspace_path;
 use super::projects_helpers::optional_jwt;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
-use crate::state::{ActiveAutomaton, AppState, AutomatonRegistry};
+use crate::persistence;
+use crate::state::{ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache};
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct LoopQueryParams {
@@ -39,16 +40,35 @@ fn emit_domain_event(
     let _ = broadcast_tx.send(event);
 }
 
-/// Forward automaton events from the harness WebSocket to the app's global
-/// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
-fn forward_automaton_events(
+struct ForwardParams {
     automaton_events_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
     app_broadcast: tokio::sync::broadcast::Sender<serde_json::Value>,
     automaton_registry: AutomatonRegistry,
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     task_id: Option<String>,
-) {
+    task_output_cache: TaskOutputCache,
+    storage_client: Option<std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<String>,
+}
+
+/// Forward automaton events from the harness WebSocket to the app's global
+/// event broadcast, mapping `AutomatonEvent` types to the app's domain events.
+/// Also accumulates task output in the in-memory cache and persists to storage
+/// on task completion.
+fn forward_automaton_events(params: ForwardParams) {
+    let ForwardParams {
+        automaton_events_tx,
+        app_broadcast,
+        automaton_registry,
+        project_id,
+        agent_instance_id,
+        task_id,
+        task_output_cache,
+        storage_client,
+        jwt,
+    } = params;
+
     let mut rx = automaton_events_tx.subscribe();
     let pid = project_id.to_string();
     let aiid = agent_instance_id.to_string();
@@ -84,6 +104,12 @@ fn forward_automaton_events(
                     if event_type == "task_started" {
                         if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
                             current_task_id = Some(tid.to_owned());
+                            let mut cache = task_output_cache.lock().await;
+                            cache.insert(tid.to_owned(), CachedTaskOutput {
+                                project_id: Some(pid.clone()),
+                                agent_instance_id: Some(aiid.clone()),
+                                ..Default::default()
+                            });
                         }
                     }
 
@@ -121,14 +147,95 @@ fn forward_automaton_events(
                         }
                     }
 
+                    // Accumulate task output in the in-memory cache.
+                    {
+                        let event_task_id = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                        let eff_tid = current_task_id.clone().or(event_task_id);
+                        if let Some(ref tid) = eff_tid {
+                            let mut cache = task_output_cache.lock().await;
+                            let entry = cache.entry(tid.clone()).or_default();
+                            match event_type {
+                                "text_delta" => {
+                                    if let Some(text) = event.get("text").and_then(|v| v.as_str()) {
+                                        entry.live_output.push_str(text);
+                                    }
+                                }
+                                "assistant_message_end" => {
+                                    if !entry.live_output.is_empty() && !entry.live_output.ends_with("\n\n") {
+                                        entry.live_output.push_str("\n\n");
+                                    }
+                                }
+                                "build_verification_skipped" | "build_verification_started"
+                                | "build_verification_passed" | "build_verification_failed"
+                                | "build_fix_attempt" => {
+                                    entry.build_steps.push(event.clone());
+                                }
+                                "test_verification_started" | "test_verification_passed"
+                                | "test_verification_failed" | "test_fix_attempt" => {
+                                    entry.test_steps.push(event.clone());
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
                     let mapped_type = match event_type {
                         "started" => Some("loop_started"),
                         "stopped" => Some("loop_stopped"),
                         "paused" => Some("loop_paused"),
                         "resumed" => Some("loop_resumed"),
                         "task_started" => Some("task_started"),
-                        "task_completed" => Some("task_completed"),
-                        "task_failed" => Some("task_failed"),
+                        "task_completed" => {
+                            // Persist accumulated output to storage.
+                            let event_tid = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                            let tid = current_task_id.clone().or(event_tid);
+                            if let Some(ref tid) = tid {
+                                let session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
+                                let cached = {
+                                    let mut cache = task_output_cache.lock().await;
+                                    if let Some(entry) = cache.get_mut(tid) {
+                                        if session_id.is_some() {
+                                            entry.session_id = session_id;
+                                        }
+                                        entry.clone()
+                                    } else {
+                                        CachedTaskOutput::default()
+                                    }
+                                };
+                                persistence::persist_task_output(
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    tid,
+                                    &cached,
+                                ).await;
+                            }
+                            Some("task_completed")
+                        }
+                        "task_failed" => {
+                            let event_tid = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                            let tid = current_task_id.clone().or(event_tid);
+                            if let Some(ref tid) = tid {
+                                let session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
+                                let cached = {
+                                    let mut cache = task_output_cache.lock().await;
+                                    if let Some(entry) = cache.get_mut(tid) {
+                                        if session_id.is_some() {
+                                            entry.session_id = session_id;
+                                        }
+                                        entry.clone()
+                                    } else {
+                                        CachedTaskOutput::default()
+                                    }
+                                };
+                                persistence::persist_task_output(
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    tid,
+                                    &cached,
+                                ).await;
+                            }
+                            Some("task_failed")
+                        }
                         "task_retrying" => Some("task_retrying"),
                         "loop_finished" => Some("loop_finished"),
                         "token_usage" => Some("token_usage"),
@@ -137,6 +244,8 @@ fn forward_automaton_events(
                         "tool_call_started" => Some("tool_use_start"),
                         "tool_result" => Some("tool_result"),
                         "progress" => Some("progress"),
+                        "git_pushed" => Some("git_pushed"),
+                        "git_committed" => Some("git_committed"),
                         "done" => {
                             clear_active_automaton(
                                 automaton_registry.clone(),
@@ -227,6 +336,7 @@ pub(crate) async fn start_loop(
         project_name,
     );
 
+    let jwt_for_persist = jwt.clone();
     let start_params = AutomatonStartParams {
         project_id: project_id.to_string(),
         auth_token: jwt,
@@ -279,14 +389,45 @@ pub(crate) async fn start_loop(
             ))
         })?;
 
-    forward_automaton_events(
-        events_tx,
-        state.event_broadcast.clone(),
-        state.automaton_registry.clone(),
+    // Resolve the first task the automaton will pick so that events
+    // arriving before the real task_started get stamped with a task_id.
+    // Without this, text_delta events have no task_id and the frontend
+    // silently discards them.
+    let first_task_id = state
+        .task_service
+        .select_next_task(&project_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|t| t.task_id.to_string());
+
+    if let Some(ref tid) = first_task_id {
+        emit_domain_event(
+            &state.event_broadcast,
+            "task_started",
+            project_id,
+            agent_instance_id,
+            serde_json::json!({"task_id": tid}),
+        );
+        let mut cache = state.task_output_cache.lock().await;
+        cache.insert(tid.clone(), CachedTaskOutput {
+            project_id: Some(project_id.to_string()),
+            agent_instance_id: Some(agent_instance_id.to_string()),
+            ..Default::default()
+        });
+    }
+
+    forward_automaton_events(ForwardParams {
+        automaton_events_tx: events_tx,
+        app_broadcast: state.event_broadcast.clone(),
+        automaton_registry: state.automaton_registry.clone(),
         project_id,
         agent_instance_id,
-        None,
-    );
+        task_id: first_task_id,
+        task_output_cache: state.task_output_cache.clone(),
+        storage_client: state.storage_client.clone(),
+        jwt: jwt_for_persist,
+    });
 
     emit_domain_event(
         &state.event_broadcast,
@@ -454,6 +595,7 @@ pub(crate) async fn run_single_task(
         project_name,
     );
 
+    let jwt_for_persist = jwt.clone();
     let result = state
         .automaton_client
         .start(AutomatonStartParams {
@@ -474,19 +616,42 @@ pub(crate) async fn run_single_task(
     let automaton_id = result.automaton_id;
     info!(%project_id, %task_id, %automaton_id, "Single task automaton started");
 
+    // Emit task_started immediately so the frontend gets the signal even if
+    // early automaton events are lost in the race between start and WS connect.
+    emit_domain_event(
+        &state.event_broadcast,
+        "task_started",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({"task_id": task_id.to_string()}),
+    );
+
+    // Pre-seed the output cache so the REST endpoint can serve partial output.
+    {
+        let mut cache = state.task_output_cache.lock().await;
+        cache.insert(task_id.to_string(), CachedTaskOutput {
+            project_id: Some(project_id.to_string()),
+            agent_instance_id: Some(agent_instance_id.to_string()),
+            ..Default::default()
+        });
+    }
+
     if let Ok(events_tx) = state
         .automaton_client
         .connect_event_stream(&automaton_id)
         .await
     {
-        forward_automaton_events(
-            events_tx,
-            state.event_broadcast.clone(),
-            state.automaton_registry.clone(),
+        forward_automaton_events(ForwardParams {
+            automaton_events_tx: events_tx,
+            app_broadcast: state.event_broadcast.clone(),
+            automaton_registry: state.automaton_registry.clone(),
             project_id,
             agent_instance_id,
-            Some(task_id.to_string()),
-        );
+            task_id: Some(task_id.to_string()),
+            task_output_cache: state.task_output_cache.clone(),
+            storage_client: state.storage_client.clone(),
+            jwt: jwt_for_persist,
+        });
     }
 
     Ok(StatusCode::ACCEPTED)

@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Input, Button } from "@cypher-asi/zui";
 import type { OrgBilling, CreditBalance } from "../../types";
 import type { CheckoutPollingStatus } from "../../hooks/use-checkout-polling";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
 import billingStyles from "./OrgSettingsBilling.module.css";
 
@@ -40,6 +42,7 @@ export function OrgSettingsBilling({
   onPurchase,
   onRetryBalance,
 }: Props) {
+  const { isNativeApp } = useAuraCapabilities();
   const [customAmount, setCustomAmount] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
 
@@ -139,7 +142,7 @@ export function OrgSettingsBilling({
       </div>
 
       {/* Purchase Credits */}
-      {isAdminOrOwner && (
+      {isAdminOrOwner && !isNativeApp && (
         <>
           <div className={styles.settingsGroupLabel}>Buy Credits</div>
           <div className={styles.settingsGroup}>
@@ -200,15 +203,24 @@ export function OrgSettingsBilling({
         </>
       )}
 
+      {isAdminOrOwner && isNativeApp && (
+        <>
+          <div className={styles.settingsGroupLabel}>Credit Purchases</div>
+          <div className={styles.settingsGroup}>
+            <div className={billingStyles.infoState}>{NATIVE_BILLING_MESSAGE}</div>
+          </div>
+        </>
+      )}
+
       {/* Checkout Error */}
-      {checkoutError && (
+      {!isNativeApp && checkoutError && (
         <div className={`${billingStyles.errorState} ${billingStyles.checkoutErrorMargin}`}>
           {checkoutError}
         </div>
       )}
 
       {/* Polling Status */}
-      {pollingStatus !== "idle" && (
+      {!isNativeApp && pollingStatus !== "idle" && (
         <div className={billingStyles.pollingStatus}>
           {pollingStatus === "polling" && "Waiting for payment confirmation..."}
           {pollingStatus === "success" && "Payment confirmed! Credits updated."}

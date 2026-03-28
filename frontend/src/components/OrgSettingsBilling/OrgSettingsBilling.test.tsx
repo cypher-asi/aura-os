@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const mockUseAuraCapabilities = vi.fn(() => ({ isNativeApp: false }));
+
 vi.mock("@cypher-asi/zui", () => ({
   Button: ({ children, onClick, disabled }: { children?: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
     <button onClick={onClick} disabled={disabled}>{children}</button>
@@ -16,6 +18,10 @@ vi.mock("../OrgSettingsPanel/OrgSettingsPanel.module.css", () => ({
 
 vi.mock("./OrgSettingsBilling.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => mockUseAuraCapabilities(),
 }));
 
 import { OrgSettingsBilling } from "./OrgSettingsBilling";
@@ -120,5 +126,16 @@ describe("OrgSettingsBilling", () => {
   it("shows plan badge", () => {
     renderBilling();
     expect(screen.getByText("free")).toBeInTheDocument();
+  });
+
+  it("shows a web-only message in native apps", () => {
+    mockUseAuraCapabilities.mockReturnValue({ isNativeApp: true });
+
+    renderBilling();
+
+    expect(screen.getByText(/aren't available in the mobile app/i)).toBeInTheDocument();
+    expect(screen.getByText("Credit Purchases")).toBeInTheDocument();
+    expect(screen.queryByText("$5")).not.toBeInTheDocument();
+    expect(screen.queryByText("Purchase")).not.toBeInTheDocument();
   });
 });

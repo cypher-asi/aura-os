@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isNativeRuntime } from "../lib/native-runtime";
 
 export const AURA_BREAKPOINTS = {
   phoneMax: 680,
@@ -24,6 +25,7 @@ export interface AuraCapabilities {
   isPhoneLayout: boolean;
   isTabletLayout: boolean;
   isStandalone: boolean;
+  isNativeApp: boolean;
   features: AuraFeatureAvailability;
   supportsWindowControls: boolean;
   supportsDesktopWorkspace: boolean;
@@ -50,6 +52,7 @@ function readCapabilities(): AuraCapabilities {
       isPhoneLayout: false,
       isTabletLayout: false,
       isStandalone: false,
+      isNativeApp: false,
       features,
       supportsWindowControls: features.windowControls,
       supportsDesktopWorkspace: features.linkedWorkspace,
@@ -67,6 +70,7 @@ function readCapabilities(): AuraCapabilities {
   const isStandalone =
     window.matchMedia(STANDALONE_MEDIA_QUERY).matches ||
     (typeof navigator !== "undefined" && "standalone" in navigator && Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
+  const isNativeApp = isNativeRuntime();
   const features = buildFeatureAvailability(hasDesktopBridge, isMobileLayout);
 
   return {
@@ -75,6 +79,7 @@ function readCapabilities(): AuraCapabilities {
     isPhoneLayout,
     isTabletLayout,
     isStandalone,
+    isNativeApp,
     features,
     supportsWindowControls: features.windowControls,
     supportsDesktopWorkspace: features.linkedWorkspace,

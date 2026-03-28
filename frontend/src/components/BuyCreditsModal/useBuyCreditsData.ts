@@ -3,6 +3,8 @@ import { useOrgStore } from "../../stores/org-store";
 import { useBillingStore } from "../../stores/billing-store";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge/useCreditBalance";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 import type { CreditBalance } from "../../types";
 
 interface BuyCreditsData {
@@ -21,6 +23,7 @@ interface BuyCreditsData {
 export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
   const activeOrg = useOrgStore((s) => s.activeOrg);
   const orgId = activeOrg?.org_id;
+  const { isNativeApp } = useAuraCapabilities();
 
   const balance = useBillingStore((s) => s.balance);
   const balanceLoading = useBillingStore((s) => s.balanceLoading);
@@ -55,6 +58,12 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
 
   const handlePurchase = useCallback(async (amountUsd: number) => {
     if (!orgId) return;
+    // Guard the action at the data layer too so a future UI change cannot
+    // accidentally re-enable external checkout inside the native app.
+    if (isNativeApp) {
+      setCheckoutError(NATIVE_BILLING_MESSAGE);
+      return;
+    }
     setCheckoutError(null);
     const result = await useBillingStore.getState().purchase(orgId, amountUsd);
     if (result?.checkout_url) {
@@ -64,7 +73,7 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
     } else {
       setCheckoutError("Unable to start checkout");
     }
-  }, [orgId, startPolling]);
+  }, [isNativeApp, orgId, startPolling]);
 
   const balanceDisplay = balanceLoading && balance === null
     ? "..."

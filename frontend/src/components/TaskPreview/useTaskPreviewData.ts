@@ -3,10 +3,12 @@ import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
-import { useTaskOutput } from "../../stores/event-store";
+import { useTaskOutput, useEventStore } from "../../stores/event-store";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import { useTaskAgentInstances } from "../../hooks/use-task-agent-instances";
 import { useTaskStream } from "../../hooks/use-task-stream";
+import { useStreamingText } from "../../hooks/stream/hooks";
+import { useTaskOutputHydration } from "../../hooks/use-task-output-hydration";
 
 function useElapsedTime(active: boolean): number {
   const startRef = useRef<number | null>(null);
@@ -41,6 +43,10 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const isActive = effectiveStatus === "in_progress";
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
+
+  const streamBuf = useStreamingText(streamKey);
+  const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
+  useTaskOutputHydration(projectId, task, isActive, isTerminal, streamBuf, seedTaskOutput);
 
   const fileOps = taskOutput.fileOps.length > 0
     ? taskOutput.fileOps

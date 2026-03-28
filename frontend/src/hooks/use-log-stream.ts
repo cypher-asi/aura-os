@@ -341,6 +341,7 @@ const ALL_ENGINE_EVENT_TYPES: EventType[] = [
   EventType.TestVerificationStarted, EventType.TestVerificationPassed,
   EventType.TestVerificationFailed, EventType.TestFixAttempt,
   EventType.GitCommitted, EventType.GitPushed, EventType.NetworkEvent,
+  EventType.Error,
 ];
 
 function eventToLogEntry(event: AuraEvent, ts?: Date): LogEntry {

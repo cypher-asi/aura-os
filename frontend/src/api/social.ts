@@ -104,7 +104,7 @@ export const feedApi = {
     const qs = params.toString();
     return apiFetch<FeedEventDto[]>(`/api/feed${qs ? `?${qs}` : ""}`);
   },
-  createPost: (data: { title: string; summary?: string; post_type?: string; metadata?: Record<string, unknown> }) =>
+  createPost: (data: { title: string; summary?: string; post_type?: string; event_type?: string; metadata?: Record<string, unknown> }) =>
     apiFetch<FeedEventDto>("/api/posts", {
       method: "POST",
       body: JSON.stringify(data),

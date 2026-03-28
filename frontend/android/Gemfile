@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+
+# Keep Android release automation on the same fastlane series as iOS so CI and
+# local release runs resolve a predictable toolchain.
+gem "fastlane", "~> 2.229"

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
 import { useHostStore, type HostConnectionStatus } from "../../stores/host-store";
-import { getHostDisplayLabel } from "../../lib/host-config";
+import { getHostDisplayLabel, getTargetHostOrigin, requiresExplicitHostOrigin } from "../../lib/host-config";
 import { ApiClientError } from "../../api/client";
 import { HostSettingsModal } from "../../components/HostSettingsModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -76,7 +76,7 @@ export function LoginView() {
   const status = useHostStore((s) => s.status);
   const refreshStatus = useHostStore((s) => s.refreshStatus);
   const hostLabel = getHostDisplayLabel();
-  const { features, isMobileLayout } = useAuraCapabilities();
+  const { features, isMobileLayout, isNativeApp } = useAuraCapabilities();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
@@ -110,6 +110,12 @@ export function LoginView() {
       return;
     }
 
+    if (isNativeApp && requiresExplicitHostOrigin() && !getTargetHostOrigin()) {
+      setError("Set an Aura host before signing in.");
+      openHostSettings();
+      return;
+    }
+
     if (activeTab === "register" && password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -140,7 +146,13 @@ export function LoginView() {
     }
   }
 
-  const hostStatus = HOST_STATUS_COPY[status];
+  const missingNativeHost = isNativeApp && requiresExplicitHostOrigin() && !getTargetHostOrigin();
+  const hostStatus = missingNativeHost
+    ? {
+        title: "Aura host required",
+        detail: "Native mobile builds need a configured Aura host before sign-in.",
+      }
+    : HOST_STATUS_COPY[status];
   const showHostWarning = status === "unreachable" || status === "error";
   const showCompactHostStatus = isMobileLayout && (status === "online" || status === "auth_required");
 
@@ -246,7 +258,7 @@ export function LoginView() {
                     disabled={hostRefreshing}
                     icon={hostRefreshing ? <Spinner size="sm" /> : undefined}
                   >
-                    {hostRefreshing ? "Retrying..." : "Retry check"}
+                    {hostRefreshing ? "Checking..." : "Retry check"}
                   </Button>
                 </div>
               </div>
@@ -259,29 +271,29 @@ export function LoginView() {
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <Input
-              type="email"
-              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              type="email"
               autoComplete="email"
               disabled={loading}
             />
 
             <Input
-              type="password"
-              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              type="password"
               autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
               disabled={loading}
             />
 
             {activeTab === "register" && (
               <Input
-                type="password"
-                placeholder="Confirm password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                type="password"
                 autoComplete="new-password"
                 disabled={loading}
               />
@@ -305,6 +317,7 @@ export function LoginView() {
           </form>
         </Panel>
       </div>
+
       {features.hostRetargeting && (
         <HostSettingsModal isOpen={hostSettingsOpen} onClose={closeHostSettings} />
       )}

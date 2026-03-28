@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AURA</string>
+    <string name="title_activity_main">AURA</string>
+    <string name="package_name">tech.zero.aura</string>
+    <string name="custom_url_scheme">tech.zero.aura</string>
+</resources>

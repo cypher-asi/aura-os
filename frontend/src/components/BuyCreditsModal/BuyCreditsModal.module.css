@@ -101,6 +101,16 @@
   text-align: center;
 }
 
+.infoState {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
 .errorState {
   font-size: var(--text-sm);
   color: var(--color-error, #ef4444);

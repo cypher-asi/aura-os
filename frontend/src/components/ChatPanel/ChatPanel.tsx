@@ -11,6 +11,7 @@ import { MessageQueue } from "../MessageQueue";
 import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queue-store";
 import type { QueuedMessage } from "../../stores/message-queue-store";
 import type { ChatAttachment } from "../../api/streams";
+import type { SlashCommand } from "../../constants/commands";
 import { loadPersistedModel, persistModel } from "../../constants/models";
 import styles from "../ChatView/ChatView.module.css";
 
@@ -21,6 +22,7 @@ export interface ChatPanelProps {
     action: string | null,
     selectedModel: string | null,
     attachments?: ChatAttachment[],
+    commands?: string[],
   ) => void;
   onStop: () => void;
   agentName?: string;
@@ -52,6 +54,7 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [selectedModel, setSelectedModel] = useState(loadPersistedModel);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
@@ -102,20 +105,23 @@ export function ChatPanel({
     (content: string, action?: string, atts?: AttachmentItem[]) => {
       setInput("");
       const apiAttachments = buildApiAttachments(atts);
+      const commandIds = commands.length > 0 ? commands.map((c) => c.id) : undefined;
       setAttachments([]);
+      setCommands([]);
 
       if (isStreaming) {
         useMessageQueueStore.getState().enqueue(streamKey, {
           content,
           action: action ?? null,
           attachments: apiAttachments,
+          commands: commandIds,
         });
       } else {
-        onSend(content, action ?? null, selectedModel, apiAttachments);
+        onSend(content, action ?? null, selectedModel, apiAttachments, commandIds);
       }
       scrollToBottom();
     },
-    [buildApiAttachments, isStreaming, onSend, scrollToBottom, selectedModel, streamKey],
+    [buildApiAttachments, commands, isStreaming, onSend, scrollToBottom, selectedModel, streamKey],
   );
 
   const prevStreamingRef = useRef(false);
@@ -133,7 +139,7 @@ export function ChatPanel({
     if (prevStreamingRef.current && !isStreaming) {
       const next = useMessageQueueStore.getState().dequeue(streamKey);
       if (next) {
-        onSendRef.current(next.content, next.action, selectedModelRef.current, next.attachments);
+        onSendRef.current(next.content, next.action, selectedModelRef.current, next.attachments, next.commands);
         scrollToBottom();
       } else {
         requestAnimationFrame(() => scrollToBottomIfPinned());
@@ -232,6 +238,8 @@ export function ChatPanel({
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onRemoveAttachment={handleRemoveAttachment}
+          selectedCommands={commands}
+          onCommandsChange={setCommands}
         />
       </div>
     </div>

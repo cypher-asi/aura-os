@@ -6,6 +6,7 @@ export type TerminalTargetStatus = "loading" | "ready" | "error";
 
 export interface TerminalTarget {
   remoteAgentId: string | undefined;
+  remoteWorkspacePath: string | undefined;
   status: TerminalTargetStatus;
 }
 
@@ -22,8 +23,9 @@ interface UseTerminalTargetArgs {
   agentsStatus?: "idle" | "loading" | "ready" | "error";
 }
 
-function resolveProjectRemote(instances: AgentInstance[]): string | undefined {
-  return instances.find((i) => i.machine_type === "remote")?.agent_id;
+function resolveProjectRemote(instances: AgentInstance[]): { agentId?: string; workspacePath?: string } {
+  const remote = instances.find((i) => i.machine_type === "remote");
+  return { agentId: remote?.agent_id, workspacePath: remote?.workspace_path ?? undefined };
 }
 
 export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
@@ -39,6 +41,7 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
 
   const [state, setState] = useState<TerminalTarget>({
     remoteAgentId: undefined,
+    remoteWorkspacePath: undefined,
     status: "loading",
   });
   const lastResolvedKeyRef = useRef<string>("");
@@ -50,7 +53,7 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
   useEffect(() => {
     if (!projectId && !agentId) {
       lastResolvedKeyRef.current = key;
-      setState({ remoteAgentId: undefined, status: "ready" });
+      setState({ remoteAgentId: undefined, remoteWorkspacePath: undefined, status: "ready" });
       return;
     }
 
@@ -67,15 +70,17 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
         .then((inst) => {
           if (cancelled) return;
           lastResolvedKeyRef.current = key;
+          const isRemote = inst.machine_type === "remote";
           setState({
-            remoteAgentId: inst.machine_type === "remote" ? inst.agent_id : undefined,
+            remoteAgentId: isRemote ? inst.agent_id : undefined,
+            remoteWorkspacePath: isRemote ? (inst.workspace_path ?? undefined) : undefined,
             status: "ready",
           });
         })
         .catch(() => {
           if (cancelled) return;
           lastResolvedKeyRef.current = key;
-          setState({ remoteAgentId: undefined, status: "error" });
+          setState({ remoteAgentId: undefined, remoteWorkspacePath: undefined, status: "error" });
         });
 
       return () => {
@@ -90,6 +95,7 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
       lastResolvedKeyRef.current = key;
       setState({
         remoteAgentId: selectedAgentMachineType === "remote" ? selectedAgentId : undefined,
+        remoteWorkspacePath: undefined,
         status: "ready",
       });
       return;
@@ -104,12 +110,13 @@ export function useTerminalTarget(args: UseTerminalTargetArgs): TerminalTarget {
         .then((instances) => {
           if (cancelled) return;
           lastResolvedKeyRef.current = key;
-          setState({ remoteAgentId: resolveProjectRemote(instances), status: "ready" });
+          const { agentId: rId, workspacePath } = resolveProjectRemote(instances);
+          setState({ remoteAgentId: rId, remoteWorkspacePath: workspacePath, status: "ready" });
         })
         .catch(() => {
           if (cancelled) return;
           lastResolvedKeyRef.current = key;
-          setState({ remoteAgentId: undefined, status: "error" });
+          setState({ remoteAgentId: undefined, remoteWorkspacePath: undefined, status: "error" });
         });
       return () => {
         cancelled = true;

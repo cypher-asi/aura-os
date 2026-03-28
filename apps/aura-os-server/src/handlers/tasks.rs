@@ -278,6 +278,21 @@ pub(crate) async fn get_task_output(
     State(state): State<AppState>,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {
+    // Check the in-memory cache first (covers active and recently completed tasks).
+    {
+        let cache = state.task_output_cache.lock().await;
+        if let Some(entry) = cache.get(&task_id.to_string()) {
+            if !entry.live_output.is_empty() || !entry.build_steps.is_empty() || !entry.test_steps.is_empty() {
+                return Ok(Json(TaskOutputResponse {
+                    output: entry.live_output.clone(),
+                    build_steps: entry.build_steps.clone(),
+                    test_steps: entry.test_steps.clone(),
+                }));
+            }
+        }
+    }
+
+    // Fall back to persisted storage.
     if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {
         if let Some(resp) = fetch_task_output_from_storage(storage, &jwt, &task_id).await {
             return Ok(Json(resp));

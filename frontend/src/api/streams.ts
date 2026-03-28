@@ -132,11 +132,15 @@ export function sendAgentEventStream(
   attachments?: ChatAttachment[],
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
+  commands?: string[],
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) body.model = model;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
+  }
+  if (commands && commands.length > 0) {
+    body.commands = commands;
   }
   return streamSSE<string>(
     `${BASE_URL}/api/agents/${agentId}/events/stream`,
@@ -159,11 +163,15 @@ export function sendEventStream(
   attachments?: ChatAttachment[],
   handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
   signal?: AbortSignal,
+  commands?: string[],
 ) {
   const body: Record<string, unknown> = { content, action };
   if (model) body.model = model;
   if (attachments && attachments.length > 0) {
     body.attachments = attachments;
+  }
+  if (commands && commands.length > 0) {
+    body.commands = commands;
   }
   return streamSSE<string>(
     `${BASE_URL}/api/projects/${projectId}/agents/${agentInstanceId}/events/stream`,

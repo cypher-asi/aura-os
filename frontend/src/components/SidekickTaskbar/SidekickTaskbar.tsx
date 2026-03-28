@@ -1,11 +1,13 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useParams } from "react-router-dom";
 import { Button, Menu } from "@cypher-asi/zui";
 import { Archive, Info, Ellipsis, File, Check, Logs, ChartNoAxesColumnIncreasing, MonitorCog, FolderClosed } from "lucide-react";
 import { useSidekick, type SidekickTab } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { hasLinkedWorkspace } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
@@ -26,7 +28,11 @@ export function SidekickTaskbar() {
   const moreBtnRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const { features } = useAuraCapabilities();
-  const canBrowseFiles = features.linkedWorkspace && hasLinkedWorkspace(ctx?.project);
+  const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
+  const { remoteAgentId, remoteWorkspacePath } = useTerminalTarget({ projectId, agentInstanceId });
+  const canBrowseLocal = features.linkedWorkspace && hasLinkedWorkspace(ctx?.project);
+  const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteWorkspacePath);
+  const canBrowseFiles = canBrowseLocal || canBrowseRemote;
 
   useEffect(() => {
     if (!canBrowseFiles && activeTab === "files") {

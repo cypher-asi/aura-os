@@ -3,14 +3,17 @@ import { useShallow } from "zustand/react/shallow";
 import { useOrgStore } from "../../stores/org-store";
 import { useAuth } from "../../stores/auth-store";
 import { useBillingStore } from "../../stores/billing-store";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { api, ApiClientError } from "../../api/client";
 import type { OrgInvite, OrgBilling, OrgRole } from "../../types";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
+import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 
 type Section = "general" | "members" | "invites" | "billing";
 
 export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
+  const { isNativeApp } = useAuraCapabilities();
   const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs, isLoading } = useOrgStore(
     useShallow((s) => ({
       activeOrg: s.activeOrg, renameOrg: s.renameOrg, members: s.members,
@@ -90,6 +93,12 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
 
   const handlePurchase = useCallback(async (amountUsd: number) => {
     if (!orgId) return;
+    // Mirror the modal safeguard here because org billing has its own purchase
+    // entry point and should follow the same native-app policy.
+    if (isNativeApp) {
+      setCheckoutError(NATIVE_BILLING_MESSAGE);
+      return;
+    }
     setCheckoutError(null);
     const result = await useBillingStore.getState().purchase(orgId, amountUsd);
     if (result?.checkout_url) {
@@ -97,7 +106,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
       const prevBalance = useBillingStore.getState().balance?.balance_cents ?? 0;
       startPolling(prevBalance);
     }
-  }, [orgId, startPolling]);
+  }, [isNativeApp, orgId, startPolling]);
 
   useEffect(() => {
     if (pollingStatus === "success" && settledBalance) {

@@ -305,5 +305,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         )),
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url: env_opt("SWARM_BASE_URL"),
+        task_output_cache: Arc::new(Mutex::new(HashMap::new())),
     })
 }

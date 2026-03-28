@@ -7,6 +7,7 @@ export interface QueuedMessage {
   content: string;
   action: string | null;
   attachments?: ChatAttachment[];
+  commands?: string[];
 }
 
 interface MessageQueueState {

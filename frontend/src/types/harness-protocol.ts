@@ -51,6 +51,7 @@ export interface SessionInit {
 
 export interface UserMessage {
   content: string;
+  tool_hints?: string[] | null;
 }
 
 export interface ApprovalResponse {

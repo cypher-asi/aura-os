@@ -197,6 +197,163 @@ Notes:
 - If you need different ports, set `AURA_SERVER_PORT` and/or `AURA_FRONTEND_PORT` before running the script.
 - For simulator/local-only use, the defaults still bind to `127.0.0.1`, which is the simplest setup.
 
+### Build native mobile shells (Capacitor)
+
+Aura's mobile store builds now use Capacitor on top of the existing Vite app.
+
+From `frontend/`:
+
+```bash
+npm install
+npm run build:native
+```
+
+Then open the native project you want:
+
+```bash
+npm run cap:open:ios
+npm run cap:open:android
+```
+
+Notes:
+
+- `npm run build:native` rebuilds the web app and syncs it into the native iOS and Android shells.
+- Store-safe mobile builds currently disable in-app credit purchases. Buy or manage credits on the web app, then return to mobile.
+- If you regenerate native assets after changing the web UI, run `npm run build:native` again before archiving or uploading a store build.
+- Native shells can ship with a mobile-only default Aura API host by setting one or more Vite env vars before `npm run build`:
+  - `VITE_NATIVE_DEFAULT_HOST` for one shared native default
+  - `VITE_IOS_DEFAULT_HOST` for an iOS-specific default
+  - `VITE_ANDROID_DEFAULT_HOST` for an Android-specific default
+- Desktop and browser builds still fall back to their current origin when no host override is configured.
+- Native mobile auth is cross-origin, so the Aura API must allow credentialed CORS for native localhost origins. Add any deployed frontend origins with `AURA_ALLOWED_ORIGINS`.
+
+#### Local native fastlane commands
+
+For day-to-day native validation, use the wrapper commands from `frontend/`:
+
+```bash
+npm run mobile:android:local
+npm run mobile:ios:local
+```
+
+Or build both in sequence:
+
+```bash
+npm run mobile:local:all
+```
+
+What these commands do:
+
+- rebuild the web app
+- sync Capacitor assets into the native shell
+- build the local Android APK or iOS simulator app through `fastlane`
+- auto-detect the local gem bin, and for Android also pick up `JAVA_HOME` / `ANDROID_HOME` when available
+
+Backend env needed for a useful local mobile session:
+
+- Minimum for remote-backed projects/orgs:
+  - `AURA_NETWORK_URL`
+- Recommended full remote-backed setup:
+  - `AURA_NETWORK_URL=https://aura-network.onrender.com`
+  - `AURA_STORAGE_URL=https://aura-storage.onrender.com`
+  - `AURA_ROUTER_URL=https://aura-router.onrender.com`
+  - `Z_BILLING_URL=https://z-billing.onrender.com`
+  - `ORBIT_BASE_URL=https://orbit-sfvu.onrender.com`
+  - `SWARM_BASE_URL=http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com`
+
+Native build env used by the local wrappers:
+
+- `VITE_ANDROID_DEFAULT_HOST`
+  - default: `http://10.0.2.2:3100`
+- `VITE_IOS_DEFAULT_HOST`
+  - default: `http://127.0.0.1:3100`
+
+You only need to override those `VITE_*` values if your backend is running on a different host or port.
+
+#### iOS TestFlight / App Store pipeline
+
+The iOS branch now includes a `fastlane` setup under [`frontend/ios`](./frontend/ios) and a GitHub Actions workflow in [`.github/workflows/ios-mobile.yml`](./.github/workflows/ios-mobile.yml).
+
+Local release commands from `frontend/ios/`:
+
+```bash
+bundle install
+bundle exec fastlane ios beta
+bundle exec fastlane ios release
+```
+
+GitHub Actions release input:
+
+- Run `iOS Mobile`
+- Choose lane `beta` for TestFlight or `release` for an App Store candidate
+- Set `submit_for_review=true` only when metadata, screenshots, and review notes are ready
+
+Required iOS secrets for CI:
+
+- `IOS_APP_STORE_CONNECT_KEY_ID`
+- `IOS_APP_STORE_CONNECT_ISSUER_ID`
+- `IOS_APP_STORE_CONNECT_KEY_BASE64`
+- `IOS_DEVELOPER_TEAM_ID`
+- `IOS_MATCH_GIT_URL`
+- `IOS_MATCH_PASSWORD`
+- One match auth method:
+  - `IOS_MATCH_GIT_PRIVATE_KEY`, or
+  - `IOS_MATCH_GIT_BASIC_AUTHORIZATION`
+- Optional overrides:
+  - `IOS_BUNDLE_ID`
+  - `IOS_MATCH_GIT_BRANCH`
+  - `IOS_APP_STORE_CONNECT_TEAM_ID`
+  - `IOS_APPLE_ID`
+
+Still needed before a real App Store submission:
+
+- A live production Aura backend/API that Apple can reach during review
+- App Store Connect app record for the final bundle ID
+- Distribution signing assets in the `match` repo
+- Final app icon, screenshots, and any preview video you want to ship
+- App Privacy answers, privacy policy URL, support URL, and age rating
+- App review contact info, demo credentials, and review notes
+- Final decision on whether production builds should lock to one hosted Aura backend
+
+#### Android Play pipeline
+
+The Android branch now includes a `fastlane` setup under [`frontend/android`](./frontend/android) and a GitHub Actions workflow in [`.github/workflows/android-mobile.yml`](./.github/workflows/android-mobile.yml).
+
+Local release commands from `frontend/android/`:
+
+```bash
+bundle install
+bundle exec fastlane android beta
+bundle exec fastlane android release
+```
+
+GitHub Actions release input:
+
+- Run `Android Mobile`
+- Choose lane `beta` for Play Internal Testing or `release` for a release candidate
+- Choose the Play track (`internal`, `closed`, or `production`)
+- Leave `release_status=draft` until you are ready for a real rollout
+
+Required Android secrets for CI:
+
+- `ANDROID_PLAY_SERVICE_ACCOUNT_JSON_BASE64`
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- Optional overrides:
+  - `ANDROID_PACKAGE_NAME`
+
+Still needed before a real Google Play submission:
+
+- A Google Play Console app record for the final package name
+- A Play service account with release permissions for that app
+- The Android upload keystore used to sign release bundles
+- Store listing copy, screenshots, and high-res app icon
+- Privacy policy URL, Data safety answers, and content rating
+- App access / review instructions if login is required
+- A live production Aura backend/API that Play reviewers can reach
+
 ### Run desktop app
 
 Build the frontend once, then run the desktop shell (it embeds the server and frontend):

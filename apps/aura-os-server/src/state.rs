@@ -55,6 +55,18 @@ impl ChatSession {
 
 pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 
+/// Accumulated live output for a running or recently completed task.
+#[derive(Clone, Default)]
+pub struct CachedTaskOutput {
+    pub live_output: String,
+    pub build_steps: Vec<serde_json::Value>,
+    pub test_steps: Vec<serde_json::Value>,
+    pub session_id: Option<String>,
+    pub agent_instance_id: Option<String>,
+    pub project_id: Option<String>,
+}
+pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
+
 /// Simple time-based cache for billing credit checks.
 pub struct CreditCache {
     pub last_check: Instant,
@@ -97,6 +109,8 @@ pub struct AppState {
     /// Base URL for the aura-swarm gateway (e.g. `http://gateway:8080`).
     /// `None` when `SWARM_BASE_URL` is not set.
     pub swarm_base_url: Option<String>,
+    /// In-memory cache of accumulated task output (live + completed).
+    pub task_output_cache: TaskOutputCache,
 }
 
 impl AppState {

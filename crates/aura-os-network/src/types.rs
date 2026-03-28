@@ -499,3 +499,25 @@ pub struct MemberUsageStats {
     #[serde(default)]
     pub total_cost_usd: f64,
 }
+
+// ---------------------------------------------------------------------------
+// Usage reporting
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportUsageRequest {
+    pub user_id: String,
+    pub model: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub estimated_cost_usd: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
+}

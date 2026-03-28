@@ -3,6 +3,8 @@ import { useShallow } from "zustand/react/shallow";
 import type { TimePeriod, LeaderboardFilter, LeaderboardUser } from "../apps/leaderboard/mockData";
 import { api } from "../api/client";
 import { useOrgStore } from "./org-store";
+import { useEventStore } from "./event-store";
+import { EventType } from "../types/aura-events";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,6 +91,34 @@ useOrgStore.subscribe((state) => {
   _prevOrgId = orgId;
   useLeaderboardStore.getState().fetchEntries();
 });
+
+let _refreshInterval: ReturnType<typeof setInterval> | null = null;
+
+useEventStore.getState().subscribe(EventType.NetworkEvent, (event) => {
+  if (!_initialized) return;
+  const payload = event.content?.payload;
+  if (!payload) return;
+  const wsType = (payload.type as string) ?? "";
+  if (wsType === "activity.new") {
+    useLeaderboardStore.getState().fetchEntries();
+  }
+});
+
+export function startLeaderboardRefresh() {
+  if (_refreshInterval) return;
+  _refreshInterval = setInterval(() => {
+    if (_initialized) {
+      useLeaderboardStore.getState().fetchEntries();
+    }
+  }, 60_000);
+}
+
+export function stopLeaderboardRefresh() {
+  if (_refreshInterval) {
+    clearInterval(_refreshInterval);
+    _refreshInterval = null;
+  }
+}
 
 export function useLeaderboard() {
   return useLeaderboardStore(

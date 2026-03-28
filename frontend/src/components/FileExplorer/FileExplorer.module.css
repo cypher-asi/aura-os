@@ -24,10 +24,37 @@
 
 .explorerContainer {
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   height: 100%;
   width: 100%;
+}
+
+.refreshBar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-1) var(--space-2);
+  flex-shrink: 0;
+}
+
+.refreshButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.refreshButton:hover {
+  color: var(--color-text-default);
+  background: var(--color-bg-hover);
 }
 
 .truncatedLabel {

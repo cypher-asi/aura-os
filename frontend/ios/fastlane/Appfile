@@ -1,0 +1,8 @@
+# Resolve app identity from env so CI and local release runs can share the same
+# fastlane configuration without hard-coding team-specific values.
+bundle_id = ENV["IOS_BUNDLE_ID"].to_s.empty? ? "tech.zero.aura" : ENV["IOS_BUNDLE_ID"]
+app_identifier(bundle_id)
+
+apple_id(ENV["IOS_APPLE_ID"]) if ENV["IOS_APPLE_ID"]
+itc_team_id(ENV["IOS_APP_STORE_CONNECT_TEAM_ID"]) if ENV["IOS_APP_STORE_CONNECT_TEAM_ID"]
+team_id(ENV["IOS_DEVELOPER_TEAM_ID"]) if ENV["IOS_DEVELOPER_TEAM_ID"]

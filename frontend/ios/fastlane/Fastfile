@@ -1,0 +1,174 @@
+fastlane_version "2.229.0"
+default_platform(:ios)
+
+require "base64"
+require "json"
+require "shellwords"
+
+def frontend_root
+  File.expand_path("../..", __dir__)
+end
+
+def ios_root
+  File.expand_path("..", __dir__)
+end
+
+def xcodeproj_path
+  File.join(ios_root, "App/App.xcodeproj")
+end
+
+def required_env!(name)
+  value = ENV[name]
+  UI.user_error!("Missing required environment variable #{name}") if value.to_s.empty?
+  value
+end
+
+def build_number
+  ENV["IOS_BUILD_NUMBER"] || ENV["GITHUB_RUN_NUMBER"] || Time.now.utc.strftime("%Y%m%d%H%M")
+end
+
+def bundle_id
+  ENV["IOS_BUNDLE_ID"].to_s.empty? ? "tech.zero.aura" : ENV["IOS_BUNDLE_ID"]
+end
+
+def match_branch
+  ENV["IOS_MATCH_GIT_BRANCH"].to_s.empty? ? "main" : ENV["IOS_MATCH_GIT_BRANCH"]
+end
+
+def match_auth_options
+  private_key = ENV["IOS_MATCH_GIT_PRIVATE_KEY"]
+  basic_auth = ENV["IOS_MATCH_GIT_BASIC_AUTHORIZATION"]
+
+  return { git_private_key: private_key } unless private_key.to_s.empty?
+  return { git_basic_authorization: basic_auth } unless basic_auth.to_s.empty?
+
+  UI.user_error!(
+    "Set IOS_MATCH_GIT_PRIVATE_KEY or IOS_MATCH_GIT_BASIC_AUTHORIZATION so fastlane match can fetch signing assets."
+  )
+end
+
+def app_store_api_key
+  app_store_connect_api_key(
+    key_id: required_env!("IOS_APP_STORE_CONNECT_KEY_ID"),
+    issuer_id: required_env!("IOS_APP_STORE_CONNECT_ISSUER_ID"),
+    key_content: Base64.decode64(required_env!("IOS_APP_STORE_CONNECT_KEY_BASE64")),
+    is_key_content_base64: false,
+    duration: 1200,
+    in_house: false
+  )
+end
+
+def booted_simulator_id
+  devices = JSON.parse(`xcrun simctl list devices booted --json`)
+  devices.fetch("devices", {}).values.flatten.find { |device| device["state"] == "Booted" }&.fetch("udid", nil)
+end
+
+def sync_signing!(api_key:, readonly:)
+  # We keep signing in match so CI can reproduce the same archive that local
+  # release runs use, instead of depending on one developer machine's keychain.
+  match(
+    type: "appstore",
+    api_key: api_key,
+    readonly: readonly,
+    app_identifier: bundle_id,
+    git_url: required_env!("IOS_MATCH_GIT_URL"),
+    git_branch: match_branch,
+    team_id: ENV["IOS_DEVELOPER_TEAM_ID"],
+    **match_auth_options
+  )
+end
+
+private_lane :build_store_archive do
+  sync_ios_web_assets
+
+  increment_build_number(
+    xcodeproj: xcodeproj_path,
+    build_number: build_number
+  )
+
+  build_app(
+    project: xcodeproj_path,
+    scheme: "App",
+    configuration: "Release",
+    clean: true,
+    export_method: "app-store",
+    output_directory: File.join(ios_root, "build"),
+    output_name: "AURA.ipa",
+    # The Xcode project already uses automatic signing, so we let fastlane
+    # archive with the provisioning assets that match synced into the runner.
+    export_options: {
+      signingStyle: "automatic"
+    },
+    xcargs: "-allowProvisioningUpdates"
+  )
+end
+
+private_lane :sync_ios_web_assets do
+  # Local simulator builds should package the same bundled web assets that CI
+  # would archive for a store build.
+  root = frontend_root.shellescape
+  sh("cd #{root} && npm run build")
+  sh("cd #{root} && npx cap sync ios")
+end
+
+platform :ios do
+  desc "Build a local simulator app bundle that can be installed with simctl"
+  lane :local_simulator do
+    sync_ios_web_assets
+
+    simulator_id = ENV["IOS_SIMULATOR_ID"].to_s.empty? ? booted_simulator_id : ENV["IOS_SIMULATOR_ID"]
+    UI.user_error!("Boot an iOS simulator or set IOS_SIMULATOR_ID before running local_simulator.") if simulator_id.to_s.empty?
+
+    derived_data = File.join(ios_root, "build/local-simulator")
+    app_path = File.join(derived_data, "Build/Products/Debug-iphonesimulator/App.app")
+
+    sh("rm -rf #{derived_data.shellescape}")
+    sh(
+      "xcodebuild -project #{xcodeproj_path.shellescape} -scheme App -configuration Debug " \
+      "-destination 'platform=iOS Simulator,id=#{simulator_id}' " \
+      "-derivedDataPath #{derived_data.shellescape} build"
+    )
+
+    UI.success("Local simulator app ready at #{app_path}")
+    app_path
+  end
+
+  desc "Create or refresh App Store signing assets in the match repo"
+  lane :bootstrap_signing do
+    sync_signing!(api_key: app_store_api_key, readonly: false)
+  end
+
+  desc "Build and upload an internal TestFlight build"
+  lane :beta do
+    api_key = app_store_api_key
+    sync_signing!(api_key: api_key, readonly: is_ci)
+    build_store_archive
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: "./build/AURA.ipa",
+      changelog: ENV["IOS_CHANGELOG"],
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and upload an App Store candidate; optionally submit it for review"
+  lane :release do
+    api_key = app_store_api_key
+    sync_signing!(api_key: api_key, readonly: is_ci)
+    build_store_archive
+
+    metadata_present = File.directory?("fastlane/metadata")
+    screenshots_present = File.directory?("fastlane/screenshots")
+
+    upload_to_app_store(
+      api_key: api_key,
+      ipa: "./build/AURA.ipa",
+      force: true,
+      automatic_release: false,
+      submit_for_review: ENV["IOS_SUBMIT_FOR_REVIEW"] == "1",
+      skip_metadata: !metadata_present,
+      skip_screenshots: !screenshots_present
+    )
+  end
+end

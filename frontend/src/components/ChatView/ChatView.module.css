@@ -140,6 +140,7 @@
 }
 
 .inputContainer {
+  position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border);
@@ -435,4 +436,114 @@
   height: 10px;
   border-radius: 2px;
   background: var(--color-text-muted);
+}
+
+/* ── Slash command chips ─────────────────────────────────────── */
+
+.commandChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px 0;
+}
+
+.commandChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  color: var(--color-text);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.commandChipLabel {
+  opacity: 0.85;
+}
+
+.commandChipRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.1s ease, background 0.1s ease;
+}
+
+.commandChipRemove:hover {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Slash command menu ──────────────────────────────────────── */
+
+.slashMenu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin-bottom: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--color-bg-secondary, #1a1a1a);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 4px 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.slashMenuCategory {
+  padding: 6px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.slashMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+
+.slashMenuItem:hover,
+.slashMenuItemActive {
+  background: var(--color-bg-tertiary, rgba(255, 255, 255, 0.06));
+  color: var(--color-text);
+}
+
+.slashMenuItemLabel {
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.slashMenuItemDesc {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

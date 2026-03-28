@@ -115,6 +115,16 @@
   border: 1px solid color-mix(in srgb, var(--color-error, #ef4444) 20%, transparent);
 }
 
+.infoState {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
 .retryButton {
   background: none;
   border: 1px solid var(--color-error, #ef4444);

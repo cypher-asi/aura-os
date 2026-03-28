@@ -7,11 +7,13 @@ import styles from "../TerminalPanel/TerminalPanel.module.css";
 
 function TerminalWrapper({
   visible,
+  focused,
   cwd,
   remoteAgentId,
   onHook,
 }: {
   visible: boolean;
+  focused: boolean;
   cwd?: string;
   remoteAgentId?: string;
   onHook: (hook: UseTerminalReturn) => void;
@@ -23,7 +25,7 @@ function TerminalWrapper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hook.terminalId]);
 
-  return <XTerminal terminal={hook} visible={visible} />;
+  return <XTerminal terminal={hook} visible={visible} focused={focused} />;
 }
 
 export function TerminalPanelBody() {
@@ -53,15 +55,19 @@ export function TerminalPanelBody() {
         onMouseDown={handleMouseDown}
       />
       <div className={styles.terminalBody}>
-        {terminals.map((t) => (
-          <TerminalWrapper
-            key={t.id}
-            visible={t.id === activeId}
-            cwd={cwd}
-            remoteAgentId={remoteAgentId}
-            onHook={(hook) => registerHook(t.id, hook)}
-          />
-        ))}
+        {terminals.map((t) => {
+          const isActive = t.id === activeId;
+          return (
+            <TerminalWrapper
+              key={t.id}
+              visible={isActive}
+              focused={isActive && !collapsed && contentReady}
+              cwd={cwd}
+              remoteAgentId={remoteAgentId}
+              onHook={(hook) => registerHook(t.id, hook)}
+            />
+          );
+        })}
       </div>
     </div>
   );

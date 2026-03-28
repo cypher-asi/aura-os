@@ -93,6 +93,10 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
       <TaskOutputSection
         isActive={isActive}
         streamKey={streamKey}
+        taskId={task.task_id}
+        task={task}
+        taskOutput={taskOutput}
+        failReason={failReason}
       />
     </>
   );
