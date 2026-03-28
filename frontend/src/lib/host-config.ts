@@ -1,8 +1,27 @@
 const HOST_STORAGE_KEY = "aura-host-origin";
 const HOST_CHANGE_EVENT = "aura-host-change";
 
+interface CapacitorWindow extends Window {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+  };
+}
+
 function hasWindow() {
   return typeof window !== "undefined";
+}
+
+function isNativeHostRuntime(): boolean {
+  if (!hasWindow()) return false;
+
+  const nativeCheck = (window as CapacitorWindow).Capacitor?.isNativePlatform;
+  if (typeof nativeCheck === "function") {
+    return Boolean(nativeCheck());
+  }
+
+  // Capacitor serves the bundled app from a localhost webview origin. Treat
+  // that as native so we do not mistake the embedded web assets for an API host.
+  return window.location.protocol === "capacitor:" || window.location.origin === "https://localhost";
 }
 
 export function normalizeHostOrigin(value: string | null | undefined): string | null {
@@ -36,7 +55,12 @@ export function getConfiguredHostOrigin(): string | null {
 
 export function getResolvedHostOrigin(): string {
   if (!hasWindow()) return "";
+  if (requiresExplicitHostOrigin() && !getConfiguredHostOrigin()) return "";
   return getConfiguredHostOrigin() ?? window.location.origin;
+}
+
+export function requiresExplicitHostOrigin(): boolean {
+  return isNativeHostRuntime();
 }
 
 export function setConfiguredHostOrigin(value: string | null): string | null {
@@ -95,5 +119,6 @@ export function resolveWsUrl(path: string): string {
 export function getHostDisplayLabel(): string {
   const configuredHost = getConfiguredHostOrigin();
   if (configuredHost) return configuredHost;
+  if (requiresExplicitHostOrigin()) return "No host configured";
   return "Current origin";
 }

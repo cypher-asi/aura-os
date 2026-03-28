@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
 import { useHostStore, type HostConnectionStatus } from "../../stores/host-store";
-import { getHostDisplayLabel } from "../../lib/host-config";
+import { getConfiguredHostOrigin, getHostDisplayLabel, requiresExplicitHostOrigin } from "../../lib/host-config";
 import { ApiClientError } from "../../api/client";
 import { HostSettingsModal } from "../../components/HostSettingsModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -76,7 +76,7 @@ export function LoginView() {
   const status = useHostStore((s) => s.status);
   const refreshStatus = useHostStore((s) => s.refreshStatus);
   const hostLabel = getHostDisplayLabel();
-  const { features, isMobileLayout } = useAuraCapabilities();
+  const { features, isMobileLayout, isNativeApp } = useAuraCapabilities();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
@@ -110,6 +110,12 @@ export function LoginView() {
       return;
     }
 
+    if (isNativeApp && requiresExplicitHostOrigin() && !getConfiguredHostOrigin()) {
+      setError("Set an Aura host before signing in.");
+      openHostSettings();
+      return;
+    }
+
     if (activeTab === "register" && password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -140,7 +146,13 @@ export function LoginView() {
     }
   }
 
-  const hostStatus = HOST_STATUS_COPY[status];
+  const missingNativeHost = isNativeApp && requiresExplicitHostOrigin() && !getConfiguredHostOrigin();
+  const hostStatus = missingNativeHost
+    ? {
+        title: "Aura host required",
+        detail: "Native mobile builds need a configured Aura host before sign-in.",
+      }
+    : HOST_STATUS_COPY[status];
   const showHostWarning = status === "unreachable" || status === "error";
   const showCompactHostStatus = isMobileLayout && (status === "online" || status === "auth_required");
 

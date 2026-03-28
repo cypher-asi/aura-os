@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Button, Input, Modal, Spinner, Text } from "@cypher-asi/zui";
 import { useShallow } from "zustand/react/shallow";
 import { useHostStore } from "../../stores/host-store";
-import { getHostDisplayLabel, getResolvedHostOrigin, normalizeHostOrigin } from "../../lib/host-config";
+import { getHostDisplayLabel, getResolvedHostOrigin, normalizeHostOrigin, requiresExplicitHostOrigin } from "../../lib/host-config";
+import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "../SettingsModal/SettingsModal.module.css";
 
 export function HostSettingsModal({
@@ -17,6 +18,8 @@ export function HostSettingsModal({
   );
   const hostLabel = getHostDisplayLabel();
   const resolvedOrigin = getResolvedHostOrigin();
+  const { isNativeApp } = useAuraCapabilities();
+  const nativeHostRequired = isNativeApp && requiresExplicitHostOrigin();
   const [value, setValue] = useState(hostOrigin ?? "");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -59,9 +62,11 @@ export function HostSettingsModal({
       footer={(
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button variant="secondary" onClick={handleUseCurrent} disabled={saving}>
-            {saving ? <><Spinner size="sm" /> Applying...</> : "Use Current Origin"}
-          </Button>
+          {!nativeHostRequired ? (
+            <Button variant="secondary" onClick={handleUseCurrent} disabled={saving}>
+              {saving ? <><Spinner size="sm" /> Applying...</> : "Use Current Origin"}
+            </Button>
+          ) : null}
           <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? <><Spinner size="sm" /> Applying...</> : "Save Host"}
           </Button>
@@ -70,7 +75,9 @@ export function HostSettingsModal({
     >
       <div className={styles.content}>
         <Text variant="muted" size="sm">
-          Point Aura at a live host. Leave this blank to use the current origin or dev proxy.
+          {nativeHostRequired
+            ? "Point Aura at a live host. Native mobile builds cannot use the embedded app origin for API requests."
+            : "Point Aura at a live host. Leave this blank to use the current origin or dev proxy."}
         </Text>
 
         <div className={styles.infoGrid}>
@@ -92,7 +99,7 @@ export function HostSettingsModal({
               setValue(e.target.value);
               setError("");
             }}
-            placeholder="192.168.1.20:5173"
+            placeholder={nativeHostRequired ? "https://aura.example.com or http://10.0.2.2:3100" : "192.168.1.20:5173"}
             mono
           />
         </div>

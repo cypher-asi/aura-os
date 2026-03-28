@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   getConfiguredHostOrigin,
+  requiresExplicitHostOrigin,
   resolveApiUrl,
   setConfiguredHostOrigin,
   subscribeToHostChanges,
@@ -12,6 +13,12 @@ const PROBE_INTERVAL_MS = 20_000;
 const PROBE_TIMEOUT_MS = 4_000;
 
 async function probeHost(): Promise<HostConnectionStatus> {
+  // Native shells bundle the frontend at a local webview origin, so they need
+  // an explicit Aura host instead of falling back to the embedded app origin.
+  if (requiresExplicitHostOrigin() && !getConfiguredHostOrigin()) {
+    return "unreachable";
+  }
+
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
 
@@ -25,7 +32,14 @@ async function probeHost(): Promise<HostConnectionStatus> {
 
     if (response.status === 401) return "auth_required";
     if (response.status === 502 || response.status === 503 || response.status === 504) return "unreachable";
-    if (response.ok || response.status < 500) return "online";
+    const contentType = response.headers.get("content-type") ?? "";
+    const looksLikeAuraApi = contentType.includes("json");
+
+    // A healthy Aura auth endpoint should answer with JSON. If we get HTML from
+    // the bundled webview origin instead, treat that as the host being invalid.
+    if (response.ok && looksLikeAuraApi) return "online";
+    if (response.ok && !looksLikeAuraApi) return "unreachable";
+    if (response.status < 500) return "error";
     return "error";
   } catch {
     return "unreachable";
