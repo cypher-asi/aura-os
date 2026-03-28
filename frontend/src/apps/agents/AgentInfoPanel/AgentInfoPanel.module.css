@@ -1,6 +1,32 @@
 .wrapper {
   position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
+  min-height: 0;
+  --entity-card-padding-bottom: var(--space-5);
+  --entity-card-mobile-padding-bottom: var(--space-5);
+}
+
+.cardSlot {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .wrapper {
+    display: block;
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+  }
+
+  .cardSlot {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
 }
 
 .section {
@@ -82,3 +108,10 @@
   margin-top: var(--space-2);
 }
 
+.mobileActions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+  padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+}

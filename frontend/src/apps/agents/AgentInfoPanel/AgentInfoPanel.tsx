@@ -13,7 +13,11 @@ import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./AgentInfoPanel.module.css";
 
-export function AgentInfoPanel() {
+interface AgentInfoPanelProps {
+  variant?: "default" | "mobileStandalone";
+}
+
+export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -67,87 +71,102 @@ export function AgentInfoPanel() {
   const a = selectedAgent;
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
+  const isMobileStandalone = variant === "mobileStandalone";
 
   return (
     <div className={styles.wrapper}>
-      <EntityCard
-        headerLabel="AGENT"
-        headerStatus={a.created_at ? "ACTIVE" : undefined}
-        image={imageUrl}
-        fallbackIcon={<Bot size={48} />}
-        name={a.name}
-        subtitle={a.role}
-        nameAction={
-          <FollowEditButton
-            isOwner={isOwnAgent}
-            targetProfileId={a.profile_id}
-            onEdit={() => setShowEditor(true)}
-          />
-        }
-        footer="CYPHER-ASI // AURA"
-      >
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt=""
-            className={styles.hidden}
-            onError={() => setIconFailed(true)}
-          />
-        )}
+      <div className={styles.cardSlot}>
+        <EntityCard
+          headerLabel="AGENT"
+          headerStatus={a.created_at ? "ACTIVE" : undefined}
+          image={imageUrl}
+          fallbackIcon={<Bot size={48} />}
+          name={a.name}
+          subtitle={a.role}
+          nameAction={
+            !isOwnAgent ? (
+              <FollowEditButton
+                isOwner={false}
+                targetProfileId={a.profile_id}
+              />
+            ) : undefined
+          }
+          footer="CYPHER-ASI // AURA"
+        >
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt=""
+              className={styles.hidden}
+              onError={() => setIconFailed(true)}
+            />
+          )}
 
-        {a.personality && (
-          <div className={styles.section}>
-            <Text size="xs" variant="muted" weight="medium">Personality</Text>
-            <Text size="sm">{a.personality}</Text>
-          </div>
-        )}
+          {a.personality && (
+            <div className={styles.section}>
+              <Text size="xs" variant="muted" weight="medium">Personality</Text>
+              <Text size="sm">{a.personality}</Text>
+            </div>
+          )}
 
-        <div className={styles.metaGrid}>
-          <div className={styles.metaRow}>
-            {a.machine_type === "remote" ? (
-              <Cloud size={13} className={styles.metaIcon} />
-            ) : (
-              <Monitor size={13} className={styles.metaIcon} />
-            )}
-            <span className={styles.metaValue}>
-              {a.machine_type === "remote" ? "Remote Machine" : "Local Machine"}
-            </span>
-          </div>
-          <div className={styles.metaRow}>
-            <Calendar size={13} className={styles.metaIcon} />
-            <span className={styles.metaValue}>
-              Birthed {new Date(a.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-            </span>
-          </div>
-        </div>
-
-        {a.skills.length > 0 && (
-          <div className={styles.section}>
-            <Text size="xs" variant="muted" weight="medium">Skills</Text>
-            <div className={styles.skills}>
-              {a.skills.map((s) => (
-                <Badge key={s} variant="pending" className={styles.skillBadge}>{s}</Badge>
-              ))}
+          <div className={styles.metaGrid}>
+            <div className={styles.metaRow}>
+              {a.machine_type === "remote" ? (
+                <Cloud size={13} className={styles.metaIcon} />
+              ) : (
+                <Monitor size={13} className={styles.metaIcon} />
+              )}
+              <span className={styles.metaValue}>
+                {a.machine_type === "remote" ? "Remote Machine" : "Local Machine"}
+              </span>
+            </div>
+            <div className={styles.metaRow}>
+              <Calendar size={13} className={styles.metaIcon} />
+              <span className={styles.metaValue}>
+                Birthed {new Date(a.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              </span>
             </div>
           </div>
-        )}
 
-        {a.system_prompt && (
-          <div className={styles.section}>
-            <Text size="xs" variant="muted" weight="medium">System Prompt</Text>
-            <Text size="sm" className={styles.prompt}>
-              {a.system_prompt}
-            </Text>
-          </div>
-        )}
+          {a.skills.length > 0 && (
+            <div className={styles.section}>
+              <Text size="xs" variant="muted" weight="medium">Skills</Text>
+              <div className={styles.skills}>
+                {a.skills.map((s) => (
+                  <Badge key={s} variant="pending" className={styles.skillBadge}>{s}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
-      </EntityCard>
+          {a.system_prompt && (
+            <div className={styles.section}>
+              <Text size="xs" variant="muted" weight="medium">System Prompt</Text>
+              <Text size="sm" className={styles.prompt}>
+                {a.system_prompt}
+              </Text>
+            </div>
+          )}
+
+        </EntityCard>
+      </div>
 
       {isOwnAgent && (
-        <SidekickActions
-          onEdit={() => setShowEditor(true)}
-          onDelete={openDeleteConfirm}
-        />
+        isMobileStandalone ? (
+          <div className={styles.mobileActions}>
+            <Button variant="ghost" size="sm" onClick={() => setShowEditor(true)}>
+              Edit
+            </Button>
+            <Button variant="ghost" size="sm" onClick={openDeleteConfirm}>
+              Delete
+            </Button>
+          </div>
+        ) : (
+          <SidekickActions
+            onEdit={() => setShowEditor(true)}
+            onDelete={openDeleteConfirm}
+          />
+        )
       )}
 
       <AgentEditorModal
