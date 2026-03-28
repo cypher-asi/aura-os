@@ -63,6 +63,7 @@ fn automaton_client_for_mode(
     state: &AppState,
     mode: HarnessMode,
     swarm_agent_id: Option<&str>,
+    jwt: Option<&str>,
 ) -> Result<std::sync::Arc<aura_os_link::AutomatonClient>, (StatusCode, Json<ApiError>)> {
     match mode {
         HarnessMode::Local => Ok(state.automaton_client.clone()),
@@ -76,7 +77,9 @@ fn automaton_client_for_mode(
                 Some(aid) => format!("{base}/v1/agents/{aid}"),
                 None => base.to_string(),
             };
-            Ok(std::sync::Arc::new(aura_os_link::AutomatonClient::new(&scoped_base)))
+            let client = aura_os_link::AutomatonClient::new(&scoped_base)
+                .with_auth(jwt.map(String::from));
+            Ok(std::sync::Arc::new(client))
         }
     }
 }
@@ -423,10 +426,27 @@ pub(crate) async fn start_loop(
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
-        .map(|inst| (inst.machine_type, Some(inst.agent_id.to_string())))
-        .unwrap_or_else(|_| ("local".to_string(), None));
+        .map(|inst| {
+            info!(
+                %project_id, %agent_instance_id,
+                agent_id = %inst.agent_id,
+                machine_type = %inst.machine_type,
+                "Resolved agent instance for loop start"
+            );
+            (inst.machine_type, Some(inst.agent_id.to_string()))
+        })
+        .unwrap_or_else(|e| {
+            warn!(%project_id, %agent_instance_id, error = %e, "Failed to resolve agent instance; defaulting to local");
+            ("local".to_string(), None)
+        });
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
-    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref())?;
+    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref(), jwt.as_deref())?;
+    info!(
+        %project_id, %agent_instance_id,
+        base_url = %automaton_client.base_url(),
+        ?harness_mode,
+        "Automaton client configured for loop start"
+    );
     let project_path = resolve_workspace_path(
         &machine_type,
         project_folder.as_deref(),
@@ -443,8 +463,11 @@ pub(crate) async fn start_loop(
         task_id: None,
     };
 
-    let (automaton_id, adopted) = match automaton_client.start(start_params.clone()).await {
-        Ok(r) => (r.automaton_id, false),
+    let (automaton_id, adopted, event_stream_url) = match automaton_client.start(start_params.clone()).await {
+        Ok(r) => {
+            let esurl = r.event_stream_url.clone();
+            (r.automaton_id, false, Some(esurl))
+        }
         Err(AutomatonStartError::Conflict(existing_id)) => {
             match existing_id {
                 Some(aid) => {
@@ -476,14 +499,17 @@ pub(crate) async fn start_loop(
                             );
                         }
                         match automaton_client.start(start_params).await {
-                            Ok(r) => (r.automaton_id, false),
+                            Ok(r) => {
+                                let esurl = r.event_stream_url.clone();
+                                (r.automaton_id, false, Some(esurl))
+                            }
                             Err(AutomatonStartError::Conflict(Some(retry_id))) => {
                                 info!(
                                     %retry_id,
                                     %project_id,
                                     "Retry still conflicts; adopting existing automaton"
                                 );
-                                (retry_id, true)
+                                (retry_id, true, None)
                             }
                             Err(AutomatonStartError::Conflict(None)) => {
                                 return Err(ApiError::conflict(
@@ -497,12 +523,8 @@ pub(crate) async fn start_loop(
                             }
                         }
                     } else {
-                        // An automaton is already running for this project in the harness.
-                        // This happens when the loop was started elsewhere or after a
-                        // server restart that cleared our in-memory registry. Adopt it so
-                        // both play button and chat share the same loop.
                         info!(%aid, %project_id, "Adopting existing automaton from harness");
-                        (aid, true)
+                        (aid, true, None)
                     }
                 }
                 None => {
@@ -513,6 +535,13 @@ pub(crate) async fn start_loop(
             }
         }
         Err(AutomatonStartError::Request { message, is_connect, is_timeout }) => {
+            warn!(
+                %project_id, %agent_instance_id,
+                base_url = %automaton_client.base_url(),
+                %is_connect, %is_timeout,
+                %message,
+                "Automaton start request error"
+            );
             if is_connect {
                 crate::app_builder::ensure_local_harness_running();
                 return Err(ApiError::service_unavailable(format!(
@@ -530,6 +559,13 @@ pub(crate) async fn start_loop(
             return Err(ApiError::internal(format!("starting dev loop: {message}")));
         }
         Err(AutomatonStartError::Response { status, body }) => {
+            warn!(
+                %project_id, %agent_instance_id,
+                base_url = %automaton_client.base_url(),
+                %status,
+                response_body = %body,
+                "Automaton start response error"
+            );
             if harness_mode == HarnessMode::Swarm && status == 404 {
                 return Err(ApiError::service_unavailable(format!(
                     "Remote dev-loop start is unavailable: swarm gateway at {} does not expose /automaton/start (HTTP 404).",
@@ -551,13 +587,11 @@ pub(crate) async fn start_loop(
         %agent_instance_id,
         %automaton_id,
         adopted,
+        event_stream_url = event_stream_url.as_deref().unwrap_or("<none>"),
         "Dev loop automaton ready"
     );
 
-    // Attach the event stream before advertising success: if this fails, the
-    // client must not see loop_started or a registered automaton (including
-    // when adopting an existing harness automaton).
-    let events_tx = match automaton_client.connect_event_stream(&automaton_id).await {
+    let events_tx = match automaton_client.connect_event_stream(&automaton_id, event_stream_url.as_deref()).await {
         Ok(tx) => tx,
         Err(e) => {
             // If start succeeded but event-stream attach failed, proactively stop
@@ -800,7 +834,7 @@ pub(crate) async fn run_single_task(
         .map(|inst| (inst.machine_type, Some(inst.agent_id.to_string())))
         .unwrap_or_else(|_| ("local".to_string(), None));
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
-    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref())?;
+    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref(), jwt.as_deref())?;
     let project_path = resolve_workspace_path(
         &machine_type,
         project_folder.as_deref(),
@@ -832,7 +866,8 @@ pub(crate) async fn run_single_task(
         })?;
 
     let automaton_id = result.automaton_id;
-    info!(%project_id, %task_id, %automaton_id, "Single task automaton started");
+    let event_stream_url = result.event_stream_url;
+    info!(%project_id, %task_id, %automaton_id, %event_stream_url, "Single task automaton started");
 
     // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
@@ -854,7 +889,7 @@ pub(crate) async fn run_single_task(
         });
     }
 
-    if let Ok(events_tx) = automaton_client.connect_event_stream(&automaton_id).await {
+    if let Ok(events_tx) = automaton_client.connect_event_stream(&automaton_id, Some(&event_stream_url)).await {
         forward_automaton_events(ForwardParams {
             automaton_events_tx: events_tx,
             app_broadcast: state.event_broadcast.clone(),

@@ -7,6 +7,7 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tokio::time::Duration;
 use tracing::{info, warn};
 
 #[derive(Debug, Clone, Serialize)]
@@ -26,6 +27,14 @@ pub struct AutomatonStartParams {
 pub enum AutomatonStartError {
     #[error("a dev loop is already running (automaton_id: {0:?})")]
     Conflict(Option<String>),
+    #[error("{message}")]
+    Request {
+        message: String,
+        is_connect: bool,
+        is_timeout: bool,
+    },
+    #[error("harness start returned status {status}: {body}")]
+    Response { status: u16, body: String },
     #[error("{0}")]
     Other(#[from] anyhow::Error),
 }
@@ -41,13 +50,36 @@ pub struct AutomatonStartResult {
 pub struct AutomatonClient {
     http_base: String,
     http: reqwest::Client,
+    auth_token: Option<String>,
 }
 
 impl AutomatonClient {
     pub fn new(harness_base_url: &str) -> Self {
+        let http = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(3))
+            .timeout(Duration::from_secs(12))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
         Self {
             http_base: harness_base_url.trim_end_matches('/').to_string(),
-            http: reqwest::Client::new(),
+            http,
+            auth_token: None,
+        }
+    }
+
+    pub fn with_auth(mut self, token: Option<String>) -> Self {
+        self.auth_token = token;
+        self
+    }
+
+    pub fn base_url(&self) -> &str {
+        &self.http_base
+    }
+
+    fn apply_auth(&self, req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match &self.auth_token {
+            Some(token) => req.bearer_auth(token),
+            None => req,
         }
     }
 
@@ -57,13 +89,14 @@ impl AutomatonClient {
         params: AutomatonStartParams,
     ) -> Result<AutomatonStartResult, AutomatonStartError> {
         let url = format!("{}/automaton/start", self.http_base);
-        let resp = self
-            .http
-            .post(&url)
-            .json(&params)
-            .send()
-            .await
-            .map_err(|e| AutomatonStartError::Other(e.into()))?;
+        let req = self.apply_auth(self.http.post(&url).json(&params));
+        let resp = req.send().await.map_err(|e| {
+            AutomatonStartError::Request {
+                message: format!("harness start request failed: {e}"),
+                is_connect: e.is_connect(),
+                is_timeout: e.is_timeout(),
+            }
+        })?;
         let status = resp.status();
         let body = resp
             .text()
@@ -81,9 +114,10 @@ impl AutomatonClient {
             return Err(AutomatonStartError::Conflict(automaton_id));
         }
         if !status.is_success() {
-            return Err(AutomatonStartError::Other(anyhow::anyhow!(
-                "POST /automaton/start returned {status}: {body}"
-            )));
+            return Err(AutomatonStartError::Response {
+                status: status.as_u16(),
+                body,
+            });
         }
         serde_json::from_str(&body).map_err(|e| AutomatonStartError::Other(e.into()))
     }
@@ -91,7 +125,7 @@ impl AutomatonClient {
     /// Pause a running automaton.
     pub async fn pause(&self, automaton_id: &str) -> anyhow::Result<()> {
         let url = format!("{}/automaton/{automaton_id}/pause", self.http_base);
-        let resp = self.http.post(&url).send().await?;
+        let resp = self.apply_auth(self.http.post(&url)).send().await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -103,7 +137,7 @@ impl AutomatonClient {
     /// Stop a running automaton.
     pub async fn stop(&self, automaton_id: &str) -> anyhow::Result<()> {
         let url = format!("{}/automaton/{automaton_id}/stop", self.http_base);
-        let resp = self.http.post(&url).send().await?;
+        let resp = self.apply_auth(self.http.post(&url)).send().await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -115,7 +149,7 @@ impl AutomatonClient {
     /// Get the status of an automaton.
     pub async fn status(&self, automaton_id: &str) -> anyhow::Result<serde_json::Value> {
         let url = format!("{}/automaton/{automaton_id}/status", self.http_base);
-        let resp = self.http.get(&url).send().await?;
+        let resp = self.apply_auth(self.http.get(&url)).send().await?;
         let status = resp.status();
         let body = resp.text().await?;
         if !status.is_success() {
@@ -124,20 +158,76 @@ impl AutomatonClient {
         Ok(serde_json::from_str(&body)?)
     }
 
+    /// Derive the WebSocket base URL from `http_base`.
+    fn ws_base(&self) -> String {
+        self.http_base
+            .replace("https://", "wss://")
+            .replace("http://", "ws://")
+    }
+
+    /// Resolve the WebSocket URL for the automaton event stream.
+    ///
+    /// When `event_stream_url` is provided (from the harness start response),
+    /// it is used — either directly if already absolute, or prefixed with the
+    /// gateway WS base when relative.  This mirrors how `SwarmHarness` handles
+    /// the `ws_url` returned by session creation and is required because the
+    /// swarm gateway only routes WebSocket upgrades on paths it knows about.
+    ///
+    /// Falls back to `{ws_base}/stream/automaton/{automaton_id}` (the local-
+    /// harness convention) when no URL is supplied.
+    fn resolve_event_stream_url(&self, automaton_id: &str, event_stream_url: Option<&str>) -> String {
+        match event_stream_url {
+            Some(u) if u.starts_with("ws://") || u.starts_with("wss://") => u.to_string(),
+            Some(u) => format!("{}/{}", self.ws_base(), u.trim_start_matches('/')),
+            None => format!("{}/stream/automaton/{automaton_id}", self.ws_base()),
+        }
+    }
+
     /// Connect to the automaton event WebSocket and forward events to a broadcast channel.
     /// Returns the broadcast sender (for sharing with other consumers) and spawns
     /// a background task that reads from the WebSocket.
+    ///
+    /// Pass the `event_stream_url` returned by [`Self::start`] when available so
+    /// the connection uses the gateway-routable path instead of a hardcoded one.
     pub async fn connect_event_stream(
         &self,
         automaton_id: &str,
+        event_stream_url: Option<&str>,
     ) -> anyhow::Result<broadcast::Sender<serde_json::Value>> {
-        let ws_base = self
-            .http_base
-            .replace("https://", "wss://")
-            .replace("http://", "ws://");
-        let url = format!("{ws_base}/stream/automaton/{automaton_id}");
+        let url = self.resolve_event_stream_url(automaton_id, event_stream_url);
+        info!(automaton_id, %url, "Connecting to automaton event stream");
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await?;
+        let (ws_stream, _) = if let Some(ref token) = self.auth_token {
+            let request = tokio_tungstenite::tungstenite::http::Request::builder()
+                .uri(&url)
+                .header("Authorization", format!("Bearer {token}"))
+                .header("Connection", "Upgrade")
+                .header("Upgrade", "websocket")
+                .header("Sec-WebSocket-Version", "13")
+                .header(
+                    "Sec-WebSocket-Key",
+                    tokio_tungstenite::tungstenite::handshake::client::generate_key(),
+                )
+                .body(())
+                .map_err(|e| anyhow::anyhow!("failed to build WS request: {e}"))?;
+            tokio::time::timeout(
+                Duration::from_secs(8),
+                tokio_tungstenite::connect_async(request),
+            )
+            .await
+            .map_err(|_| {
+                anyhow::anyhow!("timed out connecting to automaton event stream: {url}")
+            })??
+        } else {
+            tokio::time::timeout(
+                Duration::from_secs(8),
+                tokio_tungstenite::connect_async(&url),
+            )
+            .await
+            .map_err(|_| {
+                anyhow::anyhow!("timed out connecting to automaton event stream: {url}")
+            })??
+        };
         info!(automaton_id, "Connected to automaton event stream");
 
         let (broadcast_tx, _) = broadcast::channel(256);
