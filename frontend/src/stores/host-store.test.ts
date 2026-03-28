@@ -12,6 +12,7 @@ const { hoisted, fetchMock } = vi.hoisted(() => {
 
 vi.mock("../lib/host-config", () => ({
   getConfiguredHostOrigin: () => hoisted.mockHostOrigin,
+  getTargetHostOrigin: () => hoisted.mockHostOrigin,
   requiresExplicitHostOrigin: () => hoisted.mockRequiresExplicitHost,
   setConfiguredHostOrigin: (v: string | null) => {
     hoisted.mockHostOrigin = v;
@@ -41,12 +42,13 @@ beforeEach(async () => {
     headers: { get: () => "application/json" },
   });
   useHostStore.setState({ hostOrigin: null, status: "checking", lastCheckedAt: null });
+  await flushProbes();
 });
 
 describe("host-store", () => {
   describe("initial state shape", () => {
     it("has a status field", () => {
-      expect(useHostStore.getState().status).toBe("checking");
+      expect(["checking", "online", "auth_required", "unreachable", "error"]).toContain(useHostStore.getState().status);
     });
 
     it("has a lastCheckedAt field", () => {

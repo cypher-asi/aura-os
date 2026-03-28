@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Button, Input, Modal, Spinner, Text } from "@cypher-asi/zui";
 import { useShallow } from "zustand/react/shallow";
 import { useHostStore } from "../../stores/host-store";
-import { getHostDisplayLabel, getResolvedHostOrigin, normalizeHostOrigin, requiresExplicitHostOrigin } from "../../lib/host-config";
+import {
+  getHostDisplayLabel,
+  getNativeDefaultHostOrigin,
+  getResolvedHostOrigin,
+  normalizeHostOrigin,
+  requiresExplicitHostOrigin,
+} from "../../lib/host-config";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import styles from "../SettingsModal/SettingsModal.module.css";
 
@@ -17,6 +23,7 @@ export function HostSettingsModal({
     useShallow((s) => ({ hostOrigin: s.hostOrigin, status: s.status, setHostOrigin: s.setHostOrigin, refreshStatus: s.refreshStatus })),
   );
   const hostLabel = getHostDisplayLabel();
+  const defaultHostOrigin = getNativeDefaultHostOrigin();
   const resolvedOrigin = getResolvedHostOrigin();
   const { isNativeApp } = useAuraCapabilities();
   const nativeHostRequired = isNativeApp && requiresExplicitHostOrigin();
@@ -53,6 +60,13 @@ export function HostSettingsModal({
     window.location.reload();
   };
 
+  const handleUseBuildDefault = async () => {
+    setSaving(true);
+    setHostOrigin(null);
+    await refreshStatus();
+    window.location.reload();
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -66,6 +80,10 @@ export function HostSettingsModal({
             <Button variant="secondary" onClick={handleUseCurrent} disabled={saving}>
               {saving ? <><Spinner size="sm" /> Applying...</> : "Use Current Origin"}
             </Button>
+          ) : defaultHostOrigin ? (
+            <Button variant="secondary" onClick={handleUseBuildDefault} disabled={saving}>
+              {saving ? <><Spinner size="sm" /> Applying...</> : "Use Build Default"}
+            </Button>
           ) : null}
           <Button variant="primary" onClick={handleSave} disabled={saving}>
             {saving ? <><Spinner size="sm" /> Applying...</> : "Save Host"}
@@ -76,7 +94,9 @@ export function HostSettingsModal({
       <div className={styles.content}>
         <Text variant="muted" size="sm">
           {nativeHostRequired
-            ? "Point Aura at a live host. Native mobile builds cannot use the embedded app origin for API requests."
+            ? defaultHostOrigin
+              ? "Point Aura at a live host. Native mobile builds can use the build default host or a custom override, but never the embedded app origin for API requests."
+              : "Point Aura at a live host. Native mobile builds cannot use the embedded app origin for API requests."
             : "Point Aura at a live host. Leave this blank to use the current origin or dev proxy."}
         </Text>
 
@@ -87,6 +107,12 @@ export function HostSettingsModal({
           <Text size="sm" as="span" className={styles.monoText}>{resolvedOrigin || "—"}</Text>
           <Text variant="muted" size="sm" as="span">Status</Text>
           <Text size="sm" as="span">{status.replace(/_/g, " ")}</Text>
+          {defaultHostOrigin ? (
+            <>
+              <Text variant="muted" size="sm" as="span">Build default</Text>
+              <Text size="sm" as="span" className={styles.monoText}>{defaultHostOrigin}</Text>
+            </>
+          ) : null}
         </div>
 
         <div>

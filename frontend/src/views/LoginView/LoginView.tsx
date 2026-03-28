@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
 import { useHostStore, type HostConnectionStatus } from "../../stores/host-store";
-import { getConfiguredHostOrigin, getHostDisplayLabel, requiresExplicitHostOrigin } from "../../lib/host-config";
+import { getHostDisplayLabel, getTargetHostOrigin, requiresExplicitHostOrigin } from "../../lib/host-config";
 import { ApiClientError } from "../../api/client";
 import { HostSettingsModal } from "../../components/HostSettingsModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -110,7 +110,7 @@ export function LoginView() {
       return;
     }
 
-    if (isNativeApp && requiresExplicitHostOrigin() && !getConfiguredHostOrigin()) {
+    if (isNativeApp && requiresExplicitHostOrigin() && !getTargetHostOrigin()) {
       setError("Set an Aura host before signing in.");
       openHostSettings();
       return;
@@ -146,7 +146,7 @@ export function LoginView() {
     }
   }
 
-  const missingNativeHost = isNativeApp && requiresExplicitHostOrigin() && !getConfiguredHostOrigin();
+  const missingNativeHost = isNativeApp && requiresExplicitHostOrigin() && !getTargetHostOrigin();
   const hostStatus = missingNativeHost
     ? {
         title: "Aura host required",

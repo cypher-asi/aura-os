@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   getConfiguredHostOrigin,
+  getTargetHostOrigin,
   requiresExplicitHostOrigin,
   resolveApiUrl,
   setConfiguredHostOrigin,
@@ -15,7 +16,7 @@ const PROBE_TIMEOUT_MS = 4_000;
 async function probeHost(): Promise<HostConnectionStatus> {
   // Native shells bundle the frontend at a local webview origin, so they need
   // an explicit Aura host instead of falling back to the embedded app origin.
-  if (requiresExplicitHostOrigin() && !getConfiguredHostOrigin()) {
+  if (requiresExplicitHostOrigin() && !getTargetHostOrigin()) {
     return "unreachable";
   }
 
