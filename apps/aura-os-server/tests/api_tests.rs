@@ -219,4 +219,16 @@ async fn cors_headers_present() {
 
     let resp = app.clone().oneshot(req).await.unwrap();
     assert!(resp.headers().contains_key("access-control-allow-origin"));
+    assert_eq!(
+        resp.headers()
+            .get("access-control-allow-origin")
+            .and_then(|value| value.to_str().ok()),
+        Some("http://localhost:3000")
+    );
+    assert_eq!(
+        resp.headers()
+            .get("access-control-allow-credentials")
+            .and_then(|value| value.to_str().ok()),
+        Some("true")
+    );
 }

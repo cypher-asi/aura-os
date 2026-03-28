@@ -220,6 +220,12 @@ Notes:
 - `npm run build:native` rebuilds the web app and syncs it into the native iOS and Android shells.
 - Store-safe mobile builds currently disable in-app credit purchases. Buy or manage credits on the web app, then return to mobile.
 - If you regenerate native assets after changing the web UI, run `npm run build:native` again before archiving or uploading a store build.
+- Native shells can ship with a mobile-only default Aura API host by setting one or more Vite env vars before `npm run build`:
+  - `VITE_NATIVE_DEFAULT_HOST` for one shared native default
+  - `VITE_IOS_DEFAULT_HOST` for an iOS-specific default
+  - `VITE_ANDROID_DEFAULT_HOST` for an Android-specific default
+- Desktop and browser builds still fall back to their current origin when no host override is configured.
+- Native mobile auth is cross-origin, so the Aura API must allow credentialed CORS for native localhost origins. Add any deployed frontend origins with `AURA_ALLOWED_ORIGINS`.
 
 #### iOS TestFlight / App Store pipeline
 
