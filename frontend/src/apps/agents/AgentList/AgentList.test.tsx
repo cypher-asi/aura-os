@@ -9,8 +9,16 @@ const mocks = vi.hoisted(() => ({
   useSelectedAgent: vi.fn(),
   useSortedAgents: vi.fn(),
   useSidebarSearch: vi.fn(),
-  useAuraCapabilities: vi.fn(),
   useAgentStore: vi.fn(),
+  entries: {} as Record<string, unknown>,
+  useChatHistoryStore: Object.assign(
+    (selector: (state: { entries: Record<string, unknown> }) => unknown) => selector({ entries: {} }),
+    {
+      getState: () => ({
+        prefetchHistory: vi.fn(),
+      }),
+    },
+  ),
 }));
 Object.assign(mocks.useAgentStore, {
   getState: () => ({
@@ -73,18 +81,20 @@ vi.mock("../../../api/client", () => ({
 }));
 
 vi.mock("../stores", () => ({
+  LAST_AGENT_ID_KEY: "aura:lastAgentId",
   useAgents: () => mocks.useAgents(),
   useSelectedAgent: () => mocks.useSelectedAgent(),
   useAgentStore: mocks.useAgentStore,
   useSortedAgents: () => mocks.useSortedAgents(),
 }));
 
-vi.mock("../../../context/SidebarSearchContext", () => ({
-  useSidebarSearch: () => mocks.useSidebarSearch(),
+vi.mock("../../../stores/chat-history-store", () => ({
+  useChatHistoryStore: mocks.useChatHistoryStore,
+  agentHistoryKey: (agentId: string) => `agent:${agentId}`,
 }));
 
-vi.mock("../../../hooks/use-aura-capabilities", () => ({
-  useAuraCapabilities: () => mocks.useAuraCapabilities(),
+vi.mock("../../../context/SidebarSearchContext", () => ({
+  useSidebarSearch: () => mocks.useSidebarSearch(),
 }));
 
 vi.mock("./AgentList.module.css", () => ({
@@ -133,19 +143,17 @@ describe("AgentList", () => {
     });
   });
 
-  it("toggles back to the library root on mobile when tapping the selected agent", async () => {
-    mocks.useAuraCapabilities.mockReturnValue({ isMobileLayout: true });
-    mocks.useParams.mockReturnValue({ agentId: "agent-1" });
+  it("navigates to the agent route in mobile-library mode", async () => {
+    mocks.useParams.mockReturnValue({ agentId: undefined });
     const user = userEvent.setup();
 
-    render(<AgentList />);
+    render(<AgentList mode="mobile-library" />);
     await user.click(screen.getByRole("button", { name: "Builder Bot" }));
 
-    expect(mocks.navigate).toHaveBeenCalledWith("/agents");
+    expect(mocks.navigate).toHaveBeenCalledWith("/agents/agent-1");
   });
 
   it("keeps desktop navigation behavior for the selected agent", async () => {
-    mocks.useAuraCapabilities.mockReturnValue({ isMobileLayout: false });
     mocks.useParams.mockReturnValue({ agentId: "agent-1" });
     const user = userEvent.setup();
 

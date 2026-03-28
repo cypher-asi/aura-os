@@ -147,6 +147,12 @@ vi.mock("../PanelSearch", () => ({
 vi.mock("../HostSettingsModal", () => ({
   HostSettingsModal: () => null,
 }));
+vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({
+  MobileAgentLibraryView: () => <div data-testid="mobile-agent-library-view" />,
+}));
+vi.mock("../../apps/agents/MobileAgentDetailsView", () => ({
+  MobileAgentDetailsView: () => <div data-testid="mobile-agent-details-view" />,
+}));
 vi.mock("../../stores/sidekick-store", () => ({
   useSidekick: () => ({ closePreview: vi.fn() }),
 }));
@@ -171,9 +177,6 @@ beforeEach(() => {
   drawers.appOpen = false;
   drawers.previewOpen = false;
   drawers.accountOpen = false;
-  mockActiveApp.id = "projects";
-  mockActiveApp.label = "Projects";
-  mockActiveApp.basePath = "/projects";
   mockActiveApp.PreviewPanel = undefined;
   mockActiveApp.ResponsiveControls = undefined;
 });
@@ -203,6 +206,34 @@ describe("MobileShell", () => {
     expect(screen.getByRole("button", { name: "Open account" })).toBeInTheDocument();
   });
 
+  it("shows a back button on standalone mobile agent details routes", () => {
+    mockActiveApp.id = "agents";
+    mockActiveApp.label = "Agents";
+    renderMobile("/agents/agent-1");
+
+    expect(screen.getByRole("button", { name: "Back to agent library" })).toBeInTheDocument();
+  });
+
+  it("hides the extra main panel on the standalone mobile agent library root", () => {
+    mockActiveApp.id = "agents";
+    mockActiveApp.label = "Agents";
+
+    renderMobile("/agents");
+
+    expect(screen.getByTestId("mobile-agent-library-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("main-panel")).not.toBeInTheDocument();
+  });
+
+  it("renders the standalone mobile agent details wrapper", () => {
+    mockActiveApp.id = "agents";
+    mockActiveApp.label = "Agents";
+
+    renderMobile("/agents/agent-1");
+
+    expect(screen.getByTestId("mobile-agent-details-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("main-panel")).not.toBeInTheDocument();
+  });
+
   it("opens account drawer when account button clicked", async () => {
     const user = userEvent.setup();
     renderMobile();
@@ -226,16 +257,6 @@ describe("MobileShell", () => {
     drawers.navOpen = true;
     renderMobile();
     expect(screen.getByRole("button", { name: "Close drawer" })).toBeInTheDocument();
-  });
-
-  it("does not show a separate agent details action on mobile library routes", () => {
-    mockActiveApp.id = "agents";
-    mockActiveApp.label = "Agents";
-    mockActiveApp.basePath = "/agents";
-
-    renderMobile("/agents/agent-1");
-
-    expect(screen.queryByRole("button", { name: "Open agent details" })).not.toBeInTheDocument();
   });
 
   it("calls closeDrawers when backdrop is clicked", async () => {

@@ -33,7 +33,7 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
     taskOutput, effectiveStatus, effectiveSessionId, isActive,
     elapsed, failReason, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
-    fileOps, notes, showNotes, activity, iterStats, streamBuf,
+    fileOps, notes, showNotes, streamKey,
   } = useTaskPreviewData(task);
 
   return (
@@ -92,9 +92,7 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
 
       <TaskOutputSection
         isActive={isActive}
-        activity={activity}
-        iterStats={iterStats}
-        streamBuf={streamBuf}
+        streamKey={streamKey}
       />
     </>
   );

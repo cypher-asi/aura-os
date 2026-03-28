@@ -97,7 +97,17 @@ export function useTaskListData(): TaskListData {
       }),
       subscribe(EventType.FileOpsApplied, (e) => {
         const { task_id, files } = e.content;
-        if (task_id && files) updateTaskStatus(task_id, "in_progress", { files_changed: files });
+        if (!task_id || !files) return;
+        setLocalTasks((prev) => {
+          const task = prev.find((t) => t.task_id === task_id);
+          if (!task) return prev;
+          const patch: Partial<Task> = { files_changed: files };
+          if (task.status !== "done" && task.status !== "failed") {
+            (patch as Record<string, unknown>).status = "in_progress";
+          }
+          return prev.map((t) => (t.task_id === task_id ? { ...t, ...patch } : t));
+        });
+        sidekickRef.current.patchTask(task_id, { files_changed: files } as Partial<Task>);
       }),
       subscribe(EventType.TaskBecameReady, (e) => { if (e.content.task_id) updateTaskStatus(e.content.task_id, "ready"); }),
       subscribe(EventType.TasksBecameReady, (e) => {
@@ -108,9 +118,9 @@ export function useTaskListData(): TaskListData {
         });
       }),
       subscribe(EventType.FollowUpTaskCreated, refetchTasks),
-      subscribe(EventType.LoopStopped, refetchTasks),
-      subscribe(EventType.LoopPaused, refetchTasks),
-      subscribe(EventType.LoopFinished, refetchTasks),
+      subscribe(EventType.LoopStopped, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
+      subscribe(EventType.LoopPaused, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
+      subscribe(EventType.LoopFinished, () => { setLiveTaskIds(new Set()); refetchTasks(); }),
     ];
     return () => unsubs.forEach((u) => u());
   }, [subscribe, updateTaskStatus, refetchTasks]);

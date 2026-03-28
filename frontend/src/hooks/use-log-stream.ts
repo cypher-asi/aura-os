@@ -45,7 +45,6 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.TaskRetrying]: "Task",
   [EventType.TaskBecameReady]: "Task",
   [EventType.TasksBecameReady]: "Task",
-  [EventType.TaskOutputDelta]: "Output",
   [EventType.FollowUpTaskCreated]: "Task",
   [EventType.FileOpsApplied]: "Files",
   [EventType.LoopStarted]: "Loop",
@@ -174,8 +173,6 @@ function summariseTaskEvent(e: AuraEvent): string {
       return `Task ready: ${e.content.task_id}`;
     case EventType.TasksBecameReady:
       return `Tasks ready: ${(e.content.task_ids ?? []).length} task(s)`;
-    case EventType.TaskOutputDelta:
-      return `Output: ${(e.content.delta ?? "").slice(0, 80)}`;
     case EventType.FileOpsApplied:
       return `Files: ${e.content.files_written ?? 0} written, ${e.content.files_deleted ?? 0} deleted`;
     case EventType.FollowUpTaskCreated:
@@ -280,7 +277,6 @@ function summarise(e: AuraEvent): string {
     case EventType.TaskRetrying:
     case EventType.TaskBecameReady:
     case EventType.TasksBecameReady:
-    case EventType.TaskOutputDelta:
     case EventType.FileOpsApplied:
     case EventType.FollowUpTaskCreated:
       return summariseTaskEvent(e);
@@ -335,7 +331,7 @@ const ALL_ENGINE_EVENT_TYPES: EventType[] = [
   EventType.LoopFinished, EventType.LoopIterationSummary,
   EventType.TaskStarted, EventType.TaskCompleted, EventType.TaskFailed,
   EventType.TaskRetrying, EventType.TaskBecameReady, EventType.TasksBecameReady,
-  EventType.TaskOutputDelta, EventType.FileOpsApplied, EventType.FollowUpTaskCreated,
+  EventType.FileOpsApplied, EventType.FollowUpTaskCreated,
   EventType.SessionRolledOver, EventType.LogLine,
   EventType.SpecGenStarted, EventType.SpecGenProgress,
   EventType.SpecGenCompleted, EventType.SpecGenFailed, EventType.SpecSaved,

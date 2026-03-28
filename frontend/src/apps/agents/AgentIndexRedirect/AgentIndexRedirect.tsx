@@ -20,7 +20,11 @@ export function AgentIndexRedirect() {
   }
 
   if (isMobileLayout && agents.length > 0) {
-    return null;
+    return (
+      <EmptyState icon={<Bot size={32} />}>
+        Select an agent from your library.
+      </EmptyState>
+    );
   }
 
   const lastId = localStorage.getItem(LAST_AGENT_ID_KEY);

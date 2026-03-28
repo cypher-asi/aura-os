@@ -33,13 +33,11 @@
     "@xterm/xterm": "^6.0.0",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.475.0",
-    "marked": "^17.0.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",
     "rehype-highlight": "^7.0.2",
-    "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "zustand": "^5.0.12"
   },

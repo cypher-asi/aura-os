@@ -50,7 +50,6 @@ pub(crate) async fn create_agent_instance(
     let project = state.project_service.get_project(&project_id).ok();
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        &project_id.to_string(),
         project.as_ref().map(|p| p.linked_folder_path.as_str()),
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
@@ -74,7 +73,6 @@ pub(crate) async fn list_agent_instances(
     let project = state.project_service.get_project(&project_id).ok();
     let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
-    let pid_str = project_id.to_string();
 
     let instances: Vec<AgentInstance> = storage_agents
         .iter()
@@ -83,7 +81,6 @@ pub(crate) async fn list_agent_instances(
             let mut instance = merge_agent_instance(spa, agent, None);
             instance.workspace_path = Some(resolve_workspace_path(
                 &instance.machine_type,
-                &pid_str,
                 project_folder.as_deref(),
                 &state.data_dir,
                 &project_name,
@@ -123,7 +120,6 @@ pub(crate) async fn get_agent_instance(
         .and_then(|pid| state.project_service.get_project(&pid).ok());
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        &proj_id_str,
         project.as_ref().map(|p| p.linked_folder_path.as_str()),
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
@@ -183,7 +179,6 @@ pub(crate) async fn update_agent_instance(
         .and_then(|pid| state.project_service.get_project(&pid).ok());
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        &proj_id_str,
         project.as_ref().map(|p| p.linked_folder_path.as_str()),
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),

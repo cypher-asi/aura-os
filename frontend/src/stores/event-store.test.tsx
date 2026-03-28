@@ -66,16 +66,8 @@ describe("event-store", () => {
     unsub();
   });
 
-  it("task_output_delta updates store via dispatchEvent", () => {
-    simulateEvent({ type: "task_output_delta", task_id: "t1", delta: "Hello " });
-    expect(getTaskOutput("t1").text).toBe("Hello ");
-
-    simulateEvent({ type: "task_output_delta", task_id: "t1", delta: "World" });
-    expect(getTaskOutput("t1").text).toBe("Hello World");
-  });
-
   it("task_started clears stale output", () => {
-    simulateEvent({ type: "task_output_delta", task_id: "t2", delta: "old data" });
+    useEventStore.getState().seedTaskOutput("t2", "old data");
     expect(getTaskOutput("t2").text).toBe("old data");
 
     simulateEvent({ type: "task_started", task_id: "t2", session_id: "s1" });
@@ -91,17 +83,6 @@ describe("event-store", () => {
     expect(cb).toHaveBeenCalledWith(
       expect.objectContaining({ type: "task_started", task_id: "t3" }),
     );
-  });
-
-  it("useTaskOutput hook re-renders on task_output_delta", () => {
-    const { result } = renderHook(() => useTaskOutput("t4"));
-    expect(result.current.text).toBe("");
-
-    simulateEvent({ type: "task_output_delta", task_id: "t4", delta: "chunk1" });
-    expect(result.current.text).toBe("chunk1");
-
-    simulateEvent({ type: "task_output_delta", task_id: "t4", delta: " chunk2" });
-    expect(result.current.text).toBe("chunk1 chunk2");
   });
 
   it("file_ops_applied updates fileOps", () => {

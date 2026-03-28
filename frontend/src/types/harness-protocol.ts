@@ -99,6 +99,7 @@ export interface ToolResultMsg {
   name: string;
   result: string;
   is_error: boolean;
+  tool_use_id?: string;
 }
 
 export interface SessionUsage {

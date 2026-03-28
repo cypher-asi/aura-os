@@ -95,10 +95,10 @@ describe("normalizeMidSentenceBreaks", () => {
     expect(result).toBe(text);
   });
 
-  it("collapses breaks in wrapped sentences", () => {
+  it("preserves paragraph breaks even in wrapped-looking sentences", () => {
     const text = "this is a long sentence that continues,\n\non the next line";
     const result = normalizeMidSentenceBreaks(text);
-    expect(result).toBe("this is a long sentence that continues, on the next line");
+    expect(result).toBe(text);
   });
 
   it("preserves breaks around markdown blocks", () => {

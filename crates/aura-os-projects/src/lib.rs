@@ -373,6 +373,19 @@ impl ProjectService {
         }
     }
 
+    pub fn find_project_by_orbit_repo(
+        &self,
+        orbit_owner: &str,
+        orbit_repo: &str,
+    ) -> Result<Option<Project>, ProjectError> {
+        let all = self.list_local_projects()?;
+        Ok(all.into_iter().find(|p| {
+            p.orbit_owner.as_deref() == Some(orbit_owner)
+                && p.orbit_repo.as_deref() == Some(orbit_repo)
+                && p.current_status != ProjectStatus::Archived
+        }))
+    }
+
     pub fn archive_project(&self, id: &ProjectId) -> Result<Project, ProjectError> {
         let mut project = self.get_project(id)?;
         project.current_status = ProjectStatus::Archived;

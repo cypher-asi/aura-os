@@ -1,15 +1,12 @@
-import { useRef, useState, useEffect, useCallback, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
-import { useEventStore, useTaskOutput } from "../../stores/event-store";
-import { useLoopActive } from "../../hooks/use-loop-active";
+import { useTaskOutput } from "../../stores/event-store";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import { useTaskAgentInstances } from "../../hooks/use-task-agent-instances";
-import { useTaskOutputHydration } from "../../hooks/use-task-output-hydration";
-import { parseTaskStream } from "../../utils/parse-task-stream";
-import { deriveActivity, computeIterationStats } from "../../utils/derive-activity";
+import { useTaskStream } from "../../hooks/use-task-stream";
 
 function useElapsedTime(active: boolean): number {
   const startRef = useRef<number | null>(null);
@@ -27,90 +24,29 @@ function useElapsedTime(active: boolean): number {
   return active ? elapsed : 0;
 }
 
-function buildActivityItems(
-  hasOutput: boolean, isActive: boolean, isTerminal: boolean,
-  streamBuf: string,
-  buildSteps: ReturnType<typeof useTaskOutput>["buildSteps"],
-  testSteps: ReturnType<typeof useTaskOutput>["testSteps"],
-): ReturnType<typeof deriveActivity> {
-  if (!hasOutput || (!isActive && !streamBuf)) return [];
-  const items = deriveActivity(streamBuf);
-  if (isTerminal) return items.map((item) => ({ ...item, status: "done" as const }));
-
-  const allStreamDone = items.length > 0 && items.every((i) => i.status === "done");
-
-  if (allStreamDone && (buildSteps.length > 0 || testSteps.length > 0)) {
-    const lastBuild = buildSteps[buildSteps.length - 1];
-    const lastTest = testSteps[testSteps.length - 1];
-
-    if (lastBuild && lastBuild.kind !== "passed") {
-      const label = lastBuild.kind === "failed"
-        ? `Build failed (attempt ${lastBuild.attempt ?? "?"}), retrying...`
-        : lastBuild.kind === "fix_attempt"
-          ? `Applying auto-fix (attempt ${lastBuild.attempt ?? "?"})...`
-          : "Running build verification...";
-      items.push({ id: "build-verify", message: label, status: "active" });
-    } else if (lastBuild?.kind === "passed") {
-      items.push({ id: "build-verify", message: "Build verified", status: "done" });
-    }
-
-    if (lastTest && lastTest.kind !== "passed") {
-      const label = lastTest.kind === "failed"
-        ? `Tests failed (attempt ${lastTest.attempt ?? "?"}), retrying...`
-        : lastTest.kind === "fix_attempt"
-          ? `Applying test fix (attempt ${lastTest.attempt ?? "?"})...`
-          : "Running tests...";
-      items.push({ id: "test-verify", message: label, status: "active" });
-    } else if (lastTest?.kind === "passed") {
-      items.push({ id: "test-verify", message: "Tests passed", status: "done" });
-    }
-  } else if (allStreamDone && isActive) {
-    items.push({ id: "build-verify", message: "Running build verification...", status: "active" });
-  }
-
-  return items;
-}
-
 export function useTaskPreviewData(task: import("../../types").Task) {
-  const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   const taskOutput = useTaskOutput(task.task_id);
+  const { streamKey } = useTaskStream(task.task_id);
   const ctx = useProjectContext();
   const sidekick = useSidekick();
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const loopActive = useLoopActive(projectId);
   const [retrying, setRetrying] = useState(false);
 
   const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id);
   const { agentInstance, completedByAgent } = useTaskAgentInstances(projectId, task);
 
-  const rawStatus = liveStatus ?? task.status;
-  const effectiveStatus = rawStatus === "in_progress" && !loopActive && liveStatus === null ? "ready" : rawStatus;
+  const effectiveStatus = liveStatus ?? task.status;
   const effectiveSessionId = liveSessionId ?? task.session_id;
   const isActive = effectiveStatus === "in_progress";
   const isTerminal = effectiveStatus === "done" || effectiveStatus === "failed";
   const elapsed = useElapsedTime(isActive);
 
-  const streamBuf = taskOutput.text;
-  const liveFileOps = taskOutput.fileOps;
-
-  useTaskOutputHydration(projectId, task, isActive, isTerminal, streamBuf, seedTaskOutput);
-
-  const hasOutput = isActive || isTerminal || !!streamBuf;
-  const parsed = useMemo(() => (hasOutput && streamBuf ? parseTaskStream(streamBuf) : null), [hasOutput, streamBuf]);
-
-  const fileOps = hasOutput
-    ? (liveFileOps.length > 0 ? liveFileOps : parsed?.fileOps ?? (task.files_changed ?? []))
+  const fileOps = taskOutput.fileOps.length > 0
+    ? taskOutput.fileOps
     : (task.files_changed ?? []);
-
-  const notes = hasOutput ? (parsed?.notes ?? task.execution_notes) : task.execution_notes;
-  const showNotes = hasOutput ? (parsed?.notes != null || !!task.execution_notes) : !!task.execution_notes;
-
-  const activity = useMemo(
-    () => buildActivityItems(hasOutput, isActive, isTerminal, streamBuf, taskOutput.buildSteps, taskOutput.testSteps),
-    [hasOutput, isActive, isTerminal, streamBuf, taskOutput.buildSteps, taskOutput.testSteps],
-  );
-  const iterStats = useMemo(() => computeIterationStats(streamBuf), [streamBuf]);
+  const notes = task.execution_notes || null;
+  const showNotes = !!notes;
 
   const handleRetry = useCallback(async () => {
     if (!projectId || retrying) return;
@@ -146,7 +82,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,
     elapsed, failReason, agentInstance, completedByAgent,
     retrying, handleRetry, handleViewSession,
-    fileOps, notes, showNotes, activity, iterStats, streamBuf,
+    fileOps, notes, showNotes, streamKey,
   };
 }
 
@@ -154,7 +90,6 @@ export function useRunTaskData(task: import("../../types").Task) {
   const ctx = useProjectContext();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const loopActive = useLoopActive(projectId);
   const { liveStatus } = useTaskStatus(task.task_id);
   const [running, setRunning] = useState(false);
 
@@ -170,8 +105,7 @@ export function useRunTaskData(task: import("../../types").Task) {
     }
   }, [running, agentInstanceId, projectId, task.task_id]);
 
-  const effectiveStatus = (liveStatus ?? task.status) === "in_progress" && !loopActive && liveStatus === null
-    ? "ready" : liveStatus ?? task.status;
+  const effectiveStatus = liveStatus ?? task.status;
 
   return { running, handleRun, visible: effectiveStatus === "ready" };
 }

@@ -81,10 +81,15 @@ test("capture desktop agents, feed, and profile views", async ({ page }, testInf
 
   await page.goto("/agents/agent-1");
   await expect(page.getByPlaceholder("Search Agents...")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Research Bot/i })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-agents.png`,
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: /Research Bot/i }).click();
+  await expect(page).toHaveURL(/\/agents\/agent-2$/);
+  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
 
   await page.goto("/feed");
   await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();

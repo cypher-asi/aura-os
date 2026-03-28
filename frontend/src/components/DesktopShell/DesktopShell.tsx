@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Link, useOutlet } from "react-router-dom";
+import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { Server } from "lucide-react";
 import { Lane } from "../Lane";
@@ -140,7 +140,7 @@ export function DesktopShell() {
           className="titlebar-drag"
           onDoubleClick={() => windowCommand("maximize")}
           icon={<img src="/aura-icon.png" alt="" className="titlebar-icon" />}
-          title={<span className="titlebar-center"><Link to="/projects" className={styles.titleLink}><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></Link></span>}
+          title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></span>}
           actions={(
             <div className={styles.titleActions}>
               {features.hostRetargeting && (
