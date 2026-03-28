@@ -18,6 +18,8 @@ import { useUIModalStore } from "../../stores/ui-modal-store";
 import { useSidekick } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { HostSettingsModal } from "../HostSettingsModal";
+import { MobileAgentLibraryView } from "../../apps/agents/MobileAgentLibraryView";
+import { MobileAgentDetailsView } from "../../apps/agents/MobileAgentDetailsView";
 import {
   getMobileProjectDestination,
   getProjectIdFromPathname,
@@ -344,7 +346,16 @@ function MobileTopbar({ state }: { state: ReturnType<typeof useMobileShellState>
       className={styles.mobileTopbar}
       icon={
         <div className={styles.mobileTopbarSlot}>
-          {state.showProjectBack && state.currentProjectId ? (
+          {state.isStandaloneAgentDetailRoute ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={<ArrowLeft size={18} />}
+              aria-label="Back to agent library"
+              onClick={() => navigate("/agents")}
+            />
+          ) : state.showProjectBack && state.currentProjectId ? (
             <Button
               variant="ghost"
               size="sm"
@@ -436,7 +447,13 @@ export function MobileShell() {
         <UpdateBanner />
         <div className={styles.mobileMain}>
           {state.showProjectResponsiveControls && ResponsiveControls && <div className={styles.mobileResponsiveControls}><ResponsiveControls /></div>}
-          <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
+          {state.isStandaloneAgentLibraryRoot ? (
+            <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MobileAgentLibraryView /></ErrorBoundary></div>
+          ) : state.isStandaloneAgentDetailRoute ? (
+            <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MobileAgentDetailsView /></ErrorBoundary></div>
+          ) : (
+            <div className={styles.mobileMainPanel}><ErrorBoundary name="main"><MainPanel>{routeContent}</MainPanel></ErrorBoundary></div>
+          )}
         </div>
         {!drawerOpen && state.showProjectTitle && (
           <div className={styles.mobileBottomNav}>
