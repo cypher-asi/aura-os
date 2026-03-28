@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { FileText, CheckCircle2, XCircle, Search, Terminal, Trash2, FolderOpen, Wrench } from "lucide-react";
-import { useMarkdownHtml } from "../../utils/markdown";
+import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
 import styles from "./SegmentedContent.module.css";
 
 type ContentSegment =
@@ -103,16 +106,28 @@ function InlineAutoBuildMarker({ seg }: { seg: Extract<ContentSegment, { kind: "
   );
 }
 
+const MD_PLUGINS_REMARK = [remarkGfm];
+const MD_PLUGINS_REHYPE = [rehypeHighlight];
+
 function MarkdownBlock({ content }: { content: string }) {
-  const html = useMarkdownHtml(content);
-  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <ReactMarkdown remarkPlugins={MD_PLUGINS_REMARK} rehypePlugins={MD_PLUGINS_REHYPE}>
+      {content}
+    </ReactMarkdown>
+  );
 }
 
-export function SegmentedContent({ content }: { content: string }) {
-  const segments = useMemo(() => splitContentByMarkers(content), [content]);
+interface SegmentedContentProps {
+  content: string;
+  isStreaming?: boolean;
+}
+
+export function SegmentedContent({ content, isStreaming = false }: SegmentedContentProps) {
+  const safeContent = useStreamSafeContent(content, isStreaming);
+  const segments = useMemo(() => splitContentByMarkers(safeContent), [safeContent]);
 
   if (!segments) {
-    return <MarkdownBlock content={content} />;
+    return <MarkdownBlock content={safeContent} />;
   }
 
   return (

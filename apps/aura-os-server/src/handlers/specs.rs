@@ -9,21 +9,18 @@ use tokio_stream::StreamExt;
 use tracing::info;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, Spec, SpecId};
-use aura_os_link::{HarnessInbound, HarnessOutbound, SessionConfig, UserMessage};
+use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::AppState;
+use super::projects_helpers::project_tool_session_config;
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct SpecQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
 }
 
-async fn resolve_harness_mode(
-    state: &AppState,
-    project_id: &ProjectId,
-    params: &SpecQueryParams,
-) -> HarnessMode {
+async fn resolve_harness_mode(state: &AppState, project_id: &ProjectId, params: &SpecQueryParams) -> HarnessMode {
     if let Some(aiid) = params.agent_instance_id {
         state
             .agent_instance_service
@@ -63,12 +60,9 @@ pub(crate) async fn generate_specs_summary(
 
     let mode = resolve_harness_mode(&state, &project_id, &params).await;
     let harness = state.harness_for(mode);
+    let session_config = project_tool_session_config(&state, &project_id, "spec-summary")?;
     let session = harness
-        .open_session(SessionConfig {
-            agent_id: Some(format!("spec-summary-{project_id}")),
-            agent_name: Some("spec-summary".to_string()),
-            ..Default::default()
-        })
+        .open_session(session_config)
         .await
         .map_err(|e| ApiError::internal(format!("opening spec summary session: {e}")))?;
 
@@ -129,12 +123,9 @@ async fn open_spec_gen_session(
     super::billing::require_credits(state).await?;
 
     let harness = state.harness_for(harness_mode);
+    let session_config = project_tool_session_config(state, project_id, "spec-gen")?;
     let session = harness
-        .open_session(SessionConfig {
-            agent_id: Some(format!("spec-gen-{project_id}")),
-            agent_name: Some("spec-gen".to_string()),
-            ..Default::default()
-        })
+        .open_session(session_config)
         .await
         .map_err(|e| ApiError::internal(format!("opening spec gen session: {e}")))?;
 

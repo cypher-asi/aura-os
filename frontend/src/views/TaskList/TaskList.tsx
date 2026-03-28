@@ -55,7 +55,9 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
       function toNode(task: Task): ExplorerNode {
         const subtasks = childrenByParent.get(task.task_id);
         const displayStatus =
-          task.status === "in_progress" && !loopActive && !liveTaskIds.has(task.task_id)
+          task.status === "in_progress" &&
+          !liveTaskIds.has(task.task_id) &&
+          (!loopActive || liveTaskIds.size > 0)
             ? "ready"
             : task.status;
         return {

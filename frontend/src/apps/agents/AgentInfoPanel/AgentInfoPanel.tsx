@@ -13,7 +13,11 @@ import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./AgentInfoPanel.module.css";
 
-export function AgentInfoPanel() {
+interface AgentInfoPanelProps {
+  variant?: "default" | "mobileStandalone";
+}
+
+export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -67,6 +71,7 @@ export function AgentInfoPanel() {
   const a = selectedAgent;
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
+  const isMobileStandalone = variant === "mobileStandalone";
 
   return (
     <div className={styles.wrapper}>
@@ -147,10 +152,21 @@ export function AgentInfoPanel() {
       </div>
 
       {isOwnAgent && (
-        <SidekickActions
-          onEdit={() => setShowEditor(true)}
-          onDelete={openDeleteConfirm}
-        />
+        isMobileStandalone ? (
+          <div className={styles.mobileActions}>
+            <Button variant="ghost" size="sm" onClick={() => setShowEditor(true)}>
+              Edit
+            </Button>
+            <Button variant="ghost" size="sm" onClick={openDeleteConfirm}>
+              Delete
+            </Button>
+          </div>
+        ) : (
+          <SidekickActions
+            onEdit={() => setShowEditor(true)}
+            onDelete={openDeleteConfirm}
+          />
+        )
       )}
 
       <AgentEditorModal

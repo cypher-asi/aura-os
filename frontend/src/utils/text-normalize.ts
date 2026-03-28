@@ -51,7 +51,14 @@ export function stripEmojis(text: string): string {
     .join("");
 }
 
-/** Collapse accidental paragraph breaks in prose, preserving code blocks. */
+/**
+ * Normalize paragraph breaks in prose, preserving code blocks.
+ *
+ * Only collapses triple-newlines between GFM table rows into single
+ * newlines (a known artefact from some LLM outputs). All other
+ * double-newlines are preserved because they are significant for
+ * markdown block structure (headings, lists, paragraphs).
+ */
 function normalizeProseBreaks(prose: string): string {
   return prose.replace(/\n\n+/g, (match, offset) => {
     const before = prose.slice(0, offset).split("\n");
@@ -65,19 +72,7 @@ function normalizeProseBreaks(prose: string): string {
       return "\n";
     }
 
-    const looksLikeSentenceEnd = /[.!?:]\s*$/.test(lastLine);
-    const looksLikeMarkdownBlock =
-      /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(lastLine) ||
-      /^(?:[-*+]\s+|#+\s+|\d+[.)]\s+)/.test(nextLine);
-    const looksLikeSpecIndex = /^\d{1,3}:\s+/.test(lastLine);
-    const looksLikeWrappedSentence =
-      /[a-z,]$/.test(lastLine) && /^[a-z]/.test(nextLine);
-
-    if (looksLikeSentenceEnd || looksLikeMarkdownBlock || looksLikeSpecIndex) {
-      return match;
-    }
-
-    return looksLikeWrappedSentence ? " " : match;
+    return match;
   });
 }
 

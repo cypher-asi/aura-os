@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tracing::{debug, warn};
 
 use aura_os_core::{OrgId, Project, ProjectId, ProjectStatus};
+use aura_os_link::SessionConfig;
 use aura_os_network::NetworkProject;
 use aura_os_projects::CreateProjectInput;
 
@@ -182,7 +183,7 @@ pub(crate) fn canonical_workspace_path(data_dir: &std::path::Path, project_name:
     data_dir.join("workspaces").join(&slug)
 }
 
-fn slugify(name: &str) -> String {
+pub(crate) fn slugify(name: &str) -> String {
     let s = name
         .trim()
         .to_lowercase()
@@ -200,6 +201,32 @@ pub(crate) fn folder_name_from_path(path: &str) -> Option<String> {
         .file_name()
         .and_then(|name| name.to_str())
         .map(|name| name.to_string())
+}
+
+/// Build a standard project tool session config with required JWT propagation.
+pub(crate) fn project_tool_session_config(
+    state: &AppState,
+    project_id: &ProjectId,
+    tool_agent_name: &'static str,
+) -> ApiResult<SessionConfig> {
+    let jwt = state.get_jwt()?;
+    Ok(SessionConfig {
+        agent_id: Some(format!("{tool_agent_name}-{project_id}")),
+        agent_name: Some(tool_agent_name.to_string()),
+        token: Some(jwt),
+        ..Default::default()
+    })
+}
+
+/// Resolve the caller JWT when available.
+pub(crate) fn optional_jwt(state: &AppState) -> Option<String> {
+    state.get_jwt().ok()
+}
+
+/// Attach the caller JWT to a session config when available.
+pub(crate) fn with_optional_jwt(state: &AppState, mut config: SessionConfig) -> SessionConfig {
+    config.token = optional_jwt(state);
+    config
 }
 
 pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput {

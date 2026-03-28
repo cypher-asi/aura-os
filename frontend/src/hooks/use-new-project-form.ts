@@ -53,9 +53,28 @@ function validateSubmit(
   name: string,
   orbitRepoMode: OrbitRepoMode,
   selectedOrbitRepo: OrbitRepo | null,
+  orbitOwner: string | null,
+  resolvedOrbitRepo: string,
+  existingProjects: import("../types").Project[],
 ): string | null {
   if (!name.trim()) return "name";
   if (orbitRepoMode === "existing" && !selectedOrbitRepo) return "Please select an existing repo.";
+
+  const effectiveOwner =
+    orbitRepoMode === "existing" && selectedOrbitRepo
+      ? selectedOrbitRepo.owner
+      : orbitOwner;
+  const effectiveRepo =
+    orbitRepoMode === "existing" && selectedOrbitRepo
+      ? selectedOrbitRepo.name
+      : resolvedOrbitRepo;
+
+  if (effectiveOwner && effectiveRepo) {
+    const dup = existingProjects.find(
+      (p) => p.orbit_owner === effectiveOwner && p.orbit_repo === effectiveRepo,
+    );
+    if (dup) return `Orbit repo already used by project "${dup.name}".`;
+  }
   return null;
 }
 
@@ -140,7 +159,10 @@ export function useNewProjectForm(
   const handleClose = useCallback(() => { reset(); onClose(); }, [reset, onClose]);
 
   const handleSubmit = useCallback(async () => {
-    const issue = validateSubmit(name, orbitRepoMode, selectedOrbitRepo);
+    const resolvedRepo = orbitRepoMode === "custom"
+      ? orbitRepoName.trim() || proposedRepoSlug
+      : proposedRepoSlug;
+    const issue = validateSubmit(name, orbitRepoMode, selectedOrbitRepo, orbitOwner, resolvedRepo, projects);
     if (issue === "name") { setNameError("Project name is required"); return; }
     if (issue) { setError(issue); return; }
 

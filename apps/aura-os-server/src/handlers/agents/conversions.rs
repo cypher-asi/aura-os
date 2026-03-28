@@ -66,12 +66,15 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
 
 /// Compute the workspace path for an agent instance based on its machine type.
 ///
+/// Both local and remote paths are derived from the project name (slugified)
+/// so directory names are human-readable and consistent.
+///
 /// - **local**: prefer the stored absolute `project_folder`; fall back to the
 ///   canonical `{data_dir}/workspaces/{slug}` path derived from the project name.
-/// - **remote / swarm**: `/p/{project_id}`.
+/// - **remote / swarm**: `/state/workspaces/{slug}` — under the pod's PVC mount
+///   (`AURA_DATA_DIR=/state`, writable by uid 1000 / fs_group 1000).
 pub(crate) fn resolve_workspace_path(
     machine_type: &str,
-    project_id: &str,
     project_folder: Option<&str>,
     data_dir: &std::path::Path,
     project_name: &str,
@@ -87,7 +90,8 @@ pub(crate) fn resolve_workspace_path(
                     .to_string()
             })
     } else {
-        format!("/p/{project_id}")
+        let slug = super::super::projects_helpers::slugify(project_name);
+        format!("/state/workspaces/{slug}")
     }
 }
 

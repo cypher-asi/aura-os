@@ -56,8 +56,8 @@ describe("AgentIndexRedirect", () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByText("Select an agent from your library.")).toBeInTheDocument();
     expect(screen.queryByText("Agent Route")).not.toBeInTheDocument();
-    expect(document.body).toBeInTheDocument();
   });
 
   it("keeps desktop redirect behavior", () => {

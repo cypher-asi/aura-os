@@ -77,7 +77,7 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
 function MobileTasksList({ projectId }: { projectId: string }) {
   const ctx = useProjectContext();
   const sidekick = useSidekick();
-  const { tasks, tasksBySpec } = useMobileTasks(projectId);
+  const { tasks, tasksBySpec, liveTaskIds, loopActive } = useMobileTasks(projectId);
 
   if (tasks.length === 0) {
     return <Text variant="muted" size="sm">No tasks yet</Text>;
@@ -85,27 +85,35 @@ function MobileTasksList({ projectId }: { projectId: string }) {
 
   return (
     <div className={styles.itemList}>
-      {tasks.map((task) => (
-        <button
-          key={task.task_id}
-          type="button"
-          className={styles.itemButton}
-          aria-label={`Open task ${task.title}`}
-          onClick={() => sidekick.viewTask(task)}
-        >
-          <span className={styles.itemButtonMeta}>
-            <TaskStatusIcon status={task.status} />
-          </span>
-          <span className={styles.itemButtonContent}>
-            <span className={styles.itemTitle}>{task.title}</span>
-            {tasksBySpec.get(task.spec_id)?.length ? (
-              <span className={styles.itemSubtitle}>
-                {ctx?.initialSpecs.find((spec) => spec.spec_id === task.spec_id)?.title ?? "Task"}
-              </span>
-            ) : null}
-          </span>
-        </button>
-      ))}
+      {tasks.map((task) => {
+        const displayStatus =
+          task.status === "in_progress" &&
+          !liveTaskIds.has(task.task_id) &&
+          (!loopActive || liveTaskIds.size > 0)
+            ? "ready"
+            : task.status;
+        return (
+          <button
+            key={task.task_id}
+            type="button"
+            className={styles.itemButton}
+            aria-label={`Open task ${task.title}`}
+            onClick={() => sidekick.viewTask(task)}
+          >
+            <span className={styles.itemButtonMeta}>
+              <TaskStatusIcon status={displayStatus} />
+            </span>
+            <span className={styles.itemButtonContent}>
+              <span className={styles.itemTitle}>{task.title}</span>
+              {tasksBySpec.get(task.spec_id)?.length ? (
+                <span className={styles.itemSubtitle}>
+                  {ctx?.initialSpecs.find((spec) => spec.spec_id === task.spec_id)?.title ?? "Task"}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

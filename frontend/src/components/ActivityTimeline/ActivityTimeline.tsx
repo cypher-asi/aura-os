@@ -58,7 +58,7 @@ export function ActivityTimeline({
         const normalized = normalizeMidSentenceBreaks(stripEmojis(item.content));
         return (
           <div key={item.id}>
-            <SegmentedContent content={normalized} />
+            <SegmentedContent content={normalized} isStreaming={isStreaming} />
           </div>
         );
       })}

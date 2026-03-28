@@ -86,6 +86,10 @@ vi.mock("../../hooks/use-task-output-hydration", () => ({
   useTaskOutputHydration: vi.fn(),
 }));
 
+vi.mock("../../hooks/use-task-stream", () => ({
+  useTaskStream: () => ({ streamKey: "task:task-1" }),
+}));
+
 vi.mock("../VerificationStepItem", () => ({
   VerificationStepItem: () => <div data-testid="verification-step" />,
 }));
@@ -115,9 +119,6 @@ vi.mock("../TaskOutputSection", () => ({
 }));
 
 vi.mock("../../utils/format", () => ({ toBullets: (s: string) => s }));
-vi.mock("../../utils/parse-task-stream", () => ({
-  parseTaskStream: () => ({ fileOps: [], notes: null }),
-}));
 vi.mock("../../utils/derive-activity", () => ({
   deriveActivity: () => [],
   computeIterationStats: () => null,

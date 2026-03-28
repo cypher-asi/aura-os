@@ -1,15 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import type { Agent } from "../../../types";
-
-vi.mock("../../../components/Avatar", () => ({
-  Avatar: ({ name }: { name: string }) => <div>{name}</div>,
-}));
+import type { DisplaySessionEvent } from "../../../types/stream";
 
 vi.mock("../../../hooks/use-avatar-state", () => ({
-  useAvatarState: () => ({
-    status: "idle",
-    isLocal: false,
-  }),
+  useAvatarState: () => ({ status: "offline", isLocal: true }),
+}));
+
+vi.mock("../../../components/Avatar", () => ({
+  Avatar: () => <div data-testid="agent-avatar" />,
 }));
 
 import { AgentConversationRow } from "./AgentConversationRow";
@@ -28,32 +26,61 @@ const baseAgent: Agent = {
   updated_at: "2026-03-20T00:00:00Z",
 };
 
+const lastMessage: DisplaySessionEvent = {
+  id: "evt-1",
+  role: "assistant",
+  content: "Latest chat reply",
+} as DisplaySessionEvent;
+
 describe("AgentConversationRow", () => {
-  it("shows the agent role and summary without any chat preview", () => {
+  it("shows the latest chat message by default", () => {
     render(
       <AgentConversationRow
         agent={baseAgent}
+        lastMessage={lastMessage}
         isSelected={false}
         onClick={() => {}}
         onContextMenu={() => {}}
+        onMouseOver={() => {}}
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Rose/i })).toBeInTheDocument();
-    expect(screen.getByText("Architect")).toBeInTheDocument();
+    expect(screen.getByText("Rose")).toBeInTheDocument();
+    expect(screen.queryByText("Architect")).not.toBeInTheDocument();
     expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
+    expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
   });
 
-  it("falls back to a generic prompt when the agent has no summary fields", () => {
+  it("shows role and summary in metadata mode", () => {
+    render(
+      <AgentConversationRow
+        agent={baseAgent}
+        lastMessage={lastMessage}
+        showMetadataOnly
+        isSelected={false}
+        onClick={() => {}}
+        onContextMenu={() => {}}
+        onMouseOver={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Architect")).toBeInTheDocument();
+    expect(screen.getByText("Plans features end to end.")).toBeInTheDocument();
+    expect(screen.queryByText("Latest chat reply")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the latest message when the agent has no summary fields", () => {
     render(
       <AgentConversationRow
         agent={{ ...baseAgent, role: "", personality: "" }}
+        lastMessage={lastMessage}
         isSelected={false}
         onClick={() => {}}
         onContextMenu={() => {}}
+        onMouseOver={() => {}}
       />,
     );
 
-    expect(screen.getByText("Open this agent")).toBeInTheDocument();
+    expect(screen.getByText("Latest chat reply")).toBeInTheDocument();
   });
 });

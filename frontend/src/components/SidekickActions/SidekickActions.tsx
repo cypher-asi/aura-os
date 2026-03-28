@@ -12,13 +12,11 @@ export function SidekickActions({ onEdit, onDelete }: SidekickActionsProps) {
       {onEdit && (
         <button className={styles.actionBtn} onClick={onEdit} title="Edit">
           <Pencil size={14} />
-          <span>Edit</span>
         </button>
       )}
       {onDelete && (
         <button className={styles.actionBtn} onClick={onDelete} title="Delete">
           <Trash2 size={14} />
-          <span>Delete</span>
         </button>
       )}
     </div>

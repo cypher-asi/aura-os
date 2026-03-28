@@ -106,16 +106,6 @@ function handleEngineEvent(event: AuraEvent) {
     }
   }
 
-  if (event.type === EventType.TaskOutputDelta) {
-    const { task_id, delta } = event.content;
-    if (task_id && delta) {
-      const existing = updatedOutputs[task_id] ?? EMPTY_OUTPUT;
-      updatedOutputs = { ...updatedOutputs, [task_id]: { ...existing, text: existing.text + delta } };
-      outputChanged = true;
-      notifyTaskOutputListeners(task_id);
-    }
-  }
-
   if (event.type === EventType.FileOpsApplied) {
     const { task_id, files } = event.content;
     if (task_id && files) {
@@ -219,18 +209,6 @@ function handleEngineEvent(event: AuraEvent) {
   if (subs) subs.forEach((cb) => cb(event));
 }
 
-export function subscribeTaskOutput(taskId: string, listener: TaskOutputListener): () => void {
-  let set = taskOutputListeners.get(taskId);
-  if (!set) {
-    set = new Set();
-    taskOutputListeners.set(taskId, set);
-  }
-  set.add(listener);
-  return () => {
-    taskOutputListeners.get(taskId)?.delete(listener);
-  };
-}
-
 export function getTaskOutput(taskId: string): TaskOutputEntry {
   return useEventStore.getState().taskOutputs[taskId] ?? EMPTY_OUTPUT;
 }
@@ -265,8 +243,10 @@ function connectEventSocket() {
           },
         );
         handleEngineEvent(event);
-      } catch {
-        // ignore malformed events
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("Dropped malformed WS event payload", { error, data });
+        }
       }
     },
     (connected: boolean) => {

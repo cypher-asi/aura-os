@@ -293,7 +293,7 @@ test("mobile global app switcher opens feed, leaderboard, and profile", async ({
   await expect(page.getByRole("button", { name: "Demo Project" })).toBeVisible();
 });
 
-test("mobile agent library toggles the selected standalone chat open and closed", async ({ page }) => {
+test("mobile agent library opens a full-page details view and returns to the library", async ({ page }) => {
   await mockAuthenticatedMobileApp(page);
   await page.goto("/agents");
 
@@ -303,20 +303,11 @@ test("mobile agent library toggles the selected standalone chat open and closed"
   await page.getByRole("button", { name: /Builder Bot/i }).click();
   await expect(page).toHaveURL(/\/agents\/agent-1$/);
   await expect(page.getByText("Personality")).toBeVisible();
-  await expect(page.getByText("Builder Bot")).toHaveCount(1);
+  await expect(page.getByText("Build features carefully.")).toBeVisible();
 
   await page.getByRole("button", { name: "Back to agent library" }).click();
   await expect(page).toHaveURL(/\/agents$/);
   await expect(page.getByText("Personality")).toHaveCount(0);
-});
-
-test("mobile agent library opens the agent details view directly", async ({ page }) => {
-  await mockAuthenticatedMobileApp(page);
-  await page.goto("/agents/agent-1");
-
-  await expect(page.getByText("Personality")).toBeVisible();
-  await expect(page.getByText("System Prompt")).toBeVisible();
-  await expect(page.getByText("Build features carefully.")).toBeVisible();
 });
 
 test("mobile global surfaces use the app switcher to return to project mode", async ({ page }) => {
