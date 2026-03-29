@@ -3,7 +3,7 @@ import { api, type DirEntry } from "../../api/client";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer, Spinner, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
-import { Folder, File, FolderOpen } from "lucide-react";
+import { Folder, File, FolderOpen, FolderOutput } from "lucide-react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useEventStore } from "../../stores/event-store";
 import { EventType } from "../../types/aura-events";
@@ -126,6 +126,16 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
     [directoryState.error, directoryState.key, rootPath],
   );
 
+  const showOpenFolder = features.linkedWorkspace && !isRemote;
+
+  const handleOpenInExplorer = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (rootPath) api.openPath(rootPath);
+    },
+    [rootPath],
+  );
+
   const explorerData: ExplorerNode[] = useMemo(() => {
     if (!rootPath) return [];
     const rootName = rootPath.split(/[\\/]/).pop() ?? rootPath;
@@ -135,9 +145,20 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
         label: rootName,
         icon: <FolderOpen size={14} />,
         children: toExplorerNodes(entries),
+        suffix: showOpenFolder ? (
+          <button
+            type="button"
+            className={styles.openFolderButton}
+            onClick={handleOpenInExplorer}
+            title="Open in file explorer"
+            aria-label="Open in file explorer"
+          >
+            <FolderOutput size={13} />
+          </button>
+        ) : undefined,
       },
     ];
-  }, [entries, rootPath]);
+  }, [entries, rootPath, showOpenFolder, handleOpenInExplorer]);
 
   const filteredData = useMemo(
     () => filterExplorerNodes(explorerData, searchQuery ?? ""),
