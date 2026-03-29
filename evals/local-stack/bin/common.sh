@@ -61,8 +61,8 @@ stack_load_env() {
   export AURA_STACK_INTERNAL_SERVICE_TOKEN="${AURA_STACK_INTERNAL_SERVICE_TOKEN:-aura-local-internal-token}"
   export AURA_STACK_ZOS_API_URL="${AURA_STACK_ZOS_API_URL:-https://zosapi.zero.tech}"
   export AURA_STACK_ZOS_API_INTERNAL_TOKEN="${AURA_STACK_ZOS_API_INTERNAL_TOKEN:-}"
-  export AURA_STACK_ROUTER_URL="${AURA_STACK_ROUTER_URL:-https://aura-router.onrender.com}"
-  export AURA_STACK_BILLING_URL="${AURA_STACK_BILLING_URL:-https://z-billing.onrender.com}"
+  export AURA_STACK_ROUTER_URL="${AURA_STACK_ROUTER_URL:-}"
+  export AURA_STACK_BILLING_URL="${AURA_STACK_BILLING_URL:-}"
   export AURA_STACK_CORS_ORIGINS="${AURA_STACK_CORS_ORIGINS:-http://127.0.0.1:${AURA_STACK_FRONTEND_PORT},http://localhost:${AURA_STACK_FRONTEND_PORT}}"
 
   export AURA_STACK_NETWORK_LOG_LEVEL="${AURA_STACK_NETWORK_LOG_LEVEL:-info}"
@@ -96,11 +96,6 @@ stack_apply_preset() {
       export AURA_STACK_STORAGE_MODE="remote"
       export AURA_STACK_ORBIT_MODE="remote"
       export AURA_STACK_HARNESS_MODE="remote"
-
-      export AURA_STACK_REMOTE_NETWORK_URL="${AURA_STACK_REMOTE_NETWORK_URL:-https://aura-network.onrender.com}"
-      export AURA_STACK_REMOTE_STORAGE_URL="${AURA_STACK_REMOTE_STORAGE_URL:-https://aura-storage.onrender.com}"
-      export AURA_STACK_REMOTE_ORBIT_URL="${AURA_STACK_REMOTE_ORBIT_URL:-https://orbit-sfvu.onrender.com}"
-      export AURA_STACK_REMOTE_HARNESS_URL="${AURA_STACK_REMOTE_HARNESS_URL:-http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com}"
       if [[ -z "${AURA_STACK_EVAL_BUNDLE_ID:-}" || "${AURA_STACK_EVAL_BUNDLE_ID}" == "local-stack" ]]; then
         export AURA_STACK_EVAL_BUNDLE_ID="hybrid-swarm"
       fi

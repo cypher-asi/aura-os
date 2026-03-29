@@ -108,7 +108,7 @@ You can also flip individual services to remote mode:
 
 ```bash
 AURA_STACK_NETWORK_MODE=remote
-AURA_STACK_REMOTE_NETWORK_URL=https://aura-network.onrender.com
+AURA_STACK_REMOTE_NETWORK_URL=https://your-network-host.example.com
 ```
 
 Or use the built-in hybrid preset that keeps `aura-os` and the frontend local
@@ -119,12 +119,16 @@ the rest of the stack:
 AURA_STACK_PRESET=hybrid-swarm
 ```
 
-That preset currently maps to:
+That preset switches `network`, `storage`, `orbit`, and `harness` into `remote`
+mode, but you must still provide the remote URLs yourself in
+`evals/local-stack/stack.env`:
 
-- `https://aura-network.onrender.com`
-- `https://aura-storage.onrender.com`
-- `https://orbit-sfvu.onrender.com`
-- `http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com`
+```bash
+AURA_STACK_REMOTE_NETWORK_URL=https://your-network-host.example.com
+AURA_STACK_REMOTE_STORAGE_URL=https://your-storage-host.example.com
+AURA_STACK_REMOTE_ORBIT_URL=https://your-orbit-host.example.com
+AURA_STACK_REMOTE_HARNESS_URL=https://your-swarm-gateway.example.com
+```
 
 Supported modes are:
 
