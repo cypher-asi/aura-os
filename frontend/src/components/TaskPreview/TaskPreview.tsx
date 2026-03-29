@@ -1,5 +1,5 @@
 import { Button, GroupCollapsible } from "@cypher-asi/zui";
-import { Loader2, Play } from "lucide-react";
+import { GitCommitHorizontal, Loader2, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -79,17 +79,26 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
         </GroupCollapsible>
       )}
 
-      {taskOutput.gitSteps.length > 0 && (
-        <GroupCollapsible label="Git Activity" count={taskOutput.gitSteps.length} defaultOpen className={styles.section}>
-          <div className={styles.liveOutputSection}>
-            <div className={styles.activityList}>
-              {taskOutput.gitSteps.map((step, i) => (
+      <GroupCollapsible label="Git Activity" count={taskOutput.gitSteps.length || undefined} defaultOpen className={styles.section}>
+        <div className={styles.liveOutputSection}>
+          <div className={styles.activityList}>
+            {taskOutput.gitSteps.length > 0 ? (
+              taskOutput.gitSteps.map((step, i) => (
                 <GitStepItem key={i} step={step} />
-              ))}
-            </div>
+              ))
+            ) : (
+              <div className={styles.activityItem}>
+                <span className={styles.activityIcon}>
+                  <GitCommitHorizontal size={12} style={{ opacity: 0.4 }} />
+                </span>
+                <span className={styles.activityBody}>
+                  <span className={styles.activityMessage} style={{ opacity: 0.5 }}>No commits yet</span>
+                </span>
+              </div>
+            )}
           </div>
-        </GroupCollapsible>
-      )}
+        </div>
+      </GroupCollapsible>
 
       {showNotes && (
         <GroupCollapsible label="Notes" defaultOpen className={styles.section}>
