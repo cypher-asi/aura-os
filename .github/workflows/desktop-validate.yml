@@ -1,0 +1,107 @@
+name: Desktop Validate
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/desktop-validate.yml
+      - .github/workflows/release-nightly.yml
+      - .github/workflows/release-stable.yml
+      - apps/aura-os-desktop/**
+      - apps/aura-os-server/**
+      - frontend/**
+      - scripts/desktop-ci-smoke.mjs
+      - Cargo.lock
+      - Cargo.toml
+  push:
+    branches:
+      - main
+      - codex/release-build-system
+    paths:
+      - .github/workflows/desktop-validate.yml
+      - .github/workflows/release-nightly.yml
+      - .github/workflows/release-stable.yml
+      - apps/aura-os-desktop/**
+      - apps/aura-os-server/**
+      - frontend/**
+      - scripts/desktop-ci-smoke.mjs
+      - Cargo.lock
+      - Cargo.toml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  AURA_SERVER_PORT: "19847"
+
+jobs:
+  desktop-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            binary: target/release/aura-os-desktop
+          - os: macos-latest
+            target: macos-arm64
+            binary: target/release/aura-os-desktop
+          - os: macos-13
+            target: macos-x64
+            binary: target/release/aura-os-desktop
+          - os: windows-latest
+            target: windows-x64
+            binary: target/release/aura-os-desktop.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action/setup@v1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev xvfb
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build desktop release binary
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
+        run: cargo build --release --package aura-os-desktop
+
+      - name: Smoke test built desktop app
+        env:
+          AURA_DESKTOP_BINARY: ${{ matrix.binary }}
+          AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
+        run: node scripts/desktop-ci-smoke.mjs
+
+      - name: Upload desktop smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-smoke-${{ matrix.target }}
+          path: desktop-smoke-logs/${{ matrix.target }}

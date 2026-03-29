@@ -145,10 +145,26 @@ fn init_data_dirs() -> (PathBuf, PathBuf, Option<PathBuf>) {
     (db_path, webview_data_dir, frontend_dir)
 }
 
+fn ci_mode_enabled() -> bool {
+    std::env::var("AURA_DESKTOP_CI")
+        .ok()
+        .is_some_and(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+}
+
 fn bind_listener() -> (StdTcpListener, u16, String) {
-    let std_listener = StdTcpListener::bind(format!("127.0.0.1:{PREFERRED_PORT}"))
-        .or_else(|_| StdTcpListener::bind("127.0.0.1:0"))
-        .expect("failed to bind to an available port");
+    let configured_port = std::env::var("AURA_SERVER_PORT")
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .filter(|port| *port > 0);
+
+    let std_listener = if let Some(port) = configured_port {
+        StdTcpListener::bind(format!("127.0.0.1:{port}"))
+            .unwrap_or_else(|_| panic!("failed to bind configured AURA_SERVER_PORT={port}"))
+    } else {
+        StdTcpListener::bind(format!("127.0.0.1:{PREFERRED_PORT}"))
+            .or_else(|_| StdTcpListener::bind("127.0.0.1:0"))
+            .expect("failed to bind to an available port")
+    };
     std_listener
         .set_nonblocking(true)
         .expect("failed to set non-blocking");
@@ -345,6 +361,9 @@ fn load_icon_data() -> IconData {
 }
 
 fn spawn_fallback_show_timer(proxy: EventLoopProxy<UserEvent>, window_id: WindowId) {
+    if ci_mode_enabled() {
+        return;
+    }
     std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(500));
         let _ = proxy.send_event(UserEvent::ShowWindow { window_id });
@@ -452,6 +471,9 @@ fn handle_user_event(
             );
         }
         UserEvent::ShowWindow { window_id } => {
+            if ci_mode_enabled() {
+                return;
+            }
             if window_id == main_window_id {
                 main_window.set_visible(true);
             } else if let Some((ide_win, _)) = ide_windows.get(&window_id) {

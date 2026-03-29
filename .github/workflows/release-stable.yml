@@ -84,11 +84,13 @@ jobs:
 
       - name: Build release binary
         env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           UPDATER_PUBLIC_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PUBLIC_KEY }}
         run: cargo build --release --package aura-os-desktop
 
       - name: Package installer
         env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
         run: cargo packager --release --package aura-os-desktop
