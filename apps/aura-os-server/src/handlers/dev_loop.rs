@@ -135,6 +135,13 @@ async fn resolve_active_task_id(
         return Some(task.task_id.to_string());
     }
 
+    // The harness may assign tasks using its own agent ID which differs from
+    // the agent_instance_id that start_loop generated.  Fall back to any
+    // in-progress task so we can still stamp events with a task_id.
+    if let Some(task) = tasks.iter().find(|t| t.status == TaskStatus::InProgress) {
+        return Some(task.task_id.to_string());
+    }
+
     // Fallback: global scheduler's next ready task.
     task_service
         .select_next_task(project_id)
