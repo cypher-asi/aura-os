@@ -194,6 +194,20 @@ interface CleanupResult {
   message?: string;
 }
 
+interface BenchmarkOrgResolution extends BenchmarkOrg {
+  created: boolean;
+}
+
+interface BenchmarkOperationLogEntry {
+  step: string;
+  summary: string;
+  durationMs?: number;
+  details?: Record<string, unknown>;
+}
+
+const demoModeEnabled = process.env.AURA_EVAL_DEMO_MODE === "1";
+const demoStepDelayMs = Number(process.env.AURA_EVAL_DEMO_STEP_DELAY_MS ?? 1200);
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const scenariosDir = path.join(currentDir, "scenarios");
 const fixturesDir = path.join(currentDir, "fixtures");
@@ -315,6 +329,16 @@ export async function writeEvalArtifacts(
     contentType: "application/json",
   });
 
+  const benchmarkLog = formatBenchmarkRunLog(payload);
+  if (benchmarkLog) {
+    const logPath = testInfo.outputPath(`${name}.log.txt`);
+    await fs.writeFile(logPath, benchmarkLog, "utf8");
+    await testInfo.attach(`${name}.log.txt`, {
+      path: logPath,
+      contentType: "text/plain",
+    });
+  }
+
   const screenshotPath = testInfo.outputPath(`${name}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
   await testInfo.attach(`${name}.png`, {
@@ -353,6 +377,17 @@ async function apiJson<T>(
     return undefined as T;
   }
   return JSON.parse(text) as T;
+}
+
+async function maybePauseForDemo(page: Page, milliseconds = demoStepDelayMs) {
+  if (!demoModeEnabled || milliseconds <= 0) return;
+  await page.waitForTimeout(milliseconds);
+}
+
+async function maybeShowDemoPage(page: Page, url: string, milliseconds?: number) {
+  if (!demoModeEnabled) return;
+  await page.goto(url);
+  await maybePauseForDemo(page, milliseconds);
 }
 
 async function deleteResource(
@@ -540,13 +575,157 @@ async function timedStep<T>(
   return value;
 }
 
-async function resolveEvalOrg(page: Page, preferredName: string): Promise<BenchmarkOrg> {
+function latestStepDuration(results: RunStepResult[]): number {
+  return results[results.length - 1]?.durationMs ?? 0;
+}
+
+function collectSpecTitles(specs: unknown[]): string[] {
+  return specs.flatMap((spec) => {
+    if (!spec || typeof spec !== "object") return [];
+    const title = (spec as { title?: unknown }).title;
+    return typeof title === "string" && title.trim() ? [title] : [];
+  });
+}
+
+function collectCleanupSummary(results: CleanupResult[]) {
+  const removedCounts = results.reduce<Record<string, number>>((summary, result) => {
+    if (result.ok && !result.skipped) {
+      summary[result.resource] = (summary[result.resource] ?? 0) + 1;
+    }
+    return summary;
+  }, {});
+
+  const failures = results
+    .filter((result) => !result.ok)
+    .map((result) => `${result.resource}:${result.status ?? "unknown"}`);
+
+  return { removedCounts, failures };
+}
+
+function formatMetricValue(value: number | undefined, decimals = 0): string {
+  if (value == null || Number.isNaN(value)) return "n/a";
+  return value.toFixed(decimals);
+}
+
+function formatBenchmarkRunLog(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const benchmark = payload as {
+    title?: string;
+    scenarioId?: string;
+    runId?: string;
+    story?: { actor?: string; goal?: string; benefit?: string };
+    canonicalPrompts?: string[];
+    operationLog?: BenchmarkOperationLogEntry[];
+    metrics?: {
+      totalDurationMs?: number;
+      totalInputTokens?: number;
+      totalOutputTokens?: number;
+      totalTokens?: number;
+      estimatedCostUsd?: number;
+      buildSteps?: number;
+      testSteps?: number;
+      artifactVerificationPassed?: number;
+    };
+    counts?: {
+      specs?: number;
+      tasks?: number;
+      doneTasks?: number;
+      failedTasks?: number;
+      artifactChecks?: number;
+    };
+    cleanup?: {
+      enabled?: boolean;
+      results?: CleanupResult[];
+      removedCounts?: Record<string, number>;
+    };
+    entities?: Record<string, unknown>;
+    projectStats?: Record<string, unknown>;
+  };
+
+  if (!Array.isArray(benchmark.operationLog)) return null;
+
+  const lines = [
+    "AURA Benchmark Run Log",
+    "======================",
+    "",
+    `Title: ${benchmark.title ?? benchmark.scenarioId ?? "unknown"}`,
+    `Run ID: ${benchmark.runId ?? "unknown"}`,
+  ];
+
+  if (benchmark.story) {
+    lines.push(`Actor: ${benchmark.story.actor ?? "unknown"}`);
+    lines.push(`Goal: ${benchmark.story.goal ?? "unknown"}`);
+    lines.push(`Benefit: ${benchmark.story.benefit ?? "unknown"}`);
+  }
+
+  if (Array.isArray(benchmark.canonicalPrompts) && benchmark.canonicalPrompts.length > 0) {
+    lines.push("");
+    lines.push("Canonical Prompts");
+    lines.push("-----------------");
+    benchmark.canonicalPrompts.forEach((prompt, index) => {
+      lines.push(`${index + 1}. ${prompt}`);
+    });
+  }
+
+  lines.push("");
+  lines.push("Operation Log");
+  lines.push("-------------");
+  benchmark.operationLog.forEach((entry, index) => {
+    const duration = entry.durationMs != null ? ` (${entry.durationMs}ms)` : "";
+    lines.push(`${index + 1}. [${entry.step}] ${entry.summary}${duration}`);
+    if (entry.details && Object.keys(entry.details).length > 0) {
+      lines.push(`   details: ${JSON.stringify(entry.details)}`);
+    }
+  });
+
+  lines.push("");
+  lines.push("Metrics");
+  lines.push("-------");
+  lines.push(`Duration (ms): ${formatMetricValue(benchmark.metrics?.totalDurationMs)}`);
+  lines.push(`Input tokens: ${formatMetricValue(benchmark.metrics?.totalInputTokens)}`);
+  lines.push(`Output tokens: ${formatMetricValue(benchmark.metrics?.totalOutputTokens)}`);
+  lines.push(`Total tokens: ${formatMetricValue(benchmark.metrics?.totalTokens)}`);
+  lines.push(`Estimated cost (USD): ${formatMetricValue(benchmark.metrics?.estimatedCostUsd, 4)}`);
+  lines.push(`Build steps: ${formatMetricValue(benchmark.metrics?.buildSteps)}`);
+  lines.push(`Test steps: ${formatMetricValue(benchmark.metrics?.testSteps)}`);
+  lines.push(`Artifact checks passed: ${formatMetricValue(benchmark.metrics?.artifactVerificationPassed)}`);
+
+  lines.push("");
+  lines.push("Counts");
+  lines.push("------");
+  lines.push(`Specs: ${formatMetricValue(benchmark.counts?.specs)}`);
+  lines.push(`Tasks: ${formatMetricValue(benchmark.counts?.tasks)}`);
+  lines.push(`Done tasks: ${formatMetricValue(benchmark.counts?.doneTasks)}`);
+  lines.push(`Failed tasks: ${formatMetricValue(benchmark.counts?.failedTasks)}`);
+
+  if (benchmark.cleanup) {
+    lines.push("");
+    lines.push("Cleanup");
+    lines.push("-------");
+    lines.push(`Enabled: ${benchmark.cleanup.enabled ? "yes" : "no"}`);
+    if (benchmark.cleanup.removedCounts) {
+      lines.push(`Removed counts: ${JSON.stringify(benchmark.cleanup.removedCounts)}`);
+    }
+  }
+
+  if (benchmark.entities) {
+    lines.push("");
+    lines.push("Entities");
+    lines.push("--------");
+    lines.push(JSON.stringify(benchmark.entities, null, 2));
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+async function resolveEvalOrg(page: Page, preferredName: string): Promise<BenchmarkOrgResolution> {
   const orgs = await apiJson<BenchmarkOrg[]>(page, "GET", "/api/orgs");
   const existing = orgs.find((org) => org.name === preferredName);
   if (existing) {
-    return existing;
+    return { ...existing, created: false };
   }
-  return apiJson<BenchmarkOrg>(page, "POST", "/api/orgs", { name: preferredName });
+  const created = await apiJson<BenchmarkOrg>(page, "POST", "/api/orgs", { name: preferredName });
+  return { ...created, created: true };
 }
 
 async function cleanupLiveBenchmarkEntities(
@@ -603,6 +782,7 @@ export async function runLiveBenchmarkScenario(
   let projectStats: Record<string, number> = {};
   let sessions: BenchmarkSession[] = [];
   let artifactChecks: Array<{ path: string; ok: boolean; matchedTexts: string[] }> = [];
+  const operationLog: BenchmarkOperationLogEntry[] = [];
 
   try {
     await timedStep(results, "login", async () => {
@@ -612,8 +792,22 @@ export async function runLiveBenchmarkScenario(
       }
       await loginForLiveEval(page, auth.email, auth.password, scenario.timeouts.loginMs);
     });
+    operationLog.push({
+      step: "login",
+      summary: "Authenticated benchmark session",
+      durationMs: latestStepDuration(results),
+    });
+    await maybeShowDemoPage(page, "/projects");
 
     org = await timedStep(results, "resolve_org", () => resolveEvalOrg(page, orgName));
+    operationLog.push({
+      step: "resolve_org",
+      summary: org.created
+        ? `Created benchmark org "${org.name}"`
+        : `Reused benchmark org "${org.name}"`,
+      durationMs: latestStepDuration(results),
+      details: { orgId: org.org_id, created: org.created },
+    });
 
     agentTemplate = await timedStep(results, "create_agent", () =>
       apiJson<{ agent_id: string }>(page, "POST", "/api/agents", {
@@ -626,10 +820,26 @@ export async function runLiveBenchmarkScenario(
         icon: null,
       }),
     );
+    operationLog.push({
+      step: "create_agent",
+      summary: `Created agent "${scenario.agentTemplate.name}"`,
+      durationMs: latestStepDuration(results),
+      details: {
+        agentId: agentTemplate.agent_id,
+        machineType: scenario.agentTemplate.machineType ?? "local",
+      },
+    });
+    await maybeShowDemoPage(page, "/projects");
 
     const files = await timedStep(results, "prepare_fixture", () =>
       collectFixtureFiles(scenario.project.fixtureDir),
     );
+    operationLog.push({
+      step: "prepare_fixture",
+      summary: `Prepared fixture "${scenario.project.fixtureDir}"`,
+      durationMs: latestStepDuration(results),
+      details: { fileCount: files.length },
+    });
 
     project = await timedStep(results, "create_project", () =>
       apiJson<ImportedProject>(page, "POST", "/api/projects/import", {
@@ -641,6 +851,13 @@ export async function runLiveBenchmarkScenario(
         test_command: scenario.project.testCommand,
       }),
     );
+    operationLog.push({
+      step: "create_project",
+      summary: `Imported project "${projectName}"`,
+      durationMs: latestStepDuration(results),
+      details: { projectId: project.project_id, linkedFolderPath: project.linked_folder_path ?? null },
+    });
+    await maybeShowDemoPage(page, `/projects/${project.project_id}`);
 
     agentInstance = await timedStep(results, "create_agent_instance", () =>
       apiJson<{ agent_instance_id: string }>(
@@ -649,6 +866,17 @@ export async function runLiveBenchmarkScenario(
         `/api/projects/${project.project_id}/agents`,
         { agent_id: agentTemplate.agent_id },
       ),
+    );
+    operationLog.push({
+      step: "create_agent_instance",
+      summary: "Attached the benchmark agent to the project",
+      durationMs: latestStepDuration(results),
+      details: { agentInstanceId: agentInstance.agent_instance_id },
+    });
+    await maybeShowDemoPage(
+      page,
+      `/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}`,
+      1800,
     );
 
     specs = await timedStep(results, "create_spec", () =>
@@ -661,6 +889,13 @@ export async function runLiveBenchmarkScenario(
     if (specs.length === 0) {
       throw new Error(`Spec generation returned no specs for project ${project.project_id}`);
     }
+    operationLog.push({
+      step: "create_spec",
+      summary: `Generated ${specs.length} spec${specs.length === 1 ? "" : "s"}`,
+      durationMs: latestStepDuration(results),
+      details: { titles: collectSpecTitles(specs) },
+    });
+    await maybeShowDemoPage(page, `/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}`, 1800);
 
     tasks = await timedStep(results, "create_tasks", () =>
       apiJson<BenchmarkTask[]>(
@@ -672,6 +907,13 @@ export async function runLiveBenchmarkScenario(
     if (tasks.length === 0) {
       throw new Error(`Task extraction returned no tasks for project ${project.project_id}`);
     }
+    operationLog.push({
+      step: "create_tasks",
+      summary: `Extracted ${tasks.length} task${tasks.length === 1 ? "" : "s"} from generated specs`,
+      durationMs: latestStepDuration(results),
+      details: { titles: tasks.map((task) => task.title) },
+    });
+    await maybeShowDemoPage(page, `/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}`, 1800);
 
     await timedStep(results, "build_app", () =>
       apiJson(
@@ -680,6 +922,13 @@ export async function runLiveBenchmarkScenario(
         `/api/projects/${project.project_id}/loop/start?agent_instance_id=${agentInstance.agent_instance_id}`,
       ),
     );
+    operationLog.push({
+      step: "build_app",
+      summary: "Started the autonomous build loop",
+      durationMs: latestStepDuration(results),
+      details: { projectId: project.project_id, agentInstanceId: agentInstance.agent_instance_id },
+    });
+    await maybeShowDemoPage(page, `/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}`, 1800);
 
     completedTasks = await timedStep(results, "wait_for_completion", () =>
       pollForLoopCompletion(
@@ -689,10 +938,26 @@ export async function runLiveBenchmarkScenario(
         scenario.timeouts.pollIntervalMs,
       ),
     );
+    operationLog.push({
+      step: "wait_for_completion",
+      summary: `Build loop completed with ${completedTasks.filter((task) => task.status === "done").length} done and ${completedTasks.filter((task) => task.status === "failed").length} failed tasks`,
+      durationMs: latestStepDuration(results),
+      details: {
+        taskStatuses: completedTasks.map((task) => ({ title: task.title, status: task.status })),
+      },
+    });
+    await maybeShowDemoPage(page, `/projects/${project.project_id}/stats`, 1800);
 
     outputs = await timedStep(results, "collect_outputs", () =>
       collectTaskOutputs(page, project.project_id, completedTasks),
     );
+    const stepSummary = sumBuildAndTestSteps(outputs);
+    operationLog.push({
+      step: "collect_outputs",
+      summary: "Collected task outputs and verification command evidence",
+      durationMs: latestStepDuration(results),
+      details: stepSummary,
+    });
 
     projectStats = await timedStep(results, "collect_stats", () =>
       apiJson<Record<string, number>>(
@@ -701,6 +966,16 @@ export async function runLiveBenchmarkScenario(
         `/api/projects/${project.project_id}/stats`,
       ),
     );
+    operationLog.push({
+      step: "collect_stats",
+      summary: "Collected project metrics",
+      durationMs: latestStepDuration(results),
+      details: {
+        totalTokens: Number(projectStats.total_tokens ?? 0),
+        estimatedCostUsd: Number(projectStats.estimated_cost_usd ?? 0),
+        completionPercentage: Number(projectStats.completion_percentage ?? 0),
+      },
+    });
 
     sessions = await timedStep(results, "collect_sessions", () =>
       apiJson<BenchmarkSession[]>(
@@ -709,20 +984,38 @@ export async function runLiveBenchmarkScenario(
         `/api/projects/${project.project_id}/agents/${agentInstance.agent_instance_id}/sessions`,
       ),
     );
+    operationLog.push({
+      step: "collect_sessions",
+      summary: `Collected ${sessions.length} session record${sessions.length === 1 ? "" : "s"}`,
+      durationMs: latestStepDuration(results),
+      details: sumSessionTokens(sessions),
+    });
 
     artifactChecks = await timedStep(results, "verify_artifacts", () =>
       verifyArtifactFiles(page, project.linked_folder_path ?? "", scenario.project.artifactChecks),
     );
+    operationLog.push({
+      step: "verify_artifacts",
+      summary: `Verified ${artifactChecks.length} artifact file${artifactChecks.length === 1 ? "" : "s"}`,
+      durationMs: latestStepDuration(results),
+      details: {
+        artifacts: artifactChecks.map((check) => ({ path: check.path, ok: check.ok })),
+      },
+    });
 
     await timedStep(results, "verify_build", async () => {
       await page.goto(`/projects/${project.project_id}/stats`);
       for (const text of scenario.verification.statsTexts) {
         await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
       }
+      await maybePauseForDemo(page, 2400);
     });
 
+    if (demoModeEnabled) {
+      await maybeShowDemoPage(page, `/api/projects/${project.project_id}/stats`, 3000);
+    }
+
     const tokenSummary = sumSessionTokens(sessions);
-    const stepSummary = sumBuildAndTestSteps(outputs);
     const doneTasks = completedTasks.filter((task) => task.status === "done");
     const failedTasks = completedTasks.filter((task) => task.status === "failed");
 
@@ -739,17 +1032,37 @@ export async function runLiveBenchmarkScenario(
       expect(stepSummary.testSteps).toBeGreaterThan(0);
     }
 
-    const cleanup = keepEntities ? {
-      enabled: false,
-      results: [] as CleanupResult[],
-    } : {
-      enabled: true,
-      results: await cleanupLiveBenchmarkEntities(page, {
+    const cleanupResults = keepEntities
+      ? []
+      : await cleanupLiveBenchmarkEntities(page, {
         projectId: project.project_id,
         agentId: agentTemplate.agent_id,
         agentInstanceId: agentInstance.agent_instance_id,
-      }),
+      });
+
+    const cleanup = keepEntities ? {
+      enabled: false,
+      results: [] as CleanupResult[],
+      removedCounts: {} as Record<string, number>,
+    } : {
+      enabled: true,
+      ...collectCleanupSummary(cleanupResults),
+      results: cleanupResults,
     };
+
+    operationLog.push({
+      step: "cleanup",
+      summary: cleanup.enabled
+        ? "Removed benchmark-created agent instance, project, and agent"
+        : "Kept benchmark-created entities for debugging",
+      details: cleanup.enabled
+        ? { removedCounts: cleanup.removedCounts }
+        : { keptEntities: true },
+    });
+
+    if (demoModeEnabled && cleanup.enabled) {
+      await maybeShowDemoPage(page, "/projects", 1800);
+    }
 
     return {
       scenarioId: scenario.id,
@@ -758,6 +1071,7 @@ export async function runLiveBenchmarkScenario(
       story: scenario.story,
       canonicalPrompts: scenario.canonicalPrompts,
       steps: results,
+      operationLog,
       entities: {
         orgId: org.org_id,
         agentId: agentTemplate.agent_id,

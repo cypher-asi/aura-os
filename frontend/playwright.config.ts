@@ -13,6 +13,7 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    video: process.env.AURA_EVAL_RECORD_VIDEO === "1" ? "on" : "off",
     serviceWorkers: "allow",
   },
   webServer: externalEvalBaseUrl ? undefined : {
