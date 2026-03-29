@@ -64,7 +64,9 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.TestVerificationFailed]: "Test",
   [EventType.TestFixAttempt]: "Test",
   [EventType.GitCommitted]: "Git",
+  [EventType.GitCommitFailed]: "Git",
   [EventType.GitPushed]: "Git",
+  [EventType.GitPushFailed]: "Git",
   [EventType.LogLine]: "Log",
   [EventType.NetworkEvent]: "Network",
   [EventType.Error]: "Error",
@@ -304,9 +306,17 @@ function summarise(e: AuraEvent): string {
       const c = e.content;
       return `Git commit: ${c.commit_sha?.slice(0, 8) ?? c.task_id ?? ""}`;
     }
+    case EventType.GitCommitFailed: {
+      const c = e.content;
+      return `Git commit failed: ${c.reason ?? "unknown"}`;
+    }
     case EventType.GitPushed: {
       const c = e.content;
       return `Git push: ${c.branch ?? c.task_id ?? ""}`;
+    }
+    case EventType.GitPushFailed: {
+      const c = e.content;
+      return `Git push failed: ${c.reason ?? "unknown"}`;
     }
     case EventType.NetworkEvent:
       return `Network: ${e.content.network_event_type ?? "event"}`;
@@ -340,7 +350,7 @@ const ALL_ENGINE_EVENT_TYPES: EventType[] = [
   EventType.BuildFixAttempt,
   EventType.TestVerificationStarted, EventType.TestVerificationPassed,
   EventType.TestVerificationFailed, EventType.TestFixAttempt,
-  EventType.GitCommitted, EventType.GitPushed, EventType.NetworkEvent,
+  EventType.GitCommitted, EventType.GitCommitFailed, EventType.GitPushed, EventType.GitPushFailed, EventType.NetworkEvent,
   EventType.Error,
 ];
 

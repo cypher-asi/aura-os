@@ -102,7 +102,9 @@ export enum EventType {
 
   // Git
   GitCommitted          = "git_committed",
+  GitCommitFailed       = "git_commit_failed",
   GitPushed             = "git_pushed",
+  GitPushFailed         = "git_push_failed",
 
   // Other
   LogLine               = "log_line",
@@ -377,6 +379,10 @@ export type AuraEvent = AuraEventBase & (
       commit_sha: string;
       spec_id?: string;
     } }
+  | { type: EventType.GitCommitFailed; content: {
+      task_id?: string;
+      reason: string;
+    } }
   | { type: EventType.GitPushed; content: {
       task_id?: string;
       spec_id?: string;
@@ -384,6 +390,10 @@ export type AuraEvent = AuraEventBase & (
       repo?: string;
       branch?: string;
       commits?: { sha: string; message: string }[];
+    } }
+  | { type: EventType.GitPushFailed; content: {
+      task_id?: string;
+      reason: string;
     } }
 
   // ── Harness protocol (canonical types from aura-protocol) ────

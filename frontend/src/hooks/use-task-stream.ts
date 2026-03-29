@@ -126,6 +126,19 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
         });
       }),
 
+      subscribe(EventType.GitCommitFailed, (e) => {
+        const c = e.content;
+        if (c.task_id !== taskId) return;
+        const id = crypto.randomUUID();
+        handleToolCallStarted(refs, setters, { id, name: "git_commit" });
+        handleToolResult(refs, setters, {
+          id,
+          name: "git_commit",
+          result: c.reason ?? "Commit failed",
+          is_error: true,
+        });
+      }),
+
       subscribe(EventType.GitPushed, (e) => {
         const c = e.content;
         if (c.task_id !== taskId) return;
@@ -138,6 +151,19 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
           name: "git_push",
           result: `Pushed ${count} commit${count !== 1 ? "s" : ""} to ${branch}`,
           is_error: false,
+        });
+      }),
+
+      subscribe(EventType.GitPushFailed, (e) => {
+        const c = e.content;
+        if (c.task_id !== taskId) return;
+        const id = crypto.randomUUID();
+        handleToolCallStarted(refs, setters, { id, name: "git_push" });
+        handleToolResult(refs, setters, {
+          id,
+          name: "git_push",
+          result: c.reason ?? "Push failed",
+          is_error: true,
         });
       }),
 

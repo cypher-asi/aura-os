@@ -368,6 +368,8 @@ fn forward_automaton_events(params: ForwardParams) {
                         "progress" => Some("progress"),
                         "git_pushed" => Some("git_pushed"),
                         "git_committed" => Some("git_committed"),
+                        "git_commit_failed" => Some("git_commit_failed"),
+                        "git_push_failed" => Some("git_push_failed"),
                         "done" => {
                             clear_active_automaton(
                                 automaton_registry.clone(),

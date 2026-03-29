@@ -26,8 +26,9 @@ export interface TestStep {
 }
 
 export interface GitStep {
-  kind: "committed" | "pushed";
+  kind: "committed" | "commit_failed" | "pushed" | "push_failed";
   commitSha?: string;
+  reason?: string;
   repo?: string;
   branch?: string;
   commits?: { sha: string; message: string }[];
@@ -249,6 +250,18 @@ function handleEngineEvent(event: AuraEvent) {
     }
   }
 
+  if (event.type === EventType.GitCommitFailed) {
+    const c = event.content;
+    const taskId = c.task_id;
+    if (taskId) {
+      const step: GitStep = { kind: "commit_failed", reason: c.reason, timestamp: Date.now() };
+      const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
+      updatedOutputs = { ...updatedOutputs, [taskId]: { ...existing, gitSteps: [...existing.gitSteps, step] } };
+      outputChanged = true;
+      notifyTaskOutputListeners(taskId);
+    }
+  }
+
   if (event.type === EventType.GitPushed) {
     const c = event.content;
     const taskId = c.task_id;
@@ -260,6 +273,18 @@ function handleEngineEvent(event: AuraEvent) {
         commits: c.commits,
         timestamp: Date.now(),
       };
+      const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
+      updatedOutputs = { ...updatedOutputs, [taskId]: { ...existing, gitSteps: [...existing.gitSteps, step] } };
+      outputChanged = true;
+      notifyTaskOutputListeners(taskId);
+    }
+  }
+
+  if (event.type === EventType.GitPushFailed) {
+    const c = event.content;
+    const taskId = c.task_id;
+    if (taskId) {
+      const step: GitStep = { kind: "push_failed", reason: c.reason, timestamp: Date.now() };
       const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
       updatedOutputs = { ...updatedOutputs, [taskId]: { ...existing, gitSteps: [...existing.gitSteps, step] } };
       outputChanged = true;
