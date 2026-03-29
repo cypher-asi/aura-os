@@ -149,11 +149,7 @@ impl AuthService {
         access_token: &str,
     ) -> Result<AuthSessionResult, AuthError> {
         debug!("Importing existing zOS access token");
-        let result = self.build_session_from_token(access_token).await?;
-        // Store to RocksDB for the network bridge and desktop session persistence
-        let bytes = serde_json::to_vec(&result.session)?;
-        self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
-        Ok(result)
+        self.build_session_from_token(access_token).await
     }
 
     pub async fn logout(&self, token: Option<&str>) -> Result<(), AuthError> {

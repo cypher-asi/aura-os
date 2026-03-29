@@ -105,7 +105,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
 }
 
 fn auth_routes() -> Router<AppState> {
-    let routes = Router::new()
+    Router::new()
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/logout", post(auth::logout))

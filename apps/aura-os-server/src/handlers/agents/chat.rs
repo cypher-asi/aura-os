@@ -15,7 +15,6 @@ use aura_os_link::{
 };
 use aura_os_storage::StorageClient;
 
-use super::super::projects_helpers::{optional_jwt, with_optional_jwt};
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;

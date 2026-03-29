@@ -116,6 +116,11 @@ pub(crate) async fn import_access_token(
         .await
         .map_err(map_auth_error)?;
 
+    // Persist to RocksDB for network bridge and desktop session persistence
+    if let Ok(bytes) = serde_json::to_vec(&result.session) {
+        let _ = state.store.put_setting("zero_auth_session", &bytes);
+    }
+
     sync_user_to_network(&state, &mut result.session).await;
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
