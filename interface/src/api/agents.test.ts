@@ -56,7 +56,7 @@ describe("agentTemplatesApi", () => {
     globalThis.fetch = fetchMock;
     const result = await agentTemplatesApi.list();
     expect(result).toEqual(agents);
-    expect(fetchMock).toHaveBeenCalledWith("/api/agents", expect.objectContaining({ credentials: "include" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/agents", expect.objectContaining({ headers: expect.any(Object) }));
   });
 
   it("create sends POST with body", async () => {

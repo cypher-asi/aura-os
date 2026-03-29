@@ -203,13 +203,13 @@ pub(crate) fn folder_name_from_path(path: &str) -> Option<String> {
         .map(|name| name.to_string())
 }
 
-/// Build a standard project tool session config with required JWT propagation.
+/// Build a standard project tool session config with JWT propagation.
 pub(crate) fn project_tool_session_config(
     state: &AppState,
     project_id: &ProjectId,
     tool_agent_name: &'static str,
-) -> ApiResult<SessionConfig> {
-    let jwt = state.get_jwt()?;
+    jwt: &str,
+) -> SessionConfig {
     let project = state.project_service.get_project(project_id).ok();
     let project_path = project.as_ref().and_then(|project| {
         let linked = project.linked_folder_path.trim();
@@ -225,25 +225,14 @@ pub(crate) fn project_tool_session_config(
             None
         }
     });
-    Ok(SessionConfig {
+    SessionConfig {
         agent_id: Some(format!("{tool_agent_name}-{project_id}")),
         agent_name: Some(tool_agent_name.to_string()),
-        token: Some(jwt),
+        token: Some(jwt.to_string()),
         project_id: Some(project_id.to_string()),
         project_path,
         ..Default::default()
-    })
-}
-
-/// Resolve the caller JWT when available.
-pub(crate) fn optional_jwt(state: &AppState) -> Option<String> {
-    state.get_jwt().ok()
-}
-
-/// Attach the caller JWT to a session config when available.
-pub(crate) fn with_optional_jwt(state: &AppState, mut config: SessionConfig) -> SessionConfig {
-    config.token = optional_jwt(state);
-    config
+    }
 }
 
 pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput {

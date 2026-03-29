@@ -13,7 +13,7 @@ use aura_os_link::{HarnessInbound, HarnessOutbound, UserMessage};
 
 use super::projects_helpers::project_tool_session_config;
 use crate::error::{ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct SpecQueryParams {
@@ -39,10 +39,10 @@ async fn resolve_harness_mode(
 
 pub(crate) async fn list_specs(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Spec>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_specs = storage
         .list_specs(&project_id.to_string(), &jwt)
         .await
@@ -57,6 +57,7 @@ pub(crate) async fn list_specs(
 
 pub(crate) async fn generate_specs_summary(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<Json<aura_os_core::Project>> {
@@ -64,7 +65,7 @@ pub(crate) async fn generate_specs_summary(
 
     let mode = resolve_harness_mode(&state, &project_id, &params).await;
     let harness = state.harness_for(mode);
-    let session_config = project_tool_session_config(&state, &project_id, "spec-summary")?;
+    let session_config = project_tool_session_config(&state, &project_id, "spec-summary", &jwt);
     let session = harness
         .open_session(session_config)
         .await
@@ -99,10 +100,10 @@ pub(crate) async fn generate_specs_summary(
 
 pub(crate) async fn get_spec(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Spec>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_spec =
         storage
             .get_spec(&spec_id.to_string(), &jwt)
@@ -124,11 +125,12 @@ async fn open_spec_gen_session(
     state: &AppState,
     project_id: &ProjectId,
     harness_mode: HarnessMode,
+    jwt: &str,
 ) -> ApiResult<aura_os_link::HarnessSession> {
-    super::billing::require_credits(state).await?;
+    super::billing::require_credits(state, jwt).await?;
 
     let harness = state.harness_for(harness_mode);
-    let session_config = project_tool_session_config(state, project_id, "spec-gen")?;
+    let session_config = project_tool_session_config(state, project_id, "spec-gen", jwt);
     let session = harness
         .open_session(session_config)
         .await
@@ -147,19 +149,19 @@ async fn open_spec_gen_session(
 
 pub(crate) async fn generate_specs(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<Json<Vec<Spec>>> {
     info!(%project_id, "Spec generation requested");
     let mode = resolve_harness_mode(&state, &project_id, &params).await;
-    let session = open_spec_gen_session(&state, &project_id, mode).await?;
+    let session = open_spec_gen_session(&state, &project_id, mode, &jwt).await?;
     let mut rx = session.events_tx.subscribe();
 
     while let Ok(event) = rx.recv().await {
         match event {
             HarnessOutbound::AssistantMessageEnd(_) => {
                 let storage = state.require_storage_client()?;
-                let jwt = state.get_jwt()?;
                 let storage_specs = storage
                     .list_specs(&project_id.to_string(), &jwt)
                     .await
@@ -186,6 +188,7 @@ pub(crate) async fn generate_specs(
 
 pub(crate) async fn generate_specs_stream(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<SpecQueryParams>,
 ) -> ApiResult<(
@@ -194,7 +197,7 @@ pub(crate) async fn generate_specs_stream(
 )> {
     info!(%project_id, "Streaming spec generation requested");
     let mode = resolve_harness_mode(&state, &project_id, &params).await;
-    let session = open_spec_gen_session(&state, &project_id, mode).await?;
+    let session = open_spec_gen_session(&state, &project_id, mode, &jwt).await?;
 
     let stream = tokio_stream::wrappers::BroadcastStream::new(session.events_tx.subscribe())
         .filter_map(|r| r.ok())

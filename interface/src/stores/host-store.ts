@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { authHeaders } from "../lib/auth-token";
 import {
   getConfiguredHostOrigin,
   getTargetHostOrigin,
@@ -27,7 +28,7 @@ async function probeHost(): Promise<HostConnectionStatus> {
     const response = await fetch(resolveApiUrl("/api/auth/session"), {
       method: "GET",
       cache: "no-store",
-      credentials: "include",
+      headers: authHeaders(),
       signal: controller.signal,
     });
 

@@ -63,6 +63,8 @@ function expectedUser(session: AuthSession): ZeroUser {
 
 beforeEach(() => {
   useAuthStore.setState({ user: null, isLoading: true });
+  window.localStorage.removeItem("aura-jwt");
+  window.localStorage.removeItem("aura-session");
   vi.clearAllMocks();
 });
 
@@ -79,7 +81,6 @@ describe("auth-store", () => {
 
   describe("restoreSession", () => {
     it("sets user from validated session", async () => {
-      mockApi.auth.getSession.mockResolvedValue(mockSession);
       mockApi.auth.validate.mockResolvedValue(mockSession);
 
       await useAuthStore.getState().restoreSession();
@@ -89,8 +90,9 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("falls back to getSession when validate fails", async () => {
-      mockApi.auth.getSession.mockResolvedValue(mockSession);
+    it("falls back to cached session when validate fails", async () => {
+      window.localStorage.setItem("aura-jwt", "stored-token");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
       mockApi.auth.validate.mockRejectedValue(new Error("validation failed"));
 
       await useAuthStore.getState().restoreSession();
@@ -103,7 +105,8 @@ describe("auth-store", () => {
     });
 
     it("clears the cached user when validate returns 401", async () => {
-      mockApi.auth.getSession.mockResolvedValue(mockSession);
+      window.localStorage.setItem("aura-jwt", "expired-token");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
       mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
 
       await useAuthStore.getState().restoreSession();
@@ -113,24 +116,28 @@ describe("auth-store", () => {
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
 
-    it("clears user on 401", async () => {
-      mockApi.auth.getSession.mockRejectedValue(new ApiClientError("unauth", 401));
+    it("clears user on 401 from validate", async () => {
+      window.localStorage.setItem("aura-jwt", "expired-token");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+      mockApi.auth.validate.mockRejectedValue(new ApiClientError("unauth", 401));
 
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
       expect(useAuthStore.getState().isLoading).toBe(false);
+      expect(window.localStorage.getItem("aura-jwt")).toBeNull();
     });
 
-    it("does not clear user on non-401 errors", async () => {
-      useAuthStore.setState({ user: expectedUser(mockSession) });
-      mockApi.auth.getSession.mockRejectedValue(new Error("network error"));
+    it("does not clear user on non-401 errors when cached session exists", async () => {
+      window.localStorage.setItem("aura-jwt", "stored-token");
+      window.localStorage.setItem("aura-session", JSON.stringify(mockSession));
+      mockApi.auth.validate.mockRejectedValue(new Error("network error"));
 
       await useAuthStore.getState().restoreSession();
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
-      expect(useAuthStore.getState().zeroProRefreshError).toBeNull();
+      expect(useAuthStore.getState().zeroProRefreshError).toBe("network error");
       expect(useAuthStore.getState().isLoading).toBe(false);
     });
   });

@@ -1,3 +1,5 @@
+import { authHeaders } from "../lib/auth-token";
+
 export interface SSECallbacks<T extends string> {
   onEvent: (eventType: T, data: unknown) => void;
   onError?: (err: Error) => void;
@@ -14,7 +16,11 @@ export async function streamSSE<T extends string>(
 ): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, credentials: "include", signal });
+    response = await fetch(url, {
+      ...init,
+      headers: { ...authHeaders(), ...(init.headers as Record<string, string>) },
+      signal,
+    });
   } catch (err) {
     if (signal?.aborted) return;
     callbacks.onError?.(err instanceof Error ? err : new Error(String(err)));

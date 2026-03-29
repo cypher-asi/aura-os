@@ -26,8 +26,7 @@ describe("spawnTerminal", () => {
       "/api/terminal",
       expect.objectContaining({
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
         body: JSON.stringify({ cols: 80, rows: 24, cwd: "/home" }),
       }),
     );
@@ -53,7 +52,7 @@ describe("listTerminals", () => {
   beforeEach(() => vi.restoreAllMocks());
   afterEach(() => { globalThis.fetch = originalFetch; });
 
-  it("fetches GET /api/terminal with credentials", async () => {
+  it("fetches GET /api/terminal with auth headers", async () => {
     const terminals = [{ id: "t1", shell: "bash", cols: 80, rows: 24, cwd: "/", created_at: 0 }];
     const fetchMock = mockFetch(200, terminals);
     globalThis.fetch = fetchMock;
@@ -62,7 +61,7 @@ describe("listTerminals", () => {
     expect(result).toEqual(terminals);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/terminal",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ headers: expect.any(Object) }),
     );
   });
 
@@ -84,7 +83,7 @@ describe("killTerminal", () => {
     await killTerminal("term-1");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/terminal/term-1",
-      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+      expect.objectContaining({ method: "DELETE", headers: expect.any(Object) }),
     );
   });
 

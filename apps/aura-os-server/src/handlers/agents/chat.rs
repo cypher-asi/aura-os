@@ -19,7 +19,7 @@ use super::super::projects_helpers::{optional_jwt, with_optional_jwt};
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::projects;
-use crate::state::{AppState, ChatSession};
+use crate::state::{AppState, AuthJwt, ChatSession};
 
 use super::conversions::{events_to_session_history, resolve_workspace_path};
 
@@ -277,9 +277,10 @@ async fn setup_project_chat_persistence(
     state: &AppState,
     project_id: &ProjectId,
     agent_instance_id: &AgentInstanceId,
+    jwt: &str,
 ) -> Option<ChatPersistCtx> {
     let storage = state.storage_client.as_ref()?.clone();
-    let jwt = optional_jwt(state)?;
+    let jwt = jwt.to_string();
     let pai = agent_instance_id.to_string();
     let pid = project_id.to_string();
     let session_id = resolve_chat_session(&storage, &jwt, &pai, &pid).await?;
@@ -296,6 +297,7 @@ async fn setup_agent_chat_persistence(
     state: &AppState,
     agent_id: &AgentId,
     agent_name: &str,
+    jwt: &str,
 ) -> Option<ChatPersistCtx> {
     let storage = match state.storage_client.as_ref() {
         Some(s) => s.clone(),
@@ -304,14 +306,9 @@ async fn setup_agent_chat_persistence(
             return None;
         }
     };
-    let jwt = match state.get_jwt() {
-        Ok(j) => j,
-        Err(_) => {
-            warn!(%agent_id, "agent chat persistence: failed to obtain JWT");
-            return None;
-        }
-    };
-    let matching = find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let jwt = jwt.to_string();
+    let matching =
+        find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
 
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
@@ -323,7 +320,7 @@ async fn setup_agent_chat_persistence(
         (pa.id.clone(), pid)
     } else {
         warn!(%agent_id, "agent chat persistence: no matching project agents found, attempting auto-create");
-        let all_projects = match projects::list_all_projects_from_network(state).await {
+        let all_projects = match projects::list_all_projects_from_network(state, &jwt).await {
             Ok(p) => p,
             Err((status, body)) => {
                 warn!(%agent_id, ?status, ?body, "agent chat persistence: failed to list projects for auto-create");
@@ -419,7 +416,7 @@ async fn find_matching_project_agents(
     jwt: &str,
     agent_id_str: &str,
 ) -> Vec<aura_os_storage::StorageProjectAgent> {
-    let all_projects = match projects::list_all_projects_from_network(state).await {
+    let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
         Ok(p) => {
             info!(count = p.len(), %agent_id_str, "agent matching: projects discovered from network");
             p
@@ -573,9 +570,10 @@ async fn fetch_all_sessions(
 async fn aggregate_agent_events_from_storage_result(
     state: &AppState,
     agent_id: &AgentId,
+    jwt: &str,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
-    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
-        warn!(%agent_id, "aggregate events: no storage client or JWT available");
+    let Some(ref storage) = state.storage_client else {
+        warn!(%agent_id, "aggregate events: no storage client available");
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
@@ -615,8 +613,9 @@ async fn aggregate_agent_events_from_storage_result(
 async fn load_project_session_history(
     state: &AppState,
     agent_instance_id: &AgentInstanceId,
+    jwt: &str,
 ) -> Result<Vec<SessionEvent>, aura_os_storage::StorageError> {
-    let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) else {
+    let Some(ref storage) = state.storage_client else {
         return Ok(Vec::new());
     };
     let sessions = storage
@@ -639,8 +638,9 @@ async fn load_project_session_history(
 pub(crate) async fn aggregate_agent_events_from_storage(
     state: &AppState,
     agent_id: &AgentId,
+    jwt: &str,
 ) -> Vec<SessionEvent> {
-    match aggregate_agent_events_from_storage_result(state, agent_id).await {
+    match aggregate_agent_events_from_storage_result(state, agent_id, jwt).await {
         Ok(messages) => messages,
         Err(e) => {
             warn!(error = %e, %agent_id, "failed to aggregate agent messages from storage");
@@ -651,11 +651,11 @@ pub(crate) async fn aggregate_agent_events_from_storage(
 
 pub(crate) async fn list_agent_events(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
-    let _ = state.get_jwt()?;
-    let messages = aggregate_agent_events_from_storage(&state, &agent_id).await;
+    let messages = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
     Ok(Json(messages))
 }
 
@@ -784,13 +784,14 @@ async fn open_harness_chat_stream(
 
 pub(crate) async fn send_agent_event_stream(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
 )> {
-    super::super::billing::require_credits(&state).await?;
+    super::super::billing::require_credits(&state, &jwt).await?;
     info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     let agent = state
@@ -799,7 +800,7 @@ pub(crate) async fn send_agent_event_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent: {e}")))?;
 
-    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name).await;
+    let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt).await;
     if persist_ctx.is_none() {
         warn!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
     } else {
@@ -808,27 +809,21 @@ pub(crate) async fn send_agent_event_stream(
 
     let session_key = format!("agent:{agent_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
-        let stored = aggregate_agent_events_from_storage(&state, &agent_id).await;
-        if stored.is_empty() {
-            None
-        } else {
-            Some(session_events_to_conversation_history(&stored))
-        }
+        let stored = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
+        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
     } else {
         None
     };
 
-    let config = with_optional_jwt(
-        &state,
-        SessionConfig {
-            system_prompt: Some(agent.system_prompt.clone()),
-            agent_id: Some(agent_id.to_string()),
-            agent_name: Some(agent.name.clone()),
-            model: body.model.clone(),
-            conversation_messages,
-            ..Default::default()
-        },
-    );
+    let config = SessionConfig {
+        system_prompt: Some(agent.system_prompt.clone()),
+        agent_id: Some(agent_id.to_string()),
+        agent_name: Some(agent.name.clone()),
+        model: body.model.clone(),
+        token: Some(jwt.clone()),
+        conversation_messages,
+        ..Default::default()
+    };
 
     open_harness_chat_stream(
         &state,
@@ -845,10 +840,10 @@ pub(crate) async fn send_agent_event_stream(
 
 pub(crate) async fn list_events(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     let sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
@@ -869,13 +864,14 @@ pub(crate) async fn list_events(
 
 pub(crate) async fn send_event_stream(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<(
     [(&'static str, HeaderValue); 1],
     Sse<impl futures_core::Stream<Item = Result<Event, Infallible>>>,
 )> {
-    super::super::billing::require_credits(&state).await?;
+    super::super::billing::require_credits(&state, &jwt).await?;
     info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
     let instance = state
@@ -884,11 +880,12 @@ pub(crate) async fn send_event_stream(
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
 
-    let persist_ctx = setup_project_chat_persistence(&state, &project_id, &agent_instance_id).await;
+    let persist_ctx =
+        setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt).await;
 
     let session_key = format!("instance:{agent_instance_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
-        let stored = load_project_session_history(&state, &agent_instance_id)
+        let stored = load_project_session_history(&state, &agent_instance_id, &jwt)
             .await
             .map_err(map_storage_error)?;
         if stored.is_empty() {
@@ -914,19 +911,17 @@ pub(crate) async fn send_event_stream(
         project_name,
     ));
 
-    let config = with_optional_jwt(
-        &state,
-        SessionConfig {
-            system_prompt: Some(system_prompt),
-            agent_id: Some(instance.agent_id.to_string()),
-            agent_name: Some(instance.name.clone()),
-            model: body.model.clone(),
-            conversation_messages,
-            project_id: Some(pid_str),
-            project_path,
-            ..Default::default()
-        },
-    );
+    let config = SessionConfig {
+        system_prompt: Some(system_prompt),
+        agent_id: Some(instance.agent_id.to_string()),
+        agent_name: Some(instance.name.clone()),
+        model: body.model.clone(),
+        token: Some(jwt),
+        conversation_messages,
+        project_id: Some(pid_str),
+        project_path,
+        ..Default::default()
+    };
 
     open_harness_chat_stream(
         &state,

@@ -6,17 +6,17 @@ use aura_os_core::{Agent, AgentId, HarnessMode};
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::handlers::projects;
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
 use tracing::{info, warn};
 
 pub(crate) async fn create_agent(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let machine_type = body.machine_type.clone();
 
@@ -149,9 +149,11 @@ async fn provision_swarm_agent(
     Ok(vm_id)
 }
 
-pub(crate) async fn list_agents(State(state): State<AppState>) -> ApiResult<Json<Vec<Agent>>> {
+pub(crate) async fn list_agents(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<Vec<Agent>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_agents = client.list_agents(&jwt).await.map_err(map_network_error)?;
     let agents: Vec<Agent> = net_agents.iter().map(agent_from_network).collect();
     Ok(Json(agents))
@@ -159,10 +161,10 @@ pub(crate) async fn list_agents(State(state): State<AppState>) -> ApiResult<Json
 
 pub(crate) async fn get_agent(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Agent>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_agent = client
         .get_agent(&agent_id.to_string(), &jwt)
         .await
@@ -173,11 +175,11 @@ pub(crate) async fn get_agent(
 
 pub(crate) async fn update_agent(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
     Json(body): Json<UpdateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name,
         role: body.role,
@@ -203,13 +205,13 @@ pub(crate) async fn update_agent(
 
 pub(crate) async fn delete_agent(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<()>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     if let Some(ref storage) = state.storage_client {
-        let projects = projects::list_all_projects_from_network(&state).await?;
+        let projects = projects::list_all_projects_from_network(&state, &jwt).await?;
         let agent_id_str = agent_id.to_string();
         for project in &projects {
             if let Ok(agents) = storage

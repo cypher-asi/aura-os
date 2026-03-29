@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AuraEvent, AuraEventOfType } from "../types/aura-events";
 import { EventType, parseAuraEvent } from "../types/aura-events";
+import { getStoredJwt } from "../lib/auth-token";
 import { createReconnectingWebSocket } from "../hooks/ws-reconnect";
 import { resolveWsUrl } from "../lib/host-config";
 
@@ -287,11 +288,22 @@ export function useTaskOutput(taskId: string | undefined): TaskOutputEntry {
 
 let _ws: { close: () => void } | null = null;
 
-function connectEventSocket() {
+export function disconnectEventSocket() {
+  _ws?.close();
+  _ws = null;
+}
+
+export function connectEventSocket() {
   _ws?.close();
   _ws = createReconnectingWebSocket(
     {
-      url: resolveWsUrl("/ws/events"),
+      url: (() => {
+        const base = resolveWsUrl("/ws/events");
+        const jwt = getStoredJwt();
+        if (!jwt) return base;
+        const sep = base.includes("?") ? "&" : "?";
+        return `${base}${sep}token=${encodeURIComponent(jwt)}`;
+      })(),
       initialDelay: 1000,
       maxDelay: 30000,
       backoffMultiplier: 2,
@@ -321,9 +333,8 @@ function connectEventSocket() {
   );
 }
 
-if (typeof window !== "undefined") {
-  connectEventSocket();
-}
+// Event socket connection is deferred until after authentication.
+// Call connectEventSocket() from the auth store after login/restoreSession.
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {

@@ -6,7 +6,7 @@ use aura_os_core::{AgentInstance, AgentInstanceId, AgentStatus, ProjectId};
 
 use crate::dto::{CreateAgentInstanceRequest, UpdateAgentInstanceRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 use super::conversions::{
     get_user_id, resolve_network_agents, resolve_single_agent, resolve_workspace_path,
@@ -14,11 +14,13 @@ use super::conversions::{
 
 pub(crate) async fn create_agent_instance(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(project_id): Path<ProjectId>,
     Json(body): Json<CreateAgentInstanceRequest>,
 ) -> ApiResult<Json<AgentInstance>> {
     let storage = state.require_storage_client()?;
-    let user_id = get_user_id(&state)?;
+    let user_id = get_user_id(&session);
 
     let agent = state
         .agent_service
@@ -40,7 +42,6 @@ pub(crate) async fn create_agent_instance(
         icon: agent.icon.clone(),
         harness: None,
     };
-    let jwt = state.get_jwt()?;
     let storage_agent = storage
         .create_project_agent(&project_id.to_string(), &jwt, &req)
         .await
@@ -59,10 +60,10 @@ pub(crate) async fn create_agent_instance(
 
 pub(crate) async fn list_agent_instances(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<AgentInstance>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_agents = storage
         .list_project_agents(&project_id.to_string(), &jwt)
         .await
@@ -93,10 +94,10 @@ pub(crate) async fn list_agent_instances(
 
 pub(crate) async fn get_agent_instance(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<AgentInstance>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_agent = storage
         .get_project_agent(&agent_instance_id.to_string(), &jwt)
         .await
@@ -129,11 +130,11 @@ pub(crate) async fn get_agent_instance(
 
 pub(crate) async fn update_agent_instance(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<UpdateAgentInstanceRequest>,
 ) -> ApiResult<Json<AgentInstance>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     if let Some(ref status_str) = body.status {
         let target = aura_os_agents::parse_agent_status(status_str);
@@ -188,10 +189,10 @@ pub(crate) async fn update_agent_instance(
 
 pub(crate) async fn delete_agent_instance(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<()>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     storage
         .delete_project_agent(&agent_instance_id.to_string(), &jwt)
         .await

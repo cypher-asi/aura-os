@@ -1,7 +1,6 @@
 mod error;
 pub use error::AuthError;
 
-use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::Utc;
@@ -10,10 +9,8 @@ use serde::Deserialize;
 use tracing::{debug, error, warn};
 
 use aura_os_core::ZeroAuthSession;
-use aura_os_store::RocksStore;
 
 const ZOS_API_URL: &str = "https://zosapi.zero.tech";
-const AUTH_SESSION_KEY: &str = "zero_auth_session";
 
 #[derive(Debug, Deserialize)]
 struct ZosErrorBody {
@@ -89,14 +86,12 @@ fn zero_pro_refresh_error_message() -> String {
 }
 
 pub struct AuthService {
-    store: Arc<RocksStore>,
     http: Client,
 }
 
 impl AuthService {
-    pub fn new(store: Arc<RocksStore>) -> Self {
+    pub fn new() -> Self {
         Self {
-            store,
             http: Client::builder()
                 .connect_timeout(Duration::from_secs(10))
                 .timeout(Duration::from_secs(60))
@@ -122,7 +117,7 @@ impl AuthService {
         }
 
         let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
-        self.fetch_and_store_session(&login_data.access_token).await
+        self.build_session_from_token(&login_data.access_token).await
     }
 
     pub async fn register(
@@ -146,7 +141,7 @@ impl AuthService {
         }
 
         let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
-        self.fetch_and_store_session(&login_data.access_token).await
+        self.build_session_from_token(&login_data.access_token).await
     }
 
     pub async fn import_access_token(
@@ -154,96 +149,23 @@ impl AuthService {
         access_token: &str,
     ) -> Result<AuthSessionResult, AuthError> {
         debug!("Importing existing zOS access token");
-        self.fetch_and_store_session(access_token).await
+        let result = self.build_session_from_token(access_token).await?;
+        // Store to RocksDB for the network bridge and desktop session persistence
+        let bytes = serde_json::to_vec(&result.session)?;
+        self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
+        Ok(result)
     }
 
-    pub async fn get_session(&self) -> Result<Option<ZeroAuthSession>, AuthError> {
-        match self.store.get_setting(AUTH_SESSION_KEY) {
-            Ok(bytes) => {
-                let session: ZeroAuthSession = serde_json::from_slice(&bytes)?;
-                Ok(Some(session))
-            }
-            Err(aura_os_store::StoreError::NotFound(_)) => Ok(None),
-            Err(e) => Err(AuthError::Store(e)),
-        }
-    }
-
-    pub async fn validate(&self) -> Result<Option<AuthSessionResult>, AuthError> {
-        let session = match self.get_session().await? {
-            Some(s) => s,
-            None => return Ok(None),
-        };
-
-        debug!("Validating stored auth token against zOS-api");
-        match self.fetch_user_info(&session.access_token).await {
-            Ok(user) => {
-                let now = Utc::now();
-                let mut updated = ZeroAuthSession {
-                    user_id: user.id,
-                    network_user_id: session.network_user_id,
-                    profile_id: session.profile_id,
-                    display_name: build_display_name(&user.profile_summary, &user.primary_zid),
-                    profile_image: if session.profile_image.starts_with("http") {
-                        session.profile_image.clone()
-                    } else {
-                        String::new()
-                    },
-                    primary_zid: user.primary_zid.unwrap_or_default(),
-                    zero_wallet: user.primary_wallet_address.unwrap_or_default(),
-                    wallets: user
-                        .wallets
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(|w| w.public_address)
-                        .collect(),
-                    access_token: session.access_token,
-                    is_zero_pro: session.is_zero_pro,
-                    created_at: session.created_at,
-                    validated_at: now,
-                };
-
-                let mut zero_pro_refresh_error = None;
-                match self.fetch_is_zero_pro(&updated.access_token).await {
-                    Ok(is_zero_pro) => {
-                        updated.is_zero_pro = is_zero_pro;
-                    }
-                    Err(err) => {
-                        zero_pro_refresh_error = Some(zero_pro_refresh_error_message());
-                        warn!(
-                            error = %err,
-                            user_id = %updated.user_id,
-                            "validated auth session but could not refresh ZERO Pro entitlement"
-                        );
-                    }
-                }
-
-                let bytes = serde_json::to_vec(&updated)?;
-                self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
-                Ok(Some(AuthSessionResult {
-                    session: updated,
-                    zero_pro_refresh_error,
-                }))
-            }
-            Err(AuthError::ZosApi { status: 401, .. }) => {
-                warn!("Stored auth token is invalid/expired, clearing session");
-                let _ = self.store.delete_setting(AUTH_SESSION_KEY);
-                Ok(None)
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    pub async fn logout(&self) -> Result<(), AuthError> {
-        if let Some(session) = self.get_session().await? {
+    pub async fn logout(&self, token: Option<&str>) -> Result<(), AuthError> {
+        if let Some(jwt) = token {
             debug!("Logging out via zOS-api");
             let _ = self
                 .http
                 .delete(format!("{ZOS_API_URL}/authentication/session"))
-                .bearer_auth(&session.access_token)
+                .bearer_auth(jwt)
                 .send()
                 .await;
         }
-        let _ = self.store.delete_setting(AUTH_SESSION_KEY);
         Ok(())
     }
 
@@ -286,7 +208,17 @@ impl AuthService {
             .map_err(AuthError::Http)
     }
 
-    async fn fetch_and_store_session(
+    /// Validate a JWT token against zOS without reading from or writing to RocksDB.
+    /// Returns a fresh session built from the zOS user info and Pro status.
+    /// `network_user_id` and `profile_id` will be `None` — populated later
+    /// by `sync_user_to_network` on the server side.
+    pub async fn validate_token(&self, token: &str) -> Result<AuthSessionResult, AuthError> {
+        debug!("Validating token against zOS-api");
+        self.build_session_from_token(token).await
+    }
+
+    /// Build a `ZeroAuthSession` from a token by fetching user info and Pro status from zOS.
+    async fn build_session_from_token(
         &self,
         access_token: &str,
     ) -> Result<AuthSessionResult, AuthError> {
@@ -327,13 +259,12 @@ impl AuthService {
             }
         }
 
-        let bytes = serde_json::to_vec(&session)?;
-        self.store.put_setting(AUTH_SESSION_KEY, &bytes)?;
         Ok(AuthSessionResult {
             session,
             zero_pro_refresh_error,
         })
     }
+
 }
 
 fn build_display_name(profile: &Option<ZosProfileSummary>, primary_zid: &Option<String>) -> String {

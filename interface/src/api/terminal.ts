@@ -1,3 +1,4 @@
+import { authHeaders, getStoredJwt } from "../lib/auth-token";
 import { resolveApiUrl, resolveWsUrl } from "../lib/host-config";
 
 export interface TerminalInfo {
@@ -25,8 +26,7 @@ export async function spawnTerminal(opts: {
 }): Promise<SpawnTerminalResponse> {
   const res = await fetch(resolveApiUrl("/api/terminal"), {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(opts),
   });
   if (!res.ok) throw new Error(`Spawn terminal failed: ${res.statusText}`);
@@ -34,7 +34,9 @@ export async function spawnTerminal(opts: {
 }
 
 export async function listTerminals(): Promise<TerminalInfo[]> {
-  const res = await fetch(resolveApiUrl("/api/terminal"), { credentials: "include" });
+  const res = await fetch(resolveApiUrl("/api/terminal"), {
+    headers: authHeaders(),
+  });
   if (!res.ok) throw new Error(`List terminals failed: ${res.statusText}`);
   return res.json();
 }
@@ -42,14 +44,21 @@ export async function listTerminals(): Promise<TerminalInfo[]> {
 export async function killTerminal(id: string): Promise<void> {
   const res = await fetch(resolveApiUrl(`/api/terminal/${id}`), {
     method: "DELETE",
-    credentials: "include",
+    headers: authHeaders(),
   });
   if (!res.ok && res.status !== 204)
     throw new Error(`Kill terminal failed: ${res.statusText}`);
 }
 
+function appendWsToken(url: string): string {
+  const jwt = getStoredJwt();
+  if (!jwt) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}token=${encodeURIComponent(jwt)}`;
+}
+
 export function terminalWsUrl(id: string): string {
-  return resolveWsUrl(`/ws/terminal/${id}`);
+  return appendWsToken(resolveWsUrl(`/ws/terminal/${id}`));
 }
 
 // ---------------------------------------------------------------------------
@@ -61,7 +70,7 @@ export function terminalWsUrl(id: string): string {
 // ---------------------------------------------------------------------------
 
 export function remoteTerminalWsUrl(agentId: string): string {
-  return resolveWsUrl(
-    `/ws/agents/${agentId}/remote_agent/terminal`,
+  return appendWsToken(
+    resolveWsUrl(`/ws/agents/${agentId}/remote_agent/terminal`),
   );
 }

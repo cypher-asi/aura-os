@@ -8,7 +8,8 @@ use futures_util::StreamExt;
 use tokio_tungstenite::tungstenite;
 
 use aura_os_network::NetworkClient;
-use aura_os_store::RocksStore;
+
+use crate::state::ValidationCache;
 
 fn wrap_network_event(text: &str) -> Option<serde_json::Value> {
     match serde_json::from_str::<serde_json::Value>(text) {
@@ -60,11 +61,63 @@ async fn read_ws_messages(
     }
 }
 
+/// Pick any valid JWT from the validation cache for the bridge connection.
+fn get_cached_jwt(cache: &ValidationCache) -> Option<String> {
+    cache.iter().next().map(|entry| entry.key().clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::CachedSession;
+    use chrono::Utc;
+    use std::time::Instant;
+
+    fn make_session() -> aura_os_core::ZeroAuthSession {
+        aura_os_core::ZeroAuthSession {
+            user_id: "u1".into(),
+            network_user_id: None,
+            profile_id: None,
+            display_name: "Test".into(),
+            profile_image: String::new(),
+            primary_zid: "0://test".into(),
+            zero_wallet: "0x0".into(),
+            wallets: vec![],
+            access_token: "the-jwt".into(),
+            is_zero_pro: false,
+            created_at: Utc::now(),
+            validated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn get_cached_jwt_returns_none_when_empty() {
+        let cache: ValidationCache = Arc::new(dashmap::DashMap::new());
+        assert!(get_cached_jwt(&cache).is_none());
+    }
+
+    #[test]
+    fn get_cached_jwt_returns_jwt_when_populated() {
+        let cache: ValidationCache = Arc::new(dashmap::DashMap::new());
+        cache.insert(
+            "my-jwt".into(),
+            CachedSession {
+                session: make_session(),
+                validated_at: Instant::now(),
+            },
+        );
+        assert_eq!(get_cached_jwt(&cache).unwrap(), "my-jwt");
+    }
+}
+
 /// Connects to the aura-network WebSocket and rebroadcasts social events
 /// (feed activity, follows, usage updates) on the local event_broadcast channel.
+///
+/// Uses a JWT from the validation cache (populated when a user logs in)
+/// to authenticate with aura-network.
 pub(crate) fn spawn_network_ws_bridge(
     client: Arc<NetworkClient>,
-    store: Arc<RocksStore>,
+    cache: ValidationCache,
     broadcast_tx: broadcast::Sender<serde_json::Value>,
 ) {
     tokio::spawn(async move {
@@ -72,10 +125,10 @@ pub(crate) fn spawn_network_ws_bridge(
         let max_backoff = Duration::from_secs(60);
 
         loop {
-            let jwt = match store.get_jwt() {
+            let jwt = match get_cached_jwt(&cache) {
                 Some(jwt) => jwt,
                 None => {
-                    debug!("No session available for network WS bridge, retrying...");
+                    debug!("No cached session for network WS bridge, retrying...");
                     tokio::time::sleep(Duration::from_secs(10)).await;
                     continue;
                 }

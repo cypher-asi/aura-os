@@ -13,12 +13,11 @@ use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_tasks::TaskService;
 
 use super::agents::conversions_pub::resolve_workspace_path;
-use super::projects_helpers::optional_jwt;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::persistence;
 use crate::state::{
-    ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
+    ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -915,16 +914,17 @@ fn forward_automaton_events(params: ForwardParams) {
 
 pub(crate) async fn start_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
-    super::billing::require_credits(&state).await?;
+    super::billing::require_credits(&state, &jwt).await?;
 
     let agent_instance_id = params
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let jwt = optional_jwt(&state);
+    let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
@@ -1402,16 +1402,17 @@ pub(crate) async fn get_loop_status(
 
 pub(crate) async fn run_single_task(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
-    super::billing::require_credits(&state).await?;
+    super::billing::require_credits(&state, &jwt).await?;
 
     let agent_instance_id = params
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let jwt = optional_jwt(&state);
+    let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");

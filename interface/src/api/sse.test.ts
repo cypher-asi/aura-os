@@ -193,7 +193,7 @@ describe("streamSSE", () => {
     expect(callbacks.onEvent).toHaveBeenCalledWith("delta", { x: 1 });
   });
 
-  it("passes credentials include and signal to fetch", async () => {
+  it("passes auth headers and signal to fetch", async () => {
     const controller = new AbortController();
     const { fetchFn } = mockSSEFetch(200, []);
     globalThis.fetch = fetchFn;
@@ -204,9 +204,13 @@ describe("streamSSE", () => {
       "/api/stream",
       expect.objectContaining({
         method: "POST",
-        credentials: "include",
+        headers: expect.any(Object),
         signal: controller.signal,
       }),
+    );
+    expect(fetchFn).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 });

@@ -6,16 +6,16 @@ use aura_os_core::{AgentInstanceId, ProjectId, Session, SessionEvent, SessionId,
 use aura_os_sessions::storage_session_to_session;
 
 use crate::error::{map_storage_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::conversions::events_to_session_history;
 
 pub(crate) async fn list_project_sessions(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Session>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     let storage_agents = storage
         .list_project_agents(&project_id.to_string(), &jwt)
@@ -42,10 +42,10 @@ pub(crate) async fn list_project_sessions(
 
 pub(crate) async fn list_sessions(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
 ) -> ApiResult<Json<Vec<Session>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_sessions = storage
         .list_sessions(&agent_instance_id.to_string(), &jwt)
         .await
@@ -63,6 +63,7 @@ pub(crate) async fn list_sessions(
 
 pub(crate) async fn get_session(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
@@ -70,7 +71,6 @@ pub(crate) async fn get_session(
     )>,
 ) -> ApiResult<Json<Session>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let ss = storage
         .get_session(&session_id.to_string(), &jwt)
         .await
@@ -86,6 +86,7 @@ pub(crate) async fn get_session(
 
 pub(crate) async fn list_session_tasks(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
@@ -93,7 +94,6 @@ pub(crate) async fn list_session_tasks(
     )>,
 ) -> ApiResult<Json<Vec<Task>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     storage
         .get_session(&session_id.to_string(), &jwt)
@@ -121,6 +121,7 @@ pub(crate) async fn list_session_tasks(
 
 pub(crate) async fn list_session_events(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, _agent_instance_id, session_id)): Path<(
         ProjectId,
         AgentInstanceId,
@@ -128,7 +129,6 @@ pub(crate) async fn list_session_events(
     )>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     let events = storage
         .list_events(&session_id.to_string(), &jwt, None, None)

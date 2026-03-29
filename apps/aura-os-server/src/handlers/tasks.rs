@@ -11,7 +11,7 @@ use aura_os_tasks::TaskService;
 use super::projects_helpers::project_tool_session_config;
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct TaskQueryParams {
@@ -27,10 +27,10 @@ pub(crate) fn storage_task_to_task(s: StorageTask) -> Result<Task, String> {
 
 pub(crate) async fn list_tasks(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Vec<Task>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_tasks = storage
         .list_tasks(&project_id.to_string(), &jwt)
         .await
@@ -45,10 +45,10 @@ pub(crate) async fn list_tasks(
 
 pub(crate) async fn list_tasks_by_spec(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((project_id, spec_id)): Path<(ProjectId, SpecId)>,
 ) -> ApiResult<Json<Vec<Task>>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let storage_tasks = storage
         .list_tasks(&project_id.to_string(), &jwt)
         .await
@@ -64,6 +64,7 @@ pub(crate) async fn list_tasks_by_spec(
 
 pub(crate) async fn extract_tasks(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<TaskQueryParams>,
 ) -> ApiResult<Json<Vec<Task>>> {
@@ -78,7 +79,7 @@ pub(crate) async fn extract_tasks(
         HarnessMode::Local
     };
     let harness = state.harness_for(harness_mode);
-    let session_config = project_tool_session_config(&state, &project_id, "task-extract")?;
+    let session_config = project_tool_session_config(&state, &project_id, "task-extract", &jwt);
     let session = harness
         .open_session(session_config)
         .await
@@ -97,7 +98,6 @@ pub(crate) async fn extract_tasks(
         match event {
             HarnessOutbound::AssistantMessageEnd(_) => {
                 let storage = state.require_storage_client()?;
-                let jwt = state.get_jwt()?;
                 let storage_tasks = storage
                     .list_tasks(&project_id.to_string(), &jwt)
                     .await
@@ -121,11 +121,11 @@ pub(crate) async fn extract_tasks(
 
 pub(crate) async fn transition_task(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
     Json(req): Json<TransitionTaskRequest>,
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     let current = storage
         .get_task(&task_id.to_string(), &jwt)
@@ -173,10 +173,10 @@ pub(crate) async fn transition_task(
 
 pub(crate) async fn retry_task(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<Task>> {
     let storage = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
 
     let current = storage
         .get_task(&task_id.to_string(), &jwt)
@@ -299,6 +299,7 @@ async fn fetch_task_output_from_storage(
 
 pub(crate) async fn get_task_output(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {
     // Check the in-memory cache first (covers active and recently completed tasks).
@@ -319,7 +320,7 @@ pub(crate) async fn get_task_output(
     }
 
     // Fall back to persisted storage.
-    if let (Some(storage), Ok(jwt)) = (state.storage_client.as_ref(), state.get_jwt()) {
+    if let Some(storage) = state.storage_client.as_ref() {
         if let Some(resp) = fetch_task_output_from_storage(storage, &jwt, &task_id).await {
             return Ok(Json(resp));
         }
