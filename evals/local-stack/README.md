@@ -69,6 +69,7 @@ That makes it possible to:
 - `bin/run-service.sh`
 - `bin/bootstrap-auth.sh`
 - `bin/run-benchmark.sh`
+- `bin/run-one-shot.sh`
 
 ## Prerequisites
 
@@ -140,7 +141,24 @@ AURA_STACK_HARNESS_ALLOWED_COMMANDS=npm,node,npx,pnpm,bun,cargo,python,python3,p
 
 ## Bring the stack up
 
-The shortest setup is now:
+The simplest end-to-end test command is:
+
+```bash
+./evals/local-stack/bin/run-one-shot.sh "Hello world static site benchmark"
+```
+
+That command will:
+
+- tear down any previous local stack
+- bring the local stack up
+- run the live benchmark
+- clean up the benchmark agent/project artifacts
+- tear the stack back down when it finishes
+
+Set `AURA_STACK_KEEP_UP=1` if you want the services to remain up afterward for
+manual inspection.
+
+If you want the stack to stay up for normal local work, the shortest setup is:
 
 ```bash
 ./evals/local-stack/bin/up-all.sh
@@ -226,6 +244,12 @@ Or use the helper:
 ```bash
 ./evals/local-stack/bin/run-benchmark.sh
 ./evals/local-stack/bin/run-benchmark.sh "Hello world static site benchmark"
+```
+
+Or use the full one-shot runner that handles stack bring-up and teardown too:
+
+```bash
+./evals/local-stack/bin/run-one-shot.sh "Hello world static site benchmark"
 ```
 
 By default the live benchmark now cleans up the project agent, project, and
