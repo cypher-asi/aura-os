@@ -79,10 +79,15 @@ export function agenticToolLabel(toolName: string, arg?: string): string {
     case "edit_file": return shortArg ? `Edit \`${shortArg}\`` : "Edit file";
     case "delete_file": return shortArg ? `Delete \`${shortArg}\`` : "Delete file";
     case "list_files": return shortArg ? `List \`${shortArg}\`` : "List files";
+    case "find_files": return shortArg ? `Find \`${shortArg}\`` : "Find files";
     case "search_code": return shortArg ? `Search: ${shortArg}` : "Search code";
     case "run_command": return shortArg ? `Run: \`${shortArg}\`` : "Run command";
+    case "stat_file": return shortArg ? `Info: \`${shortArg}\`` : "File info";
+    case "submit_plan": return "Submit plan";
     case "task_done": return "Task complete";
-    case "get_task_context": return "Load task context";
+    case "get_task_context": return "Load context";
+    case "git_commit": return shortArg ? `Commit ${shortArg}` : "Commit code";
+    case "git_push": return shortArg ? `Push ${shortArg}` : "Push code";
     default: return shortArg ? `${toolName}: ${shortArg}` : `Tool: ${toolName}`;
   }
 }

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { FileText, CheckCircle2, XCircle, Search, Terminal, Trash2, FolderOpen, Wrench } from "lucide-react";
+import { FileText, CheckCircle2, XCircle, Search, Terminal, Trash2, FolderOpen, Wrench, GitCommitHorizontal, Upload, CheckSquare, ClipboardList } from "lucide-react";
 import { useStreamSafeContent } from "../../hooks/use-stream-safe-content";
 import styles from "./SegmentedContent.module.css";
 
@@ -58,9 +58,14 @@ function inlineToolIcon(name: string) {
     case "write_file":
     case "edit_file": return <FileText size={size} />;
     case "delete_file": return <Trash2 size={size} />;
-    case "list_files": return <FolderOpen size={size} />;
+    case "list_files":
+    case "find_files": return <FolderOpen size={size} />;
     case "search_code": return <Search size={size} />;
     case "run_command": return <Terminal size={size} />;
+    case "git_commit": return <GitCommitHorizontal size={size} />;
+    case "git_push": return <Upload size={size} />;
+    case "task_done": return <CheckSquare size={size} />;
+    case "submit_plan": return <ClipboardList size={size} />;
     default: return <Wrench size={size} />;
   }
 }
@@ -77,8 +82,15 @@ function inlineToolLabel(name: string, arg?: string): string {
     case "edit_file": return short ? `Edit \`${short}\`` : "Edit file";
     case "delete_file": return short ? `Delete \`${short}\`` : "Delete file";
     case "list_files": return short ? `List \`${short}\`` : "List files";
+    case "find_files": return short ? `Find \`${short}\`` : "Find files";
     case "search_code": return short ? `Search: ${short}` : "Search code";
     case "run_command": return short ? `Run: \`${short}\`` : "Run command";
+    case "stat_file": return short ? `Info: \`${short}\`` : "File info";
+    case "submit_plan": return "Submit plan";
+    case "task_done": return "Task complete";
+    case "get_task_context": return "Load context";
+    case "git_commit": return short ? `Commit ${short}` : "Commit code";
+    case "git_push": return short ? `Push ${short}` : "Push code";
     default: return short ? `${name}: ${short}` : `Tool: ${name}`;
   }
 }

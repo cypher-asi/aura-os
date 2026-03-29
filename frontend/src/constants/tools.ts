@@ -17,14 +17,29 @@ export const TOOL_LABELS: Record<string, string> = {
   stop_dev_loop: "Stop dev loop",
   read_file: "Read file",
   write_file: "Write file",
+  edit_file: "Edit file",
   delete_file: "Delete file",
   list_files: "List files",
+  find_files: "Find files",
+  search_code: "Search code",
+  run_command: "Run command",
+  stat_file: "File info",
+  submit_plan: "Submit plan",
+  task_done: "Task complete",
+  get_task_context: "Load context",
+  git_commit: "Commit code",
+  git_push: "Push code",
 };
 
 export const TOOL_PHASE_LABELS: Record<string, string> = {
   read_file: "Reading files...",
   write_file: "Writing code...",
+  edit_file: "Editing code...",
   list_files: "Browsing the project...",
+  find_files: "Searching for files...",
+  search_code: "Searching code...",
+  run_command: "Running command...",
+  stat_file: "Checking file info...",
   delete_file: "Cleaning up...",
   create_spec: "Drafting specs...",
   update_spec: "Drafting specs...",
@@ -42,6 +57,11 @@ export const TOOL_PHASE_LABELS: Record<string, string> = {
   stop_dev_loop: "Managing the dev loop...",
   get_project: "Checking the project...",
   update_project: "Checking the project...",
+  submit_plan: "Submitting plan...",
+  task_done: "Finishing up...",
+  get_task_context: "Loading context...",
+  git_commit: "Committing code...",
+  git_push: "Pushing code...",
 };
 
 export const FILE_OPS = new Set(["write_file", "edit_file", "read_file"]);

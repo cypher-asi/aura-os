@@ -112,6 +112,35 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
         if (stage) setters.setProgressText(stage);
       }),
 
+      subscribe(EventType.GitCommitted, (e) => {
+        const c = e.content;
+        if (c.task_id !== taskId) return;
+        const id = crypto.randomUUID();
+        const sha = c.commit_sha?.slice(0, 7) ?? "";
+        handleToolCallStarted(refs, setters, { id, name: "git_commit" });
+        handleToolResult(refs, setters, {
+          id,
+          name: "git_commit",
+          result: sha ? `Committed ${sha}` : "Committed",
+          is_error: false,
+        });
+      }),
+
+      subscribe(EventType.GitPushed, (e) => {
+        const c = e.content;
+        if (c.task_id !== taskId) return;
+        const id = crypto.randomUUID();
+        const count = c.commits?.length ?? 0;
+        const branch = c.branch ?? "main";
+        handleToolCallStarted(refs, setters, { id, name: "git_push" });
+        handleToolResult(refs, setters, {
+          id,
+          name: "git_push",
+          result: `Pushed ${count} commit${count !== 1 ? "s" : ""} to ${branch}`,
+          is_error: false,
+        });
+      }),
+
       subscribe(EventType.TaskCompleted, (e) => {
         if (e.content.task_id !== taskId) return;
         finalizeStream(refs, setters, abortRef, isStreamingRef.current);
