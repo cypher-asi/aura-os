@@ -15,6 +15,29 @@ use crate::error::{ApiError, ApiResult};
 use crate::persistence;
 use crate::state::{ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache};
 
+/// Resolve the effective git clone URL for a project. If `git_repo_url` is set,
+/// use it directly. Otherwise construct from `orbit_base_url` (or `ORBIT_BASE_URL`
+/// env var) combined with `orbit_owner` / `orbit_repo`.
+fn resolve_git_repo_url(project: Option<&aura_os_core::Project>) -> Option<String> {
+    let p = project?;
+    if let Some(ref url) = p.git_repo_url {
+        if !url.is_empty() {
+            return Some(url.clone());
+        }
+    }
+    let owner = p.orbit_owner.as_deref().filter(|s| !s.is_empty())?;
+    let repo = p.orbit_repo.as_deref().filter(|s| !s.is_empty())?;
+    let base = p
+        .orbit_base_url
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .or_else(|| std::env::var("ORBIT_BASE_URL").ok())
+        .filter(|s| !s.is_empty())?;
+    let base = base.trim_end_matches('/');
+    Some(format!("{base}/{owner}/{repo}.git"))
+}
+
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct LoopQueryParams {
     pub agent_instance_id: Option<AgentInstanceId>,
@@ -466,7 +489,7 @@ pub(crate) async fn start_loop(
         model: None,
         workspace_root: Some(project_path),
         task_id: None,
-        git_repo_url: project.as_ref().and_then(|p| p.git_repo_url.clone()),
+        git_repo_url: resolve_git_repo_url(project.as_ref()),
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
     };
 
@@ -862,7 +885,7 @@ pub(crate) async fn run_single_task(
             model: None,
             workspace_root: Some(project_path),
             task_id: Some(task_id.to_string()),
-            git_repo_url: project.as_ref().and_then(|p| p.git_repo_url.clone()),
+            git_repo_url: resolve_git_repo_url(project.as_ref()),
             git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
         })
         .await
