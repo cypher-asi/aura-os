@@ -230,7 +230,7 @@ pub struct CreateTaskRequest {
     pub dependency_ids: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTaskRequest {
     #[serde(skip_serializing_if = "Option::is_none")]

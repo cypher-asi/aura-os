@@ -65,6 +65,8 @@ pub struct CachedTaskOutput {
     pub session_id: Option<String>,
     pub agent_instance_id: Option<String>,
     pub project_id: Option<String>,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
 }
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
 

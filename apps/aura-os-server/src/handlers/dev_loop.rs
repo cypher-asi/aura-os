@@ -225,12 +225,12 @@ fn forward_automaton_events(params: ForwardParams) {
                             current_task_id = Some(tid.to_owned());
                             let session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
                             let mut cache = task_output_cache.lock().await;
-                            cache.insert(tid.to_owned(), CachedTaskOutput {
-                                project_id: Some(pid.clone()),
-                                agent_instance_id: Some(aiid.clone()),
-                                session_id,
-                                ..Default::default()
-                            });
+                            let entry = cache.entry(tid.to_owned()).or_default();
+                            entry.project_id = Some(pid.clone());
+                            entry.agent_instance_id = Some(aiid.clone());
+                            if session_id.is_some() {
+                                entry.session_id = session_id;
+                            }
                         }
                     }
 
@@ -297,6 +297,14 @@ fn forward_automaton_events(params: ForwardParams) {
                                 "test_verification_started" | "test_verification_passed"
                                 | "test_verification_failed" | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
+                                }
+                                "token_usage" => {
+                                    if let Some(input) = event.get("input_tokens").and_then(|v| v.as_u64()) {
+                                        entry.input_tokens += input;
+                                    }
+                                    if let Some(output) = event.get("output_tokens").and_then(|v| v.as_u64()) {
+                                        entry.output_tokens += output;
+                                    }
                                 }
                                 _ => {}
                             }
