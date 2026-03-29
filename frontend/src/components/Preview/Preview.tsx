@@ -173,9 +173,11 @@ export function PreviewContent() {
     : null
     : null;
 
+  const shouldAutoScroll = displayItem?.kind === "task";
+
   useEffect(() => {
-    autoScrollRef.current = true;
-  }, [resetKey]);
+    autoScrollRef.current = shouldAutoScroll;
+  }, [resetKey, shouldAutoScroll]);
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -199,13 +201,17 @@ export function PreviewContent() {
     const observer = new MutationObserver(scrollIfNeeded);
     observer.observe(el, { childList: true, subtree: true, characterData: true });
 
-    scrollIfNeeded();
+    if (shouldAutoScroll) {
+      scrollIfNeeded();
+    } else {
+      el.scrollTop = 0;
+    }
 
     return () => {
       observer.disconnect();
       el.removeEventListener("scroll", onScroll);
     };
-  }, [resetKey]);
+  }, [resetKey, shouldAutoScroll]);
 
   return (
     <div ref={bodyRef} className={styles.previewBody}>

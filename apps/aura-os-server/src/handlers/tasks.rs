@@ -87,6 +87,7 @@ pub(crate) async fn extract_tasks(
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: format!("Extract tasks for project {project_id}"),
+            tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
 

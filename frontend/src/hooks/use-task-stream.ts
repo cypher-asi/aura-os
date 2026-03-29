@@ -13,6 +13,27 @@ import {
 } from "./use-stream-core";
 import { getThinkingDurationMs } from "./stream/store";
 
+function debugTaskStreamLog(hypothesisId: string, location: string, message: string, data: Record<string, unknown>) {
+  // #region agent log
+  fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "b85524",
+    },
+    body: JSON.stringify({
+      sessionId: "b85524",
+      runId: "initial",
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
 /**
  * Bridges global WebSocket task events into the shared stream store,
  * reusing the same handlers and rendering path as the chat UI.
@@ -27,6 +48,11 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
 
     const unsubs = [
       subscribe(EventType.TaskStarted, (e) => {
+        debugTaskStreamLog("H3", "use-task-stream.ts:52", "TaskStarted seen by subscription", {
+          subscribedTaskId: taskId,
+          eventTaskId: e.content.task_id,
+          streamKey: key,
+        });
         if (e.content.task_id !== taskId) return;
         resetStreamBuffers(refs, setters);
         setters.setIsStreaming(true);
@@ -35,6 +61,12 @@ export function useTaskStream(taskId: string | undefined): { streamKey: string }
 
       subscribe(EventType.TextDelta, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
+        debugTaskStreamLog("H3", "use-task-stream.ts:63", "TextDelta seen by subscription", {
+          subscribedTaskId: taskId,
+          eventTaskId: (c.task_id as string | undefined) ?? null,
+          streamKey: key,
+          hasText: typeof c.text === "string" && (c.text as string).length > 0,
+        });
         if (c.task_id !== taskId) return;
         const text = (c.text as string) ?? "";
         if (text) handleTextDelta(refs, setters, getThinkingDurationMs(key), text);

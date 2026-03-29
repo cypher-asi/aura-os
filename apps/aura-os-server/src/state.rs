@@ -35,6 +35,7 @@ pub(crate) type HarnessSessionRegistry = Arc<Mutex<HashMap<AgentInstanceId, Acti
 pub struct ActiveAutomaton {
     pub automaton_id: String,
     pub project_id: ProjectId,
+    pub harness_base_url: String,
 }
 pub(crate) type AutomatonRegistry = Arc<Mutex<HashMap<AgentInstanceId, ActiveAutomaton>>>;
 

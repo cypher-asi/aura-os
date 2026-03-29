@@ -687,6 +687,7 @@ async fn open_harness_chat_stream(
     commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: user_content,
+            tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 

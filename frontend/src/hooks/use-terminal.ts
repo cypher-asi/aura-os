@@ -117,8 +117,12 @@ export function useTerminal(opts: UseTerminalOptions = {}): UseTerminalReturn {
           socket.close();
           return;
         }
+        const spawnPayload: Record<string, unknown> = { type: "spawn", cols, rows };
+        if (opts.cwd) {
+          spawnPayload.cwd = opts.cwd;
+        }
         socket.send(
-          JSON.stringify({ type: "spawn", cols, rows }),
+          JSON.stringify(spawnPayload),
         );
         setConnected(true);
       };

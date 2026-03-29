@@ -219,7 +219,7 @@ fn maybe_spawn_local_harness() {
     }
 
     match cmd.spawn() {
-        Ok(child) => {
+        Ok(mut child) => {
             info!(
                 pid = child.id(),
                 "aura-harness child process spawned (building in background)"
@@ -229,6 +229,10 @@ fn maybe_spawn_local_harness() {
                 let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
                 loop {
                     std::thread::sleep(std::time::Duration::from_millis(1000));
+                    if let Ok(Some(status)) = child.try_wait() {
+                        let _ = status;
+                        break;
+                    }
                     if std::time::Instant::now() > deadline {
                         tracing::warn!("Timed out waiting for local harness to become ready");
                         break;
@@ -251,6 +255,10 @@ fn maybe_spawn_local_harness() {
     }
 }
 
+pub(crate) fn ensure_local_harness_running() {
+    maybe_spawn_local_harness();
+}
+
 pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let data_dir = db_path
         .parent()
@@ -260,7 +268,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
 
-    maybe_spawn_local_harness();
+    ensure_local_harness_running();
 
     let core = init_core_services(&store);
     let domain = init_domain_services(&store, &network_client, &storage_client);

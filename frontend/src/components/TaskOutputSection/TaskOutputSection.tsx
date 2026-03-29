@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GroupCollapsible } from "@cypher-asi/zui";
 import { ClipboardCopy, Check } from "lucide-react";
 import { MessageBubble } from "../MessageBubble";
@@ -175,6 +175,38 @@ export function TaskOutputSection({ isActive, streamKey, taskId, task, taskOutpu
   const hasStreamContent = events.length > 0 || hasLiveContent;
   const hasFallback = !hasStreamContent && !!fallbackText;
   const hasContent = hasStreamContent || hasFallback;
+
+  useEffect(() => {
+    if (!isActive) return;
+    // #region agent log
+    fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "b85524",
+      },
+      body: JSON.stringify({
+        sessionId: "b85524",
+        runId: "initial",
+        hypothesisId: "H4",
+        location: "TaskOutputSection.tsx:183",
+        message: "Task output render state",
+        data: {
+          taskId: taskId ?? null,
+          streamKey,
+          isActive,
+          hasStreamContent,
+          hasFallback,
+          isStreaming,
+          streamingTextLength: streamingText.length,
+          eventsLength: events.length,
+          fallbackLength: fallbackText.length,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [isActive, taskId, streamKey, hasStreamContent, hasFallback, isStreaming, streamingText.length, events.length, fallbackText.length]);
 
   const handleCopy = useCallback(() => {
     if (!task) return;

@@ -15,9 +15,10 @@ export function ProjectMainPanel({ children }: { children?: ReactNode }) {
   const setCwd = useTerminalPanelStore((s) => s.setCwd);
   const setRemoteAgentId = useTerminalPanelStore((s) => s.setRemoteAgentId);
 
-  const { remoteAgentId, status } = useTerminalTarget({ projectId, agentInstanceId });
+  const { remoteAgentId, remoteWorkspacePath, status } = useTerminalTarget({ projectId, agentInstanceId });
+  const terminalCwd = remoteAgentId ? remoteWorkspacePath : cwd;
 
-  useEffect(() => { setCwd(cwd); }, [cwd, setCwd]);
+  useEffect(() => { setCwd(terminalCwd); }, [setCwd, terminalCwd]);
 
   useEffect(() => {
     if (status !== "ready") return;
