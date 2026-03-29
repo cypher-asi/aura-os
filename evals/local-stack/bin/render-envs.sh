@@ -95,9 +95,16 @@ write_export "$aura_os_env" "AURA_ALLOW_AUTH_TOKEN_IMPORT" "1"
 write_optional_export "$aura_os_env" "AURA_NETWORK_URL" "$network_url"
 write_optional_export "$aura_os_env" "AURA_STORAGE_URL" "$storage_url"
 write_optional_export "$aura_os_env" "ORBIT_BASE_URL" "$orbit_url"
-write_optional_export "$aura_os_env" "LOCAL_HARNESS_URL" "$harness_url"
 write_optional_export "$aura_os_env" "SWARM_BASE_URL" "$harness_url"
-write_optional_export "$aura_os_env" "AURA_HARNESS_DIR" "$AURA_STACK_HARNESS_DIR"
+if stack_is_local harness; then
+  write_optional_export "$aura_os_env" "LOCAL_HARNESS_URL" "$harness_url"
+  write_optional_export "$aura_os_env" "AURA_HARNESS_DIR" "$AURA_STACK_HARNESS_DIR"
+  write_export "$aura_os_env" "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN" "0"
+else
+  printf 'unset LOCAL_HARNESS_URL\n' >>"$aura_os_env"
+  printf 'unset AURA_HARNESS_DIR\n' >>"$aura_os_env"
+  write_export "$aura_os_env" "AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN" "1"
+fi
 write_optional_export "$aura_os_env" "AURA_ROUTER_URL" "$AURA_STACK_ROUTER_URL"
 write_optional_export "$aura_os_env" "Z_BILLING_URL" "$AURA_STACK_BILLING_URL"
 

@@ -111,11 +111,11 @@ AURA_STACK_NETWORK_MODE=remote
 AURA_STACK_REMOTE_NETWORK_URL=https://aura-network.onrender.com
 ```
 
-Or use the built-in hybrid preset that keeps `aura-os`, frontend, and the host
-harness local while targeting the deployed Render core services:
+Or use the built-in hybrid preset that keeps `aura-os` and the frontend local
+while targeting deployed services for the rest of the stack:
 
 ```bash
-AURA_STACK_PRESET=hybrid-render
+AURA_STACK_PRESET=hybrid-swarm
 ```
 
 That preset currently maps to:
@@ -123,6 +123,7 @@ That preset currently maps to:
 - `https://aura-network.onrender.com`
 - `https://aura-storage.onrender.com`
 - `https://orbit-sfvu.onrender.com`
+- `http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com`
 
 Supported modes are:
 
@@ -181,7 +182,7 @@ If you want the stack to stay up for normal local work, the shortest setup is:
 ./evals/local-stack/bin/up-all.sh
 ```
 
-For the Render-backed hybrid setup, use:
+For the swarm-backed hybrid setup, use:
 
 ```bash
 ./evals/local-stack/bin/up-hybrid.sh
@@ -269,7 +270,7 @@ Or use the helper:
 ./evals/local-stack/bin/run-benchmark.sh "Hello world static site benchmark"
 ```
 
-For the Render-backed hybrid lane:
+For the swarm-backed hybrid lane:
 
 ```bash
 ./evals/local-stack/bin/run-hybrid-benchmark.sh
@@ -298,11 +299,12 @@ org churn because there is no org delete route yet.
 The hybrid preset is meant for the common developer setup where:
 
 - Aura OS and the frontend run locally
-- the build loop still uses a local host harness
-- `aura-network`, `aura-storage`, and `orbit` point at deployed Render services
+- `aura-network`, `aura-storage`, and `orbit` point at deployed services
+- remote agent execution points at the swarm gateway
 
 That gives you a realistic remote-backed workflow without needing every sibling
-repo running locally. If your deployed Aura app already has a valid session, set
+repo running locally. In this mode the local harness autospawn is disabled so
+Aura OS does not silently fall back to localhost execution. If your deployed Aura app already has a valid session, set
 `AURA_STACK_AUTH_SOURCE_URL` to that host before running `up-hybrid.sh` or
 `run-hybrid-one-shot.sh` so the local Aura OS instance can import the same auth
 session automatically.

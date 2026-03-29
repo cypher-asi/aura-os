@@ -91,22 +91,27 @@ stack_apply_preset() {
   case "$AURA_STACK_PRESET" in
     ""|local)
       ;;
-    hybrid-render)
+    hybrid-swarm)
       export AURA_STACK_NETWORK_MODE="remote"
       export AURA_STACK_STORAGE_MODE="remote"
       export AURA_STACK_ORBIT_MODE="remote"
-      export AURA_STACK_HARNESS_MODE="local"
-      export AURA_STACK_HARNESS_RUNTIME="host"
+      export AURA_STACK_HARNESS_MODE="remote"
 
       export AURA_STACK_REMOTE_NETWORK_URL="${AURA_STACK_REMOTE_NETWORK_URL:-https://aura-network.onrender.com}"
       export AURA_STACK_REMOTE_STORAGE_URL="${AURA_STACK_REMOTE_STORAGE_URL:-https://aura-storage.onrender.com}"
       export AURA_STACK_REMOTE_ORBIT_URL="${AURA_STACK_REMOTE_ORBIT_URL:-https://orbit-sfvu.onrender.com}"
+      export AURA_STACK_REMOTE_HARNESS_URL="${AURA_STACK_REMOTE_HARNESS_URL:-http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com}"
       if [[ -z "${AURA_STACK_EVAL_BUNDLE_ID:-}" || "${AURA_STACK_EVAL_BUNDLE_ID}" == "local-stack" ]]; then
-        export AURA_STACK_EVAL_BUNDLE_ID="hybrid-render"
+        export AURA_STACK_EVAL_BUNDLE_ID="hybrid-swarm"
       fi
       ;;
+    hybrid-render)
+      export AURA_STACK_PRESET="hybrid-swarm"
+      stack_apply_preset
+      return
+      ;;
     *)
-      echo "Invalid AURA_STACK_PRESET: ${AURA_STACK_PRESET}. Expected local or hybrid-render." >&2
+      echo "Invalid AURA_STACK_PRESET: ${AURA_STACK_PRESET}. Expected local or hybrid-swarm." >&2
       exit 1
       ;;
   esac
