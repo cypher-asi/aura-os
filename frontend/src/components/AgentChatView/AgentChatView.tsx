@@ -39,17 +39,23 @@ export function AgentChatView() {
   const mode: ChatMode = projectId && agentInstanceId ? "project" : "agent";
   const entityId = mode === "project" ? agentInstanceId : agentId;
 
-  // ── Agent-mode: derive projects where this agent has an instance ────
-  const projects = useProjectsListStore((s) => s.projects);
+  // ── Derive project list for the dropdown ─────────────────────────────
+  const allProjects = useProjectsListStore((s) => s.projects);
   const agentsByProject = useProjectsListStore((s) => s.agentsByProject);
 
   const agentProjects = useMemo(() => {
     if (mode !== "agent" || !agentId) return [];
-    return projects.filter((p) => {
+    return allProjects.filter((p) => {
       const instances = agentsByProject[p.project_id];
       return instances?.some((inst) => inst.agent_id === agentId);
     });
-  }, [mode, agentId, projects, agentsByProject]);
+  }, [mode, agentId, allProjects, agentsByProject]);
+
+  const currentProject = useMemo(() => {
+    if (mode !== "project" || !projectId) return [];
+    const found = allProjects.find((p) => p.project_id === projectId);
+    return found ? [found] : [];
+  }, [mode, projectId, allProjects]);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>(() => {
     if (mode !== "agent" || !agentId) return undefined;
@@ -160,8 +166,8 @@ export function AgentChatView() {
       errorMessage={historyError ? historyError : null}
       emptyMessage={mode === "agent" ? "Send a message" : undefined}
       scrollResetKey={entityId}
-      projects={mode === "agent" ? agentProjects : undefined}
-      selectedProjectId={mode === "agent" ? effectiveProjectId : undefined}
+      projects={mode === "agent" ? agentProjects : currentProject}
+      selectedProjectId={mode === "agent" ? effectiveProjectId : projectId}
       onProjectChange={mode === "agent" ? handleProjectChange : undefined}
     />
   );

@@ -197,17 +197,22 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <span className={styles.infoText}>/ for commands</span>
         {projects.length > 0 && (
           <div className={styles.projectMenuWrap} ref={projectMenuRef}>
-            <button type="button" className={styles.projectButton} onClick={() => setProjectMenuOpen((v) => !v)}>
-              <FolderOpen size={10} />{selectedProjectName ?? "Project"}<ChevronDown size={10} />
+            <button
+              type="button"
+              className={styles.projectButton}
+              onClick={onProjectChange ? () => setProjectMenuOpen((v) => !v) : undefined}
+              style={onProjectChange ? undefined : { cursor: "default" }}
+            >
+              <FolderOpen size={10} />{selectedProjectName ?? "Project"}{onProjectChange && <ChevronDown size={10} />}
             </button>
-            {projectMenuOpen && (
+            {projectMenuOpen && onProjectChange && (
               <div className={styles.projectMenu}>
                 {projects.map((p) => (
                   <button
                     key={p.project_id}
                     type="button"
                     className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
-                    onClick={() => { onProjectChange?.(p.project_id); setProjectMenuOpen(false); }}
+                    onClick={() => { onProjectChange(p.project_id); setProjectMenuOpen(false); }}
                   >
                     {p.name}
                   </button>
