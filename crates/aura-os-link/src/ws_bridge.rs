@@ -19,8 +19,8 @@ where
         + 'static,
     <S as futures_util::Sink<WsMessage>>::Error: std::fmt::Display + Send,
 {
-    let (outbound_tx, _) = broadcast::channel::<OutboundMessage>(256);
-    let (raw_tx, _) = broadcast::channel::<serde_json::Value>(256);
+    let (outbound_tx, _) = broadcast::channel::<OutboundMessage>(4096);
+    let (raw_tx, _) = broadcast::channel::<serde_json::Value>(4096);
     let (inbound_tx, mut inbound_rx) = mpsc::unbounded_channel::<InboundMessage>();
 
     let (mut ws_sink, mut ws_stream_read) = ws_stream.split();
