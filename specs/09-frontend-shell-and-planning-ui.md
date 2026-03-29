@@ -10,7 +10,7 @@ Build the React + TypeScript single-page application that runs inside the Rust w
 
 ### Webview Integration
 
-The frontend is a standard React SPA built with Vite, producing static assets (HTML, JS, CSS) that the Rust webview loads. The webview points to `http://localhost:3100` during development and bundles the assets in production. The frontend communicates with the backend exclusively through the HTTP API defined in Spec 08.
+The interface is a standard React SPA built with Vite, producing static assets (HTML, JS, CSS) that the Rust webview loads. The webview points to `http://localhost:3100` during development and bundles the assets in production. The interface communicates with the backend exclusively through the HTTP API defined in Spec 08.
 
 ### App Shell
 
@@ -497,7 +497,7 @@ stateDiagram-v2
 
 | ID | Task | Description |
 |----|------|-------------|
-| T09.1 | Initialize frontend project | `npm create vite@latest frontend -- --template react-ts`, install deps |
+| T09.1 | Initialize interface project | `npm create vite@latest interface -- --template react-ts`, install deps |
 | T09.2 | Implement TypeScript types | `ids.ts`, `enums.ts`, `entities.ts` mirroring Rust types |
 | T09.3 | Implement API client | `api-client.ts` with all endpoints and error handling |
 | T09.4 | Implement App Shell | `AppShell.tsx` with top bar, sidebar, main content area, routing |
@@ -531,5 +531,5 @@ All of the following must pass before proceeding to Spec 10:
 - [ ] Progress dashboard displays correct counts and percentage
 - [ ] Settings view allows entering and masking an API key
 - [ ] API client correctly calls all endpoints and handles errors
-- [ ] Webview shell starts server and loads frontend
+- [ ] Webview shell starts server and loads interface
 - [ ] All views render without console errors

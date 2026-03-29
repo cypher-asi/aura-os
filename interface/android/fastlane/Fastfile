@@ -4,7 +4,7 @@ default_platform(:android)
 require "base64"
 require "shellwords"
 
-def frontend_root
+def interface_root
   File.expand_path("../..", __dir__)
 end
 
@@ -76,7 +76,7 @@ end
 private_lane :sync_android_web_assets do
   # Keep local fastlane runs aligned with CI by rebuilding the bundled web app
   # before Gradle packages the native shell.
-  root = frontend_root.shellescape
+  root = interface_root.shellescape
   sh("cd #{root} && npm run build")
   sh("cd #{root} && npx cap sync android")
 end

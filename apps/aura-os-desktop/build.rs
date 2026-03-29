@@ -25,21 +25,21 @@ fn watch_dir(dir: &Path) {
 
 fn main() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    let frontend_dir = Path::new(&manifest_dir).join("../../frontend");
-    let dist_dir = frontend_dir.join("dist");
+    let interface_dir = Path::new(&manifest_dir).join("../../interface");
+    let dist_dir = interface_dir.join("dist");
 
-    if !frontend_dir.join("package.json").exists() {
+    if !interface_dir.join("package.json").exists() {
         eprintln!(
-            "error: frontend directory not found at {}",
-            frontend_dir.display()
+            "error: interface directory not found at {}",
+            interface_dir.display()
         );
         std::process::exit(1);
     }
 
-    if !frontend_dir.join("node_modules").exists() {
+    if !interface_dir.join("node_modules").exists() {
         let status = npm()
             .arg("install")
-            .current_dir(&frontend_dir)
+            .current_dir(&interface_dir)
             .status()
             .expect("failed to run npm install — is Node.js installed?");
 
@@ -48,31 +48,31 @@ fn main() {
 
     let status = npm()
         .args(["run", "build"])
-        .current_dir(&frontend_dir)
+        .current_dir(&interface_dir)
         .status()
         .expect("failed to run npm run build — is Node.js installed?");
 
     assert!(status.success(), "npm run build failed");
 
-    watch_dir(&frontend_dir.join("src"));
+    watch_dir(&interface_dir.join("src"));
     println!(
         "cargo:rerun-if-changed={}",
-        frontend_dir.join("index.html").display()
+        interface_dir.join("index.html").display()
     );
     println!(
         "cargo:rerun-if-changed={}",
-        frontend_dir.join("package.json").display()
+        interface_dir.join("package.json").display()
     );
     println!(
         "cargo:rerun-if-changed={}",
-        frontend_dir.join("vite.config.ts").display()
+        interface_dir.join("vite.config.ts").display()
     );
     println!(
         "cargo:rerun-if-changed={}",
-        frontend_dir.join("tsconfig.json").display()
+        interface_dir.join("tsconfig.json").display()
     );
 
-    println!("cargo:rustc-env=FRONTEND_DIST_DIR={}", dist_dir.display());
+    println!("cargo:rustc-env=INTERFACE_DIST_DIR={}", dist_dir.display());
 
     // Updater signing public key – set via env var during CI, fall back to a
     // dev placeholder so local `cargo build` still succeeds.

@@ -11,7 +11,7 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::AppState;
 
 // ---------------------------------------------------------------------------
-// Response types — match the frontend's expected shapes
+// Response types — match the interface's expected shapes
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize)]

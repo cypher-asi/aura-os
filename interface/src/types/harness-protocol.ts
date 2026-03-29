@@ -1,7 +1,7 @@
 /**
  * Auto-generated from `aura-protocol` Rust crate via ts-rs.
  *
- * Regenerate with: `npm run codegen:protocol` (from `frontend/`)
+ * Regenerate with: `npm run codegen:protocol` (from `interface/`)
  *
  * DO NOT EDIT BY HAND — changes will be overwritten.
  */

@@ -87,13 +87,13 @@ Recommended commit pattern:
 
 These files are cross-cutting and should only be touched when necessary:
 
-- `frontend/src/components/AppShell.tsx`
-- `frontend/src/hooks/use-aura-capabilities.ts`
-- `frontend/src/api/client.ts`
-- `frontend/src/context/AuthContext.tsx`
-- `frontend/src/hooks/use-event-stream.ts`
-- `frontend/public/sw.js`
-- `frontend/playwright.config.ts`
+- `interface/src/components/AppShell.tsx`
+- `interface/src/hooks/use-aura-capabilities.ts`
+- `interface/src/api/client.ts`
+- `interface/src/context/AuthContext.tsx`
+- `interface/src/hooks/use-event-stream.ts`
+- `interface/public/sw.js`
+- `interface/playwright.config.ts`
 
 If a sub-agent needs one of these:
 
@@ -114,18 +114,18 @@ Goal:
 Deliverables:
 
 - Configurable API and websocket base handling
-- Host status and health model in the frontend
+- Host status and health model in the interface
 - Mobile-safe host selection or host bootstrap flow
 - Development path for LAN/mobile testing
 
 Primary ownership:
 
-- `frontend/src/api/client.ts`
-- `frontend/src/api/terminal.ts`
-- `frontend/src/hooks/use-event-stream.ts`
-- `frontend/src/components/AppShell.tsx`
-- `frontend/src/context/*` if host state needs context
-- `frontend/vite.config.ts`
+- `interface/src/api/client.ts`
+- `interface/src/api/terminal.ts`
+- `interface/src/hooks/use-event-stream.ts`
+- `interface/src/components/AppShell.tsx`
+- `interface/src/context/*` if host state needs context
+- `interface/vite.config.ts`
 - `apps/server/**` only if backend support is required
 
 Out of scope:
@@ -135,13 +135,13 @@ Out of scope:
 
 Acceptance criteria:
 
-- The frontend can target a non-localhost host cleanly
+- The interface can target a non-localhost host cleanly
 - Host online/offline state is visible to the user
 - Playwright can run against an explicit base host without local-only assumptions
 
 Suggested commits:
 
-- `Add configurable frontend host base`
+- `Add configurable interface host base`
 - `Surface host connectivity state in mobile shell`
 - `Document LAN/mobile host workflow`
 
@@ -164,9 +164,9 @@ Deliverables:
 
 Primary ownership:
 
-- `frontend/src/context/AuthContext.tsx`
-- `frontend/src/views/LoginView.tsx`
-- `frontend/src/api/client.ts`
+- `interface/src/context/AuthContext.tsx`
+- `interface/src/views/LoginView.tsx`
+- `interface/src/api/client.ts`
 - `apps/server/**`
 - `crates/domain/auth/**`
 - `crates/domain/sessions/**`
@@ -208,13 +208,13 @@ Deliverables:
 
 Primary ownership:
 
-- `frontend/src/components/AppShell.tsx`
-- `frontend/src/components/AppShell.module.css`
-- `frontend/src/components/Sidekick.tsx`
-- `frontend/src/components/Preview.tsx`
-- `frontend/src/views/ExecutionView.tsx`
-- `frontend/src/components/ChatView.tsx`
-- `frontend/src/views/*` that already power desktop/web parity
+- `interface/src/components/AppShell.tsx`
+- `interface/src/components/AppShell.module.css`
+- `interface/src/components/Sidekick.tsx`
+- `interface/src/components/Preview.tsx`
+- `interface/src/views/ExecutionView.tsx`
+- `interface/src/components/ChatView.tsx`
+- `interface/src/views/*` that already power desktop/web parity
 - relevant CSS modules
 
 Out of scope:
@@ -254,11 +254,11 @@ Deliverables:
 
 Primary ownership:
 
-- `frontend/src/hooks/use-event-stream.ts`
-- `frontend/src/hooks/ws-reconnect.ts`
-- `frontend/src/context/EventContext.tsx`
-- `frontend/src/views/ExecutionView.tsx`
-- `frontend/src/components/AppShell.tsx`
+- `interface/src/hooks/use-event-stream.ts`
+- `interface/src/hooks/ws-reconnect.ts`
+- `interface/src/context/EventContext.tsx`
+- `interface/src/views/ExecutionView.tsx`
+- `interface/src/components/AppShell.tsx`
 
 Out of scope:
 
@@ -296,12 +296,12 @@ Deliverables:
 
 Primary ownership:
 
-- `frontend/public/sw.js`
-- `frontend/public/manifest.webmanifest`
-- `frontend/src/lib/registerServiceWorker.ts`
-- `frontend/playwright.config.ts`
-- `frontend/tests/e2e/**`
-- `frontend/index.html`
+- `interface/public/sw.js`
+- `interface/public/manifest.webmanifest`
+- `interface/src/lib/registerServiceWorker.ts`
+- `interface/playwright.config.ts`
+- `interface/tests/e2e/**`
+- `interface/index.html`
 
 Out of scope:
 
@@ -349,7 +349,7 @@ To avoid stepping on each other:
 - D owns live event and reconnect files
 - E owns service worker and test files
 
-The most conflict-prone file is `frontend/src/components/AppShell.tsx`.
+The most conflict-prone file is `interface/src/components/AppShell.tsx`.
 
 Rule:
 

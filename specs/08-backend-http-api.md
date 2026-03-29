@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Expose all domain operations over HTTP so the React frontend (running in a webview) can interact with the Rust backend. This spec defines the Axum router, REST endpoints for every domain (settings, projects, specs, tasks, agents), WebSocket endpoint for real-time event streaming, request/response DTO types, and a consistent error format. CORS is configured for the webview origin.
+Expose all domain operations over HTTP so the React interface (running in a webview) can interact with the Rust backend. This spec defines the Axum router, REST endpoints for every domain (settings, projects, specs, tasks, agents), WebSocket endpoint for real-time event streaming, request/response DTO types, and a consistent error format. CORS is configured for the webview origin.
 
 ---
 
@@ -10,7 +10,7 @@ Expose all domain operations over HTTP so the React frontend (running in a webvi
 
 ### Server Architecture
 
-The HTTP server runs as an Axum application bound to `127.0.0.1` on a configurable port (default: `3100`). It is started by the desktop shell (`src/main.rs`) before the webview opens. The frontend connects to `http://localhost:3100`.
+The HTTP server runs as an Axum application bound to `127.0.0.1` on a configurable port (default: `3100`). It is started by the desktop shell (`src/main.rs`) before the webview opens. The interface connects to `http://localhost:3100`.
 
 ### Shared Application State
 
@@ -26,7 +26,7 @@ All handlers share an `AppState` struct injected via Axum's `State` extractor. T
 
 ### WebSocket for Events
 
-A single WebSocket endpoint (`/ws/events`) streams `EngineEvent`s and other state changes to the frontend. The frontend subscribes once on load and receives all events as JSON messages. No per-topic filtering in MVP — the frontend ignores events it doesn't care about.
+A single WebSocket endpoint (`/ws/events`) streams `EngineEvent`s and other state changes to the interface. The interface subscribes once on load and receives all events as JSON messages. No per-topic filtering in MVP — the interface ignores events it doesn't care about.
 
 ---
 

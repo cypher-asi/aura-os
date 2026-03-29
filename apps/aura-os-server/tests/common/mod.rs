@@ -256,7 +256,7 @@ pub fn build_test_app_from_store(
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    let app = aura_os_server::create_router_with_frontend(state.clone(), None);
+    let app = aura_os_server::create_router_with_interface(state.clone(), None);
     (app, state)
 }
 

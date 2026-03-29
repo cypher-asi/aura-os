@@ -59,7 +59,7 @@ trap cleanup EXIT INT TERM
 SERVER_PID=$!
 
 (
-  cd "$ROOT/frontend"
+  cd "$ROOT/interface"
   npm run dev -- --host "${FRONTEND_HOST}" --port "${FRONTEND_PORT}" --strictPort
 ) &
 FRONTEND_PID=$!

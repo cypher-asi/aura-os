@@ -326,7 +326,7 @@ After this, projects have two modes: **cloud** (default — microVM via aura-swa
 
 ### Integration with Backend Services
 
-aura-network and aura-storage are deployed. aura-code calls aura-network for social data and aura-storage for execution data. The desktop's local Axum server proxies shared-data requests to both services. The React frontend doesn't change — it still talks to `localhost:PORT/api/*`.
+aura-network and aura-storage are deployed. aura-code calls aura-network for social data and aura-storage for execution data. The desktop's local Axum server proxies shared-data requests to both services. The React interface doesn't change — it still talks to `localhost:PORT/api/*`.
 
 ### What Stays Local
 

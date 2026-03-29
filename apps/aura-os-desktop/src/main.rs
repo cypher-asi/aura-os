@@ -88,8 +88,8 @@ fn default_data_dir() -> PathBuf {
         .join("aura")
 }
 
-fn find_frontend_dir() -> Option<PathBuf> {
-    let compile_time = PathBuf::from(env!("FRONTEND_DIST_DIR"));
+fn find_interface_dir() -> Option<PathBuf> {
+    let compile_time = PathBuf::from(env!("INTERFACE_DIST_DIR"));
     if compile_time.join("index.html").exists() {
         return Some(compile_time);
     }
@@ -99,11 +99,11 @@ fn find_frontend_dir() -> Option<PathBuf> {
         .and_then(|p| p.parent().map(|d| d.to_path_buf()));
 
     let mut candidates = vec![
-        PathBuf::from("frontend/dist"),
-        PathBuf::from("../../frontend/dist"),
+        PathBuf::from("interface/dist"),
+        PathBuf::from("../../interface/dist"),
     ];
     if let Some(ref dir) = exe_dir {
-        candidates.push(dir.join("frontend/dist"));
+        candidates.push(dir.join("interface/dist"));
         candidates.push(dir.join("dist"));
     }
 
@@ -129,12 +129,12 @@ fn init_data_dirs() -> (PathBuf, PathBuf, Option<PathBuf>) {
 
     let db_path = data_dir.join("db");
     let webview_data_dir = data_dir.join("webview");
-    let frontend_dir = find_frontend_dir();
-    match frontend_dir {
-        Some(ref dir) => info!(path = %dir.display(), "serving frontend"),
-        None => warn!("no frontend dist found; pages will not load"),
+    let interface_dir = find_interface_dir();
+    match interface_dir {
+        Some(ref dir) => info!(path = %dir.display(), "serving interface"),
+        None => warn!("no interface dist found; pages will not load"),
     }
-    (db_path, webview_data_dir, frontend_dir)
+    (db_path, webview_data_dir, interface_dir)
 }
 
 fn bind_listener() -> (StdTcpListener, u16, String) {
@@ -156,7 +156,7 @@ fn bind_listener() -> (StdTcpListener, u16, String) {
 fn spawn_server(
     std_listener: StdTcpListener,
     db_path: PathBuf,
-    frontend_dir: Option<PathBuf>,
+    interface_dir: Option<PathBuf>,
     ide_proxy: Arc<EventLoopProxy<UserEvent>>,
 ) -> std::sync::mpsc::Receiver<()> {
     let (ready_tx, ready_rx) = std::sync::mpsc::channel::<()>();
@@ -168,7 +168,7 @@ fn spawn_server(
 
             let app_state =
                 aura_os_server::build_app_state(&db_path).expect("failed to open database");
-            let app = aura_os_server::create_router_with_frontend(app_state, frontend_dir)
+            let app = aura_os_server::create_router_with_interface(app_state, interface_dir)
                 .route("/api/pick-folder", axum_post(handlers::pick_folder))
                 .route("/api/pick-file", axum_post(handlers::pick_file))
                 .route("/api/open-path", axum_post(handlers::open_path))
@@ -497,14 +497,14 @@ fn main() {
     dotenvy::dotenv().ok();
     init_logging();
 
-    let (db_path, webview_data_dir, frontend_dir) = init_data_dirs();
+    let (db_path, webview_data_dir, interface_dir) = init_data_dirs();
     let (std_listener, _port, url) = bind_listener();
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let proxy = event_loop.create_proxy();
     let ide_proxy: Arc<EventLoopProxy<UserEvent>> = Arc::new(proxy.clone());
 
-    let ready_rx = spawn_server(std_listener, db_path, frontend_dir, ide_proxy);
+    let ready_rx = spawn_server(std_listener, db_path, interface_dir, ide_proxy);
     ready_rx
         .recv()
         .expect("server thread failed before becoming ready");

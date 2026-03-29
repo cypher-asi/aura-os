@@ -14,7 +14,7 @@ const PROBE_INTERVAL_MS = 20_000;
 const PROBE_TIMEOUT_MS = 4_000;
 
 async function probeHost(): Promise<HostConnectionStatus> {
-  // Native shells bundle the frontend at a local webview origin, so they need
+  // Native shells bundle the interface at a local webview origin, so they need
   // an explicit Aura host instead of falling back to the embedded app origin.
   if (requiresExplicitHostOrigin() && !getTargetHostOrigin()) {
     return "unreachable";

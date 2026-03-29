@@ -691,7 +691,7 @@ pub(crate) async fn start_loop(
 
     // Resolve the first task the automaton will pick so that events
     // arriving before the real task_started get stamped with a task_id.
-    // Without this, text_delta events have no task_id and the frontend
+    // Without this, text_delta events have no task_id and the interface
     // silently discards them.
     let first_task_id = resolve_active_task_id(
         state.task_service.as_ref(),
@@ -713,7 +713,7 @@ pub(crate) async fn start_loop(
         jwt: jwt_for_persist,
     });
 
-    // Emit loop_started before task_started so the frontend processes
+    // Emit loop_started before task_started so the interface processes
     // LoopStarted (sets preparing=true) then TaskStarted (clears it).
     emit_domain_event(
         &state.event_broadcast,
@@ -946,7 +946,7 @@ pub(crate) async fn run_single_task(
     let event_stream_url = result.event_stream_url;
     info!(%project_id, %task_id, %automaton_id, %event_stream_url, "Single task automaton started");
 
-    // Emit task_started immediately so the frontend gets the signal even if
+    // Emit task_started immediately so the interface gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
     emit_domain_event(
         &state.event_broadcast,

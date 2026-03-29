@@ -7,7 +7,7 @@ fn filename_from_path(path: &str) -> &str {
     path.rsplit(['/', '\\']).next().unwrap_or(path)
 }
 
-/// Spawn a new IDE window that loads the frontend IDE route for the given file.
+/// Spawn a new IDE window that loads the interface IDE route for the given file.
 ///
 /// `make_ipc` receives the new window's `WindowId` and must return an IPC
 /// handler closure. This lets the caller wire per-window events without

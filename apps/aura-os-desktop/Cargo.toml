@@ -34,7 +34,7 @@ identifier = "com.aura.desktop"
 category = "DeveloperTool"
 icons = ["assets/aura-icon.png"]
 before-packaging-command = "cargo build --release --package aura-os-desktop"
-resources = ["../../frontend/dist"]
+resources = ["../../interface/dist"]
 
 [package.metadata.packager.nsis]
 install-mode = "currentUser"

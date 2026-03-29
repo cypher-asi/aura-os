@@ -11,10 +11,10 @@ fn default_data_dir() -> PathBuf {
         .join("aura")
 }
 
-fn find_frontend_dir() -> Option<PathBuf> {
+fn find_interface_dir() -> Option<PathBuf> {
     let candidates = [
-        PathBuf::from("frontend/dist"),
-        PathBuf::from("../../frontend/dist"),
+        PathBuf::from("interface/dist"),
+        PathBuf::from("../../interface/dist"),
     ];
     candidates
         .into_iter()
@@ -37,14 +37,14 @@ async fn main() {
     let db_path = data_dir.join("db");
     let state = aura_os_server::build_app_state(&db_path).expect("failed to open database");
 
-    let frontend_dir = find_frontend_dir();
-    if let Some(ref dir) = frontend_dir {
-        info!(path = %dir.display(), "Serving frontend");
+    let interface_dir = find_interface_dir();
+    if let Some(ref dir) = interface_dir {
+        info!(path = %dir.display(), "Serving interface");
     } else {
-        warn!("No frontend dist found; API-only mode (connect frontend dev server to port 3100)");
+        warn!("No interface dist found; API-only mode (connect interface dev server to port 3100)");
     }
 
-    let app = aura_os_server::create_router_with_frontend(state, frontend_dir);
+    let app = aura_os_server::create_router_with_interface(state, interface_dir);
 
     let port: u16 = std::env::var("AURA_SERVER_PORT")
         .ok()

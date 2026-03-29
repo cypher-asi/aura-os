@@ -810,7 +810,7 @@ async function run() {
   });
 
   // ── Response Shape Validation ────────────────────────────────────
-  // Verify aura-network responses match what aura-app frontend expects
+  // Verify aura-network responses match what aura-app interface expects
 
   group("Response Shape Validation (camelCase fields)");
 

@@ -51,7 +51,7 @@ fn is_allowed_cors_origin(origin: &HeaderValue) -> bool {
         .any(|allowed| !allowed.is_empty() && allowed == origin)
 }
 
-pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf>) -> Router {
+pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathBuf>) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(|origin, _| is_allowed_cors_origin(origin)))
         .allow_credentials(true)
@@ -80,7 +80,7 @@ pub fn create_router_with_frontend(state: AppState, frontend_dir: Option<PathBuf
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    match frontend_dir {
+    match interface_dir {
         Some(dir) => {
             let index = dir.join("index.html");
             let serve = ServiceBuilder::new()

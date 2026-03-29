@@ -32,7 +32,7 @@ Implement in order; each phase is shippable on its own.
 - [ ] **Domain:** Add same optional fields to `CreateProjectInput` and `UpdateProjectInput` in `crates/domain/projects/src/lib.rs`; pass through in `create_project` and `update_project`.
 - [ ] **Network types (optional):** If aura-network will persist these, add to `NetworkProject`, `CreateProjectRequest`, `UpdateProjectRequest` in `crates/infra/network/src/types.rs`.
 - [ ] **Server:** Add optional git/orbit fields to `CreateProjectRequest` and `UpdateProjectRequest` in `apps/server/src/dto.rs`; in `apps/server/src/handlers/projects.rs`, map in create/update and in `project_from_network`.
-- [ ] **Frontend:** Add optional git/orbit fields to `Project` in `frontend/src/types/entities.ts` and to `CreateProjectRequest` / `UpdateProjectRequest` in `frontend/src/api/client.ts`.
+- [ ] **Frontend:** Add optional git/orbit fields to `Project` in `interface/src/types/entities.ts` and to `CreateProjectRequest` / `UpdateProjectRequest` in `interface/src/api/client.ts`.
 - [ ] **UI ? project settings:** Add "Git / Orbit" section: inputs for Git remote URL and branch; save via `updateProject`.
 - [ ] **UI ? New Project:** Add "Orbit repo" section with: (1) **Default proposed new repo** ? e.g. `{orbit_owner}/{slug(project_name)}` or a configurable default; user can edit owner and repo name; this repo will be created on Orbit when the project is created (Phase 2). (2) **Use existing repo** ? control to search existing repos the user is a member of and select one (Phase 2: requires Orbit token + list/search repos API). When token is not yet set, show ?Connect Orbit in settings to create a new repo or choose an existing one.? Store chosen `git_repo_url` / `git_branch` (and optional orbit_owner / orbit_repo) on create.
 - [ ] **Tests:** Project CRUD with new fields; existing project tests still pass with fields omitted.
@@ -133,8 +133,8 @@ The sections below are the full specification for each area; phases above refere
 | Network types | `crates/infra/network/src/types.rs` | Add to `NetworkProject`: `git_repo_url`, `git_branch`, and optionally `orbit_base_url`, `orbit_owner`, `orbit_repo`. Add to `CreateProjectRequest` and `UpdateProjectRequest` (all optional). Only needed if the aura-network backend will persist these; otherwise keep network types as-is and only sync from local. |
 | Server DTOs | `apps/server/src/dto.rs` | Add to `CreateProjectRequest`: `git_repo_url`, `git_branch` (optional). Add to `UpdateProjectRequest`: same (optional). |
 | Server handlers | `apps/server/src/handlers/projects.rs` | In `create_project`: map new fields from `req` to local `Project` and, when calling network, to `aura_network::CreateProjectRequest` if network supports them. In `update_project`: map from `UpdateProjectRequest` to `UpdateProjectInput` and to `UpdateProjectRequest`. In `project_from_network`: when building `Project` from `NetworkProject`, preserve/copy git/orbit fields from `net` or `local` as appropriate. |
-| Frontend types | `frontend/src/types/entities.ts` | Add to `Project`: `git_repo_url?: string`, `git_branch?: string`, and optionally `orbit_base_url?`, `orbit_owner?`, `orbit_repo?`. |
-| Frontend API | `frontend/src/api/client.ts` | Add optional `git_repo_url`, `git_branch` (and optional orbit fields) to `CreateProjectRequest` and `UpdateProjectRequest`. |
+| Frontend types | `interface/src/types/entities.ts` | Add to `Project`: `git_repo_url?: string`, `git_branch?: string`, and optionally `orbit_base_url?`, `orbit_owner?`, `orbit_repo?`. |
+| Frontend API | `interface/src/api/client.ts` | Add optional `git_repo_url`, `git_branch` (and optional orbit fields) to `CreateProjectRequest` and `UpdateProjectRequest`. |
 
 **Backend/network:** If projects live on aura-network, add the same fields to the network API (request/response) and persist there; the desktop (and future clients) set and read the link via create/update/get project. If aura-network does not yet store these, the link can live only in the local Aura store (desktop) and still be used for session_init and Git operations from the client.
 
@@ -305,9 +305,9 @@ Use the **per-phase checklists** in Phase 1?5 above. Quick index:
 | Phase 4 | [Phase 4: Session init and runtime](#phase-4-session-init-and-runtime-workspace-from-orbit) |
 | Phase 5 | [Phase 5: Aura ? Orbit org sync](#phase-5-aura--orbit-org-sync) |
 
-- [ ] **Frontend types:** Add optional git/orbit fields to `Project`, `CreateProjectRequest`, `UpdateProjectRequest` in `frontend/src/types/entities.ts` and `frontend/src/api/client.ts`.
+- [ ] **Frontend types:** Add optional git/orbit fields to `Project`, `CreateProjectRequest`, `UpdateProjectRequest` in `interface/src/types/entities.ts` and `interface/src/api/client.ts`.
 - [ ] **UI ? attach repo:** Add ?Git / Orbit? section in project settings (and optionally in New Project) to set `git_repo_url` and `git_branch`; optionally ?Browse Orbit repos? using Orbit API discovery.
-- [ ] **Orbit token storage:** Add Orbit token setting (encrypted preferred); backend API to set/get (metadata or secure use only); frontend settings UI to add/remove or ?Connect to Orbit.?
+- [ ] **Orbit token storage:** Add Orbit token setting (encrypted preferred); backend API to set/get (metadata or secure use only); interface settings UI to add/remove or ?Connect to Orbit.?
 - [ ] **Git with Orbit token:** When project has `git_repo_url`, use Orbit token for clone/push/pull (credential helper or URL injection); ensure token not logged.
 - [ ] **Orbit REST client:** Implement `list_collaborators(orbit_base_url, owner, repo, bearer_token)` and optionally `GET /api` for discovery.
 - [ ] **Collaborators API:** Add `GET /api/projects/:project_id/orbit-collaborators`; return list with roles; document ?can add people? = owner role + repo owner.
@@ -339,9 +339,9 @@ Use the **per-phase checklists** in Phase 1?5 above. Quick index:
 | Store (projects) | `crates/infra/store/src/store_project.rs` |
 | Server DTOs | `apps/server/src/dto.rs` |
 | Project handlers | `apps/server/src/handlers/projects.rs` |
-| Frontend Project type | `frontend/src/types/entities.ts` |
-| Frontend API | `frontend/src/api/client.ts` |
-| New project modal | `frontend/src/components/NewProjectModal.tsx` |
+| Frontend Project type | `interface/src/types/entities.ts` |
+| Frontend API | `interface/src/api/client.ts` |
+| New project modal | `interface/src/components/NewProjectModal.tsx` |
 | Project settings / detail | (to add or extend; e.g. project settings panel or ProjectLayout) |
 | Settings (API key, etc.) | `crates/domain/settings/`, `apps/server/src/handlers/settings.rs` |
 | Runtime contract | `docs/aura-runtime-requirements.md` (R9, R10) |

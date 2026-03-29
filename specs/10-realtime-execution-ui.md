@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Build the frontend views that let the user start, monitor, pause, and stop the autonomous development loop in real time. This spec adds WebSocket integration to the frontend, a live execution dashboard showing agent status, active task, streaming logs, session tracking, and task completion feed. It is the final vertical slice of the MVP — after this, the user can watch the system work through tasks autonomously.
+Build the interface views that let the user start, monitor, pause, and stop the autonomous development loop in real time. This spec adds WebSocket integration to the interface, a live execution dashboard showing agent status, active task, streaming logs, session tracking, and task completion feed. It is the final vertical slice of the MVP — after this, the user can watch the system work through tasks autonomously.
 
 ---
 
@@ -10,7 +10,7 @@ Build the frontend views that let the user start, monitor, pause, and stop the a
 
 ### WebSocket Event Stream
 
-The frontend opens a single WebSocket connection to `ws://localhost:3100/ws/events` on load. All `EngineEvent` messages (defined in Spec 07) are received here and dispatched to the relevant UI components via a React context. The connection auto-reconnects on failure and falls back to polling if WebSocket is unavailable.
+The interface opens a single WebSocket connection to `ws://localhost:3100/ws/events` on load. All `EngineEvent` messages (defined in Spec 07) are received here and dispatched to the relevant UI components via a React context. The connection auto-reconnects on failure and falls back to polling if WebSocket is unavailable.
 
 ### Execution View
 
@@ -402,7 +402,7 @@ stateDiagram-v2
 | Spec 08 | WebSocket endpoint `/ws/events`, loop control endpoints |
 | Spec 09 | App shell, routing, API client, TypeScript types, CSS tokens |
 
-**Additional frontend dependencies:**
+**Additional interface dependencies:**
 
 | Package | Purpose |
 |---------|---------|

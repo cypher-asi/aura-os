@@ -67,7 +67,7 @@ When the LLM calls an external tool, the runtime POSTs to `callback_url` with `{
 - `aura-core/src/types.rs` — add `ExternalToolDefinition` struct
 - New: `aura-tools/src/external.rs` — HTTP callback executor
 
-**aura-app side (callback server):** For external tools to work, aura-app must expose HTTP callback endpoints that the runtime can POST to. This means adding routes like `POST /api/tools/:tool_name` to the aura-app server (e.g. in `apps/server/src/router.rs`). Each endpoint receives `{ "tool_name": "...", "input": {...} }`, dispatches to the appropriate service (`ChatToolExecutor` or `EngineToolLoopExecutor`), and returns the tool result JSON. The aura-app server already runs on port 3100; these callback routes are internal (runtime → aura-app only, not exposed to frontend).
+**aura-app side (callback server):** For external tools to work, aura-app must expose HTTP callback endpoints that the runtime can POST to. This means adding routes like `POST /api/tools/:tool_name` to the aura-app server (e.g. in `apps/server/src/router.rs`). Each endpoint receives `{ "tool_name": "...", "input": {...} }`, dispatches to the appropriate service (`ChatToolExecutor` or `EngineToolLoopExecutor`), and returns the tool result JSON. The aura-app server already runs on port 3100; these callback routes are internal (runtime → aura-app only, not exposed to interface).
 
 **Acceptance criteria:** aura-app can register `task_done`, `get_task_context`, and all 20 domain tools as external tools. The runtime calls them via HTTP and returns results to the LLM. No tool execution logic lives outside the runtime's agentic loop.
 
@@ -188,7 +188,7 @@ This lets aura-app decide when to close the session and start a new one with a s
 
 ### R6. File Change Tracking `[HIGH]`
 
-**Problem:** aura-app emits `FileOpsApplied` events listing every file written/deleted during task execution, which the frontend uses to show what changed.
+**Problem:** aura-app emits `FileOpsApplied` events listing every file written/deleted during task execution, which the interface uses to show what changed.
 
 **What aura-app does today:** In `crates/ai/engine/src/engine/executor.rs`, `track_file_op()` records each `write_file`, `edit_file`, `delete_file` call into `tracked_file_ops`. After task completion, it emits `EngineEvent::FileOpsApplied { files_written, files_deleted, files }`.
 

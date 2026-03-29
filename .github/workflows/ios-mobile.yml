@@ -8,12 +8,12 @@ on:
       - codex/mobile-store-integration
     paths:
       - .github/workflows/ios-mobile.yml
-      - frontend/**
+      - interface/**
       - README.md
   pull_request:
     paths:
       - .github/workflows/ios-mobile.yml
-      - frontend/**
+      - interface/**
       - README.md
   workflow_dispatch:
     inputs:
@@ -55,20 +55,20 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: interface/package-lock.json
 
-      - name: Install frontend dependencies
-        working-directory: frontend
+      - name: Install interface dependencies
+        working-directory: interface
         run: npm ci
 
-      - name: Build frontend and sync Capacitor iOS
-        working-directory: frontend
+      - name: Build interface and sync Capacitor iOS
+        working-directory: interface
         run: |
           npm run build
           npx cap sync ios
 
       - name: Build iOS simulator app
-        working-directory: frontend
+        working-directory: interface
         run: |
           xcodebuild \
             -project ios/App/App.xcodeproj \
@@ -109,21 +109,21 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: interface/package-lock.json
 
       - name: Install Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
 
-      - name: Install frontend dependencies
-        working-directory: frontend
+      - name: Install interface dependencies
+        working-directory: interface
         run: npm ci
 
       - name: Install fastlane gems
-        working-directory: frontend/ios
+        working-directory: interface/ios
         run: bundle install --jobs 4 --retry 3
 
       - name: Upload build with fastlane
-        working-directory: frontend/ios
+        working-directory: interface/ios
         run: bundle exec fastlane ios ${{ inputs.lane }}

@@ -22,7 +22,7 @@ const _polledAgentIds = new Set<string>();
 let _pollInterval: ReturnType<typeof setInterval> | undefined;
 const _remoteAgentIds = new Set<string>();
 
-/** Agent IDs with at least one active task (frontend-tracked). */
+/** Agent IDs with at least one active task (interface-tracked). */
 const _activeTaskAgents = new Set<string>();
 
 function normalizeMachineType(mt: string | undefined): MachineType {

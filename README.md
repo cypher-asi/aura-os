@@ -15,7 +15,7 @@ Aura is a desktop application for continuous agentic coding. It reads a project'
 
 The core workflow follows a strict hierarchy: **Project → Spec → Task**. Agents operate within sessions, rotating context automatically when the window fills, so execution can continue indefinitely without manual intervention.
 
-Core state lives in RocksDB on-device. The backend is Rust (Axum), the frontend is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. Optional remote services (configured via `.env`) include **aura-network** (orgs/project sync), **aura-storage** (execution data), **billing** (credits), and **Orbit** (Git/repo hosting). You can run fully local with only `ANTHROPIC_API_KEY` set.
+Core state lives in RocksDB on-device. The backend is Rust (Axum), the interface is React + TypeScript served through a native desktop shell (tao + wry), and the LLM provider is the Claude API. Optional remote services (configured via `.env`) include **aura-network** (orgs/project sync), **aura-storage** (execution data), **billing** (credits), and **Orbit** (Git/repo hosting). You can run fully local with only `ANTHROPIC_API_KEY` set.
 
 ---
 
@@ -76,10 +76,10 @@ cargo run -p aura-os-server
 
 The Axum server listens on `http://127.0.0.1:3100`.
 
-### Run frontend (dev)
+### Run interface (dev)
 
 ```bash
-cd frontend
+cd interface
 npm install
 npm run dev
 ```
@@ -97,7 +97,7 @@ For all mobile browser testing, use the shared mobile dev runner from the repo r
 What it does:
 
 - starts `aura-os-server` on `AURA_SERVER_HOST:AURA_SERVER_PORT`
-- starts the frontend on `AURA_FRONTEND_HOST:AURA_FRONTEND_PORT`
+- starts the interface on `AURA_FRONTEND_HOST:AURA_FRONTEND_PORT`
 - prints the exact URL you should open for simulator or phone testing
 - fails fast if those ports are already in use, so the printed URLs stay accurate
 
@@ -153,7 +153,7 @@ http://192.168.1.42:5173/projects
 Notes:
 
 - `AURA_SERVER_HOST=0.0.0.0` lets the local Aura host accept requests from your phone.
-- `AURA_FRONTEND_HOST=0.0.0.0` lets Vite serve the frontend to your phone.
+- `AURA_FRONTEND_HOST=0.0.0.0` lets Vite serve the interface to your phone.
 - `AURA_PUBLIC_HOST` is only for the printed/opened URL. Set it to your machine's real LAN IP, not `0.0.0.0`.
 - If your macOS firewall prompts for access, allow incoming connections for the dev processes.
 - `127.0.0.1` only works for simulators running on the same machine. It does **not** work from a physical phone.
@@ -201,7 +201,7 @@ Notes:
 
 Aura's mobile store builds now use Capacitor on top of the existing Vite app.
 
-From `frontend/`:
+From `interface/`:
 
 ```bash
 npm install
@@ -225,11 +225,11 @@ Notes:
   - `VITE_IOS_DEFAULT_HOST` for an iOS-specific default
   - `VITE_ANDROID_DEFAULT_HOST` for an Android-specific default
 - Desktop and browser builds still fall back to their current origin when no host override is configured.
-- Native mobile auth is cross-origin, so the Aura API must allow credentialed CORS for native localhost origins. Add any deployed frontend origins with `AURA_ALLOWED_ORIGINS`.
+- Native mobile auth is cross-origin, so the Aura API must allow credentialed CORS for native localhost origins. Add any deployed interface origins with `AURA_ALLOWED_ORIGINS`.
 
 #### Local native fastlane commands
 
-For day-to-day native validation, use the wrapper commands from `frontend/`:
+For day-to-day native validation, use the wrapper commands from `interface/`:
 
 ```bash
 npm run mobile:android:local
@@ -272,9 +272,9 @@ You only need to override those `VITE_*` values if your backend is running on a 
 
 #### iOS TestFlight / App Store pipeline
 
-The iOS branch now includes a `fastlane` setup under [`frontend/ios`](./frontend/ios) and a GitHub Actions workflow in [`.github/workflows/ios-mobile.yml`](./.github/workflows/ios-mobile.yml).
+The iOS branch now includes a `fastlane` setup under [`interface/ios`](./interface/ios) and a GitHub Actions workflow in [`.github/workflows/ios-mobile.yml`](./.github/workflows/ios-mobile.yml).
 
-Local release commands from `frontend/ios/`:
+Local release commands from `interface/ios/`:
 
 ```bash
 bundle install
@@ -317,9 +317,9 @@ Still needed before a real App Store submission:
 
 #### Android Play pipeline
 
-The Android branch now includes a `fastlane` setup under [`frontend/android`](./frontend/android) and a GitHub Actions workflow in [`.github/workflows/android-mobile.yml`](./.github/workflows/android-mobile.yml).
+The Android branch now includes a `fastlane` setup under [`interface/android`](./interface/android) and a GitHub Actions workflow in [`.github/workflows/android-mobile.yml`](./.github/workflows/android-mobile.yml).
 
-Local release commands from `frontend/android/`:
+Local release commands from `interface/android/`:
 
 ```bash
 bundle install
@@ -356,14 +356,14 @@ Still needed before a real Google Play submission:
 
 ### Run desktop app
 
-Build the frontend once, then run the desktop shell (it embeds the server and frontend):
+Build the interface once, then run the desktop shell (it embeds the server and interface):
 
 ```bash
-cd frontend && npm run build && cd ..
+cd interface && npm run build && cd ..
 cargo run -p aura-os-desktop
 ```
 
-Run from the repo root so `.env` is loaded. The desktop app bundles the server and frontend into a single native window via WebView.
+Run from the repo root so `.env` is loaded. The desktop app bundles the server and interface into a single native window via WebView.
 
 ### Optional services
 
@@ -388,7 +388,7 @@ Run from the repo root so `.env` is loaded. The desktop app bundles the server a
 | Crate | Description |
 | --- | --- |
 | **aura-os-desktop** | Standalone desktop GUI (tao + wry WebView) |
-| **aura-os-server** | HTTP API server (Axum) serving the frontend and API routes |
+| **aura-os-server** | HTTP API server (Axum) serving the interface and API routes |
 | **aura-os-ide** | IDE helper library for the desktop shell |
 | **aura-os-core** | Shared entity types, IDs, and enums |
 | **aura-os-store** | RocksDB persistence layer and storage abstractions |
@@ -407,7 +407,7 @@ Run from the repo root so `.env` is loaded. The desktop app bundles the server a
 | **aura-engine** | AI orchestration and autonomous dev loop |
 | **aura-chat** | Chat and streaming orchestration |
 | **aura-tools** | AI tool definitions (file operations, commands) |
-| **frontend** | React 19 + TypeScript SPA (Vite) |
+| **interface** | React 19 + TypeScript SPA (Vite) |
 
 ---
 
@@ -441,7 +441,7 @@ aura-app/
       store/                # RocksDB backend
       claude/               # Claude API client
       terminal/             # Terminal emulation
-  frontend/                 # React + TypeScript SPA
+  interface/                 # React + TypeScript SPA
     src/
       api/                  # API client and SSE streams
       apps/                 # Feature apps (projects, agents, feed)

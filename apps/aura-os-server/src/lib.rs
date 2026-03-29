@@ -10,7 +10,7 @@ pub(crate) mod router;
 pub(crate) mod state;
 
 pub use app_builder::build_app_state;
-pub use router::create_router_with_frontend;
+pub use router::create_router_with_interface;
 pub use state::AppState;
 
 pub mod handlers_test_support {
