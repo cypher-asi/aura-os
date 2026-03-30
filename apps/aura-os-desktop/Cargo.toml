@@ -32,7 +32,7 @@ objc = "0.2"
 product-name = "Aura"
 identifier = "com.aura.desktop"
 category = "DeveloperTool"
-icons = ["assets/aura-icon.png"]
+icons = ["../../interface/public/pwa-512.png", "assets/aura-icon.png"]
 before-packaging-command = "cargo build --release --package aura-os-desktop"
 resources = ["../../interface/dist"]
 
