@@ -20,6 +20,12 @@ pub struct SessionConfig {
     pub project_path: Option<String>,
     /// Domain tools to register with the harness for this session.
     pub installed_tools: Option<Vec<aura_protocol::InstalledTool>>,
+    /// Project-agent UUID for X-Aura-Agent-Id billing header.
+    pub aura_agent_id: Option<String>,
+    /// Storage session UUID for X-Aura-Session-Id billing header.
+    pub aura_session_id: Option<String>,
+    /// Org UUID for X-Aura-Org-Id billing header.
+    pub aura_org_id: Option<String>,
 }
 
 impl Default for SessionConfig {
@@ -37,6 +43,9 @@ impl Default for SessionConfig {
             project_id: None,
             project_path: None,
             installed_tools: None,
+            aura_agent_id: None,
+            aura_session_id: None,
+            aura_org_id: None,
         }
     }
 }

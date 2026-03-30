@@ -791,8 +791,12 @@ pub(crate) async fn send_agent_event_stream(
         agent.system_prompt.clone()
     };
 
+    let project = requested_project_id
+        .as_ref()
+        .and_then(|pid| pid.parse::<ProjectId>().ok())
+        .and_then(|p| state.project_service.get_project(&p).ok());
+
     let (project_id_cfg, project_path_cfg) = if let Some(ref pid) = requested_project_id {
-        let project = pid.parse::<ProjectId>().ok().and_then(|p| state.project_service.get_project(&p).ok());
         let project_folder = project.as_ref().map(|p| p.linked_folder_path.as_str());
         let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
         let path = Some(resolve_workspace_path(
@@ -814,6 +818,9 @@ pub(crate) async fn send_agent_event_stream(
         conversation_messages,
         project_id: project_id_cfg,
         project_path: project_path_cfg,
+        aura_agent_id: persist_ctx.as_ref().map(|c| c.project_agent_id.clone()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
+        aura_org_id: project.as_ref().map(|p| p.org_id.to_string()),
         ..Default::default()
     });
 
@@ -896,6 +903,9 @@ pub(crate) async fn send_event_stream(
         conversation_messages,
         project_id: Some(pid_str),
         project_path,
+        aura_agent_id: persist_ctx.as_ref().map(|c| c.project_agent_id.clone()),
+        aura_session_id: persist_ctx.as_ref().map(|c| c.session_id.clone()),
+        aura_org_id: project.as_ref().map(|p| p.org_id.to_string()),
         ..Default::default()
     });
 
