@@ -39,6 +39,8 @@ env:
   CARGO_TERM_COLOR: always
   AURA_SERVER_PORT: "19847"
   AURA_UPDATE_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+  CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+  CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
 
 jobs:
   desktop-smoke:
@@ -101,9 +103,45 @@ jobs:
           AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
         run: node scripts/desktop-ci-smoke.mjs
 
+      - name: Install cargo-packager
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        run: cargo install cargo-packager --locked
+
+      - name: Package desktop artifact
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        env:
+          AURA_DESKTOP_USE_PREBUILT_FRONTEND: "1"
+          AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ env.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+        run: cargo packager --release --package aura-os-desktop
+
+      - name: Collect packaged artifacts
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          mkdir -p packaged/${{ matrix.target }}
+          cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/bundle/*/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
+          ls -la packaged/${{ matrix.target }}/
+
+      - name: Note when packaging is skipped
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY == ''
+        shell: bash
+        run: |
+          echo "Desktop packaging skipped on this run because signing secrets are unavailable." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload desktop smoke logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: desktop-smoke-${{ matrix.target }}
           path: desktop-smoke-logs/${{ matrix.target }}
+
+      - name: Upload packaged desktop artifacts
+        if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-package-${{ matrix.target }}
+          path: packaged/${{ matrix.target }}

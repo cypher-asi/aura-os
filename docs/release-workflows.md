@@ -29,6 +29,7 @@ Purpose:
 - launch the built desktop app in CI mode
 - verify the embedded local server comes up
 - verify the desktop update-status route responds
+- package signed desktop artifacts too when the signing secrets are available
 
 This is a validation workflow, not a publishing workflow.
 
