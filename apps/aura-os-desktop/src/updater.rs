@@ -3,6 +3,14 @@ use cargo_packager_updater::{
     semver::Version as SemverVersion, Config as PackagerUpdaterConfig, Update, UpdaterBuilder,
     WindowsConfig, WindowsUpdateInstallMode,
 };
+#[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "macos"
+))]
 use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
