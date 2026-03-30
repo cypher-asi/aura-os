@@ -198,6 +198,11 @@ interface BenchmarkOrgResolution extends BenchmarkOrg {
   created: boolean;
 }
 
+interface EvalAuthSession {
+  access_token?: string;
+  [key: string]: unknown;
+}
+
 interface BenchmarkOperationLogEntry {
   step: string;
   summary: string;
@@ -353,13 +358,16 @@ async function apiRequest(
   url: string,
   body?: unknown,
 ) {
+  const jwt = await page.evaluate(() => window.localStorage.getItem("aura-jwt"));
+  const headers = jwt ? { Authorization: `Bearer ${jwt}` } : undefined;
+
   if (method === "GET") {
-    return page.request.get(url);
+    return page.request.get(url, { headers });
   }
   if (method === "DELETE") {
-    return page.request.delete(url);
+    return page.request.delete(url, { headers });
   }
-  return page.request.post(url, { data: body });
+  return page.request.post(url, { data: body, headers });
 }
 
 async function apiJson<T>(
@@ -430,7 +438,7 @@ export async function loginForLiveEval(
   await page.locator("form").getByRole("button", { name: "Sign In" }).click();
   await expect
     .poll(async () => {
-      const response = await page.request.get("/api/auth/session");
+      const response = await apiRequest(page, "GET", "/api/auth/session");
       return response.ok();
     }, { timeout: timeoutMs })
     .toBe(true);
@@ -441,12 +449,19 @@ export async function importAccessTokenForLiveEval(
   accessToken: string,
   timeoutMs: number,
 ) {
-  await apiJson(page, "POST", "/api/auth/import-access-token", {
+  await page.goto("/login");
+  const session = await apiJson<EvalAuthSession>(page, "POST", "/api/auth/import-access-token", {
     access_token: accessToken,
   });
+  await page.evaluate((value) => {
+    if (value?.access_token) {
+      window.localStorage.setItem("aura-jwt", value.access_token);
+      window.localStorage.setItem("aura-session", JSON.stringify(value));
+    }
+  }, session);
   await expect
     .poll(async () => {
-      const response = await page.request.get("/api/auth/session");
+      const response = await apiRequest(page, "GET", "/api/auth/session");
       return response.ok();
     }, { timeout: timeoutMs })
     .toBe(true);

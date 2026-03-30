@@ -155,7 +155,7 @@ stack_service_dir() {
     orbit) printf '%s\n' "$AURA_STACK_ORBIT_DIR" ;;
     harness) printf '%s\n' "$AURA_STACK_HARNESS_DIR" ;;
     aura-os) printf '%s\n' "$AURA_STACK_REPO_ROOT" ;;
-    frontend) printf '%s\n' "$AURA_STACK_REPO_ROOT/frontend" ;;
+    frontend) printf '%s\n' "$AURA_STACK_REPO_ROOT/interface" ;;
     *)
       echo "Unknown service: $service" >&2
       exit 1
