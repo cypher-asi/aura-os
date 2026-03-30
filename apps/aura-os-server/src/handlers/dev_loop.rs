@@ -1,11 +1,15 @@
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
+use chrono::Utc;
 use serde::Deserialize;
+use std::sync::Arc;
 use tracing::{info, warn};
 
-use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, TaskId, TaskStatus};
+use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, TaskStatus};
 use aura_os_link::{AutomatonStartError, AutomatonStartParams};
+use aura_os_network::{NetworkClient, ReportUsageRequest};
+use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_tasks::TaskService;
 
 use super::agents::conversions_pub::resolve_workspace_path;
@@ -13,7 +17,15 @@ use super::projects_helpers::optional_jwt;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::persistence;
-use crate::state::{ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache};
+use crate::state::{
+    ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum VerificationStepKind {
+    Build,
+    Test,
+}
 
 /// Resolve the effective git clone URL for a project. If `git_repo_url` is set,
 /// use it directly. Otherwise construct from `orbit_base_url` (or `ORBIT_BASE_URL`
@@ -76,7 +88,9 @@ fn automaton_is_active(status: &serde_json::Value) -> bool {
     match state.as_deref() {
         // Paused loops are still active for singleton semantics.
         Some("running" | "active" | "started" | "paused") => true,
-        Some("done" | "stopped" | "finished" | "failed" | "cancelled" | "terminated" | "completed") => false,
+        Some(
+            "done" | "stopped" | "finished" | "failed" | "cancelled" | "terminated" | "completed",
+        ) => false,
         // Unknown schema/state: stay conservative and treat as active.
         _ => true,
     }
@@ -100,13 +114,280 @@ fn automaton_client_for_mode(
                 Some(aid) => format!("{base}/v1/agents/{aid}"),
                 None => base.to_string(),
             };
-            let client = aura_os_link::AutomatonClient::new(&scoped_base)
-                .with_auth(jwt.map(String::from));
+            let client =
+                aura_os_link::AutomatonClient::new(&scoped_base).with_auth(jwt.map(String::from));
             Ok(std::sync::Arc::new(client))
         }
     }
 }
 
+fn extract_run_command(event: &serde_json::Value) -> Option<String> {
+    if event.get("name").and_then(|value| value.as_str()) != Some("run_command") {
+        return None;
+    }
+
+    let input = event.get("input")?;
+    if let Some(command) = input.get("command").and_then(|value| value.as_str()) {
+        let command = command.trim();
+        if !command.is_empty() {
+            return Some(command.to_string());
+        }
+    }
+
+    let program = input
+        .get("program")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())?;
+    let args: Vec<&str> = input
+        .get("args")
+        .and_then(|value| value.as_array())
+        .map(|items| items.iter().filter_map(|value| value.as_str()).collect())
+        .unwrap_or_default();
+
+    if args.is_empty() {
+        Some(program.to_string())
+    } else {
+        Some(format!("{program} {}", args.join(" ")))
+    }
+}
+
+fn classify_run_command_steps(
+    event_type: &str,
+    event: &serde_json::Value,
+) -> Vec<VerificationStepKind> {
+    if !matches!(event_type, "tool_call_snapshot" | "tool_call_completed") {
+        return Vec::new();
+    }
+
+    let Some(command) = extract_run_command(event) else {
+        return Vec::new();
+    };
+    let normalized = command.to_ascii_lowercase();
+
+    let build_markers = [
+        "npm run build",
+        "npm build",
+        "pnpm run build",
+        "pnpm build",
+        "yarn run build",
+        "yarn build",
+        "bun run build",
+        "bun build",
+        "cargo build",
+        "cargo check",
+        "go build",
+        "vite build",
+        "next build",
+        "turbo build",
+        "mvn package",
+        "mvn verify",
+        "gradle build",
+        "./gradlew build",
+        "make build",
+        "tsc",
+    ];
+    let test_markers = [
+        "npm run test",
+        "npm test",
+        "pnpm run test",
+        "pnpm test",
+        "yarn run test",
+        "yarn test",
+        "bun run test",
+        "bun test",
+        "cargo test",
+        "cargo nextest",
+        "pytest",
+        "go test",
+        "vitest",
+        "jest",
+        "playwright test",
+        "mvn test",
+        "gradle test",
+        "./gradlew test",
+        "tox",
+        "rspec",
+    ];
+
+    let mut kinds = Vec::new();
+    if build_markers
+        .iter()
+        .any(|marker| normalized.contains(marker))
+    {
+        kinds.push(VerificationStepKind::Build);
+    }
+    if test_markers
+        .iter()
+        .any(|marker| normalized.contains(marker))
+    {
+        kinds.push(VerificationStepKind::Test);
+    }
+    kinds
+}
+
+fn extract_token_usage(event: &serde_json::Value) -> Option<(u64, u64)> {
+    Some((
+        event.get("input_tokens")?.as_u64()?,
+        event.get("output_tokens")?.as_u64()?,
+    ))
+}
+
+fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
+    [
+        ("claude-opus-4-6", 5.0, 25.0),
+        ("claude-sonnet-4-5", 3.0, 15.0),
+        ("claude-haiku-4-5", 0.80, 4.00),
+    ]
+}
+
+fn lookup_model_rates(model: &str) -> (f64, f64) {
+    let mut exact: Vec<_> = default_fee_schedule()
+        .into_iter()
+        .filter(|(candidate, _, _)| *candidate == model)
+        .collect();
+    if let Some((_, input, output)) = exact.pop() {
+        return (input, output);
+    }
+
+    let mut partial: Vec<_> = default_fee_schedule()
+        .into_iter()
+        .filter(|(candidate, _, _)| model.starts_with(candidate) || candidate.starts_with(model))
+        .collect();
+    if let Some((_, input, output)) = partial.pop() {
+        return (input, output);
+    }
+
+    default_fee_schedule()
+        .into_iter()
+        .next()
+        .map(|(_, input, output)| (input, output))
+        .unwrap_or((5.0, 25.0))
+}
+
+fn estimate_usage_cost_usd(model: &str, input_tokens: u64, output_tokens: u64) -> f64 {
+    let (input_rate, output_rate) = lookup_model_rates(model);
+    input_tokens as f64 * input_rate / 1_000_000.0
+        + output_tokens as f64 * output_rate / 1_000_000.0
+}
+
+#[derive(Clone)]
+struct UsageReportingContext {
+    network_client: Arc<NetworkClient>,
+    access_token: String,
+    network_user_id: String,
+    model: String,
+    org_id: Option<String>,
+}
+
+async fn report_automaton_usage(
+    usage: &UsageReportingContext,
+    project_id: ProjectId,
+    input_tokens: u64,
+    output_tokens: u64,
+) {
+    let estimated_cost_usd = estimate_usage_cost_usd(&usage.model, input_tokens, output_tokens);
+    let req = ReportUsageRequest {
+        user_id: usage.network_user_id.clone(),
+        model: usage.model.clone(),
+        input_tokens,
+        output_tokens,
+        estimated_cost_usd,
+        org_id: usage.org_id.clone(),
+        agent_id: None,
+        project_id: Some(project_id.to_string()),
+        duration_ms: None,
+    };
+
+    if let Err(error) = usage
+        .network_client
+        .report_usage(&req, &usage.access_token)
+        .await
+    {
+        warn!(%project_id, model = %usage.model, %error, "Failed to report automaton usage");
+    }
+}
+
+async fn create_automaton_session(
+    state: &AppState,
+    project_id: ProjectId,
+    agent_instance_id: AgentInstanceId,
+    active_task_id: Option<TaskId>,
+) -> Option<SessionId> {
+    let model = state
+        .agent_instance_service
+        .get_instance(&project_id, &agent_instance_id)
+        .await
+        .ok()
+        .and_then(|instance| instance.model);
+    let user_id = state.get_session().ok().map(|session| session.user_id);
+
+    match state
+        .session_service
+        .create_session(CreateSessionParams {
+            agent_instance_id,
+            project_id,
+            active_task_id,
+            summary: String::new(),
+            user_id,
+            model,
+        })
+        .await
+    {
+        Ok(session) => Some(session.session_id),
+        Err(error) => {
+            warn!(%project_id, %agent_instance_id, %error, "Failed to create automaton session");
+            None
+        }
+    }
+}
+
+async fn build_usage_reporting_context(
+    state: &AppState,
+    _project_id: ProjectId,
+    _agent_instance_id: AgentInstanceId,
+    org_id: Option<String>,
+    model: Option<String>,
+) -> Option<UsageReportingContext> {
+    let network_client = state.network_client.as_ref()?.clone();
+    let session = state.get_session().ok()?;
+    let network_user_id = session.network_user_id?;
+
+    Some(UsageReportingContext {
+        network_client,
+        access_token: session.access_token,
+        network_user_id: network_user_id.to_string(),
+        model: model.unwrap_or_else(|| "claude-opus-4-6".to_string()),
+        org_id,
+    })
+}
+
+async fn close_automaton_session(
+    storage_client: Option<&std::sync::Arc<aura_os_storage::StorageClient>>,
+    jwt: Option<&str>,
+    session_id: SessionId,
+    status: &str,
+) {
+    let (Some(storage_client), Some(jwt)) = (storage_client, jwt) else {
+        return;
+    };
+
+    let req = aura_os_storage::UpdateSessionRequest {
+        status: Some(status.to_string()),
+        total_input_tokens: None,
+        total_output_tokens: None,
+        context_usage_estimate: None,
+        summary_of_previous_context: None,
+        tasks_worked_count: None,
+        ended_at: Some(Utc::now().to_rfc3339()),
+    };
+    if let Err(error) = storage_client
+        .update_session(&session_id.to_string(), jwt, &req)
+        .await
+    {
+        warn!(%session_id, %error, "Failed to close automaton session");
+    }
+}
 struct ForwardParams {
     automaton_events_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
     app_broadcast: tokio::sync::broadcast::Sender<serde_json::Value>,
@@ -118,6 +399,10 @@ struct ForwardParams {
     task_output_cache: TaskOutputCache,
     storage_client: Option<std::sync::Arc<aura_os_storage::StorageClient>>,
     jwt: Option<String>,
+    session_id: Option<SessionId>,
+    session_service: std::sync::Arc<aura_os_sessions::SessionService>,
+    agent_instance_service: std::sync::Arc<aura_os_agents::AgentInstanceService>,
+    usage_reporting: Option<UsageReportingContext>,
 }
 
 async fn resolve_active_task_id(
@@ -167,24 +452,34 @@ fn forward_automaton_events(params: ForwardParams) {
         task_output_cache,
         storage_client,
         jwt,
+        session_id,
+        session_service,
+        agent_instance_service,
+        usage_reporting,
     } = params;
 
     let mut rx = automaton_events_tx.subscribe();
     let pid = project_id.to_string();
     let aiid = agent_instance_id.to_string();
+    let current_session_id = session_id;
+    let current_session_id_string = current_session_id.map(|id| id.to_string());
 
     tokio::spawn(async move {
         let mut first_work_seen = false;
         let mut current_task_id: Option<String> = task_id;
-        let clear_active_automaton = |registry: AutomatonRegistry, project_id: ProjectId, agent_instance_id: AgentInstanceId| async move {
-            let mut reg = registry.lock().await;
-            if reg
-                .get(&agent_instance_id)
-                .is_some_and(|entry| entry.project_id == project_id)
-            {
-                reg.remove(&agent_instance_id);
-            }
-        };
+        let mut session_status = "completed";
+        let clear_active_automaton =
+            |registry: AutomatonRegistry,
+             project_id: ProjectId,
+             agent_instance_id: AgentInstanceId| async move {
+                let mut reg = registry.lock().await;
+                if reg
+                    .get(&agent_instance_id)
+                    .is_some_and(|entry| entry.project_id == project_id)
+                {
+                    reg.remove(&agent_instance_id);
+                }
+            };
 
         loop {
             match rx.recv().await {
@@ -229,49 +524,29 @@ fn forward_automaton_events(params: ForwardParams) {
                     // task_id in their payload still get stamped correctly.
                     if event_type == "task_started" {
                         if let Some(tid) = event.get("task_id").and_then(|v| v.as_str()) {
-                            // If the harness switched to a different task, close
-                            // the old task's stream so the frontend exits any
-                            // stale "Waiting for agent output..." state.
-                            if let Some(ref old_tid) = current_task_id {
-                                if old_tid != tid {
-                                    emit_domain_event(
-                                        &app_broadcast,
-                                        "task_failed",
-                                        project_id,
-                                        agent_instance_id,
-                                        serde_json::json!({
-                                            "task_id": old_tid,
-                                            "reason": "Superseded by another task",
-                                        }),
-                                    );
-                                }
-                            }
                             current_task_id = Some(tid.to_owned());
-                            let mut session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
-
-                            // The automaton typically omits session_id from its
-                            // event payloads. Front-load it from the task document
-                            // (set by assign_task) so the cache has it by
-                            // completion time and persistence doesn't need a
-                            // fallback lookup.
-                            if session_id.is_none() {
-                                if let (Some(ref sc), Some(ref j)) = (&storage_client, &jwt) {
-                                    if let Ok(task) = sc.get_task(tid, j).await {
-                                        if let Some(sid) = task.session_id {
-                                            info!(task_id = tid, %sid, "Front-loaded session_id from task document into cache");
-                                            session_id = Some(sid);
-                                        }
-                                    }
-                                }
+                            if let (Some(session_id), Ok(task_id)) =
+                                (current_session_id, tid.parse::<TaskId>())
+                            {
+                                let _ = agent_instance_service
+                                    .start_working(
+                                        &project_id,
+                                        &agent_instance_id,
+                                        &task_id,
+                                        &session_id,
+                                    )
+                                    .await;
                             }
-
                             let mut cache = task_output_cache.lock().await;
-                            let entry = cache.entry(tid.to_owned()).or_default();
-                            entry.project_id = Some(pid.clone());
-                            entry.agent_instance_id = Some(aiid.clone());
-                            if session_id.is_some() {
-                                entry.session_id = session_id;
-                            }
+                            cache.insert(
+                                tid.to_owned(),
+                                CachedTaskOutput {
+                                    project_id: Some(pid.clone()),
+                                    agent_instance_id: Some(aiid.clone()),
+                                    session_id: current_session_id_string.clone(),
+                                    ..Default::default()
+                                },
+                            );
                         }
                     }
 
@@ -314,11 +589,23 @@ fn forward_automaton_events(params: ForwardParams) {
 
                     // Accumulate task output in the in-memory cache.
                     {
-                        let event_task_id = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                        let event_task_id = event
+                            .get("task_id")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_owned);
                         let eff_tid = current_task_id.clone().or(event_task_id);
                         if let Some(ref tid) = eff_tid {
                             let mut cache = task_output_cache.lock().await;
                             let entry = cache.entry(tid.clone()).or_default();
+                            if entry.project_id.is_none() {
+                                entry.project_id = Some(pid.clone());
+                            }
+                            if entry.agent_instance_id.is_none() {
+                                entry.agent_instance_id = Some(aiid.clone());
+                            }
+                            if entry.session_id.is_none() {
+                                entry.session_id = current_session_id_string.clone();
+                            }
                             match event_type {
                                 "text_delta" => {
                                     if let Some(text) = event.get("text").and_then(|v| v.as_str()) {
@@ -326,21 +613,76 @@ fn forward_automaton_events(params: ForwardParams) {
                                     }
                                 }
                                 "assistant_message_end" => {
-                                    if !entry.live_output.is_empty() && !entry.live_output.ends_with("\n\n") {
+                                    if !entry.live_output.is_empty()
+                                        && !entry.live_output.ends_with("\n\n")
+                                    {
                                         entry.live_output.push_str("\n\n");
                                     }
                                 }
-                                "build_verification_skipped" | "build_verification_started"
-                                | "build_verification_passed" | "build_verification_failed"
+                                "build_verification_skipped"
+                                | "build_verification_started"
+                                | "build_verification_passed"
+                                | "build_verification_failed"
                                 | "build_fix_attempt" => {
                                     entry.build_steps.push(event.clone());
                                 }
-                                "test_verification_started" | "test_verification_passed"
-                                | "test_verification_failed" | "test_fix_attempt" => {
+                                "test_verification_started"
+                                | "test_verification_passed"
+                                | "test_verification_failed"
+                                | "test_fix_attempt" => {
                                     entry.test_steps.push(event.clone());
                                 }
-                                _ => {}
+                                "token_usage" => {
+                                    if let Some((input_tokens, output_tokens)) =
+                                        extract_token_usage(&event)
+                                    {
+                                        entry.total_input_tokens += input_tokens;
+                                        entry.total_output_tokens += output_tokens;
+                                    }
+                                }
+                                _ => {
+                                    for kind in classify_run_command_steps(event_type, &event) {
+                                        match kind {
+                                            VerificationStepKind::Build => {
+                                                entry.build_steps.push(event.clone())
+                                            }
+                                            VerificationStepKind::Test => {
+                                                entry.test_steps.push(event.clone())
+                                            }
+                                        }
+                                    }
+                                }
                             }
+                        }
+                    }
+
+                    if event_type == "token_usage" {
+                        if let (Some(session_id), Some((input_tokens, output_tokens))) =
+                            (current_session_id, extract_token_usage(&event))
+                        {
+                            if let Err(error) = session_service
+                                .update_context_usage(UpdateContextUsageParams {
+                                    project_id,
+                                    agent_instance_id,
+                                    session_id,
+                                    input_tokens,
+                                    output_tokens,
+                                })
+                                .await
+                            {
+                                warn!(%session_id, %error, "Failed to persist automaton token usage");
+                            }
+                        }
+                        if let (Some(usage_reporting), Some((input_tokens, output_tokens))) =
+                            (usage_reporting.as_ref(), extract_token_usage(&event))
+                        {
+                            report_automaton_usage(
+                                usage_reporting,
+                                project_id,
+                                input_tokens,
+                                output_tokens,
+                            )
+                            .await;
                         }
                     }
 
@@ -352,10 +694,16 @@ fn forward_automaton_events(params: ForwardParams) {
                         "task_started" => Some("task_started"),
                         "task_completed" => {
                             // Persist accumulated output to storage.
-                            let event_tid = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                            let event_tid = event
+                                .get("task_id")
+                                .and_then(|v| v.as_str())
+                                .map(str::to_owned);
                             let tid = current_task_id.clone().or(event_tid);
                             if let Some(ref tid) = tid {
-                                let session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
+                                let session_id = event
+                                    .get("session_id")
+                                    .and_then(|v| v.as_str())
+                                    .map(str::to_owned);
                                 let cached = {
                                     let mut cache = task_output_cache.lock().await;
                                     if let Some(entry) = cache.get_mut(tid) {
@@ -367,20 +715,52 @@ fn forward_automaton_events(params: ForwardParams) {
                                         CachedTaskOutput::default()
                                     }
                                 };
+                                if let (Some(storage_client), Some(jwt), Some(session_id)) = (
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    cached.session_id.clone(),
+                                ) {
+                                    let req = aura_os_storage::UpdateTaskRequest {
+                                        title: None,
+                                        description: None,
+                                        order_index: None,
+                                        dependency_ids: None,
+                                        execution_notes: None,
+                                        files_changed: None,
+                                        model: None,
+                                        total_input_tokens: Some(cached.total_input_tokens),
+                                        total_output_tokens: Some(cached.total_output_tokens),
+                                        session_id: Some(session_id),
+                                        assigned_project_agent_id: Some(aiid.clone()),
+                                    };
+                                    if let Err(error) =
+                                        storage_client.update_task(tid, jwt, &req).await
+                                    {
+                                        warn!(task_id = %tid, %error, "Failed to persist task usage metadata");
+                                    }
+                                }
                                 persistence::persist_task_output(
                                     storage_client.as_ref(),
                                     jwt.as_deref(),
                                     tid,
                                     &cached,
-                                ).await;
+                                )
+                                .await;
                             }
                             Some("task_completed")
                         }
                         "task_failed" => {
-                            let event_tid = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
+                            session_status = "failed";
+                            let event_tid = event
+                                .get("task_id")
+                                .and_then(|v| v.as_str())
+                                .map(str::to_owned);
                             let tid = current_task_id.clone().or(event_tid);
                             if let Some(ref tid) = tid {
-                                let session_id = event.get("session_id").and_then(|v| v.as_str()).map(str::to_owned);
+                                let session_id = event
+                                    .get("session_id")
+                                    .and_then(|v| v.as_str())
+                                    .map(str::to_owned);
                                 let cached = {
                                     let mut cache = task_output_cache.lock().await;
                                     if let Some(entry) = cache.get_mut(tid) {
@@ -392,12 +772,37 @@ fn forward_automaton_events(params: ForwardParams) {
                                         CachedTaskOutput::default()
                                     }
                                 };
+                                if let (Some(storage_client), Some(jwt), Some(session_id)) = (
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    cached.session_id.clone(),
+                                ) {
+                                    let req = aura_os_storage::UpdateTaskRequest {
+                                        title: None,
+                                        description: None,
+                                        order_index: None,
+                                        dependency_ids: None,
+                                        execution_notes: None,
+                                        files_changed: None,
+                                        model: None,
+                                        total_input_tokens: Some(cached.total_input_tokens),
+                                        total_output_tokens: Some(cached.total_output_tokens),
+                                        session_id: Some(session_id),
+                                        assigned_project_agent_id: Some(aiid.clone()),
+                                    };
+                                    if let Err(error) =
+                                        storage_client.update_task(tid, jwt, &req).await
+                                    {
+                                        warn!(task_id = %tid, %error, "Failed to persist failed-task usage metadata");
+                                    }
+                                }
                                 persistence::persist_task_output(
                                     storage_client.as_ref(),
                                     jwt.as_deref(),
                                     tid,
                                     &cached,
-                                ).await;
+                                )
+                                .await;
                             }
                             Some("task_failed")
                         }
@@ -411,20 +816,25 @@ fn forward_automaton_events(params: ForwardParams) {
                         "progress" => Some("progress"),
                         "git_pushed" => Some("git_pushed"),
                         "git_committed" => Some("git_committed"),
-                        "git_commit_failed" => Some("git_commit_failed"),
-                        "git_push_failed" => Some("git_push_failed"),
                         "done" => {
                             clear_active_automaton(
                                 automaton_registry.clone(),
                                 project_id,
                                 agent_instance_id,
                             )
+                            .await;
+                            let _ = agent_instance_service
+                                .finish_working(&project_id, &agent_instance_id)
                                 .await;
-                            let finished_event = serde_json::json!({
-                                "type": "loop_finished",
-                                "project_id": pid,
-                                "agent_instance_id": aiid,
-                            });
+                            if let Some(session_id) = current_session_id {
+                                close_automaton_session(
+                                    storage_client.as_ref(),
+                                    jwt.as_deref(),
+                                    session_id,
+                                    session_status,
+                                )
+                                .await;
+                            }
                             emit_domain_event(
                                 &app_broadcast,
                                 "loop_finished",
@@ -432,12 +842,6 @@ fn forward_automaton_events(params: ForwardParams) {
                                 agent_instance_id,
                                 serde_json::json!({}),
                             );
-                            persistence::persist_log_event(
-                                storage_client.as_ref(),
-                                jwt.as_deref(),
-                                &pid,
-                                &finished_event,
-                            ).await;
                             break;
                         }
                         _ => None,
@@ -462,98 +866,27 @@ fn forward_automaton_events(params: ForwardParams) {
                             obj.insert("type".into(), serde_json::Value::String(mapped.into()));
                         }
                     }
-                    let _ = app_broadcast.send(forwarded.clone());
-
-                    // Persist log-worthy events to aura-storage.
-                    {
-                        let final_type = forwarded
-                            .get("type")
-                            .and_then(|t| t.as_str())
-                            .unwrap_or("");
-                        if persistence::is_log_worthy(final_type) {
-                            let sc = storage_client.clone();
-                            let j = jwt.clone();
-                            let p = pid.clone();
-                            tokio::spawn(async move {
-                                persistence::persist_log_event(
-                                    sc.as_ref(),
-                                    j.as_deref(),
-                                    &p,
-                                    &forwarded,
-                                )
-                                .await;
-                            });
-                        }
-                    }
-
-                    // Emit user-visible progress for build/test verification
-                    // phases so the frontend stream shows activity during
-                    // harness startup instead of a blank "Cooking..." state.
-                    let progress_stage: Option<&str> = match event_type {
-                        "build_verification_started" => Some("Running build verification..."),
-                        "build_verification_passed" => Some("Build passed"),
-                        "build_verification_failed" => Some("Build failed — attempting fix..."),
-                        "build_fix_attempt" => Some("Retrying build fix..."),
-                        "test_verification_started" => Some("Running tests..."),
-                        "test_verification_passed" => Some("Tests passed"),
-                        "test_verification_failed" => Some("Tests failed — attempting fix..."),
-                        "test_fix_attempt" => Some("Retrying test fix..."),
-                        _ => None,
-                    };
-                    if let Some(stage) = progress_stage {
-                        let event_task_id = event.get("task_id").and_then(|v| v.as_str()).map(str::to_owned);
-                        let effective_task_id = current_task_id.clone().or(event_task_id);
-                        let mut extra = serde_json::json!({"stage": stage});
-                        if let Some(ref tid) = effective_task_id {
-                            extra.as_object_mut().unwrap().insert(
-                                "task_id".into(),
-                                serde_json::Value::String(tid.clone()),
-                            );
-                        }
-                        emit_domain_event(
-                            &app_broadcast,
-                            "progress",
-                            project_id,
-                            agent_instance_id,
-                            extra,
-                        );
-                    }
+                    let _ = app_broadcast.send(forwarded);
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                    // Persist accumulated output for all tasks this loop worked
-                    // on, not just current_task_id.  Covers multi-task loops and
-                    // cases where the completion event was lost to lag.
-                    let entries_to_persist: Vec<(String, CachedTaskOutput)> = {
-                        let cache = task_output_cache.lock().await;
-                        cache.iter()
-                            .filter(|(_, e)| {
-                                e.project_id.as_deref() == Some(pid.as_str())
-                                    && e.agent_instance_id.as_deref() == Some(aiid.as_str())
-                                    && (!e.live_output.is_empty() || !e.build_steps.is_empty() || !e.test_steps.is_empty())
-                            })
-                            .map(|(tid, e)| (tid.clone(), e.clone()))
-                            .collect()
-                    };
-                    for (tid, cached) in &entries_to_persist {
-                        warn!(task_id = %tid, "Broadcast closed; persisting accumulated output");
-                        persistence::persist_task_output(
-                            storage_client.as_ref(),
-                            jwt.as_deref(),
-                            tid,
-                            cached,
-                        ).await;
-                    }
                     clear_active_automaton(
                         automaton_registry.clone(),
                         project_id,
                         agent_instance_id,
                     )
+                    .await;
+                    let _ = agent_instance_service
+                        .finish_working(&project_id, &agent_instance_id)
                         .await;
-                    let finished_event = serde_json::json!({
-                        "type": "loop_finished",
-                        "project_id": pid,
-                        "agent_instance_id": aiid,
-                    });
+                    if let Some(session_id) = current_session_id {
+                        close_automaton_session(
+                            storage_client.as_ref(),
+                            jwt.as_deref(),
+                            session_id,
+                            session_status,
+                        )
+                        .await;
+                    }
                     emit_domain_event(
                         &app_broadcast,
                         "loop_finished",
@@ -561,22 +894,9 @@ fn forward_automaton_events(params: ForwardParams) {
                         agent_instance_id,
                         serde_json::json!({}),
                     );
-                    persistence::persist_log_event(
-                        storage_client.as_ref(),
-                        jwt.as_deref(),
-                        &pid,
-                        &finished_event,
-                    ).await;
                     break;
                 }
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    warn!(
-                        task_id = ?current_task_id,
-                        skipped = n,
-                        "Automaton event forwarder lagged; events lost"
-                    );
-                    continue;
-                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
             }
         }
     });
@@ -615,13 +935,31 @@ pub(crate) async fn start_loop(
             ("local".to_string(), None)
         });
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
-    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref(), jwt.as_deref())?;
+    let automaton_client = automaton_client_for_mode(
+        &state,
+        harness_mode,
+        swarm_agent_id.as_deref(),
+        jwt.as_deref(),
+    )?;
     info!(
         %project_id, %agent_instance_id,
         base_url = %automaton_client.base_url(),
         ?harness_mode,
         "Automaton client configured for loop start"
     );
+    let usage_reporting = build_usage_reporting_context(
+        &state,
+        project_id,
+        agent_instance_id,
+        project.as_ref().map(|project| project.org_id.to_string()),
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .ok()
+            .and_then(|instance| instance.model),
+    )
+    .await;
     let project_path = if harness_mode == HarnessMode::Swarm {
         automaton_client
             .resolve_workspace(project_name)
@@ -631,7 +969,12 @@ pub(crate) async fn start_loop(
                 resolve_workspace_path(&machine_type, project_folder.as_deref(), &state.data_dir, project_name)
             })
     } else {
-        resolve_workspace_path(&machine_type, project_folder.as_deref(), &state.data_dir, project_name)
+        resolve_workspace_path(
+            &machine_type,
+            project_folder.as_deref(),
+            &state.data_dir,
+            project_name,
+        )
     };
 
     let jwt_for_persist = jwt.clone();
@@ -645,78 +988,83 @@ pub(crate) async fn start_loop(
         git_branch: project.as_ref().and_then(|p| p.git_branch.clone()),
     };
 
-    let (automaton_id, adopted, event_stream_url) = match automaton_client.start(start_params.clone()).await {
+    let (automaton_id, adopted, event_stream_url) = match automaton_client
+        .start(start_params.clone())
+        .await
+    {
         Ok(r) => {
             let esurl = r.event_stream_url.clone();
             (r.automaton_id, false, Some(esurl))
         }
-        Err(AutomatonStartError::Conflict(existing_id)) => {
-            match existing_id {
-                Some(aid) => {
-                    let stale_or_dead = match automaton_client.status(&aid).await {
-                        Ok(status) => !automaton_is_active(&status),
-                        Err(e) => {
-                            warn!(
-                                %aid,
-                                %project_id,
-                                error = %e,
-                                "Failed to inspect conflicting automaton status; treating as stale"
-                            );
-                            true
-                        }
-                    };
-
-                    if stale_or_dead {
-                        info!(
+        Err(AutomatonStartError::Conflict(existing_id)) => match existing_id {
+            Some(aid) => {
+                let stale_or_dead = match automaton_client.status(&aid).await {
+                    Ok(status) => !automaton_is_active(&status),
+                    Err(e) => {
+                        warn!(
                             %aid,
                             %project_id,
-                            "Conflicting automaton appears stale; stopping and retrying start"
+                            error = %e,
+                            "Failed to inspect conflicting automaton status; treating as stale"
                         );
-                        if let Err(e) = automaton_client.stop(&aid).await {
-                            warn!(
-                                %aid,
-                                %project_id,
-                                error = %e,
-                                "Failed to stop stale conflicting automaton before retry"
-                            );
-                        }
-                        match automaton_client.start(start_params).await {
-                            Ok(r) => {
-                                let esurl = r.event_stream_url.clone();
-                                (r.automaton_id, false, Some(esurl))
-                            }
-                            Err(AutomatonStartError::Conflict(Some(retry_id))) => {
-                                info!(
-                                    %retry_id,
-                                    %project_id,
-                                    "Retry still conflicts; adopting existing automaton"
-                                );
-                                (retry_id, true, None)
-                            }
-                            Err(AutomatonStartError::Conflict(None)) => {
-                                return Err(ApiError::conflict(
-                                    "A dev loop is already running but its ID could not be determined",
-                                ));
-                            }
-                            Err(e) => {
-                                return Err(ApiError::internal(format!(
-                                    "starting dev loop after stale cleanup: {e}"
-                                )));
-                            }
-                        }
-                    } else {
-                        info!(%aid, %project_id, "Adopting existing automaton from harness");
-                        (aid, true, None)
+                        true
                     }
-                }
-                None => {
-                    return Err(ApiError::conflict(
-                        "A dev loop is already running but its ID could not be determined",
-                    ));
+                };
+
+                if stale_or_dead {
+                    info!(
+                        %aid,
+                        %project_id,
+                        "Conflicting automaton appears stale; stopping and retrying start"
+                    );
+                    if let Err(e) = automaton_client.stop(&aid).await {
+                        warn!(
+                            %aid,
+                            %project_id,
+                            error = %e,
+                            "Failed to stop stale conflicting automaton before retry"
+                        );
+                    }
+                    match automaton_client.start(start_params).await {
+                        Ok(r) => {
+                            let esurl = r.event_stream_url.clone();
+                            (r.automaton_id, false, Some(esurl))
+                        }
+                        Err(AutomatonStartError::Conflict(Some(retry_id))) => {
+                            info!(
+                                %retry_id,
+                                %project_id,
+                                "Retry still conflicts; adopting existing automaton"
+                            );
+                            (retry_id, true, None)
+                        }
+                        Err(AutomatonStartError::Conflict(None)) => {
+                            return Err(ApiError::conflict(
+                                "A dev loop is already running but its ID could not be determined",
+                            ));
+                        }
+                        Err(e) => {
+                            return Err(ApiError::internal(format!(
+                                "starting dev loop after stale cleanup: {e}"
+                            )));
+                        }
+                    }
+                } else {
+                    info!(%aid, %project_id, "Adopting existing automaton from harness");
+                    (aid, true, None)
                 }
             }
-        }
-        Err(AutomatonStartError::Request { message, is_connect, is_timeout }) => {
+            None => {
+                return Err(ApiError::conflict(
+                    "A dev loop is already running but its ID could not be determined",
+                ));
+            }
+        },
+        Err(AutomatonStartError::Request {
+            message,
+            is_connect,
+            is_timeout,
+        }) => {
             warn!(
                 %project_id, %agent_instance_id,
                 base_url = %automaton_client.base_url(),
@@ -773,7 +1121,10 @@ pub(crate) async fn start_loop(
         "Dev loop automaton ready"
     );
 
-    let events_tx = match automaton_client.connect_event_stream(&automaton_id, event_stream_url.as_deref()).await {
+    let events_tx = match automaton_client
+        .connect_event_stream(&automaton_id, event_stream_url.as_deref())
+        .await
+    {
         Ok(tx) => tx,
         Err(e) => {
             // If start succeeded but event-stream attach failed, proactively stop
@@ -805,51 +1156,23 @@ pub(crate) async fn start_loop(
 
     // Resolve the first task the automaton will pick so that events
     // arriving before the real task_started get stamped with a task_id.
-    // Without this, text_delta events have no task_id and the interface
+    // Without this, text_delta events have no task_id and the frontend
     // silently discards them.
-    let first_task_id = resolve_active_task_id(
-        state.task_service.as_ref(),
-        &project_id,
-        &agent_instance_id,
-    )
-    .await;
-
-    forward_automaton_events(ForwardParams {
-        automaton_events_tx: events_tx,
-        app_broadcast: state.event_broadcast.clone(),
-        automaton_registry: state.automaton_registry.clone(),
-        project_id,
-        agent_instance_id,
-        task_id: first_task_id.clone(),
-        task_service: state.task_service.clone(),
-        task_output_cache: state.task_output_cache.clone(),
-        storage_client: state.storage_client.clone(),
-        jwt: jwt_for_persist.clone(),
-    });
-
-    // Emit loop_started before task_started so the interface processes
-    // LoopStarted (sets preparing=true) then TaskStarted (clears it).
-    emit_domain_event(
-        &state.event_broadcast,
-        "loop_started",
-        project_id,
-        agent_instance_id,
-        serde_json::json!({"automaton_id": &automaton_id, "adopted": adopted}),
-    );
-    {
-        let event = serde_json::json!({
-            "type": "loop_started",
-            "project_id": project_id.to_string(),
-            "agent_instance_id": agent_instance_id.to_string(),
-            "automaton_id": &automaton_id,
-        });
-        let sc = state.storage_client.clone();
-        let j = jwt_for_persist.clone();
-        let p = project_id.to_string();
-        tokio::spawn(async move {
-            persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &event).await;
-        });
-    }
+    let first_task_id =
+        resolve_active_task_id(state.task_service.as_ref(), &project_id, &agent_instance_id).await;
+    let first_task_uuid = first_task_id
+        .as_deref()
+        .and_then(|task_id| task_id.parse::<TaskId>().ok());
+    let current_session_id = if adopted {
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .ok()
+            .and_then(|instance| instance.current_session_id)
+    } else {
+        create_automaton_session(&state, project_id, agent_instance_id, first_task_uuid).await
+    };
 
     if let Some(ref tid) = first_task_id {
         emit_domain_event(
@@ -859,20 +1182,42 @@ pub(crate) async fn start_loop(
             agent_instance_id,
             serde_json::json!({"task_id": tid}),
         );
-        emit_domain_event(
-            &state.event_broadcast,
-            "progress",
-            project_id,
-            agent_instance_id,
-            serde_json::json!({"task_id": tid, "stage": "Preparing agent..."}),
-        );
         let mut cache = state.task_output_cache.lock().await;
-        cache.insert(tid.clone(), CachedTaskOutput {
-            project_id: Some(project_id.to_string()),
-            agent_instance_id: Some(agent_instance_id.to_string()),
-            ..Default::default()
-        });
+        cache.insert(
+            tid.clone(),
+            CachedTaskOutput {
+                project_id: Some(project_id.to_string()),
+                agent_instance_id: Some(agent_instance_id.to_string()),
+                session_id: current_session_id.map(|id| id.to_string()),
+                ..Default::default()
+            },
+        );
     }
+
+    forward_automaton_events(ForwardParams {
+        automaton_events_tx: events_tx,
+        app_broadcast: state.event_broadcast.clone(),
+        automaton_registry: state.automaton_registry.clone(),
+        project_id,
+        agent_instance_id,
+        task_id: first_task_id,
+        task_service: state.task_service.clone(),
+        task_output_cache: state.task_output_cache.clone(),
+        storage_client: state.storage_client.clone(),
+        jwt: jwt_for_persist,
+        session_id: current_session_id,
+        session_service: state.session_service.clone(),
+        agent_instance_service: state.agent_instance_service.clone(),
+        usage_reporting,
+    });
+
+    emit_domain_event(
+        &state.event_broadcast,
+        "loop_started",
+        project_id,
+        agent_instance_id,
+        serde_json::json!({"automaton_id": &automaton_id, "adopted": adopted}),
+    );
 
     {
         let mut reg = state.automaton_registry.lock().await;
@@ -918,8 +1263,6 @@ pub(crate) async fn pause_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    let jwt = optional_jwt(&state);
-
     for (aiid, automaton_id) in &targets {
         let base_url = {
             let reg = state.automaton_registry.lock().await;
@@ -938,17 +1281,6 @@ pub(crate) async fn pause_loop(
             *aiid,
             serde_json::json!({}),
         );
-        let event = serde_json::json!({
-            "type": "loop_paused",
-            "project_id": project_id.to_string(),
-            "agent_instance_id": aiid.to_string(),
-        });
-        let sc = state.storage_client.clone();
-        let j = jwt.clone();
-        let p = project_id.to_string();
-        tokio::spawn(async move {
-            persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &event).await;
-        });
     }
 
     let active_agent_instances = active_instances(&state, project_id).await;
@@ -980,8 +1312,6 @@ pub(crate) async fn stop_loop(
         return Err(ApiError::bad_request("no matching dev loop is running"));
     }
 
-    let jwt = optional_jwt(&state);
-
     for (aiid, automaton_id) in &targets {
         let base_url = reg
             .get(aiid)
@@ -999,17 +1329,6 @@ pub(crate) async fn stop_loop(
             *aiid,
             serde_json::json!({}),
         );
-        let event = serde_json::json!({
-            "type": "loop_stopped",
-            "project_id": project_id.to_string(),
-            "agent_instance_id": aiid.to_string(),
-        });
-        let sc = state.storage_client.clone();
-        let j = jwt.clone();
-        let p = project_id.to_string();
-        tokio::spawn(async move {
-            persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &event).await;
-        });
     }
 
     let remaining: Vec<AgentInstanceId> = reg
@@ -1065,7 +1384,12 @@ pub(crate) async fn run_single_task(
         .map(|inst| (inst.machine_type, Some(inst.agent_id.to_string())))
         .unwrap_or_else(|_| ("local".to_string(), None));
     let harness_mode = HarnessMode::from_machine_type(&machine_type);
-    let automaton_client = automaton_client_for_mode(&state, harness_mode, swarm_agent_id.as_deref(), jwt.as_deref())?;
+    let automaton_client = automaton_client_for_mode(
+        &state,
+        harness_mode,
+        swarm_agent_id.as_deref(),
+        jwt.as_deref(),
+    )?;
     let project_path = if harness_mode == HarnessMode::Swarm {
         automaton_client
             .resolve_workspace(project_name)
@@ -1075,8 +1399,26 @@ pub(crate) async fn run_single_task(
                 resolve_workspace_path(&machine_type, project_folder.as_deref(), &state.data_dir, project_name)
             })
     } else {
-        resolve_workspace_path(&machine_type, project_folder.as_deref(), &state.data_dir, project_name)
+        resolve_workspace_path(
+            &machine_type,
+            project_folder.as_deref(),
+            &state.data_dir,
+            project_name,
+        )
     };
+    let usage_reporting = build_usage_reporting_context(
+        &state,
+        project_id,
+        agent_instance_id,
+        project.as_ref().map(|project| project.org_id.to_string()),
+        state
+            .agent_instance_service
+            .get_instance(&project_id, &agent_instance_id)
+            .await
+            .ok()
+            .and_then(|instance| instance.model),
+    )
+    .await;
 
     let jwt_for_persist = jwt.clone();
     let result = automaton_client
@@ -1107,7 +1449,7 @@ pub(crate) async fn run_single_task(
     let event_stream_url = result.event_stream_url;
     info!(%project_id, %task_id, %automaton_id, %event_stream_url, "Single task automaton started");
 
-    // Emit task_started immediately so the interface gets the signal even if
+    // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
     emit_domain_event(
         &state.event_broadcast,
@@ -1116,56 +1458,49 @@ pub(crate) async fn run_single_task(
         agent_instance_id,
         serde_json::json!({"task_id": task_id.to_string()}),
     );
-    emit_domain_event(
-        &state.event_broadcast,
-        "progress",
-        project_id,
-        agent_instance_id,
-        serde_json::json!({"task_id": task_id.to_string(), "stage": "Preparing agent..."}),
-    );
 
     // Pre-seed the output cache so the REST endpoint can serve partial output.
+    let session_id =
+        create_automaton_session(&state, project_id, agent_instance_id, Some(task_id)).await;
     {
         let mut cache = state.task_output_cache.lock().await;
-        cache.insert(task_id.to_string(), CachedTaskOutput {
-            project_id: Some(project_id.to_string()),
-            agent_instance_id: Some(agent_instance_id.to_string()),
-            ..Default::default()
-        });
+        cache.insert(
+            task_id.to_string(),
+            CachedTaskOutput {
+                project_id: Some(project_id.to_string()),
+                agent_instance_id: Some(agent_instance_id.to_string()),
+                session_id: session_id.map(|id| id.to_string()),
+                ..Default::default()
+            },
+        );
+    }
+    if let Some(session_id) = session_id {
+        let _ = state
+            .agent_instance_service
+            .start_working(&project_id, &agent_instance_id, &task_id, &session_id)
+            .await;
     }
 
-    match automaton_client.connect_event_stream(&automaton_id, Some(&event_stream_url)).await {
-        Ok(events_tx) => {
-            forward_automaton_events(ForwardParams {
-                automaton_events_tx: events_tx,
-                app_broadcast: state.event_broadcast.clone(),
-                automaton_registry: state.automaton_registry.clone(),
-                project_id,
-                agent_instance_id,
-                task_id: Some(task_id.to_string()),
-                task_service: state.task_service.clone(),
-                task_output_cache: state.task_output_cache.clone(),
-                storage_client: state.storage_client.clone(),
-                jwt: jwt_for_persist,
-            });
-        }
-        Err(e) => {
-            warn!(%project_id, %task_id, %automaton_id, error = %e,
-                "Failed to connect event stream for single task; emitting task_failed");
-            emit_domain_event(
-                &state.event_broadcast,
-                "task_failed",
-                project_id,
-                agent_instance_id,
-                serde_json::json!({
-                    "task_id": task_id.to_string(),
-                    "reason": format!("Failed to connect event stream: {e}"),
-                }),
-            );
-            return Err(ApiError::internal(format!(
-                "connecting event stream for task {task_id}: {e}"
-            )));
-        }
+    if let Ok(events_tx) = automaton_client
+        .connect_event_stream(&automaton_id, Some(&event_stream_url))
+        .await
+    {
+        forward_automaton_events(ForwardParams {
+            automaton_events_tx: events_tx,
+            app_broadcast: state.event_broadcast.clone(),
+            automaton_registry: state.automaton_registry.clone(),
+            project_id,
+            agent_instance_id,
+            task_id: Some(task_id.to_string()),
+            task_service: state.task_service.clone(),
+            task_output_cache: state.task_output_cache.clone(),
+            storage_client: state.storage_client.clone(),
+            jwt: jwt_for_persist,
+            session_id,
+            session_service: state.session_service.clone(),
+            agent_instance_service: state.agent_instance_service.clone(),
+            usage_reporting,
+        });
     }
 
     Ok(StatusCode::ACCEPTED)
@@ -1177,4 +1512,85 @@ async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentI
         .filter(|(_, a)| a.project_id == project_id)
         .map(|(aiid, _)| *aiid)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{classify_run_command_steps, extract_run_command, VerificationStepKind};
+
+    #[test]
+    fn extracts_run_command_shell_string() {
+        let event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "command": "npm run build"
+            }
+        });
+
+        assert_eq!(
+            extract_run_command(&event).as_deref(),
+            Some("npm run build")
+        );
+    }
+
+    #[test]
+    fn extracts_run_command_program_and_args() {
+        let event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "program": "npm",
+                "args": ["run", "test"]
+            }
+        });
+
+        assert_eq!(extract_run_command(&event).as_deref(), Some("npm run test"));
+    }
+
+    #[test]
+    fn classifies_build_and_test_commands_from_tool_snapshots() {
+        let build_event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "command": "npm run build"
+            }
+        });
+        let test_event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "program": "npm",
+                "args": ["run", "test"]
+            }
+        });
+
+        assert_eq!(
+            classify_run_command_steps("tool_call_snapshot", &build_event),
+            vec![VerificationStepKind::Build]
+        );
+        assert_eq!(
+            classify_run_command_steps("tool_call_completed", &test_event),
+            vec![VerificationStepKind::Test]
+        );
+    }
+
+    #[test]
+    fn ignores_non_command_events_for_verification_steps() {
+        let event = serde_json::json!({
+            "name": "run_command",
+            "input": {
+                "command": "npm run build"
+            }
+        });
+
+        assert!(classify_run_command_steps("tool_result", &event).is_empty());
+        assert!(classify_run_command_steps(
+            "tool_call_snapshot",
+            &serde_json::json!({
+                "name": "read_file",
+                "input": {
+                    "path": "package.json"
+                }
+            })
+        )
+        .is_empty());
+    }
 }

@@ -1,0 +1,9 @@
+{
+  "name": "aura-eval-node-server",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "node scripts/validate.js",
+    "test": "node scripts/smoke.js"
+  }
+}

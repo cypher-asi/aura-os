@@ -106,6 +106,7 @@ impl SessionService {
             let req = aura_os_storage::CreateSessionRequest {
                 project_id: project_id.to_string(),
                 org_id: None,
+                model: model.clone(),
                 status: Some("active".to_string()),
                 context_usage_estimate: Some(0.0),
                 summary_of_previous_context: if summary.is_empty() {
@@ -145,10 +146,7 @@ impl SessionService {
     }
 
     /// Update context usage after an LLM turn. `context_usage_estimate` is
-    /// persisted to aura-storage; `total_input_tokens` / `total_output_tokens`
-    /// are ephemeral -- they accumulate on the returned `Session` within a
-    /// single engine run but reset on the next `get_session` call because
-    /// `StorageSession` does not carry per-session token counts.
+    /// persisted to aura-storage together with cumulative token totals.
     pub async fn update_context_usage(
         &self,
         params: UpdateContextUsageParams,
@@ -172,7 +170,10 @@ impl SessionService {
             let jwt = self.get_jwt()?;
             let req = aura_os_storage::UpdateSessionRequest {
                 status: None,
+                total_input_tokens: Some(session.total_input_tokens),
+                total_output_tokens: Some(session.total_output_tokens),
                 context_usage_estimate: Some(session.context_usage_estimate),
+                summary_of_previous_context: None,
                 tasks_worked_count: None,
                 ended_at: None,
             };
@@ -210,7 +211,10 @@ impl SessionService {
             let jwt = self.get_jwt()?;
             let req = aura_os_storage::UpdateSessionRequest {
                 status: Some("rolled_over".to_string()),
+                total_input_tokens: None,
+                total_output_tokens: None,
                 context_usage_estimate: None,
+                summary_of_previous_context: None,
                 tasks_worked_count: None,
                 ended_at: Some(Utc::now().to_rfc3339()),
             };
@@ -251,7 +255,10 @@ impl SessionService {
                 .unwrap_or_else(|| "completed".to_string());
             let req = aura_os_storage::UpdateSessionRequest {
                 status: Some(status_str),
+                total_input_tokens: Some(session.total_input_tokens),
+                total_output_tokens: Some(session.total_output_tokens),
                 context_usage_estimate: None,
+                summary_of_previous_context: None,
                 tasks_worked_count: None,
                 ended_at: Some(
                     session
@@ -326,7 +333,10 @@ impl SessionService {
             let new_count = current.tasks_worked_count.unwrap_or(0) + 1;
             let req = aura_os_storage::UpdateSessionRequest {
                 status: None,
+                total_input_tokens: None,
+                total_output_tokens: None,
                 context_usage_estimate: None,
+                summary_of_previous_context: None,
                 tasks_worked_count: Some(new_count),
                 ended_at: None,
             };
@@ -373,7 +383,10 @@ impl SessionService {
                 if ss.status.as_deref() == Some("active") {
                     let req = aura_os_storage::UpdateSessionRequest {
                         status: Some("completed".to_string()),
+                        total_input_tokens: ss.total_input_tokens,
+                        total_output_tokens: ss.total_output_tokens,
                         context_usage_estimate: None,
+                        summary_of_previous_context: None,
                         tasks_worked_count: None,
                         ended_at: Some(now.to_rfc3339()),
                     };

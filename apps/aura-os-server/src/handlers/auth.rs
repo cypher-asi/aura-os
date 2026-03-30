@@ -7,10 +7,24 @@ use serde::Serialize;
 use aura_os_auth::AuthError;
 use aura_os_core::ZeroAuthSession;
 
-use crate::dto::{AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse};
+use crate::dto::{
+    AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse, ImportAccessTokenRequest,
+};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
 use crate::state::AppState;
+
+fn auth_token_import_enabled_from_var(value: Option<&str>) -> bool {
+    matches!(value, Some("1" | "true" | "TRUE"))
+}
+
+pub(crate) fn auth_token_import_enabled() -> bool {
+    auth_token_import_enabled_from_var(
+        std::env::var("AURA_ALLOW_AUTH_TOKEN_IMPORT")
+            .ok()
+            .as_deref(),
+    )
+}
 
 fn map_auth_error(e: AuthError) -> (StatusCode, Json<ApiError>) {
     match &e {
@@ -62,6 +76,54 @@ pub(crate) async fn register(
     sync_user_to_network(&state, &mut result.session).await;
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+pub(crate) async fn import_access_token(
+    State(state): State<AppState>,
+    Json(req): Json<ImportAccessTokenRequest>,
+) -> ApiResult<Json<AuthSessionResponse>> {
+    if !auth_token_import_enabled() {
+        return Err(ApiError::forbidden(
+            "auth token import is disabled for this Aura server",
+        ));
+    }
+
+    if req.access_token.trim().is_empty() {
+        return Err(ApiError::bad_request("access_token is required"));
+    }
+
+    let mut result = state
+        .auth_service
+        .import_access_token(req.access_token.trim())
+        .await
+        .map_err(map_auth_error)?;
+
+    sync_user_to_network(&state, &mut result.session).await;
+
+    Ok(Json(AuthSessionResponse::from_auth_result(result)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::auth_token_import_enabled_from_var;
+
+    #[test]
+    fn auth_token_import_enablement_only_accepts_explicit_truthy_values() {
+        for value in [Some("1"), Some("true"), Some("TRUE")] {
+            assert!(auth_token_import_enabled_from_var(value));
+        }
+
+        for value in [
+            None,
+            Some(""),
+            Some("0"),
+            Some("false"),
+            Some("True"),
+            Some("yes"),
+        ] {
+            assert!(!auth_token_import_enabled_from_var(value));
+        }
+    }
 }
 
 pub(crate) async fn get_session(

@@ -160,13 +160,13 @@ impl TryFrom<StorageSession> for Session {
                 (0..count).map(|_| TaskId::new()).collect()
             },
             context_usage_estimate: val.context_usage_estimate.unwrap_or(0.0),
-            total_input_tokens: 0,
-            total_output_tokens: 0,
+            total_input_tokens: val.total_input_tokens.unwrap_or(0),
+            total_output_tokens: val.total_output_tokens.unwrap_or(0),
             summary_of_previous_context: val.summary_of_previous_context.unwrap_or_default(),
             status: parse_session_status(val.status.as_deref().unwrap_or("active")),
             user_id: None,
-            model: None,
-            started_at: parse_dt(&val.created_at),
+            model: val.model,
+            started_at: parse_dt(&val.started_at.or(val.created_at)),
             ended_at: val
                 .ended_at
                 .as_deref()

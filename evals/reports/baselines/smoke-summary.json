@@ -1,0 +1,161 @@
+{
+  "generatedAt": "2026-03-28T20:12:34.587Z",
+  "scenarios": [
+    {
+      "scenarioId": "desktop-login-host-connection",
+      "title": "Desktop login screen exposes the host connection controls",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-desktop-chromium",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 419,
+        "totalSteps": 2,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    },
+    {
+      "scenarioId": "desktop-project-shell",
+      "title": "Desktop project shell loads the project explorer and execution view",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-desktop-chromium",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 792,
+        "totalSteps": 2,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    },
+    {
+      "scenarioId": "mobile-login-host-connection",
+      "title": "Mobile login screen exposes the host connection controls",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-mobile-chromium",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 418,
+        "totalSteps": 2,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    },
+    {
+      "scenarioId": "mobile-login-host-connection",
+      "title": "Mobile login screen exposes the host connection controls",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-mobile-webkit",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 288,
+        "totalSteps": 2,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    },
+    {
+      "scenarioId": "mobile-project-shell",
+      "title": "Mobile project shell keeps the drawer and project tabs available",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-mobile-chromium",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 944,
+        "totalSteps": 3,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    },
+    {
+      "scenarioId": "mobile-project-shell",
+      "title": "Mobile project shell keeps the drawer and project tabs available",
+      "suite": "smoke",
+      "kind": "browser_core",
+      "device": "eval-mobile-webkit",
+      "bundleId": "browser-smoke-default",
+      "success": true,
+      "counts": {
+        "specs": 0,
+        "tasks": 0,
+        "doneTasks": 0,
+        "failedTasks": 0,
+        "artifactChecks": 0
+      },
+      "metrics": {
+        "totalDurationMs": 644,
+        "totalSteps": 3,
+        "totalTokens": 0,
+        "estimatedCostUsd": 0,
+        "buildSteps": 0,
+        "testSteps": 0,
+        "completionPercentage": 0,
+        "totalTimeSeconds": 0
+      }
+    }
+  ]
+}

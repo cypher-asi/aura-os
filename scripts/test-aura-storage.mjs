@@ -10,7 +10,7 @@
  *   node scripts/test-aura-storage.mjs
  *
  * Required env (reads from .env automatically):
- *   AURA_STORAGE_URL          - e.g. https://aura-storage.onrender.com
+ *   AURA_STORAGE_URL          - e.g. https://your-storage-host.example.com
  *   AURA_NETWORK_AUTH_TOKEN   - JWT from zOS login (shared with aura-network)
  *   AURA_NETWORK_URL          - for test setup (create project + agent)
  *

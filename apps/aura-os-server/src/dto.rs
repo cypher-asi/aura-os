@@ -134,6 +134,11 @@ pub(crate) struct AuthRegisterRequest {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct ImportAccessTokenRequest {
+    pub access_token: String,
+}
+
 #[derive(Debug, Serialize)]
 pub(crate) struct AuthSessionResponse {
     pub user_id: String,

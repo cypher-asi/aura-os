@@ -96,7 +96,6 @@ pub(crate) fn resolve_workspace_path(
     }
 }
 
-
 /// Fetch all agents from the network, returning a map by network agent ID.
 pub(crate) async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashMap<String, Agent> {
     if let Some(ref client) = state.network_client {

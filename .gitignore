@@ -1,5 +1,12 @@
 /target
 .cursor
+.playwright-cli
+frontend/node_modules
+frontend/dist
 interface/node_modules
 interface/dist
+evals/promptfoo/node_modules
+evals/reports/promptfoo-results.json
+evals/local-stack/.runtime
+evals/local-stack/stack.env
 .env

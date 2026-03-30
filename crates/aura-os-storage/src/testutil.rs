@@ -49,11 +49,15 @@ async fn create_session(
         project_agent_id: Some(project_agent_id),
         project_id: Some(req.project_id),
         org_id: req.org_id,
+        model: req.model,
         status: req.status.or(Some("active".to_string())),
         context_usage_estimate: req.context_usage_estimate,
+        total_input_tokens: Some(0),
+        total_output_tokens: Some(0),
         summary_of_previous_context: req.summary_of_previous_context,
         tasks_worked_count: Some(0),
         ended_at: None,
+        started_at: Some(Utc::now().to_rfc3339()),
         created_at: Some(Utc::now().to_rfc3339()),
         updated_at: Some(Utc::now().to_rfc3339()),
     };
@@ -85,8 +89,17 @@ async fn update_session(
         if let Some(status) = req.status {
             session.status = Some(status);
         }
+        if let Some(total_input_tokens) = req.total_input_tokens {
+            session.total_input_tokens = Some(total_input_tokens);
+        }
+        if let Some(total_output_tokens) = req.total_output_tokens {
+            session.total_output_tokens = Some(total_output_tokens);
+        }
         if let Some(usage) = req.context_usage_estimate {
             session.context_usage_estimate = Some(usage);
+        }
+        if let Some(summary) = req.summary_of_previous_context {
+            session.summary_of_previous_context = Some(summary);
         }
         if let Some(count) = req.tasks_worked_count {
             session.tasks_worked_count = Some(count);

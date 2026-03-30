@@ -1,0 +1,87 @@
+services:
+  aura-network-db:
+    image: postgres:16
+    container_name: aura-evals-network-db
+    ports:
+      - "${AURA_STACK_NETWORK_DB_PORT:-5441}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aura_network
+    volumes:
+      - aura_network_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aura_network"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  aura-storage-db:
+    image: postgres:16
+    container_name: aura-evals-storage-db
+    ports:
+      - "${AURA_STACK_STORAGE_DB_PORT:-5442}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aura_storage
+    volumes:
+      - aura_storage_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aura_storage"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  orbit-db:
+    image: postgres:16
+    container_name: aura-evals-orbit-db
+    ports:
+      - "${AURA_STACK_ORBIT_DB_PORT:-5443}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orbit
+    volumes:
+      - orbit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orbit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  aura-harness:
+    build:
+      context: "${AURA_STACK_HARNESS_DIR:-../aura-harness}"
+      dockerfile: Dockerfile
+    container_name: aura-evals-harness
+    ports:
+      - "${AURA_STACK_HARNESS_PORT:-3404}:8080"
+    environment:
+      AURA_LISTEN_ADDR: "0.0.0.0:8080"
+      AURA_DATA_DIR: /data
+      AURA_LLM_ROUTING: "${AURA_STACK_HARNESS_LLM_ROUTING:-proxy}"
+      ENABLE_CMD_TOOLS: "${AURA_STACK_HARNESS_ENABLE_CMD_TOOLS:-true}"
+      ALLOWED_COMMANDS: "${AURA_STACK_HARNESS_ALLOWED_COMMANDS:-npm,node,npx,pnpm,bun,cargo,python,python3,pytest,go,git}"
+      AURA_NETWORK_URL: "${AURA_STACK_HARNESS_NETWORK_URL:-}"
+      AURA_STORAGE_URL: "${AURA_STACK_HARNESS_STORAGE_URL:-}"
+      ORBIT_URL: "${AURA_STACK_HARNESS_ORBIT_URL:-}"
+      AURA_ROUTER_URL: "${AURA_STACK_ROUTER_URL:-}"
+      AURA_ROUTER_JWT: "${AURA_STACK_AURA_ROUTER_JWT:-}"
+      AURA_ANTHROPIC_API_KEY: "${AURA_STACK_ANTHROPIC_API_KEY:-}"
+      AURA_ANTHROPIC_MODEL: "${AURA_STACK_ANTHROPIC_MODEL:-claude-opus-4-6}"
+      RUST_LOG: "${AURA_STACK_HARNESS_LOG_LEVEL:-info}"
+    volumes:
+      - aura_harness_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  aura_network_pgdata:
+  aura_storage_pgdata:
+  orbit_pgdata:
+  aura_harness_data:

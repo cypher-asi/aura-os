@@ -53,9 +53,9 @@ Edit `.env` and set:
 |----------|----------|-------------|
 | `ANTHROPIC_API_KEY` | **Yes** | Your Anthropic API key for spec generation and agent execution |
 | `BILLING_SERVER_URL` | No | Credits/billing server (default: `https://billing.zero.tech`) |
-| `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://aura-network.onrender.com`). Omit for local-only. |
+| `AURA_NETWORK_URL` | No | aura-network backend for orgs/sync (e.g. `https://your-network-host.example.com`). Omit for local-only. |
 | `AURA_NETWORK_AUTH_TOKEN` | No | Auth token for aura-network (when using `AURA_NETWORK_URL`) |
-| `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://aura-storage.onrender.com`). Omit to disable. |
+| `AURA_STORAGE_URL` | No | aura-storage URL for execution data (e.g. `https://your-storage-host.example.com`). Omit to disable. |
 | `ORBIT_BASE_URL` | No | URL of the **standalone Orbit service** (host and port). Aura connects to this service as a client; it does not run the Orbit API. Omit to disable Orbit features. |
 | `GITHUB_APP_*` | No | GitHub App ID, private key, and slug for repository linking |
 
@@ -109,9 +109,9 @@ The same runner supports both data modes:
 Recommended remote-backed setup:
 
 ```bash
-AURA_NETWORK_URL=https://aura-network.onrender.com
-AURA_STORAGE_URL=https://aura-storage.onrender.com
-ORBIT_BASE_URL=https://orbit-sfvu.onrender.com
+AURA_NETWORK_URL=https://your-network-host.example.com
+AURA_STORAGE_URL=https://your-storage-host.example.com
+ORBIT_BASE_URL=https://your-orbit-host.example.com
 ```
 
 #### Use iOS Simulator / Android Emulator
@@ -254,12 +254,12 @@ Backend env needed for a useful local mobile session:
 - Minimum for remote-backed projects/orgs:
   - `AURA_NETWORK_URL`
 - Recommended full remote-backed setup:
-  - `AURA_NETWORK_URL=https://aura-network.onrender.com`
-  - `AURA_STORAGE_URL=https://aura-storage.onrender.com`
-  - `AURA_ROUTER_URL=https://aura-router.onrender.com`
-  - `Z_BILLING_URL=https://z-billing.onrender.com`
-  - `ORBIT_BASE_URL=https://orbit-sfvu.onrender.com`
-  - `SWARM_BASE_URL=http://ab6d2375031e74ce1976fdf62ea951a4-e757483aaffba396.elb.us-east-2.amazonaws.com`
+  - `AURA_NETWORK_URL=https://your-network-host.example.com`
+  - `AURA_STORAGE_URL=https://your-storage-host.example.com`
+  - `AURA_ROUTER_URL=https://your-router-host.example.com`
+  - `Z_BILLING_URL=https://your-billing-host.example.com`
+  - `ORBIT_BASE_URL=https://your-orbit-host.example.com`
+  - `SWARM_BASE_URL=https://your-swarm-gateway.example.com`
 
 Native build env used by the local wrappers:
 
@@ -367,8 +367,8 @@ Run from the repo root so `.env` is loaded. The desktop app bundles the server a
 
 ### Optional services
 
-- **aura-network** — When `AURA_NETWORK_URL` (and optionally `AURA_NETWORK_AUTH_TOKEN`) is set, the app can sync organizations and projects with a shared backend (e.g. `https://aura-network.onrender.com`).
-- **aura-storage** — When `AURA_STORAGE_URL` is set, execution data can be stored in a remote store (e.g. `https://aura-storage.onrender.com`). Omit for local-only execution.
+- **aura-network** — When `AURA_NETWORK_URL` (and optionally `AURA_NETWORK_AUTH_TOKEN`) is set, the app can sync organizations and projects with a shared backend (e.g. `https://your-network-host.example.com`).
+- **aura-storage** — When `AURA_STORAGE_URL` is set, execution data can be stored in a remote store (e.g. `https://your-storage-host.example.com`). Omit for local-only execution.
 - **Billing** — `BILLING_SERVER_URL` defaults to `https://billing.zero.tech`; set `BILLING_INTERNAL_TOKEN` if your billing server requires it.
 - **Orbit** — Third-party standalone service for Git/repo hosting. Set `ORBIT_BASE_URL` to the Orbit service URL (e.g. `https://orbit.your-domain.com` or `http://localhost:PORT`). Aura does not run Orbit; it only connects to it as a client.
 

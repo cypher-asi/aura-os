@@ -22,6 +22,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:evals": "playwright test tests/e2e/evals",
+    "test:evals:smoke": "playwright test tests/e2e/evals/core-feature-smoke.spec.ts",
+    "test:evals:workflow": "playwright test tests/e2e/evals/workflow-e2e.spec.ts",
+    "test:evals:benchmark": "playwright test tests/e2e/evals/live-benchmark.spec.ts",
+    "test:evals:report": "node ./scripts/summarize-evals.mjs",
+    "test:evals:compare": "node ./scripts/compare-evals.mjs",
     "codegen:protocol": "cd ../../aura-harness && cargo test -p aura-protocol --features typescript export_typescript_bindings -- --nocapture && cp crates/aura-protocol/bindings/*.ts ../aura-app/frontend/src/types/harness-protocol.ts"
   },
   "dependencies": {

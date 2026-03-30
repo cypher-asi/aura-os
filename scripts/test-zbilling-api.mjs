@@ -10,8 +10,8 @@
  *   node scripts/test-zbilling-api.mjs
  *
  * Required env (reads from .env automatically):
- *   AURA_ROUTER_URL            - e.g. https://aura-router.onrender.com
- *   Z_BILLING_URL              - e.g. https://z-billing.onrender.com
+ *   AURA_ROUTER_URL            - e.g. https://your-router-host.example.com
+ *   Z_BILLING_URL              - e.g. https://your-billing-host.example.com
  *   AURA_NETWORK_AUTH_TOKEN    - JWT from zOS login (Bearer token)
  *
  * Test groups:

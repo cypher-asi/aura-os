@@ -137,27 +137,19 @@ pub(crate) async fn persist_task_output(
         return;
     };
 
-    if cached.input_tokens > 0 || cached.output_tokens > 0 {
+    if cached.total_input_tokens > 0 || cached.total_output_tokens > 0 {
         let req = aura_os_storage::UpdateTaskRequest {
-            title: None,
-            description: None,
-            order_index: None,
-            dependency_ids: None,
-            execution_notes: None,
-            files_changed: None,
-            model: None,
-            total_input_tokens: Some(cached.input_tokens),
-            total_output_tokens: Some(cached.output_tokens),
-            assigned_project_agent_id: None,
-            session_id: None,
+            total_input_tokens: Some(cached.total_input_tokens),
+            total_output_tokens: Some(cached.total_output_tokens),
+            ..Default::default()
         };
         if let Err(e) = storage.update_task(task_id, jwt, &req).await {
             warn!(task_id, error = %e, "Failed to persist task token usage");
         } else {
             info!(
                 task_id,
-                input_tokens = cached.input_tokens,
-                output_tokens = cached.output_tokens,
+                input_tokens = cached.total_input_tokens,
+                output_tokens = cached.total_output_tokens,
                 "Persisted task token usage"
             );
         }

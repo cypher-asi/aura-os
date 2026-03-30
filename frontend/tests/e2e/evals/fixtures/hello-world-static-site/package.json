@@ -1,0 +1,9 @@
+{
+  "name": "aura-eval-hello-world",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "node scripts/validate.js",
+    "test": "node scripts/validate.js"
+  }
+}

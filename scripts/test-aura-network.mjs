@@ -10,7 +10,7 @@
  *   node scripts/test-aura-network.mjs
  *
  * Required env (reads from .env automatically):
- *   AURA_NETWORK_URL          - e.g. https://aura-network.onrender.com
+ *   AURA_NETWORK_URL          - e.g. https://your-network-host.example.com
  *   AURA_NETWORK_AUTH_TOKEN   - JWT from zOS login (Bearer token)
  *   AURA_NETWORK_INTERNAL_TOKEN - for /internal/* endpoints
  */

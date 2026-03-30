@@ -53,10 +53,8 @@ async fn create_project_impl(
     if req.linked_folder_path.trim().is_empty()
         || !std::path::Path::new(req.linked_folder_path.trim()).is_absolute()
     {
-        let canonical = super::projects_helpers::canonical_workspace_path(
-            &state.data_dir,
-            &req.name,
-        );
+        let canonical =
+            super::projects_helpers::canonical_workspace_path(&state.data_dir, &req.name);
         if let Err(e) = std::fs::create_dir_all(&canonical) {
             return Err(ApiError::internal(format!(
                 "creating workspace directory: {e}"

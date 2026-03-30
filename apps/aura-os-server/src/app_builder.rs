@@ -157,6 +157,14 @@ fn parse_host_port(url: &str) -> Option<String> {
 /// Spawns the child process and polls for readiness in a background thread
 /// so it never blocks the caller.
 fn maybe_spawn_local_harness() {
+    if std::env::var("AURA_DISABLE_LOCAL_HARNESS_AUTOSPAWN")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+    {
+        info!("Local harness autospawn disabled by env");
+        return;
+    }
+
     let harness_url =
         std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
 

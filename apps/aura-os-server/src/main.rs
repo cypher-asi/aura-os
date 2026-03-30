@@ -6,6 +6,12 @@ use tracing::{info, warn};
 use tracing_subscriber::EnvFilter;
 
 fn default_data_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("AURA_DATA_DIR") {
+        let dir = dir.trim();
+        if !dir.is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
     dirs::data_local_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("aura")

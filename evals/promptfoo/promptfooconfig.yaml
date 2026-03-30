@@ -1,0 +1,20 @@
+description: "Aura planning and execution behavior evals"
+
+prompts:
+  - file://prompts/aura-build-loop.txt
+
+providers:
+  - id: file://providers/aura-policy-provider.mjs
+    label: aura-local-baseline
+    config:
+      bundleId: aura-local-baseline
+      style: baseline
+  - id: file://providers/aura-policy-provider.mjs
+    label: aura-local-optimized
+    config:
+      bundleId: aura-local-optimized
+      style: optimized
+
+tests:
+  - file://tests/core.yaml
+  - file://tests/governance.yaml
