@@ -7,12 +7,14 @@ edition = "2021"
 aura-os-server = { path = "../aura-os-server" }
 aura-os-ide = { path = "../aura-os-ide" }
 axum = "0.7"
+base64 = "0.22"
 wry = "0.54"
 tao = "0.34"
 tokio = { version = "1", features = ["full"] }
 dirs = "5"
 dotenvy = "0.15"
 image = "0.25.10"
+minisign-verify = "0.2.5"
 rfd = "0.15.1"
 open = "5"
 serde = { version = "1", features = ["derive"] }

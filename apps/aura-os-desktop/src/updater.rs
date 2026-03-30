@@ -1,3 +1,5 @@
+use base64::Engine;
+use minisign_verify::{PublicKey, Signature};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,8 +9,7 @@ use tracing::{error, info, warn};
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(30 * 60);
 
-// Placeholder – replace with the real base64-encoded public key generated via
-// `cargo packager signer generate` and baked in at compile time through build.rs.
+// Base64-encoded Minisign public key baked in at compile time through build.rs.
 const UPDATER_PUB_KEY: &str = env!("UPDATER_PUBLIC_KEY");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -176,8 +177,9 @@ async fn download_and_verify(manifest: &UpdateManifest) -> Result<std::path::Pat
         .await
         .map_err(|e| format!("failed to write update package: {e}"))?;
 
+    let signature_raw = decode_base64_utf8("signature", &manifest.signature)?;
     let sig_path = cache_dir.join(format!("{filename}.sig"));
-    tokio::fs::write(&sig_path, &manifest.signature)
+    tokio::fs::write(&sig_path, &signature_raw)
         .await
         .map_err(|e| format!("failed to write signature: {e}"))?;
 
@@ -224,15 +226,37 @@ async fn check_and_download(
     Ok(Some(manifest.version))
 }
 
-fn verify_signature(pkg_path: &std::path::Path, signature_b64: &str) -> Result<(), String> {
-    let _ = (pkg_path, signature_b64, UPDATER_PUB_KEY);
+fn decode_base64_utf8(label: &str, encoded: &str) -> Result<String, String> {
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .map_err(|e| format!("invalid {label} base64: {e}"))?;
+    String::from_utf8(decoded).map_err(|e| format!("invalid {label} utf-8: {e}"))
+}
 
-    // cargo-packager-updater handles verification internally when using its
-    // `Updater` API in the install path. For the download-first flow we store
-    // the signature and defer full verification to install time.
-    //
-    // TODO: call into the crate's verification helper for download-time checks.
-    Ok(())
+fn verify_signature_with_pubkey(
+    pkg_path: &std::path::Path,
+    signature_b64: &str,
+    public_key_b64: &str,
+) -> Result<(), String> {
+    if public_key_b64.starts_with("NOT_SET__") {
+        return Err("updater public key is not configured".into());
+    }
+
+    let public_key_raw = decode_base64_utf8("public key", public_key_b64)?;
+    let signature_raw = decode_base64_utf8("signature", signature_b64)?;
+    let public_key =
+        PublicKey::decode(&public_key_raw).map_err(|e| format!("invalid public key: {e}"))?;
+    let signature =
+        Signature::decode(&signature_raw).map_err(|e| format!("invalid signature: {e}"))?;
+    let package_bytes = std::fs::read(pkg_path).map_err(|e| format!("read failed: {e}"))?;
+
+    public_key
+        .verify(&package_bytes, &signature, true)
+        .map_err(|e| format!("signature mismatch: {e}"))
+}
+
+fn verify_signature(pkg_path: &std::path::Path, signature_b64: &str) -> Result<(), String> {
+    verify_signature_with_pubkey(pkg_path, signature_b64, UPDATER_PUB_KEY)
 }
 
 /// Install a previously-downloaded update and restart the process.
@@ -318,7 +342,8 @@ pub(crate) fn trigger_recheck(state: UpdateState) {
 
 #[cfg(test)]
 mod tests {
-    use super::{endpoint_for_channel_with_base, UpdateChannel};
+    use super::{endpoint_for_channel_with_base, verify_signature_with_pubkey, UpdateChannel};
+    use base64::Engine;
 
     #[test]
     fn endpoint_uses_stable_channel_path() {
@@ -338,5 +363,29 @@ mod tests {
             endpoint,
             "https://updates.example.com/nightly/{{target}}/{{arch}}.json"
         );
+    }
+
+    #[test]
+    fn verifies_base64_encoded_minisign_payloads() {
+        let public_key = "untrusted comment: minisign public key E7620F1842B4E81F\nRWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3";
+        let signature = "untrusted comment: signature from minisign secret key\nRWQf6LRCGA9i59SLOFxz6NxvASXDJeRtuZykwQepbDEGt87ig1BNpWaVWuNrm73YiIiJbq71Wi+dP9eKL8OC351vwIasSSbXxwA=\ntrusted comment: timestamp:1555779966\tfile:test\nQtKMXWyYcwdpZAlPF7tE2ENJkRd1ujvKjlj1m9RtHTBnZPa5WKU5uWRs5GoP5M/VqE81QFuMKI5k/SfNQUaOAA==";
+        let package_path = std::env::temp_dir().join(format!(
+            "aura-updater-test-{}-{}.bin",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system time should be after epoch")
+                .as_nanos()
+        ));
+        std::fs::write(&package_path, b"test").expect("test package should be written");
+
+        let result = verify_signature_with_pubkey(
+            &package_path,
+            &base64::engine::general_purpose::STANDARD.encode(signature),
+            &base64::engine::general_purpose::STANDARD.encode(public_key),
+        );
+
+        std::fs::remove_file(&package_path).ok();
+        assert!(result.is_ok(), "expected signature to verify, got {result:?}");
     }
 }

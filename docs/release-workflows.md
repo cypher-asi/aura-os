@@ -136,5 +136,4 @@ The release system answers a different question:
 ## Known Future Work
 
 - installer-level smoke verification for packaged desktop artifacts
-- stronger updater verification, including signature-path confidence
 - clearer release dashboards or consolidated summaries across desktop and mobile

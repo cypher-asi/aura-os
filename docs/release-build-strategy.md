@@ -198,12 +198,12 @@ Release workflows should also verify:
 
 ## Known Gaps To Address
 
-1. The desktop updater currently uses a hardcoded update base URL in
-   [updater.rs](/Users/shahrozkhan/Documents/zero/aura-os/apps/aura-os-desktop/src/updater.rs).
-2. Desktop signature verification is not fully enforced yet.
-3. Desktop release workflows currently duplicate frontend build work.
-4. There is no dedicated PR packaging validation workflow for desktop.
-5. Mobile and desktop release outputs are not yet presented as one coherent
+1. Installer-level smoke verification is still lighter than raw binary smoke
+   verification.
+2. Desktop release workflows currently duplicate frontend build work in some
+   edge cases outside the prebuilt frontend path.
+3. There is no dedicated PR packaging validation workflow for desktop.
+4. Mobile and desktop release outputs are not yet presented as one coherent
    release system.
 
 ## Implementation Phases
@@ -213,7 +213,6 @@ Release workflows should also verify:
 - audit and simplify existing nightly/stable workflows
 - remove duplicated build work where possible
 - make update base URL configurable
-- finish or tighten update signature verification
 - standardize artifact naming and manifest generation
 
 ### Phase 2: Packaged Desktop Validation

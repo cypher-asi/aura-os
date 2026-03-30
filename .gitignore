@@ -1,6 +1,7 @@
 /target
 .cursor
 .playwright-cli
+desktop-smoke-logs
 frontend/node_modules
 frontend/dist
 evals/promptfoo/node_modules

@@ -201,7 +201,7 @@ jobs:
             local sig_file="all-artifacts/${filename}.sig"
             local signature=""
             if [ -f "$sig_file" ]; then
-              signature=$(cat "$sig_file")
+              signature=$(base64 < "$sig_file" | tr -d '\n')
             fi
 
             mkdir -p "nightly/${target}"
