@@ -51,9 +51,10 @@ export function SidekickTaskbar() {
 
   useClickOutside([moreBtnRef, moreMenuRef], () => setMoreOpen(false), moreOpen);
 
-  if (!ctx || showInfo) return null;
+  if (showInfo) return null;
 
-  const { project, handleArchive } = ctx;
+  const project = ctx?.project;
+  const handleArchive = ctx?.handleArchive;
   const visibleTabs = canBrowseFiles ? TAB_ICONS : TAB_ICONS.filter((tab) => tab.id !== "files");
 
   return (
@@ -74,51 +75,53 @@ export function SidekickTaskbar() {
           />
         ))}
       </div>
-      <div ref={moreBtnRef} className={styles.moreButtonWrap}>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={<Ellipsis size={16} />}
-          onClick={() => setMoreOpen((v) => !v)}
-          title="More actions"
-          aria-label="More actions"
-        />
-        {moreOpen &&
-          menuRect &&
-          createPortal(
-            <div
-              ref={moreMenuRef}
-              className={styles.moreMenu}
-              style={{
-                position: "fixed",
-                top: menuRect.top,
-                left: menuRect.left,
-                zIndex: 100,
-              }}
-            >
-              <Menu
-                items={[
-                  ...(project.current_status !== "archived"
-                    ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
-                    : []),
-                  { id: "info", label: "Project Info", icon: <Info size={14} /> },
-                ]}
-                onChange={(id) => {
-                  setMoreOpen(false);
-                  if (id === "archive") handleArchive();
-                  if (id === "info") toggleInfo("Project Info", null);
+      {project && (
+        <div ref={moreBtnRef} className={styles.moreButtonWrap}>
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={<Ellipsis size={16} />}
+            onClick={() => setMoreOpen((v) => !v)}
+            title="More actions"
+            aria-label="More actions"
+          />
+          {moreOpen &&
+            menuRect &&
+            createPortal(
+              <div
+                ref={moreMenuRef}
+                className={styles.moreMenu}
+                style={{
+                  position: "fixed",
+                  top: menuRect.top,
+                  left: menuRect.left,
+                  zIndex: 100,
                 }}
-                background="solid"
-                border="solid"
-                rounded="md"
-                width={180}
-                isOpen
-              />
-            </div>,
-            document.body,
-          )}
-      </div>
+              >
+                <Menu
+                  items={[
+                    ...(project.current_status !== "archived"
+                      ? [{ id: "archive", label: "Archive", icon: <Archive size={14} /> }]
+                      : []),
+                    { id: "info", label: "Project Info", icon: <Info size={14} /> },
+                  ]}
+                  onChange={(id) => {
+                    setMoreOpen(false);
+                    if (id === "archive") handleArchive?.();
+                    if (id === "info") toggleInfo("Project Info", null);
+                  }}
+                  background="solid"
+                  border="solid"
+                  rounded="md"
+                  width={180}
+                  isOpen
+                />
+              </div>,
+              document.body,
+            )}
+        </div>
+      )}
     </div>
   );
 }
