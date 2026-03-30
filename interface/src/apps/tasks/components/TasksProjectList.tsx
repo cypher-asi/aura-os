@@ -7,7 +7,6 @@ import { Bot, FolderGit2, Loader2, Pencil, Settings, Trash2 } from "lucide-react
 import { Avatar } from "../../../components/Avatar";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
 import { useSidebarSearch } from "../../../context/SidebarSearchContext";
-import { getLastAgent } from "../../../utils/storage";
 import { useProjectListData } from "../../../components/ProjectList/useProjectListData";
 import { ProjectListModals } from "../../../components/ProjectList/ProjectListModals";
 
@@ -213,20 +212,13 @@ export function TasksProjectList() {
 
     if (projectMap.has(id)) {
       if (id !== projectId) sidekick.closePreview();
-      const agents = agentsByProject[id];
-      if (agents && agents.length > 0) {
-        const lastAid = getLastAgent(id);
-        const target = (lastAid ? agents.find((a) => a.agent_instance_id === lastAid) : undefined) ?? agents[0];
-        navigate(`/tasks/${id}/agents/${target.agent_instance_id}`);
-      } else {
-        navigate(`/tasks/${id}`);
-      }
+      navigate(`/tasks/${id}`);
     } else if (agentMeta.has(id)) {
       const { projectId: pid } = agentMeta.get(id)!;
       if (pid !== projectId) sidekick.closePreview();
       navigate(`/tasks/${pid}/agents/${id}`);
     }
-  }, [projectMap, agentMeta, agentsByProject, navigate, projectId, sidekick]);
+  }, [projectMap, agentMeta, navigate, projectId, sidekick]);
 
   const handleExpand = useCallback((nodeId: string, expanded: boolean) => {
     const isNested = Boolean(agentInstanceId);

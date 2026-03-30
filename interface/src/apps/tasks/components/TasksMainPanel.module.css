@@ -63,6 +63,12 @@
   font-weight: 600;
 }
 
+.headerRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .countBadge {
   display: inline-flex;
   align-items: center;
@@ -102,7 +108,7 @@
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr);
   gap: 8px;
-  align-items: center;
+  align-items: start;
   padding: 8px;
   cursor: pointer;
 }
@@ -114,6 +120,14 @@
 .taskCardMeta {
   display: inline-flex;
   align-items: center;
+  padding-top: 1px;
+}
+
+.taskCardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .taskCardText {
@@ -123,12 +137,107 @@
   padding-right: 20px;
 }
 
+.taskCardDesc {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.taskCardFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.depBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+
+.runBtn {
+  margin-left: auto;
+}
+
 .assigneeAvatar {
   position: absolute;
   top: 6px;
   right: 6px;
   z-index: 1;
   pointer-events: none;
+}
+
+/* ── AddTaskForm ── */
+
+.addTaskForm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+}
+
+.addTaskInput {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+}
+
+.addTaskInput:focus {
+  border-color: var(--color-primary);
+}
+
+.addTaskInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.addTaskTextarea {
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  resize: vertical;
+  min-height: 40px;
+  font-family: inherit;
+}
+
+.addTaskTextarea:focus {
+  border-color: var(--color-primary);
+}
+
+.addTaskTextarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.addTaskActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .loadingOverlay {

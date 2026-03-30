@@ -6,8 +6,8 @@ import { RotateCcw } from "lucide-react";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { Avatar } from "../Avatar";
 import { useAvatarState } from "../../hooks/use-avatar-state";
-import { toBullets, formatTokens } from "../../utils/format";
-import type { Task, AgentInstance } from "../../types";
+import { toBullets, formatTokens, formatRelativeTime } from "../../utils/format";
+import type { Task, AgentInstance, Spec } from "../../types";
 import styles from "../Preview/Preview.module.css";
 
 function extractErrorMessage(raw: string): string {
@@ -53,6 +53,8 @@ export interface TaskMetaSectionProps {
   retrying: boolean;
   onRetry: () => void;
   onViewSession: () => void;
+  specs?: Spec[];
+  allTasks?: Task[];
 }
 
 export function TaskMetaSection({
@@ -67,7 +69,17 @@ export function TaskMetaSection({
   retrying,
   onRetry,
   onViewSession,
+  specs,
+  allTasks,
 }: TaskMetaSectionProps) {
+  const specTitle = specs?.find((s) => s.spec_id === task.spec_id)?.title;
+  const parentTitle = task.parent_task_id
+    ? allTasks?.find((t) => t.task_id === task.parent_task_id)?.title
+    : null;
+  const depTitles = task.dependency_ids.length > 0
+    ? task.dependency_ids.map((id) => allTasks?.find((t) => t.task_id === id)?.title ?? id.slice(0, 8))
+    : null;
+
   return (
     <div className={styles.taskMeta}>
       <div className={styles.taskField}>
@@ -128,6 +140,30 @@ export function TaskMetaSection({
           <Text size="sm">—</Text>
         )}
       </div>
+      {specTitle && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Spec</span>
+          <Text size="sm">{specTitle}</Text>
+        </div>
+      )}
+      {typeof task.order_index === "number" && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Order</span>
+          <Text size="sm">{task.order_index}</Text>
+        </div>
+      )}
+      {depTitles && depTitles.length > 0 && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Dependencies ({depTitles.length})</span>
+          <Text size="sm">{depTitles.join(", ")}</Text>
+        </div>
+      )}
+      {parentTitle && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Parent task</span>
+          <Text size="sm">{parentTitle}</Text>
+        </div>
+      )}
       {effectiveSessionId && (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Session</span>
@@ -152,15 +188,25 @@ export function TaskMetaSection({
         </div>
       )}
       {(task.total_input_tokens > 0 || task.total_output_tokens > 0) && (
-        <>
-          <div className={styles.taskField}>
-            <span className={styles.fieldLabel}>Tokens</span>
-            <Text size="sm">
-              {formatTokens(task.total_input_tokens + task.total_output_tokens)} total
-              <Text variant="muted" size="sm" as="span"> ({formatTokens(task.total_input_tokens)} in / {formatTokens(task.total_output_tokens)} out)</Text>
-            </Text>
-          </div>
-        </>
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Tokens</span>
+          <Text size="sm">
+            {formatTokens(task.total_input_tokens + task.total_output_tokens)} total
+            <Text variant="muted" size="sm" as="span"> ({formatTokens(task.total_input_tokens)} in / {formatTokens(task.total_output_tokens)} out)</Text>
+          </Text>
+        </div>
+      )}
+      {task.created_at && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Created</span>
+          <Text size="sm">{formatRelativeTime(task.created_at)}</Text>
+        </div>
+      )}
+      {task.updated_at && task.updated_at !== task.created_at && (
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Updated</span>
+          <Text size="sm">{formatRelativeTime(task.updated_at)}</Text>
+        </div>
       )}
     </div>
   );

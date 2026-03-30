@@ -133,5 +133,11 @@ export function useKanbanLanes(
     return result;
   }, [cached, agentInstanceId]);
 
-  return { lanes, loading };
+  const projectTaskCount = cached?.tasks.length ?? 0;
+  const filteredTaskCount = useMemo(
+    () => Object.values(lanes).reduce((sum, laneTasks) => sum + laneTasks.length, 0),
+    [lanes],
+  );
+
+  return { lanes, loading, filteredTaskCount, projectTaskCount };
 }

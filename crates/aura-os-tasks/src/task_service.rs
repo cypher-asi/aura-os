@@ -376,7 +376,49 @@ impl TaskService {
                 .then(a.order_index.cmp(&b.order_index))
         });
 
-        Ok(ready.first().cloned().cloned())
+        if let Some(task) = ready.first() {
+            return Ok(Some((*task).clone()));
+        }
+
+        // Auto-promote: when the pipeline is empty (no Ready, InProgress, or
+        // Blocked tasks), pick the next ToDo task and promote it through
+        // ToDo -> Pending -> Ready so the automation loop can execute it.
+        let pipeline_active = all_tasks.iter().any(|t| {
+            matches!(
+                t.status,
+                TaskStatus::Ready | TaskStatus::InProgress | TaskStatus::Blocked
+            )
+        });
+
+        if pipeline_active {
+            return Ok(None);
+        }
+
+        let mut todo: Vec<&Task> = all_tasks
+            .iter()
+            .filter(|t| t.status == TaskStatus::ToDo)
+            .collect();
+
+        todo.sort_by(|a, b| {
+            let spec_ord_a = specs.get(&a.spec_id).copied().unwrap_or(u32::MAX);
+            let spec_ord_b = specs.get(&b.spec_id).copied().unwrap_or(u32::MAX);
+            spec_ord_a
+                .cmp(&spec_ord_b)
+                .then(a.order_index.cmp(&b.order_index))
+        });
+
+        if let Some(candidate) = todo.first() {
+            let tid = &candidate.task_id;
+            let sid = &candidate.spec_id;
+            self.transition_task(project_id, sid, tid, TaskStatus::Pending)
+                .await?;
+            let promoted = self
+                .transition_task(project_id, sid, tid, TaskStatus::Ready)
+                .await?;
+            return Ok(Some(promoted));
+        }
+
+        Ok(None)
     }
 
     pub async fn claim_next_task(

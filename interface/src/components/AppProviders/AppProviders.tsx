@@ -10,7 +10,8 @@ function AppSync(): null {
 
   useEffect(() => {
     syncActiveApp(pathname);
-    markAppVisited(useAppStore.getState().activeApp.id);
+    const activeAppIdAfterSync = useAppStore.getState().activeApp.id;
+    markAppVisited(activeAppIdAfterSync);
   }, [pathname, markAppVisited]);
 
   const activeAppId = useAppStore((s) => s.activeApp.id);

@@ -12,6 +12,12 @@ mod helpers;
 
 #[test]
 fn valid_transitions_succeed() {
+    assert!(TaskService::validate_transition(TaskStatus::Backlog, TaskStatus::ToDo).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Backlog, TaskStatus::Pending).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::ToDo, TaskStatus::Pending).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::ToDo, TaskStatus::Backlog).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::ToDo).is_ok());
+    assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Backlog).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Ready).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Ready, TaskStatus::InProgress).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::InProgress, TaskStatus::Done).is_ok());
@@ -21,6 +27,19 @@ fn valid_transitions_succeed() {
     assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::Ready).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Failed, TaskStatus::InProgress).is_ok());
     assert!(TaskService::validate_transition(TaskStatus::Blocked, TaskStatus::Ready).is_ok());
+}
+
+/// Auto-promote uses the two-step sequence ToDo -> Pending -> Ready.
+#[test]
+fn auto_promote_two_step_sequence_is_valid() {
+    assert!(
+        TaskService::validate_transition(TaskStatus::ToDo, TaskStatus::Pending).is_ok(),
+        "first step: to_do → pending"
+    );
+    assert!(
+        TaskService::validate_transition(TaskStatus::Pending, TaskStatus::Ready).is_ok(),
+        "second step: pending → ready"
+    );
 }
 
 #[test]
