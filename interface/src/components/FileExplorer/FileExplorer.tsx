@@ -165,7 +165,19 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
     [explorerData, searchQuery],
   );
 
-  const defaultExpandedIds = useMemo(() => ["__files_root__"], []);
+  const defaultExpandedIds = useMemo(() => {
+    const ids: string[] = ["__files_root__"];
+    const collectFolderIds = (nodes: ExplorerNode[]) => {
+      for (const node of nodes) {
+        if (node.children) {
+          ids.push(node.id);
+          collectFolderIds(node.children);
+        }
+      }
+    };
+    collectFolderIds(explorerData);
+    return ids;
+  }, [explorerData]);
 
   const handleSelect = useCallback(
     (ids: string[]) => {
