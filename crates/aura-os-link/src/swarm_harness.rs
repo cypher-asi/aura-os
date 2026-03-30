@@ -140,23 +140,31 @@ impl HarnessLink for SwarmHarness {
             .as_deref()
             .or(config.agent_id.as_deref())
             .unwrap_or("default");
+        let agent_provision_name = sanitize_swarm_name(agent_display_name, config.agent_id.as_deref());
         let mut agent_body = serde_json::json!({
-            "name": agent_display_name,
+            "name": agent_provision_name,
         });
         if let Some(ref aid) = config.agent_id {
             agent_body["agent_id"] = serde_json::Value::String(aid.clone());
         }
 
-        let agent_resp: CreateAgentResponse = self
+        let agent_response = self
             .client
             .post(format!("{}/v1/agents", self.base_url))
             .headers(headers.clone())
             .json(&agent_body)
             .send()
-            .await?
-            .error_for_status()?
-            .json()
             .await?;
+        let agent_status = agent_response.status();
+        let agent_body_text = agent_response.text().await?;
+        if !agent_status.is_success() {
+            anyhow::bail!(
+                "swarm create agent failed with {}: {}",
+                agent_status,
+                agent_body_text
+            );
+        }
+        let agent_resp: CreateAgentResponse = serde_json::from_str(&agent_body_text)?;
         let agent_id = &agent_resp.agent_id;
 
         // 2. Wait for agent to reach a runnable state before creating session
@@ -183,16 +191,23 @@ impl HarnessLink for SwarmHarness {
             }
         });
 
-        let session_resp: CreateSessionResponse = self
+        let session_response = self
             .client
             .post(format!("{}/v1/agents/{agent_id}/sessions", self.base_url))
             .headers(headers.clone())
             .json(&session_body)
             .send()
-            .await?
-            .error_for_status()?
-            .json()
             .await?;
+        let session_status = session_response.status();
+        let session_body_text = session_response.text().await?;
+        if !session_status.is_success() {
+            anyhow::bail!(
+                "swarm create session failed with {}: {}",
+                session_status,
+                session_body_text
+            );
+        }
+        let session_resp: CreateSessionResponse = serde_json::from_str(&session_body_text)?;
 
         info!(
             session_id = %session_resp.session_id,
@@ -258,5 +273,63 @@ impl HarnessLink for SwarmHarness {
             .await?
             .error_for_status()?;
         Ok(())
+    }
+}
+
+fn sanitize_swarm_name(name: &str, agent_id: Option<&str>) -> String {
+    let mut sanitized = String::with_capacity(name.len().min(64));
+    let mut last_was_separator = false;
+
+    for ch in name.chars() {
+        if ch.is_alphanumeric() || ch == '_' || ch == '-' {
+            sanitized.push(ch);
+            last_was_separator = false;
+        } else if !sanitized.is_empty() && !last_was_separator {
+            sanitized.push('-');
+            last_was_separator = true;
+        }
+    }
+
+    let trimmed = sanitized.trim_matches(['-', '_']).to_string();
+    let mut final_name = if trimmed.is_empty() {
+        let suffix = agent_id
+            .and_then(|value| value.split('-').next())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("remote");
+        format!("agent-{suffix}")
+    } else {
+        trimmed
+    };
+
+    if final_name.len() > 64 {
+        final_name.truncate(64);
+        final_name = final_name.trim_matches(['-', '_']).to_string();
+    }
+
+    if final_name.is_empty() {
+        "agent-remote".to_string()
+    } else {
+        final_name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sanitize_swarm_name;
+
+    #[test]
+    fn sanitize_swarm_name_replaces_invalid_characters() {
+        assert_eq!(
+            sanitize_swarm_name("Aura Eval Builder", Some("00000000-1111-2222-3333-444444444444")),
+            "Aura-Eval-Builder"
+        );
+    }
+
+    #[test]
+    fn sanitize_swarm_name_uses_agent_id_fallback() {
+        assert_eq!(
+            sanitize_swarm_name("!!!", Some("12345678-1111-2222-3333-444444444444")),
+            "agent-12345678"
+        );
     }
 }
