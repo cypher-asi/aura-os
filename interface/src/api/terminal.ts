@@ -44,7 +44,7 @@ export async function killTerminal(id: string): Promise<void> {
     method: "DELETE",
     credentials: "include",
   });
-  if (!res.ok && res.status !== 204)
+  if (!res.ok && res.status !== 204 && res.status !== 404)
     throw new Error(`Kill terminal failed: ${res.statusText}`);
 }
 

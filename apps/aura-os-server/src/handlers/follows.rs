@@ -25,9 +25,12 @@ fn follow_from_network(net: &NetworkFollow) -> Follow {
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or_else(Utc::now);
+    let follow_id = net.id.clone().unwrap_or_else(|| {
+        format!("{}:{}", net.follower_profile_id, net.target_profile_id)
+    });
 
     Follow {
-        id: net.id.clone(),
+        id: follow_id,
         follower_profile_id,
         target_profile_id,
         created_at,

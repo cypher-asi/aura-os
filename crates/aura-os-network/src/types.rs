@@ -371,7 +371,8 @@ pub struct UpdateProjectRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkFollow {
-    pub id: String,
+    #[serde(default)]
+    pub id: Option<String>,
     pub follower_profile_id: String,
     pub target_profile_id: String,
     #[serde(default)]

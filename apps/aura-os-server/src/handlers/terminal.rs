@@ -72,11 +72,10 @@ pub(crate) async fn kill_terminal(
 
     match state.terminal_manager.kill(tid) {
         Ok(()) => axum::http::StatusCode::NO_CONTENT.into_response(),
-        Err(e) => (
-            axum::http::StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": e })),
-        )
-            .into_response(),
+        // Deleting an already-gone terminal should be idempotent.
+        // The WS shutdown path already kills the PTY, so a follow-up DELETE
+        // from the client can legitimately race and hit a missing ID.
+        Err(_e) => axum::http::StatusCode::NO_CONTENT.into_response(),
     }
 }
 

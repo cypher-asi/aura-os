@@ -20,12 +20,9 @@ function resolveOrbitUrl(project: Project): string | null {
 export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-
-  if (!project) return null
-
-  const isConnected = !!(project.orbit_owner?.trim() && project.orbit_repo?.trim())
-  const orbitUrl = resolveOrbitUrl(project)
-  const repoLabel = isConnected
+  const isConnected = !!(project?.orbit_owner?.trim() && project?.orbit_repo?.trim())
+  const orbitUrl = project ? resolveOrbitUrl(project) : null
+  const repoLabel = project && isConnected
     ? `${project.orbit_owner}/${project.orbit_repo}`
     : null
 
@@ -42,6 +39,8 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
 
   const handleMouseEnter = useCallback(() => setOpen(true), [])
   const handleMouseLeave = useCallback(() => setOpen(false), [])
+
+  if (!project) return null
 
   return (
     <div
