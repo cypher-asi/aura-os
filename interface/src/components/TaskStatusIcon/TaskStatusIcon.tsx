@@ -3,6 +3,8 @@ import styles from "./TaskStatusIcon.module.css";
 type VisualState = "empty" | "spinning" | "filled" | "error";
 
 const STATUS_TO_STATE: Record<string, VisualState> = {
+  backlog: "empty",
+  to_do: "empty",
   pending: "empty",
   ready: "empty",
   blocked: "empty",

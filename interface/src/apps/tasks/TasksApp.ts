@@ -1,7 +1,6 @@
 import { Check } from "lucide-react";
 import { TasksProjectList } from "./components/TasksProjectList";
 import { TasksMainPanel } from "./components/TasksMainPanel";
-import { TasksProvider } from "./components/TasksProvider";
 import { SidekickContent } from "../../components/SidekickContent";
 import { SidekickTaskbar } from "../../components/SidekickTaskbar";
 import { SidekickHeader } from "../../components/SidekickHeader";
@@ -21,6 +20,5 @@ export const TasksApp: AuraApp = {
   SidekickHeader: SidekickHeader,
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
-  Provider: TasksProvider,
   searchPlaceholder: "Search Tasks...",
 };

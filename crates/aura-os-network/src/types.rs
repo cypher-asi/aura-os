@@ -17,20 +17,22 @@ pub struct HealthResponse {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkUser {
     pub id: String,
-    #[serde(default)]
+    #[serde(default, alias = "zos_user_id")]
     pub zos_user_id: Option<String>,
+    #[serde(alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
-    #[serde(default, rename = "profileImage")]
+    #[serde(default, rename = "profileImage", alias = "avatar_url", alias = "avatarUrl")]
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     #[serde(default)]
     pub location: Option<String>,
     #[serde(default)]
     pub website: Option<String>,
+    #[serde(alias = "profile_id")]
     pub profile_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "updated_at")]
     pub updated_at: Option<String>,
 }
 
@@ -70,11 +72,14 @@ pub struct UpdateUserRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkProfile {
     pub id: String,
+    #[serde(alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
+    #[serde(alias = "avatar_url", alias = "avatarUrl")]
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
-    #[serde(rename = "type")]
+    #[serde(rename = "type", alias = "profile_type", alias = "profileType")]
     pub profile_type: Option<String>,
+    #[serde(alias = "entity_id", alias = "entityId")]
     pub entity_id: Option<String>,
 }
 
@@ -387,13 +392,15 @@ pub struct FollowRequest {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkFeedEvent {
     pub id: String,
+    #[serde(alias = "profile_id")]
     pub profile_id: String,
-    #[serde(default)]
+    #[serde(default, alias = "org_id")]
     pub org_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "project_id")]
     pub project_id: Option<String>,
+    #[serde(alias = "event_type")]
     pub event_type: String,
-    #[serde(default)]
+    #[serde(default, alias = "post_type")]
     pub post_type: Option<String>,
     #[serde(default)]
     pub title: Option<String>,
@@ -401,15 +408,15 @@ pub struct NetworkFeedEvent {
     pub summary: Option<String>,
     #[serde(default)]
     pub metadata: Option<serde_json::Value>,
-    #[serde(default)]
+    #[serde(default, alias = "agent_id")]
     pub agent_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "user_id")]
     pub user_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "push_id")]
     pub push_id: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "commit_ids")]
     pub commit_ids: Option<Vec<String>>,
-    #[serde(default)]
+    #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
 }
 
@@ -417,10 +424,12 @@ pub struct NetworkFeedEvent {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkComment {
     pub id: String,
+    #[serde(alias = "activity_event_id")]
     pub activity_event_id: String,
+    #[serde(alias = "profile_id")]
     pub profile_id: String,
     pub content: String,
-    #[serde(default)]
+    #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
 }
 
@@ -431,18 +440,19 @@ pub struct NetworkComment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardEntry {
+    #[serde(alias = "profile_id")]
     pub profile_id: String,
-    #[serde(default)]
+    #[serde(default, alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "avatar_url")]
     pub avatar_url: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "tokens_used")]
     pub tokens_used: u64,
-    #[serde(default)]
+    #[serde(default, alias = "estimated_cost_usd")]
     pub estimated_cost_usd: f64,
-    #[serde(default)]
+    #[serde(default, alias = "event_count")]
     pub event_count: u64,
-    #[serde(default)]
+    #[serde(default, alias = "profile_type")]
     pub profile_type: Option<String>,
 }
 

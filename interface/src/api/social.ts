@@ -85,6 +85,8 @@ export interface FeedEventDto {
   push_id?: string | null;
   commit_ids?: string[] | null;
   created_at: string | null;
+  author_name?: string | null;
+  author_avatar?: string | null;
 }
 
 export interface CommentDto {
@@ -93,6 +95,8 @@ export interface CommentDto {
   profile_id: string;
   content: string;
   created_at: string | null;
+  author_name?: string | null;
+  author_avatar?: string | null;
 }
 
 export const feedApi = {

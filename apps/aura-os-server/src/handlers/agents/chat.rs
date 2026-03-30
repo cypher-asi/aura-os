@@ -826,6 +826,7 @@ pub(crate) async fn send_agent_event_stream(
             agent_name: Some(agent.name.clone()),
             model: body.model.clone(),
             conversation_messages,
+            project_id: body.project_id.clone(),
             ..Default::default()
         },
     );

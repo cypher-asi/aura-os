@@ -332,6 +332,41 @@ pub(crate) async fn get_task_output(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct CreateTaskBody {
+    pub title: String,
+    pub spec_id: String,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub order_index: Option<i32>,
+}
+
+pub(crate) async fn create_task(
+    State(state): State<AppState>,
+    Path(project_id): Path<ProjectId>,
+    Json(req): Json<CreateTaskBody>,
+) -> ApiResult<Json<Task>> {
+    let storage = state.require_storage_client()?;
+    let jwt = state.get_jwt()?;
+
+    let storage_req = aura_os_storage::CreateTaskRequest {
+        spec_id: req.spec_id,
+        title: req.title,
+        org_id: None,
+        description: req.description,
+        status: Some(req.status.unwrap_or_else(|| "backlog".to_string())),
+        order_index: req.order_index,
+        dependency_ids: None,
+    };
+
+    let created = storage
+        .create_task(&project_id.to_string(), &jwt, &storage_req)
+        .await
+        .map_err(|e| ApiError::internal(format!("creating task: {e}")))?;
+    let task = storage_task_to_task(created).map_err(ApiError::internal)?;
+    Ok(Json(task))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

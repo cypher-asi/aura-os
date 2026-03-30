@@ -1,5 +1,5 @@
+import { useMemo } from "react";
 import { create } from "zustand";
-import { useShallow } from "zustand/react/shallow";
 import type { Task, ProjectId, TaskStatus } from "../../../types";
 import { tasksApi } from "../../../api/tasks";
 
@@ -101,35 +101,37 @@ export function useKanbanLanes(
   projectId: string | undefined,
   agentInstanceId?: string,
 ) {
-  return useKanbanStore(
-    useShallow((s) => {
-      const empty: Record<TaskStatus, Task[]> = Object.fromEntries(
-        LANE_ORDER.map((status) => [status, []]),
-      ) as Record<TaskStatus, Task[]>;
-
-      if (!projectId) return { lanes: empty, loading: false };
-
-      const cached = s.tasksByProject[projectId];
-      if (!cached)
-        return { lanes: empty, loading: s.loading[projectId] ?? false };
-
-      let tasks = cached.tasks;
-      if (agentInstanceId) {
-        tasks = tasks.filter(
-          (t) =>
-            t.assigned_agent_instance_id === agentInstanceId ||
-            t.completed_by_agent_instance_id === agentInstanceId,
-        );
-      }
-
-      const lanes = { ...empty };
-      for (const task of tasks) {
-        if (lanes[task.status]) {
-          lanes[task.status].push(task);
-        }
-      }
-
-      return { lanes, loading: s.loading[projectId] ?? false };
-    }),
+  const cached = useKanbanStore(
+    (s) => (projectId ? s.tasksByProject[projectId] : undefined),
   );
+  const loading = useKanbanStore(
+    (s) => (projectId ? (s.loading[projectId] ?? false) : false),
+  );
+
+  const lanes = useMemo(() => {
+    const empty = Object.fromEntries(
+      LANE_ORDER.map((status) => [status, [] as Task[]]),
+    ) as Record<TaskStatus, Task[]>;
+
+    if (!cached) return empty;
+
+    let tasks = cached.tasks;
+    if (agentInstanceId) {
+      tasks = tasks.filter(
+        (t) =>
+          t.assigned_agent_instance_id === agentInstanceId ||
+          t.completed_by_agent_instance_id === agentInstanceId,
+      );
+    }
+
+    const result = { ...empty };
+    for (const task of tasks) {
+      if (result[task.status]) {
+        result[task.status].push(task);
+      }
+    }
+    return result;
+  }, [cached, agentInstanceId]);
+
+  return { lanes, loading };
 }

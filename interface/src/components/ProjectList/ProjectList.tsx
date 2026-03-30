@@ -49,6 +49,14 @@ function executionNodeId(projectId: string) {
   return `execution:${projectId}`;
 }
 
+function getLastSelectedId(ids: Iterable<string>): string | null {
+  let selectedId: string | null = null;
+  for (const id of ids) {
+    selectedId = id;
+  }
+  return selectedId;
+}
+
 function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   const { setAction } = useSidebarSearch();
   const navigate = useNavigate();
@@ -218,8 +226,8 @@ export function ProjectList() {
     return [];
   }, [agentInstanceId, isMobileLayout, location.pathname, projectId]);
 
-  const handleSelect = useCallback((ids: string[]) => {
-    const id = ids[ids.length - 1];
+  const handleSelect = useCallback((ids: Iterable<string>) => {
+    const id = getLastSelectedId(ids);
     if (!id) return;
     const mobileDestination = getMobileProjectDestination(location.pathname);
     const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files") || location.pathname.endsWith("/stats");

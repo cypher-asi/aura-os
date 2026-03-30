@@ -37,6 +37,14 @@ const agentMenuItems: MenuItem[] = [
   { id: "delete-agent", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
+function getLastSelectedId(ids: Iterable<string>): string | null {
+  let selectedId: string | null = null;
+  for (const id of ids) {
+    selectedId = id;
+  }
+  return selectedId;
+}
+
 function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   const { setAction } = useSidebarSearch();
   const {
@@ -161,7 +169,7 @@ export function TasksProjectList() {
   useTasksProjectListEffects(data);
 
   const {
-    projectId, agentInstanceId, location, sidekick,
+    projectId, agentInstanceId, sidekick,
     projects, loadingProjects, agentsByProject,
     searchQuery,
     actions, projectMap, agentMeta, refreshProjectAgents,
@@ -199,8 +207,8 @@ export function TasksProjectList() {
     return [];
   }, [agentInstanceId, projectId]);
 
-  const handleSelect = useCallback((ids: string[]) => {
-    const id = ids[ids.length - 1];
+  const handleSelect = useCallback((ids: Iterable<string>) => {
+    const id = getLastSelectedId(ids);
     if (!id) return;
 
     if (projectMap.has(id)) {

@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
+use futures_util::future::join_all;
 use serde::{Deserialize, Serialize};
 
-use aura_os_network::{NetworkComment, NetworkFeedEvent};
+use aura_os_network::{NetworkClient, NetworkComment, NetworkFeedEvent, NetworkProfile};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
@@ -42,11 +45,18 @@ pub(crate) struct FeedEventResponse {
     pub commit_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_avatar: Option<String>,
 }
 
-impl From<NetworkFeedEvent> for FeedEventResponse {
-    fn from(e: NetworkFeedEvent) -> Self {
+impl FeedEventResponse {
+    fn from_event(e: NetworkFeedEvent, profiles: &HashMap<String, NetworkProfile>) -> Self {
+        let profile = profiles.get(&e.profile_id);
         Self {
+            author_name: profile.and_then(|p| p.display_name.clone()),
+            author_avatar: profile.and_then(|p| p.avatar_url.clone()),
             id: e.id,
             profile_id: e.profile_id,
             event_type: e.event_type,
@@ -73,11 +83,18 @@ pub(crate) struct CommentResponse {
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_avatar: Option<String>,
 }
 
-impl From<NetworkComment> for CommentResponse {
-    fn from(c: NetworkComment) -> Self {
+impl CommentResponse {
+    fn from_comment(c: NetworkComment, profiles: &HashMap<String, NetworkProfile>) -> Self {
+        let profile = profiles.get(&c.profile_id);
         Self {
+            author_name: profile.and_then(|p| p.display_name.clone()),
+            author_avatar: profile.and_then(|p| p.avatar_url.clone()),
             id: c.id,
             activity_event_id: c.activity_event_id,
             profile_id: c.profile_id,
@@ -101,6 +118,38 @@ pub(crate) struct CreatePostRequest {
     pub metadata: Option<serde_json::Value>,
 }
 
+/// Batch-fetch profiles for a set of profile IDs (deduplicated, concurrent).
+/// Failures for individual profiles are silently skipped.
+async fn resolve_profiles(
+    client: &NetworkClient,
+    profile_ids: impl IntoIterator<Item = &str>,
+    jwt: &str,
+) -> HashMap<String, NetworkProfile> {
+    let unique: Vec<String> = {
+        let mut seen = std::collections::HashSet::new();
+        profile_ids
+            .into_iter()
+            .filter(|id| !id.is_empty() && seen.insert(id.to_string()))
+            .map(String::from)
+            .collect()
+    };
+
+    let futs = unique.into_iter().map(|id| {
+        let client = client.clone();
+        let jwt = jwt.to_owned();
+        async move {
+            let result = client.get_profile(&id, &jwt).await;
+            (id, result)
+        }
+    });
+
+    join_all(futs)
+        .await
+        .into_iter()
+        .filter_map(|(id, res)| res.ok().map(|p| (id, p)))
+        .collect()
+}
+
 pub(crate) async fn list_feed(
     State(state): State<AppState>,
     Query(query): Query<FeedQuery>,
@@ -111,8 +160,19 @@ pub(crate) async fn list_feed(
         .get_feed(query.filter.as_deref(), query.limit, query.offset, &jwt)
         .await
         .map_err(map_network_error)?;
+
+    let profiles = resolve_profiles(
+        client,
+        events.iter().map(|e| e.profile_id.as_str()),
+        &jwt,
+    )
+    .await;
+
     Ok(Json(
-        events.into_iter().map(FeedEventResponse::from).collect(),
+        events
+            .into_iter()
+            .map(|e| FeedEventResponse::from_event(e, &profiles))
+            .collect(),
     ))
 }
 
@@ -139,7 +199,12 @@ pub(crate) async fn create_post(
         })
         .await
         .map_err(map_network_error)?;
-    Ok((StatusCode::CREATED, Json(FeedEventResponse::from(post))))
+
+    let profiles = resolve_profiles(client, [post.profile_id.as_str()], &jwt).await;
+    Ok((
+        StatusCode::CREATED,
+        Json(FeedEventResponse::from_event(post, &profiles)),
+    ))
 }
 
 pub(crate) async fn get_post(
@@ -152,7 +217,9 @@ pub(crate) async fn get_post(
         .get_post(&post_id, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok(Json(FeedEventResponse::from(post)))
+
+    let profiles = resolve_profiles(client, [post.profile_id.as_str()], &jwt).await;
+    Ok(Json(FeedEventResponse::from_event(post, &profiles)))
 }
 
 pub(crate) async fn get_profile_posts(
@@ -165,8 +232,19 @@ pub(crate) async fn get_profile_posts(
         .get_profile_posts(&profile_id, &jwt)
         .await
         .map_err(map_network_error)?;
+
+    let profiles = resolve_profiles(
+        client,
+        posts.iter().map(|e| e.profile_id.as_str()),
+        &jwt,
+    )
+    .await;
+
     Ok(Json(
-        posts.into_iter().map(FeedEventResponse::from).collect(),
+        posts
+            .into_iter()
+            .map(|e| FeedEventResponse::from_event(e, &profiles))
+            .collect(),
     ))
 }
 
@@ -180,8 +258,19 @@ pub(crate) async fn list_comments(
         .list_comments(&post_id, &jwt)
         .await
         .map_err(map_network_error)?;
+
+    let profiles = resolve_profiles(
+        client,
+        comments.iter().map(|c| c.profile_id.as_str()),
+        &jwt,
+    )
+    .await;
+
     Ok(Json(
-        comments.into_iter().map(CommentResponse::from).collect(),
+        comments
+            .into_iter()
+            .map(|c| CommentResponse::from_comment(c, &profiles))
+            .collect(),
     ))
 }
 
@@ -196,7 +285,12 @@ pub(crate) async fn add_comment(
         .add_comment(&post_id, &req.content, &jwt)
         .await
         .map_err(map_network_error)?;
-    Ok((StatusCode::CREATED, Json(CommentResponse::from(comment))))
+
+    let profiles = resolve_profiles(client, [comment.profile_id.as_str()], &jwt).await;
+    Ok((
+        StatusCode::CREATED,
+        Json(CommentResponse::from_comment(comment, &profiles)),
+    ))
 }
 
 pub(crate) async fn delete_comment(

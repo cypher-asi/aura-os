@@ -61,7 +61,13 @@ impl TaskService {
     pub fn validate_transition(current: TaskStatus, target: TaskStatus) -> Result<(), TaskError> {
         let legal = matches!(
             (current, target),
-            (TaskStatus::Pending, TaskStatus::Ready)
+            (TaskStatus::Backlog, TaskStatus::ToDo)
+                | (TaskStatus::Backlog, TaskStatus::Pending)
+                | (TaskStatus::ToDo, TaskStatus::Pending)
+                | (TaskStatus::ToDo, TaskStatus::Backlog)
+                | (TaskStatus::Pending, TaskStatus::ToDo)
+                | (TaskStatus::Pending, TaskStatus::Backlog)
+                | (TaskStatus::Pending, TaskStatus::Ready)
                 | (TaskStatus::Ready, TaskStatus::InProgress)
                 | (TaskStatus::InProgress, TaskStatus::Done)
                 | (TaskStatus::InProgress, TaskStatus::Failed)

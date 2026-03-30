@@ -227,7 +227,7 @@ fn spec_routes() -> Router<AppState> {
 
 fn task_routes() -> Router<AppState> {
     Router::new()
-        .route("/api/projects/:project_id/tasks", get(tasks::list_tasks))
+        .route("/api/projects/:project_id/tasks", get(tasks::list_tasks).post(tasks::create_task))
         .route(
             "/api/projects/:project_id/specs/:spec_id/tasks",
             get(tasks::list_tasks_by_spec),

@@ -8,6 +8,75 @@ import type { FeedEventDto } from "../api/social";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
 
+function isUuid(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
+/**
+ * Normalize a raw event object from aura-network WS (camelCase) into
+ * the snake_case FeedEventDto shape the rest of the code expects.
+ */
+function normalizeFeedEventDto(raw: Record<string, unknown>): FeedEventDto {
+  return {
+    id: (raw.id as string) || "",
+    profile_id: (raw.profile_id as string) || (raw.profileId as string) || "",
+    event_type: (raw.event_type as string) || (raw.eventType as string) || "",
+    post_type: (raw.post_type as string) || (raw.postType as string) || null,
+    title: (raw.title as string) || null,
+    summary: (raw.summary as string) || null,
+    metadata: (raw.metadata as Record<string, unknown>) || null,
+    org_id: (raw.org_id as string) || (raw.orgId as string) || null,
+    project_id: (raw.project_id as string) || (raw.projectId as string) || null,
+    agent_id: (raw.agent_id as string) || (raw.agentId as string) || null,
+    user_id: (raw.user_id as string) || (raw.userId as string) || null,
+    push_id: (raw.push_id as string) || (raw.pushId as string) || null,
+    commit_ids: (raw.commit_ids as string[]) || (raw.commitIds as string[]) || null,
+    created_at: (raw.created_at as string) || (raw.createdAt as string) || null,
+    author_name: (raw.author_name as string) || (raw.authorName as string) || null,
+    author_avatar: (raw.author_avatar as string) || (raw.authorAvatar as string) || null,
+  };
+}
+
+/* ── Profile cache for resolving author names on WS events ── */
+
+interface CachedProfile {
+  name: string;
+  avatarUrl?: string;
+  type: "user" | "agent";
+}
+
+const _profileCache = new Map<string, CachedProfile>();
+const _pendingLookups = new Map<string, Promise<CachedProfile | null>>();
+
+async function resolveProfile(profileId: string): Promise<CachedProfile | null> {
+  if (!profileId) return null;
+  const cached = _profileCache.get(profileId);
+  if (cached) return cached;
+
+  const pending = _pendingLookups.get(profileId);
+  if (pending) return pending;
+
+  const promise = api.profiles
+    .get(profileId)
+    .then((p) => {
+      const name =
+        p.display_name && !isUuid(p.display_name) ? p.display_name : null;
+      if (!name) return null;
+      const entry: CachedProfile = {
+        name,
+        avatarUrl: p.avatar_url || undefined,
+        type: p.profile_type === "agent" ? "agent" : "user",
+      };
+      _profileCache.set(profileId, entry);
+      return entry;
+    })
+    .catch(() => null)
+    .finally(() => _pendingLookups.delete(profileId));
+
+  _pendingLookups.set(profileId, promise);
+  return promise;
+}
+
 export type PostType = "post" | "push" | "event";
 
 export interface FeedCommit {
@@ -61,6 +130,8 @@ interface NetworkComment {
   profile_id: string;
   content: string;
   created_at: string | null;
+  author_name?: string | null;
+  author_avatar?: string | null;
 }
 
 export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
@@ -69,8 +140,9 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
   const title = net.title ?? (meta.summary as string) ?? "";
   const summary = net.summary ?? (meta.summary as string) ?? undefined;
 
-  const authorName = (meta.author_name as string) || (meta.profileName as string) || "Unknown";
-  const authorAvatar = (meta.author_avatar as string) || (meta.avatarUrl as string) || undefined;
+  const rawAuthorName = net.author_name || (meta.author_name as string) || (meta.profileName as string) || "";
+  const authorName = rawAuthorName && !isUuid(rawAuthorName) ? rawAuthorName : "Unknown";
+  const authorAvatar = net.author_avatar || (meta.author_avatar as string) || (meta.avatarUrl as string) || undefined;
   const authorType = ((meta.author_type as string) || (meta.profileType as string) || "user") as "user" | "agent";
   const authorStatus = (meta.author_status as string) || (meta.agent_status as string) || undefined;
 
@@ -105,7 +177,11 @@ export function networkCommentToFeedComment(net: NetworkComment): FeedComment {
   return {
     id: net.id,
     eventId: net.activity_event_id,
-    author: { name: net.profile_id, type: "user" },
+    author: {
+      name: net.author_name || net.profile_id,
+      type: "user",
+      avatarUrl: net.author_avatar || undefined,
+    },
     text: net.content,
     timestamp: net.created_at || new Date().toISOString(),
   };
@@ -197,12 +273,28 @@ function handleNetworkEvent(event: AuraEvent, set: FeedSetter): void {
   if (!payload) return;
   const wsType = (payload.type as string) ?? "";
   if (wsType !== "activity.new") return;
-  const data = payload.data as FeedEventDto | undefined;
-  if (!data || !data.id) return;
+  const rawData = payload.data as Record<string, unknown> | undefined;
+  if (!rawData || !rawData.id) return;
+
+  const data = normalizeFeedEventDto(rawData);
   if (_seenIds.has(data.id)) return;
   _seenIds.add(data.id);
+
   const feedEvent = networkEventToFeedEvent(data);
   set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
+
+  if (feedEvent.author.name === "Unknown" && feedEvent.profileId) {
+    resolveProfile(feedEvent.profileId).then((profile) => {
+      if (!profile) return;
+      set((s) => ({
+        liveEvents: (s.liveEvents ?? []).map((e) =>
+          e.id === feedEvent.id
+            ? { ...e, author: { ...e.author, name: profile.name, avatarUrl: profile.avatarUrl ?? e.author.avatarUrl, type: profile.type } }
+            : e,
+        ),
+      }));
+    });
+  }
 }
 
 export const useFeedStore = create<FeedState>()((set, get) => ({
@@ -267,6 +359,26 @@ export const useFeedStore = create<FeedState>()((set, get) => ({
         const mapped = netEvents.map(networkEventToFeedEvent);
         for (const e of mapped) _seenIds.add(e.id);
         set({ liveEvents: mapped });
+
+        const unknownIds = [
+          ...new Set(
+            mapped
+              .filter((e) => e.author.name === "Unknown" && e.profileId)
+              .map((e) => e.profileId),
+          ),
+        ];
+        if (unknownIds.length > 0) {
+          Promise.all(unknownIds.map(resolveProfile)).then(() => {
+            set((s) => ({
+              liveEvents: (s.liveEvents ?? []).map((e) => {
+                if (e.author.name !== "Unknown" || !e.profileId) return e;
+                const p = _profileCache.get(e.profileId);
+                if (!p) return e;
+                return { ...e, author: { ...e.author, name: p.name, avatarUrl: p.avatarUrl ?? e.author.avatarUrl, type: p.type } };
+              }),
+            }));
+          });
+        }
       })
       .catch(() => set({ liveEvents: [] }));
 

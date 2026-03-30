@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use axum::extract::{Path, Query, State};
 use axum::Json;
+use futures_util::future::join_all;
 use serde::{Deserialize, Serialize};
 
 use aura_os_core::OrgId;
-use aura_os_network::{LeaderboardEntry, MemberUsageStats, PlatformStats, UsageStats};
+use aura_os_network::{LeaderboardEntry, MemberUsageStats, NetworkClient, NetworkProfile, PlatformStats, UsageStats};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
@@ -32,18 +35,58 @@ pub(crate) struct LeaderboardEntryResponse {
     pub profile_type: Option<String>,
 }
 
-impl From<LeaderboardEntry> for LeaderboardEntryResponse {
-    fn from(e: LeaderboardEntry) -> Self {
+impl LeaderboardEntryResponse {
+    fn from_entry(e: LeaderboardEntry, profiles: &HashMap<String, NetworkProfile>) -> Self {
+        let profile = profiles.get(&e.profile_id);
+        let display_name = e
+            .display_name
+            .or_else(|| profile.and_then(|p| p.display_name.clone()));
+        let avatar_url = e
+            .avatar_url
+            .or_else(|| profile.and_then(|p| p.avatar_url.clone()));
+        let profile_type = e
+            .profile_type
+            .or_else(|| profile.and_then(|p| p.profile_type.clone()));
         Self {
             profile_id: e.profile_id,
-            display_name: e.display_name,
-            avatar_url: e.avatar_url,
+            display_name,
+            avatar_url,
             tokens_used: e.tokens_used,
             estimated_cost_usd: e.estimated_cost_usd,
             event_count: e.event_count,
-            profile_type: e.profile_type,
+            profile_type,
         }
     }
+}
+
+async fn resolve_profiles(
+    client: &NetworkClient,
+    profile_ids: impl IntoIterator<Item = &str>,
+    jwt: &str,
+) -> HashMap<String, NetworkProfile> {
+    let unique: Vec<String> = {
+        let mut seen = std::collections::HashSet::new();
+        profile_ids
+            .into_iter()
+            .filter(|id| !id.is_empty() && seen.insert(id.to_string()))
+            .map(String::from)
+            .collect()
+    };
+
+    let futs = unique.into_iter().map(|id| {
+        let client = client.clone();
+        let jwt = jwt.to_owned();
+        async move {
+            let result = client.get_profile(&id, &jwt).await;
+            (id, result)
+        }
+    });
+
+    join_all(futs)
+        .await
+        .into_iter()
+        .filter_map(|(id, res)| res.ok().map(|p| (id, p)))
+        .collect()
 }
 
 pub(crate) async fn get_leaderboard(
@@ -57,10 +100,23 @@ pub(crate) async fn get_leaderboard(
         .get_leaderboard(period, query.org_id.as_deref(), &jwt)
         .await
         .map_err(map_network_error)?;
+
+    let needs_resolution = entries.iter().any(|e| e.display_name.is_none());
+    let profiles = if needs_resolution {
+        resolve_profiles(
+            client,
+            entries.iter().map(|e| e.profile_id.as_str()),
+            &jwt,
+        )
+        .await
+    } else {
+        HashMap::new()
+    };
+
     Ok(Json(
         entries
             .into_iter()
-            .map(LeaderboardEntryResponse::from)
+            .map(|e| LeaderboardEntryResponse::from_entry(e, &profiles))
             .collect(),
     ))
 }
