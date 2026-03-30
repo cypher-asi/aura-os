@@ -2,7 +2,9 @@ name: Release Nightly
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - codex/release-build-system
   workflow_dispatch:
     inputs:
       publish_live:
@@ -131,7 +133,7 @@ jobs:
 
   release:
     needs: build
-    if: github.event_name == 'push' || inputs.publish_live
+    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +176,7 @@ jobs:
 
   preview-manifests:
     needs: build
-    if: github.event_name == 'workflow_dispatch' && !inputs.publish_live
+    if: github.ref_name != 'main' || (github.event_name == 'workflow_dispatch' && !inputs.publish_live)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -257,7 +259,7 @@ jobs:
 
   publish-manifests:
     needs: [build, release]
-    if: github.event_name == 'push' || inputs.publish_live
+    if: github.ref_name == 'main' || (github.event_name == 'workflow_dispatch' && inputs.publish_live)
     runs-on: ubuntu-latest
     permissions:
       contents: write

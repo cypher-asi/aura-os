@@ -153,3 +153,8 @@ likely to slip through unnoticed.
 `workflow_dispatch`. Those runs build and package the nightly artifacts and
 generate preview manifests by default, but they only publish the GitHub release
 and `gh-pages` manifests if `publish_live` is explicitly enabled.
+
+Pushes to `codex/release-build-system` also run the nightly workflow in preview
+mode. That gives us a branch-safe way to validate the matrix build, packaging,
+artifact summaries, and manifest generation without publishing the shared
+nightly release or updating `gh-pages`.
