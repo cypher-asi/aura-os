@@ -137,3 +137,10 @@ The release system answers a different question:
 
 - installer-level smoke verification for packaged desktop artifacts
 - clearer release dashboards or consolidated summaries across desktop and mobile
+
+## Mobile Release Reporting
+
+Android and iOS workflows now emit lightweight release summaries and upload any
+discovered build artifacts in addition to their normal validation or Fastlane
+steps. This keeps the shipping path the same while making it easier to inspect
+what each run produced.

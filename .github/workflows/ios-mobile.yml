@@ -78,6 +78,27 @@ jobs:
             -derivedDataPath /tmp/aura-ios-validate \
             build
 
+      - name: Summarize iOS validation outputs
+        run: |
+          node scripts/mobile-release-summary.mjs \
+            --platform ios \
+            --mode validate \
+            --output-dir mobile-release-summary \
+            --roots /tmp/aura-ios-validate/Build/Products
+
+      - name: Attach iOS validation summary
+        shell: bash
+        run: cat mobile-release-summary/ios-validate-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload iOS validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-validate-artifacts
+          if-no-files-found: ignore
+          path: |
+            mobile-release-summary/**
+            /tmp/aura-ios-validate/Build/Products/**/*.app
+
   ship-ios:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
@@ -127,3 +148,26 @@ jobs:
       - name: Upload build with fastlane
         working-directory: frontend/ios
         run: bundle exec fastlane ios ${{ inputs.lane }}
+
+      - name: Summarize iOS release outputs
+        run: |
+          node scripts/mobile-release-summary.mjs \
+            --platform ios \
+            --mode ship \
+            --output-dir mobile-release-summary \
+            --roots frontend/ios/build
+
+      - name: Attach iOS release summary
+        shell: bash
+        run: cat mobile-release-summary/ios-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload iOS release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-artifacts
+          if-no-files-found: ignore
+          path: |
+            mobile-release-summary/**
+            frontend/ios/build/**/*.ipa
+            frontend/ios/build/**/*.app
+            frontend/ios/build/**/*.xcarchive

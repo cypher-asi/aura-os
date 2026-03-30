@@ -94,6 +94,27 @@ jobs:
         working-directory: frontend/android
         run: ./gradlew assembleDebug
 
+      - name: Summarize Android validation outputs
+        run: |
+          node scripts/mobile-release-summary.mjs \
+            --platform android \
+            --mode validate \
+            --output-dir mobile-release-summary \
+            --roots frontend/android/app/build/outputs
+
+      - name: Attach Android validation summary
+        shell: bash
+        run: cat mobile-release-summary/android-validate-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Android validation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-validate-artifacts
+          if-no-files-found: ignore
+          path: |
+            mobile-release-summary/**
+            frontend/android/app/build/outputs/apk/debug/*.apk
+
   ship-android:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -155,3 +176,25 @@ jobs:
       - name: Upload bundle with fastlane
         working-directory: frontend/android
         run: bundle exec fastlane android ${{ inputs.lane }}
+
+      - name: Summarize Android release outputs
+        run: |
+          node scripts/mobile-release-summary.mjs \
+            --platform android \
+            --mode ship \
+            --output-dir mobile-release-summary \
+            --roots frontend/android/app/build/outputs
+
+      - name: Attach Android release summary
+        shell: bash
+        run: cat mobile-release-summary/android-ship-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-artifacts
+          if-no-files-found: ignore
+          path: |
+            mobile-release-summary/**
+            frontend/android/app/build/outputs/**/*.apk
+            frontend/android/app/build/outputs/**/*.aab
