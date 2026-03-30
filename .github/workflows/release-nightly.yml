@@ -92,6 +92,8 @@ jobs:
 
       - name: Normalize signing key
         shell: bash
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
         run: |
           normalized="$(python scripts/normalize-packager-key.py)"
           if [ -n "$normalized" ]; then
