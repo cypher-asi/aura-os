@@ -54,10 +54,11 @@ impl OrbitClient {
         &self,
         name: &str,
         org_id: &str,
+        project_id: &str,
         jwt: &str,
     ) -> Result<(), OrbitError> {
         let url = format!("{}/v1/repos", self.base_url);
-        debug!(%url, %name, %org_id, "Creating Orbit repo");
+        debug!(%url, %name, %org_id, %project_id, "Creating Orbit repo");
 
         let resp = self
             .http
@@ -66,6 +67,7 @@ impl OrbitClient {
             .json(&serde_json::json!({
                 "name": name,
                 "orgId": org_id,
+                "projectId": project_id,
             }))
             .send()
             .await

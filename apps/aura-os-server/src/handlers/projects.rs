@@ -77,23 +77,7 @@ async fn create_project_impl(
         }
     }
 
-    if let (Some(owner), Some(repo)) = (&req.orbit_owner, &req.orbit_repo) {
-        if !owner.is_empty() && !repo.is_empty() && req.git_repo_url.is_none() {
-            if let Some(orbit) = &state.orbit_client {
-                let jwt = state.get_jwt()?;
-                orbit
-                    .ensure_repo(repo, owner, &jwt)
-                    .await
-                    .map_err(|e| {
-                        ApiError::internal(format!(
-                            "Failed to create Orbit repo '{owner}/{repo}': {e}"
-                        ))
-                    })?;
-            }
-        }
-    }
-
-    if let Some(client) = &state.network_client {
+    let project = if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
 
         let net_req = aura_os_network::CreateProjectRequest {
@@ -124,19 +108,41 @@ async fn create_project_impl(
             &project_from_network(&net_project, Some(&local_shadow))?,
         );
         ensure_local_shadow(state, &project);
-        return Ok((StatusCode::CREATED, Json(project)));
+        project
+    } else {
+        let input = to_project_input(&req);
+        let project = state
+            .project_service
+            .create_project(input)
+            .map_err(|e| match &e {
+                aura_os_projects::ProjectError::InvalidInput(msg) => {
+                    ApiError::bad_request(msg.clone())
+                }
+                _ => ApiError::internal(format!("creating project: {e}")),
+            })?;
+        let project = normalize_project_workspace(state, &project);
+        ensure_local_shadow(state, &project);
+        project
+    };
+
+    if let (Some(owner), Some(repo)) = (&project.orbit_owner, &project.orbit_repo) {
+        if !owner.is_empty() && !repo.is_empty() && project.git_repo_url.is_none() {
+            if let Some(orbit) = &state.orbit_client {
+                let jwt = state.get_jwt()?;
+                if let Err(e) = orbit
+                    .ensure_repo(repo, owner, &project.project_id.to_string(), &jwt)
+                    .await
+                {
+                    tracing::warn!(
+                        %owner, %repo,
+                        error = %e,
+                        "Orbit repo creation failed (project was created, repo may need manual setup)"
+                    );
+                }
+            }
+        }
     }
 
-    let input = to_project_input(&req);
-    let project = state
-        .project_service
-        .create_project(input)
-        .map_err(|e| match &e {
-            aura_os_projects::ProjectError::InvalidInput(msg) => ApiError::bad_request(msg.clone()),
-            _ => ApiError::internal(format!("creating project: {e}")),
-        })?;
-    let project = normalize_project_workspace(state, &project);
-    ensure_local_shadow(state, &project);
     Ok((StatusCode::CREATED, Json(project)))
 }
 
