@@ -37,7 +37,7 @@ before-packaging-command = "cargo build --release --package aura-os-desktop"
 resources = ["../../interface/dist"]
 
 [package.metadata.packager.nsis]
-install-mode = "currentUser"
+installer-mode = "currentUser"
 
 [package.metadata.packager.macos]
 minimum-system-version = "10.15"
