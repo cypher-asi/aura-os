@@ -88,13 +88,16 @@ if (!BILLING_BASE) {
 
 const LOCAL_APP_URL = "http://localhost:3100";
 const ZOS_LOGIN_URL = "https://zosapi.zero.tech/api/v2/accounts/login";
+const LOCAL_AURA_DATA_DIR = process.env.AURA_DATA_DIR || `${process.env.HOME}/Library/Application Support/aura`;
 
 async function fetchTokenFromLocalApp() {
   try {
-    const res = await fetch(`${LOCAL_APP_URL}/api/auth/access-token`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.access_token || null;
+    const { execFileSync } = await import("node:child_process");
+    return execFileSync(
+      "cargo",
+      ["run", "-q", "-p", "aura-os-server", "--bin", "print-auth-token", "--", LOCAL_AURA_DATA_DIR],
+      { encoding: "utf8" },
+    ).trim() || null;
   } catch {
     return null;
   }
