@@ -138,6 +138,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p packaged/${{ matrix.target }}
+          cp target/release/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true

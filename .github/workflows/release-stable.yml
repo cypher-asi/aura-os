@@ -119,6 +119,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
+          cp target/release/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
+          cp target/release/*.app.tar.gz dist/ 2>/dev/null || true
+          cp target/release/*-setup*.exe dist/ 2>/dev/null || true
+          cp target/release/*.sig dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
@@ -252,10 +256,10 @@ jobs:
           MANIFEST
           }
 
-          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.nsis.exe" "nsis"
+          generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.exe" "nsis"
           generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
           generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
-          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_amd64.AppImage" "appimage"
+          generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_x86_64.AppImage" "appimage"
 
       - name: Validate stable update manifests
         run: |
