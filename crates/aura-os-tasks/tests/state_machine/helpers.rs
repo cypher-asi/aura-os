@@ -80,6 +80,7 @@ pub(crate) async fn create_task(params: CreateTestTask<'_>) -> String {
                 status: Some(params.status.into()),
                 order_index: Some(params.order_index),
                 dependency_ids: params.dependency_ids,
+                assigned_project_agent_id: None,
             },
         )
         .await

@@ -435,6 +435,7 @@ async fn task_crud_and_transition_lifecycle() {
                 status: Some("pending".into()),
                 order_index: Some(1),
                 dependency_ids: None,
+                assigned_project_agent_id: None,
             },
         )
         .await
@@ -452,6 +453,7 @@ async fn task_crud_and_transition_lifecycle() {
                 status: Some("pending".into()),
                 order_index: Some(2),
                 dependency_ids: Some(vec![task.id.clone()]),
+                assigned_project_agent_id: None,
             },
         )
         .await
@@ -619,6 +621,7 @@ async fn end_to_end_project_chat_and_task_flow() {
                 status: Some("pending".into()),
                 order_index: Some(1),
                 dependency_ids: None,
+                assigned_project_agent_id: None,
             },
         )
         .await

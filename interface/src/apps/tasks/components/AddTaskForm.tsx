@@ -3,21 +3,25 @@ import { Button } from "@cypher-asi/zui";
 import { tasksApi } from "../../../api/tasks";
 import { useKanbanStore } from "../stores/kanban-store";
 import { useProjectContext } from "../../../stores/project-action-store";
+import { useProjectsListStore } from "../../../stores/projects-list-store";
 import styles from "./TasksMainPanel.module.css";
 
 interface AddTaskFormProps {
   projectId: string;
   status: "backlog" | "to_do";
+  agentInstanceId?: string;
   onDone: () => void;
 }
 
-export function AddTaskForm({ projectId, status, onDone }: AddTaskFormProps) {
+export function AddTaskForm({ projectId, status, agentInstanceId, onDone }: AddTaskFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [assignee, setAssignee] = useState(agentInstanceId ?? "");
   const [submitting, setSubmitting] = useState(false);
   const addTask = useKanbanStore((s) => s.addTask);
   const ctx = useProjectContext();
   const specs = ctx?.initialSpecs ?? [];
+  const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId] ?? []);
   const formRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +51,7 @@ export function AddTaskForm({ projectId, status, onDone }: AddTaskFormProps) {
         spec_id: specs[0].spec_id,
         description: description.trim() || undefined,
         status,
+        assigned_agent_instance_id: assignee || undefined,
       });
       addTask(projectId, task);
       onDone();
@@ -54,7 +59,7 @@ export function AddTaskForm({ projectId, status, onDone }: AddTaskFormProps) {
       console.error("Failed to create task:", err);
       setSubmitting(false);
     }
-  }, [title, description, submitting, specs, projectId, status, addTask, onDone]);
+  }, [title, description, assignee, submitting, specs, projectId, status, addTask, onDone]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -86,6 +91,21 @@ export function AddTaskForm({ projectId, status, onDone }: AddTaskFormProps) {
         rows={2}
         disabled={submitting}
       />
+      {projectAgents.length > 0 && (
+        <select
+          className={styles.addTaskSelect}
+          value={assignee}
+          onChange={(e) => setAssignee(e.target.value)}
+          disabled={submitting}
+        >
+          <option value="">Unassigned</option>
+          {projectAgents.map((a) => (
+            <option key={a.agent_instance_id} value={a.agent_instance_id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      )}
       <div className={styles.addTaskActions}>
         <Button variant="ghost" size="sm" onClick={onDone} disabled={submitting}>
           Cancel

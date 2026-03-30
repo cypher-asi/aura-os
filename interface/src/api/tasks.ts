@@ -4,7 +4,7 @@ import { apiFetch } from "./core";
 export const tasksApi = {
   listTasks: (projectId: ProjectId) =>
     apiFetch<Task[]>(`/api/projects/${projectId}/tasks`),
-  createTask: (projectId: ProjectId, body: { title: string; spec_id: string; description?: string; status?: "backlog" | "to_do"; order_index?: number }) =>
+  createTask: (projectId: ProjectId, body: { title: string; spec_id: string; description?: string; status?: "backlog" | "to_do"; order_index?: number; assigned_agent_instance_id?: string }) =>
     apiFetch<Task>(`/api/projects/${projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify(body),

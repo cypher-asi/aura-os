@@ -229,6 +229,8 @@ pub struct CreateTaskRequest {
     pub order_index: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dependency_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assigned_project_agent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

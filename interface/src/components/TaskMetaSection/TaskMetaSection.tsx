@@ -110,15 +110,17 @@ export function TaskMetaSection({
           <Text size="xs" className={styles.failReason}>{extractErrorMessage(failReason || task.execution_notes)}</Text>
         )}
       </div>
-      {agentInstance && (
-        <div className={styles.taskField}>
-          <span className={styles.fieldLabel}>Assigned to</span>
+      <div className={styles.taskField}>
+        <span className={styles.fieldLabel}>Assigned to</span>
+        {agentInstance ? (
           <span className={styles.agentInline}>
             <AgentAvatar agent={agentInstance} />
             <Text size="sm">{agentInstance.name}</Text>
           </span>
-        </div>
-      )}
+        ) : (
+          <Text size="sm" variant="muted">Unassigned</Text>
+        )}
+      </div>
       {completedByAgent && (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Completed by</span>

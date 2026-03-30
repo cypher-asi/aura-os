@@ -490,6 +490,7 @@ impl TaskService {
             } else {
                 Some(dep_ids)
             },
+            assigned_project_agent_id: None,
         };
         let created = storage.create_task(&pid, &jwt, &req).await?;
         crate::storage_task_to_task(created).map_err(TaskError::ParseError)

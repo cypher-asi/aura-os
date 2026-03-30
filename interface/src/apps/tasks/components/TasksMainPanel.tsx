@@ -40,8 +40,9 @@ function KanbanCard({
   return (
     <button type="button" className={styles.taskCard} onClick={onClick}>
       {agentName && (
-        <span className={styles.assigneeAvatar}>
-          <Avatar avatarUrl={agentIcon} name={agentName} type="agent" size={16} />
+        <span className={styles.assigneeBadge}>
+          <Avatar avatarUrl={agentIcon} name={agentName} type="agent" size={14} />
+          <span className={styles.assigneeName}>{agentName}</span>
         </span>
       )}
       <span className={styles.taskCardMeta}>
@@ -133,6 +134,7 @@ export function TasksMainPanel({ children: _children }: { children?: React.React
                       <AddTaskForm
                         projectId={projectId}
                         status={lane.status as "backlog" | "to_do"}
+                        agentInstanceId={agentInstanceId}
                         onDone={handleAddDone}
                       />
                     )}

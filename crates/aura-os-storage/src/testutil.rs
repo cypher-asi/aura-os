@@ -153,7 +153,7 @@ async fn create_task(
         model: None,
         total_input_tokens: None,
         total_output_tokens: None,
-        assigned_project_agent_id: None,
+        assigned_project_agent_id: req.assigned_project_agent_id,
         session_id: None,
         created_at: Some(now.clone()),
         updated_at: Some(now),
