@@ -66,6 +66,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare zui sibling workspace
+        uses: ./.github/actions/setup-zui-sibling
+        with:
+          repository-owner: ${{ github.repository_owner }}
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -122,8 +127,23 @@ jobs:
         run: |
           mkdir -p packaged/${{ matrix.target }}
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} packaged/${{ matrix.target }}/ 2>/dev/null || true
+          cp target/release/bundle/*/*.app.tar.gz packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe packaged/${{ matrix.target }}/ 2>/dev/null || true
           cp target/release/bundle/*/*.sig packaged/${{ matrix.target }}/ 2>/dev/null || true
+          if [ "${{ matrix.target }}" = "macos-arm64" ] || [ "${{ matrix.target }}" = "macos-x64" ]; then
+            arch_suffix="x86_64"
+            if [ "${{ matrix.target }}" = "macos-arm64" ]; then
+              arch_suffix="aarch64"
+            fi
+            for bundle in packaged/${{ matrix.target }}/*.app.tar.gz; do
+              [ -e "$bundle" ] || continue
+              renamed="packaged/${{ matrix.target }}/aura-os-desktop_${arch_suffix}.app.tar.gz"
+              mv "$bundle" "$renamed"
+              if [ -f "${bundle}.sig" ]; then
+                mv "${bundle}.sig" "${renamed}.sig"
+              fi
+            done
+          fi
           ls -la packaged/${{ matrix.target }}/
 
       - name: Note when packaging is skipped

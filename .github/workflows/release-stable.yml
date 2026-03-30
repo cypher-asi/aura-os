@@ -40,6 +40,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare zui sibling workspace
+        uses: ./.github/actions/setup-zui-sibling
+        with:
+          repository-owner: ${{ github.repository_owner }}
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -104,8 +109,19 @@ jobs:
         run: |
           mkdir -p dist
           cp target/release/bundle/*/*.{exe,dmg,AppImage,deb} dist/ 2>/dev/null || true
+          cp target/release/bundle/*/*.app.tar.gz dist/ 2>/dev/null || true
           cp target/release/bundle/*/*-setup*.exe dist/ 2>/dev/null || true
           cp target/release/bundle/*/*.sig dist/ 2>/dev/null || true
+          if [ "${{ matrix.target }}" = "macos" ]; then
+            for bundle in dist/*.app.tar.gz; do
+              [ -e "$bundle" ] || continue
+              renamed="dist/aura-os-desktop_${{ steps.version.outputs.version }}_${{ matrix.arch }}.app.tar.gz"
+              mv "$bundle" "$renamed"
+              if [ -f "${bundle}.sig" ]; then
+                mv "${bundle}.sig" "${renamed}.sig"
+              fi
+            done
+          fi
           ls -la dist/
           echo "dir=dist" >> "$GITHUB_OUTPUT"
 
@@ -209,9 +225,9 @@ jobs:
           generate_manifest() {
             local target=$1 arch=$2 filename=$3 format=$4
             local sig_file="all-artifacts/${filename}.sig"
-            local signature=""
+            local signature='""'
             if [ -f "$sig_file" ]; then
-              signature=$(base64 < "$sig_file" | tr -d '\n')
+              signature=$(jq -Rs . < "$sig_file")
             fi
 
             mkdir -p "stable/${target}"
@@ -219,15 +235,15 @@ jobs:
           {
             "version": "${VERSION}",
             "url": "${BASE_URL}/${filename}",
-            "signature": "${signature}",
+            "signature": ${signature},
             "format": "${format}"
           }
           MANIFEST
           }
 
           generate_manifest "windows" "x86_64" "aura-os-desktop_${VERSION}_x64-setup.nsis.exe" "nsis"
-          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.dmg" "dmg"
-          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x64.dmg" "dmg"
+          generate_manifest "macos" "aarch64" "aura-os-desktop_${VERSION}_aarch64.app.tar.gz" "app"
+          generate_manifest "macos" "x86_64" "aura-os-desktop_${VERSION}_x86_64.app.tar.gz" "app"
           generate_manifest "linux" "x86_64" "aura-os-desktop_${VERSION}_amd64.AppImage" "appimage"
 
       - name: Validate stable update manifests

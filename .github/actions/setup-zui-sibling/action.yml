@@ -1,0 +1,23 @@
+name: Setup ZUI sibling workspace
+description: Checks out the public zui repo and links it into the sibling path expected by frontend/package.json.
+
+inputs:
+  repository-owner:
+    description: GitHub org or user that owns the zui repo.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout zui
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository-owner }}/zui
+        path: zui
+
+    - name: Link zui into sibling workspace path
+      shell: bash
+      run: |
+        rm -rf "$GITHUB_WORKSPACE/../zui"
+        ln -s "$GITHUB_WORKSPACE/zui" "$GITHUB_WORKSPACE/../zui"
+        ls -ld "$GITHUB_WORKSPACE/zui" "$GITHUB_WORKSPACE/../zui"

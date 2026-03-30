@@ -69,7 +69,7 @@ function validateManifest(manifestPath, manifest) {
   }
   if (typeof manifest.format !== "string" || !manifest.format.trim()) {
     errors.push("missing format");
-  } else if (!["nsis", "dmg", "appimage"].includes(manifest.format)) {
+  } else if (!["nsis", "app", "appimage"].includes(manifest.format)) {
     errors.push(`unsupported format ${manifest.format}`);
   }
 

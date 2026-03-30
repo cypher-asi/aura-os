@@ -26,7 +26,7 @@ function sha256(filePath) {
 
 function classify(fileName) {
   const lower = fileName.toLowerCase();
-  const platform = lower.includes(".dmg")
+  const platform = lower.includes(".dmg") || lower.endsWith(".app.tar.gz")
     ? "macos"
     : lower.includes(".appimage") || lower.includes(".deb")
       ? "linux"
@@ -35,6 +35,8 @@ function classify(fileName) {
         : "other";
   const kind = lower.endsWith(".sig")
     ? "signature"
+    : lower.endsWith(".app.tar.gz")
+      ? "updater_bundle"
     : lower.endsWith(".dmg")
       ? "dmg"
       : lower.endsWith(".appimage")
