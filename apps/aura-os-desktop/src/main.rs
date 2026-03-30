@@ -339,6 +339,7 @@ fn create_main_webview(
 
     #[cfg(target_os = "linux")]
     let webview = {
+        use tao::platform::unix::WindowExtUnix;
         use wry::WebViewBuilderExtUnix;
         builder
             .build_gtk(window.gtk_window())
