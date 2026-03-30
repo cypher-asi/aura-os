@@ -566,6 +566,20 @@
   }
 }
 
+.sidekickContentWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidekickPanels {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .laneLeftBorder {
   box-shadow: -1px 0 0 0 var(--color-border);
 }

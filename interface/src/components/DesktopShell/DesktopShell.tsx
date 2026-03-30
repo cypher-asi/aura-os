@@ -9,6 +9,7 @@ import { ErrorBoundary } from "../ErrorBoundary";
 import { HostSettingsModal } from "../HostSettingsModal";
 import { UpdateBanner } from "../UpdateBanner";
 import { PanelSearch } from "../PanelSearch";
+import { TaskOutputPanel } from "../TaskOutputPanel";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
 import { useSidebarSearch } from "../../context/SidebarSearchContext";
@@ -64,17 +65,22 @@ function SidekickLane() {
       taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
       className={styles.laneLeftBorder}
     >
-      {apps.map((app) => {
-        if (!app.SidekickPanel || !visitedAppIds.has(app.id)) return null;
-        return (
-          <div
-            key={app.id}
-            className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
-          >
-            <app.SidekickPanel />
-          </div>
-        );
-      })}
+      <div className={styles.sidekickContentWrapper}>
+        <div className={styles.sidekickPanels}>
+          {apps.map((app) => {
+            if (!app.SidekickPanel || !visitedAppIds.has(app.id)) return null;
+            return (
+              <div
+                key={app.id}
+                className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
+              >
+                <app.SidekickPanel />
+              </div>
+            );
+          })}
+        </div>
+        <TaskOutputPanel />
+      </div>
     </Lane>
   );
 }
