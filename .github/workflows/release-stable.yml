@@ -102,7 +102,7 @@ jobs:
           AURA_UPDATE_BASE_URL: ${{ env.AURA_UPDATE_BASE_URL }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
           CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
-        run: cargo packager --release --package aura-os-desktop
+        run: cargo packager --release --packages aura-os-desktop
 
       - name: Collect artifacts
         id: artifacts
