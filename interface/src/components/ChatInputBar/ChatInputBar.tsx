@@ -4,6 +4,7 @@ import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
 import { AVAILABLE_MODELS, modelLabel } from "../../constants/models";
 import { AgentEnvironment } from "../AgentEnvironment";
+import { OrbitStatusIndicator } from "../OrbitStatusIndicator/OrbitStatusIndicator";
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { CommandChips } from "./CommandChips";
 import type { SlashCommand } from "../../constants/commands";
@@ -120,7 +121,8 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [projectMenuOpen]);
 
-  const selectedProjectName = projects.find((p) => p.project_id === selectedProjectId)?.name;
+  const selectedProject = projects.find((p) => p.project_id === selectedProjectId);
+  const selectedProjectName = selectedProject?.name;
 
   const excludeIds = new Set(selectedCommands.map((c) => c.id));
 
@@ -194,6 +196,8 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
       </div>
       <div className={styles.inputInfoBar}>
         {machineType && <><AgentEnvironment machineType={machineType} agentId={templateAgentId ?? agentId} /><span className={styles.infoText} style={{ marginRight: 2 }}>·</span></>}
+        <OrbitStatusIndicator project={selectedProject} />
+        {selectedProject && <span className={styles.infoText} style={{ marginRight: 2 }}>·</span>}
         <span className={styles.infoText}>/ for commands</span>
         {projects.length > 0 && (
           <div className={styles.projectMenuWrap} ref={projectMenuRef}>
