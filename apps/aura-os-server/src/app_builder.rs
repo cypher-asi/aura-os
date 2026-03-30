@@ -18,6 +18,7 @@ use aura_os_store::{RocksStore, StoreError};
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
+use crate::orbit_client::OrbitClient;
 use crate::state::AppState;
 
 fn spawn_health_checks(
@@ -275,6 +276,10 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
+    let orbit_client = OrbitClient::from_env();
+    if orbit_client.is_none() {
+        info!("Orbit integration disabled (ORBIT_BASE_URL not set)");
+    }
 
     ensure_local_harness_running();
 
@@ -322,5 +327,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url: env_opt("SWARM_BASE_URL"),
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
+        orbit_client,
     })
 }

@@ -116,6 +116,8 @@ pub struct AppState {
     pub swarm_base_url: Option<String>,
     /// In-memory cache of accumulated task output (live + completed).
     pub task_output_cache: TaskOutputCache,
+    /// Optional Orbit client for repo operations. `None` when `ORBIT_BASE_URL` is not set.
+    pub orbit_client: Option<crate::orbit_client::OrbitClient>,
 }
 
 impl AppState {

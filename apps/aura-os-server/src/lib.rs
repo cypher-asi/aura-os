@@ -5,6 +5,7 @@ pub(crate) mod dto;
 pub(crate) mod error;
 pub mod handlers;
 mod network_bridge;
+pub(crate) mod orbit_client;
 pub(crate) mod persistence;
 pub(crate) mod router;
 pub(crate) mod state;

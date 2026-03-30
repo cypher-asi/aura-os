@@ -77,6 +77,22 @@ async fn create_project_impl(
         }
     }
 
+    if let (Some(owner), Some(repo)) = (&req.orbit_owner, &req.orbit_repo) {
+        if !owner.is_empty() && !repo.is_empty() && req.git_repo_url.is_none() {
+            if let Some(orbit) = &state.orbit_client {
+                let jwt = state.get_jwt()?;
+                orbit
+                    .ensure_repo(repo, owner, &jwt)
+                    .await
+                    .map_err(|e| {
+                        ApiError::internal(format!(
+                            "Failed to create Orbit repo '{owner}/{repo}': {e}"
+                        ))
+                    })?;
+            }
+        }
+    }
+
     if let Some(client) = &state.network_client {
         let jwt = state.get_jwt()?;
 
