@@ -87,6 +87,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
     return (
       <div
         ref={laneRef}
+        data-resizing={isResizing || undefined}
         className={cn(
           styles.lane,
           flex && styles.laneFlex,
@@ -98,14 +99,13 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
       >
         {resizable && (
           <div
+            data-resize-handle
             className={cn(
               styles.resizeHandle,
               resizePosition === "left" ? styles.resizeHandleLeft : styles.resizeHandleRight,
             )}
             onMouseDown={handleMouseDown}
-          >
-            <div className={styles.resizeHandleLine} />
-          </div>
+          />
         )}
 
         <div className={styles.laneInner} style={collapsible ? { minWidth: openWidth } : undefined}>

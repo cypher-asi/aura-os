@@ -21,6 +21,12 @@
   flex-direction: column;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg);
+  transition: border-color var(--transition-fast, 0.15s);
+}
+
+.desktopSidebar:has([data-resize-handle]:hover),
+.desktopSidebar:has([data-resizing]) {
+  border-right-color: #fff;
 }
 
 .desktopSidebarBody {
@@ -595,6 +601,12 @@
 
 .laneLeftBorder {
   box-shadow: -1px 0 0 0 var(--color-border);
+  transition: box-shadow var(--transition-fast, 0.15s);
+}
+
+.laneLeftBorder:has([data-resize-handle]:hover),
+.laneLeftBorder:has([data-resizing]) {
+  box-shadow: -1px 0 0 0 #fff;
 }
 
 .titleLink {

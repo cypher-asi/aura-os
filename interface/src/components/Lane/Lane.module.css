@@ -29,21 +29,16 @@
   opacity: 0;
 }
 
-/* ── Resize handle ── */
+/* ── Resize handle (invisible hit area) ── */
 
 .resizeHandle {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: ew-resize;
   z-index: 10;
   user-select: none;
-  transition: opacity var(--transition-fast, 0.15s);
-  opacity: 0;
 }
 
 .resizeHandleRight {
@@ -52,25 +47,6 @@
 
 .resizeHandleLeft {
   left: 0;
-}
-
-.lane:hover .resizeHandle,
-.resizeHandle:hover,
-.resizing .resizeHandle {
-  opacity: 1;
-}
-
-.resizeHandleLine {
-  width: 2px;
-  height: 48px;
-  background: var(--color-border);
-  border-radius: var(--radius-sm, 2px);
-  transition: background-color var(--transition-fast, 0.15s);
-}
-
-.resizeHandle:hover .resizeHandleLine,
-.resizing .resizeHandleLine {
-  background: #fff;
 }
 
 .resizing {
