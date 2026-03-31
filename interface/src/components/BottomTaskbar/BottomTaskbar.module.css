@@ -9,27 +9,6 @@
   padding: 0 var(--space-2);
 }
 
-.desktopButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.desktopButton:hover {
-  background: var(--color-surface-hover);
-  color: var(--color-text);
-}
-
 .spacer {
   flex: 1;
   min-width: 0;

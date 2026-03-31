@@ -93,6 +93,7 @@ export function DesktopShell() {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const { MainPanel } = activeApp;
   const ActiveProvider = activeApp.Provider ?? Fragment;
+  const isDesktop = activeApp.id === "desktop";
 
 
   useEffect(() => {
@@ -147,26 +148,28 @@ export function DesktopShell() {
           <div ref={leftPanelRef} className={styles.desktopSidebar}>
             <div className={styles.desktopSidebarBody}>
               <AppNavRail />
-              <Lane
-                resizable
-                resizePosition="right"
-                defaultWidth={200}
-                maxWidth={600}
-                storageKey="aura-sidebar"
-                header={<SidebarSearchInput />}
-              >
-                {apps.map((app) => {
-                  if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
-                  return (
-                    <div
-                      key={app.id}
-                      className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
-                    >
-                      <app.LeftPanel />
-                    </div>
-                  );
-                })}
-              </Lane>
+              {!isDesktop && (
+                <Lane
+                  resizable
+                  resizePosition="right"
+                  defaultWidth={200}
+                  maxWidth={600}
+                  storageKey="aura-sidebar"
+                  header={<SidebarSearchInput />}
+                >
+                  {apps.map((app) => {
+                    if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
+                    return (
+                      <div
+                        key={app.id}
+                        className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
+                      >
+                        <app.LeftPanel />
+                      </div>
+                    );
+                  })}
+                </Lane>
+              )}
             </div>
           </div>
 
@@ -174,9 +177,11 @@ export function DesktopShell() {
             <ErrorBoundary name="main">
               <MainPanel>{routeContent}</MainPanel>
             </ErrorBoundary>
-            <ErrorBoundary name="sidekick">
-              <SidekickLane />
-            </ErrorBoundary>
+            {!isDesktop && (
+              <ErrorBoundary name="sidekick">
+                <SidekickLane />
+              </ErrorBoundary>
+            )}
           </ActiveProvider>
         </div>
         <BottomTaskbar />

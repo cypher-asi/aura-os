@@ -1,4 +1,4 @@
-import { Monitor } from "lucide-react";
+import { Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AuraApp } from "../types";
 
@@ -13,7 +13,7 @@ function MainPanel({ children }: { children?: ReactNode }) {
 export const DesktopApp: AuraApp = {
   id: "desktop",
   label: "Desktop",
-  icon: Monitor,
+  icon: Circle,
   basePath: "/desktop",
   LeftPanel: EmptyPanel,
   MainPanel,
