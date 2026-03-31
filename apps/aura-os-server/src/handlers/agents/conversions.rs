@@ -33,6 +33,8 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         .map(|dt| dt.with_timezone(&Utc))
         .unwrap_or(created_at);
 
+    let is_super = net.role.as_deref() == Some("super_agent");
+
     Agent {
         agent_id,
         user_id: net.user_id.clone(),
@@ -49,8 +51,12 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: Vec::new(),
-        is_pinned: false,
+        tags: if is_super {
+            vec!["super_agent".to_string()]
+        } else {
+            Vec::new()
+        },
+        is_pinned: is_super,
         created_at,
         updated_at,
     }
