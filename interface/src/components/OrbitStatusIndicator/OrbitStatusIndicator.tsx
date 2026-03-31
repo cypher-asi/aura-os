@@ -50,8 +50,8 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
       onMouseLeave={handleMouseLeave}
     >
       <span className={styles.indicator}>
-        <FolderGit2 size={11} />
         <span className={styles.dot} data-status={isConnected ? "connected" : "disconnected"} />
+        <FolderGit2 size={11} />
       </span>
 
       {open && (
