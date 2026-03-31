@@ -1,13 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useOrgStore } from "../../stores/org-store";
 import { useEventStore } from "../../stores/event-store";
 import { api } from "../../api/client";
 import { EventType } from "../../types/aura-events";
 
 export const CREDITS_UPDATED_EVENT = "credits-updated";
-
-const POLL_INTERVAL_MS = 60_000;
-const DEBOUNCE_MS = 2_000;
 
 interface CreditBalanceResult {
   credits: number | null;
@@ -19,7 +16,6 @@ export function useCreditBalance(): CreditBalanceResult {
   const subscribe = useEventStore((s) => s.subscribe);
   const [credits, setCredits] = useState<number | null>(null);
   const [balanceFormatted, setBalanceFormatted] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const orgId = activeOrg?.org_id ?? null;
 
   const fetchBalance = useCallback(() => {
@@ -33,37 +29,27 @@ export function useCreditBalance(): CreditBalanceResult {
       .catch((err) => console.warn("Failed to fetch credit balance:", err));
   }, [orgId]);
 
-  const debouncedFetch = useCallback(() => {
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(fetchBalance, DEBOUNCE_MS);
-  }, [fetchBalance]);
-
+  // Initial HTTP fetch on mount / org change
   useEffect(() => {
     const frame = window.requestAnimationFrame(fetchBalance);
     return () => window.cancelAnimationFrame(frame);
   }, [fetchBalance]);
 
+  // Real-time balance updates from z-billing via WebSocket
   useEffect(() => {
-    const id = setInterval(fetchBalance, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [fetchBalance]);
+    return subscribe(EventType.CreditBalanceUpdated, (event) => {
+      const { balance_cents, balance_formatted } = event.content;
+      if (balance_cents != null) setCredits(balance_cents);
+      if (balance_formatted) setBalanceFormatted(balance_formatted);
+    });
+  }, [subscribe]);
 
+  // Manual trigger (e.g. after purchase modal closes)
   useEffect(() => {
     const handler = () => fetchBalance();
     window.addEventListener(CREDITS_UPDATED_EVENT, handler);
     return () => window.removeEventListener(CREDITS_UPDATED_EVENT, handler);
   }, [fetchBalance]);
-
-  useEffect(() => {
-    const unsubs = [
-      subscribe(EventType.TaskCompleted, debouncedFetch),
-      subscribe(EventType.LoopFinished, debouncedFetch),
-    ];
-    return () => {
-      unsubs.forEach((fn) => fn());
-      clearTimeout(debounceRef.current);
-    };
-  }, [subscribe, debouncedFetch]);
 
   return { credits, balanceFormatted };
 }

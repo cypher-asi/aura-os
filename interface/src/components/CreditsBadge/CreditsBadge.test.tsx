@@ -107,14 +107,13 @@ describe("CreditsBadge", () => {
     });
   });
 
-  it("subscribes to task_completed and loop_finished events", () => {
+  it("subscribes to credit_balance_updated events", () => {
     mockGetCreditBalance.mockResolvedValue({ balance_cents: 0, plan: "free", balance_formatted: "$0.00" });
     render(<CreditsBadge />);
 
     const subscribedEvents = fakeSubscribe.mock.calls.map(
       (call: unknown[]) => call[0],
     );
-    expect(subscribedEvents).toContain("task_completed");
-    expect(subscribedEvents).toContain("loop_finished");
+    expect(subscribedEvents).toContain("credit_balance_updated");
   });
 });

@@ -327,6 +327,14 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         );
     }
 
+    let billing_base_url = std::env::var("Z_BILLING_URL")
+        .unwrap_or_else(|_| "https://z-billing.onrender.com".to_string());
+    super::billing_bridge::spawn_billing_ws_bridge(
+        billing_base_url,
+        validation_cache.clone(),
+        event_broadcast.clone(),
+    );
+
     Ok(AppState {
         data_dir,
         store,

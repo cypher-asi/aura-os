@@ -106,6 +106,9 @@ export enum EventType {
   GitPushed             = "git_pushed",
   GitPushFailed         = "git_push_failed",
 
+  // Billing
+  CreditBalanceUpdated  = "credit_balance_updated",
+
   // Other
   LogLine               = "log_line",
   NetworkEvent          = "network_event",
@@ -402,6 +405,12 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.AssistantMessageEnd; content: HarnessAssistantMessageEnd }
   | { type: EventType.TextDelta; content: HarnessTextDelta }
   | { type: EventType.ToolUseStart; content: HarnessToolUseStart }
+
+  // ── Billing ────────────────────────────────────────────────
+  | { type: EventType.CreditBalanceUpdated; content: {
+      balance_cents: number;
+      balance_formatted: string;
+    } }
 
   // ── Other ──────────────────────────────────────────────────
   | { type: EventType.LogLine; content: {

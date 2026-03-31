@@ -1,12 +1,11 @@
-import { useState, useRef, useCallback } from "react";
-import { api } from "../api/client";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useEventStore } from "../stores/event-store";
+import { EventType } from "../types/aura-events";
 import type { CreditBalance } from "../types";
 
 export type CheckoutPollingStatus = "idle" | "polling" | "success" | "timeout";
 
-const POLL_INTERVAL_MS = 3_000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1_000;
-const STATUS_SETTLE_TIMEOUT_MS = 15_000;
 
 interface UseCheckoutPollingResult {
   status: CheckoutPollingStatus;
@@ -16,68 +15,57 @@ interface UseCheckoutPollingResult {
 }
 
 export function useCheckoutPolling(orgId: string | undefined): UseCheckoutPollingResult {
+  const subscribe = useEventStore((s) => s.subscribe);
   const [status, setStatus] = useState<CheckoutPollingStatus>("idle");
   const [settledBalance, setSettledBalance] = useState<CreditBalance | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const settleRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const unsubRef = useRef<(() => void) | undefined>(undefined);
+  const prevBalanceRef = useRef<number>(0);
 
-  const stopPolling = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+  const cleanup = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (settleRef.current) clearTimeout(settleRef.current);
-    timerRef.current = undefined;
+    if (unsubRef.current) unsubRef.current();
     timeoutRef.current = undefined;
-    settleRef.current = undefined;
+    unsubRef.current = undefined;
   }, []);
-
-  const finish = useCallback((balance: CreditBalance) => {
-    stopPolling();
-    setSettledBalance(balance);
-    setStatus("success");
-  }, [stopPolling]);
 
   const startPolling = useCallback(
     (previousBalance: number) => {
       if (!orgId) return;
-      stopPolling();
+      cleanup();
+      prevBalanceRef.current = previousBalance;
       setStatus("polling");
       setSettledBalance(null);
-      let balanceIncreased = false;
 
-      const poll = async () => {
-        try {
-          const b = await api.orgs.getCreditBalance(orgId);
-          if (b.balance_cents > previousBalance) {
-            if (!balanceIncreased) {
-              balanceIncreased = true;
-              settleRef.current = setTimeout(() => finish(b), STATUS_SETTLE_TIMEOUT_MS);
-            } else {
-              finish(b);
-              return;
-            }
-          }
-        } catch {
-          // keep polling on transient errors
+      unsubRef.current = subscribe(EventType.CreditBalanceUpdated, (event) => {
+        const { balance_cents, balance_formatted } = event.content;
+        if (balance_cents != null && balance_cents > prevBalanceRef.current) {
+          cleanup();
+          const bal: CreditBalance = {
+            balance_cents,
+            balance_formatted: balance_formatted ?? `$${(balance_cents / 100).toFixed(2)}`,
+            plan: "",
+          };
+          setSettledBalance(bal);
+          setStatus("success");
         }
-      };
-
-      timerRef.current = setInterval(poll, POLL_INTERVAL_MS);
-      poll();
+      });
 
       timeoutRef.current = setTimeout(() => {
-        stopPolling();
+        cleanup();
         setStatus("timeout");
       }, POLL_TIMEOUT_MS);
     },
-    [orgId, stopPolling, finish],
+    [orgId, cleanup, subscribe],
   );
 
   const reset = useCallback(() => {
-    stopPolling();
+    cleanup();
     setStatus("idle");
     setSettledBalance(null);
-  }, [stopPolling]);
+  }, [cleanup]);
+
+  useEffect(() => cleanup, [cleanup]);
 
   return { status, settledBalance, startPolling, reset };
 }

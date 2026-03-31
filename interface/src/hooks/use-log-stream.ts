@@ -67,6 +67,7 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.GitCommitFailed]: "Git",
   [EventType.GitPushed]: "Git",
   [EventType.GitPushFailed]: "Git",
+  [EventType.CreditBalanceUpdated]: "Billing",
   [EventType.LogLine]: "Log",
   [EventType.NetworkEvent]: "Network",
   [EventType.Error]: "Error",
