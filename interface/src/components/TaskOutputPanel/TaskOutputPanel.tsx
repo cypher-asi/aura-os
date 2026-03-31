@@ -1,15 +1,19 @@
 import { useEffect, useRef } from "react";
 import { Text, Item, ModalConfirm } from "@cypher-asi/zui";
-import { Trash2, Play, Pause, Square, Loader2 } from "lucide-react";
+import { Trash2, Play, Pause, Square, Loader2, Plus, ChevronDown } from "lucide-react";
 import {
   useTaskOutputPanel,
   useTaskOutputPanelStore,
   useTasksForProject,
+  type OutputPanelTab,
 } from "../../stores/task-output-panel-store";
+import { useTerminalPanel } from "../../stores/terminal-panel-store";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { EventType } from "../../types/aura-events";
+import { ConnectionDot } from "../ConnectionDot";
+import { TerminalPanelBody } from "../TerminalPanelBody";
 import { ActiveTaskStream } from "./ActiveTaskStream";
 import { CompletedTaskOutput } from "./CompletedTaskOutput";
 import styles from "./TaskOutputPanel.module.css";
@@ -21,13 +25,11 @@ function useActiveTaskTracking() {
   const { addTask, completeTask, failTask, markAllCompleted } = useTaskOutputPanelStore.getState();
 
   useEffect(() => {
-    if (!projectId) return;
-    const pid = projectId;
-
     const unsubs = [
       subscribe(EventType.TaskStarted, (e) => {
         const { task_id, task_title } = e.content;
-        if (task_id) addTask(task_id, e.project_id ?? pid, task_title);
+        const pid = e.project_id ?? projectId;
+        if (task_id && pid) addTask(task_id, pid, task_title);
       }),
       subscribe(EventType.TaskCompleted, (e) => {
         if (e.content.task_id) completeTask(e.content.task_id);
@@ -56,7 +58,7 @@ function AutomationControls({ projectId }: { projectId: string }) {
       {!showStopPause && (
         <button
           type="button"
-          className={styles.headerBtn}
+          className={styles.runBtnGroup}
           onClick={handleStart}
           disabled={!canPlay}
           title="Run"
@@ -65,6 +67,8 @@ function AutomationControls({ projectId }: { projectId: string }) {
           {starting || preparing
             ? <Loader2 size={11} className={styles.spinner} />
             : <Play size={11} />}
+          <span>Run</span>
+          <span className={styles.shortcutBadge}>&#8984;R</span>
         </button>
       )}
       {showStopPause && (
@@ -72,12 +76,14 @@ function AutomationControls({ projectId }: { projectId: string }) {
           {canPlay && (
             <button
               type="button"
-              className={styles.headerBtn}
+              className={styles.runBtnGroup}
               onClick={handleStart}
               title="Resume"
               aria-label="Resume automation"
             >
               <Play size={11} />
+              <span>Run</span>
+              <span className={styles.shortcutBadge}>&#8984;R</span>
             </button>
           )}
           {canPause && (
@@ -118,8 +124,49 @@ function AutomationControls({ projectId }: { projectId: string }) {
   );
 }
 
+function PanelTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: OutputPanelTab;
+  onTabChange: (tab: OutputPanelTab) => void;
+}) {
+  const { addTerminal } = useTerminalPanel();
+
+  return (
+    <div className={styles.headerTabs}>
+      <button
+        type="button"
+        className={activeTab === "run" ? styles.tabActive : styles.tab}
+        onClick={() => onTabChange("run")}
+      >
+        Run
+      </button>
+      <button
+        type="button"
+        className={activeTab === "terminal" ? styles.tabActive : styles.tab}
+        onClick={() => onTabChange("terminal")}
+      >
+        Terminal
+      </button>
+      <button
+        type="button"
+        className={styles.addTerminalBtn}
+        onClick={() => {
+          addTerminal();
+          onTabChange("terminal");
+        }}
+        title="New terminal"
+      >
+        <Plus size={13} />
+      </button>
+    </div>
+  );
+}
+
 export function TaskOutputPanel() {
-  const { panelHeight, collapsed, toggleCollapse, handleMouseDown } = useTaskOutputPanel();
+  const { panelHeight, collapsed, toggleCollapse, handleMouseDown, activeTab } = useTaskOutputPanel();
+  const setActiveTab = useTaskOutputPanelStore((s) => s.setActiveTab);
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
   const contentRef = useRef<HTMLDivElement>(null);
   const ctx = useProjectContext();
@@ -148,13 +195,12 @@ export function TaskOutputPanel() {
       <div className={styles.header}>
         <div className={styles.headerLeft}>
           <Item.Chevron expanded={!collapsed} onToggle={toggleCollapse} size="sm" />
-          <span className={styles.headerLabel}>
-            Task Output{projectTasks.length > 0 ? ` (${projectTasks.length})` : ""}
-          </span>
+          <PanelTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
         <div className={styles.headerActions}>
+          <span className={styles.wifiIcon}><ConnectionDot /></span>
           {projectId && <AutomationControls projectId={projectId} />}
-          {hasCompleted && (
+          {activeTab === "run" && hasCompleted && (
             <button
               type="button"
               className={styles.headerBtn}
@@ -165,33 +211,50 @@ export function TaskOutputPanel() {
               <Trash2 size={11} />
             </button>
           )}
+          <button
+            type="button"
+            className={styles.headerBtn}
+            onClick={toggleCollapse}
+            title={collapsed ? "Expand" : "Collapse"}
+          >
+            <ChevronDown size={13} style={{ transform: collapsed ? undefined : "rotate(180deg)", transition: "transform 0.15s" }} />
+          </button>
         </div>
       </div>
-      <div className={styles.content} ref={contentRef}>
-        {projectTasks.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Text size="sm" className={styles.emptyText}>No active tasks</Text>
-          </div>
-        ) : (
-          projectTasks.map((entry) =>
-            entry.status === "active" ? (
-              <ActiveTaskStream
-                key={entry.taskId}
-                taskId={entry.taskId}
-                title={entry.title}
-              />
-            ) : (
-              <CompletedTaskOutput
-                key={entry.taskId}
-                taskId={entry.taskId}
-                projectId={entry.projectId}
-                title={entry.title}
-                status={entry.status}
-              />
-            ),
-          )
-        )}
-      </div>
+
+      {activeTab === "run" && (
+        <div className={styles.content} ref={contentRef}>
+          {projectTasks.length === 0 ? (
+            <div className={styles.emptyState}>
+              <Text size="sm" className={styles.emptyText}>No tasks</Text>
+            </div>
+          ) : (
+            projectTasks.map((entry) =>
+              entry.status === "active" ? (
+                <ActiveTaskStream
+                  key={entry.taskId}
+                  taskId={entry.taskId}
+                  title={entry.title}
+                />
+              ) : (
+                <CompletedTaskOutput
+                  key={entry.taskId}
+                  taskId={entry.taskId}
+                  projectId={entry.projectId}
+                  title={entry.title}
+                  status={entry.status}
+                />
+              ),
+            )
+          )}
+        </div>
+      )}
+
+      {activeTab === "terminal" && (
+        <div className={styles.terminalContent}>
+          <TerminalPanelBody />
+        </div>
+      )}
     </div>
   );
 }

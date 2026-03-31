@@ -9,6 +9,7 @@ const MAX_HEIGHT = 500;
 const MAX_PERSISTED_TASKS = 20;
 
 export type PanelTaskStatus = "active" | "completed" | "failed";
+export type OutputPanelTab = "run" | "terminal";
 
 export interface PanelTaskEntry {
   taskId: string;
@@ -53,8 +54,10 @@ function savePersistedTasks(tasks: PanelTaskEntry[]) {
 interface TaskOutputPanelState {
   panelHeight: number;
   collapsed: boolean;
+  activeTab: OutputPanelTab;
   tasks: PanelTaskEntry[];
 
+  setActiveTab: (tab: OutputPanelTab) => void;
   toggleCollapse: () => void;
   addTask: (taskId: string, projectId: string, title?: string) => void;
   completeTask: (taskId: string) => void;
@@ -72,7 +75,12 @@ const restoredTasks = loadPersistedTasks();
 export const useTaskOutputPanelStore = create<TaskOutputPanelState>()((set, get) => ({
   panelHeight: saved.height,
   collapsed: saved.collapsed,
+  activeTab: "run" as OutputPanelTab,
   tasks: restoredTasks,
+
+  setActiveTab: (tab) => {
+    set({ activeTab: tab });
+  },
 
   toggleCollapse: () => {
     set((s) => ({ collapsed: !s.collapsed }));
@@ -166,6 +174,6 @@ export function useTaskOutputPanel() {
 
 export function useTasksForProject(projectId: string | undefined) {
   return useTaskOutputPanelStore(
-    useShallow((s) => (projectId ? s.tasks.filter((t) => t.projectId === projectId) : [])),
+    useShallow((s) => (projectId ? s.tasks.filter((t) => t.projectId === projectId) : s.tasks)),
   );
 }
