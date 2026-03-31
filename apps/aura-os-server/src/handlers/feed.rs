@@ -6,10 +6,16 @@ use axum::Json;
 use futures_util::future::join_all;
 use serde::{Deserialize, Serialize};
 
+use tracing::warn;
+
 use aura_os_network::{NetworkClient, NetworkComment, NetworkFeedEvent, NetworkProfile};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
+
+fn is_uuid(s: &str) -> bool {
+    s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4
+}
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct FeedQuery {
@@ -55,7 +61,9 @@ impl FeedEventResponse {
     fn from_event(e: NetworkFeedEvent, profiles: &HashMap<String, NetworkProfile>) -> Self {
         let profile = profiles.get(&e.profile_id);
         Self {
-            author_name: profile.and_then(|p| p.display_name.clone()),
+            author_name: profile
+                .and_then(|p| p.display_name.clone())
+                .filter(|n| !is_uuid(n)),
             author_avatar: profile.and_then(|p| p.avatar_url.clone()),
             id: e.id,
             profile_id: e.profile_id,
@@ -93,7 +101,9 @@ impl CommentResponse {
     fn from_comment(c: NetworkComment, profiles: &HashMap<String, NetworkProfile>) -> Self {
         let profile = profiles.get(&c.profile_id);
         Self {
-            author_name: profile.and_then(|p| p.display_name.clone()),
+            author_name: profile
+                .and_then(|p| p.display_name.clone())
+                .filter(|n| !is_uuid(n)),
             author_avatar: profile.and_then(|p| p.avatar_url.clone()),
             id: c.id,
             activity_event_id: c.activity_event_id,
@@ -119,7 +129,8 @@ pub(crate) struct CreatePostRequest {
 }
 
 /// Batch-fetch profiles for a set of profile IDs (deduplicated, concurrent).
-/// Failures for individual profiles are silently skipped.
+/// Uses a fallback chain: profile lookup → user profile lookup → user lookup,
+/// because some feed events carry a userId rather than a profileId.
 async fn resolve_profiles(
     client: &NetworkClient,
     profile_ids: impl IntoIterator<Item = &str>,
@@ -138,15 +149,36 @@ async fn resolve_profiles(
         let client = client.clone();
         let jwt = jwt.to_owned();
         async move {
-            let result = client.get_profile(&id, &jwt).await;
-            (id, result)
+            if let Ok(p) = client.get_profile(&id, &jwt).await {
+                return (id, Some(p));
+            }
+            if let Ok(p) = client.get_user_profile(&id, &jwt).await {
+                return (id, Some(p));
+            }
+            if let Ok(user) = client.get_user(&id, &jwt).await {
+                return (
+                    id.clone(),
+                    Some(NetworkProfile {
+                        id: user.profile_id.unwrap_or(id),
+                        display_name: user.display_name,
+                        avatar_url: user.avatar_url,
+                        bio: user.bio,
+                        profile_type: Some("user".into()),
+                        entity_id: None,
+                        user_id: None,
+                        agent_id: None,
+                    }),
+                );
+            }
+            warn!(profile_id = %id, "Could not resolve profile via any method");
+            (id, None)
         }
     });
 
     join_all(futs)
         .await
         .into_iter()
-        .filter_map(|(id, res)| res.ok().map(|p| (id, p)))
+        .filter_map(|(id, profile)| profile.map(|p| (id, p)))
         .collect()
 }
 

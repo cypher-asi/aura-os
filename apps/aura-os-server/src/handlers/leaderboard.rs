@@ -4,12 +4,17 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 use futures_util::future::join_all;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use aura_os_core::OrgId;
 use aura_os_network::{LeaderboardEntry, MemberUsageStats, NetworkClient, NetworkProfile, PlatformStats, UsageStats};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::AppState;
+
+fn is_uuid(s: &str) -> bool {
+    s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4
+}
 
 // ---------------------------------------------------------------------------
 // Leaderboard
@@ -40,7 +45,8 @@ impl LeaderboardEntryResponse {
         let profile = profiles.get(&e.profile_id);
         let display_name = e
             .display_name
-            .or_else(|| profile.and_then(|p| p.display_name.clone()));
+            .or_else(|| profile.and_then(|p| p.display_name.clone()))
+            .filter(|n| !is_uuid(n));
         let avatar_url = e
             .avatar_url
             .or_else(|| profile.and_then(|p| p.avatar_url.clone()));
@@ -77,15 +83,36 @@ async fn resolve_profiles(
         let client = client.clone();
         let jwt = jwt.to_owned();
         async move {
-            let result = client.get_profile(&id, &jwt).await;
-            (id, result)
+            if let Ok(p) = client.get_profile(&id, &jwt).await {
+                return (id, Some(p));
+            }
+            if let Ok(p) = client.get_user_profile(&id, &jwt).await {
+                return (id, Some(p));
+            }
+            if let Ok(user) = client.get_user(&id, &jwt).await {
+                return (
+                    id.clone(),
+                    Some(NetworkProfile {
+                        id: user.profile_id.unwrap_or(id),
+                        display_name: user.display_name,
+                        avatar_url: user.avatar_url,
+                        bio: user.bio,
+                        profile_type: Some("user".into()),
+                        entity_id: None,
+                        user_id: None,
+                        agent_id: None,
+                    }),
+                );
+            }
+            warn!(profile_id = %id, "Could not resolve profile via any method");
+            (id, None)
         }
     });
 
     join_all(futs)
         .await
         .into_iter()
-        .filter_map(|(id, res)| res.ok().map(|p| (id, p)))
+        .filter_map(|(id, profile)| profile.map(|p| (id, p)))
         .collect()
 }
 
@@ -224,8 +251,10 @@ pub(crate) async fn get_org_usage_members(
 
 #[derive(Debug, Serialize)]
 pub(crate) struct PlatformStatsResponse {
-    pub id: String,
-    pub date: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
     pub daily_active_users: i32,
     pub total_users: i32,
     pub new_signups: i32,
@@ -233,7 +262,8 @@ pub(crate) struct PlatformStatsResponse {
     pub total_input_tokens: i64,
     pub total_output_tokens: i64,
     pub total_revenue_usd: f64,
-    pub created_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
 }
 
 impl From<PlatformStats> for PlatformStatsResponse {

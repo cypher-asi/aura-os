@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { ButtonPlus, PageEmptyState, Text } from "@cypher-asi/zui";
+import { PageEmptyState, Text } from "@cypher-asi/zui";
 import { GitBranch, Loader2, SquareKanban } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
@@ -120,13 +120,6 @@ export function TasksMainPanel({ children: _children }: { children?: React.React
                     <Text size="xs" className={styles.columnTitle}>{lane.label}</Text>
                     <span className={styles.headerRight}>
                       <span className={styles.countBadge}>{laneTasks.length}</span>
-                      {lane.canAdd && (
-                        <ButtonPlus
-                          onClick={() => setAddingToLane(lane.status)}
-                          size="sm"
-                          title={`Add task to ${lane.label}`}
-                        />
-                      )}
                     </span>
                   </header>
                   <div className={styles.columnBody}>
@@ -155,6 +148,16 @@ export function TasksMainPanel({ children: _children }: { children?: React.React
                           />
                         );
                       })
+                    )}
+                    {lane.canAdd && addingToLane !== lane.status && (
+                      <button
+                        type="button"
+                        className={styles.laneAddBtn}
+                        onClick={() => setAddingToLane(lane.status)}
+                        title={`Add task to ${lane.label}`}
+                      >
+                        +
+                      </button>
                     )}
                   </div>
                 </section>

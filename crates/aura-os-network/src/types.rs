@@ -17,7 +17,7 @@ pub struct HealthResponse {
 #[serde(rename_all = "camelCase")]
 pub struct NetworkUser {
     pub id: String,
-    #[serde(default, alias = "zos_user_id")]
+    #[serde(default, alias = "zos_user_id", alias = "zeroUserId")]
     pub zos_user_id: Option<String>,
     #[serde(alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
@@ -74,13 +74,17 @@ pub struct NetworkProfile {
     pub id: String,
     #[serde(alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
-    #[serde(alias = "avatar_url", alias = "avatarUrl")]
+    #[serde(alias = "avatar_url", alias = "avatarUrl", alias = "avatar")]
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     #[serde(rename = "type", alias = "profile_type", alias = "profileType")]
     pub profile_type: Option<String>,
-    #[serde(alias = "entity_id", alias = "entityId")]
+    #[serde(default, alias = "entity_id", alias = "entityId")]
     pub entity_id: Option<String>,
+    #[serde(default, alias = "user_id")]
+    pub user_id: Option<String>,
+    #[serde(default, alias = "agent_id")]
+    pub agent_id: Option<String>,
 }
 
 impl NetworkProfile {
@@ -460,8 +464,10 @@ pub struct LeaderboardEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlatformStats {
-    pub id: String,
-    pub date: String,
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub date: Option<String>,
     #[serde(default)]
     pub daily_active_users: i32,
     #[serde(default)]
@@ -477,7 +483,7 @@ pub struct PlatformStats {
     #[serde(default)]
     pub total_revenue_usd: f64,
     #[serde(default)]
-    pub created_at: String,
+    pub created_at: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
