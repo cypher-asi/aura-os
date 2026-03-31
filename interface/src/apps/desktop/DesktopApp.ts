@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import type { AuraApp } from "../types";
@@ -7,7 +8,7 @@ function EmptyPanel() {
 }
 
 function MainPanel({ children }: { children?: ReactNode }) {
-  return children ?? null;
+  return createElement("div", { style: { flex: 1, minHeight: 0, overflow: "hidden" } }, children);
 }
 
 export const DesktopApp: AuraApp = {
