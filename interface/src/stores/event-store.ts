@@ -44,6 +44,13 @@ export interface TaskOutputEntry {
   gitSteps: GitStep[];
 }
 
+interface PersistedTaskOutputCacheEntry {
+  taskId: string;
+  projectId?: string;
+  text: string;
+  updatedAt: number;
+}
+
 type EventCallback = (event: AuraEvent) => void;
 type TaskOutputListener = () => void;
 
@@ -51,6 +58,9 @@ const EMPTY_OUTPUT: TaskOutputEntry = { text: "", fileOps: [], buildSteps: [], t
 
 const subscribers = new Map<EventType, Set<EventCallback>>();
 const taskOutputListeners = new Map<string, Set<TaskOutputListener>>();
+const TASK_OUTPUT_CACHE_KEY = "aura-task-output-cache-v1";
+const TASK_OUTPUT_CACHE_MAX_ENTRIES = 100;
+const TASK_OUTPUT_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface EventState {
   connected: boolean;
@@ -58,7 +68,68 @@ interface EventState {
   taskOutputs: Record<string, TaskOutputEntry>;
 
   subscribe: <T extends EventType>(type: T, callback: (event: AuraEventOfType<T>) => void) => () => void;
-  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[]) => void;
+  seedTaskOutput: (taskId: string, text: string, buildSteps?: BuildStep[], testSteps?: TestStep[], projectId?: string) => void;
+}
+
+function canUseLocalStorage(): boolean {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function loadPersistedTaskOutputCache(): PersistedTaskOutputCacheEntry[] {
+  if (!canUseLocalStorage()) return [];
+  try {
+    const raw = window.localStorage.getItem(TASK_OUTPUT_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as PersistedTaskOutputCacheEntry[];
+    const now = Date.now();
+    return parsed.filter((entry) =>
+      !!entry?.taskId &&
+      typeof entry.text === "string" &&
+      entry.text.length > 0 &&
+      typeof entry.updatedAt === "number" &&
+      now - entry.updatedAt <= TASK_OUTPUT_CACHE_TTL_MS,
+    );
+  } catch {
+    return [];
+  }
+}
+
+function savePersistedTaskOutputCache(entries: PersistedTaskOutputCacheEntry[]): void {
+  if (!canUseLocalStorage()) return;
+  try {
+    const now = Date.now();
+    const filtered = entries
+      .filter((entry) => now - entry.updatedAt <= TASK_OUTPUT_CACHE_TTL_MS)
+      .sort((a, b) => a.updatedAt - b.updatedAt)
+      .slice(-TASK_OUTPUT_CACHE_MAX_ENTRIES);
+    window.localStorage.setItem(TASK_OUTPUT_CACHE_KEY, JSON.stringify(filtered));
+  } catch {
+    // Ignore quota and serialization errors.
+  }
+}
+
+function persistTaskOutputText(taskId: string, text: string, projectId?: string): void {
+  if (!text) return;
+  const cache = loadPersistedTaskOutputCache();
+  const matchIndex = cache.findIndex((entry) => entry.taskId === taskId && entry.projectId === projectId);
+  const nextEntry: PersistedTaskOutputCacheEntry = {
+    taskId,
+    projectId,
+    text,
+    updatedAt: Date.now(),
+  };
+  if (matchIndex >= 0) {
+    cache[matchIndex] = nextEntry;
+  } else {
+    cache.push(nextEntry);
+  }
+  savePersistedTaskOutputCache(cache);
+}
+
+function removePersistedTaskOutputText(taskId: string): void {
+  const cache = loadPersistedTaskOutputCache();
+  const next = cache.filter((entry) => entry.taskId !== taskId);
+  if (next.length !== cache.length) savePersistedTaskOutputCache(next);
 }
 
 function notifyTaskOutputListeners(taskId: string) {
@@ -83,20 +154,30 @@ export const useEventStore = create<EventState>()((set, get) => ({
     };
   },
 
-  seedTaskOutput: (taskId, text, buildSteps, testSteps) => {
+  seedTaskOutput: (taskId, text, buildSteps, testSteps, projectId) => {
     if (!text && (!buildSteps || buildSteps.length === 0) && (!testSteps || testSteps.length === 0)) return;
     const { taskOutputs } = get();
     const existing = taskOutputs[taskId];
-    if (existing && existing.text) return;
     const seededBuildSteps = buildSteps?.map((s) => ({ ...s, timestamp: 0 })) ?? existing?.buildSteps ?? [];
     const seededTestSteps = testSteps?.map((s) => ({ ...s, timestamp: 0 })) ?? existing?.testSteps ?? [];
+    let mergedText = existing?.text ?? "";
+    if (text) {
+      if (!mergedText || text.length >= mergedText.length || text.includes(mergedText)) {
+        mergedText = text;
+      } else if (!mergedText.includes(text)) {
+        mergedText = `${mergedText}${text}`;
+      }
+    }
+    const finalBuildSteps = existing?.buildSteps.length ? existing.buildSteps : seededBuildSteps;
+    const finalTestSteps = existing?.testSteps.length ? existing.testSteps : seededTestSteps;
     const entry: TaskOutputEntry = {
-      text: text || existing?.text || "",
+      text: mergedText,
       fileOps: existing?.fileOps ?? [],
-      buildSteps: existing?.buildSteps.length ? existing.buildSteps : seededBuildSteps,
-      testSteps: existing?.testSteps.length ? existing.testSteps : seededTestSteps,
+      buildSteps: finalBuildSteps,
+      testSteps: finalTestSteps,
       gitSteps: existing?.gitSteps ?? [],
     };
+    if (entry.text) persistTaskOutputText(taskId, entry.text, projectId);
     set({ taskOutputs: { ...taskOutputs, [taskId]: entry } });
     notifyTaskOutputListeners(taskId);
   },
@@ -116,6 +197,22 @@ function handleEngineEvent(event: AuraEvent) {
         outputChanged = true;
         notifyTaskOutputListeners(task_id);
       }
+      removePersistedTaskOutputText(task_id);
+    }
+  }
+
+  if (event.type === EventType.TextDelta) {
+    const c = event.content as unknown as Record<string, unknown>;
+    const taskId = c.task_id as string | undefined;
+    const text = (c.text as string | undefined) ?? "";
+    if (taskId && text) {
+      const existing = updatedOutputs[taskId] ?? EMPTY_OUTPUT;
+      updatedOutputs = {
+        ...updatedOutputs,
+        [taskId]: { ...existing, text: `${existing.text}${text}` },
+      };
+      outputChanged = true;
+      notifyTaskOutputListeners(taskId);
     }
   }
 
@@ -258,7 +355,11 @@ function handleEngineEvent(event: AuraEvent) {
     (event.type === EventType.TaskCompleted || event.type === EventType.TaskFailed)
   ) {
     const c = event.content as { task_id: string };
-    if (c.task_id) notifyTaskOutputListeners(c.task_id);
+    if (c.task_id) {
+      const existing = updatedOutputs[c.task_id];
+      if (existing?.text) persistTaskOutputText(c.task_id, existing.text, event.project_id);
+      notifyTaskOutputListeners(c.task_id);
+    }
   }
 
   if (event.type === EventType.LoopStopped || event.type === EventType.LoopFinished) {
@@ -284,6 +385,14 @@ export { EMPTY_OUTPUT };
 
 export function useTaskOutput(taskId: string | undefined): TaskOutputEntry {
   return useEventStore((s) => (taskId ? s.taskOutputs[taskId] : undefined) ?? EMPTY_OUTPUT);
+}
+
+export function getCachedTaskOutputText(taskId: string, projectId?: string): string {
+  const cache = loadPersistedTaskOutputCache();
+  const exact = cache.find((entry) => entry.taskId === taskId && entry.projectId === projectId);
+  if (exact?.text) return exact.text;
+  const fallback = cache.find((entry) => entry.taskId === taskId);
+  return fallback?.text ?? "";
 }
 
 let _ws: { close: () => void } | null = null;

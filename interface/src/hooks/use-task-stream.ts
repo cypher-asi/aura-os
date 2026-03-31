@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useEventStore } from "../stores/event-store";
+import { useEventStore, getTaskOutput } from "../stores/event-store";
 import { EventType } from "../types/aura-events";
 import {
   useStreamCore,
@@ -146,12 +146,32 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
 
       subscribe(EventType.TaskCompleted, (e) => {
         if (e.content.task_id !== taskId) return;
+        const bufferedText = refs.streamBuffer.current;
+        if (bufferedText) {
+          const existingText = getTaskOutput(taskId).text;
+          const mergedText = existingText.endsWith(bufferedText)
+            ? existingText
+            : `${existingText}${bufferedText}`;
+          if (mergedText && mergedText !== existingText) {
+            useEventStore.getState().seedTaskOutput(taskId, mergedText, undefined, undefined, e.project_id);
+          }
+        }
         finalizeStream(refs, setters, abortRef, isStreamingRef.current);
         isStreamingRef.current = false;
       }),
 
       subscribe(EventType.TaskFailed, (e) => {
         if (e.content.task_id !== taskId) return;
+        const bufferedText = refs.streamBuffer.current;
+        if (bufferedText) {
+          const existingText = getTaskOutput(taskId).text;
+          const mergedText = existingText.endsWith(bufferedText)
+            ? existingText
+            : `${existingText}${bufferedText}`;
+          if (mergedText && mergedText !== existingText) {
+            useEventStore.getState().seedTaskOutput(taskId, mergedText, undefined, undefined, e.project_id);
+          }
+        }
         finalizeStream(refs, setters, abortRef, isStreamingRef.current);
         isStreamingRef.current = false;
       }),

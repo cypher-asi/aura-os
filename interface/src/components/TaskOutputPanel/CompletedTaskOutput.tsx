@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Check, X as XIcon, AlertTriangle } from "lucide-react";
-import { useTaskOutput, useEventStore } from "../../stores/event-store";
+import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
 import { MessageBubble } from "../MessageBubble";
@@ -13,6 +13,8 @@ interface CompletedTaskOutputProps {
   status: PanelTaskStatus;
 }
 
+const RETRY_DELAY_MS = 2000;
+
 function useHydrateCompletedOutput(projectId: string, taskId: string) {
   const seedTaskOutput = useEventStore((s) => s.seedTaskOutput);
   const hydratedRef = useRef<string | null>(null);
@@ -21,16 +23,47 @@ function useHydrateCompletedOutput(projectId: string, taskId: string) {
     if (hydratedRef.current === taskId) return;
     hydratedRef.current = taskId;
 
-    const existing = useEventStore.getState().taskOutputs[taskId];
-    if (existing?.text) return;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-    api.getTaskOutput(projectId, taskId)
-      .then((res) => {
-        if (res.output) {
-          seedTaskOutput(taskId, res.output);
+    const runHydration = async (attempt: number) => {
+      const existing = useEventStore.getState().taskOutputs[taskId];
+      if (existing?.text || cancelled) return;
+
+      if (attempt === 0) {
+        const cached = getCachedTaskOutputText(taskId, projectId);
+        if (cached) {
+          seedTaskOutput(taskId, cached, undefined, undefined, projectId);
         }
-      })
-      .catch(() => {});
+      }
+
+      const latest = useEventStore.getState().taskOutputs[taskId];
+      if (latest?.text || cancelled) return;
+
+      try {
+        const res = await api.getTaskOutput(projectId, taskId);
+        if (cancelled) return;
+        if (res.output || res.build_steps?.length || res.test_steps?.length) {
+          seedTaskOutput(taskId, res.output, undefined, undefined, projectId);
+          return;
+        }
+      } catch {
+        // Ignore and retry once below.
+      }
+
+      if (attempt === 0 && !cancelled) {
+        retryTimer = setTimeout(() => {
+          void runHydration(1);
+        }, RETRY_DELAY_MS);
+      }
+    };
+
+    void runHydration(0);
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [projectId, taskId, seedTaskOutput]);
 }
 
