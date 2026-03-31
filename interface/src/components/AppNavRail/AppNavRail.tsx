@@ -5,6 +5,7 @@ import { CircleUserRound } from "lucide-react";
 import { useAppStore } from "../../stores/app-store";
 import { getLastSelectedAgentId } from "../../apps/agents/stores";
 import { getLastProject, getLastAgent } from "../../utils/storage";
+import { OrgSelector } from "../OrgSelector";
 import styles from "./AppNavRail.module.css";
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
@@ -45,6 +46,11 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
 
   return (
     <nav className={isBar ? styles.bar : styles.rail} aria-label="Primary navigation">
+      {!isBar && (
+        <div className={styles.orgIcon}>
+          <OrgSelector variant="icon" />
+        </div>
+      )}
       <div className={isBar ? styles.barGroup : styles.appGroup}>
         {primaryApps.map((app) => (
           <Button

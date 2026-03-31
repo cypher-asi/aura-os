@@ -118,3 +118,43 @@
   background: var(--color-border);
   margin: var(--space-1) 0;
 }
+
+/* ── Icon variant (navrail) ── */
+
+.iconContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.iconTrigger:hover {
+  color: var(--color-text-primary);
+}
+
+.iconTrigger:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.iconDropdown {
+  bottom: auto;
+  top: 100%;
+  left: 0;
+  right: auto;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}

@@ -11,7 +11,7 @@ import styles from "./OrgSelector.module.css";
 export function OrgSelector({
   variant = "default",
 }: {
-  variant?: "default" | "drawer";
+  variant?: "default" | "drawer" | "icon";
 } = {}) {
   const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
   const { orgs, activeOrg, switchOrg, createOrg } = useOrgStore(
@@ -41,23 +41,42 @@ export function OrgSelector({
     }
   };
 
+  const containerClass =
+    variant === "icon"
+      ? styles.iconContainer
+      : variant === "drawer"
+        ? `${styles.container} ${styles.drawerContainer}`
+        : styles.container;
+
+  const dropdownClass =
+    variant === "icon" ? `${styles.dropdown} ${styles.iconDropdown}` : styles.dropdown;
+
   return (
-    <div
-      className={`${styles.container} ${variant === "drawer" ? styles.drawerContainer : ""}`}
-      ref={dropdownRef}
-    >
-      <button
-        type="button"
-        className={`${styles.trigger} ${variant === "drawer" ? styles.drawerTrigger : ""}`}
-        onClick={() => setDropdownOpen((v) => !v)}
-      >
-        {variant === "drawer" && <Building2 size={14} className={styles.triggerIcon} />}
-        <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
-        <ChevronDown size={12} className={styles.chevron} />
-      </button>
+    <div className={containerClass} ref={dropdownRef}>
+      {variant === "icon" ? (
+        <button
+          type="button"
+          className={styles.iconTrigger}
+          onClick={() => setDropdownOpen((v) => !v)}
+          title={activeOrg?.name ?? "My Team"}
+          aria-label="Switch team"
+        >
+          <Building2 size={18} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          className={`${styles.trigger} ${variant === "drawer" ? styles.drawerTrigger : ""}`}
+          onClick={() => setDropdownOpen((v) => !v)}
+        >
+          {variant === "drawer" && <Building2 size={14} className={styles.triggerIcon} />}
+          <span className={styles.name}>{activeOrg?.name ?? "My Team"}</span>
+          <ChevronDown size={12} className={styles.chevron} />
+        </button>
+      )}
 
       {dropdownOpen && (
-        <div className={styles.dropdown}>
+        <div className={dropdownClass}>
           {orgs.map((org) => (
             <button
               key={org.org_id}
