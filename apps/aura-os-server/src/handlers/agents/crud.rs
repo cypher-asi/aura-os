@@ -105,10 +105,9 @@ async fn provision_swarm_agent(
     agent_name: &str,
 ) -> ApiResult<String> {
     let url = format!("{}/v1/agents", swarm_base_url);
-    let swarm_name = swarm_provision_name(agent_name, agent_id);
 
     let body = serde_json::json!({
-        "name": swarm_name,
+        "name": agent_name,
         "agent_id": agent_id,
     });
 
@@ -148,72 +147,6 @@ async fn provision_swarm_agent(
         .unwrap_or_else(|| swarm_resp.agent_id.clone());
 
     Ok(vm_id)
-}
-
-fn swarm_provision_name(agent_name: &str, agent_id: &str) -> String {
-    let mut sanitized = String::with_capacity(agent_name.len().min(64));
-    let mut last_was_separator = false;
-
-    for ch in agent_name.chars() {
-        if ch.is_alphanumeric() || ch == '_' || ch == '-' {
-            sanitized.push(ch);
-            last_was_separator = false;
-            continue;
-        }
-
-        if !sanitized.is_empty() && !last_was_separator {
-            sanitized.push('-');
-            last_was_separator = true;
-        }
-    }
-
-    let trimmed = sanitized.trim_matches(['-', '_']).to_string();
-    let mut final_name = if trimmed.is_empty() {
-        let suffix = agent_id.split('-').next().unwrap_or("remote");
-        format!("agent-{suffix}")
-    } else {
-        trimmed
-    };
-
-    if final_name.len() > 64 {
-        final_name.truncate(64);
-        final_name = final_name.trim_matches(['-', '_']).to_string();
-    }
-
-    if final_name.is_empty() {
-        "agent-remote".to_string()
-    } else {
-        final_name
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::swarm_provision_name;
-
-    #[test]
-    fn swarm_provision_name_replaces_invalid_characters() {
-        assert_eq!(
-            swarm_provision_name("Aura Eval Builder", "00000000-1111-2222-3333-444444444444"),
-            "Aura-Eval-Builder"
-        );
-    }
-
-    #[test]
-    fn swarm_provision_name_falls_back_when_name_has_no_valid_characters() {
-        assert_eq!(
-            swarm_provision_name("!!!", "12345678-1111-2222-3333-444444444444"),
-            "agent-12345678"
-        );
-    }
-
-    #[test]
-    fn swarm_provision_name_truncates_to_gateway_limit() {
-        let long_name = "a".repeat(80);
-        let value = swarm_provision_name(&long_name, "12345678-1111-2222-3333-444444444444");
-        assert_eq!(value.len(), 64);
-        assert!(value.chars().all(|ch| ch.is_alphanumeric() || ch == '_' || ch == '-'));
-    }
 }
 
 pub(crate) async fn list_agents(

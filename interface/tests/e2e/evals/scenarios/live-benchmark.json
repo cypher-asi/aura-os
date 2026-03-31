@@ -17,7 +17,7 @@
       "Verify that build and test commands complete successfully and that the stats view renders."
     ],
     "agentTemplate": {
-      "name": "Aura Eval Builder",
+      "name": "Aura-Eval-Builder",
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
@@ -67,7 +67,7 @@
       "Verify that build and test commands complete successfully and that the generated server source matches the expected routes."
     ],
     "agentTemplate": {
-      "name": "Aura Eval Builder",
+      "name": "Aura-Eval-Builder",
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
@@ -117,7 +117,7 @@
       "Verify that build and test commands complete successfully and that the server was patched in place."
     ],
     "agentTemplate": {
-      "name": "Aura Eval Builder",
+      "name": "Aura-Eval-Builder",
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
