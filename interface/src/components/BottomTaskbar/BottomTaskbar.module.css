@@ -9,6 +9,22 @@
   padding: 0 var(--space-2);
 }
 
+.desktopBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.desktopBtn:hover {
+  background-color: transparent !important;
+}
+
+.desktopBtn[class*="selected"],
+.desktopBtn[class*="selected"] svg {
+  color: #ffffff !important;
+}
+
 .spacer {
   flex: 1;
   min-width: 0;

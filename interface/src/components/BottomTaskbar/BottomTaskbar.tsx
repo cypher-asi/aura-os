@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CreditCard, Circle } from "lucide-react";
+import { Button } from "@cypher-asi/zui";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
 import { formatCredits } from "../../utils/format";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useAppStore } from "../../stores/app-store";
 import { ConnectionDot } from "../ConnectionDot/ConnectionDot";
 import styles from "./BottomTaskbar.module.css";
 
@@ -17,12 +20,25 @@ function useClock() {
 
 export function BottomTaskbar() {
   const openBuyCredits = useUIModalStore((s) => s.openBuyCredits);
+  const activeApp = useAppStore((s) => s.activeApp);
   const { credits } = useCreditBalance();
   const time = useClock();
   const display = credits !== null ? formatCredits(credits) : "---";
+  const navigate = useNavigate();
 
   return (
     <div className={styles.bar}>
+      <Button
+        variant="ghost"
+        size="sm"
+        iconOnly
+        selected={activeApp.id === "desktop"}
+        icon={<Circle size={18} />}
+        title="Desktop"
+        aria-label="Desktop"
+        className={styles.desktopBtn}
+        onClick={() => navigate("/desktop")}
+      />
       <div className={styles.spacer} />
       <div className={styles.right}>
         <button

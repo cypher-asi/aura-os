@@ -36,7 +36,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
   const apps = useAppStore((s) => s.apps);
   const activeApp = useAppStore((s) => s.activeApp);
   const navigate = useNavigate();
-  const primaryApps = apps.filter((app) => app.id !== "profile");
+  const primaryApps = apps.filter((app) => app.id !== "profile" && app.id !== "desktop");
   const isBar = layout === "bar";
 
   const handleAppClick = useCallback(
