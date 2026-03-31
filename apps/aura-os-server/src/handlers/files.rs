@@ -6,6 +6,25 @@ use axum::{
 };
 use tracing::{debug, warn};
 
+/// Reject paths that attempt traversal or access sensitive system locations.
+fn is_path_safe(path: &str) -> bool {
+    // Block path traversal
+    if path.contains("..") {
+        return false;
+    }
+
+    // Block sensitive system paths
+    let blocked = ["/etc/", "/proc/", "/sys/", "/dev/", "/var/run/"];
+    let lower = path.to_lowercase();
+    for prefix in &blocked {
+        if lower.starts_with(prefix) || lower == prefix.trim_end_matches('/') {
+            return false;
+        }
+    }
+
+    true
+}
+
 #[derive(serde::Deserialize)]
 pub(crate) struct ListDirectoryRequest {
     path: String,
@@ -101,6 +120,10 @@ fn walk_directory(path: &std::path::Path, depth: usize, max_depth: usize) -> Vec
 pub(crate) async fn list_directory(
     Json(req): Json<ListDirectoryRequest>,
 ) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "list_directory: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
     let target = std::path::Path::new(&req.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,
@@ -124,6 +147,10 @@ pub(crate) async fn list_directory(
 }
 
 pub(crate) async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_json::Value> {
+    if !is_path_safe(&req.path) {
+        warn!(path = %req.path, "read_file: blocked unsafe path");
+        return Json(serde_json::json!({ "ok": false, "error": "access denied" }));
+    }
     let target = std::path::Path::new(&req.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,
@@ -151,6 +178,10 @@ pub(crate) async fn read_file(Json(req): Json<ReadFileRequest>) -> Json<serde_js
 }
 
 pub(crate) async fn preview_file(Query(query): Query<FilePreviewQuery>) -> Response {
+    if !is_path_safe(&query.path) {
+        warn!(path = %query.path, "preview_file: blocked unsafe path");
+        return (StatusCode::FORBIDDEN, "access denied").into_response();
+    }
     let target = std::path::Path::new(&query.path);
     let meta = match tokio::fs::metadata(target).await {
         Ok(m) => m,
