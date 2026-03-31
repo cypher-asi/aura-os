@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use aura_os_core::HarnessMode;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 const VALID_LIFECYCLE_ACTIONS: &[&str] = &["hibernate", "stop", "restart", "wake", "start"];
 
@@ -44,9 +44,9 @@ pub(crate) struct RemoteAgentStateResponse {
 
 pub(crate) async fn get_remote_agent_state(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
 ) -> ApiResult<Json<RemoteAgentStateResponse>> {
-    let jwt = state.get_jwt()?;
 
     let network = state.require_network_client()?;
     let net_agent = network
@@ -105,6 +105,7 @@ pub(crate) async fn get_remote_agent_state(
 /// swarm gateway for a remote agent.
 pub(crate) async fn remote_agent_lifecycle(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((agent_id, action)): Path<(String, String)>,
 ) -> ApiResult<Json<LifecycleActionResponse>> {
     if !VALID_LIFECYCLE_ACTIONS.contains(&action.as_str()) {
@@ -113,8 +114,6 @@ pub(crate) async fn remote_agent_lifecycle(
             VALID_LIFECYCLE_ACTIONS.join(", ")
         )));
     }
-
-    let jwt = state.get_jwt()?;
 
     let network = state.require_network_client()?;
     let net_agent = network

@@ -8,7 +8,7 @@ use aura_os_network::NetworkFollow;
 
 use crate::dto::{FollowCheckResponse, FollowRequest};
 use crate::error::{map_network_error, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 fn follow_from_network(net: &NetworkFollow) -> Follow {
     let follower_profile_id = net
@@ -39,10 +39,10 @@ fn follow_from_network(net: &NetworkFollow) -> Follow {
 
 pub(crate) async fn follow(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<FollowRequest>,
 ) -> ApiResult<(StatusCode, Json<Follow>)> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_req = aura_os_network::FollowRequest {
         target_profile_id: req.target_profile_id,
     };
@@ -55,10 +55,10 @@ pub(crate) async fn follow(
 
 pub(crate) async fn unfollow(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(target_profile_id): Path<String>,
 ) -> ApiResult<StatusCode> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     client
         .unfollow_profile(&target_profile_id, &jwt)
         .await
@@ -66,9 +66,11 @@ pub(crate) async fn unfollow(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub(crate) async fn list_follows(State(state): State<AppState>) -> ApiResult<Json<Vec<Follow>>> {
+pub(crate) async fn list_follows(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<Vec<Follow>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_follows = client.list_follows(&jwt).await.map_err(map_network_error)?;
     let follows: Vec<Follow> = net_follows.iter().map(follow_from_network).collect();
     Ok(Json(follows))
@@ -76,10 +78,10 @@ pub(crate) async fn list_follows(State(state): State<AppState>) -> ApiResult<Jso
 
 pub(crate) async fn check_follow(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(target_profile_id): Path<String>,
 ) -> ApiResult<Json<FollowCheckResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_follows = client.list_follows(&jwt).await.map_err(map_network_error)?;
     let following = net_follows
         .iter()

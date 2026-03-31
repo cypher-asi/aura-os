@@ -11,7 +11,7 @@ use tracing::warn;
 use aura_os_network::{NetworkClient, NetworkComment, NetworkFeedEvent, NetworkProfile};
 
 use crate::error::{map_network_error, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 fn is_uuid(s: &str) -> bool {
     s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4
@@ -184,10 +184,10 @@ async fn resolve_profiles(
 
 pub(crate) async fn list_feed(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Query(query): Query<FeedQuery>,
 ) -> ApiResult<Json<Vec<FeedEventResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let events = client
         .get_feed(query.filter.as_deref(), query.limit, query.offset, &jwt)
         .await
@@ -210,10 +210,10 @@ pub(crate) async fn list_feed(
 
 pub(crate) async fn create_post(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<CreatePostRequest>,
 ) -> ApiResult<(StatusCode, Json<FeedEventResponse>)> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let post = client
         .create_post(&aura_os_network::client::CreatePostParams {
             title: &req.title,
@@ -241,10 +241,10 @@ pub(crate) async fn create_post(
 
 pub(crate) async fn get_post(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<FeedEventResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let post = client
         .get_post(&post_id, &jwt)
         .await
@@ -256,10 +256,10 @@ pub(crate) async fn get_post(
 
 pub(crate) async fn get_profile_posts(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(profile_id): Path<String>,
 ) -> ApiResult<Json<Vec<FeedEventResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let posts = client
         .get_profile_posts(&profile_id, &jwt)
         .await
@@ -282,10 +282,10 @@ pub(crate) async fn get_profile_posts(
 
 pub(crate) async fn list_comments(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(post_id): Path<String>,
 ) -> ApiResult<Json<Vec<CommentResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let comments = client
         .list_comments(&post_id, &jwt)
         .await
@@ -308,11 +308,11 @@ pub(crate) async fn list_comments(
 
 pub(crate) async fn add_comment(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(post_id): Path<String>,
     Json(req): Json<AddCommentRequest>,
 ) -> ApiResult<(StatusCode, Json<CommentResponse>)> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let comment = client
         .add_comment(&post_id, &req.content, &jwt)
         .await
@@ -327,10 +327,10 @@ pub(crate) async fn add_comment(
 
 pub(crate) async fn delete_comment(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(comment_id): Path<String>,
 ) -> ApiResult<StatusCode> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     client
         .delete_comment(&comment_id, &jwt)
         .await

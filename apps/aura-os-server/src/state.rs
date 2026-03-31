@@ -3,8 +3,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use axum::async_trait;
+use axum::extract::FromRequestParts;
+use axum::http::request::Parts;
 use axum::http::StatusCode;
 use axum::Json;
+use dashmap::DashMap;
 use tokio::sync::{broadcast, mpsc, Mutex};
 
 use aura_os_agents::{AgentInstanceService, AgentService};
@@ -22,6 +26,154 @@ use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
 
 use crate::error::ApiError;
+
+// ---------------------------------------------------------------------------
+// Per-request auth extractors (set by `require_verified_session` middleware)
+// ---------------------------------------------------------------------------
+
+/// JWT access token extracted from the `Authorization: Bearer <token>` header.
+/// Injected as an Axum Extension by the auth middleware.
+#[derive(Clone, Debug)]
+pub(crate) struct AuthJwt(pub String);
+
+#[async_trait]
+impl<S: Send + Sync> FromRequestParts<S> for AuthJwt {
+    type Rejection = (StatusCode, Json<ApiError>);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<AuthJwt>()
+            .cloned()
+            .ok_or_else(|| ApiError::unauthorized("missing auth token"))
+    }
+}
+
+/// Full authenticated session, available after middleware validation.
+/// Injected as an Axum Extension by the auth middleware.
+#[derive(Clone, Debug)]
+pub(crate) struct AuthSession(pub ZeroAuthSession);
+
+#[async_trait]
+impl<S: Send + Sync> FromRequestParts<S> for AuthSession {
+    type Rejection = (StatusCode, Json<ApiError>);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<AuthSession>()
+            .cloned()
+            .ok_or_else(|| ApiError::unauthorized("missing auth session"))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Validation cache — caches zOS session validation results per JWT
+// ---------------------------------------------------------------------------
+
+/// Cached validation result for a JWT token.
+pub struct CachedSession {
+    pub session: ZeroAuthSession,
+    pub validated_at: Instant,
+}
+
+/// Thread-safe in-memory cache keyed by JWT string.
+pub type ValidationCache = Arc<DashMap<String, CachedSession>>;
+
+/// Maximum age before a cached entry is considered expired and eligible for eviction.
+const CACHE_ENTRY_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+/// How often the background eviction task runs.
+const CACHE_EVICTION_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+
+/// Spawn a background task that periodically removes expired entries from the validation cache.
+pub(crate) fn spawn_cache_eviction(cache: ValidationCache) {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(CACHE_EVICTION_INTERVAL).await;
+            let before = cache.len();
+            cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
+            let removed = before.saturating_sub(cache.len());
+            if removed > 0 {
+                tracing::debug!(removed, remaining = cache.len(), "evicted expired auth cache entries");
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    fn make_session() -> ZeroAuthSession {
+        ZeroAuthSession {
+            user_id: "u1".into(),
+            network_user_id: None,
+            profile_id: None,
+            display_name: "Test".into(),
+            profile_image: String::new(),
+            primary_zid: "0://test".into(),
+            zero_wallet: "0x0".into(),
+            wallets: vec![],
+            access_token: "tok".into(),
+            is_zero_pro: false,
+            created_at: Utc::now(),
+            validated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn cache_retains_fresh_entries() {
+        let cache: ValidationCache = Arc::new(DashMap::new());
+        cache.insert(
+            "fresh".into(),
+            CachedSession {
+                session: make_session(),
+                validated_at: Instant::now(),
+            },
+        );
+        cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
+        assert_eq!(cache.len(), 1);
+    }
+
+    #[test]
+    fn cache_evicts_expired_entries() {
+        let cache: ValidationCache = Arc::new(DashMap::new());
+        cache.insert(
+            "expired".into(),
+            CachedSession {
+                session: make_session(),
+                validated_at: Instant::now() - CACHE_ENTRY_MAX_AGE - std::time::Duration::from_secs(1),
+            },
+        );
+        cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
+        assert_eq!(cache.len(), 0);
+    }
+
+    #[test]
+    fn cache_mixed_fresh_and_expired() {
+        let cache: ValidationCache = Arc::new(DashMap::new());
+        cache.insert(
+            "fresh".into(),
+            CachedSession {
+                session: make_session(),
+                validated_at: Instant::now(),
+            },
+        );
+        cache.insert(
+            "expired".into(),
+            CachedSession {
+                session: make_session(),
+                validated_at: Instant::now() - CACHE_ENTRY_MAX_AGE - std::time::Duration::from_secs(1),
+            },
+        );
+        cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
+        assert_eq!(cache.len(), 1);
+        assert!(cache.contains_key("fresh"));
+        assert!(!cache.contains_key("expired"));
+    }
+}
 
 /// Active harness sessions: agent_instance_id → (session_id, commands_tx, project_id).
 pub struct ActiveHarnessSession {
@@ -118,25 +270,11 @@ pub struct AppState {
     pub task_output_cache: TaskOutputCache,
     /// Optional Orbit client for repo operations. `None` when `ORBIT_BASE_URL` is not set.
     pub orbit_client: Option<crate::orbit_client::OrbitClient>,
+    /// Per-JWT validation cache. Avoids calling zOS on every request.
+    pub validation_cache: ValidationCache,
 }
 
 impl AppState {
-    /// Load the full zOS auth session from storage.
-    pub(crate) fn get_session(&self) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
-        let bytes = self
-            .store
-            .get_setting("zero_auth_session")
-            .map_err(|_| ApiError::unauthorized("no active session"))?;
-        let session: ZeroAuthSession =
-            serde_json::from_slice(&bytes).map_err(|e| ApiError::internal(e.to_string()))?;
-        Ok(session)
-    }
-
-    /// Extract the JWT access token from the stored zOS session.
-    pub(crate) fn get_jwt(&self) -> Result<String, (StatusCode, Json<ApiError>)> {
-        self.get_session().map(|s| s.access_token)
-    }
-
     /// Get the network client, returning 503 if not configured.
     pub(crate) fn require_network_client(
         &self,

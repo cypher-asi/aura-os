@@ -67,6 +67,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .allow_headers(AllowHeaders::mirror_request());
 
     let protected_api_router = Router::new()
+        .merge(protected_auth_routes())
         .merge(user_routes())
         .merge(org_routes())
         .merge(billing_routes())
@@ -104,13 +105,16 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
 }
 
 fn auth_routes() -> Router<AppState> {
-    let routes = Router::new()
+    Router::new()
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
+        .route("/api/auth/logout", post(auth::logout))
+}
+
+fn protected_auth_routes() -> Router<AppState> {
+    let routes = Router::new()
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
-        .route("/api/auth/logout", post(auth::logout))
-        .route("/api/auth/access-token", get(auth::get_access_token))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer));
 
     if auth::auth_token_import_enabled() {

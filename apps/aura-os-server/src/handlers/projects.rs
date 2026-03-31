@@ -7,16 +7,15 @@ use aura_os_projects::UpdateProjectInput;
 
 use crate::dto::{CreateImportedProjectRequest, CreateProjectRequest, UpdateProjectRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
     build_local_shadow, ensure_local_shadow, folder_name_from_path, normalize_project_workspace,
     project_from_network, to_project_input, write_imported_files, ListProjectsQuery,
 };
 
-pub(crate) async fn list_all_projects_from_network(state: &AppState) -> ApiResult<Vec<Project>> {
+pub(crate) async fn list_all_projects_from_network(state: &AppState, jwt: &str) -> ApiResult<Vec<Project>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
     let mut projects = Vec::new();
     for org in &orgs {
@@ -48,6 +47,7 @@ async fn create_project_impl(
     state: &AppState,
     req: &CreateProjectRequest,
     network_folder: Option<String>,
+    jwt: &str,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
     let mut req = req.clone();
     if req.linked_folder_path.trim().is_empty()
@@ -78,8 +78,6 @@ async fn create_project_impl(
     }
 
     let project = if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
-
         let net_req = aura_os_network::CreateProjectRequest {
             name: req.name.clone(),
             org_id: req.org_id.to_string(),
@@ -128,7 +126,6 @@ async fn create_project_impl(
     if let (Some(owner), Some(repo)) = (&project.orbit_owner, &project.orbit_repo) {
         if !owner.is_empty() && !repo.is_empty() && project.git_repo_url.is_none() {
             if let Some(orbit) = &state.orbit_client {
-                let jwt = state.get_jwt()?;
                 if let Err(e) = orbit
                     .ensure_repo(repo, owner, &project.project_id.to_string(), &jwt)
                     .await
@@ -148,17 +145,19 @@ async fn create_project_impl(
 
 pub(crate) async fn create_project(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<CreateProjectRequest>,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
     if req.name.trim().is_empty() {
         return Err(ApiError::bad_request("name must not be empty"));
     }
     let folder = folder_name_from_path(&req.linked_folder_path);
-    create_project_impl(&state, &req, folder).await
+    create_project_impl(&state, &req, folder, &jwt).await
 }
 
 pub(crate) async fn create_imported_project(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<CreateImportedProjectRequest>,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
     let CreateImportedProjectRequest {
@@ -208,16 +207,16 @@ pub(crate) async fn create_imported_project(
         orbit_repo,
     };
 
-    create_project_impl(&state, &local_req, None).await
+    create_project_impl(&state, &local_req, None, &jwt).await
 }
 
 pub(crate) async fn list_projects(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Query(query): Query<ListProjectsQuery>,
 ) -> ApiResult<Json<Vec<Project>>> {
     if let Some(ref org_id) = query.org_id {
         if let Some(client) = &state.network_client {
-            let jwt = state.get_jwt()?;
             let net_projects = client
                 .list_projects_by_org(&org_id.to_string(), &jwt)
                 .await
@@ -273,10 +272,10 @@ pub(crate) async fn list_projects(
 
 pub(crate) async fn get_project(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<Project>> {
     if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
         let net_project = client
             .get_project(&project_id.to_string(), &jwt)
             .await
@@ -304,6 +303,7 @@ pub(crate) async fn get_project(
 
 pub(crate) async fn update_project(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Json(req): Json<UpdateProjectRequest>,
 ) -> ApiResult<Json<Project>> {
@@ -326,7 +326,6 @@ pub(crate) async fn update_project(
         })?;
 
     if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
         let folder = req
             .linked_folder_path
             .as_deref()
@@ -360,6 +359,7 @@ pub(crate) async fn update_project(
 
 pub(crate) async fn delete_project(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<StatusCode> {
     // Verify the project exists locally before attempting remote deletion.
@@ -374,7 +374,6 @@ pub(crate) async fn delete_project(
     // Delete remotely first so that a rejection (e.g. project has agent
     // children) prevents us from removing the local copy.
     if let Some(client) = &state.network_client {
-        let jwt = state.get_jwt()?;
         client
             .delete_project(&project_id.to_string(), &jwt)
             .await

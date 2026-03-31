@@ -61,6 +61,10 @@ Edit `.env` and set:
 
 The server reads `.env` from the current working directory when you run `aura-os-server` or `aura-os-desktop`.
 
+### Authentication
+
+All protected API endpoints require a JWT via `Authorization: Bearer <token>` header. WebSocket connections use `?token=<jwt>` query parameter. The JWT is obtained from the `/api/auth/login` or `/api/auth/register` response (`access_token` field) and stored client-side in localStorage. The same auth flow works for both the desktop app and web deployment.
+
 ### Server URLs (local development)
 
 - **Backend (Axum):** `http://127.0.0.1:3100` — API at `/api`, WebSocket at `/ws`

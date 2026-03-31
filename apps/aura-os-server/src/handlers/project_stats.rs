@@ -6,7 +6,7 @@ use aura_os_core::ProjectId;
 use aura_os_storage::ProjectStats;
 
 use crate::error::{map_storage_error, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ProjectStatsResponse {
@@ -55,10 +55,10 @@ impl From<ProjectStats> for ProjectStatsResponse {
 
 pub(crate) async fn get_project_stats(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
 ) -> ApiResult<Json<ProjectStatsResponse>> {
     let client = state.require_storage_client()?;
-    let jwt = state.get_jwt()?;
     let stats = client
         .get_project_stats(&project_id.to_string(), &jwt)
         .await

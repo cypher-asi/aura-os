@@ -8,7 +8,7 @@ use aura_os_network::{NetworkOrg, NetworkOrgInvite, NetworkOrgMember};
 
 use crate::dto::SetBillingRequest;
 use crate::error::{map_network_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt, AuthSession};
 
 // ---------------------------------------------------------------------------
 // Response types — match the interface's expected shapes
@@ -120,9 +120,11 @@ fn map_org_err(e: aura_os_orgs::OrgError) -> (StatusCode, Json<ApiError>) {
 // Org CRUD — network only; billing from settings
 // ---------------------------------------------------------------------------
 
-pub(crate) async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<Vec<OrgResponse>>> {
+pub(crate) async fn list_orgs(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<Vec<OrgResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let net_orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
 
     let responses = net_orgs
@@ -142,10 +144,10 @@ pub(crate) async fn list_orgs(State(state): State<AppState>) -> ApiResult<Json<V
 
 pub(crate) async fn create_org(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<crate::dto::CreateOrgRequest>,
 ) -> ApiResult<(StatusCode, Json<OrgResponse>)> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let net_req = aura_os_network::CreateOrgRequest {
         name: req.name,
@@ -170,10 +172,10 @@ pub(crate) async fn create_org(
 
 pub(crate) async fn get_org(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<OrgResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let net_org = client
         .get_org(&org_id_str, &jwt)
@@ -186,11 +188,11 @@ pub(crate) async fn get_org(
 
 pub(crate) async fn update_org(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
     Json(req): Json<crate::dto::UpdateOrgRequest>,
 ) -> ApiResult<Json<OrgResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let net_req = aura_os_network::UpdateOrgRequest {
         name: Some(req.name),
@@ -212,11 +214,11 @@ pub(crate) async fn update_org(
 
 pub(crate) async fn list_members(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberResponse>>> {
     let client = state.require_network_client()?;
-    let session = state.get_session()?;
-    let jwt = session.access_token.clone();
     let org_id_str = org_id.to_string();
     let members = client
         .list_org_members(&org_id_str, &jwt)
@@ -287,11 +289,11 @@ async fn try_fill_from_network(
 
 pub(crate) async fn update_member_role(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((org_id, target_user_id)): Path<(OrgId, String)>,
     Json(req): Json<crate::dto::UpdateMemberRoleRequest>,
 ) -> ApiResult<Json<MemberResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let role_str = format!("{:?}", req.role).to_lowercase();
     let net_req = aura_os_network::UpdateMemberRequest {
@@ -308,10 +310,10 @@ pub(crate) async fn update_member_role(
 
 pub(crate) async fn remove_member(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((org_id, target_user_id)): Path<(OrgId, String)>,
 ) -> ApiResult<StatusCode> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     client
         .remove_org_member(&org_id_str, &target_user_id, &jwt)
@@ -327,10 +329,10 @@ pub(crate) async fn remove_member(
 
 pub(crate) async fn create_invite(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<(StatusCode, Json<InviteResponse>)> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let net_req = aura_os_network::CreateInviteRequest {
         email: None,
@@ -345,10 +347,10 @@ pub(crate) async fn create_invite(
 
 pub(crate) async fn list_invites(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<InviteResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let invites = client
         .list_invites(&org_id_str, &jwt)
@@ -361,10 +363,10 @@ pub(crate) async fn list_invites(
 
 pub(crate) async fn revoke_invite(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((org_id, invite_id)): Path<(OrgId, String)>,
 ) -> ApiResult<StatusCode> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     client
         .revoke_invite(&org_id_str, &invite_id, &jwt)
@@ -375,10 +377,10 @@ pub(crate) async fn revoke_invite(
 
 pub(crate) async fn accept_invite(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(token): Path<String>,
 ) -> ApiResult<Json<MemberResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let member = client
         .accept_invite(&token, &jwt)
         .await

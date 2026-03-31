@@ -15,7 +15,7 @@ use tracing::{info, warn};
 use aura_os_core::HarnessMode;
 
 use crate::error::{map_network_error, ApiError};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 /// `GET /ws/agents/:agent_id/remote_agent/terminal`
 ///
@@ -24,12 +24,9 @@ use crate::state::AppState;
 pub(crate) async fn ws_remote_terminal(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
 ) -> impl IntoResponse {
-    let jwt = match state.get_jwt() {
-        Ok(j) => j,
-        Err(e) => return e.into_response(),
-    };
     let network = match state.require_network_client() {
         Ok(n) => n,
         Err(e) => return e.into_response(),

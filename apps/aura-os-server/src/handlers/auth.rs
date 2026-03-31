@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
@@ -5,14 +7,13 @@ use base64::Engine;
 use serde::Serialize;
 
 use aura_os_auth::AuthError;
-use aura_os_core::ZeroAuthSession;
 
 use crate::dto::{
     AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse, ImportAccessTokenRequest,
 };
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt, AuthSession, CachedSession};
 
 fn auth_token_import_enabled_from_var(value: Option<&str>) -> bool {
     matches!(value, Some("1" | "true" | "TRUE"))
@@ -60,6 +61,15 @@ pub(crate) async fn login(
 
     sync_user_to_network(&state, &mut result.session).await;
 
+    // Seed the validation cache so the first authenticated request is instant.
+    state.validation_cache.insert(
+        result.session.access_token.clone(),
+        CachedSession {
+            session: result.session.clone(),
+            validated_at: Instant::now(),
+        },
+    );
+
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
@@ -74,6 +84,14 @@ pub(crate) async fn register(
         .map_err(map_auth_error)?;
 
     sync_user_to_network(&state, &mut result.session).await;
+
+    state.validation_cache.insert(
+        result.session.access_token.clone(),
+        CachedSession {
+            session: result.session.clone(),
+            validated_at: Instant::now(),
+        },
+    );
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
@@ -97,6 +115,11 @@ pub(crate) async fn import_access_token(
         .import_access_token(req.access_token.trim())
         .await
         .map_err(map_auth_error)?;
+
+    // Persist to RocksDB for network bridge and desktop session persistence
+    if let Ok(bytes) = serde_json::to_vec(&result.session) {
+        let _ = state.store.put_setting("zero_auth_session", &bytes);
+    }
 
     sync_user_to_network(&state, &mut result.session).await;
 
@@ -126,55 +149,62 @@ mod tests {
     }
 }
 
+/// GET /api/auth/session — return the current session from the middleware-validated auth.
 pub(crate) async fn get_session(
-    State(state): State<AppState>,
+    AuthSession(session): AuthSession,
 ) -> ApiResult<Json<AuthSessionResponse>> {
-    let session = state
-        .auth_service
-        .get_session()
-        .await
-        .map_err(map_auth_error)?
-        .ok_or_else(|| ApiError::unauthorized("no active session"))?;
     Ok(Json(AuthSessionResponse::from(session)))
 }
 
+/// POST /api/auth/validate — force-refresh the session against zOS and update the cache.
 pub(crate) async fn validate(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<AuthSessionResponse>> {
     let mut result = state
         .auth_service
-        .validate()
+        .validate_token(&jwt)
         .await
-        .map_err(map_auth_error)?
-        .ok_or_else(|| ApiError::unauthorized("session expired or invalid"))?;
+        .map_err(map_auth_error)?;
 
     sync_user_to_network(&state, &mut result.session).await;
+
+    // Update validation cache with the refreshed session.
+    state.validation_cache.insert(
+        jwt,
+        CachedSession {
+            session: result.session.clone(),
+            validated_at: Instant::now(),
+        },
+    );
 
     Ok(Json(AuthSessionResponse::from_auth_result(result)))
 }
 
-pub(crate) async fn logout(State(state): State<AppState>) -> ApiResult<StatusCode> {
-    state.auth_service.logout().await.map_err(map_auth_error)?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-#[derive(Serialize)]
-pub(crate) struct AccessTokenResponse {
-    pub access_token: String,
-}
-
-pub(crate) async fn get_access_token(
+pub(crate) async fn logout(
     State(state): State<AppState>,
-) -> ApiResult<Json<AccessTokenResponse>> {
-    let bytes = state
-        .store
-        .get_setting("zero_auth_session")
-        .map_err(|_| ApiError::unauthorized("no active session"))?;
-    let session: ZeroAuthSession = serde_json::from_slice(&bytes)
-        .map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
-    Ok(Json(AccessTokenResponse {
-        access_token: session.access_token,
-    }))
+    req: axum::extract::Request,
+) -> ApiResult<StatusCode> {
+    // Best-effort: extract JWT from header for zOS session invalidation.
+    // Logout is unprotected so the token may be absent or expired.
+    let token = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|s| s.to_string());
+
+    if let Some(ref jwt) = token {
+        state.validation_cache.remove(jwt);
+    }
+
+    state
+        .auth_service
+        .logout(token.as_deref())
+        .await
+        .map_err(map_auth_error)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Payload decoded from JWT (only the claims we need for issuer discovery).
@@ -193,16 +223,9 @@ pub(crate) struct JwtIssuerResponse {
 /// session's JWT. Used to configure Orbit's TRUSTED_JWT_* without pasting the token into jwt.io.
 /// Returns only public claims (iss); the token itself is never sent.
 pub(crate) async fn get_jwt_issuer(
-    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<JwtIssuerResponse>> {
-    let bytes = state
-        .store
-        .get_setting("zero_auth_session")
-        .map_err(|_| ApiError::unauthorized("no active session"))?;
-    let session: ZeroAuthSession = serde_json::from_slice(&bytes).map_err(|e| {
-        ApiError::internal(format!("deserializing auth session for jwt issuer: {e}"))
-    })?;
-    let token = session.access_token.trim();
+    let token = jwt.trim();
     let parts: Vec<&str> = token.split('.').collect();
     let payload_b64 = parts
         .get(1)

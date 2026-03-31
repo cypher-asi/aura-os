@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useEventStore, getTaskOutput, useTaskOutput } from "./event-store";
+import { useEventStore, getTaskOutput, useTaskOutput, connectEventSocket } from "./event-store";
 
 const { capture } = vi.hoisted(() => {
   const capture = { onMessage: null as ((data: string) => void) | null };
@@ -21,6 +21,10 @@ vi.mock("../lib/host-config", () => ({
   resolveWsUrl: (path: string) => `ws://localhost${path}`,
 }));
 
+vi.mock("../lib/auth-token", () => ({
+  getStoredJwt: () => "test-jwt",
+}));
+
 function simulateEvent(event: Record<string, unknown>) {
   act(() => {
     capture.onMessage!(JSON.stringify(event));
@@ -29,6 +33,7 @@ function simulateEvent(event: Record<string, unknown>) {
 
 beforeEach(() => {
   useEventStore.setState({ connected: false, lastEventAt: null, taskOutputs: {} });
+  connectEventSocket();
 });
 
 describe("event-store", () => {

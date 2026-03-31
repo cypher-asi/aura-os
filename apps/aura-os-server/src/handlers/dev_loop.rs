@@ -13,12 +13,11 @@ use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_tasks::TaskService;
 
 use super::agents::conversions_pub::resolve_workspace_path;
-use super::projects_helpers::optional_jwt;
 use crate::dto::LoopStatusResponse;
 use crate::error::{ApiError, ApiResult};
 use crate::persistence;
 use crate::state::{
-    ActiveAutomaton, AppState, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
+    ActiveAutomaton, AppState, AuthJwt, AutomatonRegistry, CachedTaskOutput, TaskOutputCache,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -313,6 +312,7 @@ async fn create_automaton_session(
     project_id: ProjectId,
     agent_instance_id: AgentInstanceId,
     active_task_id: Option<TaskId>,
+    jwt: Option<&str>,
 ) -> Option<SessionId> {
     let model = state
         .agent_instance_service
@@ -320,7 +320,9 @@ async fn create_automaton_session(
         .await
         .ok()
         .and_then(|instance| instance.model);
-    let user_id = state.get_session().ok().map(|session| session.user_id);
+    let user_id = jwt
+        .and_then(|j| state.validation_cache.get(j))
+        .map(|entry| entry.session.user_id.clone());
 
     match state
         .session_service
@@ -348,14 +350,16 @@ async fn build_usage_reporting_context(
     _agent_instance_id: AgentInstanceId,
     org_id: Option<String>,
     model: Option<String>,
+    jwt: Option<&str>,
 ) -> Option<UsageReportingContext> {
     let network_client = state.network_client.as_ref()?.clone();
-    let session = state.get_session().ok()?;
-    let network_user_id = session.network_user_id?;
+    let jwt_str = jwt?;
+    let cached = state.validation_cache.get(jwt_str)?;
+    let network_user_id = cached.session.network_user_id.as_ref()?;
 
     Some(UsageReportingContext {
         network_client,
-        access_token: session.access_token,
+        access_token: jwt_str.to_string(),
         network_user_id: network_user_id.to_string(),
         model: model.unwrap_or_else(|| "claude-opus-4-6".to_string()),
         org_id,
@@ -915,16 +919,17 @@ fn forward_automaton_events(params: ForwardParams) {
 
 pub(crate) async fn start_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<(StatusCode, Json<LoopStatusResponse>)> {
-    super::billing::require_credits(&state).await?;
+    super::billing::require_credits(&state, &jwt).await?;
 
     let agent_instance_id = params
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let jwt = optional_jwt(&state);
+    let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
@@ -969,6 +974,7 @@ pub(crate) async fn start_loop(
             .await
             .ok()
             .and_then(|instance| instance.model),
+        jwt.as_deref(),
     )
     .await;
     let project_path = if harness_mode == HarnessMode::Swarm {
@@ -1182,7 +1188,7 @@ pub(crate) async fn start_loop(
             .ok()
             .and_then(|instance| instance.current_session_id)
     } else {
-        create_automaton_session(&state, project_id, agent_instance_id, first_task_uuid).await
+        create_automaton_session(&state, project_id, agent_instance_id, first_task_uuid, jwt_for_persist.as_deref()).await
     };
 
     if let Some(ref tid) = first_task_id {
@@ -1215,7 +1221,7 @@ pub(crate) async fn start_loop(
         task_service: state.task_service.clone(),
         task_output_cache: state.task_output_cache.clone(),
         storage_client: state.storage_client.clone(),
-        jwt: jwt_for_persist,
+        jwt: jwt_for_persist.clone(),
         session_id: current_session_id,
         session_service: state.session_service.clone(),
         agent_instance_service: state.agent_instance_service.clone(),
@@ -1232,7 +1238,7 @@ pub(crate) async fn start_loop(
     {
         let ev = serde_json::json!({"type": "loop_started", "project_id": project_id.to_string(), "agent_instance_id": agent_instance_id.to_string()});
         let sc = state.storage_client.clone();
-        let j = state.get_jwt().ok();
+        let j = jwt_for_persist.clone();
         let p = project_id.to_string();
         tokio::spawn(async move {
             persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &ev).await;
@@ -1267,6 +1273,7 @@ pub(crate) async fn start_loop(
 
 pub(crate) async fn pause_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -1304,7 +1311,7 @@ pub(crate) async fn pause_loop(
         {
             let ev = serde_json::json!({"type": "loop_paused", "project_id": project_id.to_string(), "agent_instance_id": aiid.to_string()});
             let sc = state.storage_client.clone();
-            let j = state.get_jwt().ok();
+            let j: Option<String> = Some(jwt.clone());
             let p = project_id.to_string();
             tokio::spawn(async move {
                 persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &ev).await;
@@ -1325,6 +1332,7 @@ pub(crate) async fn pause_loop(
 
 pub(crate) async fn stop_loop(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(project_id): Path<ProjectId>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<Json<LoopStatusResponse>> {
@@ -1361,7 +1369,7 @@ pub(crate) async fn stop_loop(
         {
             let ev = serde_json::json!({"type": "loop_stopped", "project_id": project_id.to_string(), "agent_instance_id": aiid.to_string()});
             let sc = state.storage_client.clone();
-            let j = state.get_jwt().ok();
+            let j: Option<String> = Some(jwt.clone());
             let p = project_id.to_string();
             tokio::spawn(async move {
                 persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &ev).await;
@@ -1402,16 +1410,17 @@ pub(crate) async fn get_loop_status(
 
 pub(crate) async fn run_single_task(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path((project_id, task_id)): Path<(ProjectId, TaskId)>,
     Query(params): Query<LoopQueryParams>,
 ) -> ApiResult<StatusCode> {
-    super::billing::require_credits(&state).await?;
+    super::billing::require_credits(&state, &jwt).await?;
 
     let agent_instance_id = params
         .agent_instance_id
         .unwrap_or_else(AgentInstanceId::new);
 
-    let jwt = optional_jwt(&state);
+    let jwt = Some(jwt);
     let project = state.project_service.get_project(&project_id).ok();
     let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
@@ -1455,6 +1464,7 @@ pub(crate) async fn run_single_task(
             .await
             .ok()
             .and_then(|instance| instance.model),
+        jwt.as_deref(),
     )
     .await;
 
@@ -1499,7 +1509,7 @@ pub(crate) async fn run_single_task(
 
     // Pre-seed the output cache so the REST endpoint can serve partial output.
     let session_id =
-        create_automaton_session(&state, project_id, agent_instance_id, Some(task_id)).await;
+        create_automaton_session(&state, project_id, agent_instance_id, Some(task_id), jwt_for_persist.as_deref()).await;
     {
         let mut cache = state.task_output_cache.lock().await;
         cache.insert(

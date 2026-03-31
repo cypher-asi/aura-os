@@ -10,7 +10,7 @@ use aura_os_core::OrgId;
 use aura_os_network::{LeaderboardEntry, MemberUsageStats, NetworkClient, NetworkProfile, PlatformStats, UsageStats};
 
 use crate::error::{map_network_error, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 fn is_uuid(s: &str) -> bool {
     s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4
@@ -118,10 +118,10 @@ async fn resolve_profiles(
 
 pub(crate) async fn get_leaderboard(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Query(query): Query<LeaderboardQuery>,
 ) -> ApiResult<Json<Vec<LeaderboardEntryResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let period = query.period.as_deref().unwrap_or("all");
     let entries = client
         .get_leaderboard(period, query.org_id.as_deref(), &jwt)
@@ -201,10 +201,10 @@ impl From<MemberUsageStats> for MemberUsageResponse {
 
 pub(crate) async fn get_personal_usage(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Query(query): Query<UsageQuery>,
 ) -> ApiResult<Json<UsageResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let period = query.period.as_deref().unwrap_or("all");
     let usage = client
         .get_personal_usage(period, &jwt)
@@ -215,11 +215,11 @@ pub(crate) async fn get_personal_usage(
 
 pub(crate) async fn get_org_usage(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
     Query(query): Query<UsageQuery>,
 ) -> ApiResult<Json<UsageResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let period = query.period.as_deref().unwrap_or("all");
     let usage = client
@@ -231,10 +231,10 @@ pub(crate) async fn get_org_usage(
 
 pub(crate) async fn get_org_usage_members(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(org_id): Path<OrgId>,
 ) -> ApiResult<Json<Vec<MemberUsageResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let org_id_str = org_id.to_string();
     let members = client
         .get_org_usage_members(&org_id_str, &jwt)
@@ -285,9 +285,9 @@ impl From<PlatformStats> for PlatformStatsResponse {
 
 pub(crate) async fn get_platform_stats(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
 ) -> ApiResult<Json<Option<PlatformStatsResponse>>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
     let stats = client
         .get_platform_stats(&jwt)
         .await

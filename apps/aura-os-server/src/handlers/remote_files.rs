@@ -9,7 +9,7 @@ use tracing::warn;
 use aura_os_core::HarnessMode;
 
 use crate::error::{map_network_error, ApiError, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 #[derive(serde::Deserialize)]
 pub(crate) struct RemoteFileRequest {
@@ -20,8 +20,8 @@ pub(crate) struct RemoteFileRequest {
 async fn resolve_remote_context(
     state: &AppState,
     agent_id: &str,
+    jwt: &str,
 ) -> Result<(String, String), (axum::http::StatusCode, Json<ApiError>)> {
-    let jwt = state.get_jwt()?;
     let network = state.require_network_client()?;
     let net_agent = network
         .get_agent(agent_id, &jwt)
@@ -39,7 +39,7 @@ async fn resolve_remote_context(
         .ok_or_else(|| ApiError::service_unavailable("swarm gateway is not configured"))?
         .to_string();
 
-    Ok((base_url, jwt))
+    Ok((base_url, jwt.to_string()))
 }
 
 fn map_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<ApiError>) {
@@ -57,10 +57,11 @@ fn map_gateway_status(status: u16, body: &str) -> (axum::http::StatusCode, Json<
 /// Returns the same `{ ok, entries }` shape as the local `list_directory`.
 pub(crate) async fn list_remote_directory(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
     Json(req): Json<RemoteFileRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (base_url, jwt) = resolve_remote_context(&state, &agent_id).await?;
+    let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
     let network = state.require_network_client()?;
 
     let url = format!("{}/v1/agents/{}/files", base_url, agent_id);
@@ -96,10 +97,11 @@ pub(crate) async fn list_remote_directory(
 /// Returns the same `{ ok, content, path }` shape as the local `read_file`.
 pub(crate) async fn read_remote_file(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
     Json(req): Json<RemoteFileRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (base_url, jwt) = resolve_remote_context(&state, &agent_id).await?;
+    let (base_url, jwt) = resolve_remote_context(&state, &agent_id, &jwt).await?;
     let network = state.require_network_client()?;
 
     let url = format!("{}/v1/agents/{}/read-file", base_url, agent_id);

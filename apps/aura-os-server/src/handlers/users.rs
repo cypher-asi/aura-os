@@ -7,7 +7,7 @@ use aura_os_core::ZeroAuthSession;
 use aura_os_network::{NetworkProfile, NetworkUser};
 
 use crate::error::{map_network_error, ApiResult};
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 // ---------------------------------------------------------------------------
 // Response types (snake_case for local API)
@@ -85,9 +85,11 @@ pub(crate) struct UpdateMeRequest {
 // ---------------------------------------------------------------------------
 
 /// GET /api/users/me — proxy to aura-network, returns the current user.
-pub(crate) async fn get_me(State(state): State<AppState>) -> ApiResult<Json<UserResponse>> {
+pub(crate) async fn get_me(
+    State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
+) -> ApiResult<Json<UserResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let user = client
         .get_current_user(&jwt)
@@ -100,10 +102,10 @@ pub(crate) async fn get_me(State(state): State<AppState>) -> ApiResult<Json<User
 /// GET /api/users/:id — proxy to aura-network, returns a user by ID.
 pub(crate) async fn get_user(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(user_id): Path<String>,
 ) -> ApiResult<Json<UserResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let user = client
         .get_user(&user_id, &jwt)
@@ -116,10 +118,10 @@ pub(crate) async fn get_user(
 /// PUT /api/users/me — proxy to aura-network, updates the current user.
 pub(crate) async fn update_me(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Json(req): Json<UpdateMeRequest>,
 ) -> ApiResult<Json<UserResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let network_req = aura_os_network::UpdateUserRequest {
         display_name: req.display_name,
@@ -140,10 +142,10 @@ pub(crate) async fn update_me(
 /// GET /api/users/:id/profile — proxy to aura-network, returns a user's profile.
 pub(crate) async fn get_user_profile(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(user_id): Path<String>,
 ) -> ApiResult<Json<ProfileResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let profile = client
         .get_user_profile(&user_id, &jwt)
@@ -156,10 +158,10 @@ pub(crate) async fn get_user_profile(
 /// GET /api/profiles/:id — proxy to aura-network, returns a profile by ID.
 pub(crate) async fn get_profile(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(profile_id): Path<String>,
 ) -> ApiResult<Json<ProfileResponse>> {
     let client = state.require_network_client()?;
-    let jwt = state.get_jwt()?;
 
     let profile = client
         .get_profile(&profile_id, &jwt)
@@ -170,8 +172,9 @@ pub(crate) async fn get_profile(
 }
 
 /// Sync user to aura-network: populates `network_user_id` and `profile_id`
-/// on the session and re-persists to RocksDB. Best-effort — logs warnings
-/// on failure but never errors out.
+/// on the session and re-persists to RocksDB (for network bridge) and
+/// the in-memory validation cache. Best-effort — logs warnings on failure
+/// but never errors out.
 pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAuthSession) {
     if let Some(client) = &state.network_client {
         match client.get_current_user(&session.access_token).await {
@@ -179,9 +182,14 @@ pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAut
                 session.network_user_id = user.user_id_typed();
                 session.profile_id = user.profile_id_typed();
 
-                if let Ok(bytes) = serde_json::to_vec(&session) {
-                    let _ = state.store.put_setting("zero_auth_session", &bytes);
-                }
+                // Update validation cache with enriched session
+                state.validation_cache.insert(
+                    session.access_token.clone(),
+                    crate::state::CachedSession {
+                        session: session.clone(),
+                        validated_at: std::time::Instant::now(),
+                    },
+                );
 
                 let local_name = &session.display_name;
                 let remote_name = user.display_name.as_deref().unwrap_or("");

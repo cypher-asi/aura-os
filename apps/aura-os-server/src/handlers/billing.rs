@@ -2,20 +2,11 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 
-use aura_os_core::{BillingAccount, OrgId, TransactionsResponse, ZeroAuthSession};
+use aura_os_core::{BillingAccount, OrgId, TransactionsResponse};
 
 use crate::dto::CreateCreditCheckoutRequest;
 use crate::error::{ApiError, ApiResult};
-use crate::state::AppState;
-
-fn get_auth_session(state: &AppState) -> Result<ZeroAuthSession, (StatusCode, Json<ApiError>)> {
-    let bytes = state
-        .store
-        .get_setting("zero_auth_session")
-        .map_err(|_| ApiError::unauthorized("not authenticated"))?;
-    serde_json::from_slice(&bytes)
-        .map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))
-}
+use crate::state::{AppState, AuthJwt};
 
 fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>) {
     match e {
@@ -47,7 +38,7 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
 ///
 /// Results are cached for 60 seconds when credits are available to avoid
 /// hitting the billing API on every chat message.
-pub(crate) async fn require_credits(state: &AppState) -> Result<(), (StatusCode, Json<ApiError>)> {
+pub(crate) async fn require_credits(state: &AppState, jwt: &str) -> Result<(), (StatusCode, Json<ApiError>)> {
     use crate::state::CreditCache;
     use std::time::{Duration, Instant};
 
@@ -62,10 +53,9 @@ pub(crate) async fn require_credits(state: &AppState) -> Result<(), (StatusCode,
         }
     }
 
-    let session = get_auth_session(state)?;
     let result = state
         .billing_client
-        .ensure_has_credits(&session.access_token)
+        .ensure_has_credits(jwt)
         .await;
 
     let has_credits = result.is_ok();
@@ -83,12 +73,12 @@ pub(crate) async fn require_credits(state: &AppState) -> Result<(), (StatusCode,
 
 pub(crate) async fn get_credit_balance(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let session = get_auth_session(&state)?;
     let balance = state
         .billing_client
-        .get_balance(&session.access_token)
+        .get_balance(&jwt)
         .await
         .map_err(billing_err)?;
     Ok(Json(serde_json::to_value(balance).unwrap_or_default()))
@@ -96,13 +86,13 @@ pub(crate) async fn get_credit_balance(
 
 pub(crate) async fn create_credit_checkout(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(_org_id): Path<OrgId>,
     Json(body): Json<CreateCreditCheckoutRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let session = get_auth_session(&state)?;
     let resp = state
         .billing_client
-        .create_purchase(&session.access_token, body.amount_usd)
+        .create_purchase(&jwt, body.amount_usd)
         .await
         .map_err(billing_err)?;
     Ok(Json(serde_json::to_value(resp).unwrap_or_default()))
@@ -110,12 +100,12 @@ pub(crate) async fn create_credit_checkout(
 
 pub(crate) async fn get_transactions(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<TransactionsResponse>> {
-    let session = get_auth_session(&state)?;
     let result = state
         .billing_client
-        .get_transactions(&session.access_token)
+        .get_transactions(&jwt)
         .await
         .map_err(billing_err)?;
     Ok(Json(result))
@@ -123,12 +113,12 @@ pub(crate) async fn get_transactions(
 
 pub(crate) async fn get_account(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Path(_org_id): Path<OrgId>,
 ) -> ApiResult<Json<BillingAccount>> {
-    let session = get_auth_session(&state)?;
     let result = state
         .billing_client
-        .get_account(&session.access_token)
+        .get_account(&jwt)
         .await
         .map_err(billing_err)?;
     Ok(Json(result))

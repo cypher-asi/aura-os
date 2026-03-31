@@ -73,7 +73,7 @@ struct CoreServices {
 fn init_core_services(store: &Arc<RocksStore>) -> CoreServices {
     CoreServices {
         org_service: Arc::new(OrgService::new(store.clone())),
-        auth_service: Arc::new(AuthService::new(store.clone())),
+        auth_service: Arc::new(AuthService::new()),
         billing_client: Arc::new(BillingClient::new()),
     }
 }
@@ -288,11 +288,17 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(4096);
 
+    let validation_cache = {
+        let cache = Arc::new(dashmap::DashMap::new());
+        crate::state::spawn_cache_eviction(cache.clone());
+        cache
+    };
+
     spawn_health_checks(&storage_client, &network_client);
     if let Some(ref client) = network_client {
         super::network_bridge::spawn_network_ws_bridge(
             client.clone(),
-            store.clone(),
+            validation_cache.clone(),
             event_broadcast.clone(),
         );
     }
@@ -328,5 +334,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         swarm_base_url: env_opt("SWARM_BASE_URL"),
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client,
+        validation_cache,
     })
 }

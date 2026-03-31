@@ -83,16 +83,19 @@ describe("apiFetch", () => {
     expect(result).toEqual(data);
   });
 
-  it("sends Content-Type and credentials by default", async () => {
+  it("sends Content-Type header by default", async () => {
     const fetchMock = mockFetch(200, {});
     globalThis.fetch = fetchMock;
     await apiFetch("/api/test");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
       }),
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ credentials: "include" }),
     );
   });
 

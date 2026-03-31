@@ -1,4 +1,5 @@
 import type { ApiError } from "../types";
+import { authHeaders } from "../lib/auth-token";
 import { resolveApiUrl } from "../lib/host-config";
 
 export class ApiClientError extends Error {
@@ -34,8 +35,7 @@ export function dispatchInsufficientCredits(): void {
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(resolveApiUrl(path), {
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     ...options,
   });
   if (!res.ok) {

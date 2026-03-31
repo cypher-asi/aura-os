@@ -154,6 +154,8 @@ pub(crate) struct AuthSessionResponse {
     pub is_zero_pro: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub zero_pro_refresh_error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token: Option<String>,
     pub created_at: DateTime<Utc>,
     pub validated_at: DateTime<Utc>,
 }
@@ -202,6 +204,7 @@ pub(crate) struct CreateCreditCheckoutRequest {
 
 impl From<ZeroAuthSession> for AuthSessionResponse {
     fn from(s: ZeroAuthSession) -> Self {
+        let token = s.access_token.clone();
         Self {
             user_id: s.user_id,
             network_user_id: s.network_user_id.map(|id| id.to_string()),
@@ -213,6 +216,7 @@ impl From<ZeroAuthSession> for AuthSessionResponse {
             wallets: s.wallets,
             is_zero_pro: s.is_zero_pro,
             zero_pro_refresh_error: None,
+            access_token: Some(token),
             created_at: s.created_at,
             validated_at: s.validated_at,
         }

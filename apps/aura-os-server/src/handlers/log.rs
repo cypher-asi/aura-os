@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::ApiResult;
 use crate::handlers::projects;
-use crate::state::AppState;
+use crate::state::{AppState, AuthJwt};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct LogEntriesQuery {
@@ -66,15 +66,16 @@ async fn aggregate_storage_logs(
 
 pub(crate) async fn list_log_entries(
     State(state): State<AppState>,
+    AuthJwt(jwt): AuthJwt,
     Query(query): Query<LogEntriesQuery>,
 ) -> ApiResult<Json<Vec<PersistedLogEntry>>> {
     let limit = query.limit.unwrap_or(1000).min(5000);
 
-    if let (Some(ref storage), Ok(jwt)) = (&state.storage_client, state.get_jwt()) {
+    if let Some(ref storage) = state.storage_client {
         let project_ids: Vec<String> = if let Some(ref pid) = query.project_id {
             vec![pid.clone()]
         } else {
-            projects::list_all_projects_from_network(&state)
+            projects::list_all_projects_from_network(&state, &jwt)
                 .await
                 .unwrap_or_default()
                 .iter()

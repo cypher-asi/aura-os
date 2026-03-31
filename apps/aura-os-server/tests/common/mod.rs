@@ -204,7 +204,7 @@ pub fn build_test_app_from_store(
 ) -> (Router, AppState) {
     let billing_client = Arc::new(BillingClient::new());
     let org_service = Arc::new(OrgService::new(store.clone()));
-    let auth_service = Arc::new(AuthService::new(store.clone()));
+    let auth_service = Arc::new(AuthService::new());
     let project_service = Arc::new(ProjectService::new_with_network(
         network_client.clone(),
         store.clone(),
@@ -255,6 +255,8 @@ pub fn build_test_app_from_store(
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url,
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
+        orbit_client: None,
+        validation_cache: Arc::new(dashmap::DashMap::new()),
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);

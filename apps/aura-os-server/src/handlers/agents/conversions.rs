@@ -2,9 +2,6 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 
-use axum::http::StatusCode;
-use axum::Json;
-
 use aura_os_core::parse_dt;
 use aura_os_core::{
     Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, ProfileId, ProjectId,
@@ -13,17 +10,10 @@ use aura_os_core::{
 use aura_os_network::NetworkAgent;
 use aura_os_storage::StorageSessionEvent;
 
-use crate::error::ApiError;
 use crate::state::AppState;
 
-pub(crate) fn get_user_id(state: &AppState) -> Result<String, (StatusCode, Json<ApiError>)> {
-    let session_bytes = state
-        .store
-        .get_setting("zero_auth_session")
-        .map_err(|_| ApiError::unauthorized("not authenticated"))?;
-    let session: ZeroAuthSession = serde_json::from_slice(&session_bytes)
-        .map_err(|e| ApiError::internal(format!("deserializing auth session: {e}")))?;
-    Ok(session.user_id)
+pub(crate) fn get_user_id(session: &ZeroAuthSession) -> String {
+    session.user_id.clone()
 }
 
 pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
