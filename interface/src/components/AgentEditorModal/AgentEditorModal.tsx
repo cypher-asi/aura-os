@@ -144,7 +144,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
         isOpen={cropOpen}
         imageSrc={rawImageSrc}
         cropShape="round"
-        outputSize={128}
+        outputSize={512}
         onConfirm={handleCropConfirm}
         onClose={handleCropClose}
       />
