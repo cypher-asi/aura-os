@@ -5,6 +5,7 @@ import { TOOL_LABELS, FILE_OPS } from "../../constants/tools";
 import { summarizeInput, formatResult } from "../../utils/format";
 import { FilePreviewCard } from "../FilePreviewCard";
 import { SpecPreviewCard } from "./SpecPreviewCard";
+import { getSuperAgentCardRenderer } from "./SuperAgentToolCards";
 import { TaskCreatedIndicator } from "./TaskCreatedIndicator";
 import toolStyles from "../ToolCallBlock.module.css";
 
@@ -93,6 +94,16 @@ export function ToolCallBlock({
         <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
           <div className={toolStyles.toolBody}>
             <SpecPreviewCard entry={entry} />
+          </div>
+        </div>
+      );
+    }
+    const SuperAgentCard = getSuperAgentCardRenderer(entry.name);
+    if (SuperAgentCard && !entry.pending && entry.result) {
+      return (
+        <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+          <div className={toolStyles.toolBody}>
+            <SuperAgentCard entry={entry} />
           </div>
         </div>
       );

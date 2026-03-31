@@ -1,3 +1,4 @@
+pub mod events;
 pub mod prompt;
 pub mod state;
 pub mod tier;
@@ -20,6 +21,7 @@ use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
 use aura_os_tasks::TaskService;
 
+use events::SuperAgentEventListener;
 use tools::{SuperAgentContext, ToolRegistry};
 
 #[derive(Error, Debug)]
@@ -38,6 +40,7 @@ pub struct SuperAgentService {
     pub tool_registry: ToolRegistry,
     pub router_url: String,
     pub http_client: reqwest::Client,
+    pub event_listener: SuperAgentEventListener,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
     agent_instance_service: Arc<AgentInstanceService>,
@@ -70,11 +73,14 @@ impl SuperAgentService {
         event_broadcast: broadcast::Sender<serde_json::Value>,
     ) -> Self {
         let tool_registry = ToolRegistry::with_tier1_tools();
+        let event_listener = SuperAgentEventListener::new(100);
+        event_listener.spawn(event_broadcast.subscribe());
         info!(router_url = %router_url, "SuperAgentService initialized");
         Self {
             tool_registry,
             router_url,
             http_client: reqwest::Client::new(),
+            event_listener,
             project_service,
             agent_service,
             agent_instance_service,

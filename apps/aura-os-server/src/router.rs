@@ -383,6 +383,10 @@ fn super_agent_routes() -> Router<AppState> {
             "/api/super-agent/orchestrations/:orchestration_id",
             get(super_agent::get_orchestration),
         )
+        .route(
+            "/api/super-agent/events",
+            get(super_agent::list_pending_events),
+        )
 }
 
 fn system_routes() -> Router<AppState> {

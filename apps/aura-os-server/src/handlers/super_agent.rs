@@ -101,6 +101,14 @@ pub(crate) async fn get_orchestration(
     Ok(Json(orch))
 }
 
+pub(crate) async fn list_pending_events(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+) -> ApiResult<Json<Vec<aura_os_super_agent::events::SuperAgentEvent>>> {
+    let events = state.super_agent_service.event_listener.peek_events().await;
+    Ok(Json(events))
+}
+
 fn agent_from_net(net: &aura_os_network::NetworkAgent) -> Agent {
     let agent_id = net.id.parse::<AgentId>().unwrap_or_else(|_| AgentId::new());
     let profile_id: Option<ProfileId> = net.profile_id_typed();
