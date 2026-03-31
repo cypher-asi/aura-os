@@ -45,7 +45,7 @@ function SidebarSearchInput() {
 function SidekickLane() {
   const activeApp = useAppStore((s) => s.activeApp);
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
-  const { SidekickTaskbar, SidekickHeader: SidekickHeaderComp } = activeApp;
+  const { SidekickTaskbar } = activeApp;
 
 
   const hasAnySidekick = apps.some(
@@ -62,7 +62,6 @@ function SidekickLane() {
       maxWidth={1200}
       storageKey="aura-sidekick-v2"
       header={SidekickTaskbar && <SidekickTaskbar />}
-      taskbar={SidekickHeaderComp && <SidekickHeaderComp />}
       className={styles.laneLeftBorder}
     >
       <div className={styles.sidekickContentWrapper}>

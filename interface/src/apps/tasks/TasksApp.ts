@@ -3,7 +3,6 @@ import { TasksProjectList } from "./components/TasksProjectList";
 import { TasksMainPanel } from "./components/TasksMainPanel";
 import { SidekickContent } from "../../components/SidekickContent";
 import { SidekickTaskbar } from "../../components/SidekickTaskbar";
-import { SidekickHeader } from "../../components/SidekickHeader";
 import { PreviewContent, PreviewHeader } from "../../components/Preview";
 import type { AuraApp } from "../types";
 import { TasksProvider } from "./components/TasksProvider";
@@ -18,7 +17,6 @@ export const TasksApp: AuraApp = {
   ResponsiveControls: TasksProjectList,
   SidekickPanel: SidekickContent,
   SidekickTaskbar: SidekickTaskbar,
-  SidekickHeader: SidekickHeader,
   PreviewPanel: PreviewContent,
   PreviewHeader: PreviewHeader,
   Provider: TasksProvider,

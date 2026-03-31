@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Text } from "@cypher-asi/zui";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Text, Item, ModalConfirm } from "@cypher-asi/zui";
+import { Trash2, Play, Pause, Square, Loader2 } from "lucide-react";
 import {
   useTaskOutputPanel,
   useTaskOutputPanelStore,
@@ -8,6 +8,7 @@ import {
 } from "../../stores/task-output-panel-store";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectContext } from "../../stores/project-action-store";
+import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { EventType } from "../../types/aura-events";
 import { ActiveTaskStream } from "./ActiveTaskStream";
 import { CompletedTaskOutput } from "./CompletedTaskOutput";
@@ -41,6 +42,82 @@ function useActiveTaskTracking() {
   }, [subscribe, projectId, addTask, completeTask, failTask, markAllCompleted]);
 }
 
+function AutomationControls({ projectId }: { projectId: string }) {
+  const {
+    canPlay, canPause, canStop, starting, preparing,
+    handleStart, handlePause, handleStop, handleStopConfirm,
+    confirmStop, setConfirmStop,
+  } = useAutomationStatus(projectId);
+
+  const showStopPause = canPause || canStop;
+
+  return (
+    <>
+      {!showStopPause && (
+        <button
+          type="button"
+          className={styles.headerBtn}
+          onClick={handleStart}
+          disabled={!canPlay}
+          title="Run"
+          aria-label="Run automation"
+        >
+          {starting || preparing
+            ? <Loader2 size={11} className={styles.spinner} />
+            : <Play size={11} />}
+        </button>
+      )}
+      {showStopPause && (
+        <>
+          {canPlay && (
+            <button
+              type="button"
+              className={styles.headerBtn}
+              onClick={handleStart}
+              title="Resume"
+              aria-label="Resume automation"
+            >
+              <Play size={11} />
+            </button>
+          )}
+          {canPause && (
+            <button
+              type="button"
+              className={styles.headerBtn}
+              onClick={handlePause}
+              title="Pause"
+              aria-label="Pause automation"
+            >
+              <Pause size={11} />
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.headerBtn}
+            onClick={handleStop}
+            disabled={!canStop}
+            title="Stop"
+            aria-label="Stop automation"
+          >
+            <Square size={11} />
+          </button>
+        </>
+      )}
+
+      <ModalConfirm
+        isOpen={confirmStop}
+        onClose={() => setConfirmStop(false)}
+        onConfirm={handleStopConfirm}
+        title="Stop Execution"
+        message="Stop autonomous execution? The current task will complete first."
+        confirmLabel="Stop"
+        cancelLabel="Cancel"
+        danger
+      />
+    </>
+  );
+}
+
 export function TaskOutputPanel() {
   const { panelHeight, collapsed, toggleCollapse, handleMouseDown } = useTaskOutputPanel();
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
@@ -69,10 +146,14 @@ export function TaskOutputPanel() {
     >
       <div className={styles.resizeHandle} onMouseDown={collapsed ? undefined : handleMouseDown} />
       <div className={styles.header}>
-        <span className={styles.headerLabel}>
-          Task Output{projectTasks.length > 0 ? ` (${projectTasks.length})` : ""}
-        </span>
+        <div className={styles.headerLeft}>
+          <Item.Chevron expanded={!collapsed} onToggle={toggleCollapse} size="sm" />
+          <span className={styles.headerLabel}>
+            Task Output{projectTasks.length > 0 ? ` (${projectTasks.length})` : ""}
+          </span>
+        </div>
         <div className={styles.headerActions}>
+          {projectId && <AutomationControls projectId={projectId} />}
           {hasCompleted && (
             <button
               type="button"
@@ -84,15 +165,6 @@ export function TaskOutputPanel() {
               <Trash2 size={11} />
             </button>
           )}
-          <button
-            type="button"
-            className={styles.headerBtn}
-            onClick={toggleCollapse}
-            title={collapsed ? "Expand" : "Collapse"}
-            aria-label={collapsed ? "Expand task output" : "Collapse task output"}
-          >
-            {collapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </button>
         </div>
       </div>
       <div className={styles.content} ref={contentRef}>

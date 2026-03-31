@@ -12,8 +12,6 @@ export interface AuraApp {
   SidekickPanel?: ComponentType;
   /** Rendered in the sidekick Lane's `header` slot (e.g. tab bar). */
   SidekickTaskbar?: ComponentType;
-  /** Rendered in the sidekick Lane's `taskbar` slot (e.g. automation bar). */
-  SidekickHeader?: ComponentType;
   PreviewPanel?: ComponentType;
   PreviewHeader?: ComponentType;
   Provider?: ComponentType<{ children: ReactNode }>;
