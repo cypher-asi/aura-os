@@ -32,7 +32,7 @@ impl SuperAgentTool for ListAgentsTool {
     async fn execute(&self, _input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
         if let Some(network) = ctx.network_client.as_deref() {
             let agents = network
-                .list_agents_by_org(&ctx.org_id, &ctx.jwt)
+                .list_agents(&ctx.jwt)
                 .await
                 .map_err(|e| tool_err("list_agents", e))?;
             return Ok(ToolResult {
@@ -339,7 +339,7 @@ pub struct UpdateAgentInstanceTool;
 #[async_trait]
 impl SuperAgentTool for UpdateAgentInstanceTool {
     fn name(&self) -> &str { "update_agent_instance" }
-    fn description(&self) -> &str { "Update an agent instance's settings within a project" }
+    fn description(&self) -> &str { "Update an agent instance's status within a project" }
     fn domain(&self) -> ToolDomain { ToolDomain::Agent }
 
     fn parameters_schema(&self) -> serde_json::Value {
@@ -348,12 +348,13 @@ impl SuperAgentTool for UpdateAgentInstanceTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "agent_instance_id": { "type": "string", "description": "Agent instance ID" },
-                "name": { "type": "string", "description": "New name" },
-                "role": { "type": "string", "description": "New role" },
-                "personality": { "type": "string", "description": "New personality" },
-                "model": { "type": "string", "description": "LLM model to use" }
+                "status": {
+                    "type": "string",
+                    "enum": ["idle", "working", "blocked", "stopped", "error"],
+                    "description": "New status for the agent instance"
+                }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["project_id", "agent_instance_id", "status"]
         })
     }
 
@@ -361,12 +362,8 @@ impl SuperAgentTool for UpdateAgentInstanceTool {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let agent_instance_id = require_str(&input, "agent_instance_id")?;
-        let mut body = json!({});
-        for field in &["name", "role", "personality", "model"] {
-            if let Some(v) = input[field].as_str() {
-                body[field] = json!(v);
-            }
-        }
+        let status = require_str(&input, "status")?;
+        let body = json!({ "status": status });
         network_put(
             network,
             &format!("/api/projects/{project_id}/agents/{agent_instance_id}"),

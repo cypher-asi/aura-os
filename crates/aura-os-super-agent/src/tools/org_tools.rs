@@ -238,7 +238,7 @@ pub struct ManageInvitesTool;
 #[async_trait]
 impl SuperAgentTool for ManageInvitesTool {
     fn name(&self) -> &str { "manage_invites" }
-    fn description(&self) -> &str { "Manage organization invites: list, create, or revoke invitations" }
+    fn description(&self) -> &str { "Manage organization invites: list, create, or revoke. Note: email-targeted invites are not yet supported; create generates a generic invite link." }
     fn domain(&self) -> ToolDomain { ToolDomain::Org }
 
     fn parameters_schema(&self) -> serde_json::Value {

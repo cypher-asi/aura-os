@@ -85,25 +85,24 @@ impl SuperAgentTool for PauseDevLoopTool {
         json!({
             "type": "object",
             "properties": {
-                "project_id": { "type": "string", "description": "Project ID" },
-                "agent_instance_id": { "type": "string", "description": "Agent instance / automaton ID" }
+                "automaton_id": { "type": "string", "description": "Automaton ID (returned by start_dev_loop)" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["automaton_id"]
         })
     }
 
     async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
-        let agent_instance_id = input["agent_instance_id"]
+        let automaton_id = input["automaton_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("agent_instance_id is required".into()))?;
+            .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
 
         ctx.automaton_client
-            .pause(agent_instance_id)
+            .pause(automaton_id)
             .await
             .map_err(|e| tool_err("pause_dev_loop", e))?;
 
         Ok(ToolResult {
-            content: json!({ "status": "paused", "agent_instance_id": agent_instance_id }),
+            content: json!({ "status": "paused", "automaton_id": automaton_id }),
             is_error: false,
         })
     }
@@ -125,25 +124,24 @@ impl SuperAgentTool for StopDevLoopTool {
         json!({
             "type": "object",
             "properties": {
-                "project_id": { "type": "string", "description": "Project ID" },
-                "agent_instance_id": { "type": "string", "description": "Agent instance / automaton ID" }
+                "automaton_id": { "type": "string", "description": "Automaton ID (returned by start_dev_loop)" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["automaton_id"]
         })
     }
 
     async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
-        let agent_instance_id = input["agent_instance_id"]
+        let automaton_id = input["automaton_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("agent_instance_id is required".into()))?;
+            .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
 
         ctx.automaton_client
-            .stop(agent_instance_id)
+            .stop(automaton_id)
             .await
             .map_err(|e| tool_err("stop_dev_loop", e))?;
 
         Ok(ToolResult {
-            content: json!({ "status": "stopped", "agent_instance_id": agent_instance_id }),
+            content: json!({ "status": "stopped", "automaton_id": automaton_id }),
             is_error: false,
         })
     }
@@ -165,21 +163,20 @@ impl SuperAgentTool for GetLoopStatusTool {
         json!({
             "type": "object",
             "properties": {
-                "project_id": { "type": "string", "description": "Project ID" },
-                "agent_instance_id": { "type": "string", "description": "Agent instance / automaton ID" }
+                "automaton_id": { "type": "string", "description": "Automaton ID (returned by start_dev_loop)" }
             },
-            "required": ["project_id", "agent_instance_id"]
+            "required": ["automaton_id"]
         })
     }
 
     async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
-        let agent_instance_id = input["agent_instance_id"]
+        let automaton_id = input["automaton_id"]
             .as_str()
-            .ok_or_else(|| SuperAgentError::ToolError("agent_instance_id is required".into()))?;
+            .ok_or_else(|| SuperAgentError::ToolError("automaton_id is required".into()))?;
 
         let status = ctx
             .automaton_client
-            .status(agent_instance_id)
+            .status(automaton_id)
             .await
             .map_err(|e| tool_err("get_loop_status", e))?;
 
@@ -231,14 +228,14 @@ impl SuperAgentTool for SendToAgentTool {
             .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))?;
 
         let url = format!(
-            "{}/api/projects/{}/agents/{}/events",
+            "{}/api/projects/{}/agents/{}/events/stream",
             network.base_url(),
             project_id,
             agent_instance_id
         );
         let body = json!({
-            "role": "user",
-            "content": message
+            "content": message,
+            "action": "message"
         });
 
         let resp = network

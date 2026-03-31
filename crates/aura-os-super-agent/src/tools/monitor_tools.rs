@@ -34,7 +34,7 @@ impl SuperAgentTool for GetFleetStatusTool {
             .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))?;
 
         let agents = network
-            .list_agents_by_org(&ctx.org_id, &ctx.jwt)
+            .list_agents(&ctx.jwt)
             .await
             .map_err(|e| tool_err("get_fleet_status", e))?;
 

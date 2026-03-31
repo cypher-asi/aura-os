@@ -10,6 +10,8 @@ pub mod social_tools;
 pub mod spec_tools;
 pub mod system_tools;
 pub mod task_tools;
+#[cfg(test)]
+mod tests;
 
 use std::collections::HashMap;
 use std::sync::Arc;

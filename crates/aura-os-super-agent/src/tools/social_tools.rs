@@ -56,16 +56,20 @@ impl SuperAgentTool for CreatePostTool {
         json!({
             "type": "object",
             "properties": {
-                "content": { "type": "string", "description": "Post content" }
+                "title": { "type": "string", "description": "Post title / content" },
+                "summary": { "type": "string", "description": "Optional summary" }
             },
-            "required": ["content"]
+            "required": ["title"]
         })
     }
 
     async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
-        let content = require_str(&input, "content")?;
-        let body = json!({ "content": content });
+        let title = require_str(&input, "title")?;
+        let mut body = json!({ "title": title });
+        if let Some(summary) = input["summary"].as_str() {
+            body["summary"] = json!(summary);
+        }
         network_post(network, "/api/posts", &ctx.jwt, &body).await
     }
 }

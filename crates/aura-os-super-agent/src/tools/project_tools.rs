@@ -312,15 +312,19 @@ impl SuperAgentTool for ArchiveProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, _ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
-        let project_id = input["project_id"]
+    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+        let project_id_str = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
+        let pid: ProjectId = project_id_str
+            .parse()
+            .map_err(|_| SuperAgentError::ToolError("invalid project_id".into()))?;
+        let project = ctx
+            .project_service
+            .archive_project(&pid)
+            .map_err(|e| tool_err("archive_project", e))?;
         Ok(ToolResult {
-            content: json!({
-                "message": "Project archival is not yet supported via the API. Use delete_project for permanent removal.",
-                "project_id": project_id
-            }),
+            content: serde_json::to_value(&project).unwrap_or_default(),
             is_error: false,
         })
     }
@@ -360,7 +364,7 @@ impl SuperAgentTool for GetProjectStatsTool {
                 .map_err(|e| tool_err("get_project_stats", e))?;
 
             let agents = network
-                .list_agents_by_org(&ctx.org_id, &ctx.jwt)
+                .list_agents(&ctx.jwt)
                 .await
                 .unwrap_or_default();
 

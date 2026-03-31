@@ -89,7 +89,7 @@ impl SuperAgentTool for CreateTaskTool {
                 "spec_id": { "type": "string", "description": "Spec ID to associate with" },
                 "status": { "type": "string", "description": "Initial status (e.g. pending, in_progress)" }
             },
-            "required": ["project_id", "title"]
+            "required": ["project_id", "title", "spec_id"]
         })
     }
 
@@ -159,9 +159,9 @@ impl SuperAgentTool for TransitionTaskTool {
             "properties": {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "task_id": { "type": "string", "description": "Task ID" },
-                "status": { "type": "string", "description": "Target status" }
+                "new_status": { "type": "string", "description": "Target status (e.g. pending, ready, in_progress, done, failed)" }
             },
-            "required": ["project_id", "task_id", "status"]
+            "required": ["project_id", "task_id", "new_status"]
         })
     }
 
@@ -169,8 +169,8 @@ impl SuperAgentTool for TransitionTaskTool {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        let status = require_str(&input, "status")?;
-        let body = json!({ "status": status });
+        let new_status = require_str(&input, "new_status")?;
+        let body = json!({ "new_status": new_status });
         network_post(network, &format!("/api/projects/{project_id}/tasks/{task_id}/transition"), &ctx.jwt, &body).await
     }
 }

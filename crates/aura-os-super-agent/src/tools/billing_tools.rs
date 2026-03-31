@@ -122,19 +122,19 @@ impl SuperAgentTool for PurchaseCreditsTool {
             "type": "object",
             "properties": {
                 "org_id": { "type": "string", "description": "Organization ID (uses context org if omitted)" },
-                "amount_cents": { "type": "integer", "description": "Amount to purchase in cents" }
+                "amount_usd": { "type": "number", "description": "Amount to purchase in USD (e.g. 10.00)" }
             },
-            "required": ["amount_cents"]
+            "required": ["amount_usd"]
         })
     }
 
     async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id);
-        let amount_cents = input["amount_cents"]
-            .as_i64()
-            .ok_or_else(|| SuperAgentError::ToolError("amount_cents is required".into()))?;
-        let body = json!({ "amount_cents": amount_cents });
+        let amount_usd = input["amount_usd"]
+            .as_f64()
+            .ok_or_else(|| SuperAgentError::ToolError("amount_usd is required".into()))?;
+        let body = json!({ "amount_usd": amount_usd });
         network_post(network, &format!("/api/orgs/{org_id}/credits/checkout"), &ctx.jwt, &body).await
     }
 }
