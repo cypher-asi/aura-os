@@ -5,6 +5,7 @@
   overflow: hidden;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg);
+  position: relative;
 }
 
 .panelCollapsed {
@@ -19,12 +20,15 @@
 /* ── Resize handle ── */
 
 .resizeHandle {
-  height: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
   cursor: row-resize;
   background: transparent;
-  flex-shrink: 0;
   transition: background 0.15s;
-  position: relative;
+  z-index: 2;
 }
 
 .resizeHandle::after {
@@ -69,6 +73,7 @@
 .headerLeft {
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: 0;
   min-width: 0;
 }
@@ -76,17 +81,26 @@
 .headerTabs {
   display: flex;
   align-items: center;
+  align-self: stretch;
   gap: 0;
   min-width: 0;
 }
 
 .panelTabsRoot {
   border-bottom: none;
+  align-self: stretch;
+  display: flex !important;
+  flex-direction: column;
+}
+
+.panelTabsRoot > div {
+  flex: 1;
+  align-items: center;
 }
 
 .panelTabBtn {
-  min-height: unset;
-  padding: 4px 8px;
+  min-height: 0 !important;
+  padding: 4px 8px !important;
   font-size: 11px;
   line-height: 1;
 }

@@ -242,7 +242,7 @@ export function TaskOutputPanel() {
   return (
     <div
       className={collapsed ? styles.panelCollapsed : styles.panel}
-      style={{ height: collapsed ? 34 : panelHeight }}
+      style={{ height: collapsed ? 30 : panelHeight }}
     >
       <div className={styles.resizeHandle} onMouseDown={collapsed ? undefined : handleMouseDown} />
       <div className={styles.header}>
