@@ -37,7 +37,7 @@ impl HarnessLink for LocalHarness {
 
         let (events_tx, raw_events_tx, commands_tx) = spawn_ws_bridge(ws_stream);
 
-        commands_tx.send(InboundMessage::SessionInit(Box::new(SessionInit {
+        commands_tx.send(InboundMessage::SessionInit(SessionInit {
             system_prompt: config.system_prompt,
             model: config.model,
             max_tokens: config.max_tokens,
@@ -52,7 +52,7 @@ impl HarnessLink for LocalHarness {
             aura_agent_id: config.aura_agent_id,
             aura_session_id: config.aura_session_id,
             aura_org_id: config.aura_org_id,
-        })))?;
+        }))?;
 
         let mut rx = events_tx.subscribe();
         let session_id = loop {
