@@ -36,7 +36,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
   background: var(--color-overlay-subtle);
   color: var(--color-text-secondary);
@@ -45,7 +45,7 @@
 .avatarImg {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 50%;
   object-fit: cover;
 }
 

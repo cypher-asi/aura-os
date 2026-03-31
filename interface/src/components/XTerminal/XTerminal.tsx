@@ -63,7 +63,7 @@ export function XTerminal({ terminal: hook, visible, focused }: XTerminalProps) 
     const xterm = new Terminal({
       theme: getTheme(),
       fontFamily: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', Menlo, monospace",
-      fontSize: 13,
+      fontSize: 11,
       lineHeight: 1.3,
       cursorBlink: true,
       allowProposedApi: true,
