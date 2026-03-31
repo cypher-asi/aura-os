@@ -132,8 +132,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: var(--control-height-sm, 32px);
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
@@ -151,10 +151,10 @@
 }
 
 .iconDropdown {
+  position: fixed;
   bottom: auto;
-  top: 100%;
-  left: 0;
   right: auto;
   min-width: 180px;
+  z-index: 200;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }

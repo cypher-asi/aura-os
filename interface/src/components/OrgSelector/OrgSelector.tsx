@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useOrgStore } from "../../stores/org-store";
 import { Building2, ChevronDown, Layers, Plus, Settings } from "lucide-react";
@@ -23,8 +24,15 @@ export function OrgSelector({
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const iconTriggerRef = useRef<HTMLButtonElement>(null);
+  const iconDropdownRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside(dropdownRef, () => setDropdownOpen(false), dropdownOpen);
+  const isIcon = variant === "icon";
+  useClickOutside(
+    isIcon ? [iconTriggerRef, iconDropdownRef] : dropdownRef,
+    useCallback(() => setDropdownOpen(false), []),
+    dropdownOpen,
+  );
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -51,10 +59,59 @@ export function OrgSelector({
   const dropdownClass =
     variant === "icon" ? `${styles.dropdown} ${styles.iconDropdown}` : styles.dropdown;
 
-  return (
-    <div className={containerClass} ref={dropdownRef}>
-      {variant === "icon" ? (
+  const dropdownItems = (
+    <>
+      {orgs.map((org) => (
         <button
+          key={org.org_id}
+          type="button"
+          className={`${styles.item} ${org.org_id === activeOrg?.org_id ? styles.active : ""}`}
+          onClick={() => {
+            switchOrg(org.org_id);
+            setDropdownOpen(false);
+          }}
+        >
+          <Building2 size={12} />
+          <span>{org.name}</span>
+        </button>
+      ))}
+      <div className={styles.divider} />
+      <button
+        type="button"
+        className={styles.item}
+        onClick={() => {
+          setDropdownOpen(false);
+          setShowCreate(true);
+        }}
+      >
+        <Plus size={12} />
+        <span>New Team</span>
+      </button>
+      <button
+        type="button"
+        className={styles.item}
+        onClick={() => {
+          setDropdownOpen(false);
+          openOrgSettings();
+        }}
+      >
+        <Settings size={12} />
+        <span>Team Settings</span>
+      </button>
+    </>
+  );
+
+  const iconDropdownPos = (): React.CSSProperties => {
+    const rect = iconTriggerRef.current?.getBoundingClientRect();
+    if (!rect) return {};
+    return { top: rect.bottom, left: rect.left };
+  };
+
+  return (
+    <div className={containerClass} ref={isIcon ? undefined : dropdownRef}>
+      {isIcon ? (
+        <button
+          ref={iconTriggerRef}
           type="button"
           className={styles.iconTrigger}
           onClick={() => setDropdownOpen((v) => !v)}
@@ -75,46 +132,15 @@ export function OrgSelector({
         </button>
       )}
 
-      {dropdownOpen && (
-        <div className={dropdownClass}>
-          {orgs.map((org) => (
-            <button
-              key={org.org_id}
-              type="button"
-              className={`${styles.item} ${org.org_id === activeOrg?.org_id ? styles.active : ""}`}
-              onClick={() => {
-                switchOrg(org.org_id);
-                setDropdownOpen(false);
-              }}
-            >
-              <Building2 size={12} />
-              <span>{org.name}</span>
-            </button>
-          ))}
-          <div className={styles.divider} />
-          <button
-            type="button"
-            className={styles.item}
-            onClick={() => {
-              setDropdownOpen(false);
-              setShowCreate(true);
-            }}
-          >
-            <Plus size={12} />
-            <span>New Team</span>
-          </button>
-          <button
-            type="button"
-            className={styles.item}
-            onClick={() => {
-              setDropdownOpen(false);
-              openOrgSettings();
-            }}
-          >
-            <Settings size={12} />
-            <span>Team Settings</span>
-          </button>
-        </div>
+      {dropdownOpen && !isIcon && (
+        <div className={dropdownClass}>{dropdownItems}</div>
+      )}
+
+      {dropdownOpen && isIcon && createPortal(
+        <div ref={iconDropdownRef} className={dropdownClass} style={iconDropdownPos()}>
+          {dropdownItems}
+        </div>,
+        document.body,
       )}
 
       <Modal
