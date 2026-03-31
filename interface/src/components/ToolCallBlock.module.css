@@ -224,8 +224,6 @@
   white-space: pre-wrap;
   word-break: break-all;
   color: var(--color-text-secondary);
-  max-height: 200px;
-  overflow-y: auto;
   margin: 0;
 }
 

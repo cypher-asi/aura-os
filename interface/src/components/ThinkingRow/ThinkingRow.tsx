@@ -29,7 +29,6 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
     <ResponseBlock
       expanded={expanded}
       onExpandedChange={setExpanded}
-      maxExpandedHeight={300}
       animate={!isStreaming}
       className={styles.thinkingBlock}
       header={

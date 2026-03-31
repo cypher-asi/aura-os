@@ -33,6 +33,5 @@
   color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 280px;
-  overflow-y: auto;
+  max-height: none;
 }

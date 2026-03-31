@@ -428,8 +428,6 @@
 }
 
 .rawOutput {
-  max-height: 320px;
-  overflow-y: auto;
   overflow-x: hidden;
   margin: 0;
   padding: var(--space-2);
@@ -446,8 +444,6 @@
 /* ── Formatted raw output ── */
 
 .formattedRawOutput {
-  max-height: 320px;
-  overflow-y: auto;
   overflow-x: hidden;
   margin: 0;
   padding: var(--space-2);
@@ -649,8 +645,6 @@
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--color-bg-tertiary, rgba(0,0,0,0.08));
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .buildSkipped {
