@@ -11,7 +11,7 @@ export function WindowControls() {
   return (
     <div className={`titlebar-no-drag ${styles.controlRow}`}>
       <ButtonWindow action="minimize" size="sm" onClick={() => windowCommand("minimize")} />
-      <ButtonWindow action="maximize" size="sm" onClick={() => windowCommand("maximize")} />
+      <ButtonWindow action="maximize" size="sm" className={styles.maximizeIcon} onClick={() => windowCommand("maximize")} />
       <ButtonWindow action="close" size="sm" onClick={() => windowCommand("close")} />
     </div>
   );
