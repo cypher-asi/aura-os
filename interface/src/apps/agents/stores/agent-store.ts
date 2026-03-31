@@ -66,7 +66,18 @@ export const useAgentStore = create<AgentState>()(
 
         agentsFetchPromise = api.agents
           .list()
-          .then((agents) => {
+          .then(async (agents) => {
+            const hasSuperAgent = agents.some(
+              (a) => a.tags?.includes("super_agent") || a.role === "super_agent",
+            );
+            if (!hasSuperAgent) {
+              try {
+                const { agent } = await api.superAgent.setup();
+                agents.push(agent);
+              } catch {
+                // setup may fail if network is down; non-blocking
+              }
+            }
             const sorted = agents.sort((a, b) => {
               if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
               return a.name.localeCompare(b.name);

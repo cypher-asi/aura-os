@@ -15,7 +15,7 @@ export function ProjectCard({ entry }: ToolCardProps) {
       <div className={styles.cardHeader}>
         <FolderOpen size={14} />
         <Text size="sm" weight="medium">{data.name || "Project"}</Text>
-        {data.current_status && <Badge variant="info">{data.current_status}</Badge>}
+        {data.current_status && <Badge variant="running">{data.current_status}</Badge>}
       </div>
       {data.description && (
         <Text size="xs" variant="muted" className={styles.description}>{data.description}</Text>
@@ -36,13 +36,13 @@ export function FleetStatusCard({ entry }: ToolCardProps) {
       <div className={styles.cardHeader}>
         <Bot size={14} />
         <Text size="sm" weight="medium">Fleet Status</Text>
-        <Badge variant="info">{agents.length} agents</Badge>
+        <Badge variant="running">{agents.length} agents</Badge>
       </div>
       <div className={styles.statusGrid}>
         {agents.slice(0, 6).map((agent: any, i: number) => (
           <div key={i} className={styles.statusRow}>
             <Text size="xs">{agent.name || agent.agent_name || `Agent ${i + 1}`}</Text>
-            <Badge variant={agent.status === "working" ? "success" : agent.status === "error" ? "error" : "pending"}>
+            <Badge variant={agent.status === "working" ? "running" : agent.status === "error" ? "error" : "pending"}>
               {agent.status || "unknown"}
             </Badge>
           </div>
@@ -81,7 +81,7 @@ export function CreditBalanceCard({ entry }: ToolCardProps) {
         <Coins size={14} />
         <Text size="sm" weight="medium">Credit Balance</Text>
       </div>
-      <Text size="lg" weight="bold">{data.balance_formatted || `$${((data.balance_cents || 0) / 100).toFixed(2)}`}</Text>
+      <Text size="lg" weight="semibold">{data.balance_formatted || `$${((data.balance_cents || 0) / 100).toFixed(2)}`}</Text>
       {data.plan && <Text size="xs" variant="muted">Plan: {data.plan}</Text>}
     </div>
   );

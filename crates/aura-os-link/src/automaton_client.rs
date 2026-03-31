@@ -214,6 +214,11 @@ impl AutomatonClient {
     /// Returns the broadcast sender (for sharing with other consumers) and spawns
     /// a background task that reads from the WebSocket.
     ///
+    /// After a successful WS handshake a brief liveness probe waits for the first
+    /// message or error.  If the connection is reset immediately (e.g. the harness
+    /// already finished the automaton) the method returns `Err` so the caller can
+    /// retry instead of silently spawning a dead reader task.
+    ///
     /// Pass the `event_stream_url` returned by [`Self::start`] when available so
     /// the connection uses the gateway-routable path instead of a hardcoded one.
     pub async fn connect_event_stream(
@@ -248,8 +253,51 @@ impl AutomatonClient {
         let tx = broadcast_tx.clone();
         let aid = automaton_id.to_string();
 
+        let (_write, mut read) = ws_stream.split();
+
+        // Liveness probe: wait briefly for the first frame to detect connections
+        // that the harness resets immediately after the upgrade handshake (e.g.
+        // because the automaton already finished before we connected).
+        let mut buffered_event: Option<serde_json::Value> = None;
+        let probe = tokio::time::timeout(Duration::from_millis(200), read.next()).await;
+        match probe {
+            Ok(Some(Err(e))) => {
+                return Err(anyhow::anyhow!(
+                    "automaton event stream died immediately after connect: {e}"
+                ));
+            }
+            Ok(None) => {
+                return Err(anyhow::anyhow!(
+                    "automaton event stream closed immediately after connect"
+                ));
+            }
+            Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Text(text)))) => {
+                if let Ok(event) = serde_json::from_str::<serde_json::Value>(&text) {
+                    buffered_event = Some(event);
+                }
+            }
+            Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Close(_)))) => {
+                return Err(anyhow::anyhow!(
+                    "automaton event stream sent close frame immediately after connect"
+                ));
+            }
+            Ok(Some(Ok(_))) => {}
+            Err(_) => {}
+        }
+
         tokio::spawn(async move {
-            let (_write, mut read) = ws_stream.split();
+            let _keep_write = _write;
+            if let Some(event) = buffered_event {
+                let is_done = event
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .map_or(false, |t| t == "done");
+                let _ = tx.send(event);
+                if is_done {
+                    info!(automaton_id = %aid, "Automaton event stream ended");
+                    return;
+                }
+            }
             while let Some(msg_result) = read.next().await {
                 match msg_result {
                     Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {

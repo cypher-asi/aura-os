@@ -27,19 +27,50 @@ pub(crate) async fn setup_super_agent(
         .await
         .map_err(map_network_error)?;
 
+    let (org_name, org_id) = match network.list_orgs(&jwt).await {
+        Ok(orgs) => orgs
+            .first()
+            .map(|o| (o.name.clone(), o.id.clone()))
+            .unwrap_or_else(|| ("My Organization".into(), "default".into())),
+        Err(_) => ("My Organization".into(), "default".into()),
+    };
+
     if let Some(net_agent) = net_agents
         .iter()
         .find(|a| a.role.as_deref() == Some("super_agent"))
     {
+        let fresh_prompt =
+            aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
+        let needs_update = net_agent
+            .system_prompt
+            .as_deref()
+            .map(|p| p.contains("Default Org") || !p.contains(&org_name))
+            .unwrap_or(true);
+
+        if needs_update {
+            let update_req = aura_os_network::UpdateAgentRequest {
+                name: None,
+                role: None,
+                personality: None,
+                system_prompt: Some(fresh_prompt),
+                skills: None,
+                icon: None,
+                harness: None,
+                machine_type: None,
+                vm_id: None,
+            };
+            if let Ok(updated) = network.update_agent(&net_agent.id, &jwt, &update_req).await {
+                let agent = agent_from_net(&updated);
+                return Ok(Json(SetupResponse { agent, created: false }));
+            }
+        }
+
         let agent = agent_from_net(net_agent);
-        return Ok(Json(SetupResponse {
-            agent,
-            created: false,
-        }));
+        return Ok(Json(SetupResponse { agent, created: false }));
     }
 
     let prompt =
-        aura_os_super_agent::prompt::super_agent_system_prompt("Default Org", "default");
+        aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
 
     let net_req = aura_os_network::CreateAgentRequest {
         name: "CEO".to_string(),
@@ -58,7 +89,7 @@ pub(crate) async fn setup_super_agent(
         icon: None,
         harness: None,
         machine_type: Some("local".to_string()),
-        org_id: None,
+        org_id: Some(org_id),
     };
 
     let net_agent = network

@@ -232,9 +232,10 @@ async fn fetch_task_output_from_storage(
     storage: &aura_os_storage::StorageClient,
     jwt: &str,
     task_id: &TaskId,
+    cached_session_id: Option<&str>,
 ) -> Option<TaskOutputResponse> {
     let task = storage.get_task(&task_id.to_string(), jwt).await.ok()?;
-    let session_id = match task.session_id {
+    let session_id = match task.session_id.or_else(|| cached_session_id.map(String::from)) {
         Some(sid) => sid,
         None => {
             debug!(%task_id, "Task has no session_id in storage; cannot fetch persisted output");
@@ -304,7 +305,7 @@ pub(crate) async fn get_task_output(
     Path((_project_id, task_id)): Path<(ProjectId, TaskId)>,
 ) -> ApiResult<Json<TaskOutputResponse>> {
     // Check the in-memory cache first (covers active and recently completed tasks).
-    {
+    let cached_session_id = {
         let cache = state.task_output_cache.lock().await;
         if let Some(entry) = cache.get(&task_id.to_string()) {
             if !entry.live_output.is_empty()
@@ -317,12 +318,20 @@ pub(crate) async fn get_task_output(
                     test_steps: entry.test_steps.clone(),
                 }));
             }
+            entry.session_id.clone()
+        } else {
+            None
         }
-    }
+    };
 
-    // Fall back to persisted storage.
+    // Fall back to persisted storage. Prefer session_id from the in-memory
+    // cache when the task document hasn't been updated yet (race between
+    // task_started writing session_id and the first output poll).
     if let Some(storage) = state.storage_client.as_ref() {
-        if let Some(resp) = fetch_task_output_from_storage(storage, &jwt, &task_id).await {
+        if let Some(resp) =
+            fetch_task_output_from_storage(storage, &jwt, &task_id, cached_session_id.as_deref())
+                .await
+        {
             return Ok(Json(resp));
         }
     }

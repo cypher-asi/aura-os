@@ -34,7 +34,8 @@ impl SuperAgentEventListener {
                             let mut buf = events.lock().await;
                             buf.push(evt);
                             if buf.len() > max {
-                                buf.drain(0..buf.len() - max);
+                                let excess = buf.len() - max;
+                                buf.drain(0..excess);
                             }
                         }
                     }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Text, Badge } from "@cypher-asi/zui";
+import type { BadgeVariant } from "@cypher-asi/zui";
 import { FolderOpen, Bot, Activity } from "lucide-react";
 import { api } from "../../api/client";
 import { useProjectsListStore } from "../../stores/projects-list-store";
@@ -10,7 +11,7 @@ interface SuperAgentDashboardPanelProps {
   agent: Agent;
 }
 
-const STATUS_VARIANT: Record<string, string> = {
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
   completed: "stopped",
   failed: "error",
   executing: "running",
@@ -18,14 +19,14 @@ const STATUS_VARIANT: Record<string, string> = {
   pending: "pending",
 };
 
-export function SuperAgentDashboardPanel({ agent }: SuperAgentDashboardPanelProps) {
+export function SuperAgentDashboardPanel({ agent: _agent }: SuperAgentDashboardPanelProps) {
   const [orchestrations, setOrchestrations] = useState<SuperAgentOrchestration[]>([]);
   const projects = useProjectsListStore((s) => s.projects);
-  const fetchProjects = useProjectsListStore((s) => s.fetchProjects);
+  const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    refreshProjects();
+  }, [refreshProjects]);
 
   useEffect(() => {
     api.superAgent.listOrchestrations()
@@ -38,7 +39,7 @@ export function SuperAgentDashboardPanel({ agent }: SuperAgentDashboardPanelProp
   return (
     <div className={styles.dashboard}>
       <div className={styles.header}>
-        <Text size="sm" weight="bold">CEO Dashboard</Text>
+        <Text size="sm" weight="semibold">CEO Dashboard</Text>
       </div>
 
       <div className={styles.section}>
@@ -48,11 +49,11 @@ export function SuperAgentDashboardPanel({ agent }: SuperAgentDashboardPanelProp
         </div>
         <div className={styles.statGrid}>
           <div className={styles.stat}>
-            <Text size="lg" weight="bold">{projects.length}</Text>
+            <Text size="lg" weight="semibold">{projects.length}</Text>
             <Text size="xs" variant="muted">Total</Text>
           </div>
           <div className={styles.stat}>
-            <Text size="lg" weight="bold">{activeProjects.length}</Text>
+            <Text size="lg" weight="semibold">{activeProjects.length}</Text>
             <Text size="xs" variant="muted">Active</Text>
           </div>
         </div>

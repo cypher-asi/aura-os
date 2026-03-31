@@ -540,6 +540,18 @@ fn forward_automaton_events(params: ForwardParams) {
                                         &session_id,
                                     )
                                     .await;
+                                if let (Some(sc), Some(jwt)) =
+                                    (storage_client.as_ref(), jwt.as_deref())
+                                {
+                                    let req = aura_os_storage::UpdateTaskRequest {
+                                        session_id: Some(session_id.to_string()),
+                                        assigned_project_agent_id: Some(aiid.clone()),
+                                        ..Default::default()
+                                    };
+                                    if let Err(e) = sc.update_task(tid, jwt, &req).await {
+                                        warn!(task_id = %tid, error = %e, "Failed to persist session_id on task start");
+                                    }
+                                }
                             }
                             let mut cache = task_output_cache.lock().await;
                             cache.insert(
@@ -1497,6 +1509,36 @@ pub(crate) async fn run_single_task(
     let event_stream_url = result.event_stream_url;
     info!(%project_id, %task_id, %automaton_id, %event_stream_url, "Single task automaton started");
 
+    // Connect to the event stream as early as possible to minimise the window
+    // between automaton start and WS attach.  Retry a few times because the
+    // harness may reset the connection if the automaton isn't ready yet.
+    let mut events_tx = None;
+    for attempt in 0..3u32 {
+        if attempt > 0 {
+            let delay_ms = 500 * (1u64 << attempt.min(2));
+            warn!(
+                %project_id, %task_id, %automaton_id, attempt,
+                "Retrying automaton event stream connection in {delay_ms}ms"
+            );
+            tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+        }
+        match automaton_client
+            .connect_event_stream(&automaton_id, Some(&event_stream_url))
+            .await
+        {
+            Ok(tx) => {
+                events_tx = Some(tx);
+                break;
+            }
+            Err(e) => {
+                warn!(
+                    %project_id, %task_id, %automaton_id, attempt,
+                    error = %e, "Failed to connect to automaton event stream"
+                );
+            }
+        }
+    }
+
     // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
     emit_domain_event(
@@ -1529,10 +1571,7 @@ pub(crate) async fn run_single_task(
             .await;
     }
 
-    if let Ok(events_tx) = automaton_client
-        .connect_event_stream(&automaton_id, Some(&event_stream_url))
-        .await
-    {
+    if let Some(events_tx) = events_tx {
         forward_automaton_events(ForwardParams {
             automaton_events_tx: events_tx,
             app_broadcast: state.event_broadcast.clone(),
@@ -1543,12 +1582,40 @@ pub(crate) async fn run_single_task(
             task_service: state.task_service.clone(),
             task_output_cache: state.task_output_cache.clone(),
             storage_client: state.storage_client.clone(),
-            jwt: jwt_for_persist,
+            jwt: jwt_for_persist.clone(),
             session_id,
             session_service: state.session_service.clone(),
             agent_instance_service: state.agent_instance_service.clone(),
             usage_reporting,
         });
+    } else {
+        warn!(
+            %project_id, %task_id, %automaton_id,
+            "All event stream connection attempts failed; cleaning up"
+        );
+        let _ = state
+            .agent_instance_service
+            .finish_working(&project_id, &agent_instance_id)
+            .await;
+        if let Some(session_id) = session_id {
+            close_automaton_session(
+                state.storage_client.as_ref(),
+                jwt_for_persist.as_deref(),
+                session_id,
+                "failed",
+            )
+            .await;
+        }
+        emit_domain_event(
+            &state.event_broadcast,
+            "task_failed",
+            project_id,
+            agent_instance_id,
+            serde_json::json!({
+                "task_id": task_id.to_string(),
+                "error": "Failed to connect to automaton event stream"
+            }),
+        );
     }
 
     Ok(StatusCode::ACCEPTED)
