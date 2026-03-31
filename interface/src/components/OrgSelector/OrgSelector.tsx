@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useOrgStore } from "../../stores/org-store";
-import { Building2, ChevronDown, Plus } from "lucide-react";
+import { Building2, ChevronDown, Layers, Plus } from "lucide-react";
 import { Button, Input, Modal } from "@cypher-asi/zui";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
@@ -61,7 +61,7 @@ export function OrgSelector({
           title={activeOrg?.name ?? "My Team"}
           aria-label="Switch team"
         >
-          <Building2 size={18} />
+          <Layers size={18} />
         </button>
       ) : (
         <button
