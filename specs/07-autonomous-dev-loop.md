@@ -46,7 +46,7 @@ Claude's response is parsed into a set of file operations:
 - **Modify** — replace content in an existing file
 - **Delete** — remove a file
 
-Operations are applied to the `linked_folder_path` directory. The engine validates paths (no escape from the linked folder via `..`).
+Operations are applied to the attached agent instance workspace directory. The engine validates paths so they cannot escape the resolved workspace root via `..`.
 
 ### Execution Logging
 
@@ -374,7 +374,7 @@ impl DevLoopEngine {
         let spec = self.store.get_spec(project_id, &task.spec_id)?;
 
         // Build user message with context
-        let codebase_snapshot = self.read_relevant_files(&project.linked_folder_path, task)?;
+        let codebase_snapshot = self.read_relevant_files(&agent_instance.workspace_path, task)?;
         let user_message = self.build_execution_prompt(
             &project, &spec, task, session, &codebase_snapshot,
         );
@@ -400,7 +400,7 @@ impl DevLoopEngine {
         ops: &[FileOp],
     ) -> Result<(), EngineError> {
         let project = self.project_service.get_project(project_id)?;
-        let base_path = Path::new(&project.linked_folder_path)
+        let base_path = Path::new(&agent_instance.workspace_path)
             .canonicalize()
             .map_err(|e| EngineError::Io(e.to_string()))?;
 
@@ -598,7 +598,7 @@ flowchart TD
 ## Key Behaviors
 
 1. **Non-interruptible iteration** — a pause/stop takes effect between task iterations, not during a Claude call. This prevents partial execution and corrupted state.
-2. **Path safety** — all file operations are validated against the `linked_folder_path`. Any path that resolves outside the project directory is rejected with `PathEscape`.
+2. **Path safety** — all file operations are validated against the resolved agent workspace path. Any path that resolves outside that workspace is rejected with `PathEscape`.
 3. **File content is full replacement** — the `modify` operation writes the complete new content, not a diff. This is simpler for the MVP; diff-based editing is a future enhancement.
 4. **Codebase size cap** — the file reader caps at ~50KB of source to fit within Claude's context along with the spec, task, and summary. Larger projects need smarter file selection (future enhancement).
 5. **Follow-up tasks are optional** — Claude may return an empty `follow_up_tasks` array. When present, they are created immediately and available for future iterations.

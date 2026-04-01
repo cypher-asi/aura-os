@@ -142,7 +142,6 @@ pub struct SetSettingRequest {
 pub struct CreateProjectRequest {
     pub name: String,
     pub description: String,
-    pub linked_folder_path: String,
     pub requirements_doc_path: String,
 }
 
@@ -150,7 +149,6 @@ pub struct CreateProjectRequest {
 pub struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub linked_folder_path: Option<String>,
     pub requirements_doc_path: Option<String>,
 }
 
@@ -232,7 +230,6 @@ async fn create_project(
     let input = CreateProjectInput {
         name: req.name,
         description: req.description,
-        linked_folder_path: req.linked_folder_path,
         requirements_doc_path: req.requirements_doc_path,
     };
     let project = state.project_service
