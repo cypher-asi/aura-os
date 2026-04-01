@@ -297,6 +297,7 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid var(--color-border)",
   background: "var(--color-bg-input)",
   color: "var(--color-text)",
+  colorScheme: "dark",
   fontSize: 13,
   fontFamily: "inherit",
   width: "100%",
