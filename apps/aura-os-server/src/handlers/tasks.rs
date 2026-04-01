@@ -1,6 +1,7 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 use tracing::debug;
 
@@ -40,6 +41,23 @@ async fn load_extracted_tasks(
     };
     tasks.sort_by_key(|t| t.order_index);
     Ok(tasks)
+}
+
+fn tasks_changed_since(before: &[Task], after: &[Task]) -> bool {
+    if before.len() != after.len() {
+        return true;
+    }
+
+    let before_versions: HashMap<_, _> = before
+        .iter()
+        .map(|task| (task.task_id, task.updated_at))
+        .collect();
+
+    after.iter().any(|task| {
+        before_versions
+            .get(&task.task_id)
+            .is_none_or(|updated_at| *updated_at != task.updated_at)
+    })
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -97,6 +115,7 @@ pub(crate) async fn extract_tasks(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<TaskQueryParams>,
 ) -> ApiResult<Json<Vec<Task>>> {
+    let baseline_tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
     let harness_mode = if let Some(aiid) = params.agent_instance_id {
         state
             .agent_instance_service
@@ -141,7 +160,7 @@ pub(crate) async fn extract_tasks(
             }
             HarnessOutbound::Error(err) => {
                 let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
-                if !tasks.is_empty() {
+                if tasks_changed_since(&baseline_tasks, &tasks) {
                     return Ok(Json(tasks));
                 }
                 return Err(ApiError::internal(err.message));
@@ -150,7 +169,9 @@ pub(crate) async fn extract_tasks(
         }
     }
 
-    Ok(Json(Vec::new()))
+    Err(ApiError::internal(
+        "task extraction stream ended without result",
+    ))
 }
 
 pub(crate) async fn transition_task(

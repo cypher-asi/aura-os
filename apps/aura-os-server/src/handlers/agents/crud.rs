@@ -65,22 +65,6 @@ pub(crate) async fn create_agent(
         )
         .await?;
 
-        if !matches!(provisioned.status.as_str(), "running" | "idle") {
-            wait_for_swarm_agent_ready(
-                client.http_client(),
-                swarm_base_url,
-                &jwt,
-                &provisioned.agent_id,
-            )
-            .await?;
-        }
-
-        info!(
-            agent_id = %agent_id_str,
-            vm_id = %provisioned.vm_id,
-            "Swarm VM provisioned for remote agent"
-        );
-
         let update_req = aura_os_network::UpdateAgentRequest {
             name: None,
             role: None,
@@ -108,6 +92,50 @@ pub(crate) async fn create_agent(
             })?;
 
         agent = agent_from_network(&updated_net_agent);
+
+        info!(
+            agent_id = %agent_id_str,
+            vm_id = %provisioned.vm_id,
+            "Swarm VM provisioned for remote agent"
+        );
+
+        if !matches!(provisioned.status.as_str(), "running" | "idle") {
+            match wait_for_swarm_agent_ready(
+                client.http_client(),
+                swarm_base_url,
+                &jwt,
+                &provisioned.agent_id,
+            )
+            .await
+            {
+                Ok(()) => {}
+                Err(SwarmAgentReadyError::Timeout) => {
+                    warn!(
+                        agent_id = %agent_id_str,
+                        vm_id = %provisioned.vm_id,
+                        "Remote agent is still provisioning after create"
+                    );
+                    return Err(ApiError::service_unavailable(
+                        "remote agent was created but is still provisioning; try again in a moment",
+                    ));
+                }
+                Err(SwarmAgentReadyError::ErrorState) => {
+                    return Err(ApiError::bad_gateway(format!(
+                        "remote agent {agent_id_str} was created but entered an error state"
+                    )));
+                }
+                Err(SwarmAgentReadyError::Transport(message)) => {
+                    return Err(ApiError::bad_gateway(format!(
+                        "remote agent {agent_id_str} was created but readiness checks failed: {message}"
+                    )));
+                }
+                Err(SwarmAgentReadyError::Parse(message)) => {
+                    return Err(ApiError::internal(format!(
+                        "remote agent {agent_id_str} was created but readiness response could not be parsed: {message}"
+                    )));
+                }
+            }
+        }
     }
 
     Ok(Json(agent))
@@ -183,7 +211,7 @@ async fn wait_for_swarm_agent_ready(
     swarm_base_url: &str,
     jwt: &str,
     agent_id: &str,
-) -> ApiResult<()> {
+) -> Result<(), SwarmAgentReadyError> {
     let url = format!("{}/v1/agents/{agent_id}/state", swarm_base_url);
     let deadline = tokio::time::Instant::now() + SWARM_AGENT_READY_TIMEOUT;
 
@@ -191,10 +219,7 @@ async fn wait_for_swarm_agent_ready(
         tokio::time::sleep(SWARM_AGENT_READY_POLL_INTERVAL).await;
 
         if tokio::time::Instant::now() >= deadline {
-            return Err(ApiError::bad_gateway(format!(
-                "swarm agent {agent_id} did not become ready within {}s",
-                SWARM_AGENT_READY_TIMEOUT.as_secs()
-            )));
+            return Err(SwarmAgentReadyError::Timeout);
         }
 
         let resp = http
@@ -202,7 +227,7 @@ async fn wait_for_swarm_agent_ready(
             .header("Authorization", format!("Bearer {jwt}"))
             .send()
             .await
-            .map_err(|e| ApiError::bad_gateway(format!("swarm agent state check failed: {e}")))?;
+            .map_err(|e| SwarmAgentReadyError::Transport(e.to_string()))?;
 
         if !resp.status().is_success() {
             let status = resp.status().as_u16();
@@ -214,20 +239,25 @@ async fn wait_for_swarm_agent_ready(
         let state = resp
             .json::<SwarmAgentStateResponse>()
             .await
-            .map_err(|e| ApiError::internal(format!("failed to parse swarm agent state: {e}")))?;
+            .map_err(|e| SwarmAgentReadyError::Parse(e.to_string()))?;
 
         match state.state.as_str() {
             "running" | "idle" => return Ok(()),
             "error" => {
-                return Err(ApiError::bad_gateway(format!(
-                    "swarm agent {agent_id} entered error state"
-                )));
+                return Err(SwarmAgentReadyError::ErrorState);
             }
             other => {
                 info!(agent_id = %agent_id, state = %other, "Waiting for remote agent provisioning");
             }
         }
     }
+}
+
+enum SwarmAgentReadyError {
+    Timeout,
+    ErrorState,
+    Transport(String),
+    Parse(String),
 }
 
 pub(crate) async fn list_agents(
@@ -359,7 +389,10 @@ pub(crate) async fn list_agent_project_bindings(
     let all_projects = projects::list_all_projects_from_network(&state, &jwt).await?;
     let agent_id_str = agent_id.to_string();
 
-    let project_ids: Vec<String> = all_projects.iter().map(|p| p.project_id.to_string()).collect();
+    let project_ids: Vec<String> = all_projects
+        .iter()
+        .map(|p| p.project_id.to_string())
+        .collect();
     let futs: Vec<_> = project_ids
         .iter()
         .map(|pid| storage.list_project_agents(pid, &jwt))

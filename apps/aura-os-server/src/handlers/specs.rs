@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::convert::Infallible;
 
 use axum::extract::{Path, Query, State};
@@ -42,6 +43,23 @@ async fn load_generated_specs(
     };
     specs.sort_by_key(|s| s.order_index);
     Ok(specs)
+}
+
+fn specs_changed_since(before: &[Spec], after: &[Spec]) -> bool {
+    if before.len() != after.len() {
+        return true;
+    }
+
+    let before_versions: HashMap<_, _> = before
+        .iter()
+        .map(|spec| (spec.spec_id, spec.updated_at))
+        .collect();
+
+    after.iter().any(|spec| {
+        before_versions
+            .get(&spec.spec_id)
+            .is_none_or(|updated_at| *updated_at != spec.updated_at)
+    })
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -203,6 +221,7 @@ pub(crate) async fn generate_specs(
 ) -> ApiResult<Json<Vec<Spec>>> {
     info!(%project_id, "Spec generation requested");
     let mode = resolve_harness_mode(&state, &project_id, &params).await;
+    let baseline_specs = load_generated_specs(&state, &project_id, &jwt).await?;
     let session =
         open_spec_gen_session(&state, &project_id, mode, params.agent_instance_id, &jwt).await?;
     let mut rx = session.events_tx.subscribe();
@@ -217,12 +236,12 @@ pub(crate) async fn generate_specs(
             }
             HarnessOutbound::Error(err) => {
                 let specs = load_generated_specs(&state, &project_id, &jwt).await?;
-                if !specs.is_empty() {
+                if specs_changed_since(&baseline_specs, &specs) {
                     info!(
                         %project_id,
                         count = specs.len(),
                         error = %err.message,
-                        "Spec generation returned stored specs despite harness error"
+                        "Spec generation returned newly stored specs despite harness error"
                     );
                     return Ok(Json(specs));
                 }
