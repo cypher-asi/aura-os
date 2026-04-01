@@ -124,12 +124,23 @@ impl AuthService {
         &self,
         email: &str,
         password: &str,
+        name: &str,
+        invite_code: &str,
     ) -> Result<AuthSessionResult, AuthError> {
         debug!("Registering via zOS-api");
+
+        // Step 1: Create account with invite code
         let res = self
             .http
             .post(format!("{ZOS_API_URL}/api/v2/accounts/createAndAuthorize"))
-            .json(&serde_json::json!({ "email": email, "password": password }))
+            .json(&serde_json::json!({
+                "user": {
+                    "email": email.to_lowercase(),
+                    "password": password,
+                    "handle": email.to_lowercase(),
+                },
+                "inviteSlug": invite_code,
+            }))
             .send()
             .await
             .map_err(AuthError::Http)?;
@@ -141,7 +152,33 @@ impl AuthService {
         }
 
         let login_data: ZosLoginResponse = res.json().await.map_err(AuthError::Http)?;
-        self.build_session_from_token(&login_data.access_token).await
+        let token = &login_data.access_token;
+
+        // Step 2: Fetch user to get userId for finalize
+        let user = self.fetch_user_info(token).await?;
+
+        // Step 3: Finalize profile with name
+        let finalize_res = self
+            .http
+            .post(format!("{ZOS_API_URL}/api/v2/accounts/finalize"))
+            .bearer_auth(token)
+            .json(&serde_json::json!({
+                "userId": user.id,
+                "name": name,
+                "inviteCode": invite_code,
+            }))
+            .send()
+            .await
+            .map_err(AuthError::Http)?;
+
+        if !finalize_res.status().is_success() {
+            let status = finalize_res.status().as_u16();
+            let body = finalize_res.text().await.unwrap_or_default();
+            warn!(status, body = %body, "Failed to finalize account, continuing with session");
+        }
+
+        // Step 4: Build session from the token (re-fetches user with completed profile)
+        self.build_session_from_token(token).await
     }
 
     pub async fn import_access_token(

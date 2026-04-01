@@ -7,10 +7,10 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, name: string, inviteCode: string) =>
     apiFetch<AuthSession>("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, name, invite_code: inviteCode }),
     }),
   getSession: () => apiFetch<AuthSession>("/api/auth/session"),
   validate: () =>

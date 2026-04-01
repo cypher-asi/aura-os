@@ -213,7 +213,7 @@ describe("auth-store", () => {
     it("sets user from session", async () => {
       mockApi.auth.register.mockResolvedValue(mockSession);
 
-      await useAuthStore.getState().register("a@b.com", "pass");
+      await useAuthStore.getState().register("a@b.com", "pass", "Test", "INVITE");
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(mockSession));
     });
@@ -221,7 +221,7 @@ describe("auth-store", () => {
     it("preserves a zero pro verification error from registration", async () => {
       mockApi.auth.register.mockResolvedValue(sessionWithZeroProError);
 
-      await useAuthStore.getState().register("a@b.com", "pass");
+      await useAuthStore.getState().register("a@b.com", "pass", "Test", "INVITE");
 
       expect(useAuthStore.getState().user).toEqual(expectedUser(sessionWithZeroProError));
       expect(useAuthStore.getState().zeroProRefreshError).toBe(

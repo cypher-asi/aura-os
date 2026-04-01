@@ -125,6 +125,8 @@ pub(crate) struct AuthLoginRequest {
 pub(crate) struct AuthRegisterRequest {
     pub email: String,
     pub password: String,
+    pub name: String,
+    pub invite_code: String,
 }
 
 #[derive(Debug, Deserialize)]
