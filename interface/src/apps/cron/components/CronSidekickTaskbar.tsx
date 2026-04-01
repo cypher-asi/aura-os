@@ -1,10 +1,10 @@
-import { Button } from "@cypher-asi/zui";
+import type { MenuItem } from "@cypher-asi/zui";
+import { Cpu, History, Package, ChartNoAxesColumnIncreasing, Logs, Pencil, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { Cpu, History, Package, ChartNoAxesColumnIncreasing, Logs } from "lucide-react";
 import { useCronSidekickStore, type CronSidekickTab } from "../stores/cron-sidekick-store";
-import styles from "../../../components/Sidekick/Sidekick.module.css";
+import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 
-const TABS: { id: CronSidekickTab; icon: React.ReactNode; title: string }[] = [
+const TABS: TabItem[] = [
   { id: "cron", icon: <Cpu size={16} />, title: "Cron" },
   { id: "runs", icon: <History size={16} />, title: "Runs" },
   { id: "artifacts", icon: <Package size={16} />, title: "Artifacts" },
@@ -12,29 +12,34 @@ const TABS: { id: CronSidekickTab; icon: React.ReactNode; title: string }[] = [
   { id: "log", icon: <Logs size={16} />, title: "Log" },
 ];
 
+const ACTIONS: MenuItem[] = [
+  { id: "edit", label: "Edit", icon: <Pencil size={14} /> },
+  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
+];
+
 export function CronSidekickTaskbar() {
-  const { activeTab, setActiveTab } = useCronSidekickStore(
-    useShallow((s) => ({ activeTab: s.activeTab, setActiveTab: s.setActiveTab })),
+  const { activeTab, setActiveTab, requestEdit, requestDelete } = useCronSidekickStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      setActiveTab: s.setActiveTab,
+      requestEdit: s.requestEdit,
+      requestDelete: s.requestDelete,
+    })),
   );
 
+  const handleAction = (id: string) => {
+    if (id === "edit") requestEdit();
+    else if (id === "delete") requestDelete();
+  };
+
   return (
-    <div className={styles.sidekickTaskbar}>
-      <div className={styles.sidekickTabBar}>
-        {TABS.map(({ id, icon, title }) => (
-          <Button
-            key={id}
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={icon}
-            title={title}
-            aria-label={title}
-            onClick={() => setActiveTab(id)}
-            aria-pressed={activeTab === id}
-            selected={activeTab === id}
-          />
-        ))}
-      </div>
-    </div>
+    <SidekickTabBar
+      tabs={TABS}
+      activeTab={activeTab}
+      onTabChange={(id) => setActiveTab(id as CronSidekickTab)}
+      actions={ACTIONS}
+      onAction={handleAction}
+      alwaysShowMore
+    />
   );
 }

@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { Play, Pause, Trash2, Pencil } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { Button } from "@cypher-asi/zui";
 import { Avatar } from "../../../components/Avatar";
 import { useCronStore } from "../stores/cron-store";
@@ -20,9 +20,11 @@ export function CronInfoTab() {
   const removeJob = useCronStore((s) => s.removeJob);
   const fetchRuns = useCronStore((s) => s.fetchRuns);
   const viewRun = useCronSidekickStore((s) => s.viewRun);
+  const showEditor = useCronSidekickStore((s) => s.showEditor);
+  const closeEditor = useCronSidekickStore((s) => s.closeEditor);
+  const showDeleteConfirm = useCronSidekickStore((s) => s.showDeleteConfirm);
+  const closeDeleteConfirm = useCronSidekickStore((s) => s.closeDeleteConfirm);
   const agents = useAgentStore((s) => s.agents);
-
-  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const job = jobs.find((j) => j.cron_job_id === cronJobId);
   const jobRuns = cronJobId ? runs[cronJobId] ?? [] : [];
@@ -54,10 +56,11 @@ export function CronInfoTab() {
     try {
       await cronApi.deleteJob(job.cron_job_id);
       removeJob(job.cron_job_id);
+      closeDeleteConfirm();
     } catch (e) {
       console.error("Failed to delete job:", e);
     }
-  }, [job, removeJob]);
+  }, [job, removeJob, closeDeleteConfirm]);
 
   const statusClass = (status: string) => {
     switch (status) {
@@ -92,7 +95,6 @@ export function CronInfoTab() {
           <span className={job.enabled ? styles.enabledBadge : styles.disabledBadge}>
             {job.enabled ? "Active" : "Paused"}
           </span>
-          <Button variant="ghost" size="sm" iconOnly icon={<Pencil size={14} />} title="Edit" onClick={() => setEditModalOpen(true)} />
           <Button variant="ghost" size="sm" iconOnly icon={<Play size={14} />} title="Trigger now" onClick={handleTrigger} />
           <Button
             variant="ghost"
@@ -102,7 +104,6 @@ export function CronInfoTab() {
             title={job.enabled ? "Pause" : "Resume"}
             onClick={handleToggle}
           />
-          <Button variant="ghost" size="sm" iconOnly icon={<Trash2 size={14} />} title="Delete" onClick={handleDelete} />
         </div>
       </div>
 
@@ -173,8 +174,20 @@ export function CronInfoTab() {
         </div>
       </div>
 
-      {editModalOpen && (
-        <CronEditModal job={job} onClose={() => setEditModalOpen(false)} />
+      {showEditor && (
+        <CronEditModal job={job} onClose={closeEditor} />
+      )}
+
+      {showDeleteConfirm && (
+        <div className={styles.deleteOverlay}>
+          <div className={styles.deleteCard}>
+            <p>Delete <strong>{job.name}</strong>?</p>
+            <div className={styles.deleteActions}>
+              <Button variant="ghost" size="sm" onClick={closeDeleteConfirm}>Cancel</Button>
+              <Button variant="danger" size="sm" onClick={handleDelete}>Delete</Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
