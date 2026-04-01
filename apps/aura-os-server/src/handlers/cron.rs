@@ -24,7 +24,9 @@ pub(crate) struct CreateCronJobRequest {
     pub schedule: String,
     #[serde(default)]
     pub prompt: Option<String>,
-    pub tag: Option<String>,
+    pub agent_id: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     #[serde(default)]
     pub input_artifact_refs: Vec<ArtifactRef>,
     pub max_retries: Option<u32>,
@@ -37,7 +39,8 @@ pub(crate) struct UpdateCronJobRequest {
     pub description: Option<String>,
     pub schedule: Option<String>,
     pub prompt: Option<String>,
-    pub tag: Option<String>,
+    pub agent_id: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub enabled: Option<bool>,
     pub input_artifact_refs: Option<Vec<ArtifactRef>>,
     pub max_retries: Option<u32>,
@@ -84,7 +87,8 @@ pub(crate) async fn create_cron_job(
         schedule,
         prompt: req.prompt.unwrap_or_default(),
         enabled: true,
-        tag: req.tag,
+        agent_id: req.agent_id.and_then(|id| id.parse().ok()),
+        tags: req.tags,
         input_artifact_refs: req.input_artifact_refs,
         max_retries: req.max_retries.unwrap_or(1),
         timeout_seconds: req.timeout_seconds.unwrap_or(300),
@@ -171,8 +175,15 @@ pub(crate) async fn update_cron_job(
     if let Some(prompt) = req.prompt {
         job.prompt = prompt;
     }
-    if let Some(tag) = req.tag {
-        job.tag = Some(tag);
+    if let Some(agent_id) = req.agent_id {
+        job.agent_id = if agent_id.is_empty() {
+            None
+        } else {
+            Some(agent_id.parse().map_err(|_| ApiError::bad_request("invalid agent ID"))?)
+        };
+    }
+    if let Some(tags) = req.tags {
+        job.tags = tags;
     }
     if let Some(enabled) = req.enabled {
         job.enabled = enabled;

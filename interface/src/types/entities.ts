@@ -362,7 +362,8 @@ export interface CronJob {
   schedule: string;
   prompt: string;
   enabled: boolean;
-  tag: string | null;
+  agent_id: string | null;
+  tags: string[];
   input_artifact_refs: ArtifactRef[];
   max_retries: number;
   timeout_seconds: number;

@@ -5,7 +5,8 @@ export interface CreateCronJobRequest {
   description?: string;
   schedule: string;
   prompt?: string;
-  tag?: string;
+  agent_id?: string;
+  tags?: string[];
   input_artifact_refs?: import("../types").ArtifactRef[];
   max_retries?: number;
   timeout_seconds?: number;
@@ -16,7 +17,8 @@ export interface UpdateCronJobRequest {
   description?: string;
   schedule?: string;
   prompt?: string;
-  tag?: string;
+  agent_id?: string;
+  tags?: string[];
   enabled?: boolean;
   input_artifact_refs?: import("../types").ArtifactRef[];
   max_retries?: number;

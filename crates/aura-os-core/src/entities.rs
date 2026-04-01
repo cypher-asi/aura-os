@@ -466,7 +466,9 @@ pub struct CronJob {
     pub prompt: String,
     pub enabled: bool,
     #[serde(default)]
-    pub tag: Option<String>,
+    pub agent_id: Option<AgentId>,
+    #[serde(default)]
+    pub tags: Vec<String>,
     #[serde(default)]
     pub input_artifact_refs: Vec<ArtifactRef>,
     #[serde(default = "default_max_retries")]

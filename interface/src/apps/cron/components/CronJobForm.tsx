@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Input, Button, Text } from "@cypher-asi/zui";
 import { cronApi } from "../../../api/cron";
 import { useCronStore } from "../stores/cron-store";
+import { useAgentStore } from "../../agents/stores";
 import { SchedulePicker } from "./SchedulePicker";
 import { TagSelector } from "./TagSelector";
 import styles from "./CronJobForm.module.css";
@@ -14,13 +15,22 @@ export function CronJobForm({ onClose }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [schedule, setSchedule] = useState("0 9 * * *");
-  const [tag, setTag] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [agentId, setAgentId] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addJob = useCronStore((s) => s.addJob);
 
+  const agents = useAgentStore((s) => s.agents);
+  const fetchAgents = useAgentStore((s) => s.fetchAgents);
+
+  useEffect(() => {
+    fetchAgents();
+  }, [fetchAgents]);
+
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !agentId) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -28,7 +38,9 @@ export function CronJobForm({ onClose }: Props) {
         name,
         description,
         schedule,
-        tag: tag.trim() || undefined,
+        prompt: prompt.trim() || undefined,
+        agent_id: agentId,
+        tags: tags.length ? tags : undefined,
       });
       addJob(job);
       onClose();
@@ -55,7 +67,7 @@ export function CronJobForm({ onClose }: Props) {
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={submitting || !name.trim()}
+            disabled={submitting || !name.trim() || !agentId}
           >
             {submitting ? "Creating..." : "Create Job"}
           </Button>
@@ -81,8 +93,31 @@ export function CronJobForm({ onClose }: Props) {
           />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Tag</label>
-          <TagSelector value={tag} onChange={setTag} />
+          <label className={styles.label}>Agent <span className={styles.required}>*</span></label>
+          <select
+            className={styles.select}
+            value={agentId}
+            onChange={(e) => setAgentId(e.target.value)}
+          >
+            <option value="">Select an agent...</option>
+            {agents.map((a) => (
+              <option key={a.agent_id} value={a.agent_id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Prompt</label>
+          <textarea
+            className={styles.textarea}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Instructions for the agent to execute on schedule"
+            rows={4}
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Tags</label>
+          <TagSelector value={tags} onChange={setTags} />
         </div>
         <div className={styles.field}>
           <label className={styles.label}>Schedule</label>
