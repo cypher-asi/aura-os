@@ -95,6 +95,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
   const selectNode = useProcessSidekickStore((s) => s.selectNode);
+  const closeNodeInspector = useProcessSidekickStore((s) => s.closeNodeInspector);
 
   useEffect(() => {
     setNodes(toFlowNodes(processNodes));
@@ -192,6 +193,10 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     [processNodes, selectNode],
   );
 
+  const onPaneClick = useCallback(() => {
+    closeNodeInspector();
+  }, [closeNodeInspector]);
+
   const onNodeDragStop = useCallback(
     async (_: unknown, node: Node) => {
       try {
@@ -216,6 +221,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
         nodeTypes={nodeTypes}
         fitView

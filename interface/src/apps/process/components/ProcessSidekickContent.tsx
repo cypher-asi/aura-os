@@ -5,7 +5,9 @@ import { Button, Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { EmptyState } from "../../../components/EmptyState";
-import { NodeInspector } from "./NodeInspector";
+import { NodeInfoTab } from "./NodeInfoTab";
+import { NodeConfigTab } from "./NodeConfigTab";
+import { NodeConnectionsTab } from "./NodeConnectionsTab";
 import {
   StatCard,
   SectionHeader,
@@ -165,15 +167,15 @@ function RunPreview({ run, onClose }: { run: ProcessRun; onClose: () => void }) 
 
 export function ProcessSidekickContent() {
   const { processId } = useParams<{ processId: string }>();
-  const { activeTab, previewRun, selectedNode, viewRun, closePreview, closeNodeInspector } =
+  const { activeTab, activeNodeTab, previewRun, selectedNode, viewRun, closePreview } =
     useProcessSidekickStore(
       useShallow((s) => ({
         activeTab: s.activeTab,
+        activeNodeTab: s.activeNodeTab,
         previewRun: s.previewRun,
         selectedNode: s.selectedNode,
         viewRun: s.viewRun,
         closePreview: s.closePreview,
-        closeNodeInspector: s.closeNodeInspector,
       })),
     );
 
@@ -190,11 +192,12 @@ export function ProcessSidekickContent() {
   if (selectedNode) {
     return (
       <div className={styles.sidekickBody}>
-        <div
-          className={styles.previewOverlay}
-          style={{ top: "calc(-1 * var(--control-height-sm, 32px))", zIndex: 20 }}
-        >
-          <NodeInspector node={selectedNode} onClose={closeNodeInspector} />
+        <div className={styles.sidekickContent}>
+          <div className={styles.tabContent}>
+            {activeNodeTab === "info" && <NodeInfoTab node={selectedNode} />}
+            {activeNodeTab === "config" && <NodeConfigTab node={selectedNode} />}
+            {activeNodeTab === "connections" && <NodeConnectionsTab node={selectedNode} />}
+          </div>
         </div>
       </div>
     );

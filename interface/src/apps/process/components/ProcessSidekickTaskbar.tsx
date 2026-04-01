@@ -1,10 +1,10 @@
 import type { MenuItem } from "@cypher-asi/zui";
-import { Cpu, History, Activity, ChartNoAxesColumnIncreasing, Logs, Pencil, Trash2 } from "lucide-react";
+import { Cpu, History, Activity, ChartNoAxesColumnIncreasing, Logs, Settings, Link2, Pencil, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { useProcessSidekickStore, type ProcessSidekickTab } from "../stores/process-sidekick-store";
+import { useProcessSidekickStore, type ProcessSidekickTab, type NodeSidekickTab } from "../stores/process-sidekick-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
 
-const TABS: TabItem[] = [
+const PROCESS_TABS: TabItem[] = [
   { id: "process", icon: <Cpu size={16} />, title: "Process" },
   { id: "runs", icon: <History size={16} />, title: "Runs" },
   { id: "events", icon: <Activity size={16} />, title: "Events" },
@@ -12,16 +12,35 @@ const TABS: TabItem[] = [
   { id: "log", icon: <Logs size={16} />, title: "Log" },
 ];
 
-const ACTIONS: MenuItem[] = [
+const NODE_TABS: TabItem[] = [
+  { id: "info", icon: <Cpu size={16} />, title: "Node Info" },
+  { id: "config", icon: <Settings size={16} />, title: "Config" },
+  { id: "connections", icon: <Link2 size={16} />, title: "Connections" },
+];
+
+const PROCESS_ACTIONS: MenuItem[] = [
+  { id: "edit", label: "Edit", icon: <Pencil size={14} /> },
+  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
+];
+
+const NODE_ACTIONS: MenuItem[] = [
   { id: "edit", label: "Edit", icon: <Pencil size={14} /> },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
 export function ProcessSidekickTaskbar() {
-  const { activeTab, setActiveTab, requestEdit, requestDelete } = useProcessSidekickStore(
+  const {
+    activeTab, setActiveTab,
+    activeNodeTab, setActiveNodeTab,
+    selectedNode,
+    requestEdit, requestDelete,
+  } = useProcessSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
       setActiveTab: s.setActiveTab,
+      activeNodeTab: s.activeNodeTab,
+      setActiveNodeTab: s.setActiveNodeTab,
+      selectedNode: s.selectedNode,
       requestEdit: s.requestEdit,
       requestDelete: s.requestDelete,
     })),
@@ -32,12 +51,25 @@ export function ProcessSidekickTaskbar() {
     else if (id === "delete") requestDelete();
   };
 
+  if (selectedNode) {
+    return (
+      <SidekickTabBar
+        tabs={NODE_TABS}
+        activeTab={activeNodeTab}
+        onTabChange={(id) => setActiveNodeTab(id as NodeSidekickTab)}
+        actions={NODE_ACTIONS}
+        onAction={handleAction}
+        alwaysShowMore
+      />
+    );
+  }
+
   return (
     <SidekickTabBar
-      tabs={TABS}
+      tabs={PROCESS_TABS}
       activeTab={activeTab}
       onTabChange={(id) => setActiveTab(id as ProcessSidekickTab)}
-      actions={ACTIONS}
+      actions={PROCESS_ACTIONS}
       onAction={handleAction}
       alwaysShowMore
     />

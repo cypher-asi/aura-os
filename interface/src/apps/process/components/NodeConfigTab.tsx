@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { X, Pencil, Save, Trash2 } from "lucide-react";
+import { Pencil, Save, Trash2, X } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
+import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { useAgentStore } from "../../agents/stores";
-import { Avatar } from "../../../components/Avatar";
 import styles from "../../../components/Preview/Preview.module.css";
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
@@ -19,14 +19,37 @@ const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   merge: "Merge",
 };
 
-interface NodeInspectorProps {
+interface NodeConfigTabProps {
   node: ProcessNode;
-  onClose: () => void;
 }
 
-export function NodeInspector({ node, onClose }: NodeInspectorProps) {
+function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className={styles.taskField}>
+      <span className={styles.fieldLabel}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--color-border)",
+  background: "var(--color-bg-input)",
+  color: "var(--color-text)",
+  colorScheme: "dark",
+  fontSize: 13,
+  fontFamily: "inherit",
+  width: "100%",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+export function NodeConfigTab({ node }: NodeConfigTabProps) {
   const { processId } = useParams<{ processId: string }>();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
+  const closeNodeInspector = useProcessSidekickStore((s) => s.closeNodeInspector);
   const agents = useAgentStore((s) => s.agents);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
 
@@ -37,16 +60,16 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
   const [agentId, setAgentId] = useState(node.agent_id ?? "");
   const cfg = node.config as Record<string, unknown>;
   const [schedule, setSchedule] = useState(
-    node.node_type === "ignition" ? cfg?.schedule as string ?? "" : "",
+    node.node_type === "ignition" ? (cfg?.schedule as string) ?? "" : "",
   );
   const [conditionExpr, setConditionExpr] = useState(
-    node.node_type === "condition" ? cfg?.condition_expression as string ?? "" : "",
+    node.node_type === "condition" ? (cfg?.condition_expression as string) ?? "" : "",
   );
   const [artifactType, setArtifactType] = useState(
-    node.node_type === "artifact" ? cfg?.artifact_type as string ?? "report" : "report",
+    node.node_type === "artifact" ? (cfg?.artifact_type as string) ?? "report" : "report",
   );
   const [artifactName, setArtifactName] = useState(
-    node.node_type === "artifact" ? cfg?.artifact_name as string ?? "" : "",
+    node.node_type === "artifact" ? (cfg?.artifact_name as string) ?? "" : "",
   );
   const [delaySeconds, setDelaySeconds] = useState(
     node.node_type === "delay" ? String(cfg?.delay_seconds ?? "60") : "60",
@@ -60,22 +83,34 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
     setPrompt(node.prompt);
     setAgentId(node.agent_id ?? "");
     setEditing(false);
+    const c = node.config as Record<string, unknown>;
+    if (node.node_type === "ignition") setSchedule((c?.schedule as string) ?? "");
+    if (node.node_type === "condition") setConditionExpr((c?.condition_expression as string) ?? "");
+    if (node.node_type === "artifact") {
+      setArtifactType((c?.artifact_type as string) ?? "report");
+      setArtifactName((c?.artifact_name as string) ?? "");
+    }
+    if (node.node_type === "delay") setDelaySeconds(String(c?.delay_seconds ?? "60"));
   }, [node]);
-
-  const agent = agentId ? agents.find((a) => a.agent_id === agentId) ?? null : null;
 
   const handleSave = useCallback(async () => {
     if (!processId) return;
     setSaving(true);
     try {
-      const config: Record<string, unknown> = { ...node.config as Record<string, unknown> };
+      const config: Record<string, unknown> = { ...(node.config as Record<string, unknown>) };
       if (node.node_type === "ignition" && schedule) config.schedule = schedule;
       if (node.node_type === "condition") config.condition_expression = conditionExpr;
-      if (node.node_type === "artifact") { config.artifact_type = artifactType; config.artifact_name = artifactName; }
+      if (node.node_type === "artifact") {
+        config.artifact_type = artifactType;
+        config.artifact_name = artifactName;
+      }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
 
       await processApi.updateNode(processId, node.node_id, {
-        label, prompt, agent_id: agentId || undefined, config,
+        label,
+        prompt,
+        agent_id: agentId || undefined,
+        config,
       });
       if (node.node_type === "ignition" && schedule) {
         await processApi.updateProcess(processId, { schedule });
@@ -94,15 +129,15 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
     try {
       await processApi.deleteNode(processId, node.node_id);
       fetchNodes(processId);
-      onClose();
+      closeNodeInspector();
     } catch (e) {
       console.error("Failed to delete node:", e);
     }
-  }, [processId, node, fetchNodes, onClose]);
+  }, [processId, node, fetchNodes, closeNodeInspector]);
 
   if (editing) {
     return (
-      <>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div className={styles.previewHeader}>
           <Text size="sm" className={`${styles.previewTitle} ${styles.previewTitleBold}`}>
             Edit {NODE_TYPE_LABELS[node.node_type]} Node
@@ -182,20 +217,18 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
             )}
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className={styles.previewHeader}>
         <Text size="sm" className={`${styles.previewTitle} ${styles.previewTitleBold}`}>
-          {NODE_TYPE_LABELS[node.node_type]} Node
+          {NODE_TYPE_LABELS[node.node_type]} Config
         </Text>
         <Button variant="ghost" size="sm" iconOnly icon={<Pencil size={14} />} title="Edit" onClick={() => setEditing(true)} />
-        <Button variant="ghost" size="sm" iconOnly icon={<X size={14} />} aria-label="Close" onClick={onClose} />
       </div>
-
       <div className={styles.previewBody}>
         <div className={styles.taskMeta}>
           <div className={styles.taskField}>
@@ -215,14 +248,7 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
           {(node.node_type === "action" || node.node_type === "ignition") && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Agent</span>
-              {agent ? (
-                <div className={styles.agentInline}>
-                  <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={18} />
-                  <Text variant="secondary" size="sm">{agent.name}</Text>
-                </div>
-              ) : (
-                <Text variant="secondary" size="sm">None</Text>
-              )}
+              <Text variant="secondary" size="sm">{node.agent_id || "None"}</Text>
             </div>
           )}
 
@@ -235,7 +261,7 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
 
           {node.node_type === "condition" && (cfg?.condition_expression as string) && (
             <div className={styles.taskField}>
-              <span className={styles.fieldLabel}>Condition</span>
+              <span className={styles.fieldLabel}>Condition Expression</span>
               <Text variant="secondary" size="sm" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
                 {cfg.condition_expression as string}
               </Text>
@@ -263,44 +289,8 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
               <Text variant="secondary" size="sm">{String(cfg?.delay_seconds ?? 60)} seconds</Text>
             </div>
           )}
-
-          <div className={styles.taskField} style={{ borderTop: "1px solid var(--color-border)", paddingTop: 12, marginTop: 4 }}>
-            <span className={styles.fieldLabel}>Node ID</span>
-            <Text variant="secondary" size="sm" style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{node.node_id}</Text>
-          </div>
-          <div className={styles.taskField}>
-            <span className={styles.fieldLabel}>Created</span>
-            <Text variant="secondary" size="sm">{new Date(node.created_at).toLocaleString()}</Text>
-          </div>
-          <div className={styles.taskField}>
-            <span className={styles.fieldLabel}>Updated</span>
-            <Text variant="secondary" size="sm">{new Date(node.updated_at).toLocaleString()}</Text>
-          </div>
         </div>
       </div>
-    </>
-  );
-}
-
-function EditField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className={styles.taskField}>
-      <span className={styles.fieldLabel}>{label}</span>
-      {children}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "8px 10px",
-  borderRadius: "var(--radius-sm)",
-  border: "1px solid var(--color-border)",
-  background: "var(--color-bg-input)",
-  color: "var(--color-text)",
-  colorScheme: "dark",
-  fontSize: 13,
-  fontFamily: "inherit",
-  width: "100%",
-  outline: "none",
-  boxSizing: "border-box",
-};
