@@ -62,7 +62,7 @@ function InfoPanel({
       <div className={styles.infoGrid}>
         <Text variant="muted" size="sm" as="span">Status</Text>
         <span><StatusBadge status={project.current_status} /></span>
-        <Text variant="muted" size="sm" as="span">Workspace</Text>
+        <Text variant="muted" size="sm" as="span">Agent workspace</Text>
         <span className={styles.infoWorkspaceCell}>
           {canOpenWorkspace ? (
             <button
@@ -78,7 +78,7 @@ function InfoPanel({
             <Text size="sm" as="span">{workspaceLabel}</Text>
           )}
           {remoteAgentId ? (
-            <Text size="xs" variant="muted" as="span">Attached to remote agent workspace</Text>
+            <Text size="xs" variant="muted" as="span">Resolved from the attached remote agent</Text>
           ) : null}
           {openWorkspaceError ? (
             <Text size="xs" variant="muted" as="span">{openWorkspaceError}</Text>
@@ -156,6 +156,11 @@ export function SidekickContent() {
   const canBrowseLocal = features.linkedWorkspace && Boolean(localRoot);
   const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteRoot);
   const canBrowseFiles = canBrowseLocal || canBrowseRemote;
+  const filesEmptyMessage = remoteAgentId
+    ? "The attached remote agent has not reported a live workspace yet."
+    : features.linkedWorkspace
+      ? "This project does not currently expose a live local agent workspace."
+      : "File browsing stays in the desktop app for now.";
 
   if (showInfo) {
     return (
@@ -183,9 +188,7 @@ export function SidekickContent() {
     : (
       <div className={styles.emptyState}>
         <Text variant="muted" size="sm">
-          {features.linkedWorkspace
-            ? "Imported workspaces do not expose live host files."
-            : "File browsing stays in the desktop app for now."}
+          {filesEmptyMessage}
         </Text>
       </div>
     );

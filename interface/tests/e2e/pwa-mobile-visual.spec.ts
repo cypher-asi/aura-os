@@ -226,7 +226,7 @@ test("capture mobile work, files, and account sheet", async ({ page, browserName
   await page.goto("/projects/proj-1/files");
   await expect(page).toHaveURL(/\/projects\/proj-1\/files$/);
   await expect(page.getByText("Files stay on the remote agent")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText("Remote workspace", { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Agent workspace", { exact: true })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Open Agent" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Open Execution" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible({ timeout: 10000 });

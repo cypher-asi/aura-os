@@ -240,7 +240,7 @@ function AppSwitcherContent({ state }: { state: ReturnType<typeof useMobileShell
     {
       id: "projects",
       label: "Projects",
-      description: state.mobileTargetProject?.name ?? "Return to your workspace",
+      description: state.mobileTargetProject?.name ?? "Return to your current project",
       icon: FolderOpen,
       path: resolveGlobalProjectPath(state),
     },
@@ -254,7 +254,7 @@ function AppSwitcherContent({ state }: { state: ReturnType<typeof useMobileShell
     {
       id: "feed",
       label: "Feed",
-      description: "Activity across your workspace",
+      description: "Activity across your projects",
       icon: GitCommitVertical,
       path: "/feed",
     },
@@ -289,6 +289,7 @@ function AppSwitcherContent({ state }: { state: ReturnType<typeof useMobileShell
                 type="button"
                 className={`${styles.mobileAppSwitcherButton} ${isSelected ? styles.mobileAppSwitcherButtonActive : ""}`}
                 aria-pressed={isSelected}
+                aria-label={item.label}
                 onClick={() => openAfterDrawerClose(() => navigate(item.path))}
               >
                 <span className={styles.mobileAppSwitcherIcon}>
