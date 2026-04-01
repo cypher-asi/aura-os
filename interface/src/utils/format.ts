@@ -187,3 +187,39 @@ export function formatChatTime(iso: string): string {
 
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
+
+const DOW_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/**
+ * Convert a 5- or 6-field cron expression into a short human-readable label.
+ * Falls back to showing the raw 5-field expression if it can't be described.
+ */
+export function describeCronSchedule(cron: string): string {
+  const parts = cron.trim().split(/\s+/);
+  const [min, hour, dom, mon, dow] = parts.length === 6 ? parts.slice(1) : parts;
+  if (!min || !hour || !dom || !mon || !dow) return cron;
+
+  const h = parseInt(hour, 10);
+  const m = parseInt(min, 10);
+  if (isNaN(h) || isNaN(m)) return parts.length === 6 ? parts.slice(1).join(" ") : cron;
+
+  const time = new Date(2000, 0, 1, h, m)
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    .toLowerCase();
+
+  if (dom === "*" && mon === "*" && dow === "*") return `Daily at ${time}`;
+
+  if (dom === "*" && mon === "*" && dow !== "*") {
+    const dayNums = dow.split(",").map(Number).filter((n) => !isNaN(n));
+    if (dayNums.length) {
+      const names = dayNums.map((d) => DOW_NAMES[d % 7]).join(", ");
+      return `${names} at ${time}`;
+    }
+  }
+
+  if (mon === "*" && dow === "*" && dom !== "*") {
+    return `Monthly on day ${dom} at ${time}`;
+  }
+
+  return parts.length === 6 ? parts.slice(1).join(" ") : cron;
+}

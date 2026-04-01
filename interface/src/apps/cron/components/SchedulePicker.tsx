@@ -86,6 +86,7 @@ export function SchedulePicker({ value, onChange }: Props) {
         {(["daily", "weekly", "monthly"] as Frequency[]).map((f) => (
           <Button
             key={f}
+            className={styles.frequencyTabButton}
             variant={frequency === f ? "primary" : "ghost"}
             size="sm"
             onClick={() => setFrequency(f)}

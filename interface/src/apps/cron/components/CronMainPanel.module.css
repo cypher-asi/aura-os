@@ -17,6 +17,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+
+.headerBadges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .jobTitle {
@@ -33,6 +40,7 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .body {
@@ -64,11 +72,17 @@
   line-height: 1.5;
 }
 
+.emptyPrompt {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 .metaGrid {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 6px 16px;
   font-size: 13px;
+  align-items: center;
 }
 
 .metaLabel {
@@ -131,8 +145,84 @@
   background: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
 }
 
+.tagBadge {
+  composes: badge;
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 15%, transparent);
+  color: var(--color-primary, #6366f1);
+}
+
 .emptyRuns {
   color: var(--color-text-muted);
   font-size: 13px;
   padding: 12px 0;
+}
+
+/* Inline editing */
+
+.editTitleInput {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+}
+
+.editTitleInput:focus {
+  border-color: var(--color-primary);
+}
+
+.editInput {
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  outline: none;
+  width: 100%;
+}
+
+.editInput:focus {
+  border-color: var(--color-primary);
+}
+
+.editSelect {
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+}
+
+.editSelect:focus {
+  border-color: var(--color-primary);
+}
+
+.editPrompt {
+  width: 100%;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.editPrompt:focus {
+  border-color: var(--color-primary);
 }

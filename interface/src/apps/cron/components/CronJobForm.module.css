@@ -16,6 +16,10 @@
   color: var(--color-text-secondary);
 }
 
+.required {
+  color: var(--color-danger, #ef4444);
+}
+
 .footer {
   display: flex;
   flex-wrap: wrap;
@@ -32,4 +36,39 @@
 .error {
   font-size: var(--text-sm);
   color: var(--color-danger, #ef4444);
+}
+
+.select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: var(--color-primary);
+}
+
+.textarea {
+  width: 100%;
+  padding: 8px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-bg-input, var(--color-bg-secondary));
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.textarea:focus {
+  border-color: var(--color-primary);
 }
