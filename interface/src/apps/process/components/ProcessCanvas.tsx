@@ -6,7 +6,6 @@ import {
   Background,
   Controls,
   MiniMap,
-  addEdge,
   useNodesState,
   useReactFlow,
   BackgroundVariant,
