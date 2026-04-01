@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Button, Menu, type MenuItem } from "@cypher-asi/zui";
 import {
@@ -55,6 +55,32 @@ export function AgentSidekickTaskbar() {
 
   const showMoreButton = overflowItems.length > 0 || isOwnAgent;
 
+  const [animated, setAnimated] = useState(false);
+  const [exitingTabs, setExitingTabs] = useState<typeof TAB_ICONS>([]);
+  const prevVisibleIdsRef = useRef<string[] | null>(null);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnimated(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    const currentIds = visibleItems.map((t) => t.id);
+    const prevIds = prevVisibleIdsRef.current;
+    prevVisibleIdsRef.current = currentIds;
+    if (!animated || !prevIds) return;
+
+    const removed = TAB_ICONS.filter(
+      (t) => prevIds.includes(t.id) && !currentIds.includes(t.id),
+    );
+    if (removed.length > 0) {
+      clearTimeout(exitTimerRef.current);
+      setExitingTabs(removed);
+      exitTimerRef.current = setTimeout(() => setExitingTabs([]), 120);
+    }
+  }, [visibleItems, animated]);
+
   const menuItems = useMemo<MenuItem[]>(() => {
     const overflow: MenuItem[] = overflowItems.map(({ id, icon, title }) => ({
       id,
@@ -87,7 +113,7 @@ export function AgentSidekickTaskbar() {
 
   return (
     <div ref={containerRef} className={styles.sidekickTaskbar}>
-      <div className={styles.sidekickTabBar}>
+      <div className={styles.sidekickTabBar} data-animated={animated || undefined}>
         {visibleItems.map(({ id, icon, title }) => (
           <Button
             key={id}
@@ -101,6 +127,11 @@ export function AgentSidekickTaskbar() {
             aria-pressed={activeTab === id}
             selected={activeTab === id}
           />
+        ))}
+        {exitingTabs.map(({ id, icon }) => (
+          <span key={`exit-${id}`} className={styles.tabExit}>
+            <Button variant="ghost" size="sm" iconOnly icon={icon} aria-hidden />
+          </span>
         ))}
       </div>
       {showMoreButton && (
