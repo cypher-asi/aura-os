@@ -156,7 +156,7 @@ export function ProcessCanvas({ processId, processNodes, processConnections }: P
           className="process-flow-controls"
         />
         <MiniMap
-          style={{ background: "var(--color-bg-surface, #1a1a2e)", border: "1px solid var(--color-border, #333)", borderRadius: 8 }}
+          style={{ background: "var(--color-bg-surface, #1a1a2e)", border: "1px solid var(--color-border, #333)", borderRadius: 0 }}
           nodeColor="var(--color-text-muted, #666)"
           maskColor="rgba(0,0,0,0.5)"
         />
