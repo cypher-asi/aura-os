@@ -12,3 +12,8 @@
 .process-flow-controls button svg {
   fill: var(--color-text, #eee) !important;
 }
+
+.react-flow__selection {
+  border: 1px solid var(--color-success, #4c9) !important;
+  background: color-mix(in srgb, var(--color-success, #4c9) 12%, transparent) !important;
+}
