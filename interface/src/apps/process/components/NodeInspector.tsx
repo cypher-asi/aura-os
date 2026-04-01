@@ -260,7 +260,7 @@ export function NodeInspector({ node, onClose }: NodeInspectorProps) {
           {node.node_type === "delay" && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Delay</span>
-              <Text variant="secondary" size="sm">{cfg?.delay_seconds ?? 60} seconds</Text>
+              <Text variant="secondary" size="sm">{String(cfg?.delay_seconds ?? 60)} seconds</Text>
             </div>
           )}
 
