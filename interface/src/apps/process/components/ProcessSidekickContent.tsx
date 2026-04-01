@@ -5,6 +5,7 @@ import { Button, Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { EmptyState } from "../../../components/EmptyState";
+import { NodeInspector } from "./NodeInspector";
 import {
   StatCard,
   SectionHeader,
@@ -164,14 +165,17 @@ function RunPreview({ run, onClose }: { run: ProcessRun; onClose: () => void }) 
 
 export function ProcessSidekickContent() {
   const { processId } = useParams<{ processId: string }>();
-  const { activeTab, previewRun, viewRun, closePreview } = useProcessSidekickStore(
-    useShallow((s) => ({
-      activeTab: s.activeTab,
-      previewRun: s.previewRun,
-      viewRun: s.viewRun,
-      closePreview: s.closePreview,
-    })),
-  );
+  const { activeTab, previewRun, selectedNode, viewRun, closePreview, closeNodeInspector } =
+    useProcessSidekickStore(
+      useShallow((s) => ({
+        activeTab: s.activeTab,
+        previewRun: s.previewRun,
+        selectedNode: s.selectedNode,
+        viewRun: s.viewRun,
+        closePreview: s.closePreview,
+        closeNodeInspector: s.closeNodeInspector,
+      })),
+    );
 
   const runs = useProcessStore((s) => (processId ? s.runs[processId] ?? EMPTY_RUNS : EMPTY_RUNS));
 
@@ -179,6 +183,16 @@ export function ProcessSidekickContent() {
     return (
       <div className={styles.sidekickBody}>
         <EmptyState>Select a process</EmptyState>
+      </div>
+    );
+  }
+
+  if (selectedNode) {
+    return (
+      <div className={styles.sidekickBody}>
+        <div className={styles.previewOverlay}>
+          <NodeInspector node={selectedNode} onClose={closeNodeInspector} />
+        </div>
       </div>
     );
   }
