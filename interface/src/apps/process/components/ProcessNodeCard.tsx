@@ -40,9 +40,9 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
   return (
     <div
       style={{
-        background: "var(--color-bg-surface, #1a1a2e)",
-        border: `2px solid ${selected ? color : "var(--color-border, #333)"}`,
-        borderRadius: 12,
+        background: "var(--color-bg, #0d0d1a)",
+        border: `1px solid ${selected ? color : "var(--color-border)"}`,
+        borderRadius: 0,
         padding: "12px 16px",
         minWidth: 180,
         maxWidth: 240,
