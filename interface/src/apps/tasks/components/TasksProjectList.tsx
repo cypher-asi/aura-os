@@ -6,7 +6,7 @@ import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
 import { Avatar } from "../../../components/Avatar";
 import { useProfileStatusStore } from "../../../stores/profile-status-store";
-import { useSidebarSearch } from "../../../context/SidebarSearchContext";
+import { useAppUIStore } from "../../../stores/app-ui-store";
 import { useProjectListData } from "../../../components/ProjectList/useProjectListData";
 import { ProjectListModals } from "../../../components/ProjectList/ProjectListModals";
 
@@ -45,25 +45,17 @@ function getLastSelectedId(ids: Iterable<string>): string | null {
 }
 
 function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>) {
-  const { setAction } = useSidebarSearch();
+  const setAction = useAppUIStore((s) => s.setSidebarAction);
   const {
     projectId, agentsByProject, setAgentsByProject, refreshProjectAgents,
-    openNewProjectModal, sidekick, agentInstanceId,
+    openNewProjectModal, sidekick: { onAgentInstanceUpdate }, agentInstanceId,
   } = data;
 
   const recoveredAgentRef = useRef<string | null>(null);
-  const actionEffectRunsRef = useRef(0);
 
   useEffect(() => {
-    actionEffectRunsRef.current += 1;
-    // #region agent log
-    fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "300c7e" }, body: JSON.stringify({ sessionId: "300c7e", runId: "run1", hypothesisId: "H1", location: "TasksProjectList.tsx:61", message: "Tasks sidebar action effect run", data: { runs: actionEffectRunsRef.current, hasProjectId: Boolean(projectId), hasAgent: Boolean(agentInstanceId) }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
     setAction("tasks", <ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />);
     return () => {
-      // #region agent log
-      fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "300c7e" }, body: JSON.stringify({ sessionId: "300c7e", runId: "run1", hypothesisId: "H1", location: "TasksProjectList.tsx:65", message: "Tasks sidebar action cleanup", data: { runs: actionEffectRunsRef.current }, timestamp: Date.now() }) }).catch(() => {});
-      // #endregion
       setAction("tasks", null);
     };
   }, [openNewProjectModal, setAction]);
@@ -88,7 +80,7 @@ function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>)
   }, [agentInstanceId, agentsByProject, projectId, refreshProjectAgents]);
 
   useEffect(() => {
-    return sidekick.onAgentInstanceUpdate((instance) => {
+    return onAgentInstanceUpdate((instance) => {
       setAgentsByProject((prev) => {
         const pid = instance.project_id;
         const list = prev[pid];
@@ -103,7 +95,7 @@ function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>)
         };
       });
     });
-  }, [setAgentsByProject, sidekick]);
+  }, [setAgentsByProject, onAgentInstanceUpdate]);
 }
 
 const STATUS_MAP: Record<string, string> = {
@@ -186,7 +178,7 @@ export function TasksProjectList() {
   useTasksProjectListEffects(data);
 
   const {
-    projectId, agentInstanceId, sidekick,
+    projectId, agentInstanceId, sidekick: { closePreview, streamingAgentInstanceId },
     projects, loadingProjects, agentsByProject,
     automatingProjectId, automatingAgentInstanceId,
     searchQuery,
@@ -216,7 +208,7 @@ export function TasksProjectList() {
   const explorerData: ExplorerNode[] = useMemo(
     () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap, machineTypesMap)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- track specific fields of `data` to avoid recomputing every render
-    [projects, agentsByProject, automatingProjectId, automatingAgentInstanceId, sidekick.streamingAgentInstanceId, actions.handleAddAgent, statusMap, machineTypesMap],
+    [projects, agentsByProject, automatingProjectId, automatingAgentInstanceId, streamingAgentInstanceId, actions.handleAddAgent, statusMap, machineTypesMap],
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
@@ -232,24 +224,24 @@ export function TasksProjectList() {
     if (!id) return;
 
     if (projectMap.has(id)) {
-      if (id !== projectId) sidekick.closePreview();
+      if (id !== projectId) closePreview();
       navigate(`/tasks/${id}`);
     } else if (agentMeta.has(id)) {
       const { projectId: pid } = agentMeta.get(id)!;
-      if (pid !== projectId) sidekick.closePreview();
+      if (pid !== projectId) closePreview();
       navigate(`/tasks/${pid}/agents/${id}`);
     }
-  }, [projectMap, agentMeta, navigate, projectId, sidekick]);
+  }, [projectMap, agentMeta, navigate, projectId, closePreview]);
 
   const handleExpand = useCallback((nodeId: string, expanded: boolean) => {
     const isNested = Boolean(agentInstanceId);
     if (!expanded && nodeId === projectId && isNested) {
-      sidekick.closePreview();
+      closePreview();
       return;
     }
     if (expanded && projectMap.has(nodeId) && !(nodeId in agentsByProject))
       void refreshProjectAgents(nodeId);
-  }, [agentInstanceId, agentsByProject, projectId, projectMap, refreshProjectAgents, sidekick]);
+  }, [agentInstanceId, agentsByProject, projectId, projectMap, refreshProjectAgents, closePreview]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== "F2") return;

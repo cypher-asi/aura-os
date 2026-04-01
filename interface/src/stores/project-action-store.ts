@@ -21,7 +21,7 @@ interface ProjectActionState {
 export const useProjectActionStore = create<ProjectActionState>()((set) => ({
   actions: null,
   register: (a) => set({ actions: a }),
-  unregister: () => set({ actions: null }),
+  unregister: () => set((s) => (s.actions === null ? s : { actions: null })),
 }));
 
 export function useProjectContext(): ProjectActions | null {

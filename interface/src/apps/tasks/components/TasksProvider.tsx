@@ -86,7 +86,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       initialTasks,
     });
 
-    return () => unregister();
+    return () => {
+      unregister();
+    };
   }, [displayProject, initialSpecs, initialTasks, navigate, register, setProjectSafe, unregister]);
 
   return <>{children}</>;

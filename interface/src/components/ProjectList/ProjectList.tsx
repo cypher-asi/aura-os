@@ -6,7 +6,7 @@ import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
 import { Bot, FolderGit2, Gauge, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
 import { Avatar } from "../Avatar";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
-import { useSidebarSearch } from "../../context/SidebarSearchContext";
+import { useAppUIStore } from "../../stores/app-ui-store";
 import {
   getMobileProjectDestination,
   projectRootPath,
@@ -58,10 +58,10 @@ function getLastSelectedId(ids: Iterable<string>): string | null {
 }
 
 function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
-  const { setAction } = useSidebarSearch();
+  const setAction = useAppUIStore((s) => s.setSidebarAction);
   const navigate = useNavigate();
   const {
-    projectId, agentInstanceId, location, sidekick,
+    projectId, agentInstanceId, location, sidekick: { onAgentInstanceUpdate },
     agentsByProject, setAgentsByProject, refreshProjectAgents,
     openNewProjectModal, isMobileLayout,
   } = data;
@@ -90,7 +90,7 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   }, [agentInstanceId, agentsByProject, projectId, refreshProjectAgents]);
 
   useEffect(() => {
-    return sidekick.onAgentInstanceUpdate((instance) => {
+    return onAgentInstanceUpdate((instance) => {
       setAgentsByProject((prev) => {
         const pid = instance.project_id;
         const list = prev[pid];
@@ -98,7 +98,7 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
         return { ...prev, [pid]: list.map((s) => s.agent_instance_id === instance.agent_instance_id ? { ...s, name: instance.name, status: instance.status, updated_at: instance.updated_at } : s) };
       });
     });
-  }, [setAgentsByProject, sidekick]);
+  }, [setAgentsByProject, onAgentInstanceUpdate]);
 
   useEffect(() => {
     if (!projectId || agentInstanceId || isMobileLayout) return;
@@ -194,7 +194,7 @@ export function ProjectList() {
   useProjectListEffects(data);
 
   const {
-    projectId, agentInstanceId, location, sidekick,
+    projectId, agentInstanceId, location, sidekick: { closePreview },
     projects, loadingProjects, agentsByProject,
     searchQuery, isMobileLayout,
     actions, projectMap, agentMeta, refreshProjectAgents,
@@ -219,9 +219,11 @@ export function ProjectList() {
     if (remoteAgents.length > 0) registerRemote(remoteAgents);
   }, [agentsByProject, registerAgents, registerRemote]);
 
+  const { automatingProjectId, automatingAgentInstanceId, sidekick: { streamingAgentInstanceId }, actions: { handleAddAgent }, isMobileLayout: isMobile } = data;
   const explorerData: ExplorerNode[] = useMemo(
     () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap, machineTypesMap)),
-    [projects, data, statusMap, machineTypesMap],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- track specific fields of `data` to avoid recomputing every render
+    [projects, agentsByProject, automatingProjectId, automatingAgentInstanceId, streamingAgentInstanceId, handleAddAgent, isMobile, statusMap, machineTypesMap],
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
@@ -242,7 +244,7 @@ export function ProjectList() {
     const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files") || location.pathname.endsWith("/stats");
 
     if (projectMap.has(id)) {
-      if (id !== projectId) sidekick.closePreview();
+      if (id !== projectId) closePreview();
       if (isMobileLayout) {
         if (id === projectId && isNested) { navigate(projectRootPath(id)); return; }
         if (mobileDestination === "tasks") { navigate(projectWorkRoute(id)); return; }
@@ -260,24 +262,24 @@ export function ProjectList() {
       }
     } else if (id.startsWith("execution:")) {
       const pid = id.slice("execution:".length);
-      if (pid !== projectId) sidekick.closePreview();
+      if (pid !== projectId) closePreview();
       navigate(projectWorkRoute(pid));
     } else if (agentMeta.has(id)) {
       const { projectId: pid } = agentMeta.get(id)!;
-      if (pid !== projectId) sidekick.closePreview();
+      if (pid !== projectId) closePreview();
       navigate(`/projects/${pid}/agents/${id}`);
     }
-  }, [projectMap, agentMeta, agentsByProject, agentInstanceId, isMobileLayout, location.pathname, navigate, projectId, sidekick]);
+  }, [projectMap, agentMeta, agentsByProject, agentInstanceId, isMobileLayout, location.pathname, navigate, projectId, closePreview]);
 
   const handleExpand = useCallback((nodeId: string, expanded: boolean) => {
     const isNested = Boolean(agentInstanceId) || location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/files") || location.pathname.endsWith("/stats");
     if (!expanded && nodeId === projectId && isNested) {
-      sidekick.closePreview();
+      closePreview();
       if (isMobileLayout) navigate(`/projects/${nodeId}`);
       return;
     }
     if (expanded && projectMap.has(nodeId) && !(nodeId in agentsByProject)) void refreshProjectAgents(nodeId);
-  }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId, projectMap, refreshProjectAgents, sidekick]);
+  }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId, projectMap, refreshProjectAgents, closePreview]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key !== "F2") return;

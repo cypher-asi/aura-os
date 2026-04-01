@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import type { AgentInstance } from "../../types";
-import { useSidebarSearch } from "../../context/SidebarSearchContext";
+import { useAppUIStore } from "../../stores/app-ui-store";
 import { useLoopStatus } from "../../hooks/use-loop-status";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
@@ -11,7 +11,13 @@ import { useProjectListActions } from "../../hooks/use-project-list-actions";
 export function useProjectListData() {
   const { projectId, agentInstanceId } = useParams();
   const location = useLocation();
-  const sidekick = useSidekick();
+  const closePreview = useSidekickStore((s) => s.closePreview);
+  const onAgentInstanceUpdate = useSidekickStore((s) => s.onAgentInstanceUpdate);
+  const streamingAgentInstanceId = useSidekickStore((s) => s.streamingAgentInstanceId);
+  const sidekick = useMemo(
+    () => ({ closePreview, onAgentInstanceUpdate, streamingAgentInstanceId }),
+    [closePreview, onAgentInstanceUpdate, streamingAgentInstanceId],
+  );
   const {
     projects,
     loadingProjects,
@@ -21,7 +27,7 @@ export function useProjectListData() {
     openNewProjectModal,
   } = useProjectsList();
 
-  const { query: searchQuery } = useSidebarSearch();
+  const searchQuery = useAppUIStore((s) => s.sidebarQuery);
   const { isMobileLayout } = useAuraCapabilities();
   const { automatingProjectId, automatingAgentInstanceId } = useLoopStatus(agentInstanceId);
   const actions = useProjectListActions();
