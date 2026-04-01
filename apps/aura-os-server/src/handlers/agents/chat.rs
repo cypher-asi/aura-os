@@ -13,7 +13,7 @@ use tracing::{info, warn};
 type SseStream = Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
 type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
 
-use aura_os_core::{Agent, AgentId, AgentInstanceId, ChatRole, HarnessMode, ProjectId, SessionEvent};
+use aura_os_core::{Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId, SessionEvent};
 use aura_os_link::{
     ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage,
 };
@@ -411,6 +411,88 @@ pub fn session_events_to_conversation_history(events: &[SessionEvent]) -> Vec<Co
             })
         })
         .collect()
+}
+
+/// Reconstruct conversation history in Claude API format from stored
+/// `SessionEvent`s. Unlike `session_events_to_conversation_history` (which
+/// only keeps text), this preserves tool_use / tool_result content blocks so
+/// the super agent can resume multi-turn tool conversations after a cold start.
+fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_json::Value> {
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+    let mut pending_tool_results: Vec<serde_json::Value> = Vec::new();
+
+    for evt in events {
+        match evt.role {
+            ChatRole::User => {
+                if !pending_tool_results.is_empty() {
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": pending_tool_results,
+                    }));
+                    pending_tool_results = Vec::new();
+                }
+                if !evt.content.is_empty() {
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": evt.content,
+                    }));
+                }
+            }
+            ChatRole::Assistant => {
+                if let Some(ref blocks) = evt.content_blocks {
+                    let mut api_blocks: Vec<serde_json::Value> = Vec::new();
+                    for block in blocks {
+                        match block {
+                            ChatContentBlock::Text { text } => {
+                                api_blocks.push(serde_json::json!({
+                                    "type": "text",
+                                    "text": text,
+                                }));
+                            }
+                            ChatContentBlock::ToolUse { id, name, input } => {
+                                api_blocks.push(serde_json::json!({
+                                    "type": "tool_use",
+                                    "id": id,
+                                    "name": name,
+                                    "input": input,
+                                }));
+                            }
+                            ChatContentBlock::ToolResult { tool_use_id, content, is_error } => {
+                                pending_tool_results.push(serde_json::json!({
+                                    "type": "tool_result",
+                                    "tool_use_id": tool_use_id,
+                                    "content": content,
+                                    "is_error": is_error.unwrap_or(false),
+                                }));
+                            }
+                            _ => {}
+                        }
+                    }
+                    if !api_blocks.is_empty() {
+                        messages.push(serde_json::json!({
+                            "role": "assistant",
+                            "content": api_blocks,
+                        }));
+                    }
+                } else if !evt.content.is_empty() {
+                    messages.push(serde_json::json!({
+                        "role": "assistant",
+                        "content": evt.content,
+                    }));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if !pending_tool_results.is_empty() {
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": pending_tool_results,
+        }));
+    }
+
+    messages
 }
 
 async fn find_matching_project_agents(
@@ -838,16 +920,26 @@ async fn handle_super_agent_stream(
     let tool_defs = sas.tool_registry.tool_definitions(&domain_tools);
 
     let session_key = format!("super_agent:{agent_id}");
-    let conversation_history: Vec<serde_json::Value> =
-        if !has_live_session(state, &session_key) {
-            let stored = aggregate_agent_events_from_storage(state, &agent_id, jwt).await;
-            session_events_to_conversation_history(&stored)
-                .into_iter()
-                .map(|m| serde_json::json!({ "role": m.role, "content": m.content }))
-                .collect()
+
+    // Load conversation history: prefer in-memory cache (full Claude API
+    // format with tool blocks), fall back to storage-based reconstruction
+    // for cold starts (e.g. after server restart).
+    let conversation_history: Vec<serde_json::Value> = {
+        let cache = state.super_agent_messages.lock().await;
+        if let Some(cached) = cache.get(&session_key) {
+            info!(%agent_id, cached_messages = cached.len(), "super agent: loaded conversation from in-memory cache");
+            cached.clone()
         } else {
-            Vec::new()
-        };
+            drop(cache);
+            let stored = aggregate_agent_events_from_storage(state, &agent_id, jwt).await;
+            if stored.is_empty() {
+                Vec::new()
+            } else {
+                info!(%agent_id, stored_events = stored.len(), "super agent: reconstructing conversation from storage (cold start)");
+                session_events_to_super_agent_history(&stored)
+            }
+        }
+    };
 
     let persist_ctx =
         setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt).await;
@@ -877,8 +969,11 @@ async fn handle_super_agent_stream(
     );
 
     let content_for_run = user_content.clone();
+    let messages_cache = state.super_agent_messages.clone();
+    let cache_key = session_key.clone();
     tokio::spawn(async move {
-        stream_handle.run(content_for_run).await;
+        let messages = stream_handle.run(content_for_run).await;
+        messages_cache.lock().await.insert(cache_key, messages);
     });
 
     if let (Some(pctx), Some(prx)) = (persist_ctx, persist_rx) {
