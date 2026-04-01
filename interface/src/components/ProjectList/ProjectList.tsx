@@ -300,7 +300,7 @@ export function ProjectList() {
   if (!loadingProjects && projects.length === 0) {
     return (
       <div className={styles.root}>
-        <PageEmptyState icon={<FolderGit2 size={32} />} title="No projects yet" description="Open an existing project from this team, or create a linked project from the desktop app." />
+        <PageEmptyState icon={<FolderGit2 size={32} />} title="No projects yet" description="Open an existing project or create a linked one from the desktop app." />
       </div>
     );
   }

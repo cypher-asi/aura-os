@@ -52,10 +52,20 @@ function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>)
   } = data;
 
   const recoveredAgentRef = useRef<string | null>(null);
+  const actionEffectRunsRef = useRef(0);
 
   useEffect(() => {
+    actionEffectRunsRef.current += 1;
+    // #region agent log
+    fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "300c7e" }, body: JSON.stringify({ sessionId: "300c7e", runId: "run1", hypothesisId: "H1", location: "TasksProjectList.tsx:61", message: "Tasks sidebar action effect run", data: { runs: actionEffectRunsRef.current, hasProjectId: Boolean(projectId), hasAgent: Boolean(agentInstanceId) }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
     setAction("tasks", <ButtonPlus onClick={openNewProjectModal} size="sm" title="New Project" />);
-    return () => setAction("tasks", null);
+    return () => {
+      // #region agent log
+      fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "300c7e" }, body: JSON.stringify({ sessionId: "300c7e", runId: "run1", hypothesisId: "H1", location: "TasksProjectList.tsx:65", message: "Tasks sidebar action cleanup", data: { runs: actionEffectRunsRef.current }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
+      setAction("tasks", null);
+    };
   }, [openNewProjectModal, setAction]);
 
   useEffect(() => {
@@ -265,7 +275,7 @@ export function TasksProjectList() {
         <PageEmptyState
           icon={<FolderGit2 size={32} />}
           title="No projects yet"
-          description="Open an existing project from this team, or create a linked project from the desktop app."
+          description="Open an existing project or create a linked one from the desktop app."
         />
       </div>
     );
