@@ -56,17 +56,19 @@ export function ImageCropModal({
       size="md"
       footer={
         <div className={styles.footer}>
-          {onChangeImage && (
-            <Button variant="ghost" onClick={onChangeImage} className={styles.changeBtn}>
+          <div>{onChangeImage && (
+            <Button variant="ghost" onClick={onChangeImage}>
               Change Image
             </Button>
-          )}
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleConfirm}>
-            Confirm
-          </Button>
+          )}</div>
+          <div className={styles.footerEnd}>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleConfirm}>
+              Confirm
+            </Button>
+          </div>
         </div>
       }
     >
