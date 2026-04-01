@@ -62,10 +62,26 @@ const ADD_NODE_TYPES: { type: ProcessNodeType; label: string }[] = [
   { type: "merge", label: "Merge" },
 ];
 
+const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
+  action: <Play size={14} />,
+  condition: <GitBranch size={14} />,
+  artifact: <FileOutput size={14} />,
+  delay: <Timer size={14} />,
+  merge: <Merge size={14} />,
+};
+
+const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
+  id: item.type,
+  label: item.label,
+  icon: NODE_MENU_ICONS[item.type],
+}));
+
 export function ProcessCanvas({ processId, processNodes, processConnections }: ProcessCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes));
   const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections));
-  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const ctxMenuRef = useRef<HTMLDivElement>(null);
+  const { screenToFlowPosition } = useReactFlow();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
 
@@ -98,23 +114,48 @@ export function ProcessCanvas({ processId, processNodes, processConnections }: P
 
   const handleAddNode = useCallback(
     async (type: ProcessNodeType, label: string) => {
-      setShowAddMenu(false);
-      const yPositions = processNodes.map((n) => n.position_y);
-      const maxY = yPositions.length > 0 ? Math.max(...yPositions) : 0;
+      if (!ctxMenu) return;
+      const flowPos = screenToFlowPosition({ x: ctxMenu.x, y: ctxMenu.y });
+      const snappedX = Math.round(flowPos.x / 20) * 20;
+      const snappedY = Math.round(flowPos.y / 20) * 20;
+      setCtxMenu(null);
       try {
         await processApi.createNode(processId, {
           node_type: type,
           label,
-          position_x: 250,
-          position_y: maxY + 120,
+          position_x: snappedX,
+          position_y: snappedY,
         });
         fetchNodes(processId);
       } catch (e) {
         console.error("Failed to create node:", e);
       }
     },
-    [processId, processNodes, fetchNodes],
+    [processId, ctxMenu, screenToFlowPosition, fetchNodes],
   );
+
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setCtxMenu({ x: event.clientX, y: event.clientY });
+  }, []);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as HTMLElement)) {
+        setCtxMenu(null);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCtxMenu(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [ctxMenu]);
 
   const onNodeDragStop = useCallback(
     async (_: unknown, node: Node) => {
@@ -145,6 +186,10 @@ export function ProcessCanvas({ processId, processNodes, processConnections }: P
         snapGrid={[20, 20]}
         defaultEdgeOptions={{ animated: true }}
         proOptions={{ hideAttribution: true }}
+        selectionOnDrag
+        panOnDrag={[1]}
+        panActivationKeyCode="Shift"
+        selectionKeyCode={null}
         style={{ background: "var(--color-bg, #0d0d1a)" }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--color-border, #222)" />
