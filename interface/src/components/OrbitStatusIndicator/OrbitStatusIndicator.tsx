@@ -74,10 +74,6 @@ export function OrbitStatusIndicator({ project }: OrbitStatusIndicatorProps) {
               <span className={styles.statusValue}>{project.git_repo_url}</span>
             </div>
           )}
-          <div className={styles.statusRow}>
-            <span className={styles.statusLabel}>Local path</span>
-            <span className={styles.statusValue}>{project.linked_folder_path || "—"}</span>
-          </div>
         </div>
       )}
     </div>

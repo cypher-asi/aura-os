@@ -17,17 +17,27 @@ import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { getLinkedWorkspaceRoot, getProjectWorkspaceDisplay, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
+import { getProjectWorkspaceDisplay } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
-function InfoPanel({ project, onClose }: { project: import("../../types").Project; onClose: () => void }) {
-  const workspaceLabel = getProjectWorkspaceDisplay(project) ?? "—";
-  const workspacePath = getProjectWorkspaceRoot(project);
+function InfoPanel({
+  project,
+  workspacePath,
+  remoteAgentId,
+  onClose,
+}: {
+  project: import("../../types").Project;
+  workspacePath?: string;
+  remoteAgentId?: string;
+  onClose: () => void;
+}) {
+  const workspaceLabel = workspacePath ?? getProjectWorkspaceDisplay(project) ?? "—";
   const [openingWorkspace, setOpeningWorkspace] = useState(false);
   const [openWorkspaceError, setOpenWorkspaceError] = useState<string | null>(null);
+  const canOpenWorkspace = Boolean(workspacePath) && !remoteAgentId;
 
   const handleOpenWorkspace = async () => {
-    if (!workspacePath || openingWorkspace) {
+    if (!workspacePath || openingWorkspace || remoteAgentId) {
       return;
     }
     setOpenWorkspaceError(null);
@@ -55,7 +65,7 @@ function InfoPanel({ project, onClose }: { project: import("../../types").Projec
         <span><StatusBadge status={project.current_status} /></span>
         <Text variant="muted" size="sm" as="span">Workspace</Text>
         <span className={styles.infoWorkspaceCell}>
-          {workspacePath ? (
+          {canOpenWorkspace ? (
             <button
               type="button"
               className={styles.infoWorkspaceLink}
@@ -68,6 +78,9 @@ function InfoPanel({ project, onClose }: { project: import("../../types").Projec
           ) : (
             <Text size="sm" as="span">{workspaceLabel}</Text>
           )}
+          {remoteAgentId ? (
+            <Text size="xs" variant="muted" as="span">Attached to remote agent workspace</Text>
+          ) : null}
           {openWorkspaceError ? (
             <Text size="xs" variant="muted" as="span">{openWorkspaceError}</Text>
           ) : null}
@@ -115,7 +128,7 @@ export function SidekickContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
-  const { remoteAgentId, remoteWorkspacePath } = useTerminalTarget({ projectId, agentInstanceId });
+  const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
   const navigate = useNavigate();
   const [fileRefreshKey, setFileRefreshKey] = useState(0);
 
@@ -138,15 +151,22 @@ export function SidekickContent() {
   }
 
   const { project } = ctx;
-  const linkedWorkspaceRoot = getLinkedWorkspaceRoot(project);
   const remoteRoot = remoteWorkspacePath ?? null;
-  const workspaceRoot = remoteAgentId ? remoteRoot : linkedWorkspaceRoot;
-  const canBrowseLocal = features.linkedWorkspace && Boolean(linkedWorkspaceRoot);
+  const localRoot = !remoteAgentId ? (workspacePath ?? null) : null;
+  const workspaceRoot = remoteAgentId ? remoteRoot : localRoot;
+  const canBrowseLocal = features.linkedWorkspace && Boolean(localRoot);
   const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteRoot);
   const canBrowseFiles = canBrowseLocal || canBrowseRemote;
 
   if (showInfo) {
-    return <InfoPanel project={project} onClose={() => toggleInfo("", null)} />;
+    return (
+      <InfoPanel
+        project={project}
+        workspacePath={workspacePath}
+        remoteAgentId={remoteAgentId}
+        onClose={() => toggleInfo("", null)}
+      />
+    );
   }
 
   const searchable = activeTab !== "stats";

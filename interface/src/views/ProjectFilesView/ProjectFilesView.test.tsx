@@ -3,6 +3,7 @@ import { render, screen } from "../../test/render";
 const mockUseProjectContext = vi.fn();
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectsListStore = vi.fn();
+const mockUseTerminalTarget = vi.fn();
 const mockNavigate = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -18,6 +19,10 @@ vi.mock("../../stores/project-action-store", () => ({
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => mockUseTerminalTarget(),
 }));
 
 vi.mock("../../stores/projects-list-store", () => ({
@@ -62,6 +67,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseProjectContext.mockReturnValue({ project });
   mockUseProjectsListStore.mockReturnValue({ projects: [project] });
+  mockUseTerminalTarget.mockReturnValue({
+    remoteAgentId: "remote-agent-1",
+    remoteWorkspacePath: "p/demo-project",
+    workspacePath: "p/demo-project",
+    status: "ready",
+  });
 });
 
 describe("ProjectFilesView", () => {
