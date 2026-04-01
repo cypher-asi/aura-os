@@ -190,7 +190,10 @@ export function ProcessSidekickContent() {
   if (selectedNode) {
     return (
       <div className={styles.sidekickBody}>
-        <div className={styles.previewOverlay}>
+        <div
+          className={styles.previewOverlay}
+          style={{ top: "calc(-1 * var(--control-height-sm, 32px))", zIndex: 20 }}
+        >
           <NodeInspector node={selectedNode} onClose={closeNodeInspector} />
         </div>
       </div>
