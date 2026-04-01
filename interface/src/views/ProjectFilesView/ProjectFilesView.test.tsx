@@ -58,9 +58,6 @@ import { ProjectFilesView } from "./ProjectFilesView";
 const project = {
   project_id: "proj-1",
   name: "Demo Project",
-  linked_folder_path: "p/demo-project",
-  workspace_source: "remote",
-  workspace_display_path: "",
 };
 
 beforeEach(() => {
@@ -82,7 +79,7 @@ describe("ProjectFilesView", () => {
     render(<ProjectFilesView />);
 
     expect(screen.getByText("Files stay on the remote agent")).toBeInTheDocument();
-    expect(screen.getByText("Project path: p/demo-project")).toBeInTheDocument();
+    expect(screen.getByText("Workspace path: p/demo-project")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Agent" })).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });

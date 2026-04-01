@@ -142,7 +142,6 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       org_id: "org-1",
       name: "Demo Project",
       description: "Parity test project",
-      linked_folder_path: "/tmp/demo-project",
       current_status: "active",
       created_at: "2026-03-17T01:00:00.000Z",
       updated_at: "2026-03-17T01:00:00.000Z",
@@ -160,6 +159,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
       system_prompt: "Build features carefully.",
       skills: [],
       icon: null,
+      machine_type: "local",
+      workspace_path: "/tmp/demo-project",
       status: "idle",
       current_task_id: null,
       current_session_id: null,
@@ -388,8 +389,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (projects.some((candidate) => pathname === `/api/projects/${candidate.project_id}/stop-loop`)) return json({ ok: true });
     if (pathname === "/api/log-entries") return json([]);
     if (pathname === "/api/list-directory") {
-      const workspaceRoot = typeof project.linked_folder_path === "string" && project.linked_folder_path.length > 0
-        ? project.linked_folder_path
+      const workspaceRoot = typeof agentInstances[0]?.workspace_path === "string" && agentInstances[0].workspace_path.length > 0
+        ? agentInstances[0].workspace_path
         : "/tmp/demo-project";
       return json({
         ok: true,

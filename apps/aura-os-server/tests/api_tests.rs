@@ -16,9 +16,6 @@ use common::*;
 async fn project_crud() {
     let (app, _, _db) = build_test_app_with_mocks().await;
 
-    // Create a temp dir for the project linked folder
-    let project_dir = tempfile::tempdir().unwrap();
-
     // Create
     let org_id = OrgId::new();
     let req = json_request(
@@ -27,8 +24,7 @@ async fn project_crud() {
         Some(serde_json::json!({
             "org_id": org_id,
             "name": "Test Project",
-            "description": "A test",
-            "linked_folder_path": project_dir.path().to_string_lossy()
+            "description": "A test"
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();
@@ -93,8 +89,7 @@ async fn project_create_invalid_name() {
         Some(serde_json::json!({
             "org_id": org_id,
             "name": "",
-            "description": "desc",
-            "linked_folder_path": "."
+            "description": "desc"
         })),
     );
     let resp = app.clone().oneshot(req).await.unwrap();

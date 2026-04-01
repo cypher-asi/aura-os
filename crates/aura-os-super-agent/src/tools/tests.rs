@@ -257,9 +257,6 @@ mod tests {
             org_id,
             name: "TestProject".into(),
             description: "desc".into(),
-            linked_folder_path: String::new(),
-            workspace_source: None,
-            workspace_display_path: None,
             build_command: None,
             test_command: None,
         };
@@ -284,9 +281,6 @@ mod tests {
             org_id: aura_os_core::OrgId::new(),
             name: "Proj1".into(),
             description: "d".into(),
-            linked_folder_path: String::new(),
-            workspace_source: None,
-            workspace_display_path: None,
             build_command: None,
             test_command: None,
         };
@@ -393,9 +387,6 @@ mod tests {
             org_id: aura_os_core::OrgId::new(),
             name: "ToArchive".into(),
             description: "d".into(),
-            linked_folder_path: String::new(),
-            workspace_source: None,
-            workspace_display_path: None,
             build_command: None,
             test_command: None,
         };

@@ -81,8 +81,6 @@ test("desktop imported projects hide file browsing even with a desktop bridge", 
 
   await mockAuthenticatedApp(page, {
     project: {
-      workspace_source: "imported",
-      linked_folder_path: "",
     },
   });
 

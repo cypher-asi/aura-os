@@ -114,7 +114,6 @@ describe("useProjectListActions", () => {
         org_id: "o-1",
         name: "Updated",
         description: "",
-        linked_folder_path: "",
         current_status: "active",
         created_at: "",
         updated_at: "",

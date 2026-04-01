@@ -46,8 +46,6 @@ const mockProjectContext = {
     project_id: "proj-1",
     name: "Test Project",
     current_status: "active",
-    linked_folder_path: "/test/path",
-    workspace_source: "linked",
     created_at: "2025-01-01T00:00:00Z",
   },
   setProject: vi.fn(),
@@ -78,7 +76,7 @@ vi.mock("../../hooks/use-terminal-target", () => ({
   useTerminalTarget: () => ({
     remoteAgentId: undefined,
     remoteWorkspacePath: undefined,
-    workspacePath: projectCtx?.project?.linked_folder_path ?? undefined,
+    workspacePath: "/test/path",
     status: "ready",
   }),
 }));

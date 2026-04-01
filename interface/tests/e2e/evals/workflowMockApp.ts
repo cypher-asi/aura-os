@@ -296,9 +296,6 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
         org_id: typeof body.org_id === "string" ? body.org_id : state.orgs[0]?.org_id ?? "org-1",
         name,
         description: typeof body.description === "string" ? body.description : scenario.project.description,
-        linked_folder_path: `/tmp/${slugify(name) || projectId}`,
-        workspace_source: imported ? "imported" : "local",
-        workspace_display_path: imported ? "Imported project files" : undefined,
         current_status: "active",
         build_command: typeof body.build_command === "string" ? body.build_command : scenario.project.buildCommand,
         test_command: typeof body.test_command === "string" ? body.test_command : scenario.project.testCommand,
@@ -354,6 +351,10 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
         skills: [],
         icon: null,
         machine_type: template?.machine_type ?? "local",
+        workspace_path:
+          (template?.machine_type ?? "local") === "remote"
+            ? `/home/aura/${slugify(state.projects.find((entry) => entry.project_id === projectId)?.name ?? projectId)}`
+            : `/tmp/${slugify(state.projects.find((entry) => entry.project_id === projectId)?.name ?? projectId)}`,
         status: "idle",
         current_task_id: null,
         current_session_id: null,
@@ -614,10 +615,11 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
 
     if (pathname === "/api/list-directory") {
       const projectId = state.projects[0]?.project_id;
+      const workspaceRoot = state.agentInstances.find((entry) => entry.project_id === projectId)?.workspace_path ?? "/tmp";
       const files = projectId ? state.projectFilesByProject.get(projectId) : null;
       const entries = files
         ? Array.from(files.keys()).map((relativePath) => ({
-            path: `/tmp/${relativePath}`,
+            path: `${workspaceRoot}/${relativePath}`,
             name: relativePath.split("/").pop() ?? relativePath,
             is_dir: false,
           }))

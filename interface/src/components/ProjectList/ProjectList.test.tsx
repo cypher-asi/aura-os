@@ -33,6 +33,10 @@ vi.mock("../../stores/sidekick-store", () => ({
     streamingAgentInstanceId: null,
     onAgentInstanceUpdate: vi.fn(() => vi.fn()),
   }),
+  useSidekickStore: {
+    subscribe: vi.fn(() => vi.fn()),
+    getState: vi.fn(() => ({ streamingAgentInstanceId: null })),
+  },
 }));
 
 const mockActions = {
@@ -134,7 +138,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     org_id: "org-1",
     name: "My Project",
     description: "",
-    linked_folder_path: "",
     current_status: "active",
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
