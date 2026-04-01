@@ -16,11 +16,6 @@ pub struct Project {
     pub org_id: OrgId,
     pub name: String,
     pub description: String,
-    pub linked_folder_path: String,
-    #[serde(default)]
-    pub workspace_source: Option<String>,
-    #[serde(default)]
-    pub workspace_display_path: Option<String>,
     #[serde(default)]
     pub requirements_doc_path: Option<String>,
     pub current_status: ProjectStatus,

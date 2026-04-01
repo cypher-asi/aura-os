@@ -1,7 +1,6 @@
 mod error;
 pub use error::ProjectError;
 
-use std::path::Path;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
@@ -52,11 +51,6 @@ fn network_project_to_core(
             .clone()
             .or_else(|| local.map(|p| p.description.clone()))
             .unwrap_or_default(),
-        linked_folder_path: local
-            .map(|p| p.linked_folder_path.clone())
-            .unwrap_or_else(|| net.folder.clone().unwrap_or_default()),
-        workspace_source: local.and_then(|p| p.workspace_source.clone()),
-        workspace_display_path: local.and_then(|p| p.workspace_display_path.clone()),
         requirements_doc_path: local.and_then(|p| p.requirements_doc_path.clone()),
         current_status: local
             .map(|p| p.current_status)
@@ -169,9 +163,6 @@ pub struct CreateProjectInput {
     pub org_id: OrgId,
     pub name: String,
     pub description: String,
-    pub linked_folder_path: String,
-    pub workspace_source: Option<String>,
-    pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -180,9 +171,6 @@ pub struct CreateProjectInput {
 pub struct UpdateProjectInput {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub linked_folder_path: Option<String>,
-    pub workspace_source: Option<String>,
-    pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
 }
@@ -254,25 +242,12 @@ impl ProjectService {
             ));
         }
 
-        let folder = Path::new(&input.linked_folder_path);
-        if !folder.as_os_str().is_empty() {
-            if let Err(e) = std::fs::create_dir_all(folder) {
-                return Err(ProjectError::InvalidInput(format!(
-                    "failed to create workspace directory {}: {e}",
-                    input.linked_folder_path
-                )));
-            }
-        }
-
         let now = Utc::now();
         let project = Project {
             project_id: ProjectId::new(),
             org_id: input.org_id,
             name: input.name,
             description: input.description,
-            linked_folder_path: input.linked_folder_path,
-            workspace_source: input.workspace_source,
-            workspace_display_path: input.workspace_display_path,
             requirements_doc_path: None,
             current_status: ProjectStatus::Planning,
             build_command: sanitize_command_option(input.build_command),
@@ -331,15 +306,6 @@ impl ProjectService {
         }
         if let Some(desc) = input.description {
             project.description = desc;
-        }
-        if let Some(path) = input.linked_folder_path {
-            project.linked_folder_path = path;
-        }
-        if let Some(source) = input.workspace_source {
-            project.workspace_source = Some(source);
-        }
-        if let Some(display_path) = input.workspace_display_path {
-            project.workspace_display_path = Some(display_path);
         }
         if input.build_command.is_some() {
             project.build_command = sanitize_command_option(input.build_command);
@@ -435,15 +401,10 @@ impl ProjectService {
         }
 
         let jwt = self.get_jwt()?;
-        let folder = input
-            .linked_folder_path
-            .clone()
-            .filter(|path| !path.is_empty());
-
         let net_req = aura_os_network::UpdateProjectRequest {
             name: input.name.clone(),
             description: input.description.clone(),
-            folder,
+            folder: None,
             git_repo_url: None,
             git_branch: None,
             orbit_base_url: None,

@@ -5,16 +5,13 @@ use crate::entities::*;
 use crate::enums::*;
 use crate::ids::*;
 
-pub fn make_project(name: &str, folder: &str) -> Project {
+pub fn make_project(name: &str, _folder: &str) -> Project {
     let now = Utc::now();
     Project {
         project_id: ProjectId::new(),
         org_id: OrgId::new(),
         name: name.to_string(),
         description: String::new(),
-        linked_folder_path: folder.to_string(),
-        workspace_source: None,
-        workspace_display_path: None,
         requirements_doc_path: None,
         current_status: ProjectStatus::Active,
         build_command: None,

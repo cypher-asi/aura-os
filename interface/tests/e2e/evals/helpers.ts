@@ -170,7 +170,11 @@ interface BenchmarkTaskOutput {
 
 interface ImportedProject {
   project_id: string;
-  linked_folder_path?: string;
+}
+
+interface ImportedAgentInstance {
+  agent_instance_id: string;
+  workspace_path?: string | null;
 }
 
 interface BenchmarkOrg {
@@ -915,12 +919,12 @@ export async function runLiveBenchmarkScenario(
       step: "create_project",
       summary: `Imported project "${projectName}"`,
       durationMs: latestStepDuration(results),
-      details: { projectId: project.project_id, linkedFolderPath: project.linked_folder_path ?? null },
+      details: { projectId: project.project_id },
     });
     await maybeShowDemoPage(page, `/projects/${project.project_id}`);
 
     agentInstance = await timedStep(results, "create_agent_instance", () =>
-      apiJson<{ agent_instance_id: string }>(
+      apiJson<ImportedAgentInstance>(
         page,
         "POST",
         `/api/projects/${project.project_id}/agents`,
@@ -1059,8 +1063,14 @@ export async function runLiveBenchmarkScenario(
         details: { skipped: true, machineType: agentMachineType },
       });
     } else {
+      const workspacePath = agentInstance.workspace_path?.trim();
+      if (!workspacePath) {
+        throw new Error(
+          `Agent instance ${agentInstance.agent_instance_id} did not report a workspace path`,
+        );
+      }
       artifactChecks = await timedStep(results, "verify_artifacts", () =>
-        verifyArtifactFiles(page, project.linked_folder_path ?? "", scenario.project.artifactChecks, {
+        verifyArtifactFiles(page, workspacePath, scenario.project.artifactChecks, {
           machineType: agentMachineType,
           remoteAgentId: agentTemplate?.agent_id,
         }),
@@ -1149,7 +1159,7 @@ export async function runLiveBenchmarkScenario(
         agentId: agentTemplate.agent_id,
         projectId: project.project_id,
         agentInstanceId: agentInstance.agent_instance_id,
-        linkedFolderPath: project.linked_folder_path ?? null,
+        workspacePath: agentInstance.workspace_path ?? null,
       },
       counts: {
         specs: specs.length,

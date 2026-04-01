@@ -2,6 +2,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use futures_util::future::join_all;
 use serde::Serialize;
+use std::time::Duration;
 
 use aura_os_core::{Agent, AgentId, HarnessMode};
 
@@ -12,6 +13,9 @@ use crate::state::{AppState, AuthJwt};
 
 use super::conversions::agent_from_network;
 use tracing::{info, warn};
+
+const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
+const SWARM_AGENT_READY_TIMEOUT: Duration = Duration::from_secs(90);
 
 pub(crate) async fn create_agent(
     State(state): State<AppState>,
@@ -52,7 +56,7 @@ pub(crate) async fn create_agent(
             )
         })?;
 
-        let vm_id = provision_swarm_agent(
+        let provisioned = provision_swarm_agent(
             client.http_client(),
             swarm_base_url,
             &jwt,
@@ -60,12 +64,6 @@ pub(crate) async fn create_agent(
             &agent.name,
         )
         .await?;
-
-        info!(
-            agent_id = %agent_id_str,
-            vm_id = %vm_id,
-            "Swarm VM provisioned for remote agent"
-        );
 
         let update_req = aura_os_network::UpdateAgentRequest {
             name: None,
@@ -76,7 +74,7 @@ pub(crate) async fn create_agent(
             icon: None,
             harness: None,
             machine_type: None,
-            vm_id: Some(vm_id.clone()),
+            vm_id: Some(provisioned.vm_id.clone()),
         };
 
         let updated_net_agent = client
@@ -94,6 +92,47 @@ pub(crate) async fn create_agent(
             })?;
 
         agent = agent_from_network(&updated_net_agent);
+
+        info!(
+            agent_id = %agent_id_str,
+            vm_id = %provisioned.vm_id,
+            "Swarm VM provisioned for remote agent"
+        );
+
+        if !matches!(provisioned.status.as_str(), "running" | "idle") {
+            match wait_for_swarm_agent_ready(
+                client.http_client(),
+                swarm_base_url,
+                &jwt,
+                &provisioned.agent_id,
+            )
+            .await
+            {
+                Ok(()) => {}
+                Err(SwarmAgentReadyError::Timeout) => {
+                    warn!(
+                        agent_id = %agent_id_str,
+                        vm_id = %provisioned.vm_id,
+                        "Remote agent is still provisioning after create; returning created agent to avoid duplicate retries"
+                    );
+                }
+                Err(SwarmAgentReadyError::ErrorState) => {
+                    return Err(ApiError::bad_gateway(format!(
+                        "remote agent {agent_id_str} was created but entered an error state"
+                    )));
+                }
+                Err(SwarmAgentReadyError::Transport(message)) => {
+                    return Err(ApiError::bad_gateway(format!(
+                        "remote agent {agent_id_str} was created but readiness checks failed: {message}"
+                    )));
+                }
+                Err(SwarmAgentReadyError::Parse(message)) => {
+                    return Err(ApiError::internal(format!(
+                        "remote agent {agent_id_str} was created but readiness response could not be parsed: {message}"
+                    )));
+                }
+            }
+        }
     }
 
     Ok(Json(agent))
@@ -105,7 +144,7 @@ async fn provision_swarm_agent(
     jwt: &str,
     agent_id: &str,
     agent_name: &str,
-) -> ApiResult<String> {
+) -> ApiResult<ProvisionedSwarmAgent> {
     let url = format!("{}/v1/agents", swarm_base_url);
 
     let body = serde_json::json!({
@@ -144,11 +183,78 @@ async fn provision_swarm_agent(
         ))
     })?;
 
-    let vm_id = swarm_resp
-        .pod_id
-        .unwrap_or_else(|| swarm_resp.agent_id.clone());
+    Ok(ProvisionedSwarmAgent {
+        agent_id: swarm_resp.agent_id.clone(),
+        vm_id: swarm_resp
+            .pod_id
+            .unwrap_or_else(|| swarm_resp.agent_id.clone()),
+        status: swarm_resp.status,
+    })
+}
 
-    Ok(vm_id)
+struct ProvisionedSwarmAgent {
+    agent_id: String,
+    vm_id: String,
+    status: String,
+}
+
+#[derive(serde::Deserialize)]
+struct SwarmAgentStateResponse {
+    state: String,
+}
+
+async fn wait_for_swarm_agent_ready(
+    http: &reqwest::Client,
+    swarm_base_url: &str,
+    jwt: &str,
+    agent_id: &str,
+) -> Result<(), SwarmAgentReadyError> {
+    let url = format!("{}/v1/agents/{agent_id}/state", swarm_base_url);
+    let deadline = tokio::time::Instant::now() + SWARM_AGENT_READY_TIMEOUT;
+
+    loop {
+        tokio::time::sleep(SWARM_AGENT_READY_POLL_INTERVAL).await;
+
+        if tokio::time::Instant::now() >= deadline {
+            return Err(SwarmAgentReadyError::Timeout);
+        }
+
+        let resp = http
+            .get(&url)
+            .header("Authorization", format!("Bearer {jwt}"))
+            .send()
+            .await
+            .map_err(|e| SwarmAgentReadyError::Transport(e.to_string()))?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            warn!(agent_id = %agent_id, status, body, "Swarm agent state check returned non-success");
+            continue;
+        }
+
+        let state = resp
+            .json::<SwarmAgentStateResponse>()
+            .await
+            .map_err(|e| SwarmAgentReadyError::Parse(e.to_string()))?;
+
+        match state.state.as_str() {
+            "running" | "idle" => return Ok(()),
+            "error" => {
+                return Err(SwarmAgentReadyError::ErrorState);
+            }
+            other => {
+                info!(agent_id = %agent_id, state = %other, "Waiting for remote agent provisioning");
+            }
+        }
+    }
+}
+
+enum SwarmAgentReadyError {
+    Timeout,
+    ErrorState,
+    Transport(String),
+    Parse(String),
 }
 
 pub(crate) async fn list_agents(
@@ -280,7 +386,10 @@ pub(crate) async fn list_agent_project_bindings(
     let all_projects = projects::list_all_projects_from_network(&state, &jwt).await?;
     let agent_id_str = agent_id.to_string();
 
-    let project_ids: Vec<String> = all_projects.iter().map(|p| p.project_id.to_string()).collect();
+    let project_ids: Vec<String> = all_projects
+        .iter()
+        .map(|p| p.project_id.to_string())
+        .collect();
     let futs: Vec<_> = project_ids
         .iter()
         .map(|pid| storage.list_project_agents(pid, &jwt))

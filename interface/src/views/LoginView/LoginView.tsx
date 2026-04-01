@@ -84,6 +84,8 @@ export function LoginView() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
@@ -93,6 +95,8 @@ export function LoginView() {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
+    setName("");
+    setInviteCode("");
     setError(null);
   }
 
@@ -116,9 +120,19 @@ export function LoginView() {
       return;
     }
 
-    if (activeTab === "register" && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
+    if (activeTab === "register") {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (!name.trim()) {
+        setError("Name is required");
+        return;
+      }
+      if (!inviteCode.trim()) {
+        setError("Invite code is required");
+        return;
+      }
     }
 
     setLoading(true);
@@ -126,7 +140,7 @@ export function LoginView() {
       if (activeTab === "signin") {
         await login(email, password);
       } else {
-        await register(email, password);
+        await register(email, password, name.trim(), inviteCode.trim());
       }
       await refreshStatus();
       navigate(from, { replace: true });
@@ -289,14 +303,32 @@ export function LoginView() {
             />
 
             {activeTab === "register" && (
-              <Input
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                type="password"
-                autoComplete="new-password"
-                disabled={loading}
-              />
+              <>
+                <Input
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  type="password"
+                  autoComplete="new-password"
+                  disabled={loading}
+                />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Display name"
+                  type="text"
+                  autoComplete="name"
+                  disabled={loading}
+                />
+                <Input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Invite code"
+                  type="text"
+                  autoComplete="off"
+                  disabled={loading}
+                />
+              </>
             )}
 
             {error && <div className={styles.error}>{error}</div>}

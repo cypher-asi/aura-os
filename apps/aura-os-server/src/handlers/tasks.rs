@@ -1,6 +1,8 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::Duration;
 use tracing::debug;
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SpecId, Task, TaskId, TaskStatus};
@@ -12,6 +14,51 @@ use super::projects_helpers::project_tool_session_config;
 use crate::dto::TransitionTaskRequest;
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
+
+const TASK_RESULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
+const TASK_RESULT_POLL_TIMEOUT: Duration = Duration::from_secs(5);
+
+async fn load_extracted_tasks(
+    state: &AppState,
+    project_id: &ProjectId,
+    jwt: &str,
+) -> ApiResult<Vec<Task>> {
+    let storage = state.require_storage_client()?;
+    let started_at = tokio::time::Instant::now();
+    let mut tasks: Vec<Task> = loop {
+        let storage_tasks = storage
+            .list_tasks(&project_id.to_string(), jwt)
+            .await
+            .map_err(|e| ApiError::internal(format!("listing tasks: {e}")))?;
+        let tasks: Vec<Task> = storage_tasks
+            .into_iter()
+            .filter_map(|s| storage_task_to_task(s).ok())
+            .collect();
+        if !tasks.is_empty() || started_at.elapsed() >= TASK_RESULT_POLL_TIMEOUT {
+            break tasks;
+        }
+        tokio::time::sleep(TASK_RESULT_POLL_INTERVAL).await;
+    };
+    tasks.sort_by_key(|t| t.order_index);
+    Ok(tasks)
+}
+
+fn tasks_changed_since(before: &[Task], after: &[Task]) -> bool {
+    if before.len() != after.len() {
+        return true;
+    }
+
+    let before_versions: HashMap<_, _> = before
+        .iter()
+        .map(|task| (task.task_id, task.updated_at))
+        .collect();
+
+    after.iter().any(|task| {
+        before_versions
+            .get(&task.task_id)
+            .is_none_or(|updated_at| *updated_at != task.updated_at)
+    })
+}
 
 #[derive(Debug, Deserialize, Default)]
 pub(crate) struct TaskQueryParams {
@@ -68,19 +115,32 @@ pub(crate) async fn extract_tasks(
     Path(project_id): Path<ProjectId>,
     Query(params): Query<TaskQueryParams>,
 ) -> ApiResult<Json<Vec<Task>>> {
+    let baseline_tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
     let harness_mode = if let Some(aiid) = params.agent_instance_id {
-        state
+        let instance = state
             .agent_instance_service
             .get_instance(&project_id, &aiid)
             .await
-            .map(|inst| inst.harness_mode())
-            .unwrap_or(HarnessMode::Local)
+            .map_err(|e| match e {
+                aura_os_agents::AgentError::NotFound => {
+                    ApiError::not_found(format!("agent instance {aiid} not found"))
+                }
+                other => ApiError::internal(format!("looking up agent instance {aiid}: {other}")),
+            })?;
+        instance.harness_mode()
     } else {
         HarnessMode::Local
     };
     let harness = state.harness_for(harness_mode);
-    let session_config =
-        project_tool_session_config(&state, &project_id, "task-extract", harness_mode, &jwt);
+    let session_config = project_tool_session_config(
+        &state,
+        &project_id,
+        "task-extract",
+        harness_mode,
+        params.agent_instance_id,
+        &jwt,
+    )
+    .await;
     let session = harness
         .open_session(session_config)
         .await
@@ -89,7 +149,9 @@ pub(crate) async fn extract_tasks(
     session
         .commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
-            content: format!("Extract tasks for project {project_id}"),
+            content: format!(
+                "Extract tasks for project {project_id}. Review the existing specs, then create or update the project's tasks using the available task tools until the task list is populated."
+            ),
             tool_hints: None,
         }))
         .map_err(|e| ApiError::internal(format!("sending task extract command: {e}")))?;
@@ -98,26 +160,23 @@ pub(crate) async fn extract_tasks(
     while let Ok(event) = rx.recv().await {
         match event {
             HarnessOutbound::AssistantMessageEnd(_) => {
-                let storage = state.require_storage_client()?;
-                let storage_tasks = storage
-                    .list_tasks(&project_id.to_string(), &jwt)
-                    .await
-                    .map_err(|e| ApiError::internal(format!("listing tasks: {e}")))?;
-                let mut tasks: Vec<Task> = storage_tasks
-                    .into_iter()
-                    .filter_map(|s| storage_task_to_task(s).ok())
-                    .collect();
-                tasks.sort_by_key(|t| t.order_index);
+                let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
                 return Ok(Json(tasks));
             }
             HarnessOutbound::Error(err) => {
+                let tasks = load_extracted_tasks(&state, &project_id, &jwt).await?;
+                if tasks_changed_since(&baseline_tasks, &tasks) {
+                    return Ok(Json(tasks));
+                }
                 return Err(ApiError::internal(err.message));
             }
             _ => continue,
         }
     }
 
-    Ok(Json(Vec::new()))
+    Err(ApiError::internal(
+        "task extraction stream ended without result",
+    ))
 }
 
 pub(crate) async fn transition_task(
@@ -235,7 +294,10 @@ async fn fetch_task_output_from_storage(
     cached_session_id: Option<&str>,
 ) -> Option<TaskOutputResponse> {
     let task = storage.get_task(&task_id.to_string(), jwt).await.ok()?;
-    let session_id = match task.session_id.or_else(|| cached_session_id.map(String::from)) {
+    let session_id = match task
+        .session_id
+        .or_else(|| cached_session_id.map(String::from))
+    {
         Some(sid) => sid,
         None => {
             debug!(%task_id, "Task has no session_id in storage; cannot fetch persisted output");

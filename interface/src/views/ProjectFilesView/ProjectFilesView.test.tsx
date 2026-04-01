@@ -3,6 +3,7 @@ import { render, screen } from "../../test/render";
 const mockUseProjectContext = vi.fn();
 const mockUseAuraCapabilities = vi.fn();
 const mockUseProjectsListStore = vi.fn();
+const mockUseTerminalTarget = vi.fn();
 const mockNavigate = vi.fn();
 
 vi.mock("@cypher-asi/zui", () => ({
@@ -18,6 +19,10 @@ vi.mock("../../stores/project-action-store", () => ({
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => mockUseAuraCapabilities(),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => mockUseTerminalTarget(),
 }));
 
 vi.mock("../../stores/projects-list-store", () => ({
@@ -53,15 +58,18 @@ import { ProjectFilesView } from "./ProjectFilesView";
 const project = {
   project_id: "proj-1",
   name: "Demo Project",
-  linked_folder_path: "p/demo-project",
-  workspace_source: "remote",
-  workspace_display_path: "",
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockUseProjectContext.mockReturnValue({ project });
   mockUseProjectsListStore.mockReturnValue({ projects: [project] });
+  mockUseTerminalTarget.mockReturnValue({
+    remoteAgentId: "remote-agent-1",
+    remoteWorkspacePath: "p/demo-project",
+    workspacePath: "p/demo-project",
+    status: "ready",
+  });
 });
 
 describe("ProjectFilesView", () => {
@@ -71,7 +79,7 @@ describe("ProjectFilesView", () => {
     render(<ProjectFilesView />);
 
     expect(screen.getByText("Files stay on the remote agent")).toBeInTheDocument();
-    expect(screen.getByText("Project path: p/demo-project")).toBeInTheDocument();
+    expect(screen.getByText("Workspace path: p/demo-project")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Agent" })).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });

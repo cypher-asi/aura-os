@@ -47,7 +47,6 @@ impl ProjectService {
             project_id: ProjectId::new(),
             name: input.name,
             description: input.description,
-            linked_folder_path: input.linked_folder_path,
             requirements_doc_path: input.requirements_doc_path,
             current_status: ProjectStatus::Planning,
             created_at: now,
@@ -78,7 +77,6 @@ impl ProjectService {
 pub struct CreateProjectInput {
     pub name: String,
     pub description: String,
-    pub linked_folder_path: String,
     pub requirements_doc_path: String,
 }
 
@@ -86,7 +84,6 @@ pub struct CreateProjectInput {
 pub struct UpdateProjectInput {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub linked_folder_path: Option<String>,
     pub requirements_doc_path: Option<String>,
 }
 ```
@@ -319,7 +316,7 @@ stateDiagram-v2
 3. **Response parsing robustness** — Claude may wrap JSON in a markdown code fence. The parser strips ` ```json ` / ` ``` ` before attempting `serde_json::from_str`. If parsing fails after both attempts, the raw response is included in the error for debugging.
 4. **Idempotent regeneration** — calling `generate_specs` on a project that already has specs deletes all existing specs (and their tasks, via batch op) before writing new ones. This is atomic via `write_batch`.
 5. **Order index** — specs are numbered 0, 1, 2, ... in the order Claude returns them. The prompt instructs Claude to order from most foundational to least. `list_specs` always sorts by `order_index`.
-6. **Linked folder validation** — `create_project` verifies the `linked_folder_path` exists and is a directory. It does not validate the contents.
+6. **Workspace validation** — project creation validates metadata only; executable workspace validation happens when an agent instance is attached and resolves its workspace.
 7. **Max tokens** — the Claude call uses a generous `max_tokens` (8192) to allow detailed spec output. This is hardcoded for MVP.
 
 ---
@@ -347,7 +344,7 @@ stateDiagram-v2
 |----|------|-------------|
 | T04.1 | Create `aura-services` crate | `cargo new aura-services --lib`, add to workspace, depend on `aura-os-core` and `aura-os-store` |
 | T04.2 | Implement `ProjectService` | `create_project`, `get_project`, `list_projects`, `update_project`, `archive_project` |
-| T04.3 | Input validation | Validate name non-empty, linked_folder_path is existing directory, requirements_doc_path is existing file |
+| T04.3 | Input validation | Validate name non-empty and requirements_doc_path is an existing file |
 | T04.4 | Implement `ClaudeClient` | HTTP POST to Claude Messages API, parse response, handle errors |
 | T04.5 | Define spec generation prompt | `SPEC_GENERATION_SYSTEM_PROMPT` constant and `RawSpecOutput` struct |
 | T04.6 | Implement `SpecGenerationService::generate_specs` | Full pipeline: read file, call Claude, parse, delete old, store new |

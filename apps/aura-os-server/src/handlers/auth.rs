@@ -79,7 +79,7 @@ pub(crate) async fn register(
 ) -> ApiResult<Json<AuthSessionResponse>> {
     let mut result = state
         .auth_service
-        .register(&req.email, &req.password)
+        .register(&req.email, &req.password, &req.name, &req.invite_code)
         .await
         .map_err(map_auth_error)?;
 

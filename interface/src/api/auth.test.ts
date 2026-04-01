@@ -32,15 +32,15 @@ describe("authApi", () => {
     );
   });
 
-  it("register sends POST with email and password", async () => {
+  it("register sends POST with email, password, name, and invite code", async () => {
     const fetchMock = mockFetch(200, { token: "new" });
     globalThis.fetch = fetchMock;
-    await authApi.register("new@user.com", "secret");
+    await authApi.register("new@user.com", "secret", "Test User", "ABC123");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/register",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ email: "new@user.com", password: "secret" }),
+        body: JSON.stringify({ email: "new@user.com", password: "secret", name: "Test User", invite_code: "ABC123" }),
       }),
     );
   });

@@ -6,9 +6,6 @@ export interface CreateProjectRequest {
   org_id: string;
   name: string;
   description: string;
-  linked_folder_path?: string;
-  workspace_source?: string;
-  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -19,9 +16,6 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
-  linked_folder_path?: string;
-  workspace_source?: string;
-  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -116,10 +110,12 @@ export const projectsApi = {
     apiFetch<Spec[]>(`/api/projects/${projectId}/specs`),
   getSpec: (projectId: ProjectId, specId: SpecId) =>
     apiFetch<Spec>(`/api/projects/${projectId}/specs/${specId}`),
-  generateSpecs: (projectId: ProjectId) =>
-    apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate`, {
+  generateSpecs: (projectId: ProjectId, agentInstanceId?: string | null) => {
+    const params = agentInstanceId ? `?agent_instance_id=${encodeURIComponent(agentInstanceId)}` : "";
+    return apiFetch<Spec[]>(`/api/projects/${projectId}/specs/generate${params}`, {
       method: "POST",
-    }),
+    });
+  },
   generateSpecsStream,
   getProjectStats: (projectId: ProjectId) =>
     apiFetch<ProjectStatsData>(`/api/projects/${projectId}/stats`),

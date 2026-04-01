@@ -15,7 +15,17 @@ function mockFetch(status: number, body: unknown) {
 
 describe("projectsApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      configurable: true,
+    });
+  });
   afterEach(() => { globalThis.fetch = originalFetch; });
 
   it("listProjects fetches GET /api/projects without orgId", async () => {
@@ -37,7 +47,6 @@ describe("projectsApi", () => {
       org_id: "o1",
       name: "Proj",
       description: "Desc",
-      linked_folder_path: "/code",
     };
     const fetchMock = mockFetch(200, { id: "p1", ...data });
     globalThis.fetch = fetchMock;
@@ -143,6 +152,16 @@ describe("projectsApi", () => {
     await projectsApi.generateSpecs("p1" as string);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/projects/p1/specs/generate",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("generateSpecs appends agent_instance_id when provided", async () => {
+    const fetchMock = mockFetch(200, []);
+    globalThis.fetch = fetchMock;
+    await projectsApi.generateSpecs("p1" as string, "ai 1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/projects/p1/specs/generate?agent_instance_id=ai%201",
       expect.objectContaining({ method: "POST" }),
     );
   });

@@ -7,7 +7,7 @@ import { FileExplorer } from "../../components/FileExplorer";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
-import { getProjectWorkspaceDisplay, getProjectWorkspaceLabel, getProjectWorkspaceRoot } from "../../utils/projectWorkspace";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { projectAgentRoute, projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import styles from "./ProjectFilesView.module.css";
 
@@ -16,16 +16,17 @@ export function ProjectFilesView() {
   const ctx = useProjectContext();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
+  const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId });
   const listedProject = useProjectsListStore((state) => (
     projectId ? state.projects.find((candidate) => candidate.project_id === projectId) ?? null : null
   ));
   const project = ctx?.project ?? listedProject;
-  const rootPath = getProjectWorkspaceRoot(project);
-  const workspaceSourceLabel = getProjectWorkspaceLabel(project);
-  const workspaceDisplay = getProjectWorkspaceDisplay(project);
+  const rootPath = workspacePath ?? null;
+  const workspaceSourceLabel = remoteAgentId ? "Remote agent workspace" : "Agent workspace";
+  const workspaceDisplay = remoteWorkspacePath ?? workspacePath ?? null;
 
   if (isMobileLayout) {
-    const projectPath = project?.linked_folder_path?.trim();
+    const projectPath = workspacePath?.trim();
 
     return (
       <div className={styles.mobileRemoteRoot}>
@@ -46,7 +47,7 @@ export function ProjectFilesView() {
               </Text>
               {projectPath ? (
                 <Text variant="muted" size="sm">
-                  Project path: {projectPath}
+                  Workspace path: {projectPath}
                 </Text>
               ) : null}
             </div>
@@ -72,6 +73,7 @@ export function ProjectFilesView() {
   return (
     <ProjectFilesContent
       rootPath={rootPath}
+      remoteAgentId={remoteAgentId}
       workspaceSourceLabel={workspaceSourceLabel}
       workspaceDisplay={workspaceDisplay}
     />
@@ -80,12 +82,14 @@ export function ProjectFilesView() {
 
 interface ProjectFilesContentProps {
   rootPath: string | null;
+  remoteAgentId?: string;
   workspaceSourceLabel: string;
   workspaceDisplay: string | null;
 }
 
 function ProjectFilesContent({
   rootPath,
+  remoteAgentId,
   workspaceSourceLabel,
   workspaceDisplay,
 }: ProjectFilesContentProps) {
@@ -118,6 +122,7 @@ function ProjectFilesContent({
       <div className={styles.explorerArea}>
         <FileExplorer
           rootPath={rootPath ?? undefined}
+          remoteAgentId={remoteAgentId}
           searchQuery={searchQuery}
         />
       </div>

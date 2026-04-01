@@ -8,7 +8,6 @@ const mockProject: Project = {
   org_id: "org-1",
   name: "My Project",
   description: "A project",
-  linked_folder_path: "/path",
   current_status: "active",
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",

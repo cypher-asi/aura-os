@@ -8,7 +8,6 @@ import { useProjectContext } from "../../stores/project-action-store";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { hasLinkedWorkspace } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
 const TAB_ICONS: { id: SidekickTab; icon: React.ReactNode; title: string }[] = [
@@ -29,8 +28,8 @@ export function SidekickTaskbar() {
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
-  const { remoteAgentId, remoteWorkspacePath } = useTerminalTarget({ projectId, agentInstanceId });
-  const canBrowseLocal = features.linkedWorkspace && hasLinkedWorkspace(ctx?.project);
+  const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });
+  const canBrowseLocal = features.linkedWorkspace && !remoteAgentId && Boolean(workspacePath);
   const canBrowseRemote = Boolean(remoteAgentId) && Boolean(remoteWorkspacePath);
   const canBrowseFiles = canBrowseLocal || canBrowseRemote;
 

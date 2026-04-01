@@ -29,9 +29,16 @@ const mockSidekick = {
   canGoBack: false,
   goBackPreview: vi.fn(),
 };
+const { mockUseSidekickStore } = vi.hoisted(() => ({
+  mockUseSidekickStore: {
+    subscribe: vi.fn(() => () => {}),
+    getState: vi.fn(() => ({ streamingAgentInstanceId: null })),
+  },
+}));
 
 vi.mock("../../stores/sidekick-store", () => ({
   useSidekick: () => mockSidekick,
+  useSidekickStore: mockUseSidekickStore,
 }));
 
 const mockProjectContext = {
@@ -39,8 +46,6 @@ const mockProjectContext = {
     project_id: "proj-1",
     name: "Test Project",
     current_status: "active",
-    linked_folder_path: "/test/path",
-    workspace_source: "linked",
     created_at: "2025-01-01T00:00:00Z",
   },
   setProject: vi.fn(),
@@ -58,6 +63,21 @@ vi.mock("../../stores/project-action-store", () => ({
 vi.mock("../../hooks/use-aura-capabilities", () => ({
   useAuraCapabilities: () => ({
     features: { linkedWorkspace: false },
+  }),
+}));
+
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => mockNavigate,
+  useParams: () => ({ projectId: "proj-1", agentInstanceId: "agent-inst-1" }),
+}));
+
+vi.mock("../../hooks/use-terminal-target", () => ({
+  useTerminalTarget: () => ({
+    remoteAgentId: undefined,
+    remoteWorkspacePath: undefined,
+    workspacePath: "/test/path",
+    status: "ready",
   }),
 }));
 
@@ -155,8 +175,9 @@ describe("SidekickTaskbar", () => {
 
   it("renders nothing when no project context", () => {
     projectCtx = null;
-    const { container } = render(<SidekickTaskbar />);
-    expect(container.innerHTML).toBe("");
+    render(<SidekickTaskbar />);
+    expect(screen.getByRole("button", { name: "Tasks" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More actions" })).not.toBeInTheDocument();
   });
 
   it("renders More actions button", () => {

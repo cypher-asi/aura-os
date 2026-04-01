@@ -381,7 +381,7 @@ The runtime responds with:
 
 **Problem:** For cloud execution, the microVM workspace starts empty. The project's code needs to be cloned in.
 
-**Recommendation:** Support `workspace.git_repo_url` and `workspace.git_branch` in `session_init`. On receiving this, the runtime clones the repo into its workspace directory before sending `session_ready`. For local mode, this field is omitted and the workspace is the project's `linked_folder_path` directly.
+**Recommendation:** Support `workspace.git_repo_url` and `workspace.git_branch` in `session_init`. On receiving this, the runtime clones the repo into its workspace directory before sending `session_ready`. For local mode, this field is omitted and the workspace path comes from the attached local agent instance.
 
 **Aura-app:** The server builds the payload in `apps/server/src/session_init.rs` via `build_session_init_payload(project, jwt)`. When a runtime WebSocket session is started, the server should send this as the first message. The optional `orbit_jwt` is the user's JWT for Orbit Git HTTP (same token as Aura); the runtime must not log or persist it.
 
@@ -432,7 +432,7 @@ The spec already defines `terminal_output` messages for streaming command output
 
 **Problem:** aura-app supports multi-project agent chat where a single agent operates across multiple projects. In `crates/ai/tools/src/lib.rs`, `multi_project_tool_definitions()` adds a required `project_id` parameter to every tool so the LLM specifies which project to target. The runtime is single-workspace — it operates on one workspace directory per session.
 
-**What aura-app does today:** `AgentToolLoopExecutor` in `crates/ai/chat/src/chat_tool_executor.rs` validates `project_id` against a list of allowed projects and resolves the workspace path for each tool call. Each project has its own `linked_folder_path`.
+**What aura-app does today:** `AgentToolLoopExecutor` in `crates/ai/chat/src/chat_tool_executor.rs` validates `project_id` against a list of allowed projects and resolves the workspace path for each tool call from the relevant agent instance or runtime session.
 
 **Recommendation:** Handle multi-project at the aura-app orchestration layer rather than adding multi-workspace support to the runtime. For multi-project agent chat, aura-app maintains one runtime WebSocket session per project. The aura-app agent chat handler routes tool calls to the correct session based on `project_id`. The runtime itself remains single-workspace.
 

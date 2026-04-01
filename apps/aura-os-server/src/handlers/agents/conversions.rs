@@ -74,20 +74,14 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
 /// (dev loop, task runner) should call `resolve_workspace` on the client.
 pub(crate) fn resolve_workspace_path(
     machine_type: &str,
-    project_folder: Option<&str>,
+    project_id: &ProjectId,
     data_dir: &std::path::Path,
     project_name: &str,
 ) -> String {
     if machine_type == "local" {
-        project_folder
-            .filter(|s| !s.is_empty())
-            .filter(|s| std::path::Path::new(s).is_absolute())
-            .map(String::from)
-            .unwrap_or_else(|| {
-                super::super::projects_helpers::canonical_workspace_path(data_dir, project_name)
-                    .to_string_lossy()
-                    .to_string()
-            })
+        super::super::projects_helpers::canonical_workspace_path(data_dir, project_id)
+            .to_string_lossy()
+            .to_string()
     } else {
         let slug = super::super::projects_helpers::slugify(project_name);
         format!("/home/aura/{slug}")

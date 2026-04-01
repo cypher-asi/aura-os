@@ -99,10 +99,12 @@ function createChatStreamHandler(handler: StreamEventHandler): SSECallbacks<stri
 export function generateSpecsStream(
   projectId: ProjectId,
   cb: SpecGenStreamCallbacks,
+  agentInstanceId?: string | null,
   signal?: AbortSignal,
 ) {
+  const params = agentInstanceId ? `?agent_instance_id=${encodeURIComponent(agentInstanceId)}` : "";
   return streamSSE<string>(
-    `${BASE_URL}/api/projects/${projectId}/specs/generate/stream`,
+    `${BASE_URL}/api/projects/${projectId}/specs/generate/stream${params}`,
     { method: "POST" },
     createSSEHandler(
       {

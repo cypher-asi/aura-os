@@ -40,7 +40,6 @@ function makeProject(id: string, updatedAt: string): Project {
     org_id: "org-1",
     name: `Project ${id}`,
     description: "",
-    linked_folder_path: "",
     current_status: "active",
     created_at: "2025-01-01T00:00:00Z",
     updated_at: updatedAt,

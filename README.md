@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Continuous Agentic Coding</b><br>
-  A local desktop app that turns requirements into structured specs and autonomously executes implementation tasks against a linked codebase.
+  A local desktop app that turns requirements into structured specs and autonomously executes implementation tasks against agent workspaces.
 </p>
 
 <p align="center">
@@ -11,7 +11,7 @@
 
 ## Overview
 
-Aura is a desktop application for continuous agentic coding. It reads a project's `requirements.md`, uses AI to generate a structured implementation spec, extracts ordered tasks, and then runs an autonomous development loop that works through those tasks against a linked local code repository.
+Aura is a desktop application for continuous agentic coding. It reads a project's `requirements.md`, uses AI to generate a structured implementation spec, extracts ordered tasks, and then runs an autonomous development loop that works through those tasks against the attached agent's workspace.
 
 The core workflow follows a strict hierarchy: **Project → Spec → Task**. Agents operate within sessions, rotating context automatically when the window fills, so execution can continue indefinitely without manual intervention.
 
@@ -21,13 +21,13 @@ Core state lives in RocksDB on-device. The backend is Rust (Axum), the interface
 
 ## Core Concepts
 
-1. **Projects:** The top-level container. Each project links a `requirements.md` file to a local codebase folder. All specs, tasks, and agents belong to a project.
+1. **Projects:** The top-level container for metadata, planning, and execution history. Specs, tasks, and agent instances belong to a project, but the executable workspace lives on the agent instance rather than the project itself.
 
 2. **Specs:** AI-generated structured implementation plans produced from the project requirements. Each spec is a standalone markdown file, ordered from most foundational to least foundational, covering purpose, interfaces, use cases, and dependencies.
 
 3. **Tasks:** Concrete units of work extracted from specs. Each task tracks its own state through a full lifecycle: `pending` → `ready` → `in_progress` → `done` / `failed` / `blocked`. Tasks carry dependency information so the agent loop can resolve execution order automatically.
 
-4. **Agents & Sessions:** Autonomous workers that execute tasks. An agent picks the next available task, loads relevant spec context, performs the work against the local codebase, and updates state. When the context window fills past a threshold, the agent rolls over into a new session, carrying forward only a compressed summary, and continues seamlessly.
+4. **Agents & Sessions:** Autonomous workers that execute tasks. An agent instance picks the next available task, loads relevant spec context, performs the work against its local or remote workspace, and updates state. When the context window fills past a threshold, the agent rolls over into a new session, carrying forward only a compressed summary, and continues seamlessly.
 
 ---
 

@@ -69,7 +69,6 @@ interface Project {
   project_id: ProjectId;
   name: string;
   description: string;
-  linked_folder_path: string;
   requirements_doc_path: string;
   current_status: ProjectStatus;
   created_at: string;
@@ -250,14 +249,14 @@ export const api = {
 interface CreateProjectRequest {
   name: string;
   description: string;
-  linked_folder_path: string;
+  workspace_path?: string;
   requirements_doc_path: string;
 }
 
 interface UpdateProjectRequest {
   name?: string;
   description?: string;
-  linked_folder_path?: string;
+  workspace_path?: string;
   requirements_doc_path?: string;
 }
 

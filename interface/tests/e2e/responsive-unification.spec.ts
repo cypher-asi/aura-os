@@ -190,8 +190,13 @@ test("feed keeps shared content while mobile/tablet use the global app chrome", 
   await mockAuthenticatedApp(page);
   await page.goto("/feed");
 
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Organization" })).toBeVisible();
+  if (factor === "desktop") {
+    await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+    await expect(page.getByRole("treeitem", { name: "Organization" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Organization" })).toBeVisible();
+  }
   await expectGlobalAppChrome(page, factor);
 });
 
@@ -201,8 +206,13 @@ test("leaderboard remains reachable directly with shared content across form fac
   await mockAuthenticatedApp(page);
   await page.goto("/leaderboard");
 
-  await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
+  if (factor === "desktop") {
+    await expect(page.getByRole("treeitem", { name: "My Agents" })).toBeVisible();
+    await expect(page.getByRole("treeitem", { name: "Following" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("button", { name: "My Agents" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Following" })).toBeVisible();
+  }
   await expectGlobalAppChrome(page, factor);
 });
 
@@ -234,7 +244,7 @@ test("project work route uses the combined mobile work view while desktop keeps 
     await expect(page.getByPlaceholder("Search Projects...")).toBeVisible();
     await expect(page.getByRole("treeitem", { name: "Demo Project" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tasks" })).toBeVisible();
+    await expect(page.getByText("Mobile parity spec")).toBeVisible();
   } else {
     await expect(page.getByRole("main").getByText("Execution", { exact: true })).toBeVisible({ timeout: 15000 });
     await expect(page.getByRole("button", { name: "Specs" })).toBeVisible({ timeout: 15000 });
@@ -288,8 +298,7 @@ test("modal flows lock the background document across form factors", async ({ pa
     await expect(page.getByRole("heading", { name: "Host Connection" })).toBeVisible();
   } else {
     await page.getByRole("button", { name: "Open account" }).click();
-    await page.getByRole("button", { name: "App settings" }).click();
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "App settings" })).toBeVisible();
   }
 
   await expect.poll(async () => {

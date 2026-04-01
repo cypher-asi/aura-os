@@ -200,8 +200,8 @@ export function FileExplorer({ rootPath, searchQuery, onFileSelect, remoteAgentI
     return (
       <PageEmptyState
         icon={<FolderOpen size={32} />}
-        title="No linked workspace"
-        description="This project does not expose a live host folder to browse."
+        title="No agent workspace"
+        description="This view does not have a live agent workspace to browse."
       />
     );
   }

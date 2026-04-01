@@ -50,8 +50,25 @@ describe("generateSpecsStream", () => {
       onError: vi.fn(),
     };
 
-    await generateSpecsStream("p1" as string, cb, controller.signal);
+    await generateSpecsStream("p1" as string, cb, undefined, controller.signal);
     expect(streamSSE.mock.calls[0][3]).toBe(controller.signal);
+  });
+
+  it("appends agent_instance_id when provided", async () => {
+    const cb: SpecGenStreamCallbacks = {
+      onProgress: vi.fn(),
+      onDelta: vi.fn(),
+      onGenerating: vi.fn(),
+      onSpecSaved: vi.fn(),
+      onTaskSaved: vi.fn(),
+      onComplete: vi.fn(),
+      onError: vi.fn(),
+    };
+
+    await generateSpecsStream("p1" as string, cb, "ai 1");
+
+    const [url] = streamSSE.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/projects/p1/specs/generate/stream?agent_instance_id=ai%201");
   });
 
   it("routes SSE events to correct callbacks", async () => {

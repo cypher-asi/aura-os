@@ -43,7 +43,8 @@ test("desktop browser project execution keeps desktop chrome and hides workspace
 
   await expect(page.getByText("Demo Project")).toBeVisible();
   await expect(page.getByRole("button", { name: "Chat" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Tasks" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("Task Feed")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Files" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
 });
@@ -55,9 +56,9 @@ test("desktop browser agents route keeps desktop layout without mobile switcher"
 
   await expect(page.getByPlaceholder("Search Agents...")).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Choose agent" })).toHaveCount(0);
-  await expect(page.getByText("Builder Bot")).toBeVisible();
-  await expect(page.getByText("Helpful")).toBeVisible();
-  await expect(page.getByPlaceholder("Add a follow-up")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Builder Bot/i }).first()).toBeVisible();
+  await expect(page.getByRole("paragraph").filter({ hasText: "Helpful" })).toBeVisible();
+  await expect(page.getByPlaceholder("Add a follow-up")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open navigation" })).toHaveCount(0);
 });
 
@@ -80,8 +81,6 @@ test("desktop imported projects hide file browsing even with a desktop bridge", 
 
   await mockAuthenticatedApp(page, {
     project: {
-      workspace_source: "imported",
-      linked_folder_path: "",
     },
   });
 

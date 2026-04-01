@@ -58,7 +58,8 @@ test("capture desktop projects root and execution chrome", async ({ page }, test
 
   await page.goto("/projects/proj-1/execution");
   await expect(page.getByText("Demo Project")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Tasks" })).toBeVisible();
+  await expect(page.getByRole("main").getByText("Task Feed")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Specs" })).toBeVisible();
   await page.screenshot({
     path: `test-artifacts/review-shots/${projectName}-desktop-project-execution.png`,
     fullPage: true,

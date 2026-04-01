@@ -141,7 +141,6 @@ pub struct Project {
     pub project_id: ProjectId,
     pub name: String,
     pub description: String,
-    pub linked_folder_path: String,
     pub requirements_doc_path: String,
     pub current_status: ProjectStatus,
     pub created_at: DateTime<Utc>,
@@ -174,6 +173,8 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+Note: the current runtime architecture keeps executable workspace paths on `AgentInstance`, not on `Project`.
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {

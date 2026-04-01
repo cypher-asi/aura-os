@@ -75,7 +75,7 @@ for (const scenario of scenarios) {
     await timed("open_workbench", () => page.goto(`/projects/${project.project_id}/work`));
     await expect(page.getByRole("heading", { name: /Task Feed/i })).toBeVisible();
     await expect(page.getByRole("button", { name: "Specs", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Tasks", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Tasks", exact: true }).last()).toBeVisible();
     await expect(page.getByText(tasks[0].title, { exact: true })).toBeVisible();
 
     await timed("start_loop", async () => {

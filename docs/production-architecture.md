@@ -138,7 +138,7 @@ For **aura-swarm** (cloud agents): the key is injected as an env var into the mi
 
 | Data | Why |
 |---|---|
-| `linked_folder_path` | Machine-specific filesystem path |
+| Agent workspace resolution | Local agents execute inside a machine-specific workspace root |
 | Terminal sessions | Local execution only |
 | Encrypted personal API keys | Local-first mode fallback |
 | Dev loop engine execution state | Local process management |
@@ -330,7 +330,7 @@ aura-network and aura-storage are deployed. aura-code calls aura-network for soc
 
 ### What Stays Local
 
-- Filesystem access (`linked_folder_path`, file reading/writing)
+- Filesystem access for local agent workspaces (file reading/writing)
 - Terminal sessions
 - Dev loop execution (aura-runtime)
 - Encrypted personal API keys (local-first fallback)

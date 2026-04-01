@@ -175,7 +175,6 @@ export function useNewProjectForm(
         org_id: resolvedOrgId,
         name: name.trim(),
         description: "",
-        linked_folder_path: "",
         ...orbitFields,
       });
 
@@ -185,7 +184,7 @@ export function useNewProjectForm(
     } finally { setLoading(false); }
   }, [name, orbitRepoMode,
       selectedOrbitRepo, orbitRepoName, proposedRepoSlug, orbitOwner,
-      resolvedOrgId, reset, onCreated]);
+      resolvedOrgId, reset, onCreated, projects]);
 
   const submitBlocker = useMemo(() => {
     if (orgLoading || (!activeOrg && loadingProjects && projects.length === 0)) return "Loading your team...";
@@ -193,7 +192,7 @@ export function useNewProjectForm(
     if (!resolvedOrgId) return "No team found. Log out and back in to create a default team.";
     if (orbitRepoMode === "existing" && !selectedOrbitRepo) return "Select an existing Orbit repo to continue.";
     return "";
-  }, [activeOrg, isAuthenticated, loadingProjects, name, orbitRepoMode, orgLoading, projects.length, resolvedOrgId, selectedOrbitRepo]);
+  }, [activeOrg, isAuthenticated, loadingProjects, orbitRepoMode, orgLoading, projects.length, resolvedOrgId, selectedOrbitRepo]);
   const canSubmit = !loading && !submitBlocker && !!name.trim();
 
   return {

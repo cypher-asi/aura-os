@@ -21,10 +21,10 @@ use aura_os_storage::StorageClient;
 
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
-use crate::handlers::projects;
+use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
 use crate::state::{AppState, AuthJwt, ChatSession};
 
-use super::conversions::{events_to_session_history, resolve_workspace_path};
+use super::conversions::events_to_session_history;
 
 // ---------------------------------------------------------------------------
 // Chat persistence helpers
@@ -1110,17 +1110,14 @@ pub(crate) async fn send_event_stream(
 
     let pid_str = project_id.to_string();
 
-    let system_prompt = build_project_system_prompt(&state, &project_id, &instance.system_prompt);
-
-    let project = state.project_service.get_project(&project_id).ok();
-    let project_folder = project.as_ref().map(|p| p.linked_folder_path.as_str());
-    let project_name = project.as_ref().map(|p| p.name.as_str()).unwrap_or("");
-    let project_path = Some(resolve_workspace_path(
-        &instance.machine_type,
-        project_folder,
-        &state.data_dir,
-        project_name,
-    ));
+    let project_path =
+        resolve_agent_instance_workspace_path(&state, &project_id, Some(agent_instance_id)).await;
+    let system_prompt = build_project_system_prompt(
+        &state,
+        &project_id,
+        &instance.system_prompt,
+        project_path.as_deref(),
+    );
 
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
@@ -1151,11 +1148,11 @@ fn build_project_system_prompt(
     state: &AppState,
     project_id: &ProjectId,
     agent_prompt: &str,
+    workspace_path: Option<&str>,
 ) -> String {
     let project_ctx = match state.project_service.get_project(project_id) {
         Ok(p) => {
             let desc: &str = &p.description;
-            let folder: &str = &p.linked_folder_path;
             let mut ctx = format!(
                 "<project_context>\nproject_id: {}\nproject_name: {}\n",
                 project_id, p.name,
@@ -1163,8 +1160,8 @@ fn build_project_system_prompt(
             if !desc.is_empty() {
                 ctx.push_str(&format!("description: {}\n", desc));
             }
-            if !folder.is_empty() {
-                ctx.push_str(&format!("workspace: {}\n", folder));
+            if let Some(workspace_path) = workspace_path.filter(|path| !path.is_empty()) {
+                ctx.push_str(&format!("workspace: {}\n", workspace_path));
             }
             ctx.push_str("</project_context>\n\n");
             ctx.push_str("IMPORTANT: When calling tools that accept a project_id parameter, always use the project_id from the project_context above.\n\n");

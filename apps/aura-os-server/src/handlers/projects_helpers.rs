@@ -3,15 +3,16 @@ use std::path::{Component, Path as FsPath, PathBuf};
 use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use tracing::{debug, warn};
+use tracing::warn;
 
-use aura_os_core::{HarnessMode, OrgId, Project, ProjectId, ProjectStatus};
+use aura_os_core::{AgentInstanceId, HarnessMode, OrgId, Project, ProjectId, ProjectStatus};
 use aura_os_link::SessionConfig;
 use aura_os_network::NetworkProject;
 use aura_os_projects::CreateProjectInput;
 
 use crate::dto::{CreateProjectRequest, ImportedProjectFile};
 use crate::error::{ApiError, ApiResult};
+use crate::handlers::agents::conversions_pub::resolve_workspace_path;
 use crate::state::AppState;
 
 #[derive(Debug, Deserialize)]
@@ -66,15 +67,6 @@ pub(crate) fn project_from_network(
     local: Option<&Project>,
 ) -> ApiResult<Project> {
     let meta = parse_network_ids_and_dates(net)?;
-    let folder = net.folder.clone().unwrap_or_default();
-    debug!(
-        project_id = %net.id,
-        name = %net.name,
-        network_folder = ?net.folder,
-        resolved_folder = %folder,
-        "project_from_network"
-    );
-
     Ok(Project {
         project_id: meta.project_id,
         org_id: meta.org_id,
@@ -84,11 +76,6 @@ pub(crate) fn project_from_network(
             .clone()
             .or_else(|| local.map(|project| project.description.clone()))
             .unwrap_or_default(),
-        linked_folder_path: local
-            .map(|project| project.linked_folder_path.clone())
-            .unwrap_or(folder),
-        workspace_source: local.and_then(|project| project.workspace_source.clone()),
-        workspace_display_path: local.and_then(|project| project.workspace_display_path.clone()),
         requirements_doc_path: local.and_then(|project| project.requirements_doc_path.clone()),
         current_status: local
             .map(|project| project.current_status)
@@ -108,79 +95,18 @@ pub(crate) fn project_from_network(
 }
 
 pub(crate) fn ensure_local_shadow(state: &AppState, project: &Project) {
-    let normalized = normalize_project_workspace(state, project);
-    if let Err(err) = state.project_service.save_project_shadow(&normalized) {
+    if let Err(err) = state.project_service.save_project_shadow(project) {
         warn!(project_id = %project.project_id, error = %err, "Failed to save local project shadow");
     }
 }
 
 pub(crate) fn normalize_project_workspace(state: &AppState, project: &Project) -> Project {
-    let mut normalized = project.clone();
-    let original_path = normalized.linked_folder_path.clone();
-    let normalized_path = normalize_linked_folder_path(state, &original_path, &normalized.name);
-    if normalized_path != original_path {
-        normalized.linked_folder_path = normalized_path;
-        if normalized
-            .workspace_display_path
-            .as_deref()
-            .map(str::trim)
-            .unwrap_or("")
-            .is_empty()
-        {
-            normalized.workspace_display_path = Some(original_path);
-        }
-    }
-    normalized
+    let _ = state;
+    project.clone()
 }
 
-fn normalize_linked_folder_path(state: &AppState, raw_path: &str, project_name: &str) -> String {
-    let trimmed = raw_path.trim();
-    if trimmed.is_empty() {
-        let resolved = canonical_workspace_path(&state.data_dir, project_name);
-        if let Err(err) = std::fs::create_dir_all(&resolved) {
-            warn!(
-                path = %resolved.display(),
-                error = %err,
-                "Failed to create canonical workspace directory"
-            );
-        }
-        return resolved.to_string_lossy().to_string();
-    }
-
-    let input_path = FsPath::new(trimmed);
-    if input_path.is_absolute() {
-        return trimmed.to_string();
-    }
-
-    let mut rel = PathBuf::new();
-    for component in input_path.components() {
-        match component {
-            Component::Normal(part) => rel.push(part),
-            Component::CurDir => {}
-            Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
-                warn!(path = %raw_path, "Rejected unsafe relative workspace path");
-                return raw_path.to_string();
-            }
-        }
-    }
-    if rel.as_os_str().is_empty() {
-        return raw_path.to_string();
-    }
-
-    let resolved = state.data_dir.join("workspaces").join(rel);
-    if let Err(err) = std::fs::create_dir_all(&resolved) {
-        warn!(
-            path = %resolved.display(),
-            error = %err,
-            "Failed to create normalized workspace directory"
-        );
-    }
-    resolved.to_string_lossy().to_string()
-}
-
-pub(crate) fn canonical_workspace_path(data_dir: &std::path::Path, project_name: &str) -> PathBuf {
-    let slug = slugify(project_name);
-    data_dir.join("workspaces").join(&slug)
+pub(crate) fn canonical_workspace_path(data_dir: &std::path::Path, project_id: &ProjectId) -> PathBuf {
+    data_dir.join("workspaces").join(project_id.to_string())
 }
 
 pub(crate) fn slugify(name: &str) -> String {
@@ -196,40 +122,109 @@ pub(crate) fn slugify(name: &str) -> String {
     }
 }
 
-pub(crate) fn folder_name_from_path(path: &str) -> Option<String> {
-    std::path::Path::new(path)
-        .file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.to_string())
+pub(crate) fn resolve_project_workspace_path_for_machine(
+    state: &AppState,
+    project_id: &ProjectId,
+    project_name: Option<&str>,
+    machine_type: &str,
+) -> Option<String> {
+    Some(resolve_workspace_path(
+        machine_type,
+        project_id,
+        &state.data_dir,
+        project_name.unwrap_or(""),
+    ))
+}
+
+pub(crate) async fn resolve_agent_instance_workspace_path(
+    state: &AppState,
+    project_id: &ProjectId,
+    agent_instance_id: Option<AgentInstanceId>,
+) -> Option<String> {
+    if let Some(agent_instance_id) = agent_instance_id {
+        if let Ok(instance) = state
+            .agent_instance_service
+            .get_instance(project_id, &agent_instance_id)
+            .await
+        {
+            if let Some(workspace_path) = instance
+                .workspace_path
+                .as_deref()
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+            {
+                return Some(workspace_path.to_string());
+            }
+
+            let project = state.project_service.get_project(project_id).ok();
+            return resolve_project_workspace_path_for_machine(
+                state,
+                project_id,
+                project.as_ref().map(|project| project.name.as_str()),
+                &instance.machine_type,
+            );
+        }
+    }
+    None
+}
+
+async fn resolve_project_tool_workspace_path(
+    state: &AppState,
+    project_id: &ProjectId,
+    harness_mode: HarnessMode,
+    agent_instance_id: Option<AgentInstanceId>,
+) -> Option<String> {
+    if let Some(path) = resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await {
+        return Some(path);
+    }
+
+    let project = state.project_service.get_project(project_id).ok()?;
+    let machine_type = match harness_mode {
+        HarnessMode::Local => "local",
+        HarnessMode::Swarm => "remote",
+    };
+    resolve_project_workspace_path_for_machine(state, project_id, Some(project.name.as_str()), machine_type)
 }
 
 /// Build a standard project tool session config with JWT propagation.
-pub(crate) fn project_tool_session_config(
+pub(crate) async fn project_tool_session_config(
     state: &AppState,
     project_id: &ProjectId,
     tool_agent_name: &'static str,
     harness_mode: HarnessMode,
+    agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
 ) -> SessionConfig {
-    let project = state.project_service.get_project(project_id).ok();
-    let project_path = project.as_ref().and_then(|project| {
-        let linked = project.linked_folder_path.trim();
-        if !linked.is_empty() {
-            Some(linked.to_string())
-        } else if !project.name.trim().is_empty() {
-            Some(
-                canonical_workspace_path(&state.data_dir, &project.name)
-                    .display()
-                    .to_string(),
-            )
+    let remote_instance = if harness_mode == HarnessMode::Swarm {
+        if let Some(agent_instance_id) = agent_instance_id {
+            state
+                .agent_instance_service
+                .get_instance(project_id, &agent_instance_id)
+                .await
+                .ok()
         } else {
             None
         }
-    });
+    } else {
+        None
+    };
+    let project_path =
+        resolve_project_tool_workspace_path(state, project_id, harness_mode, agent_instance_id)
+            .await;
     SessionConfig {
-        agent_id: (harness_mode == HarnessMode::Local)
-            .then(|| format!("{tool_agent_name}-{project_id}")),
-        agent_name: Some(tool_agent_name.to_string()),
+        agent_id: if let Some(instance) = remote_instance.as_ref() {
+            Some(instance.agent_id.to_string())
+        } else if harness_mode == HarnessMode::Local {
+            Some(format!("{tool_agent_name}-{project_id}"))
+        } else {
+            None
+        },
+        agent_name: Some(
+            remote_instance
+                .as_ref()
+                .map(|instance| instance.name.clone())
+                .unwrap_or_else(|| tool_agent_name.to_string()),
+        ),
         token: Some(jwt.to_string()),
         project_id: Some(project_id.to_string()),
         project_path,
@@ -242,9 +237,6 @@ pub(super) fn to_project_input(req: &CreateProjectRequest) -> CreateProjectInput
         org_id: req.org_id,
         name: req.name.clone(),
         description: req.description.clone(),
-        linked_folder_path: req.linked_folder_path.clone(),
-        workspace_source: req.workspace_source.clone(),
-        workspace_display_path: req.workspace_display_path.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
     }
@@ -319,9 +311,6 @@ pub(super) fn build_local_shadow(project_id: ProjectId, req: &CreateProjectReque
         org_id: req.org_id,
         name: req.name.clone(),
         description: req.description.clone(),
-        linked_folder_path: req.linked_folder_path.clone(),
-        workspace_source: req.workspace_source.clone(),
-        workspace_display_path: req.workspace_display_path.clone(),
         requirements_doc_path: None,
         current_status: ProjectStatus::Planning,
         build_command: req.build_command.clone(),
