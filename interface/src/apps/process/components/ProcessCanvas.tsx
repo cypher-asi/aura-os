@@ -48,11 +48,11 @@ function toFlowEdges(connections: ProcessNodeConnection[]): Edge[] {
   return connections.map((c) => ({
     id: c.connection_id,
     source: c.source_node_id,
-    sourceHandle: c.source_handle ?? undefined,
+    sourceHandle: c.source_handle || null,
     target: c.target_node_id,
-    targetHandle: c.target_handle ?? undefined,
+    targetHandle: c.target_handle || null,
     animated: true,
-    style: { stroke: "var(--color-text-muted, #999)", strokeWidth: 2 },
+    style: { stroke: "#999", strokeWidth: 2 },
   }));
 }
 
@@ -106,7 +106,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
 
   const onConnect = useCallback(
     async (params: Connection) => {
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "var(--color-text-muted, #999)", strokeWidth: 2 } }, eds));
+      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "#999", strokeWidth: 2 } }, eds));
       try {
         await processApi.createConnection(processId, {
           source_node_id: params.source!,
