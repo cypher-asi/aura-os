@@ -11,6 +11,9 @@ import { useAppStore } from "../../stores/app-store";
 import { ConnectionDot } from "../ConnectionDot/ConnectionDot";
 import { Avatar } from "../Avatar";
 import { useFavoriteAgents, useAgentStore } from "../../apps/agents/stores";
+import { useAvatarState } from "../../hooks/use-avatar-state";
+import { useProfileStatusStore } from "../../stores/profile-status-store";
+import type { Agent } from "../../types";
 import styles from "./BottomTaskbar.module.css";
 
 const unfavoriteMenuItems: MenuItem[] = [
@@ -32,6 +35,36 @@ interface FavCtxMenu {
   agentId: string;
 }
 
+function FavoriteAgentButton({
+  agent,
+  onClick,
+  onContextMenu,
+}: {
+  agent: Agent;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+}) {
+  const { status, isLocal } = useAvatarState(agent.agent_id);
+  return (
+    <button
+      type="button"
+      className={styles.favoriteBtn}
+      title={agent.name}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+    >
+      <Avatar
+        avatarUrl={agent.icon ?? undefined}
+        name={agent.name}
+        type="agent"
+        size={20}
+        status={status}
+        isLocal={isLocal}
+      />
+    </button>
+  );
+}
+
 export function BottomTaskbar() {
   const openBuyCredits = useUIModalStore((s) => s.openBuyCredits);
   const activeApp = useAppStore((s) => s.activeApp);
@@ -41,6 +74,15 @@ export function BottomTaskbar() {
   const navigate = useNavigate();
   const favoriteAgents = useFavoriteAgents();
   const toggleFavorite = useAgentStore((s) => s.toggleFavorite);
+  const registerAgents = useProfileStatusStore((s) => s.registerAgents);
+  const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
+
+  useEffect(() => {
+    if (favoriteAgents.length === 0) return;
+    registerAgents(favoriteAgents.map((a) => ({ id: a.agent_id, machineType: a.machine_type })));
+    const remote = favoriteAgents.filter((a) => a.machine_type === "remote" && a.network_agent_id);
+    if (remote.length > 0) registerRemote(remote);
+  }, [favoriteAgents, registerAgents, registerRemote]);
 
   const [favCtx, setFavCtx] = useState<FavCtxMenu | null>(null);
   const favCtxRef = useRef<HTMLDivElement>(null);
@@ -101,21 +143,12 @@ export function BottomTaskbar() {
         {favoriteAgents.length > 0 && (
           <div className={styles.favorites}>
             {favoriteAgents.map((agent) => (
-              <button
+              <FavoriteAgentButton
                 key={agent.agent_id}
-                type="button"
-                className={styles.favoriteBtn}
-                title={agent.name}
+                agent={agent}
                 onClick={() => navigate(`/agents/${agent.agent_id}`)}
                 onContextMenu={(e) => handleFavContextMenu(e, agent.agent_id)}
-              >
-                <Avatar
-                  avatarUrl={agent.icon ?? undefined}
-                  name={agent.name}
-                  type="agent"
-                  size={20}
-                />
-              </button>
+              />
             ))}
           </div>
         )}
