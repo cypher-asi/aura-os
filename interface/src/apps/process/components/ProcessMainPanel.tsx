@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Cpu, Play, Pause, Trash2 } from "lucide-react";
 import { Button, PageEmptyState } from "@cypher-asi/zui";
@@ -7,6 +7,9 @@ import { useProcessStore } from "../stores/process-store";
 import { processApi } from "../../../api/process";
 import { ProcessCanvas } from "./ProcessCanvas";
 import type { ReactNode } from "react";
+
+const EMPTY_NODES: never[] = [];
+const EMPTY_CONNECTIONS: never[] = [];
 
 export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   const { processId } = useParams<{ processId: string }>();
@@ -19,8 +22,8 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
 
   const process = processes.find((p) => p.process_id === processId);
-  const processNodes = processId ? nodes[processId] ?? [] : [];
-  const processConnections = processId ? connections[processId] ?? [] : [];
+  const processNodes = useMemo(() => (processId ? nodes[processId] ?? EMPTY_NODES : EMPTY_NODES), [processId, nodes]);
+  const processConnections = useMemo(() => (processId ? connections[processId] ?? EMPTY_CONNECTIONS : EMPTY_CONNECTIONS), [processId, connections]);
 
   const handleToggle = useCallback(async () => {
     if (!process) return;

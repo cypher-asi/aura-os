@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ReactFlow,
@@ -96,12 +96,11 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
   const selectNode = useProcessSidekickStore((s) => s.selectNode);
 
-  // Sync when processNodes/processConnections change from the store
-  useMemo(() => {
+  useEffect(() => {
     setNodes(toFlowNodes(processNodes));
   }, [processNodes, setNodes]);
 
-  useMemo(() => {
+  useEffect(() => {
     setEdges(toFlowEdges(processConnections));
   }, [processConnections, setEdges]);
 
