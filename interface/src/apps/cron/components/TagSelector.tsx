@@ -48,7 +48,7 @@ export function TagSelector({ value, onChange }: Props) {
       setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)));
       handleSelect(tag.name);
     } catch {
-      // ignore
+      handleSelect(name);
     } finally {
       setCreating(false);
     }

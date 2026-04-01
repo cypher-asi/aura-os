@@ -1,17 +1,4 @@
-const BASE = "/api";
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`${res.status}: ${body}`);
-  }
-  return res.json();
-}
+import { apiFetch } from "./core";
 
 export interface CreateCronJobRequest {
   name: string;
@@ -37,32 +24,32 @@ export interface UpdateCronJobRequest {
 }
 
 export const cronApi = {
-  listJobs: () => request<import("../types").CronJob[]>("/cron-jobs"),
-  getJob: (id: string) => request<import("../types").CronJob>(`/cron-jobs/${id}`),
+  listJobs: () => apiFetch<import("../types").CronJob[]>("/cron-jobs"),
+  getJob: (id: string) => apiFetch<import("../types").CronJob>(`/cron-jobs/${id}`),
   createJob: (data: CreateCronJobRequest) =>
-    request<import("../types").CronJob>("/cron-jobs", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch<import("../types").CronJob>("/cron-jobs", { method: "POST", body: JSON.stringify(data) }),
   updateJob: (id: string, data: UpdateCronJobRequest) =>
-    request<import("../types").CronJob>(`/cron-jobs/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    apiFetch<import("../types").CronJob>(`/cron-jobs/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteJob: (id: string) =>
-    request<void>(`/cron-jobs/${id}`, { method: "DELETE" }),
+    apiFetch<void>(`/cron-jobs/${id}`, { method: "DELETE" }),
   pauseJob: (id: string) =>
-    request<import("../types").CronJob>(`/cron-jobs/${id}/pause`, { method: "POST" }),
+    apiFetch<import("../types").CronJob>(`/cron-jobs/${id}/pause`, { method: "POST" }),
   resumeJob: (id: string) =>
-    request<import("../types").CronJob>(`/cron-jobs/${id}/resume`, { method: "POST" }),
+    apiFetch<import("../types").CronJob>(`/cron-jobs/${id}/resume`, { method: "POST" }),
   triggerJob: (id: string) =>
-    request<import("../types").CronJobRun>(`/cron-jobs/${id}/trigger`, { method: "POST" }),
+    apiFetch<import("../types").CronJobRun>(`/cron-jobs/${id}/trigger`, { method: "POST" }),
   listRuns: (id: string) =>
-    request<import("../types").CronJobRun[]>(`/cron-jobs/${id}/runs`),
+    apiFetch<import("../types").CronJobRun[]>(`/cron-jobs/${id}/runs`),
   getRun: (id: string, runId: string) =>
-    request<import("../types").CronJobRun>(`/cron-jobs/${id}/runs/${runId}`),
+    apiFetch<import("../types").CronJobRun>(`/cron-jobs/${id}/runs/${runId}`),
   listArtifacts: (id: string) =>
-    request<import("../types").CronArtifact[]>(`/cron-jobs/${id}/artifacts`),
+    apiFetch<import("../types").CronArtifact[]>(`/cron-jobs/${id}/artifacts`),
   getArtifact: (id: string) =>
-    request<import("../types").CronArtifact>(`/artifacts/${id}`),
+    apiFetch<import("../types").CronArtifact>(`/artifacts/${id}`),
 
-  listTags: () => request<import("../types").CronTag[]>("/cron-tags"),
+  listTags: () => apiFetch<import("../types").CronTag[]>("/cron-tags"),
   createTag: (name: string) =>
-    request<import("../types").CronTag>("/cron-tags", { method: "POST", body: JSON.stringify({ name }) }),
+    apiFetch<import("../types").CronTag>("/cron-tags", { method: "POST", body: JSON.stringify({ name }) }),
   deleteTag: (tagId: string) =>
-    request<void>(`/cron-tags/${tagId}`, { method: "DELETE" }),
+    apiFetch<void>(`/cron-tags/${tagId}`, { method: "DELETE" }),
 };
