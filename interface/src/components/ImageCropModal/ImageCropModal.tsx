@@ -14,6 +14,8 @@ interface ImageCropModalProps {
   outputSize?: number;
   onConfirm: (dataUrl: string) => void;
   onClose: () => void;
+  /** When provided, a "Change Image" button appears in the footer. */
+  onChangeImage?: () => void;
 }
 
 export function ImageCropModal({
@@ -23,6 +25,7 @@ export function ImageCropModal({
   outputSize = 256,
   onConfirm,
   onClose,
+  onChangeImage,
 }: ImageCropModalProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -53,6 +56,11 @@ export function ImageCropModal({
       size="md"
       footer={
         <div className={styles.footer}>
+          {onChangeImage && (
+            <Button variant="ghost" onClick={onChangeImage} className={styles.changeBtn}>
+              Change Image
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>

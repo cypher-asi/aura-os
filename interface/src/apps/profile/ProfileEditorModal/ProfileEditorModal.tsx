@@ -97,6 +97,11 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
     setRawImageSrc("");
   }, [rawImageSrc]);
 
+  const handleChangeImage = useCallback(() => {
+    setCropOpen(false);
+    fileInputRef.current?.click();
+  }, []);
+
   return (
     <>
       <Modal
@@ -203,6 +208,7 @@ export function ProfileEditorModal({ isOpen, profile, onClose, onSave }: Profile
         outputSize={256}
         onConfirm={handleCropConfirm}
         onClose={handleCropClose}
+        onChangeImage={handleChangeImage}
       />
     </>
   );

@@ -15,12 +15,12 @@ interface AgentEditorModalProps {
 export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEditorModalProps) {
   const {
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
-    systemPrompt, setSystemPrompt, icon, setIcon, machineType, setMachineType,
+    systemPrompt, setSystemPrompt, icon, machineType, setMachineType,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,
     cropOpen, rawImageSrc,
     handleSave, handleClose, handleFileSelect, handleCropConfirm, handleCropClose,
-    handleAvatarClick, handleAvatarRemove,
+    handleAvatarClick, handleAvatarRemove, handleChangeImage,
   } = useAgentEditorForm(isOpen, agent, onClose, onSaved);
 
   const isEditing = !!agent;
@@ -152,6 +152,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
         outputSize={512}
         onConfirm={handleCropConfirm}
         onClose={handleCropClose}
+        onChangeImage={handleChangeImage}
       />
     </>
   );

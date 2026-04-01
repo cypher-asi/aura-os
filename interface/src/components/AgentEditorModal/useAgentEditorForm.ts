@@ -34,6 +34,7 @@ interface AgentEditorFormResult {
   handleCropClose: () => void;
   handleAvatarClick: () => void;
   handleAvatarRemove: () => void;
+  handleChangeImage: () => void;
 }
 
 export function useAgentEditorForm(
@@ -114,6 +115,11 @@ export function useAgentEditorForm(
     setRawImageSrc("");
   }, [rawImageSrc]);
 
+  const handleChangeImage = useCallback(() => {
+    setCropOpen(false);
+    fileInputRef.current?.click();
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!name.trim()) { setNameError("Name is required"); return; }
     setNameError(""); setSaving(true); setError("");
@@ -143,6 +149,6 @@ export function useAgentEditorForm(
     nameRef, initialFocusRef, fileInputRef,
     cropOpen, rawImageSrc,
     handleSave, handleClose, handleFileSelect, handleCropConfirm, handleCropClose,
-    handleAvatarClick, handleAvatarRemove,
+    handleAvatarClick, handleAvatarRemove, handleChangeImage,
   };
 }
