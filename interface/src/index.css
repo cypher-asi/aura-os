@@ -36,6 +36,10 @@ body:has([role="dialog"][aria-modal="true"]) {
   overflow: hidden;
 }
 
+[role="dialog"][aria-modal="true"] {
+  --color-elevated: #000000;
+}
+
 @media (pointer: coarse), (max-width: 900px) {
   html,
   body,
