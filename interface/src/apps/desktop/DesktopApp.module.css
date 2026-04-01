@@ -1,0 +1,16 @@
+.surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+.marquee {
+  position: absolute;
+  border: 1px solid var(--color-success, #4c9);
+  background: color-mix(in srgb, var(--color-success, #4c9) 12%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
