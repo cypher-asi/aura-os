@@ -209,6 +209,11 @@ impl ChatSession {
 
 pub type ChatSessionRegistry = Arc<Mutex<HashMap<String, ChatSession>>>;
 
+/// In-memory cache of super-agent conversation messages (full Claude API format
+/// including tool_use / tool_result blocks). Keyed by session key, e.g.
+/// `"super_agent:{agent_id}"`.
+pub type SuperAgentConversationCache = Arc<Mutex<HashMap<String, Vec<serde_json::Value>>>>;
+
 /// Accumulated live output for a running or recently completed task.
 #[derive(Clone, Default)]
 pub struct CachedTaskOutput {
@@ -274,6 +279,10 @@ pub struct AppState {
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
     pub super_agent_service: Arc<SuperAgentService>,
+    /// In-memory cache of super-agent conversation messages so multi-turn
+    /// context survives across requests (mirrors how the harness keeps state
+    /// for normal agents).
+    pub super_agent_messages: SuperAgentConversationCache,
 }
 
 impl AppState {

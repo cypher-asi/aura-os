@@ -5,19 +5,6 @@
   overflow: hidden;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.title {
-  font-weight: 600;
-  font-size: 13px;
-}
-
 .list {
   flex: 1;
   overflow-y: auto;

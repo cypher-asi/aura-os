@@ -374,5 +374,6 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         orbit_client,
         validation_cache,
         super_agent_service,
+        super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
     })
 }

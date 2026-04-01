@@ -141,7 +141,11 @@ impl SuperAgentStream {
     }
 
     /// Run the full multi-turn tool loop for a single user message.
-    pub async fn run(mut self, user_message: String) {
+    ///
+    /// Returns the accumulated conversation messages (full Claude API format
+    /// with tool_use / tool_result blocks) so the caller can cache them for
+    /// subsequent turns.
+    pub async fn run(mut self, user_message: String) -> Vec<Value> {
         self.messages.push(json!({
             "role": "user",
             "content": user_message,
@@ -182,7 +186,7 @@ impl SuperAgentStream {
                         message: format!("Claude API request failed: {e}"),
                         recoverable: false,
                     }));
-                    return;
+                    return self.messages;
                 }
             };
 
@@ -194,7 +198,7 @@ impl SuperAgentStream {
                     message: format!("Claude API returned {status}: {body}"),
                     recoverable: false,
                 }));
-                return;
+                return self.messages;
             }
 
             let (stop_reason, usage) =
@@ -206,7 +210,7 @@ impl SuperAgentStream {
                             message: format!("Failed to parse Claude stream: {e}"),
                             recoverable: false,
                         }));
-                        return;
+                        return self.messages;
                     }
                 };
 
@@ -230,7 +234,7 @@ impl SuperAgentStream {
                         files_changed: FilesChanged::default(),
                     },
                 ));
-                return;
+                return self.messages;
             }
 
             // stop_reason == tool_use: continue the loop
@@ -253,6 +257,7 @@ impl SuperAgentStream {
                 files_changed: FilesChanged::default(),
             },
         ));
+        self.messages
     }
 
     /// Parse a streaming response, emit events, execute tools if needed,
