@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ReactFlow,
   Background,
@@ -7,6 +8,7 @@ import {
   addEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   BackgroundVariant,
   type Connection,
   type Node,
@@ -14,8 +16,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./ProcessCanvas.css";
-import { Plus } from "lucide-react";
-import { Button } from "@cypher-asi/zui";
+import { Play, GitBranch, FileOutput, Timer, Merge } from "lucide-react";
+import { Menu } from "@cypher-asi/zui";
+import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNode, ProcessNodeConnection } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
 import { processApi } from "../../../api/process";
@@ -156,7 +159,7 @@ export function ProcessCanvas({ processId, processNodes, processConnections }: P
           className="process-flow-controls"
         />
         <MiniMap
-          style={{ background: "var(--color-bg-surface, #1a1a2e)", border: "1px solid var(--color-border, #333)", borderRadius: 0 }}
+          style={{ background: "var(--color-bg-surface, #1a1a2e)", border: "1px solid var(--color-border, #333)", borderRadius: 0, width: 150, height: 112 }}
           nodeColor="var(--color-text-muted, #666)"
           maskColor="rgba(0,0,0,0.5)"
         />
