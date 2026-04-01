@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ButtonPlus } from "@cypher-asi/zui";
 import { useCronStore } from "../stores/cron-store";
 import { useSidebarSearch } from "../../../context/SidebarSearchContext";
+import { EmptyState } from "../../../components/EmptyState";
 import { CronJobForm } from "./CronJobForm";
 import styles from "./CronJobList.module.css";
 
@@ -35,9 +36,7 @@ export function CronJobList() {
     <div className={styles.container}>
       <div className={styles.list}>
         {jobs.length === 0 && !loading && (
-          <div className={styles.empty}>
-            No cron jobs yet. Create one to get started.
-          </div>
+          <EmptyState>No cron jobs yet. Create one to get started.</EmptyState>
         )}
         {filteredJobs.map((job) => (
           <button

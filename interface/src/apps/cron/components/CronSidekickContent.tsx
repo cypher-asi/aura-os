@@ -5,13 +5,14 @@ import { useCronSidekickStore } from "../stores/cron-sidekick-store";
 import type { CronJobRun, CronArtifact } from "../../../types";
 import { ArrowLeft } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
+import { EmptyState } from "../../../components/EmptyState";
 import styles from "../../../components/Sidekick/Sidekick.module.css";
 
 const EMPTY_RUNS: CronJobRun[] = [];
 const EMPTY_ARTIFACTS: CronArtifact[] = [];
 
 function RunList({ runs, onSelect }: { runs: CronJobRun[]; onSelect: (r: CronJobRun) => void }) {
-  if (runs.length === 0) return <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>No runs yet</div>;
+  if (runs.length === 0) return <EmptyState>No runs yet</EmptyState>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: 8 }}>
       {runs.map((run) => (
@@ -43,7 +44,7 @@ function RunList({ runs, onSelect }: { runs: CronJobRun[]; onSelect: (r: CronJob
 }
 
 function ArtifactList({ artifacts, onSelect }: { artifacts: CronArtifact[]; onSelect: (a: CronArtifact) => void }) {
-  if (artifacts.length === 0) return <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>No artifacts yet</div>;
+  if (artifacts.length === 0) return <EmptyState>No artifacts yet</EmptyState>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: 8 }}>
       {artifacts.map((art) => (
@@ -163,7 +164,7 @@ export function CronSidekickContent() {
   if (!cronJobId) {
     return (
       <div className={styles.sidekickBody}>
-        <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>Select a cron job</div>
+        <EmptyState>Select a cron job</EmptyState>
       </div>
     );
   }
@@ -187,9 +188,7 @@ export function CronSidekickContent() {
           {activeTab === "artifacts" && <ArtifactList artifacts={artifacts} onSelect={viewArtifact} />}
           {activeTab === "stats" && <StatsView runs={runs} />}
           {activeTab === "log" && (
-            <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>
-              Activity log coming soon
-            </div>
+            <EmptyState>Activity log coming soon</EmptyState>
           )}
         </div>
       </div>

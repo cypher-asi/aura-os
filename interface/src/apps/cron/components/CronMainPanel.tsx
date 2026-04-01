@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Clock, Play, Pause, Trash2 } from "lucide-react";
 import { Button } from "@cypher-asi/zui";
+import { EmptyState } from "../../../components/EmptyState";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { useCronStore } from "../stores/cron-store";
 import { useCronSidekickStore } from "../stores/cron-sidekick-store";
@@ -24,10 +25,7 @@ export function CronMainPanel({ children }: { children?: ReactNode }) {
     return (
       <ResponsiveMainLane>
         <div className={styles.container}>
-          <div className={styles.empty}>
-            <Clock size={48} strokeWidth={1} />
-            <span>Select a cron job or create one to get started</span>
-          </div>
+          <EmptyState icon={<Clock size={32} />}>Select a cron job or create one to get started</EmptyState>
           {children}
         </div>
       </ResponsiveMainLane>
@@ -118,7 +116,7 @@ export function CronMainPanel({ children }: { children?: ReactNode }) {
           </div>
           <div className={styles.section}>
             <div className={styles.sectionTitle}>Recent Runs</div>
-            {jobRuns.length === 0 && <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}>No runs yet</span>}
+            {jobRuns.length === 0 && <EmptyState>No runs yet</EmptyState>}
             {jobRuns.map((run) => (
               <button
                 key={run.run_id}

@@ -74,16 +74,17 @@ impl SuperAgentTool for CreateCronJobTool {
         let description = input["description"]
             .as_str()
             .ok_or_else(|| tool_err("create_cron_job", "description is required"))?;
-        let schedule = input["schedule"]
+        let raw_schedule = input["schedule"]
             .as_str()
             .ok_or_else(|| tool_err("create_cron_job", "schedule is required"))?;
+        let schedule = crate::scheduler::normalize_cron_expr(raw_schedule);
         let prompt = input["prompt"]
             .as_str()
             .ok_or_else(|| tool_err("create_cron_job", "prompt is required"))?;
 
         if schedule.parse::<cron::Schedule>().is_err() {
             return Ok(ToolResult {
-                content: json!({ "error": format!("Invalid cron expression: {schedule}") }),
+                content: json!({ "error": format!("Invalid cron expression: {raw_schedule}") }),
                 is_error: true,
             });
         }
@@ -103,7 +104,7 @@ impl SuperAgentTool for CreateCronJobTool {
             .unwrap_or(300);
 
         let now = Utc::now();
-        let next_run = crate::scheduler::compute_next_run(schedule);
+        let next_run = crate::scheduler::compute_next_run(&schedule);
 
         let job = CronJob {
             cron_job_id: CronJobId::new(),
@@ -111,7 +112,7 @@ impl SuperAgentTool for CreateCronJobTool {
             user_id: ctx.user_id.clone(),
             name: name.to_string(),
             description: description.to_string(),
-            schedule: schedule.to_string(),
+            schedule,
             prompt: prompt.to_string(),
             enabled: true,
             input_artifact_refs,
@@ -263,14 +264,15 @@ impl SuperAgentTool for UpdateCronJobTool {
             job.description = v.to_string();
         }
         if let Some(v) = input.get("schedule").and_then(|v| v.as_str()) {
-            if v.parse::<cron::Schedule>().is_err() {
+            let normalized = crate::scheduler::normalize_cron_expr(v);
+            if normalized.parse::<cron::Schedule>().is_err() {
                 return Ok(ToolResult {
                     content: json!({ "error": format!("Invalid cron expression: {v}") }),
                     is_error: true,
                 });
             }
-            job.schedule = v.to_string();
-            job.next_run_at = crate::scheduler::compute_next_run(v);
+            job.schedule = normalized;
+            job.next_run_at = crate::scheduler::compute_next_run(&job.schedule);
         }
         if let Some(v) = input.get("prompt").and_then(|v| v.as_str()) {
             job.prompt = v.to_string();

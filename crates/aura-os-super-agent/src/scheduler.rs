@@ -81,6 +81,19 @@ impl CronScheduler {
 
 pub fn compute_next_run(schedule: &str) -> Option<chrono::DateTime<Utc>> {
     use std::str::FromStr;
-    let sched = cron::Schedule::from_str(schedule).ok()?;
+    let normalized = normalize_cron_expr(schedule);
+    let sched = cron::Schedule::from_str(&normalized).ok()?;
     sched.upcoming(Utc).next()
+}
+
+/// The `cron` crate expects 6-field (sec min hour dom mon dow) or 7-field
+/// expressions, but users typically write standard 5-field Unix cron
+/// (min hour dom mon dow). Prepend "0" for seconds when we detect 5 fields.
+pub fn normalize_cron_expr(expr: &str) -> String {
+    let fields: Vec<&str> = expr.split_whitespace().collect();
+    if fields.len() == 5 {
+        format!("0 {expr}")
+    } else {
+        expr.to_string()
+    }
 }

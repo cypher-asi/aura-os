@@ -55,7 +55,8 @@ pub(crate) async fn create_cron_job(
     AuthSession(session): AuthSession,
     Json(req): Json<CreateCronJobRequest>,
 ) -> ApiResult<Json<CronJob>> {
-    let next_run_at = aura_os_super_agent::scheduler::compute_next_run(&req.schedule)
+    let schedule = aura_os_super_agent::scheduler::normalize_cron_expr(&req.schedule);
+    let next_run_at = aura_os_super_agent::scheduler::compute_next_run(&schedule)
         .ok_or_else(|| ApiError::bad_request("invalid cron expression"))?;
 
     let org_id = "default".to_string();
@@ -71,7 +72,7 @@ pub(crate) async fn create_cron_job(
         user_id,
         name: req.name,
         description: req.description.unwrap_or_default(),
-        schedule: req.schedule,
+        schedule,
         prompt: req.prompt,
         enabled: true,
         input_artifact_refs: req.input_artifact_refs,
@@ -151,6 +152,7 @@ pub(crate) async fn update_cron_job(
         job.description = description;
     }
     if let Some(schedule) = req.schedule {
+        let schedule = aura_os_super_agent::scheduler::normalize_cron_expr(&schedule);
         let next = aura_os_super_agent::scheduler::compute_next_run(&schedule)
             .ok_or_else(|| ApiError::bad_request("invalid cron expression"))?;
         job.schedule = schedule;
