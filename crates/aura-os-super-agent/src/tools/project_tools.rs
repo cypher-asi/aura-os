@@ -35,8 +35,7 @@ impl SuperAgentTool for CreateProjectTool {
             "properties": {
                 "name": { "type": "string", "description": "Project name" },
                 "description": { "type": "string", "description": "Project description" },
-                "org_id": { "type": "string", "description": "Organization ID (uses context org if omitted)" },
-                "linked_folder_path": { "type": "string", "description": "Local folder path to link" }
+                "org_id": { "type": "string", "description": "Organization ID (uses context org if omitted)" }
             },
             "required": ["name"]
         })
@@ -53,7 +52,7 @@ impl SuperAgentTool for CreateProjectTool {
             name,
             org_id,
             description: input["description"].as_str().map(String::from),
-            folder: input["linked_folder_path"].as_str().map(String::from),
+            folder: None,
             git_repo_url: None,
             git_branch: None,
             orbit_base_url: None,
@@ -218,7 +217,6 @@ impl SuperAgentTool for UpdateProjectTool {
                 "project_id": { "type": "string", "description": "Project ID" },
                 "name": { "type": "string" },
                 "description": { "type": "string" },
-                "linked_folder_path": { "type": "string" },
                 "git_repo_url": { "type": "string" },
                 "git_branch": { "type": "string" }
             },
@@ -234,7 +232,7 @@ impl SuperAgentTool for UpdateProjectTool {
         let req = UpdateProjectRequest {
             name: input["name"].as_str().map(String::from),
             description: input["description"].as_str().map(String::from),
-            folder: input["linked_folder_path"].as_str().map(String::from),
+            folder: None,
             git_repo_url: input["git_repo_url"].as_str().map(String::from),
             git_branch: input["git_branch"].as_str().map(String::from),
             orbit_base_url: None,

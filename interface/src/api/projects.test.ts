@@ -15,7 +15,17 @@ function mockFetch(status: number, body: unknown) {
 
 describe("projectsApi", () => {
   const originalFetch = globalThis.fetch;
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    Object.defineProperty(window, "localStorage", {
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      },
+      configurable: true,
+    });
+  });
   afterEach(() => { globalThis.fetch = originalFetch; });
 
   it("listProjects fetches GET /api/projects without orgId", async () => {
@@ -37,7 +47,6 @@ describe("projectsApi", () => {
       org_id: "o1",
       name: "Proj",
       description: "Desc",
-      linked_folder_path: "/code",
     };
     const fetchMock = mockFetch(200, { id: "p1", ...data });
     globalThis.fetch = fetchMock;

@@ -6,9 +6,6 @@ export interface CreateProjectRequest {
   org_id: string;
   name: string;
   description: string;
-  linked_folder_path?: string;
-  workspace_source?: string;
-  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;
@@ -19,9 +16,6 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
-  linked_folder_path?: string;
-  workspace_source?: string;
-  workspace_display_path?: string;
   git_repo_url?: string;
   git_branch?: string;
   orbit_base_url?: string;

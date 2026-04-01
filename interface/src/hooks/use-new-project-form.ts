@@ -175,7 +175,6 @@ export function useNewProjectForm(
         org_id: resolvedOrgId,
         name: name.trim(),
         description: "",
-        linked_folder_path: "",
         ...orbitFields,
       });
 
