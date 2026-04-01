@@ -5,6 +5,7 @@ import { useCronSidekickStore } from "../stores/cron-sidekick-store";
 import type { CronJobRun, CronArtifact } from "../../../types";
 import { ArrowLeft } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
+import styles from "../../../components/Sidekick/Sidekick.module.css";
 
 const EMPTY_RUNS: CronJobRun[] = [];
 const EMPTY_ARTIFACTS: CronArtifact[] = [];
@@ -93,7 +94,7 @@ function RunPreview({ run, onClose }: { run: CronJobRun; onClose: () => void }) 
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid var(--color-border)" }}>
         <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={14} />} onClick={onClose} />
-        <Text size="sm" style={{ fontWeight: 600 }}>Run Detail</Text>
+        <Text size="sm">Run Detail</Text>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: 12, fontSize: 13 }}>
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", marginBottom: 16 }}>
@@ -133,7 +134,7 @@ function ArtifactPreview({ artifact, onClose }: { artifact: CronArtifact; onClos
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid var(--color-border)" }}>
         <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={14} />} onClick={onClose} />
-        <Text size="sm" style={{ fontWeight: 600 }}>{artifact.name}</Text>
+        <Text size="sm">{artifact.name}</Text>
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: 12, fontSize: 13 }}>
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px", marginBottom: 16 }}>
@@ -160,24 +161,38 @@ export function CronSidekickContent() {
   const artifacts = useCronStore((s) => (cronJobId ? s.artifacts[cronJobId] ?? EMPTY_ARTIFACTS : EMPTY_ARTIFACTS));
 
   if (!cronJobId) {
-    return <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>Select a cron job</div>;
+    return (
+      <div className={styles.sidekickBody}>
+        <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>Select a cron job</div>
+      </div>
+    );
   }
 
   if (previewItem) {
-    if (previewItem.kind === "run") return <RunPreview run={previewItem.run} onClose={closePreview} />;
-    if (previewItem.kind === "artifact") return <ArtifactPreview artifact={previewItem.artifact} onClose={closePreview} />;
+    return (
+      <div className={styles.sidekickBody}>
+        <div className={styles.previewOverlay}>
+          {previewItem.kind === "run" && <RunPreview run={previewItem.run} onClose={closePreview} />}
+          {previewItem.kind === "artifact" && <ArtifactPreview artifact={previewItem.artifact} onClose={closePreview} />}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ height: "100%", overflow: "auto" }}>
-      {activeTab === "runs" && <RunList runs={runs} onSelect={viewRun} />}
-      {activeTab === "artifacts" && <ArtifactList artifacts={artifacts} onSelect={viewArtifact} />}
-      {activeTab === "stats" && <StatsView runs={runs} />}
-      {activeTab === "log" && (
-        <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>
-          Activity log coming soon
+    <div className={styles.sidekickBody}>
+      <div className={styles.sidekickContent}>
+        <div className={styles.tabContent}>
+          {activeTab === "runs" && <RunList runs={runs} onSelect={viewRun} />}
+          {activeTab === "artifacts" && <ArtifactList artifacts={artifacts} onSelect={viewArtifact} />}
+          {activeTab === "stats" && <StatsView runs={runs} />}
+          {activeTab === "log" && (
+            <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>
+              Activity log coming soon
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
