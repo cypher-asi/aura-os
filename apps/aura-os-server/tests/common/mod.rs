@@ -24,6 +24,7 @@ use aura_os_server::AppState;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
+use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
 
 pub fn store_zero_auth_session(store: &RocksStore) {
@@ -57,7 +58,8 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
     let now_post = now.clone();
     let now_put_get = now_put.clone();
     let now_put_put = now_put.clone();
-    let created_ids: Arc<StdMutex<HashMap<String, String>>> = Arc::new(StdMutex::new(HashMap::new()));
+    let created_ids: Arc<StdMutex<HashMap<String, String>>> =
+        Arc::new(StdMutex::new(HashMap::new()));
     let created_ids_post = created_ids.clone();
     let created_ids_get = created_ids.clone();
     let created_ids_put = created_ids.clone();
@@ -86,7 +88,10 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
                 let created_ids = created_ids_post.clone();
                 let id = ProjectId::new().to_string();
                 let org_id = OrgId::new().to_string();
-                created_ids.lock().unwrap().insert(id.clone(), org_id.clone());
+                created_ids
+                    .lock()
+                    .unwrap()
+                    .insert(id.clone(), org_id.clone());
                 async move {
                     (
                         StatusCode::CREATED,
@@ -160,7 +165,8 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
                 let created_ids = created_ids_del.clone();
                 async move {
                     created_ids.lock().unwrap().remove(&project_id);
-                    StatusCode::NO_CONTENT                }
+                    StatusCode::NO_CONTENT
+                }
             }),
         );
     let net_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -231,6 +237,22 @@ pub fn build_test_app_from_store(
         Arc::new(LocalHarness::new("http://localhost:19080".to_string()));
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
+    let automaton_client = Arc::new(AutomatonClient::new("http://localhost:19080"));
+    let super_agent_service = Arc::new(SuperAgentService::new(
+        "http://localhost:3000".to_string(),
+        project_service.clone(),
+        agent_service.clone(),
+        agent_instance_service.clone(),
+        task_service.clone(),
+        session_service.clone(),
+        org_service.clone(),
+        billing_client.clone(),
+        automaton_client.clone(),
+        network_client.clone(),
+        storage_client.clone(),
+        store.clone(),
+        event_broadcast.clone(),
+    ));
 
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
@@ -275,12 +297,14 @@ pub fn build_test_app_from_store(
         network_client,
         storage_client,
         require_zero_pro: false,
-        automaton_client: Arc::new(AutomatonClient::new("http://localhost:19080")),
+        automaton_client,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url,
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client: None,
         validation_cache,
+        super_agent_service,
+        super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);

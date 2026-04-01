@@ -13,7 +13,10 @@ use tracing::{info, warn};
 type SseStream = Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
 type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
 
-use aura_os_core::{Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId, SessionEvent};
+use aura_os_core::{
+    Agent, AgentId, AgentInstanceId, ChatContentBlock, ChatRole, HarnessMode, ProjectId,
+    SessionEvent,
+};
 use aura_os_link::{
     ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, UserMessage,
 };
@@ -236,10 +239,8 @@ fn spawn_chat_persist_task(
                                 "text": &full_text,
                                 "thinking": if thinking_buf.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(thinking_buf) },
                                 "content_blocks": &content_blocks,
-                                "usage": {
-                                    "input_tokens": end.usage.input_tokens,
-                                    "output_tokens": end.usage.output_tokens,
-                                },
+                                "usage": &end.usage,
+                                "files_changed": &end.files_changed,
                                 "stop_reason": &end.stop_reason,
                                 "seq": seq,
                             })).await;
@@ -310,8 +311,7 @@ async fn setup_agent_chat_persistence(
         }
     };
     let jwt = jwt.to_string();
-    let matching =
-        find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
+    let matching = find_matching_project_agents(state, &storage, &jwt, &agent_id.to_string()).await;
 
     let (pai, pid) = if let Some(pa) = matching.first() {
         let pid = pa.project_id.clone().unwrap_or_default();
@@ -457,7 +457,11 @@ fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_j
                                     "input": input,
                                 }));
                             }
-                            ChatContentBlock::ToolResult { tool_use_id, content, is_error } => {
+                            ChatContentBlock::ToolResult {
+                                tool_use_id,
+                                content,
+                                is_error,
+                            } => {
                                 pending_tool_results.push(serde_json::json!({
                                     "type": "tool_result",
                                     "tool_use_id": tool_use_id,
@@ -901,7 +905,10 @@ async fn handle_super_agent_stream(
         .get_setting("zero_auth_session")
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok());
-    let user_id = session.as_ref().map(|s| s.user_id.as_str()).unwrap_or("unknown");
+    let user_id = session
+        .as_ref()
+        .map(|s| s.user_id.as_str())
+        .unwrap_or("unknown");
 
     // Resolve org: try network first, then derive from local projects
     let (org_name, org_id) = resolve_org_for_super_agent(state, jwt).await;
@@ -909,8 +916,7 @@ async fn handle_super_agent_stream(
     let sa_ctx = Arc::new(sas.build_context(user_id, &org_id, jwt));
 
     // Always generate a fresh system prompt with current org info
-    let system_prompt =
-        aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
+    let system_prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
 
     let user_content = body.content;
     let requested_model = body.model;
@@ -941,8 +947,7 @@ async fn handle_super_agent_stream(
         }
     };
 
-    let persist_ctx =
-        setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt).await;
+    let persist_ctx = setup_agent_chat_persistence(state, &agent_id, &agent.name, jwt).await;
     if persist_ctx.is_none() {
         warn!(%agent_id, "super agent chat: persistence context unavailable");
     }
@@ -1023,7 +1028,11 @@ pub(crate) async fn send_agent_event_stream(
     let session_key = format!("agent:{agent_id}");
     let conversation_messages = if !has_live_session(&state, &session_key) {
         let stored = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
-        if stored.is_empty() { None } else { Some(session_events_to_conversation_history(&stored)) }
+        if stored.is_empty() {
+            None
+        } else {
+            Some(session_events_to_conversation_history(&stored))
+        }
     } else {
         None
     };

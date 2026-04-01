@@ -21,10 +21,11 @@ use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
+use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_store::RocksStore;
+use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
 use aura_os_terminal::TerminalManager;
-use aura_os_super_agent::SuperAgentService;
 
 use crate::error::ApiError;
 
@@ -96,7 +97,11 @@ pub(crate) fn spawn_cache_eviction(cache: ValidationCache) {
             cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
             let removed = before.saturating_sub(cache.len());
             if removed > 0 {
-                tracing::debug!(removed, remaining = cache.len(), "evicted expired auth cache entries");
+                tracing::debug!(
+                    removed,
+                    remaining = cache.len(),
+                    "evicted expired auth cache entries"
+                );
             }
         }
     });
@@ -145,7 +150,9 @@ mod tests {
             "expired".into(),
             CachedSession {
                 session: make_session(),
-                validated_at: Instant::now() - CACHE_ENTRY_MAX_AGE - std::time::Duration::from_secs(1),
+                validated_at: Instant::now()
+                    - CACHE_ENTRY_MAX_AGE
+                    - std::time::Duration::from_secs(1),
             },
         );
         cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
@@ -166,7 +173,9 @@ mod tests {
             "expired".into(),
             CachedSession {
                 session: make_session(),
-                validated_at: Instant::now() - CACHE_ENTRY_MAX_AGE - std::time::Duration::from_secs(1),
+                validated_at: Instant::now()
+                    - CACHE_ENTRY_MAX_AGE
+                    - std::time::Duration::from_secs(1),
             },
         );
         cache.retain(|_, entry| entry.validated_at.elapsed() < CACHE_ENTRY_MAX_AGE);
@@ -222,11 +231,19 @@ pub struct CachedTaskOutput {
     pub test_steps: Vec<serde_json::Value>,
     pub total_input_tokens: u64,
     pub total_output_tokens: u64,
+    pub total_cache_creation_input_tokens: u64,
+    pub total_cache_read_input_tokens: u64,
+    pub estimated_context_tokens: u64,
+    pub context_usage_estimate: Option<f64>,
+    pub provider: Option<String>,
+    pub model: Option<String>,
+    pub files_changed: Vec<StorageTaskFileChangeSummary>,
     pub session_id: Option<String>,
     pub agent_instance_id: Option<String>,
     pub project_id: Option<String>,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub saw_rich_usage: bool,
 }
 pub(crate) type TaskOutputCache = Arc<Mutex<HashMap<String, CachedTaskOutput>>>;
 

@@ -12,25 +12,45 @@ use crate::state::CachedTaskOutput;
 
 const LOG_WORTHY_TYPES: &[&str] = &[
     // Loop lifecycle
-    "loop_started", "loop_paused", "loop_resumed", "loop_stopped", "loop_finished",
+    "loop_started",
+    "loop_paused",
+    "loop_resumed",
+    "loop_stopped",
+    "loop_finished",
     "loop_iteration_summary",
     // Task lifecycle
-    "task_started", "task_completed", "task_failed", "task_retrying",
-    "task_became_ready", "tasks_became_ready", "follow_up_task_created",
+    "task_started",
+    "task_completed",
+    "task_failed",
+    "task_retrying",
+    "task_became_ready",
+    "tasks_became_ready",
+    "follow_up_task_created",
     // File operations
     "file_ops_applied",
     // Session
-    "session_rolled_over", "log_line",
+    "session_rolled_over",
+    "log_line",
     // Spec generation
-    "spec_gen_started", "spec_gen_progress", "spec_gen_completed", "spec_gen_failed", "spec_saved",
+    "spec_gen_started",
+    "spec_gen_progress",
+    "spec_gen_completed",
+    "spec_gen_failed",
+    "spec_saved",
     // Build verification
-    "build_verification_skipped", "build_verification_started",
-    "build_verification_passed", "build_verification_failed", "build_fix_attempt",
+    "build_verification_skipped",
+    "build_verification_started",
+    "build_verification_passed",
+    "build_verification_failed",
+    "build_fix_attempt",
     // Test verification
-    "test_verification_started", "test_verification_passed",
-    "test_verification_failed", "test_fix_attempt",
+    "test_verification_started",
+    "test_verification_passed",
+    "test_verification_failed",
+    "test_fix_attempt",
     // Git
-    "git_committed", "git_pushed",
+    "git_committed",
+    "git_pushed",
     // Errors
     "error",
 ];
@@ -66,12 +86,18 @@ fn log_message_for_event(event: &serde_json::Value) -> String {
         "task_started" => format!("Task started: {label}"),
         "task_completed" => format!("Task completed: {label}"),
         "task_failed" => {
-            let reason = event.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let reason = event
+                .get("reason")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
             format!("Task failed: {label} — {reason}")
         }
         "task_retrying" => format!("Task retrying: {label}"),
         "git_committed" => {
-            let sha = event.get("commit_sha").and_then(|v| v.as_str()).unwrap_or("");
+            let sha = event
+                .get("commit_sha")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             format!("Git commit: {}", &sha[..sha.len().min(8)])
         }
         "git_pushed" => {
@@ -79,7 +105,10 @@ fn log_message_for_event(event: &serde_json::Value) -> String {
             format!("Git push: {branch}")
         }
         "error" => {
-            let msg = event.get("message").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let msg = event
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
             format!("Error: {msg}")
         }
         other => other.replace('_', " "),
@@ -137,10 +166,15 @@ pub(crate) async fn persist_task_output(
         return;
     };
 
-    if cached.total_input_tokens > 0 || cached.total_output_tokens > 0 {
+    if cached.total_input_tokens > 0
+        || cached.total_output_tokens > 0
+        || !cached.files_changed.is_empty()
+    {
         let req = aura_os_storage::UpdateTaskRequest {
             total_input_tokens: Some(cached.total_input_tokens),
             total_output_tokens: Some(cached.total_output_tokens),
+            files_changed: (!cached.files_changed.is_empty())
+                .then_some(cached.files_changed.clone()),
             ..Default::default()
         };
         if let Err(e) = storage.update_task(task_id, jwt, &req).await {
@@ -150,6 +184,7 @@ pub(crate) async fn persist_task_output(
                 task_id,
                 input_tokens = cached.total_input_tokens,
                 output_tokens = cached.total_output_tokens,
+                files_changed = cached.files_changed.len(),
                 "Persisted task token usage"
             );
         }
@@ -161,23 +196,21 @@ pub(crate) async fn persist_task_output(
     // claims the task.
     let session_id: String = match cached.session_id.clone() {
         Some(sid) => sid,
-        None => {
-            match storage.get_task(task_id, jwt).await {
-                Ok(task) if task.session_id.is_some() => {
-                    let sid = task.session_id.unwrap();
-                    info!(task_id, %sid, "Resolved session_id from task document (cache miss fallback)");
-                    sid
-                }
-                Ok(_) => {
-                    warn!(task_id, "Cannot persist task output: session_id missing from both cache and task document");
-                    return;
-                }
-                Err(e) => {
-                    warn!(task_id, error = %e, "Cannot persist task output: failed to fetch task for session_id fallback");
-                    return;
-                }
+        None => match storage.get_task(task_id, jwt).await {
+            Ok(task) if task.session_id.is_some() => {
+                let sid = task.session_id.unwrap();
+                info!(task_id, %sid, "Resolved session_id from task document (cache miss fallback)");
+                sid
             }
-        }
+            Ok(_) => {
+                warn!(task_id, "Cannot persist task output: session_id missing from both cache and task document");
+                return;
+            }
+            Err(e) => {
+                warn!(task_id, error = %e, "Cannot persist task output: failed to fetch task for session_id fallback");
+                return;
+            }
+        },
     };
 
     // Ensure the task document in aura-storage carries the session_id so
