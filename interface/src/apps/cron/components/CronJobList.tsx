@@ -1,8 +1,8 @@
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus } from "lucide-react";
-import { Button } from "@cypher-asi/zui";
+import { ButtonPlus } from "@cypher-asi/zui";
 import { useCronStore } from "../stores/cron-store";
-import { useState } from "react";
+import { useSidebarSearch } from "../../../context/SidebarSearchContext";
 import { CronJobForm } from "./CronJobForm";
 import styles from "./CronJobList.module.css";
 
@@ -12,27 +12,34 @@ export function CronJobList() {
   const navigate = useNavigate();
   const { cronJobId } = useParams<{ cronJobId: string }>();
   const [showForm, setShowForm] = useState(false);
+  const { query: searchQuery, setAction } = useSidebarSearch();
+
+  useEffect(() => {
+    setAction(
+      "cron",
+      <ButtonPlus onClick={() => setShowForm(true)} size="sm" title="New Cron Job" />,
+    );
+    return () => setAction("cron", null);
+  }, [setAction]);
+
+  const filteredJobs = useMemo(() => {
+    if (!searchQuery) return jobs;
+    const q = searchQuery.toLowerCase();
+    return jobs.filter((job) => {
+      const haystack = `${job.name} ${job.schedule}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [jobs, searchQuery]);
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <span className={styles.title}>Cron Jobs</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={<Plus size={16} />}
-          title="Create cron job"
-          onClick={() => setShowForm(true)}
-        />
-      </div>
       <div className={styles.list}>
         {jobs.length === 0 && !loading && (
           <div className={styles.empty}>
             No cron jobs yet. Create one to get started.
           </div>
         )}
-        {jobs.map((job) => (
+        {filteredJobs.map((job) => (
           <button
             key={job.cron_job_id}
             type="button"
