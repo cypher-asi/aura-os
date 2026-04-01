@@ -57,8 +57,12 @@ vi.mock("../../stores/event-store", () => {
 });
 
 const setActiveTabMock = vi.fn();
+const mockSidekickState = { setActiveTab: setActiveTabMock };
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({ setActiveTab: setActiveTabMock }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("../StatusBadge", () => ({

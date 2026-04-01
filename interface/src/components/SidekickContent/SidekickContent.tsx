@@ -7,7 +7,8 @@ import { PanelSearch } from "../PanelSearch";
 import { PreviewContent, PreviewHeader } from "../Preview";
 import { StatusBadge } from "../StatusBadge";
 import { api } from "../../api/client";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectContext } from "../../stores/project-action-store";
 import { SpecList } from "../../views/SpecList";
 import { TaskList } from "../../views/TaskList";
@@ -122,7 +123,14 @@ const SEARCH_PLACEHOLDERS: Record<string, string> = {
 };
 
 export function SidekickContent() {
-  const { activeTab, showInfo, toggleInfo, previewItem } = useSidekick();
+  const { activeTab, showInfo, toggleInfo, previewItem } = useSidekickStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      showInfo: s.showInfo,
+      toggleInfo: s.toggleInfo,
+      previewItem: s.previewItem,
+    })),
+  );
   const ctx = useProjectContext();
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();

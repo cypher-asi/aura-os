@@ -19,18 +19,22 @@ const mockRemoveSpec = vi.fn();
 const mockRemoveTask = vi.fn();
 const mockNotifyAgentInstanceUpdate = vi.fn();
 
+const mockSidekickState = {
+  previewItem: null,
+  setStreamingAgentInstanceId: mockSetStreamingAgentInstanceId,
+  clearGeneratedArtifacts: mockClearGeneratedArtifacts,
+  setActiveTab: mockSetActiveTab,
+  pushSpec: mockPushSpec,
+  pushTask: mockPushTask,
+  removeSpec: mockRemoveSpec,
+  removeTask: mockRemoveTask,
+  notifyAgentInstanceUpdate: mockNotifyAgentInstanceUpdate,
+};
 vi.mock("../stores/sidekick-store", () => ({
-  useSidekick: () => ({
-    previewItem: null,
-    setStreamingAgentInstanceId: mockSetStreamingAgentInstanceId,
-    clearGeneratedArtifacts: mockClearGeneratedArtifacts,
-    setActiveTab: mockSetActiveTab,
-    pushSpec: mockPushSpec,
-    pushTask: mockPushTask,
-    removeSpec: mockRemoveSpec,
-    removeTask: mockRemoveTask,
-    notifyAgentInstanceUpdate: mockNotifyAgentInstanceUpdate,
-  }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("../stores/project-action-store", () => ({

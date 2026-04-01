@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { useShallow } from "zustand/react/shallow";
 
 export type AgentSidekickTab =
   | "profile"
@@ -35,6 +34,3 @@ export const useAgentSidekickStore = create<AgentSidekickState>()((set) => ({
   closeDeleteConfirm: () => set({ showDeleteConfirm: false }),
 }));
 
-export function useAgentSidekick() {
-  return useAgentSidekickStore(useShallow((s) => s));
-}

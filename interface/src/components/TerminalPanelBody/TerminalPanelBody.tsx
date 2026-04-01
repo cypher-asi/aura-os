@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { cn } from "@cypher-asi/zui";
 import { useTerminal, type UseTerminalReturn } from "../../hooks/use-terminal";
-import { useTerminalPanel } from "../../stores/terminal-panel-store";
+import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
+import { useShallow } from "zustand/react/shallow";
 import { XTerminal } from "../XTerminal";
 import styles from "../TerminalPanel/TerminalPanel.module.css";
 
@@ -39,7 +40,19 @@ export function TerminalPanelBody({ embedded }: { embedded?: boolean } = {}) {
     registerHook,
     cwd,
     remoteAgentId,
-  } = useTerminalPanel();
+  } = useTerminalPanelStore(
+    useShallow((s) => ({
+      terminals: s.terminals,
+      activeId: s.activeId,
+      collapsed: s.collapsed,
+      contentReady: s.contentReady,
+      panelHeight: s.panelHeight,
+      handleMouseDown: s.handleMouseDown,
+      registerHook: s.registerHook,
+      cwd: s.cwd,
+      remoteAgentId: s.remoteAgentId,
+    })),
+  );
 
   if (embedded) {
     return (

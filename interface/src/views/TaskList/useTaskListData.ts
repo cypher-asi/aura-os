@@ -4,7 +4,6 @@ import type { Spec, Task, TaskStatus } from "../../types";
 import { EventType } from "../../types/aura-events";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
-import { useSidekick } from "../../stores/sidekick-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { mergeById, compareSpecs } from "../../utils/collections";
@@ -15,14 +14,14 @@ interface TaskListData {
   liveTaskIds: Set<string>;
   loopActive: boolean;
   loading: boolean;
-  sidekick: ReturnType<typeof useSidekick>;
 }
 
 export function useTaskListData(): TaskListData {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
-  const sidekick = useSidekick();
   const subscribe = useEventStore((s) => s.subscribe);
+  const storeSpecs = useSidekickStore((s) => s.specs);
+  const storeTasks = useSidekickStore((s) => s.tasks);
   const loopActive = useLoopActive(projectId);
   const [liveTaskIds, setLiveTaskIds] = useState<Set<string>>(() => new Set());
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
@@ -32,8 +31,8 @@ export function useTaskListData(): TaskListData {
   useEffect(() => { if (ctx?.initialSpecs) setLocalSpecs(ctx.initialSpecs); }, [ctx?.initialSpecs]);
   useEffect(() => { if (ctx?.initialTasks) setLocalTasks(ctx.initialTasks); }, [ctx?.initialTasks]);
 
-  const sidekickRef = useRef(sidekick);
-  sidekickRef.current = sidekick;
+  const sidekickRef = useRef(useSidekickStore.getState());
+  useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);
   const projectIdRef = useRef(projectId);
   projectIdRef.current = projectId;
 
@@ -125,8 +124,8 @@ export function useTaskListData(): TaskListData {
     return () => unsubs.forEach((u) => u());
   }, [subscribe, updateTaskStatus, refetchTasks]);
 
-  const specs = useMemo(() => mergeById(localSpecs, sidekick.specs, "spec_id").sort(compareSpecs), [localSpecs, sidekick.specs]);
-  const tasks = useMemo(() => mergeById(localTasks, sidekick.tasks, "task_id"), [localTasks, sidekick.tasks]);
+  const specs = useMemo(() => mergeById(localSpecs, storeSpecs, "spec_id").sort(compareSpecs), [localSpecs, storeSpecs]);
+  const tasks = useMemo(() => mergeById(localTasks, storeTasks, "task_id"), [localTasks, storeTasks]);
 
-  return { specs, tasks, liveTaskIds, loopActive, loading, sidekick };
+  return { specs, tasks, liveTaskIds, loopActive, loading };
 }

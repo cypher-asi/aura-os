@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useEventStore } from "../../stores/event-store";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";
 
@@ -27,7 +27,7 @@ interface AutomationStatusData {
 export function useAutomationStatus(projectId: ProjectId): AutomationStatusData {
   const subscribe = useEventStore((s) => s.subscribe);
   const connected = useEventStore((s) => s.connected);
-  const { setActiveTab } = useSidekick();
+  const setActiveTab = useSidekickStore((s) => s.setActiveTab);
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const [activeAgents, setActiveAgents] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);

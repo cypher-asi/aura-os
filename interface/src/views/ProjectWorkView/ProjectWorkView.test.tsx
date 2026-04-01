@@ -41,11 +41,15 @@ vi.mock("../../hooks/use-loop-control", () => ({
   }),
 }));
 
+const mockSidekickState = {
+  viewSpec: vi.fn(),
+  viewTask: vi.fn(),
+};
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({
-    viewSpec: vi.fn(),
-    viewTask: vi.fn(),
-  }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("./useMobileSpecs", () => ({

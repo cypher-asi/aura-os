@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuraCapabilities } from "./use-aura-capabilities";
-import { useSidekick } from "../stores/sidekick-store";
+import { useSidekickStore } from "../stores/sidekick-store";
+import type { PreviewItem } from "../stores/sidekick-store";
 import { useMobileDrawerStore } from "../stores/mobile-drawer-store";
 import { useUIModalStore } from "../stores/ui-modal-store";
 
-function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): string | null {
+function previewItemKey(item: PreviewItem | null): string | null {
   if (!item) return null;
   switch (item.kind) {
     case "spec":
@@ -27,7 +28,7 @@ function previewItemKey(item: ReturnType<typeof useSidekick>["previewItem"]): st
  */
 export function useMobileDrawerEffects(hasPreviewPanel: boolean): void {
   const { isMobileLayout } = useAuraCapabilities();
-  const { previewItem } = useSidekick();
+  const previewItem = useSidekickStore((s) => s.previewItem);
   const location = useLocation();
   const lastPreviewKeyRef = useRef<string | null>(null);
 

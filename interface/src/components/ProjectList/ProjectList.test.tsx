@@ -27,16 +27,16 @@ vi.mock("@cypher-asi/zui", () => ({
   ),
 }));
 
+const mockSidekickState = {
+  closePreview: vi.fn(),
+  streamingAgentInstanceId: null,
+  onAgentInstanceUpdate: vi.fn(() => vi.fn()),
+};
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({
-    closePreview: vi.fn(),
-    streamingAgentInstanceId: null,
-    onAgentInstanceUpdate: vi.fn(() => vi.fn()),
-  }),
-  useSidekickStore: {
-    subscribe: vi.fn(() => vi.fn()),
-    getState: vi.fn(() => ({ streamingAgentInstanceId: null })),
-  },
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 const mockActions = {

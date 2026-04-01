@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { X, ArrowLeft, FileText } from "lucide-react";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { TaskPreview } from "../TaskPreview";
 import { RunTaskButton } from "../RunTaskButton";
@@ -16,7 +16,7 @@ import type { Spec } from "../../types";
 import styles from "./Preview.module.css";
 
 function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
-  const sidekick = useSidekick();
+  const pushPreview = useSidekickStore((s) => s.pushPreview);
   const ctx = useProjectContext();
   const project = ctx?.project;
 
@@ -70,7 +70,7 @@ function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
           {specs.map((spec) => (
               <Item
                 key={spec.spec_id}
-                onClick={() => sidekick.pushPreview({ kind: "spec", spec })}
+                onClick={() => pushPreview({ kind: "spec", spec })}
                 className={styles.fileOpItem}
               >
                 <Item.Icon><FileText size={14} /></Item.Icon>
@@ -113,12 +113,13 @@ function previewTitle(item: PreviewItem): string {
 }
 
 function useDisplayItem() {
-  const { previewItem } = useSidekick();
-  return previewItem;
+  return useSidekickStore((s) => s.previewItem);
 }
 
 export function PreviewHeader() {
-  const { closePreview, canGoBack, goBackPreview } = useSidekick();
+  const closePreview = useSidekickStore((s) => s.closePreview);
+  const canGoBack = useSidekickStore((s) => s.canGoBack);
+  const goBackPreview = useSidekickStore((s) => s.goBackPreview);
   const displayItem = useDisplayItem();
   const ctx = useProjectContext();
 

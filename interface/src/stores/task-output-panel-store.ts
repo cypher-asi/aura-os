@@ -170,10 +170,6 @@ useTaskOutputPanelStore.subscribe((s) => {
   savePersistedTasks(s.tasks);
 });
 
-export function useTaskOutputPanel() {
-  return useTaskOutputPanelStore(useShallow((s) => s));
-}
-
 export function useTasksForProject(projectId: string | undefined, agentInstanceId?: string | undefined) {
   return useTaskOutputPanelStore(
     useShallow((s) => {

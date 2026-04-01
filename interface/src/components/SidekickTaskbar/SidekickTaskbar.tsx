@@ -2,7 +2,8 @@ import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Archive, Info, File, Check, Logs, ChartNoAxesColumnIncreasing, MonitorCog, FolderClosed } from "lucide-react";
-import { useSidekick, type SidekickTab } from "../../stores/sidekick-store";
+import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
@@ -18,7 +19,14 @@ const TAB_ICONS: TabItem[] = [
 ];
 
 export function SidekickTaskbar() {
-  const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekick();
+  const { activeTab, setActiveTab, showInfo, toggleInfo } = useSidekickStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      setActiveTab: s.setActiveTab,
+      showInfo: s.showInfo,
+      toggleInfo: s.toggleInfo,
+    })),
+  );
   const ctx = useProjectContext();
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();

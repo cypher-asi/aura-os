@@ -4,7 +4,8 @@ import type { Spec } from "../../types";
 import type { AuraEvent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
 import { useEventStore } from "../../stores/event-store";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
+import { useShallow } from "zustand/react/shallow";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { mergeById, compareSpecs } from "../../utils/collections";
@@ -20,14 +21,20 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const subscribe = useEventStore((s) => s.subscribe);
-  const sidekick = useSidekick();
-  const sidekickRef = useRef(sidekick);
+  const { specs, deletedSpecIds, streamingAgentInstanceId } = useSidekickStore(
+    useShallow((s) => ({
+      specs: s.specs,
+      deletedSpecIds: s.deletedSpecIds,
+      streamingAgentInstanceId: s.streamingAgentInstanceId,
+    })),
+  );
+  const pushPreview = useSidekickStore((s) => s.pushPreview);
+  const viewSpec = useSidekickStore((s) => s.viewSpec);
+  const sidekickRef = useRef(useSidekickStore.getState());
   const ctxRef = useRef(ctx);
 
-  useEffect(() => {
-    sidekickRef.current = sidekick;
-    ctxRef.current = ctx;
-  }, [ctx, sidekick]);
+  useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);
+  useEffect(() => { ctxRef.current = ctx; }, [ctx]);
 
   useEffect(() => {
     if (ctx?.initialSpecs) {
@@ -35,11 +42,11 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     }
   }, [ctx?.initialSpecs]);
   const mergedSpecs = useMemo(() => {
-    const merged = mergeById(localSpecs, sidekick.specs, "spec_id").sort(compareSpecs);
-    if (sidekick.deletedSpecIds.length === 0) return merged;
-    const deleted = new Set(sidekick.deletedSpecIds);
+    const merged = mergeById(localSpecs, specs, "spec_id").sort(compareSpecs);
+    if (deletedSpecIds.length === 0) return merged;
+    const deleted = new Set(deletedSpecIds);
     return merged.filter((s) => !deleted.has(s.spec_id));
-  }, [localSpecs, sidekick.specs, sidekick.deletedSpecIds]);
+  }, [localSpecs, specs, deletedSpecIds]);
 
   const fetchSpecs = useCallback(
     (autoSelect?: boolean) => {
@@ -130,13 +137,13 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
     if (!id) return;
     if (id === "__specs_root__") {
       setSelectedId(id);
-      sidekick.pushPreview({ kind: "specs_overview", specs: mergedSpecs });
+      pushPreview({ kind: "specs_overview", specs: mergedSpecs });
       return;
     }
     const spec = specById.get(id);
     if (spec) {
       setSelectedId(id);
-      sidekick.viewSpec(spec);
+      viewSpec(spec);
     }
   };
 
@@ -146,7 +153,7 @@ export function SpecList({ searchQuery }: { searchQuery: string }) {
   );
 
   const isEmpty = mergedSpecs.length === 0;
-  const showEmpty = useDelayedEmpty(isEmpty, loading, sidekick.streamingAgentInstanceId ? 800 : 0);
+  const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
 
   if (isEmpty) {
     if (!showEmpty) return null;

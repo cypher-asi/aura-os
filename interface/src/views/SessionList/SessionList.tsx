@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
@@ -24,7 +24,7 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
 
 export function SessionList({ searchQuery }: { searchQuery: string }) {
   const { sessions, sessionById, loading, selectedId, setSelectedId } = useSessionListData();
-  const sidekick = useSidekick();
+  const viewSession = useSidekickStore((s) => s.viewSession);
 
   const explorerData: ExplorerNode[] = useMemo(
     () =>
@@ -58,7 +58,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
     const session = sessionById.get(id);
     if (session) {
       setSelectedId(id);
-      sidekick.viewSession(session);
+      viewSession(session);
     }
   };
 

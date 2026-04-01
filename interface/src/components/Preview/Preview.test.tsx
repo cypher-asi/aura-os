@@ -40,7 +40,10 @@ const mockSidekick = {
 };
 
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => mockSidekick,
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekick) : mockSidekick),
+    { getState: () => mockSidekick, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 const mockProjectContext = {

@@ -153,8 +153,12 @@ vi.mock("../../apps/agents/MobileAgentLibraryView", () => ({
 vi.mock("../../apps/agents/MobileAgentDetailsView", () => ({
   MobileAgentDetailsView: () => <div data-testid="mobile-agent-details-view" />,
 }));
+const mockSidekickState = { closePreview: vi.fn() };
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({ closePreview: vi.fn() }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("../AppShell/AppShell.module.css", () => ({

@@ -7,6 +7,7 @@ import { getHostDisplayLabel, getTargetHostOrigin, requiresExplicitHostOrigin } 
 import { ApiClientError } from "../../api/client";
 import { HostSettingsModal } from "../../components/HostSettingsModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { windowCommand } from "../../lib/windowCommand";
 import { WindowControls } from "../../components/WindowControls";
@@ -88,7 +89,13 @@ export function LoginView() {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
+  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
+    useShallow((s) => ({
+      hostSettingsOpen: s.hostSettingsOpen,
+      openHostSettings: s.openHostSettings,
+      closeHostSettings: s.closeHostSettings,
+    })),
+  );
   const [hostRefreshing, setHostRefreshing] = useState(false);
 
   function resetForm(): void {

@@ -8,7 +8,7 @@ import { TaskFeed } from "../TaskFeed";
 import { LogPanel } from "../LogPanel";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
 import { useMobileSpecs } from "./useMobileSpecs";
 import { useMobileTasks } from "./useMobileTasks";
@@ -50,7 +50,7 @@ function ExecutionSummary({ projectId }: { projectId: string }) {
 }
 
 function MobileSpecsList({ projectId }: { projectId: string }) {
-  const sidekick = useSidekick();
+  const viewSpec = useSidekickStore((s) => s.viewSpec);
   const { specs } = useMobileSpecs(projectId);
 
   if (specs.length === 0) {
@@ -65,7 +65,7 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
           type="button"
           className={styles.itemButton}
           aria-label={`Open spec ${spec.title || "Spec"}`}
-          onClick={() => sidekick.viewSpec(spec)}
+          onClick={() => viewSpec(spec)}
         >
           <span className={styles.itemTitle}>{spec.title || "Spec"}</span>
         </button>
@@ -76,7 +76,7 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
 
 function MobileTasksList({ projectId }: { projectId: string }) {
   const ctx = useProjectContext();
-  const sidekick = useSidekick();
+  const viewTask = useSidekickStore((s) => s.viewTask);
   const { tasks, tasksBySpec, liveTaskIds, loopActive } = useMobileTasks(projectId);
 
   if (tasks.length === 0) {
@@ -98,7 +98,7 @@ function MobileTasksList({ projectId }: { projectId: string }) {
             type="button"
             className={styles.itemButton}
             aria-label={`Open task ${task.title}`}
-            onClick={() => sidekick.viewTask(task)}
+            onClick={() => viewTask(task)}
           >
             <span className={styles.itemButtonMeta}>
               <TaskStatusIcon status={displayStatus} />

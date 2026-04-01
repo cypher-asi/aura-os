@@ -16,6 +16,7 @@ import { useSidebarSearch } from "../../context/SidebarSearchContext";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { apps } from "../../apps/registry";
 import { windowCommand } from "../../lib/windowCommand";
@@ -88,7 +89,13 @@ export function DesktopShell() {
   const activeApp = useAppStore((s) => s.activeApp);
   const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
-  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore();
+  const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
+    useShallow((s) => ({
+      hostSettingsOpen: s.hostSettingsOpen,
+      openHostSettings: s.openHostSettings,
+      closeHostSettings: s.closeHostSettings,
+    })),
+  );
   const routeContent = useOutlet();
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const { MainPanel } = activeApp;

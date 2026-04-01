@@ -32,11 +32,15 @@ vi.mock("../../api/client", () => ({
   dispatchInsufficientCredits: vi.fn(),
 }));
 
+const mockSidekickState = {
+  pushPreview: vi.fn(),
+  setActiveTab: vi.fn(),
+};
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({
-    pushPreview: vi.fn(),
-    setActiveTab: vi.fn(),
-  }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 const mockProjectContext = {

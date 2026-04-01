@@ -4,28 +4,29 @@ import { SettingsModal } from "../SettingsModal";
 import { OrgSettingsPanel } from "../OrgSettingsPanel";
 import { BuyCreditsModal } from "../BuyCreditsModal";
 import { AppProviders } from "../AppProviders";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { NewProjectModal } from "../NewProjectModal";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useShallow } from "zustand/react/shallow";
 import { DesktopShell } from "../DesktopShell";
 import { MobileShell } from "../MobileShell";
 
 function ProjectCreationModalHost() {
   const navigate = useNavigate();
-  const sidekick = useSidekick();
+  const closePreview = useSidekickStore((s) => s.closePreview);
   const { setProjects, newProjectModalOpen, closeNewProjectModal } = useProjectsList();
 
   const handleProjectCreated = useCallback((project: import("../../types").Project) => {
     closeNewProjectModal();
-    sidekick.closePreview();
+    closePreview();
     setProjects((prev) => {
       const next = prev.filter((existing) => existing.project_id !== project.project_id);
       return [...next, project];
     });
     navigate(`/projects/${project.project_id}`);
-  }, [closeNewProjectModal, navigate, setProjects, sidekick]);
+  }, [closeNewProjectModal, navigate, setProjects, closePreview]);
 
   return (
     <NewProjectModal
@@ -46,7 +47,18 @@ function AppContent() {
     orgSettingsOpen, orgInitialSection, closeOrgSettings,
     settingsOpen, closeSettings,
     buyCreditsOpen, closeBuyCredits, openOrgBilling,
-  } = useUIModalStore();
+  } = useUIModalStore(
+    useShallow((s) => ({
+      orgSettingsOpen: s.orgSettingsOpen,
+      orgInitialSection: s.orgInitialSection,
+      closeOrgSettings: s.closeOrgSettings,
+      settingsOpen: s.settingsOpen,
+      closeSettings: s.closeSettings,
+      buyCreditsOpen: s.buyCreditsOpen,
+      closeBuyCredits: s.closeBuyCredits,
+      openOrgBilling: s.openOrgBilling,
+    })),
+  );
 
   return (
     <>

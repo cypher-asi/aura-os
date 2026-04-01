@@ -4,7 +4,7 @@ import type { AuraEvent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
 import { useEventStore } from "../../stores/event-store";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useClickOutside } from "../../hooks/use-click-outside";
 
 interface AgentEventParams {
@@ -71,7 +71,7 @@ interface AgentStatusBarData {
 export function useAgentStatusBarData(projectId: ProjectId): AgentStatusBarData {
   const connected = useEventStore((s) => s.connected);
   const subscribe = useEventStore((s) => s.subscribe);
-  const sidekick = useSidekick();
+  const viewSession = useSidekickStore((s) => s.viewSession);
   const [agents, setAgents] = useState<AgentInstance[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -120,8 +120,8 @@ export function useAgentStatusBarData(projectId: ProjectId): AgentStatusBarData 
 
   const handleSessionClick = useCallback((session: Session) => {
     setDropdownOpen(false);
-    sidekick.viewSession(session);
-  }, [sidekick]);
+    viewSession(session);
+  }, [viewSession]);
 
   return {
     connected, agents, selectedAgent, selectedAgentId, setSelectedAgentId,

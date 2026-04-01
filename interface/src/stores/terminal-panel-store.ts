@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { useShallow } from "zustand/react/shallow";
 import type { UseTerminalReturn } from "../hooks/use-terminal";
 
 const STORAGE_KEY = "aura-terminal-panel";
@@ -175,9 +174,3 @@ useTerminalPanelStore.subscribe((s) => {
   savePanelState(s.panelHeight, s.collapsed);
 });
 
-/**
- * Drop-in replacement for the old useTerminalPanel() context hook.
- */
-export function useTerminalPanel() {
-  return useTerminalPanelStore(useShallow((s) => s));
-}

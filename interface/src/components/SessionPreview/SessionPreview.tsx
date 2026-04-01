@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { api } from "../../api/client";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { formatRelativeTime, formatTokens } from "../../utils/format";
@@ -24,7 +24,7 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
 export function SessionPreview({ session }: { session: Session }) {
   const ctx = useProjectContext();
   const projectId = ctx?.project.project_id;
-  const sidekick = useSidekick();
+  const pushPreview = useSidekickStore((s) => s.pushPreview);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const requestKey = projectId
@@ -115,7 +115,7 @@ export function SessionPreview({ session }: { session: Session }) {
           {tasks.map((task) => (
             <Item
               key={task.task_id}
-              onClick={() => sidekick.pushPreview({ kind: "task", task })}
+              onClick={() => pushPreview({ kind: "task", task })}
               className={styles.fileOpItem}
             >
               <Item.Icon><TaskStatusIcon status={task.status} /></Item.Icon>

@@ -61,8 +61,12 @@ vi.mock("../../context/SidebarSearchContext", () => ({
   }),
 }));
 
+const mockSidekickState = { previewItem: null };
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => ({ previewItem: null }),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("../../apps/registry", () => ({

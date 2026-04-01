@@ -6,12 +6,16 @@ import { titleSortKey } from "../../utils/collections";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
 import { Explorer } from "@cypher-asi/zui";
 import { EmptyState } from "../../components/EmptyState";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useTaskListData } from "./useTaskListData";
 import styles from "../aura.module.css";
 import type { ExplorerNode } from "@cypher-asi/zui";
 
 export function TaskList({ searchQuery }: { searchQuery: string }) {
-  const { specs, tasks, liveTaskIds, loopActive, loading, sidekick } = useTaskListData();
+  const { specs, tasks, liveTaskIds, loopActive, loading } = useTaskListData();
+  const previewItem = useSidekickStore((s) => s.previewItem);
+  const streamingAgentInstanceId = useSidekickStore((s) => s.streamingAgentInstanceId);
+  const viewTask = useSidekickStore((s) => s.viewTask);
 
   const specMap = useMemo(() => new Map(specs.map((s) => [s.spec_id, s])), [specs]);
   const taskMap = useMemo(() => new Map(tasks.map((t) => [t.task_id, t])), [tasks]);
@@ -97,7 +101,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   const defaultExpandedIds = useMemo(() => explorerData.map((node) => node.id), [explorerData]);
 
   const previewTaskId =
-    sidekick.previewItem?.kind === "task" ? sidekick.previewItem.task.task_id : null;
+    previewItem?.kind === "task" ? previewItem.task.task_id : null;
   const defaultSelectedIds = useMemo(() => (previewTaskId ? [previewTaskId] : []), [previewTaskId]);
 
   const filteredData = useMemo(
@@ -106,7 +110,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
   );
 
   const isEmpty = tasks.length === 0;
-  const showEmpty = useDelayedEmpty(isEmpty, loading, sidekick.streamingAgentInstanceId ? 800 : 0);
+  const showEmpty = useDelayedEmpty(isEmpty, loading, streamingAgentInstanceId ? 800 : 0);
 
   if (isEmpty) {
     if (!showEmpty) return null;
@@ -127,7 +131,7 @@ export function TaskList({ searchQuery }: { searchQuery: string }) {
           const id = [...ids].reverse().find((candidate) => taskMap.has(candidate));
           if (!id) return;
           const task = taskMap.get(id);
-          if (task) sidekick.viewTask(task);
+          if (task) viewTask(task);
         }}
       />
     </>

@@ -29,10 +29,14 @@ vi.mock("./use-aura-capabilities", () => ({
   })),
 }));
 
+const mockSidekickState = {
+  previewItem: null,
+};
 vi.mock("../stores/sidekick-store", () => ({
-  useSidekick: vi.fn(() => ({
-    previewItem: null,
-  })),
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekickState) : mockSidekickState),
+    { getState: () => mockSidekickState, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 vi.mock("../stores/mobile-drawer-store", () => ({

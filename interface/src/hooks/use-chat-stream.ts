@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
-import { useSidekick } from "../stores/sidekick-store";
+import { useSidekickStore } from "../stores/sidekick-store";
 import { useProjectContext } from "../stores/project-action-store";
 import type { StreamEventHandler } from "../api/streams";
 import type { AuraEvent } from "../types/aura-events";
@@ -88,7 +88,7 @@ function buildAttachmentLabel(attachments: ChatAttachment[] | undefined): string
 function pushPendingSpec(
   content: { id: string; name: string; input: Record<string, unknown> },
   projectId: string,
-  sidekick: ReturnType<typeof useSidekick>,
+  sidekick: ReturnType<typeof useSidekickStore.getState>,
   pendingSpecIdsRef: { current: string[] },
 ) {
   const pendingId = `pending-${content.id}`;
@@ -111,7 +111,7 @@ function pushPendingSpec(
 function pushPendingTask(
   content: { id: string; name: string; input: Record<string, unknown> },
   projectId: string,
-  sidekick: ReturnType<typeof useSidekick>,
+  sidekick: ReturnType<typeof useSidekickStore.getState>,
   pendingTaskIdsRef: { current: string[] },
 ) {
   const pendingId = `pending-${content.id}`;
@@ -157,7 +157,7 @@ function removePendingArtifact(
 function promotePendingSpec(
   content: { id: string; result: string },
   projectId: string,
-  sidekick: ReturnType<typeof useSidekick>,
+  sidekick: ReturnType<typeof useSidekickStore.getState>,
   pendingSpecIdsRef: { current: string[] },
 ) {
   try {
@@ -188,7 +188,7 @@ function promotePendingSpec(
 function promotePendingTask(
   content: { id: string; result: string },
   projectId: string,
-  sidekick: ReturnType<typeof useSidekick>,
+  sidekick: ReturnType<typeof useSidekickStore.getState>,
   pendingTaskIdsRef: { current: string[] },
 ) {
   try {
@@ -286,7 +286,7 @@ interface DispatchDeps {
   abortRef: ReturnType<typeof useStreamCore>["abortRef"];
   coreKey: string;
   setProgressText: (t: string) => void;
-  sidekickRef: React.MutableRefObject<ReturnType<typeof useSidekick>>;
+  sidekickRef: React.MutableRefObject<ReturnType<typeof useSidekickStore.getState>>;
   projectCtxRef: React.MutableRefObject<ReturnType<typeof useProjectContext>>;
   pendingSpecIdsRef: React.MutableRefObject<string[]>;
   pendingTaskIdsRef: React.MutableRefObject<string[]>;
@@ -447,12 +447,11 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
 /* ------------------------------------------------------------------ */
 
 export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptions) {
-  const sidekick = useSidekick();
-  const sidekickRef = useRef(sidekick);
+  const sidekickRef = useRef(useSidekickStore.getState());
   const projectCtx = useProjectContext();
   const projectCtxRef = useRef(projectCtx);
 
-  useEffect(() => { sidekickRef.current = sidekick; }, [sidekick]);
+  useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);
   useEffect(() => { projectCtxRef.current = projectCtx; }, [projectCtx]);
 
   const core = useStreamCore([projectId, agentInstanceId]);

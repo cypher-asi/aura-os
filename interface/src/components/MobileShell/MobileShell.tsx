@@ -15,7 +15,7 @@ import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { HostSettingsModal } from "../HostSettingsModal";
 import { MobileAgentLibraryView } from "../../apps/agents/MobileAgentLibraryView";
@@ -46,7 +46,7 @@ function ProjectNavigationDrawerContent() {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const sidekick = useSidekick();
+  const closePreview = useSidekickStore((s) => s.closePreview);
   const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const currentProjectId = getProjectIdFromPathname(location.pathname);
   const mobileDestination = getMobileProjectDestination(location.pathname);
@@ -66,7 +66,7 @@ function ProjectNavigationDrawerContent() {
 
   const openProjectLanding = useCallback((projectId: string) => {
     if (projectId !== currentProjectId) {
-      sidekick.closePreview();
+      closePreview();
     }
 
     openAfterDrawerClose(() => {
@@ -82,7 +82,7 @@ function ProjectNavigationDrawerContent() {
 
       navigate(projectAgentRoute(projectId));
     });
-  }, [currentProjectId, mobileDestination, navigate, openAfterDrawerClose, sidekick]);
+  }, [currentProjectId, mobileDestination, navigate, openAfterDrawerClose, closePreview]);
 
   const currentProject = currentProjectId
     ? projects.find((project) => project.project_id === currentProjectId) ?? null
@@ -308,9 +308,11 @@ function AppSwitcherContent({ state }: { state: ReturnType<typeof useMobileShell
 }
 
 function AccountSheetContent() {
-  const { openAfterDrawerClose } = useMobileDrawerStore();
+  const openAfterDrawerClose = useMobileDrawerStore((s) => s.openAfterDrawerClose);
   const { features } = useAuraCapabilities();
-  const { openOrgSettings, openSettings, openHostSettings } = useUIModalStore();
+  const openOrgSettings = useUIModalStore((s) => s.openOrgSettings);
+  const openSettings = useUIModalStore((s) => s.openSettings);
+  const openHostSettings = useUIModalStore((s) => s.openHostSettings);
   return (
     <div className={styles.mobileDrawerContent}>
       <div className={styles.mobileDrawerBody}>
@@ -425,7 +427,8 @@ export function MobileShell() {
   const closeDrawers = useMobileDrawerStore((s) => s.closeDrawers);
   const drawerOpen = useMobileDrawerStore(selectDrawerOpen);
   const overlayDrawerOpen = useMobileDrawerStore(selectOverlayDrawerOpen);
-  const { hostSettingsOpen, closeHostSettings } = useUIModalStore();
+  const hostSettingsOpen = useUIModalStore((s) => s.hostSettingsOpen);
+  const closeHostSettings = useUIModalStore((s) => s.closeHostSettings);
   const mobileNavActiveId: MobileNavId | null = state.mobileDestination === "agent"
     || state.mobileDestination === "tasks"
     || state.mobileDestination === "stats"

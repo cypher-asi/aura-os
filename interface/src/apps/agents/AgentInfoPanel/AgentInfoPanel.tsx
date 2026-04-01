@@ -11,7 +11,8 @@ import { StatusBadge } from "../../../components/StatusBadge";
 import { TaskStatusIcon } from "../../../components/TaskStatusIcon";
 import { api, ApiClientError } from "../../../api/client";
 import { useSelectedAgent, useAgentStore } from "../stores";
-import { useAgentSidekick } from "../stores/agent-sidekick-store";
+import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
+import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { formatTokens } from "../../../utils/format";
@@ -34,7 +35,17 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     closeDeleteConfirm,
     requestEdit,
     requestDelete,
-  } = useAgentSidekick();
+  } = useAgentSidekickStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      showEditor: s.showEditor,
+      showDeleteConfirm: s.showDeleteConfirm,
+      closeEditor: s.closeEditor,
+      closeDeleteConfirm: s.closeDeleteConfirm,
+      requestEdit: s.requestEdit,
+      requestDelete: s.requestDelete,
+    })),
+  );
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [iconFailed, setIconFailed] = useState(false);

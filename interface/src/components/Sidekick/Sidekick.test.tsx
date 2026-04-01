@@ -28,17 +28,14 @@ const mockSidekick = {
   closePreview: vi.fn(),
   canGoBack: false,
   goBackPreview: vi.fn(),
+  streamingAgentInstanceId: null as string | null,
 };
-const { mockUseSidekickStore } = vi.hoisted(() => ({
-  mockUseSidekickStore: {
-    subscribe: vi.fn(() => () => {}),
-    getState: vi.fn(() => ({ streamingAgentInstanceId: null })),
-  },
-}));
 
 vi.mock("../../stores/sidekick-store", () => ({
-  useSidekick: () => mockSidekick,
-  useSidekickStore: mockUseSidekickStore,
+  useSidekickStore: Object.assign(
+    vi.fn((selector?: (s: any) => any) => selector ? selector(mockSidekick) : mockSidekick),
+    { getState: () => mockSidekick, subscribe: vi.fn(() => vi.fn()) },
+  ),
 }));
 
 const mockProjectContext = {

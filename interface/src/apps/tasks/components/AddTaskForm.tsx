@@ -32,7 +32,7 @@ export function AddTaskForm({
   const addTask = useKanbanStore((s) => s.addTask);
   const ctx = useProjectContext();
   const specs = ctx?.initialSpecs ?? [];
-  const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId] ?? []);
+  const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId]) ?? [];
 
   const { inputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
 

@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useTaskOutput, useEventStore } from "../../stores/event-store";
 import { useTaskStatus } from "../../hooks/use-task-status";
@@ -29,7 +29,7 @@ function useElapsedTime(active: boolean): number {
 export function useTaskPreviewData(task: import("../../types").Task) {
   const taskOutput = useTaskOutput(task.task_id);
   const ctx = useProjectContext();
-  const sidekick = useSidekick();
+  const pushPreview = useSidekickStore((s) => s.pushPreview);
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const [retrying, setRetrying] = useState(false);
@@ -74,15 +74,15 @@ export function useTaskPreviewData(task: import("../../types").Task) {
         for (const a of instances) {
           try {
             const s = await api.getSession(projectId, a.agent_instance_id, effectiveSessionId);
-            sidekick.pushPreview({ kind: "session", session: s }); return;
+            pushPreview({ kind: "session", session: s }); return;
           } catch { /* try next */ }
         }
         console.error("Failed to load session: agent instance not found"); return;
       }
       const session = await api.getSession(projectId, assignedId, effectiveSessionId);
-      sidekick.pushPreview({ kind: "session", session });
+      pushPreview({ kind: "session", session });
     } catch (err) { console.error("Failed to load session:", err); }
-  }, [projectId, effectiveSessionId, task.assigned_agent_instance_id, sidekick]);
+  }, [projectId, effectiveSessionId, task.assigned_agent_instance_id, pushPreview]);
 
   return {
     taskOutput, effectiveStatus, effectiveSessionId, isActive, isTerminal,

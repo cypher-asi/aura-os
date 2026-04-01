@@ -417,6 +417,8 @@ useFeedStore.subscribe((state, prev) => {
 
 /* ── derived selectors ── */
 
+const EMPTY_EVENTS: FeedEvent[] = [];
+
 export function useFeedEvents(): FeedEvent[] {
   const liveEvents = useFeedStore((s) => s.liveEvents);
   const userAvatarUrl = useFeedStore((s) => s.userAvatarUrl);
@@ -426,7 +428,7 @@ export function useFeedEvents(): FeedEvent[] {
     (user?.profile_image && user.profile_image.startsWith("http") ? user.profile_image : undefined);
   const currentUserName = user?.display_name;
 
-  const source = liveEvents ?? [];
+  const source = liveEvents ?? EMPTY_EVENTS;
   return [...source]
     .map((evt) => {
       if (currentUserAvatar && evt.author.type === "user" && evt.author.name === CURRENT_USER) {

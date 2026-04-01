@@ -12,7 +12,8 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import { useAgentSidekick, type AgentSidekickTab } from "../stores/agent-sidekick-store";
+import { useAgentSidekickStore, type AgentSidekickTab } from "../stores/agent-sidekick-store";
+import { useShallow } from "zustand/react/shallow";
 import { useSelectedAgent } from "../stores";
 import { useAuth } from "../../../stores/auth-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
@@ -29,7 +30,14 @@ const TAB_ICONS: TabItem[] = [
 ];
 
 export function AgentSidekickTaskbar() {
-  const { activeTab, setActiveTab, requestEdit, requestDelete } = useAgentSidekick();
+  const { activeTab, setActiveTab, requestEdit, requestDelete } = useAgentSidekickStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      setActiveTab: s.setActiveTab,
+      requestEdit: s.requestEdit,
+      requestDelete: s.requestDelete,
+    })),
+  );
   const { selectedAgent } = useSelectedAgent();
   const { user } = useAuth();
 

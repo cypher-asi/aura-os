@@ -173,7 +173,13 @@ function ArtifactPreview({ artifact, onClose }: { artifact: CronArtifact; onClos
 export function CronSidekickContent() {
   const { cronJobId } = useParams<{ cronJobId: string }>();
   const { activeTab, previewItem, viewRun, viewArtifact, closePreview } = useCronSidekickStore(
-    useShallow((s) => s),
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      previewItem: s.previewItem,
+      viewRun: s.viewRun,
+      viewArtifact: s.viewArtifact,
+      closePreview: s.closePreview,
+    })),
   );
   const runs = useCronStore((s) => (cronJobId ? s.runs[cronJobId] ?? EMPTY_RUNS : EMPTY_RUNS));
   const artifacts = useCronStore((s) => (cronJobId ? s.artifacts[cronJobId] ?? EMPTY_ARTIFACTS : EMPTY_ARTIFACTS));

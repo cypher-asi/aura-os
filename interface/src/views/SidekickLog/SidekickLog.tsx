@@ -4,7 +4,7 @@ import { Text } from "@cypher-asi/zui";
 import { Check } from "lucide-react";
 import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
 import { useClickOutside } from "../../hooks/use-click-outside";
-import { useSidekick } from "../../stores/sidekick-store";
+import { useSidekickStore } from "../../stores/sidekick-store";
 import type { LogEntry } from "../../hooks/use-log-stream";
 import styles from "../../components/Sidekick/Sidekick.module.css";
 
@@ -138,7 +138,7 @@ function LogRow({
 
 export function SidekickLog({ searchQuery }: { searchQuery: string }) {
   const { entries, contentRef, handleScroll } = useLogStream();
-  const sidekick = useSidekick();
+  const pushPreview = useSidekickStore((s) => s.pushPreview);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(
     () => new Set(ALL_CATEGORIES),
   );
@@ -188,7 +188,7 @@ export function SidekickLog({ searchQuery }: { searchQuery: string }) {
             <LogRow
               key={i}
               entry={entry}
-              onSelect={() => sidekick.pushPreview({ kind: "log", entry })}
+              onSelect={() => pushPreview({ kind: "log", entry })}
             />
           ))
         )}

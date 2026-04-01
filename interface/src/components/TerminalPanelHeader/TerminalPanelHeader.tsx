@@ -1,6 +1,7 @@
 import { type MouseEvent } from "react";
 import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
-import { useTerminalPanel, type TerminalInstance } from "../../stores/terminal-panel-store";
+import { useTerminalPanelStore, type TerminalInstance } from "../../stores/terminal-panel-store";
+import { useShallow } from "zustand/react/shallow";
 import styles from "../TerminalPanel/TerminalPanel.module.css";
 
 function TerminalTab({
@@ -46,7 +47,17 @@ export function TerminalPanelHeader() {
     setActiveId,
     toggleCollapse,
     collapsed,
-  } = useTerminalPanel();
+  } = useTerminalPanelStore(
+    useShallow((s) => ({
+      terminals: s.terminals,
+      activeId: s.activeId,
+      addTerminal: s.addTerminal,
+      removeTerminal: s.removeTerminal,
+      setActiveId: s.setActiveId,
+      toggleCollapse: s.toggleCollapse,
+      collapsed: s.collapsed,
+    })),
+  );
 
   const handleBackgroundClick = (e: MouseEvent<HTMLDivElement>) => {
     if (!(e.target as HTMLElement).closest("button")) {

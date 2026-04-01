@@ -3,12 +3,12 @@ import { useParams } from "react-router-dom";
 import { Text, Item, ModalConfirm, Tabs } from "@cypher-asi/zui";
 import { Trash2, Play, Pause, Square, Loader2, Plus, X } from "lucide-react";
 import {
-  useTaskOutputPanel,
   useTaskOutputPanelStore,
   useTasksForProject,
   type OutputPanelTab,
 } from "../../stores/task-output-panel-store";
-import { useTerminalPanel } from "../../stores/terminal-panel-store";
+import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
+import { useShallow } from "zustand/react/shallow";
 import { useEventStore } from "../../stores/event-store";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
@@ -131,7 +131,7 @@ function PanelTabs({
   onTabChange: (tab: OutputPanelTab) => void;
   isRunning: boolean;
 }) {
-  const { addTerminal } = useTerminalPanel();
+  const addTerminal = useTerminalPanelStore((s) => s.addTerminal);
 
   const tabs = [
     {
@@ -172,7 +172,14 @@ function PanelTabs({
 }
 
 function TerminalInstanceTabs() {
-  const { terminals, activeId, setActiveId, removeTerminal } = useTerminalPanel();
+  const { terminals, activeId, setActiveId, removeTerminal } = useTerminalPanelStore(
+    useShallow((s) => ({
+      terminals: s.terminals,
+      activeId: s.activeId,
+      setActiveId: s.setActiveId,
+      removeTerminal: s.removeTerminal,
+    })),
+  );
 
   if (terminals.length <= 1) return null;
 
@@ -201,7 +208,15 @@ function TerminalInstanceTabs() {
 }
 
 export function TaskOutputPanel() {
-  const { panelHeight, collapsed, toggleCollapse, handleMouseDown, activeTab } = useTaskOutputPanel();
+  const { panelHeight, collapsed, toggleCollapse, handleMouseDown, activeTab } = useTaskOutputPanelStore(
+    useShallow((s) => ({
+      panelHeight: s.panelHeight,
+      collapsed: s.collapsed,
+      toggleCollapse: s.toggleCollapse,
+      handleMouseDown: s.handleMouseDown,
+      activeTab: s.activeTab,
+    })),
+  );
   const setActiveTab = useTaskOutputPanelStore((s) => s.setActiveTab);
   const clearCompleted = useTaskOutputPanelStore((s) => s.clearCompleted);
   const contentRef = useRef<HTMLDivElement>(null);

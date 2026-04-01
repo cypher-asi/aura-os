@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { useShallow } from "zustand/react/shallow";
 import type { ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";
@@ -243,11 +242,3 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
   },
 }));
 
-/**
- * Drop-in replacement for the old useSidekick() context hook.
- */
-export function useSidekick() {
-  return useSidekickStore(
-    useShallow((s) => s),
-  );
-}
