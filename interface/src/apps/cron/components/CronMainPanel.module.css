@@ -36,30 +36,10 @@
   color: var(--color-text-muted);
 }
 
-.headerActions {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
 .body {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-}
-
-.section {
-  margin-bottom: 24px;
-}
-
-.sectionTitle {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .prompt {
@@ -75,53 +55,6 @@
 .emptyPrompt {
   color: var(--color-text-muted);
   font-style: italic;
-}
-
-.metaGrid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 16px;
-  font-size: 13px;
-  align-items: center;
-}
-
-.metaLabel {
-  color: var(--color-text-muted);
-}
-
-.runItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  margin-bottom: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.runItem:hover {
-  background: var(--color-bg-hover);
-}
-
-.statusDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.statusCompleted { background: var(--color-success); }
-.statusFailed { background: var(--color-error); }
-.statusRunning { background: var(--color-warning); }
-.statusPending { background: var(--color-text-muted); }
-
-.runMeta {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  margin-left: auto;
 }
 
 .badge {
@@ -149,80 +82,4 @@
   composes: badge;
   background: color-mix(in srgb, var(--color-primary, #6366f1) 15%, transparent);
   color: var(--color-primary, #6366f1);
-}
-
-.emptyRuns {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  padding: 12px 0;
-}
-
-/* Inline editing */
-
-.editTitleInput {
-  font-size: 16px;
-  font-weight: 600;
-  font-family: inherit;
-  background: var(--color-bg-input, var(--color-bg-secondary));
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 2px 6px;
-  outline: none;
-  width: 100%;
-}
-
-.editTitleInput:focus {
-  border-color: var(--color-primary);
-}
-
-.editInput {
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--color-bg-input, var(--color-bg-secondary));
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 3px 6px;
-  outline: none;
-  width: 100%;
-}
-
-.editInput:focus {
-  border-color: var(--color-primary);
-}
-
-.editSelect {
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--color-bg-input, var(--color-bg-secondary));
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 3px 6px;
-  outline: none;
-  width: 100%;
-  cursor: pointer;
-}
-
-.editSelect:focus {
-  border-color: var(--color-primary);
-}
-
-.editPrompt {
-  width: 100%;
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--color-bg-input, var(--color-bg-secondary));
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  outline: none;
-  resize: vertical;
-  line-height: 1.5;
-}
-
-.editPrompt:focus {
-  border-color: var(--color-primary);
 }

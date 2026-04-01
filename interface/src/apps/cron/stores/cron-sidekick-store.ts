@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { CronJobRun, CronArtifact } from "../../../types";
 
-export type CronSidekickTab = "runs" | "artifacts" | "stats" | "log";
+export type CronSidekickTab = "cron" | "runs" | "artifacts" | "stats" | "log";
 
 export type CronPreviewItem =
   | { kind: "run"; run: CronJobRun }
@@ -17,7 +17,7 @@ interface CronSidekickState {
 }
 
 export const useCronSidekickStore = create<CronSidekickState>()((set) => ({
-  activeTab: "runs",
+  activeTab: "cron",
   previewItem: null,
 
   setActiveTab: (tab) => set({ activeTab: tab, previewItem: null }),

@@ -13,6 +13,7 @@ import {
   ProgressBar,
   cx,
 } from "../../../components/StatCard";
+import { CronInfoTab } from "./CronInfoTab";
 import styles from "../../../components/Sidekick/Sidekick.module.css";
 import auraStyles from "../../../views/aura.module.css";
 
@@ -200,6 +201,7 @@ export function CronSidekickContent() {
     <div className={styles.sidekickBody}>
       <div className={styles.sidekickContent}>
         <div className={styles.tabContent}>
+          {activeTab === "cron" && <CronInfoTab />}
           {activeTab === "runs" && <RunList runs={runs} onSelect={viewRun} />}
           {activeTab === "artifacts" && <ArtifactList artifacts={artifacts} onSelect={viewArtifact} />}
           {activeTab === "stats" && <StatsView runs={runs} />}

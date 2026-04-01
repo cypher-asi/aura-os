@@ -1,10 +1,11 @@
 import { Button } from "@cypher-asi/zui";
 import { useShallow } from "zustand/react/shallow";
-import { History, Package, ChartNoAxesColumnIncreasing, Logs } from "lucide-react";
+import { Cpu, History, Package, ChartNoAxesColumnIncreasing, Logs } from "lucide-react";
 import { useCronSidekickStore, type CronSidekickTab } from "../stores/cron-sidekick-store";
 import styles from "../../../components/Sidekick/Sidekick.module.css";
 
 const TABS: { id: CronSidekickTab; icon: React.ReactNode; title: string }[] = [
+  { id: "cron", icon: <Cpu size={16} />, title: "Cron" },
   { id: "runs", icon: <History size={16} />, title: "Runs" },
   { id: "artifacts", icon: <Package size={16} />, title: "Artifacts" },
   { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
