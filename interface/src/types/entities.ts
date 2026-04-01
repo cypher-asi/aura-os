@@ -16,9 +16,6 @@ export interface Project {
   org_id: string;
   name: string;
   description: string;
-  linked_folder_path: string;
-  workspace_source?: string;
-  workspace_display_path?: string;
   requirements_doc_path?: string;
   current_status: ProjectStatus;
   build_command?: string;

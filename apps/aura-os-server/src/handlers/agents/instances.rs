@@ -51,7 +51,7 @@ pub(crate) async fn create_agent_instance(
     let project = state.project_service.get_project(&project_id).ok();
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        project.as_ref().map(|p| p.linked_folder_path.as_str()),
+        &project_id,
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
     ));
@@ -72,7 +72,6 @@ pub(crate) async fn list_agent_instances(
     let agent_map = resolve_network_agents(&state, &jwt).await;
 
     let project = state.project_service.get_project(&project_id).ok();
-    let project_folder = project.as_ref().map(|p| p.linked_folder_path.clone());
     let project_name = project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
 
     let instances: Vec<AgentInstance> = storage_agents
@@ -82,7 +81,7 @@ pub(crate) async fn list_agent_instances(
             let mut instance = merge_agent_instance(spa, agent, None);
             instance.workspace_path = Some(resolve_workspace_path(
                 &instance.machine_type,
-                project_folder.as_deref(),
+                &project_id,
                 &state.data_dir,
                 &project_name,
             ));
@@ -119,9 +118,12 @@ pub(crate) async fn get_agent_instance(
         .parse::<aura_os_core::ProjectId>()
         .ok()
         .and_then(|pid| state.project_service.get_project(&pid).ok());
+    let resolved_project_id = proj_id_str
+        .parse::<aura_os_core::ProjectId>()
+        .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        project.as_ref().map(|p| p.linked_folder_path.as_str()),
+        &resolved_project_id,
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
     ));
@@ -178,9 +180,12 @@ pub(crate) async fn update_agent_instance(
         .parse::<aura_os_core::ProjectId>()
         .ok()
         .and_then(|pid| state.project_service.get_project(&pid).ok());
+    let resolved_project_id = proj_id_str
+        .parse::<aura_os_core::ProjectId>()
+        .unwrap_or_else(|_| aura_os_core::ProjectId::nil());
     instance.workspace_path = Some(resolve_workspace_path(
         &instance.machine_type,
-        project.as_ref().map(|p| p.linked_folder_path.as_str()),
+        &resolved_project_id,
         &state.data_dir,
         project.as_ref().map(|p| p.name.as_str()).unwrap_or(""),
     ));

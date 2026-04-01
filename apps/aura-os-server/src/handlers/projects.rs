@@ -10,8 +10,9 @@ use crate::error::{map_network_error, ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
-    build_local_shadow, ensure_local_shadow, folder_name_from_path, normalize_project_workspace,
+    build_local_shadow, canonical_workspace_path, ensure_local_shadow, normalize_project_workspace,
     project_from_network, to_project_input, write_imported_files, ListProjectsQuery,
+    slugify,
 };
 
 pub(crate) async fn list_all_projects_from_network(state: &AppState, jwt: &str) -> ApiResult<Vec<Project>> {
@@ -49,20 +50,6 @@ async fn create_project_impl(
     network_folder: Option<String>,
     jwt: &str,
 ) -> ApiResult<(StatusCode, Json<Project>)> {
-    let mut req = req.clone();
-    if req.linked_folder_path.trim().is_empty()
-        || !std::path::Path::new(req.linked_folder_path.trim()).is_absolute()
-    {
-        let canonical =
-            super::projects_helpers::canonical_workspace_path(&state.data_dir, &req.name);
-        if let Err(e) = std::fs::create_dir_all(&canonical) {
-            return Err(ApiError::internal(format!(
-                "creating workspace directory: {e}"
-            )));
-        }
-        req.linked_folder_path = canonical.to_string_lossy().to_string();
-    }
-
     if let (Some(owner), Some(repo)) = (&req.orbit_owner, &req.orbit_repo) {
         if !owner.is_empty() && !repo.is_empty() {
             if let Ok(Some(existing)) = state
@@ -151,7 +138,7 @@ pub(crate) async fn create_project(
     if req.name.trim().is_empty() {
         return Err(ApiError::bad_request("name must not be empty"));
     }
-    let folder = folder_name_from_path(&req.linked_folder_path);
+    let folder = Some(slugify(&req.name));
     create_project_impl(&state, &req, folder, &jwt).await
 }
 
@@ -174,30 +161,10 @@ pub(crate) async fn create_imported_project(
         orbit_repo,
     } = req;
 
-    let workspace_id = ProjectId::new().to_string();
-    let workspace_root = state
-        .data_dir
-        .join("imported-workspaces")
-        .join(workspace_id)
-        .join("workspace");
-
-    tokio::fs::create_dir_all(&workspace_root)
-        .await
-        .map_err(|e| {
-            ApiError::internal(format!(
-                "failed to create imported workspace directory: {e}",
-            ))
-        })?;
-
-    write_imported_files(&workspace_root, files).await?;
-
     let local_req = CreateProjectRequest {
         org_id,
         name,
         description,
-        linked_folder_path: workspace_root.to_string_lossy().to_string(),
-        workspace_source: Some("imported".to_string()),
-        workspace_display_path: Some("Imported project files".to_string()),
         build_command,
         test_command,
         git_repo_url,
@@ -207,7 +174,15 @@ pub(crate) async fn create_imported_project(
         orbit_repo,
     };
 
-    create_project_impl(&state, &local_req, None, &jwt).await
+    let (status, Json(project)) = create_project_impl(&state, &local_req, None, &jwt).await?;
+    let workspace_root = canonical_workspace_path(&state.data_dir, &project.project_id);
+
+    tokio::fs::create_dir_all(&workspace_root)
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to create imported workspace directory: {e}")))?;
+    write_imported_files(&workspace_root, files).await?;
+
+    Ok((status, Json(project)))
 }
 
 pub(crate) async fn list_projects(
@@ -310,9 +285,6 @@ pub(crate) async fn update_project(
     let input = UpdateProjectInput {
         name: req.name.clone(),
         description: req.description.clone(),
-        linked_folder_path: req.linked_folder_path.clone(),
-        workspace_source: req.workspace_source.clone(),
-        workspace_display_path: req.workspace_display_path.clone(),
         build_command: req.build_command.clone(),
         test_command: req.test_command.clone(),
     };
@@ -326,14 +298,10 @@ pub(crate) async fn update_project(
         })?;
 
     if let Some(client) = &state.network_client {
-        let folder = req
-            .linked_folder_path
-            .as_deref()
-            .and_then(folder_name_from_path);
         let net_req = aura_os_network::UpdateProjectRequest {
             name: req.name.clone(),
             description: req.description.clone(),
-            folder,
+            folder: None,
             git_repo_url: req.git_repo_url.clone(),
             git_branch: req.git_branch.clone(),
             orbit_base_url: req.orbit_base_url.clone(),

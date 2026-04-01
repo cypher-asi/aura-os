@@ -3,7 +3,7 @@ import { FilePlus, FilePen, FileX } from "lucide-react";
 import { api } from "../../api/client";
 import { useProjectContext } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { getLinkedWorkspaceRoot } from "../../utils/projectWorkspace";
+import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import styles from "../Preview/Preview.module.css";
 
 function FileOpIcon({ op }: { op: string }) {
@@ -16,17 +16,18 @@ function FileOpIcon({ op }: { op: string }) {
 export function TaskFilesSection({ fileOps }: { fileOps: { op: string; path: string }[] }) {
   const ctx = useProjectContext();
   const { features } = useAuraCapabilities();
+  const { workspacePath, remoteAgentId } = useTerminalTarget({ projectId: ctx?.project.project_id });
 
   if (fileOps.length === 0) return null;
 
-  const linkedWorkspaceRoot = getLinkedWorkspaceRoot(ctx?.project);
-  const canOpenChangedFiles = features.ideIntegration && Boolean(linkedWorkspaceRoot);
+  const localWorkspaceRoot = remoteAgentId ? null : (workspacePath?.trim() || null);
+  const canOpenChangedFiles = features.ideIntegration && Boolean(localWorkspaceRoot);
 
   return (
     <GroupCollapsible label="Files Changed" count={fileOps.length} defaultOpen className={styles.section}>
       <div className={styles.fileOpsList}>
         {fileOps.map((f) => {
-          const fullPath = linkedWorkspaceRoot ? `${linkedWorkspaceRoot}/${f.path}` : null;
+          const fullPath = localWorkspaceRoot ? `${localWorkspaceRoot}/${f.path}` : null;
           return (
             <Item
               key={f.path}
@@ -41,7 +42,7 @@ export function TaskFilesSection({ fileOps }: { fileOps: { op: string; path: str
       </div>
       {!canOpenChangedFiles && (
         <Text variant="muted" size="sm" className={styles.filesHint}>
-          Open changed files from a linked desktop workspace.
+          Open changed files from an attached local agent workspace.
         </Text>
       )}
     </GroupCollapsible>

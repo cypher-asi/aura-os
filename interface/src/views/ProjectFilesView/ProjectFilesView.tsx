@@ -8,7 +8,6 @@ import { useProjectContext } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { getProjectWorkspaceDisplay } from "../../utils/projectWorkspace";
 import { projectAgentRoute, projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import styles from "./ProjectFilesView.module.css";
 
@@ -24,7 +23,7 @@ export function ProjectFilesView() {
   const project = ctx?.project ?? listedProject;
   const rootPath = workspacePath ?? null;
   const workspaceSourceLabel = remoteAgentId ? "Remote agent workspace" : "Agent workspace";
-  const workspaceDisplay = remoteWorkspacePath ?? workspacePath ?? getProjectWorkspaceDisplay(project);
+  const workspaceDisplay = remoteWorkspacePath ?? workspacePath ?? null;
 
   if (isMobileLayout) {
     const projectPath = workspacePath?.trim();
@@ -48,7 +47,7 @@ export function ProjectFilesView() {
               </Text>
               {projectPath ? (
                 <Text variant="muted" size="sm">
-                  Project path: {projectPath}
+                  Workspace path: {projectPath}
                 </Text>
               ) : null}
             </div>

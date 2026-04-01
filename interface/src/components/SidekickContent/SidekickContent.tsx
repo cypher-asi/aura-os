@@ -17,7 +17,6 @@ import { SidekickLog } from "../../views/SidekickLog";
 import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
-import { getProjectWorkspaceDisplay } from "../../utils/projectWorkspace";
 import styles from "../Sidekick/Sidekick.module.css";
 
 function InfoPanel({
@@ -31,7 +30,7 @@ function InfoPanel({
   remoteAgentId?: string;
   onClose: () => void;
 }) {
-  const workspaceLabel = workspacePath ?? getProjectWorkspaceDisplay(project) ?? "—";
+  const workspaceLabel = workspacePath ?? "—";
   const [openingWorkspace, setOpeningWorkspace] = useState(false);
   const [openWorkspaceError, setOpenWorkspaceError] = useState<string | null>(null);
   const canOpenWorkspace = Boolean(workspacePath) && !remoteAgentId;

@@ -7,10 +7,6 @@ pub(crate) struct CreateProjectRequest {
     pub org_id: OrgId,
     pub name: String,
     pub description: String,
-    #[serde(default)]
-    pub linked_folder_path: String,
-    pub workspace_source: Option<String>,
-    pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
     pub git_repo_url: Option<String>,
@@ -24,9 +20,6 @@ pub(crate) struct CreateProjectRequest {
 pub(crate) struct UpdateProjectRequest {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub linked_folder_path: Option<String>,
-    pub workspace_source: Option<String>,
-    pub workspace_display_path: Option<String>,
     pub build_command: Option<String>,
     pub test_command: Option<String>,
     pub git_repo_url: Option<String>,
