@@ -47,7 +47,7 @@ function getLastSelectedId(ids: Iterable<string>): string | null {
 function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>) {
   const { setAction } = useSidebarSearch();
   const {
-    projectId, agentsByProject, refreshProjectAgents,
+    projectId, agentsByProject, setAgentsByProject, refreshProjectAgents,
     openNewProjectModal, sidekick, agentInstanceId,
   } = data;
 
@@ -79,7 +79,7 @@ function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>)
 
   useEffect(() => {
     return sidekick.onAgentInstanceUpdate((instance) => {
-      data.setAgentsByProject((prev) => {
+      setAgentsByProject((prev) => {
         const pid = instance.project_id;
         const list = prev[pid];
         if (!list) return prev;
@@ -93,7 +93,7 @@ function useTasksProjectListEffects(data: ReturnType<typeof useProjectListData>)
         };
       });
     });
-  }, [data, sidekick]);
+  }, [setAgentsByProject, sidekick]);
 }
 
 const STATUS_MAP: Record<string, string> = {
@@ -178,6 +178,7 @@ export function TasksProjectList() {
   const {
     projectId, agentInstanceId, sidekick,
     projects, loadingProjects, agentsByProject,
+    automatingProjectId, automatingAgentInstanceId,
     searchQuery,
     actions, projectMap, agentMeta, refreshProjectAgents,
   } = data;
@@ -191,6 +192,7 @@ export function TasksProjectList() {
     const allAgents: { id: string; machineType: string }[] = [];
     const remoteAgents: { agent_id: string }[] = [];
     for (const agents of Object.values(agentsByProject)) {
+      if (!Array.isArray(agents)) continue;
       for (const inst of agents) {
         allAgents.push({ id: inst.agent_id, machineType: inst.machine_type });
         allAgents.push({ id: inst.agent_instance_id, machineType: inst.machine_type });
@@ -203,7 +205,8 @@ export function TasksProjectList() {
 
   const explorerData: ExplorerNode[] = useMemo(
     () => projects.filter((p) => p.name.trim()).map((p) => buildExplorerNode(p, data, statusMap, machineTypesMap)),
-    [projects, data, statusMap, machineTypesMap],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- track specific fields of `data` to avoid recomputing every render
+    [projects, agentsByProject, automatingProjectId, automatingAgentInstanceId, sidekick.streamingAgentInstanceId, actions.handleAddAgent, statusMap, machineTypesMap],
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
