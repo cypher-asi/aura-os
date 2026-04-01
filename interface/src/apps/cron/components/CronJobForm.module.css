@@ -49,6 +49,12 @@
   border-radius: var(--radius-sm);
   outline: none;
   cursor: pointer;
+  color-scheme: dark;
+}
+
+.select option {
+  background: var(--color-bg-elevated, #1e1e1e);
+  color: var(--color-text-primary, #e0e0e0);
 }
 
 .select:focus {
