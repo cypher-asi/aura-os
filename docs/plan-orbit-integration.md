@@ -215,7 +215,7 @@ On the **New Project** screen, include an Orbit repo section with:
 
 **Aura:**
 
-- **Local mode:** Keep using `linked_folder_path` as today. Optionally set the Git remote to `git_repo_url` so push/pull go to Orbit (using the user?s Orbit token when running Git from the app).
+- **Local mode:** Keep using the local agent instance workspace. Optionally set the Git remote to `git_repo_url` so push/pull go to Orbit (using the user's Orbit token when running Git from the app).
 - **Cloud mode (or any mode where the workspace is empty):** When starting a session for a project that has an Orbit link:
   - Send in `session_init` (or equivalent) something like:
     - `workspace.git_repo_url` = project?s `git_repo_url`
