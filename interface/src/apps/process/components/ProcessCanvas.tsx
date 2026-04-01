@@ -52,7 +52,7 @@ function toFlowEdges(connections: ProcessNodeConnection[]): Edge[] {
     target: c.target_node_id,
     targetHandle: c.target_handle ?? undefined,
     animated: true,
-    style: { stroke: "var(--color-text-muted, #666)", strokeWidth: 2 },
+    style: { stroke: "var(--color-text-muted, #999)", strokeWidth: 2 },
   }));
 }
 
@@ -107,7 +107,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
 
   const onConnect = useCallback(
     async (params: Connection) => {
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "var(--color-text-muted, #666)", strokeWidth: 2 } }, eds));
+      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: "var(--color-text-muted, #999)", strokeWidth: 2 } }, eds));
       try {
         await processApi.createConnection(processId, {
           source_node_id: params.source!,
@@ -206,6 +206,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         snapToGrid
         snapGrid={[20, 20]}
         defaultEdgeOptions={{ animated: true }}
+        connectionLineStyle={{ stroke: "var(--color-text, #eee)", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}
         selectionOnDrag
         panOnDrag={[1]}

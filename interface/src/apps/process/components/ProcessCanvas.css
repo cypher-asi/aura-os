@@ -17,3 +17,12 @@
   border: 1px solid var(--color-success, #4c9) !important;
   background: color-mix(in srgb, var(--color-success, #4c9) 12%, transparent) !important;
 }
+
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.react-flow__edge path {
+  stroke-width: 2;
+}
