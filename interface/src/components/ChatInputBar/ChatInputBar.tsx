@@ -199,32 +199,30 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <OrbitStatusIndicator project={selectedProject} />
         {selectedProject && <span className={styles.infoText} style={{ marginRight: 2 }}>·</span>}
         <span className={styles.infoText}>/ for commands</span>
-        {projects.length > 0 && (
-          <div className={styles.projectMenuWrap} ref={projectMenuRef}>
-            <button
-              type="button"
-              className={styles.projectButton}
-              onClick={onProjectChange ? () => setProjectMenuOpen((v) => !v) : undefined}
-              style={onProjectChange ? undefined : { cursor: "default" }}
-            >
-              <FolderOpen size={10} />{selectedProjectName ?? "Project"}{onProjectChange && <ChevronDown size={10} />}
-            </button>
-            {projectMenuOpen && onProjectChange && (
-              <div className={styles.projectMenu}>
-                {projects.map((p) => (
-                  <button
-                    key={p.project_id}
-                    type="button"
-                    className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
-                    onClick={() => { onProjectChange(p.project_id); setProjectMenuOpen(false); }}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <div className={styles.projectMenuWrap} ref={projectMenuRef}>
+          <button
+            type="button"
+            className={styles.projectButton}
+            onClick={projects.length > 0 && onProjectChange ? () => setProjectMenuOpen((v) => !v) : undefined}
+            style={projects.length > 0 && onProjectChange ? undefined : { cursor: "default" }}
+          >
+            <FolderOpen size={10} />{selectedProjectName ?? "General"}{projects.length > 0 && onProjectChange && <ChevronDown size={10} />}
+          </button>
+          {projectMenuOpen && projects.length > 0 && onProjectChange && (
+            <div className={styles.projectMenu}>
+              {projects.map((p) => (
+                <button
+                  key={p.project_id}
+                  type="button"
+                  className={`${styles.projectMenuItem} ${p.project_id === selectedProjectId ? styles.projectMenuItemActive : ""}`}
+                  onClick={() => { onProjectChange(p.project_id); setProjectMenuOpen(false); }}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <div className={styles.modelMenuWrap} ref={modelMenuRef}>
           <button type="button" className={styles.modelButton} onClick={() => setModelMenuOpen((v) => !v)}>
             {modelLabel(selectedModel ?? "")}<ChevronDown size={10} />
