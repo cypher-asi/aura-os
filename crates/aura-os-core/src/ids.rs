@@ -66,3 +66,6 @@ define_id!(SessionEventId);
 define_id!(OrgId);
 define_id!(UserId);
 define_id!(ProfileId);
+define_id!(CronJobId);
+define_id!(CronJobRunId);
+define_id!(ArtifactId);

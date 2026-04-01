@@ -65,6 +65,9 @@ export default function App() {
             <Route path="tasks/:projectId" element={null} />
             <Route path="tasks/:projectId/agents/:agentInstanceId" element={null} />
 
+            <Route path="cron" element={null} />
+            <Route path="cron/:cronJobId" element={null} />
+
             <Route path="leaderboard" element={null} />
             <Route path="feed" element={null} />
             <Route path="profile" element={null} />

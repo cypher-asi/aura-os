@@ -36,12 +36,12 @@ fn batch_write_is_atomic() {
 
     let ops = vec![
         BatchOp::Put {
-            cf: ColumnFamilyName::Settings,
+            cf: "settings".to_string(),
             key: "key_a".to_string(),
             value: b"value_a".to_vec(),
         },
         BatchOp::Put {
-            cf: ColumnFamilyName::Settings,
+            cf: "settings".to_string(),
             key: "key_b".to_string(),
             value: b"value_b".to_vec(),
         },

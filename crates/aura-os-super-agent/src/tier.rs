@@ -63,6 +63,23 @@ pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
     ) {
         domains.push(ToolDomain::Generation);
     }
+    if contains_any(
+        &lower,
+        &[
+            "cron",
+            "schedule",
+            "scheduled",
+            "recurring",
+            "every day",
+            "every hour",
+            "every morning",
+            "daily",
+            "weekly",
+            "periodic",
+        ],
+    ) {
+        domains.push(ToolDomain::Cron);
+    }
 
     domains.dedup();
     domains
@@ -91,6 +108,7 @@ const LOADABLE_DOMAINS: &[&str] = &[
     "social",
     "system",
     "generation",
+    "cron",
 ];
 
 #[async_trait]

@@ -32,6 +32,7 @@ import { loopApi } from "./loop";
 import { followsApi, usersApi, profilesApi, feedApi, leaderboardApi, platformStatsApi, usageApi, activityApi } from "./social";
 import { environmentApi } from "./environment";
 import { swarmApi } from "./swarm";
+import { cronApi } from "./cron";
 
 export const api = {
   auth: authApi,
@@ -54,4 +55,5 @@ export const api = {
   environment: environmentApi,
   swarm: swarmApi,
   superAgent: superAgentApi,
+  cron: cronApi,
 };

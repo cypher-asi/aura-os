@@ -11,9 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, dev_loop, feed, files, follows, leaderboard, log, orgs, project_stats,
-    projects, remote_files, remote_terminal, specs, super_agent, swarm, system, tasks, terminal,
-    users, ws,
+    agents, auth, billing, cron, dev_loop, feed, files, follows, leaderboard, log, orgs,
+    project_stats, projects, remote_files, remote_terminal, specs, super_agent, swarm, system,
+    tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -79,6 +79,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(social_routes())
         .merge(system_routes())
         .merge(super_agent_routes())
+        .merge(cron_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -395,6 +396,33 @@ fn super_agent_routes() -> Router<AppState> {
             "/api/super-agent/events",
             get(super_agent::list_pending_events),
         )
+}
+
+fn cron_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/cron-jobs",
+            get(cron::list_cron_jobs).post(cron::create_cron_job),
+        )
+        .route(
+            "/api/cron-jobs/:id",
+            get(cron::get_cron_job)
+                .put(cron::update_cron_job)
+                .delete(cron::delete_cron_job),
+        )
+        .route("/api/cron-jobs/:id/pause", post(cron::pause_cron_job))
+        .route("/api/cron-jobs/:id/resume", post(cron::resume_cron_job))
+        .route("/api/cron-jobs/:id/trigger", post(cron::trigger_cron_job))
+        .route("/api/cron-jobs/:id/runs", get(cron::list_cron_runs))
+        .route(
+            "/api/cron-jobs/:id/runs/:run_id",
+            get(cron::get_cron_run),
+        )
+        .route(
+            "/api/cron-jobs/:id/artifacts",
+            get(cron::list_cron_artifacts),
+        )
+        .route("/api/artifacts/:id", get(cron::get_artifact))
 }
 
 fn system_routes() -> Router<AppState> {

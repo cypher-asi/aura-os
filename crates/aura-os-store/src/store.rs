@@ -9,7 +9,13 @@ use crate::batch::BatchOp;
 use crate::error::{StoreError, StoreResult};
 
 /// Only settings CF is persisted; projects, orgs, agents, messages are remote-only.
-pub(crate) const CF_NAMES: &[&str] = &["settings", "super_agent_orchestrations"];
+pub(crate) const CF_NAMES: &[&str] = &[
+    "settings",
+    "super_agent_orchestrations",
+    "cron_jobs",
+    "cron_job_runs",
+    "cron_artifacts",
+];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;
 
@@ -133,10 +139,10 @@ impl RocksStore {
         for op in ops {
             match op {
                 BatchOp::Put { cf, key, value } => {
-                    batch.put_cf(&self.cf_handle(cf.as_str())?, key.as_bytes(), &value);
+                    batch.put_cf(&self.cf_handle(&cf)?, key.as_bytes(), &value);
                 }
                 BatchOp::Delete { cf, key } => {
-                    batch.delete_cf(&self.cf_handle(cf.as_str())?, key.as_bytes());
+                    batch.delete_cf(&self.cf_handle(&cf)?, key.as_bytes());
                 }
             }
         }

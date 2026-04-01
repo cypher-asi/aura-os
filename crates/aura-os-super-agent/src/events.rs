@@ -119,6 +119,44 @@ fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
             "budget_alert".to_string(),
             "Credit balance is running low".to_string(),
         ),
+        "cron_job_started" => {
+            let name = value
+                .get("job_name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            (
+                event_type.to_string(),
+                format!("Cron job started: {name}"),
+            )
+        }
+        "cron_job_completed" => {
+            let name = value
+                .get("job_name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            let artifacts = value
+                .get("artifacts_count")
+                .and_then(|n| n.as_u64())
+                .unwrap_or(0);
+            (
+                event_type.to_string(),
+                format!("Cron job completed: {name} ({artifacts} artifacts)"),
+            )
+        }
+        "cron_job_failed" => {
+            let name = value
+                .get("job_name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            let error = value
+                .get("error")
+                .and_then(|e| e.as_str())
+                .unwrap_or("unknown error");
+            (
+                event_type.to_string(),
+                format!("Cron job failed: {name} - {error}"),
+            )
+        }
         _ => return None,
     };
 

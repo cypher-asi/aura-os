@@ -1,5 +1,6 @@
 pub mod agent_tools;
 pub mod billing_tools;
+pub mod cron_tools;
 pub mod exec_tools;
 pub mod generation_tools;
 pub mod helpers;
@@ -191,6 +192,23 @@ impl ToolRegistry {
         registry.register(Arc::new(generation_tools::Get3dStatusTool));
 
         registry
+    }
+
+    pub fn register_cron_tools(
+        &mut self,
+        store: Arc<crate::cron_store::CronStore>,
+        executor: Arc<crate::executor::CronJobExecutor>,
+    ) {
+        self.register(Arc::new(cron_tools::CreateCronJobTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::ListCronJobsTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::UpdateCronJobTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::DeleteCronJobTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::PauseCronJobTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::ResumeCronJobTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::TriggerCronJobTool { store: store.clone(), executor }));
+        self.register(Arc::new(cron_tools::ListCronRunsTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::GetArtifactTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::ListArtifactsTool { store }));
     }
 
     pub fn register(&mut self, tool: Arc<dyn SuperAgentTool>) {

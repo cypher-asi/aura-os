@@ -13,12 +13,12 @@ impl ColumnFamilyName {
 
 pub enum BatchOp {
     Put {
-        cf: ColumnFamilyName,
+        cf: String,
         key: String,
         value: Vec<u8>,
     },
     Delete {
-        cf: ColumnFamilyName,
+        cf: String,
         key: String,
     },
 }

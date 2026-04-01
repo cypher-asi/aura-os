@@ -11,12 +11,12 @@ pub mod testutil;
 // TODO: replace with explicit re-exports
 pub use entities::*;
 pub use enums::{
-    AgentStatus, ChatRole, HarnessMode, OrgRole, OrchestrationStatus, ProjectStatus,
-    SessionStatus, StepStatus, TaskStatus, ToolDomain,
+    AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode, OrgRole,
+    OrchestrationStatus, ProjectStatus, SessionStatus, StepStatus, TaskStatus, ToolDomain,
 };
 pub use helpers::{extract_fenced_json, fuzzy_search_replace, parse_dt};
 pub use ids::{
-    AgentId, AgentInstanceId, OrgId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId,
-    TaskId, UserId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProfileId, ProjectId,
+    SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 pub use settings::{SettingsEntry, SettingsValue};

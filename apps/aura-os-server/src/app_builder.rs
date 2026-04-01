@@ -318,6 +318,15 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         event_broadcast.clone(),
     ));
 
+    // Spawn cron scheduler
+    {
+        let scheduler = Arc::new(aura_os_super_agent::scheduler::CronScheduler::new(
+            super_agent_service.cron_store.clone(),
+            super_agent_service.cron_executor.clone(),
+        ));
+        scheduler.spawn();
+    }
+
     spawn_health_checks(&storage_client, &network_client);
     if let Some(ref client) = network_client {
         super::network_bridge::spawn_network_ws_bridge(

@@ -1,5 +1,8 @@
+pub mod cron_store;
 pub mod events;
+pub mod executor;
 pub mod prompt;
+pub mod scheduler;
 pub mod state;
 pub mod stream;
 pub mod tier;
@@ -42,6 +45,8 @@ pub struct SuperAgentService {
     pub router_url: String,
     pub http_client: reqwest::Client,
     pub event_listener: SuperAgentEventListener,
+    pub cron_store: Arc<cron_store::CronStore>,
+    pub cron_executor: Arc<executor::CronJobExecutor>,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
     agent_instance_service: Arc<AgentInstanceService>,
@@ -73,7 +78,15 @@ impl SuperAgentService {
         store: Arc<RocksStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
     ) -> Self {
-        let tool_registry = ToolRegistry::with_tier1_tools();
+        let cron_store = Arc::new(cron_store::CronStore::new(store.clone()));
+        let cron_executor = Arc::new(executor::CronJobExecutor::new(
+            cron_store.clone(),
+            event_broadcast.clone(),
+        ));
+
+        let mut tool_registry = ToolRegistry::with_tier1_tools();
+        tool_registry.register_cron_tools(cron_store.clone(), cron_executor.clone());
+
         let event_listener = SuperAgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
         info!(router_url = %router_url, "SuperAgentService initialized");
@@ -82,6 +95,8 @@ impl SuperAgentService {
             router_url,
             http_client: reqwest::Client::new(),
             event_listener,
+            cron_store,
+            cron_executor,
             project_service,
             agent_service,
             agent_instance_service,
@@ -95,6 +110,15 @@ impl SuperAgentService {
             store,
             event_broadcast,
         }
+    }
+
+    pub fn spawn_scheduler(self: &Arc<Self>) {
+        let sched = Arc::new(scheduler::CronScheduler::new(
+            self.cron_store.clone(),
+            self.cron_executor.clone(),
+        ));
+        sched.spawn();
+        info!("Cron scheduler spawned");
     }
 
     pub fn build_context(&self, user_id: &str, org_id: &str, jwt: &str) -> SuperAgentContext {

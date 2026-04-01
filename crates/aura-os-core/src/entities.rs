@@ -1,10 +1,13 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::enums::{AgentStatus, ChatRole, HarnessMode, ProjectStatus, SessionStatus, TaskStatus};
+use crate::enums::{
+    AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode,
+    ProjectStatus, SessionStatus, TaskStatus,
+};
 use crate::ids::{
-    AgentId, AgentInstanceId, OrgId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId,
-    TaskId, UserId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProfileId, ProjectId,
+    SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -422,4 +425,98 @@ pub struct SuperAgentStep {
     pub tool_input: serde_json::Value,
     pub status: crate::enums::StepStatus,
     pub result: Option<serde_json::Value>,
+}
+
+// ---------------------------------------------------------------------------
+// Cron Jobs
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ArtifactRef {
+    pub source_cron_job_id: CronJobId,
+    #[serde(default)]
+    pub artifact_type: Option<ArtifactType>,
+    #[serde(default = "default_true")]
+    pub use_latest: bool,
+    #[serde(default)]
+    pub specific_run_id: Option<CronJobRunId>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CronJob {
+    pub cron_job_id: CronJobId,
+    pub org_id: OrgId,
+    pub user_id: String,
+    pub name: String,
+    pub description: String,
+    /// Cron expression, e.g. `"0 9 * * *"` for daily at 9 AM.
+    pub schedule: String,
+    /// Natural-language instruction for the CEO to execute.
+    pub prompt: String,
+    pub enabled: bool,
+    #[serde(default)]
+    pub input_artifact_refs: Vec<ArtifactRef>,
+    #[serde(default = "default_max_retries")]
+    pub max_retries: u32,
+    #[serde(default = "default_timeout")]
+    pub timeout_seconds: u64,
+    #[serde(default)]
+    pub last_run_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub next_run_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+fn default_max_retries() -> u32 {
+    1
+}
+fn default_timeout() -> u64 {
+    300
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CronJobRun {
+    pub run_id: CronJobRunId,
+    pub cron_job_id: CronJobId,
+    pub status: CronJobRunStatus,
+    pub trigger: CronJobTrigger,
+    /// The fully-resolved prompt sent to the CEO (includes artifact context).
+    #[serde(default)]
+    pub prompt_snapshot: String,
+    #[serde(default)]
+    pub response_text: String,
+    #[serde(default)]
+    pub output_artifact_ids: Vec<ArtifactId>,
+    #[serde(default)]
+    pub tasks_created: Vec<TaskId>,
+    #[serde(default)]
+    pub error: Option<String>,
+    #[serde(default)]
+    pub input_tokens: u64,
+    #[serde(default)]
+    pub output_tokens: u64,
+    pub started_at: DateTime<Utc>,
+    #[serde(default)]
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Artifact {
+    pub artifact_id: ArtifactId,
+    pub cron_job_id: CronJobId,
+    pub run_id: CronJobRunId,
+    pub org_id: OrgId,
+    pub artifact_type: ArtifactType,
+    pub name: String,
+    pub content: String,
+    #[serde(default)]
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    #[serde(default)]
+    pub expires_at: Option<DateTime<Utc>>,
 }
