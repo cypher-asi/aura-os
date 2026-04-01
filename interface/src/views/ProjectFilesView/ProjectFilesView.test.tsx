@@ -79,7 +79,8 @@ describe("ProjectFilesView", () => {
     render(<ProjectFilesView />);
 
     expect(screen.getByText("Files stay on the remote agent")).toBeInTheDocument();
-    expect(screen.getByText("Workspace path: p/demo-project")).toBeInTheDocument();
+    expect(screen.getByText("Agent workspace")).toBeInTheDocument();
+    expect(screen.getByText("Agent path: p/demo-project")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Agent" })).toBeInTheDocument();
     expect(screen.queryByTestId("file-explorer")).not.toBeInTheDocument();
   });

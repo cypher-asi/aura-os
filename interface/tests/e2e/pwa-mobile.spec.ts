@@ -364,7 +364,7 @@ test("mobile files view explains remote workspace handoff", async ({ page }) => 
   await page.goto("/projects/proj-1/files");
 
   await expect(page.getByText("Files stay on the remote agent")).toBeVisible();
-  await expect(page.getByText("Remote workspace", { exact: true })).toBeVisible();
+  await expect(page.getByText("Agent workspace", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Agent" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Execution" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Stats" })).toBeVisible();

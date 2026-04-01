@@ -44,7 +44,7 @@ export function ImportFilesSection({
         </Text>
       )}
       <Text variant="muted" size="sm">
-        Aura prepares a workspace from the selected local files on the connected host so you can keep working from the browser.
+        Aura stages the selected local files into an agent workspace so you can keep working from the browser.
       </Text>
       {importSummary.count > 0 && (
         <div className={styles.summaryCard}>

@@ -24,21 +24,26 @@ export function ProjectFilesView() {
   const rootPath = workspacePath ?? null;
   const workspaceSourceLabel = remoteAgentId ? "Remote agent workspace" : "Agent workspace";
   const workspaceDisplay = remoteWorkspacePath ?? workspacePath ?? null;
+  const hasRemoteAgent = Boolean(remoteAgentId);
 
   if (isMobileLayout) {
     const projectPath = workspacePath?.trim();
+    const mobileTitle = hasRemoteAgent ? "Files stay on the remote agent" : "Files stay with the attached agent";
+    const mobileDescription = hasRemoteAgent
+      ? "Use Agent, Execution, or Stats while we wire remote file browsing directly into this view."
+      : "Use the desktop app when you need to browse a local agent workspace from this project.";
 
     return (
       <div className={styles.mobileRemoteRoot}>
         <div className={styles.mobileRemoteCard}>
           <Text size="xs" variant="muted" className={styles.mobileRemoteEyebrow}>
-            Remote workspace
+            Agent workspace
           </Text>
           <Text size="lg" weight="medium">
-            Files stay on the remote agent
+            {mobileTitle}
           </Text>
           <Text variant="muted" size="sm">
-            Mobile projects stay on Aura Swarm. Use Agent, Execution, or Stats while we wire remote workspace browsing directly into this view.
+            {mobileDescription}
           </Text>
           {project ? (
             <div className={styles.mobileRemoteMeta}>
@@ -47,7 +52,7 @@ export function ProjectFilesView() {
               </Text>
               {projectPath ? (
                 <Text variant="muted" size="sm">
-                  Workspace path: {projectPath}
+                  Agent path: {projectPath}
                 </Text>
               ) : null}
             </div>

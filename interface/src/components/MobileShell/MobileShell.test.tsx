@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 vi.mock("@cypher-asi/zui", () => ({
   Topbar: ({ title, actions, icon }: { title?: React.ReactNode; actions?: React.ReactNode; icon?: React.ReactNode; className?: string }) => (
@@ -126,6 +126,7 @@ vi.mock("../../utils/mobileNavigation", () => ({
   getProjectIdFromPathname: (pathname: string) => (pathname.startsWith("/projects/proj-1") ? "proj-1" : null),
   isProjectSubroute: (pathname: string) => pathname.startsWith("/projects/proj-1/"),
   projectAgentRoute: (id: string) => `/projects/${id}/agent`,
+  projectAgentChatRoute: (projectId: string, agentInstanceId: string) => `/projects/${projectId}/agents/${agentInstanceId}`,
   projectFilesRoute: (id: string) => `/projects/${id}/files`,
   projectStatsRoute: (id: string) => `/projects/${id}/stats`,
   projectRootPath: (id: string) => `/projects/${id}`,
@@ -166,7 +167,17 @@ import { MobileShell } from "../MobileShell";
 function renderMobile(path = "/projects") {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <MobileShell />
+      <Routes>
+        <Route element={<MobileShell />}>
+          <Route path="/projects/:projectId/agent" element={<div>Project agent redirect</div>} />
+          <Route path="/projects/:projectId/agents/:agentInstanceId" element={<div>Project agent chat</div>} />
+          <Route path="/projects/:projectId/work" element={<div>Project work</div>} />
+          <Route path="/projects/:projectId/stats" element={<div>Project stats</div>} />
+          <Route path="/feed" element={<div>Feed</div>} />
+          <Route path="/projects" element={<div>Projects</div>} />
+          <Route path="*" element={<div>Fallback</div>} />
+        </Route>
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -189,11 +200,17 @@ describe("MobileShell", () => {
 
   it("renders project bottom navigation with 4 items", () => {
     renderMobile("/projects/proj-1/agent");
-    expect(screen.getByText("Agent")).toBeInTheDocument();
-    expect(screen.getByText("Execution")).toBeInTheDocument();
-    expect(screen.getByText("Stats")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: true, name: /Agent/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: false, name: /Execution/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { pressed: false, name: /Stats/i })).toBeInTheDocument();
     expect(screen.queryByText("Feed")).not.toBeInTheDocument();
     expect(screen.queryByText("Files")).not.toBeInTheDocument();
+  });
+
+  it("keeps the project title trigger in the top bar on the agent route", () => {
+    renderMobile("/projects/proj-1/agents/agent-inst-1");
+    expect(screen.getByRole("button", { name: "Open project navigation for Demo Project" })).toBeInTheDocument();
   });
 
   it("renders the global navigation trigger on global routes", () => {
@@ -245,6 +262,15 @@ describe("MobileShell", () => {
   it("renders update banner", () => {
     renderMobile();
     expect(screen.getByTestId("update-banner")).toBeInTheDocument();
+  });
+
+  it("navigates the mobile agent tab back to the last agent chat", async () => {
+    const user = userEvent.setup();
+    renderMobile("/projects/proj-1/work");
+
+    await user.click(screen.getByRole("button", { name: /agent/i }));
+
+    expect(await screen.findByText("Project agent chat")).toBeInTheDocument();
   });
 
   it("hides bottom nav when a drawer is open", () => {

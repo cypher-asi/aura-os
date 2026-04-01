@@ -208,6 +208,18 @@ export function ChatPanel({
 
   return (
     <div className={styles.container}>
+      {isMobileLayout && agentName ? (
+        <div className={styles.projectAgentBar}>
+          <div className={styles.projectAgentSummary}>
+            <div className={styles.projectAgentSummaryCopy}>
+              <span className={styles.projectAgentName}>{agentName}</span>
+              <span className={styles.projectAgentSummaryHint}>
+                {machineType === "remote" ? "Remote agent chat" : "Local agent chat"}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className={styles.chatArea}>
         <div
           className={styles.messageArea}
