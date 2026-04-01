@@ -1,6 +1,7 @@
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Serialize;
+use tracing::warn;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct ApiError {
@@ -117,6 +118,11 @@ pub(crate) fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode
     match &e {
         aura_os_network::NetworkError::Server { status, body } => {
             let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
+            warn!(
+                upstream_status = status,
+                body_preview = %body.chars().take(200).collect::<String>(),
+                "aura-network upstream error"
+            );
             (
                 code,
                 Json(ApiError {
@@ -126,7 +132,10 @@ pub(crate) fn map_network_error(e: aura_os_network::NetworkError) -> (StatusCode
                 }),
             )
         }
-        _ => ApiError::bad_gateway(e.to_string()),
+        _ => {
+            warn!(error = %e, "aura-network request failed");
+            ApiError::bad_gateway(e.to_string())
+        }
     }
 }
 
@@ -135,6 +144,11 @@ pub(crate) fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode
     match &e {
         aura_os_storage::StorageError::Server { status, body } => {
             let code = StatusCode::from_u16(*status).unwrap_or(StatusCode::BAD_GATEWAY);
+            warn!(
+                upstream_status = status,
+                body_preview = %body.chars().take(200).collect::<String>(),
+                "aura-storage upstream error"
+            );
             (
                 code,
                 Json(ApiError {
@@ -144,6 +158,9 @@ pub(crate) fn map_storage_error(e: aura_os_storage::StorageError) -> (StatusCode
                 }),
             )
         }
-        _ => ApiError::bad_gateway(e.to_string()),
+        _ => {
+            warn!(error = %e, "aura-storage request failed");
+            ApiError::bad_gateway(e.to_string())
+        }
     }
 }

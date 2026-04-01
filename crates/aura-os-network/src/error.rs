@@ -17,3 +17,10 @@ pub enum NetworkError {
     #[error("aura-network health check failed: {0}")]
     HealthCheckFailed(String),
 }
+
+impl NetworkError {
+    /// Whether this error is a transient upstream failure worth retrying (502, 503, 504).
+    pub fn is_transient(&self) -> bool {
+        matches!(self, NetworkError::Server { status, .. } if *status == 502 || *status == 503 || *status == 504)
+    }
+}

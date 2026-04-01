@@ -28,6 +28,8 @@ pub struct NetworkClient {
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+const TRANSIENT_RETRY_COUNT: usize = 2;
+const TRANSIENT_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
 
 fn build_http_client() -> Client {
     Client::builder()
@@ -130,9 +132,25 @@ impl NetworkClient {
         url: &str,
         jwt: &str,
     ) -> Result<T, NetworkError> {
-        let resp = self.http.get(url).bearer_auth(jwt).send().await?;
-
-        self.handle_response(resp).await
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self.http.get(url).bearer_auth(jwt).send().await?;
+            match self.handle_response(resp).await {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_transient() => {
+                    warn!(
+                        %url, attempt, error = %e,
+                        "transient upstream error, retrying"
+                    );
+                    last_err = Some(e);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Err(last_err.unwrap())
     }
 
     pub(crate) async fn post_authed<T: serde::de::DeserializeOwned, B: serde::Serialize>(
@@ -141,15 +159,31 @@ impl NetworkClient {
         jwt: &str,
         body: &B,
     ) -> Result<T, NetworkError> {
-        let resp = self
-            .http
-            .post(url)
-            .bearer_auth(jwt)
-            .json(body)
-            .send()
-            .await?;
-
-        self.handle_response(resp).await
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self
+                .http
+                .post(url)
+                .bearer_auth(jwt)
+                .json(body)
+                .send()
+                .await?;
+            match self.handle_response(resp).await {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_transient() => {
+                    warn!(
+                        %url, attempt, error = %e,
+                        "transient upstream error, retrying"
+                    );
+                    last_err = Some(e);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Err(last_err.unwrap())
     }
 
     pub(crate) async fn put_authed<T: serde::de::DeserializeOwned, B: serde::Serialize>(
@@ -158,29 +192,60 @@ impl NetworkClient {
         jwt: &str,
         body: &B,
     ) -> Result<T, NetworkError> {
-        let resp = self
-            .http
-            .put(url)
-            .bearer_auth(jwt)
-            .json(body)
-            .send()
-            .await?;
-
-        self.handle_response(resp).await
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self
+                .http
+                .put(url)
+                .bearer_auth(jwt)
+                .json(body)
+                .send()
+                .await?;
+            match self.handle_response(resp).await {
+                Ok(v) => return Ok(v),
+                Err(e) if e.is_transient() => {
+                    warn!(
+                        %url, attempt, error = %e,
+                        "transient upstream error, retrying"
+                    );
+                    last_err = Some(e);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Err(last_err.unwrap())
     }
 
     pub(crate) async fn delete_authed(&self, url: &str, jwt: &str) -> Result<(), NetworkError> {
-        let resp = self.http.delete(url).bearer_auth(jwt).send().await?;
-
-        let status = resp.status();
-        if !status.is_success() {
+        let mut last_err = None;
+        for attempt in 0..=TRANSIENT_RETRY_COUNT {
+            if attempt > 0 {
+                tokio::time::sleep(TRANSIENT_RETRY_DELAY).await;
+            }
+            let resp = self.http.delete(url).bearer_auth(jwt).send().await?;
+            let status = resp.status();
+            if status.is_success() {
+                return Ok(());
+            }
             let body = resp.text().await.unwrap_or_default();
-            return Err(NetworkError::Server {
+            let err = NetworkError::Server {
                 status: status.as_u16(),
                 body,
-            });
+            };
+            if err.is_transient() {
+                warn!(
+                    %url, attempt, error = %err,
+                    "transient upstream error, retrying"
+                );
+                last_err = Some(err);
+            } else {
+                return Err(err);
+            }
         }
-        Ok(())
+        Err(last_err.unwrap())
     }
 
     pub(crate) async fn handle_response<T: serde::de::DeserializeOwned>(
