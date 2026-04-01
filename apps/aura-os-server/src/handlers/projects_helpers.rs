@@ -272,13 +272,36 @@ pub(crate) async fn project_tool_session_config(
     agent_instance_id: Option<AgentInstanceId>,
     jwt: &str,
 ) -> SessionConfig {
+    let remote_instance = if harness_mode == HarnessMode::Swarm {
+        if let Some(agent_instance_id) = agent_instance_id {
+            state
+                .agent_instance_service
+                .get_instance(project_id, &agent_instance_id)
+                .await
+                .ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
     let project_path =
         resolve_project_tool_workspace_path(state, project_id, harness_mode, agent_instance_id)
             .await;
     SessionConfig {
-        agent_id: (harness_mode == HarnessMode::Local)
-            .then(|| format!("{tool_agent_name}-{project_id}")),
-        agent_name: Some(tool_agent_name.to_string()),
+        agent_id: if let Some(instance) = remote_instance.as_ref() {
+            Some(instance.agent_id.to_string())
+        } else if harness_mode == HarnessMode::Local {
+            Some(format!("{tool_agent_name}-{project_id}"))
+        } else {
+            None
+        },
+        agent_name: Some(
+            remote_instance
+                .as_ref()
+                .map(|instance| instance.name.clone())
+                .unwrap_or_else(|| tool_agent_name.to_string()),
+        ),
         token: Some(jwt.to_string()),
         project_id: Some(project_id.to_string()),
         project_path,
