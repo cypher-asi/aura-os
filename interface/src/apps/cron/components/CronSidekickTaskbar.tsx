@@ -1,4 +1,5 @@
 import { Button } from "@cypher-asi/zui";
+import { useShallow } from "zustand/react/shallow";
 import { History, Package, ChartNoAxesColumnIncreasing, Logs } from "lucide-react";
 import { useCronSidekickStore, type CronSidekickTab } from "../stores/cron-sidekick-store";
 
@@ -10,7 +11,9 @@ const TABS: { id: CronSidekickTab; icon: React.ReactNode; title: string }[] = [
 ];
 
 export function CronSidekickTaskbar() {
-  const { activeTab, setActiveTab } = useCronSidekickStore();
+  const { activeTab, setActiveTab } = useCronSidekickStore(
+    useShallow((s) => ({ activeTab: s.activeTab, setActiveTab: s.setActiveTab })),
+  );
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "4px 8px" }}>

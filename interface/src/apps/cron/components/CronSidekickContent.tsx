@@ -1,9 +1,13 @@
 import { useParams } from "react-router-dom";
+import { useShallow } from "zustand/react/shallow";
 import { useCronStore } from "../stores/cron-store";
 import { useCronSidekickStore } from "../stores/cron-sidekick-store";
 import type { CronJobRun, CronArtifact } from "../../../types";
 import { ArrowLeft } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
+
+const EMPTY_RUNS: CronJobRun[] = [];
+const EMPTY_ARTIFACTS: CronArtifact[] = [];
 
 function RunList({ runs, onSelect }: { runs: CronJobRun[]; onSelect: (r: CronJobRun) => void }) {
   if (runs.length === 0) return <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>No runs yet</div>;
@@ -149,9 +153,11 @@ function ArtifactPreview({ artifact, onClose }: { artifact: CronArtifact; onClos
 
 export function CronSidekickContent() {
   const { cronJobId } = useParams<{ cronJobId: string }>();
-  const { activeTab, previewItem, viewRun, viewArtifact, closePreview } = useCronSidekickStore();
-  const runs = useCronStore((s) => (cronJobId ? s.runs[cronJobId] ?? [] : []));
-  const artifacts = useCronStore((s) => (cronJobId ? s.artifacts[cronJobId] ?? [] : []));
+  const { activeTab, previewItem, viewRun, viewArtifact, closePreview } = useCronSidekickStore(
+    useShallow((s) => s),
+  );
+  const runs = useCronStore((s) => (cronJobId ? s.runs[cronJobId] ?? EMPTY_RUNS : EMPTY_RUNS));
+  const artifacts = useCronStore((s) => (cronJobId ? s.artifacts[cronJobId] ?? EMPTY_ARTIFACTS : EMPTY_ARTIFACTS));
 
   if (!cronJobId) {
     return <div style={{ padding: 16, color: "var(--color-text-muted)", fontSize: 13 }}>Select a cron job</div>;
