@@ -134,7 +134,7 @@ export function ProcessCanvas({ processId, processNodes, processConnections }: P
     [processId, ctxMenu, screenToFlowPosition, fetchNodes],
   );
 
-  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+  const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault();
     setCtxMenu({ x: event.clientX, y: event.clientY });
   }, []);
