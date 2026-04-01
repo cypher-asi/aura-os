@@ -37,7 +37,7 @@ export function ProjectSettingsModal({ target, onClose, onSaved }: ProjectSettin
       })
       .catch(() => setError("Failed to load project"))
       .finally(() => setLoading(false));
-  }, [target?.project_id]);
+  }, [target, target?.project_id]);
 
   useEffect(() => {
     if (!project?.orbit_owner || !project?.orbit_repo) {
