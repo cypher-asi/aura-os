@@ -47,6 +47,8 @@ pub struct SuperAgentService {
     pub event_listener: SuperAgentEventListener,
     pub cron_store: Arc<cron_store::CronStore>,
     pub cron_executor: Arc<executor::CronJobExecutor>,
+    pub process_store: Arc<aura_os_process::ProcessStore>,
+    pub process_executor: Arc<aura_os_process::ProcessExecutor>,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
     agent_instance_service: Arc<AgentInstanceService>,
@@ -84,8 +86,15 @@ impl SuperAgentService {
             event_broadcast.clone(),
         ));
 
+        let process_store = Arc::new(aura_os_process::ProcessStore::new(store.clone()));
+        let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
+            process_store.clone(),
+            event_broadcast.clone(),
+        ));
+
         let mut tool_registry = ToolRegistry::with_tier1_tools();
         tool_registry.register_cron_tools(cron_store.clone(), cron_executor.clone());
+        tool_registry.register_process_tools(process_store.clone(), process_executor.clone());
 
         let event_listener = SuperAgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
@@ -97,6 +106,8 @@ impl SuperAgentService {
             event_listener,
             cron_store,
             cron_executor,
+            process_store,
+            process_executor,
             project_service,
             agent_service,
             agent_instance_service,
@@ -119,6 +130,13 @@ impl SuperAgentService {
         ));
         sched.spawn();
         info!("Cron scheduler spawned");
+
+        let process_sched = Arc::new(aura_os_process::ProcessScheduler::new(
+            self.process_store.clone(),
+            self.process_executor.clone(),
+        ));
+        process_sched.spawn();
+        info!("Process scheduler spawned");
     }
 
     pub fn build_context(&self, user_id: &str, org_id: &str, jwt: &str) -> SuperAgentContext {

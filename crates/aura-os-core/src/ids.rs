@@ -69,3 +69,8 @@ define_id!(ProfileId);
 define_id!(CronJobId);
 define_id!(CronJobRunId);
 define_id!(ArtifactId);
+define_id!(ProcessId);
+define_id!(ProcessNodeId);
+define_id!(ProcessNodeConnectionId);
+define_id!(ProcessRunId);
+define_id!(ProcessEventId);

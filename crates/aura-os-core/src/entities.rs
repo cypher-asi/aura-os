@@ -3,10 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::enums::{
     AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode,
-    ProjectStatus, SessionStatus, TaskStatus,
+    ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger, ProjectStatus,
+    SessionStatus, TaskStatus,
 };
 use crate::ids::{
-    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProfileId, ProjectId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
+    ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId,
     SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 
@@ -530,4 +532,92 @@ pub struct Artifact {
     pub created_at: DateTime<Utc>,
     #[serde(default)]
     pub expires_at: Option<DateTime<Utc>>,
+}
+
+// ---------------------------------------------------------------------------
+// Process workflow entities
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Process {
+    pub process_id: ProcessId,
+    pub org_id: OrgId,
+    pub user_id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub enabled: bool,
+    /// Optional cron expression for scheduled triggering.
+    #[serde(default)]
+    pub schedule: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub last_run_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub next_run_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessNode {
+    pub node_id: ProcessNodeId,
+    pub process_id: ProcessId,
+    pub node_type: ProcessNodeType,
+    pub label: String,
+    #[serde(default)]
+    pub agent_id: Option<AgentId>,
+    #[serde(default)]
+    pub prompt: String,
+    /// Type-specific configuration (condition expression, artifact settings, delay, etc.)
+    #[serde(default)]
+    pub config: serde_json::Value,
+    #[serde(default)]
+    pub position_x: f64,
+    #[serde(default)]
+    pub position_y: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessNodeConnection {
+    pub connection_id: ProcessNodeConnectionId,
+    pub process_id: ProcessId,
+    pub source_node_id: ProcessNodeId,
+    #[serde(default)]
+    pub source_handle: Option<String>,
+    pub target_node_id: ProcessNodeId,
+    #[serde(default)]
+    pub target_handle: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessRun {
+    pub run_id: ProcessRunId,
+    pub process_id: ProcessId,
+    pub status: ProcessRunStatus,
+    pub trigger: ProcessRunTrigger,
+    #[serde(default)]
+    pub error: Option<String>,
+    pub started_at: DateTime<Utc>,
+    #[serde(default)]
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessEvent {
+    pub event_id: ProcessEventId,
+    pub run_id: ProcessRunId,
+    pub node_id: ProcessNodeId,
+    pub process_id: ProcessId,
+    pub status: ProcessEventStatus,
+    #[serde(default)]
+    pub input_snapshot: String,
+    #[serde(default)]
+    pub output: String,
+    pub started_at: DateTime<Utc>,
+    #[serde(default)]
+    pub completed_at: Option<DateTime<Utc>>,
 }

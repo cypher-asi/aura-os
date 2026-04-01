@@ -142,8 +142,8 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           <div className={styles.tabEmptyState}>No tasks yet</div>
         )}
 
-        {effectiveTab === "crons" && (
-          <div className={styles.tabEmptyState}>No crons yet</div>
+        {effectiveTab === "processes" && (
+          <div className={styles.tabEmptyState}>No processes yet</div>
         )}
 
         {effectiveTab === "logs" && (

@@ -80,6 +80,20 @@ pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
     ) {
         domains.push(ToolDomain::Cron);
     }
+    if contains_any(
+        &lower,
+        &[
+            "process",
+            "workflow",
+            "node",
+            "ignition",
+            "pipeline",
+            "automate",
+            "trigger",
+        ],
+    ) {
+        domains.push(ToolDomain::Process);
+    }
 
     domains.dedup();
     domains
@@ -109,6 +123,7 @@ const LOADABLE_DOMAINS: &[&str] = &[
     "system",
     "generation",
     "cron",
+    "process",
 ];
 
 #[async_trait]

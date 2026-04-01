@@ -9,6 +9,10 @@ import type {
   CronJobRunStatus,
   CronJobTrigger,
   ArtifactType,
+  ProcessNodeType,
+  ProcessRunStatus,
+  ProcessRunTrigger,
+  ProcessEventStatus,
 } from "./enums";
 
 export interface Project {
@@ -400,4 +404,68 @@ export interface CronArtifact {
   metadata: Record<string, unknown>;
   created_at: string;
   expires_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Process workflow entities
+// ---------------------------------------------------------------------------
+
+export interface Process {
+  process_id: string;
+  org_id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  schedule: string | null;
+  tags: string[];
+  last_run_at: string | null;
+  next_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProcessNode {
+  node_id: string;
+  process_id: string;
+  node_type: ProcessNodeType;
+  label: string;
+  agent_id: string | null;
+  prompt: string;
+  config: Record<string, unknown>;
+  position_x: number;
+  position_y: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProcessNodeConnection {
+  connection_id: string;
+  process_id: string;
+  source_node_id: string;
+  source_handle: string | null;
+  target_node_id: string;
+  target_handle: string | null;
+}
+
+export interface ProcessRun {
+  run_id: string;
+  process_id: string;
+  status: ProcessRunStatus;
+  trigger: ProcessRunTrigger;
+  error: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface ProcessEvent {
+  event_id: string;
+  run_id: string;
+  node_id: string;
+  process_id: string;
+  status: ProcessEventStatus;
+  input_snapshot: string;
+  output: string;
+  started_at: string;
+  completed_at: string | null;
 }

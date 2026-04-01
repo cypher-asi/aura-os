@@ -14,6 +14,7 @@ members = [
     "crates/aura-os-super-agent",
     "crates/aura-os-tasks",
     "crates/aura-os-terminal",
+    "crates/aura-os-process",
     "apps/aura-os-desktop",
     "apps/aura-os-server",
     "apps/aura-os-ide",

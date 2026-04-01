@@ -15,6 +15,7 @@ aura-os-network = { path = "../aura-os-network" }
 aura-os-storage = { path = "../aura-os-storage" }
 aura-os-store = { path = "../aura-os-store" }
 aura-os-link = { path = "../aura-os-link" }
+aura-os-process = { path = "../aura-os-process" }
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 cron = "0.13"

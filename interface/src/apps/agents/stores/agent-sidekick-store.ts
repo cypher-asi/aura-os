@@ -6,7 +6,7 @@ export type AgentSidekickTab =
   | "skills"
   | "projects"
   | "tasks"
-  | "crons"
+  | "processes"
   | "logs"
   | "stats";
 

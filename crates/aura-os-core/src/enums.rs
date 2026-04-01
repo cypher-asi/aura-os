@@ -109,6 +109,7 @@ pub enum ToolDomain {
     System,
     Generation,
     Cron,
+    Process,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -135,4 +136,45 @@ pub enum ArtifactType {
     Media,
     Code,
     Custom,
+}
+
+// ---------------------------------------------------------------------------
+// Process workflow enums
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessNodeType {
+    Ignition,
+    Action,
+    Condition,
+    Artifact,
+    Delay,
+    Merge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessRunStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessRunTrigger {
+    Scheduled,
+    Manual,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProcessEventStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+    Skipped,
 }

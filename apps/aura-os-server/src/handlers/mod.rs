@@ -3,6 +3,7 @@ pub(crate) mod auth;
 pub(crate) mod billing;
 pub(crate) mod cron;
 pub(crate) mod dev_loop;
+pub(crate) mod process;
 pub(crate) mod feed;
 pub(crate) mod files;
 pub(crate) mod follows;

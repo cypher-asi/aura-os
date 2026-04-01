@@ -157,6 +157,37 @@ fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
                 format!("Cron job failed: {name} - {error}"),
             )
         }
+        "process_run_started" => {
+            let pid = value
+                .get("process_id")
+                .and_then(|p| p.as_str())
+                .unwrap_or("unknown");
+            (event_type.to_string(), format!("Process run started: {pid}"))
+        }
+        "process_run_completed" => {
+            let pid = value
+                .get("process_id")
+                .and_then(|p| p.as_str())
+                .unwrap_or("unknown");
+            (
+                event_type.to_string(),
+                format!("Process run completed: {pid}"),
+            )
+        }
+        "process_node_executed" => {
+            let node_type = value
+                .get("node_type")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            let node_id = value
+                .get("node_id")
+                .and_then(|n| n.as_str())
+                .unwrap_or("unknown");
+            (
+                event_type.to_string(),
+                format!("Process node executed: {node_type} ({node_id})"),
+            )
+        }
         _ => return None,
     };
 

@@ -9,3 +9,8 @@ export type ToolDomain = "project" | "spec" | "task" | "agent" | "execution" | "
 export type CronJobRunStatus = "pending" | "running" | "completed" | "failed";
 export type CronJobTrigger = "scheduled" | "manual";
 export type ArtifactType = "report" | "data" | "media" | "code" | "custom";
+
+export type ProcessNodeType = "ignition" | "action" | "condition" | "artifact" | "delay" | "merge";
+export type ProcessRunStatus = "pending" | "running" | "completed" | "failed";
+export type ProcessRunTrigger = "scheduled" | "manual";
+export type ProcessEventStatus = "pending" | "running" | "completed" | "failed" | "skipped";

@@ -24,7 +24,7 @@ const TAB_ICONS: TabItem[] = [
   { id: "skills", icon: <Zap size={16} />, title: "Skills" },
   { id: "projects", icon: <FolderOpen size={16} />, title: "Projects" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
-  { id: "crons", icon: <Cpu size={16} />, title: "Crons" },
+  { id: "processes", icon: <Cpu size={16} />, title: "Processes" },
   { id: "logs", icon: <Logs size={16} />, title: "Logs" },
   { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
 ];

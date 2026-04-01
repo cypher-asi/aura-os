@@ -68,6 +68,9 @@ export default function App() {
             <Route path="cron" element={null} />
             <Route path="cron/:cronJobId" element={null} />
 
+            <Route path="process" element={null} />
+            <Route path="process/:processId" element={null} />
+
             <Route path="leaderboard" element={null} />
             <Route path="feed" element={null} />
             <Route path="profile" element={null} />

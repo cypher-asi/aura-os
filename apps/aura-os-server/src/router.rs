@@ -12,8 +12,8 @@ use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
     agents, auth, billing, cron, dev_loop, feed, files, follows, leaderboard, log, orgs,
-    project_stats, projects, remote_files, remote_terminal, specs, super_agent, swarm, system,
-    tasks, terminal, users, ws,
+    process, project_stats, projects, remote_files, remote_terminal, specs, super_agent, swarm,
+    system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -80,6 +80,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(system_routes())
         .merge(super_agent_routes())
         .merge(cron_routes())
+        .merge(process_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::auth_guard::require_verified_session,
@@ -428,6 +429,46 @@ fn cron_routes() -> Router<AppState> {
             get(cron::list_cron_tags).post(cron::create_cron_tag),
         )
         .route("/api/cron-tags/:tag_id", delete(cron::delete_cron_tag))
+}
+
+fn process_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/processes",
+            get(process::list_processes).post(process::create_process),
+        )
+        .route(
+            "/api/processes/:id",
+            get(process::get_process)
+                .put(process::update_process)
+                .delete(process::delete_process),
+        )
+        .route("/api/processes/:id/trigger", post(process::trigger_process))
+        .route(
+            "/api/processes/:id/nodes",
+            get(process::list_nodes).post(process::create_node),
+        )
+        .route(
+            "/api/processes/:id/nodes/:node_id",
+            put(process::update_node).delete(process::delete_node),
+        )
+        .route(
+            "/api/processes/:id/connections",
+            get(process::list_connections).post(process::create_connection),
+        )
+        .route(
+            "/api/processes/:id/connections/:connection_id",
+            delete(process::delete_connection),
+        )
+        .route("/api/processes/:id/runs", get(process::list_runs))
+        .route(
+            "/api/processes/:id/runs/:run_id",
+            get(process::get_run),
+        )
+        .route(
+            "/api/processes/:id/runs/:run_id/events",
+            get(process::list_run_events),
+        )
 }
 
 fn system_routes() -> Router<AppState> {

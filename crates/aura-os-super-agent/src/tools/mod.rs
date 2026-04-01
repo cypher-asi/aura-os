@@ -6,6 +6,7 @@ pub mod generation_tools;
 pub mod helpers;
 pub mod monitor_tools;
 pub mod org_tools;
+pub mod process_tools;
 pub mod project_tools;
 pub mod social_tools;
 pub mod spec_tools;
@@ -209,6 +210,18 @@ impl ToolRegistry {
         self.register(Arc::new(cron_tools::ListCronRunsTool { store: store.clone() }));
         self.register(Arc::new(cron_tools::GetArtifactTool { store: store.clone() }));
         self.register(Arc::new(cron_tools::ListArtifactsTool { store }));
+    }
+
+    pub fn register_process_tools(
+        &mut self,
+        store: Arc<aura_os_process::ProcessStore>,
+        executor: Arc<aura_os_process::ProcessExecutor>,
+    ) {
+        self.register(Arc::new(process_tools::CreateProcessTool { store: store.clone() }));
+        self.register(Arc::new(process_tools::ListProcessesTool { store: store.clone() }));
+        self.register(Arc::new(process_tools::DeleteProcessTool { store: store.clone() }));
+        self.register(Arc::new(process_tools::TriggerProcessTool { store: store.clone(), executor }));
+        self.register(Arc::new(process_tools::ListProcessRunsTool { store }));
     }
 
     pub fn register(&mut self, tool: Arc<dyn SuperAgentTool>) {

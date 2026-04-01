@@ -1,0 +1,123 @@
+import { useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Workflow, Play, Pause, Trash2 } from "lucide-react";
+import { Button, PageEmptyState } from "@cypher-asi/zui";
+import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
+import { useProcessStore } from "../stores/process-store";
+import { processApi } from "../../../api/process";
+import { ProcessCanvas } from "./ProcessCanvas";
+import type { ReactNode } from "react";
+
+export function ProcessMainPanel({ children }: { children?: ReactNode }) {
+  const { processId } = useParams<{ processId: string }>();
+  const navigate = useNavigate();
+  const processes = useProcessStore((s) => s.processes);
+  const nodes = useProcessStore((s) => s.nodes);
+  const connections = useProcessStore((s) => s.connections);
+  const updateProcess = useProcessStore((s) => s.updateProcess);
+  const removeProcess = useProcessStore((s) => s.removeProcess);
+  const fetchRuns = useProcessStore((s) => s.fetchRuns);
+
+  const process = processes.find((p) => p.process_id === processId);
+  const processNodes = processId ? nodes[processId] ?? [] : [];
+  const processConnections = processId ? connections[processId] ?? [] : [];
+
+  const handleToggle = useCallback(async () => {
+    if (!process) return;
+    try {
+      const updated = await processApi.updateProcess(process.process_id, {
+        enabled: !process.enabled,
+      });
+      updateProcess(updated);
+    } catch (e) {
+      console.error("Failed to toggle process:", e);
+    }
+  }, [process, updateProcess]);
+
+  const handleTrigger = useCallback(async () => {
+    if (!process) return;
+    try {
+      await processApi.triggerProcess(process.process_id);
+      fetchRuns(process.process_id);
+    } catch (e) {
+      console.error("Failed to trigger process:", e);
+    }
+  }, [process, fetchRuns]);
+
+  const handleDelete = useCallback(async () => {
+    if (!process) return;
+    try {
+      await processApi.deleteProcess(process.process_id);
+      removeProcess(process.process_id);
+      navigate("/process");
+    } catch (e) {
+      console.error("Failed to delete process:", e);
+    }
+  }, [process, removeProcess, navigate]);
+
+  if (!processId || !process) {
+    return (
+      <ResponsiveMainLane>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <PageEmptyState
+            icon={<Workflow size={32} />}
+            title="Processes"
+            description="Select a process or create one to get started."
+          />
+          {children}
+        </div>
+      </ResponsiveMainLane>
+    );
+  }
+
+  return (
+    <ResponsiveMainLane>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <div
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 16px",
+            borderBottom: "1px solid var(--color-border, #333)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text, #eee)" }}>
+              {process.name}
+            </span>
+            <span
+              style={{
+                fontSize: 11, padding: "2px 8px", borderRadius: 99,
+                background: process.enabled ? "rgba(16,185,129,0.15)" : "rgba(107,114,128,0.15)",
+                color: process.enabled ? "#10b981" : "#6b7280",
+                fontWeight: 600,
+              }}
+            >
+              {process.enabled ? "Active" : "Paused"}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            <Button variant="ghost" size="sm" iconOnly icon={<Play size={14} />} title="Trigger" onClick={handleTrigger} />
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              icon={process.enabled ? <Pause size={14} /> : <Play size={14} />}
+              title={process.enabled ? "Pause" : "Resume"}
+              onClick={handleToggle}
+            />
+            <Button variant="ghost" size="sm" iconOnly icon={<Trash2 size={14} />} title="Delete" onClick={handleDelete} />
+          </div>
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ProcessCanvas
+            processId={processId}
+            processNodes={processNodes}
+            processConnections={processConnections}
+          />
+        </div>
+        {children}
+      </div>
+    </ResponsiveMainLane>
+  );
+}

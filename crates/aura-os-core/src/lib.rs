@@ -12,11 +12,13 @@ pub mod testutil;
 pub use entities::*;
 pub use enums::{
     AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode, OrgRole,
-    OrchestrationStatus, ProjectStatus, SessionStatus, StepStatus, TaskStatus, ToolDomain,
+    OrchestrationStatus, ProcessEventStatus, ProcessNodeType, ProcessRunStatus, ProcessRunTrigger,
+    ProjectStatus, SessionStatus, StepStatus, TaskStatus, ToolDomain,
 };
 pub use helpers::{extract_fenced_json, fuzzy_search_replace, parse_dt};
 pub use ids::{
-    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProfileId, ProjectId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
+    ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId,
     SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 pub use settings::{SettingsEntry, SettingsValue};
