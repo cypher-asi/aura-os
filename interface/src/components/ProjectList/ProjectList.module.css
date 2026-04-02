@@ -27,7 +27,7 @@
 }
 
 .explorerWrap [class*="itemContent"][aria-expanded] [class*="label"] {
-  color: #ffffff;
+  color: var(--color-text-secondary);
 }
 
 /* Tighten suffix so the per-project + stays flush right */

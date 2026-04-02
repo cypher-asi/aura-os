@@ -80,7 +80,7 @@ export const Lane = forwardRef<HTMLDivElement, LaneProps>(
         : {
             width: resolvedWidth,
             ...(collapsed && { minWidth: 0 }),
-            transition: isResizing ? "none" : "width 300ms ease-out",
+            transition: isResizing ? "none" : "width 100ms ease-out",
           }),
     };
 

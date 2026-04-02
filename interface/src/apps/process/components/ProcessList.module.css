@@ -79,7 +79,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
 }
 
 .dot {

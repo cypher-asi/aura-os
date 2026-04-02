@@ -79,7 +79,7 @@ export function SkillEditorModal({ isOpen, onClose, onCreated }: SkillEditorModa
       onClose={handleClose}
       title="Create Skill"
       size="md"
-      initialFocusRef={nameRef}
+      initialFocusRef={nameRef as React.RefObject<HTMLElement>}
       footer={
         <div className={styles.footer}>
           <Button variant="ghost" onClick={handleClose} disabled={saving}>

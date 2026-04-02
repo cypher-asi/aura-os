@@ -16,7 +16,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  transition: opacity 200ms ease-out;
+  transition: opacity 100ms ease-out;
 }
 
 /* ── Collapse ── */

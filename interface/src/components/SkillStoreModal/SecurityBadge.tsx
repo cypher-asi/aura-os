@@ -9,9 +9,7 @@ const CONFIG = {
 };
 
 const CAUTION_STYLE: CSSProperties = {
-  background: "rgba(59, 130, 246, 0.15)",
   color: "#60a5fa",
-  borderColor: "rgba(59, 130, 246, 0.3)",
 };
 
 interface SecurityBadgeProps {

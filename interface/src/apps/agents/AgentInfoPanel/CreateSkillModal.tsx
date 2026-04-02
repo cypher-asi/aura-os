@@ -75,7 +75,7 @@ export function CreateSkillModal({ isOpen, onClose, onCreated }: CreateSkillModa
       onClose={handleClose}
       title="Create Skill"
       size="md"
-      initialFocusRef={nameRef}
+      initialFocusRef={nameRef as React.RefObject<HTMLElement>}
       footer={
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <Button variant="ghost" onClick={handleClose} disabled={saving}>

@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import { Input } from "@cypher-asi/zui";
 import { X, Search } from "lucide-react";
 import { SkillStoreCategories } from "./SkillStoreCategories";
 import { SkillStoreGrid } from "./SkillStoreGrid";
