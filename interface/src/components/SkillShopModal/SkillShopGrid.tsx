@@ -1,14 +1,14 @@
-import { SkillStoreCard } from "./SkillStoreCard";
-import type { SkillStoreCatalogEntry } from "../../types";
-import styles from "./SkillStoreModal.module.css";
+import { SkillShopCard } from "./SkillShopCard";
+import type { SkillShopCatalogEntry } from "../../types";
+import styles from "./SkillShopModal.module.css";
 
-interface SkillStoreGridProps {
-  entries: SkillStoreCatalogEntry[];
+interface SkillShopGridProps {
+  entries: SkillShopCatalogEntry[];
   installedNames: Set<string>;
-  onSelect: (entry: SkillStoreCatalogEntry) => void;
+  onSelect: (entry: SkillShopCatalogEntry) => void;
 }
 
-export function SkillStoreGrid({ entries, installedNames, onSelect }: SkillStoreGridProps) {
+export function SkillShopGrid({ entries, installedNames, onSelect }: SkillShopGridProps) {
   if (entries.length === 0) {
     return <div className={styles.gridEmpty}>No skills match your search</div>;
   }
@@ -16,7 +16,7 @@ export function SkillStoreGrid({ entries, installedNames, onSelect }: SkillStore
   return (
     <div className={styles.grid}>
       {entries.map((entry) => (
-        <SkillStoreCard
+        <SkillShopCard
           key={entry.name}
           entry={entry}
           installed={installedNames.has(entry.name)}

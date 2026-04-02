@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { X, Search } from "lucide-react";
-import { SkillStoreCategories } from "./SkillStoreCategories";
-import { SkillStoreGrid } from "./SkillStoreGrid";
-import { SkillStoreDetail } from "./SkillStoreDetail";
+import { SkillShopCategories } from "./SkillShopCategories";
+import { SkillShopGrid } from "./SkillShopGrid";
+import { SkillShopDetail } from "./SkillShopDetail";
 import { api } from "../../api/client";
-import catalogData from "../../data/skill-store-catalog.json";
-import type { SkillCategory, SkillStoreCatalogEntry } from "../../types";
-import styles from "./SkillStoreModal.module.css";
+import catalogData from "../../data/skill-shop-catalog.json";
+import type { SkillCategory, SkillShopCatalogEntry } from "../../types";
+import styles from "./SkillShopModal.module.css";
 
-const catalog = catalogData as SkillStoreCatalogEntry[];
+const catalog = catalogData as SkillShopCatalogEntry[];
 
-interface SkillStoreModalProps {
+interface SkillShopModalProps {
   isOpen: boolean;
   agentId?: string;
   initialInstalledNames?: Set<string>;
@@ -18,10 +18,10 @@ interface SkillStoreModalProps {
   onInstalled?: () => void;
 }
 
-export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClose, onInstalled }: SkillStoreModalProps) {
+export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose, onInstalled }: SkillShopModalProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<SkillCategory | "all">("all");
-  const [selected, setSelected] = useState<SkillStoreCatalogEntry | null>(null);
+  const [selected, setSelected] = useState<SkillShopCatalogEntry | null>(null);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [installing, setInstalling] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
@@ -53,10 +53,10 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
     return result;
   }, [category, search]);
 
-  const handleInstall = useCallback(async (entry: SkillStoreCatalogEntry) => {
+  const handleInstall = useCallback(async (entry: SkillShopCatalogEntry) => {
     setInstalling(true);
     try {
-      await api.harnessSkills.installFromStore(entry.name, entry.source_url);
+      await api.harnessSkills.installFromShop(entry.name, entry.source_url);
       if (agentId) {
         await api.harnessSkills.installAgentSkill(agentId, entry.name, entry.source_url).catch(() => {});
       }
@@ -66,7 +66,7 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
     setInstalling(false);
   }, [agentId, onInstalled]);
 
-  const handleUninstall = useCallback(async (entry: SkillStoreCatalogEntry) => {
+  const handleUninstall = useCallback(async (entry: SkillShopCatalogEntry) => {
     if (!agentId) return;
     setUninstalling(true);
     try {
@@ -94,7 +94,7 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
     <div className={styles.overlay} onClick={handleClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.topBar}>
-          <span className={styles.title}>Skill Store</span>
+          <span className={styles.title}>Skill Shop</span>
           <div className={styles.searchWrap}>
             <Search size={14} className={styles.searchIcon} />
             <input
@@ -112,7 +112,7 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
 
         <div className={styles.body}>
           <div className={styles.sidebar}>
-            <SkillStoreCategories
+            <SkillShopCategories
               catalog={catalog}
               selected={category}
               onSelect={(c) => { setCategory(c); setSelected(null); }}
@@ -121,7 +121,7 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
 
           <div className={styles.content}>
             {selected ? (
-              <SkillStoreDetail
+              <SkillShopDetail
                 entry={selected}
                 installed={installedNames.has(selected.name)}
                 installing={installing}
@@ -131,7 +131,7 @@ export function SkillStoreModal({ isOpen, agentId, initialInstalledNames, onClos
                 onUninstall={() => handleUninstall(selected)}
               />
             ) : (
-              <SkillStoreGrid
+              <SkillShopGrid
                 entries={filtered}
                 installedNames={installedNames}
                 onSelect={setSelected}

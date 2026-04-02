@@ -4,7 +4,7 @@ import { Zap, Loader2, Plus, Minus, ChevronDown, ChevronRight, FilePlus2, Store 
 import { api } from "../../../api/client";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
-import { SkillStoreModal } from "../../../components/SkillStoreModal";
+import { SkillShopModal } from "../../../components/SkillShopModal";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -95,9 +95,22 @@ export function SkillsTab({ agent }: SkillsTabProps) {
     fetchData();
   }, [fetchData]);
 
-  const installedNames = new Set(installations.map((i) => i.skill_name));
-  const installedSkills = catalog.filter((s) => installedNames.has(s.name));
-  const availableSkills = catalog.filter((s) => !installedNames.has(s.name));
+  const installedNameSet = new Set(installations.map((i) => i.skill_name));
+  const catalogByName = new Map(catalog.map((s) => [s.name, s]));
+
+  // Build installed list from installations, synthesising entries for skills
+  // the harness catalog hasn't indexed yet (race after store install).
+  const installedSkills: HarnessSkill[] = installations.map((inst) =>
+    catalogByName.get(inst.skill_name) ?? {
+      name: inst.skill_name,
+      description: "",
+      source: "store",
+      model_invocable: false,
+      user_invocable: true,
+      frontmatter: {},
+    },
+  );
+  const availableSkills = catalog.filter((s) => !installedNameSet.has(s.name));
 
   const handleInstall = useCallback(
     async (name: string) => {
@@ -146,7 +159,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
             type="button"
             className={styles.skillCreateBtn}
             onClick={() => setShowStore(true)}
-            title="Skill Store"
+            title="Skill Shop"
           >
             <Store size={14} />
           </button>
@@ -202,10 +215,10 @@ export function SkillsTab({ agent }: SkillsTabProps) {
         onCreated={fetchData}
       />
 
-      <SkillStoreModal
+      <SkillShopModal
         isOpen={showStore}
         agentId={agentId}
-        initialInstalledNames={installedNames}
+        initialInstalledNames={installedNameSet}
         onClose={() => setShowStore(false)}
         onInstalled={fetchData}
       />

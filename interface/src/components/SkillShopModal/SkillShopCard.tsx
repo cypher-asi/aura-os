@@ -1,16 +1,16 @@
 import { Check } from "lucide-react";
 import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
-import type { SkillStoreCatalogEntry } from "../../types";
-import styles from "./SkillStoreModal.module.css";
+import type { SkillShopCatalogEntry } from "../../types";
+import styles from "./SkillShopModal.module.css";
 
-interface SkillStoreCardProps {
-  entry: SkillStoreCatalogEntry;
+interface SkillShopCardProps {
+  entry: SkillShopCatalogEntry;
   installed: boolean;
   onClick: () => void;
 }
 
-export function SkillStoreCard({ entry, installed, onClick }: SkillStoreCardProps) {
+export function SkillShopCard({ entry, installed, onClick }: SkillShopCardProps) {
   return (
     <button type="button" className={styles.card} onClick={onClick}>
       <div className={styles.cardIcon}>

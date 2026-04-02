@@ -36,8 +36,8 @@ export const harnessSkillsApi = {
     apiFetch<void>(`/api/harness/agents/${agentId}/skills/${skillName}`, {
       method: "DELETE",
     }),
-  installFromStore: (name: string, sourceUrl: string) =>
-    apiFetch<{ name: string; path: string; installed: boolean }>(`/api/harness/skills/install-from-store`, {
+  installFromShop: (name: string, sourceUrl: string) =>
+    apiFetch<{ name: string; path: string; installed: boolean }>(`/api/harness/skills/install-from-shop`, {
       method: "POST",
       body: JSON.stringify({ name, source_url: sourceUrl }),
     }),

@@ -5,8 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
-import type { SkillStoreCatalogEntry } from "../../types";
-import styles from "./SkillStoreModal.module.css";
+import type { SkillShopCatalogEntry } from "../../types";
+import styles from "./SkillShopModal.module.css";
 import mdStyles from "../Preview/Preview.module.css";
 
 function stripFrontmatter(raw: string): string {
@@ -17,8 +17,8 @@ function stripFrontmatter(raw: string): string {
   return trimmed.slice(end + 3).trimStart();
 }
 
-interface SkillStoreDetailProps {
-  entry: SkillStoreCatalogEntry;
+interface SkillShopDetailProps {
+  entry: SkillShopCatalogEntry;
   installed: boolean;
   installing: boolean;
   uninstalling: boolean;
@@ -27,7 +27,7 @@ interface SkillStoreDetailProps {
   onUninstall: () => void;
 }
 
-export function SkillStoreDetail({
+export function SkillShopDetail({
   entry,
   installed,
   installing,
@@ -35,7 +35,7 @@ export function SkillStoreDetail({
   onBack,
   onInstall,
   onUninstall,
-}: SkillStoreDetailProps) {
+}: SkillShopDetailProps) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourceContent, setSourceContent] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);

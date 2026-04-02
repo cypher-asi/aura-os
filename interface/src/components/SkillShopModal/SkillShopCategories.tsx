@@ -1,5 +1,5 @@
-import type { SkillCategory, SkillStoreCatalogEntry } from "../../types";
-import styles from "./SkillStoreModal.module.css";
+import type { SkillCategory, SkillShopCatalogEntry } from "../../types";
+import styles from "./SkillShopModal.module.css";
 
 const CATEGORY_LABELS: Record<SkillCategory | "all", string> = {
   all: "All",
@@ -20,13 +20,13 @@ const CATEGORY_ORDER: (SkillCategory | "all")[] = [
   "media", "ai-ml", "smart-home", "security", "automation", "utilities",
 ];
 
-interface SkillStoreCategoriesProps {
-  catalog: SkillStoreCatalogEntry[];
+interface SkillShopCategoriesProps {
+  catalog: SkillShopCatalogEntry[];
   selected: SkillCategory | "all";
   onSelect: (cat: SkillCategory | "all") => void;
 }
 
-export function SkillStoreCategories({ catalog, selected, onSelect }: SkillStoreCategoriesProps) {
+export function SkillShopCategories({ catalog, selected, onSelect }: SkillShopCategoriesProps) {
   const counts: Record<string, number> = { all: catalog.length };
   for (const entry of catalog) {
     counts[entry.category] = (counts[entry.category] ?? 0) + 1;

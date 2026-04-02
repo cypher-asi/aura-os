@@ -478,18 +478,18 @@ pub(crate) async fn uninstall_agent_skill(
 }
 
 // ---------------------------------------------------------------------------
-// Install skill from store (fetch SKILL.md from URL)
+// Install skill from shop (fetch SKILL.md from URL)
 // ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
-pub(crate) struct InstallFromStoreBody {
+pub(crate) struct InstallFromShopBody {
     pub name: String,
     pub source_url: String,
 }
 
-pub(crate) async fn install_from_store(
+pub(crate) async fn install_from_shop(
     State(_state): State<AppState>,
-    Json(body): Json<InstallFromStoreBody>,
+    Json(body): Json<InstallFromShopBody>,
 ) -> Result<Response, StatusCode> {
     let name = body.name.trim().to_lowercase().replace(' ', "-");
     if name.is_empty()
@@ -517,12 +517,32 @@ pub(crate) async fn install_from_store(
     let skill_path = skill_dir.join("SKILL.md");
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Poke the harness so it re-indexes the newly written skill file.
+    // Register the skill with the harness. Try POST first (explicit
+    // registration), then fall back to a GET poke for lazy-indexing harnesses.
     let base = harness_base_url();
-    let _ = reqwest::Client::new()
-        .get(format!("{base}/api/skills/{name}"))
+    let client = reqwest::Client::new();
+    let post_ok = client
+        .post(format!("{base}/api/skills"))
+        .header("Content-Type", "application/json")
+        .body(
+            serde_json::json!({
+                "name": name,
+                "path": skill_path.to_string_lossy().to_string(),
+                "content": content,
+            })
+            .to_string(),
+        )
         .send()
-        .await;
+        .await
+        .map(|r| r.status().is_success())
+        .unwrap_or(false);
+
+    if !post_ok {
+        let _ = client
+            .get(format!("{base}/api/skills/{name}"))
+            .send()
+            .await;
+    }
 
     let resp_json = serde_json::json!({
         "name": name,

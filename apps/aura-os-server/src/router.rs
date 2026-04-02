@@ -549,8 +549,8 @@ fn harness_proxy_routes() -> Router<AppState> {
             post(harness_proxy::activate_skill),
         )
         .route(
-            "/api/harness/skills/install-from-store",
-            post(harness_proxy::install_from_store),
+            "/api/harness/skills/install-from-shop",
+            post(harness_proxy::install_from_shop),
         )
         // Per-agent skill installations
         .route(

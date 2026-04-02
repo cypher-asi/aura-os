@@ -566,7 +566,7 @@ export interface HarnessSkillInstallation {
 }
 
 // ---------------------------------------------------------------------------
-// Skill Store catalog
+// Skill Shop catalog
 // ---------------------------------------------------------------------------
 
 export type SkillCategory =
@@ -581,7 +581,7 @@ export type SkillCategory =
   | "automation"
   | "utilities";
 
-export interface SkillStoreCatalogEntry {
+export interface SkillShopCatalogEntry {
   name: string;
   description: string;
   emoji: string;

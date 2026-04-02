@@ -1,13 +1,13 @@
 /**
- * Bootstrap Skill Store Catalog
+ * Bootstrap Skill Shop Catalog
  *
  * Fetches all SKILL.md files from the AURA skills repo, parses frontmatter,
  * assigns categories, and optionally audits each skill with Claude for
- * security ratings. Outputs skill-store-catalog.json.
+ * security ratings. Outputs skill-shop-catalog.json.
  *
  * Usage:
- *   npx tsx scripts/bootstrap-skill-store.ts
- *   npx tsx scripts/bootstrap-skill-store.ts --audit   # with Claude security audit
+ *   npx tsx scripts/bootstrap-skill-shop.ts
+ *   npx tsx scripts/bootstrap-skill-shop.ts --audit   # with Claude security audit
  *
  * Requires ANTHROPIC_API_KEY env var for --audit mode.
  */
@@ -147,7 +147,7 @@ async function main() {
     });
   }
 
-  const outPath = path.resolve(__dirname, "../interface/src/data/skill-store-catalog.json");
+  const outPath = path.resolve(__dirname, "../interface/src/data/skill-shop-catalog.json");
   fs.writeFileSync(outPath, JSON.stringify(catalog, null, 2) + "\n");
   console.log(`Wrote ${catalog.length} skills to ${outPath}`);
 }
