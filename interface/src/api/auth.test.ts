@@ -76,4 +76,17 @@ describe("authApi", () => {
     globalThis.fetch = mockFetch(401, { error: "Invalid creds", code: "unauthorized", details: null });
     await expect(authApi.login("a@b.com", "wrong")).rejects.toThrow(ApiClientError);
   });
+
+  it("requestPasswordReset sends POST with email", async () => {
+    const fetchMock = mockFetch(204, null);
+    globalThis.fetch = fetchMock;
+    await authApi.requestPasswordReset("user@test.com");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/request-password-reset",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ email: "user@test.com" }),
+      }),
+    );
+  });
 });

@@ -130,6 +130,11 @@ pub(crate) struct AuthRegisterRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct PasswordResetRequest {
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub(crate) struct ImportAccessTokenRequest {
     pub access_token: String,
 }

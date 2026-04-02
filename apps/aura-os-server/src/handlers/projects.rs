@@ -353,6 +353,19 @@ pub(crate) async fn delete_project(
         .delete_project(&project_id)
         .map_err(|e| ApiError::internal(format!("deleting project: {e}")))?;
 
+    // Clean up local workspace directory (best-effort)
+    let workspace = canonical_workspace_path(&state.data_dir, &project_id);
+    if workspace.exists() {
+        if let Err(e) = tokio::fs::remove_dir_all(&workspace).await {
+            tracing::warn!(
+                project_id = %project_id,
+                path = %workspace.display(),
+                error = %e,
+                "failed to remove workspace directory"
+            );
+        }
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 

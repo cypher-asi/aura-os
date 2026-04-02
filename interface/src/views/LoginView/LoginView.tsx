@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
+import { authApi } from "../../api/auth";
 import { useHostStore, type HostConnectionStatus } from "../../stores/host-store";
 import { getHostDisplayLabel, getTargetHostOrigin, requiresExplicitHostOrigin } from "../../lib/host-config";
 import { ApiClientError } from "../../api/client";
@@ -89,6 +90,10 @@ export function LoginView() {
   const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetStatus, setResetStatus] = useState<"input" | "sending" | "sent" | "error">("input");
+  const [resetError, setResetError] = useState("");
   const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
     useShallow((s) => ({
       hostSettingsOpen: s.hostSettingsOpen,
@@ -105,6 +110,31 @@ export function LoginView() {
     setName("");
     setInviteCode("");
     setError(null);
+  }
+
+  function openResetPassword(): void {
+    setResetEmail(email);
+    setResetStatus("input");
+    setResetError("");
+    setShowResetPassword(true);
+  }
+
+  function closeResetPassword(): void {
+    setShowResetPassword(false);
+  }
+
+  async function handleResetSubmit(): Promise<void> {
+    if (!resetEmail.trim()) return;
+    setResetStatus("sending");
+    try {
+      await authApi.requestPasswordReset(resetEmail.trim());
+      setResetStatus("sent");
+    } catch (err) {
+      setResetError(
+        err instanceof Error ? err.message : "Failed to send reset email",
+      );
+      setResetStatus("error");
+    }
   }
 
   function handleTabChange(id: string): void {
@@ -286,74 +316,137 @@ export function LoginView() {
             ) : null
           )}
 
-          <div className={styles.tabs}>
-            <Tabs tabs={AUTH_TABS} value={activeTab} onChange={handleTabChange} />
-          </div>
+          {showResetPassword ? (
+            <div className={styles.form}>
+              <Text size="sm" weight="medium">Reset Password</Text>
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              type="email"
-              autoComplete="email"
-              disabled={loading}
-            />
+              {resetStatus === "sent" ? (
+                <>
+                  <Text variant="muted" size="sm">
+                    A password reset link has been sent to <strong>{resetEmail}</strong>
+                  </Text>
+                  <Button variant="primary" onClick={closeResetPassword}>
+                    Back to Sign In
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Text variant="muted" size="sm">
+                    Enter your ZERO account email and we'll send a reset link.
+                  </Text>
+                  <Input
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="Email address"
+                    type="email"
+                    autoComplete="email"
+                    disabled={resetStatus === "sending"}
+                  />
+                  {resetStatus === "error" && (
+                    <div className={styles.error}>{resetError}</div>
+                  )}
+                  <div className={styles.resetActions}>
+                    <Button
+                      variant="ghost"
+                      onClick={closeResetPassword}
+                      disabled={resetStatus === "sending"}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleResetSubmit}
+                      disabled={!resetEmail.trim() || resetStatus === "sending"}
+                      icon={resetStatus === "sending" ? <Spinner size="sm" className={styles.spinnerWhite} /> : undefined}
+                    >
+                      {resetStatus === "sending" ? "Sending..." : "Send Reset Link"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className={styles.tabs}>
+                <Tabs tabs={AUTH_TABS} value={activeTab} onChange={handleTabChange} />
+              </div>
 
-            <Input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              type="password"
-              autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
-              disabled={loading}
-            />
-
-            {activeTab === "register" && (
-              <>
+              <form onSubmit={handleSubmit} className={styles.form}>
                 <Input
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm password"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  type="email"
+                  autoComplete="email"
+                  disabled={loading}
+                />
+
+                <Input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
                   type="password"
-                  autoComplete="new-password"
+                  autoComplete={activeTab === "signin" ? "current-password" : "new-password"}
                   disabled={loading}
                 />
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Display name"
-                  type="text"
-                  autoComplete="name"
-                  disabled={loading}
-                />
-                <Input
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Invite code"
-                  type="text"
-                  autoComplete="off"
-                  disabled={loading}
-                />
-              </>
-            )}
 
-            {error && <div className={styles.error}>{error}</div>}
+                {activeTab === "signin" && (
+                  <button
+                    type="button"
+                    className={styles.forgotPassword}
+                    onClick={openResetPassword}
+                  >
+                    Forgot password?
+                  </button>
+                )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              className={styles.submit}
-              disabled={loading}
-              icon={loading ? <Spinner size="sm" className={styles.spinnerWhite} /> : undefined}
-            >
-              {loading
-                ? "Please wait..."
-                : activeTab === "signin"
-                  ? "Sign In"
-                  : "Create Account"}
-            </Button>
-          </form>
+                {activeTab === "register" && (
+                  <>
+                    <Input
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm password"
+                      type="password"
+                      autoComplete="new-password"
+                      disabled={loading}
+                    />
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Display name"
+                      type="text"
+                      autoComplete="name"
+                      disabled={loading}
+                    />
+                    <Input
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      placeholder="Invite code"
+                      type="text"
+                      autoComplete="off"
+                      disabled={loading}
+                    />
+                  </>
+                )}
+
+                {error && <div className={styles.error}>{error}</div>}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className={styles.submit}
+                  disabled={loading}
+                  icon={loading ? <Spinner size="sm" className={styles.spinnerWhite} /> : undefined}
+                >
+                  {loading
+                    ? "Please wait..."
+                    : activeTab === "signin"
+                      ? "Sign In"
+                      : "Create Account"}
+                </Button>
+              </form>
+            </>
+          )}
         </Panel>
       </div>
 

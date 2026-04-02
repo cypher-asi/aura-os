@@ -17,4 +17,9 @@ export const authApi = {
     apiFetch<AuthSession>("/api/auth/validate", { method: "POST" }),
   logout: () =>
     apiFetch<void>("/api/auth/logout", { method: "POST" }),
+  requestPasswordReset: (email: string) =>
+    apiFetch<void>("/api/auth/request-password-reset", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
 };

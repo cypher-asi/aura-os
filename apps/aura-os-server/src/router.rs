@@ -113,7 +113,11 @@ fn auth_routes() -> Router<AppState> {
     let routes = Router::new()
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/register", post(auth::register))
-        .route("/api/auth/logout", post(auth::logout));
+        .route("/api/auth/logout", post(auth::logout))
+        .route(
+            "/api/auth/request-password-reset",
+            post(auth::request_password_reset),
+        );
 
     if auth::auth_token_import_enabled() {
         routes.route(

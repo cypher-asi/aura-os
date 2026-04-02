@@ -10,6 +10,7 @@ use aura_os_auth::AuthError;
 
 use crate::dto::{
     AuthLoginRequest, AuthRegisterRequest, AuthSessionResponse, ImportAccessTokenRequest,
+    PasswordResetRequest,
 };
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::users::sync_user_to_network;
@@ -147,6 +148,20 @@ mod tests {
             assert!(!auth_token_import_enabled_from_var(value));
         }
     }
+}
+
+/// POST /api/auth/request-password-reset — proxy to zOS password reset (no auth required).
+pub(crate) async fn request_password_reset(
+    State(state): State<AppState>,
+    Json(req): Json<PasswordResetRequest>,
+) -> ApiResult<StatusCode> {
+    state
+        .auth_service
+        .request_password_reset(&req.email)
+        .await
+        .map_err(map_auth_error)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// GET /api/auth/session — return the current session from the middleware-validated auth.

@@ -197,6 +197,28 @@
   border-radius: var(--radius-sm);
 }
 
+.forgotPassword {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  padding: 0;
+  text-align: right;
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.forgotPassword:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+.resetActions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
 .submit {
   margin-top: var(--space-2);
 }

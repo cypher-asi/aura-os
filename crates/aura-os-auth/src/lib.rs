@@ -189,6 +189,27 @@ impl AuthService {
         self.build_session_from_token(access_token).await
     }
 
+    pub async fn request_password_reset(&self, email: &str) -> Result<(), AuthError> {
+        debug!("Requesting password reset via zOS-api");
+        let res = self
+            .http
+            .post(format!(
+                "{ZOS_API_URL}/api/v2/accounts/request-password-reset"
+            ))
+            .json(&serde_json::json!({ "email": email.to_lowercase() }))
+            .send()
+            .await
+            .map_err(AuthError::Http)?;
+
+        if !res.status().is_success() {
+            let status = res.status().as_u16();
+            let body = res.text().await.unwrap_or_default();
+            return Err(parse_zos_error(status, &body));
+        }
+
+        Ok(())
+    }
+
     pub async fn logout(&self, token: Option<&str>) -> Result<(), AuthError> {
         if let Some(jwt) = token {
             debug!("Logging out via zOS-api");
