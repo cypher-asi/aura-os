@@ -1,0 +1,9 @@
+{
+  "name": "aura-eval-repeated-read-summary",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "build": "echo \"no build\"",
+    "test": "echo \"no tests\""
+  }
+}

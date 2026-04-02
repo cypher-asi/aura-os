@@ -2,6 +2,11 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
+import {
+  getHarnessBenchmarkScenario,
+  prepareHarnessBenchmarkWorkspace,
+} from "./lib/harness-benchmark-scenarios.mjs";
 
 const interfaceRoot = process.cwd();
 const resultsDir = path.resolve(interfaceRoot, process.env.AURA_EVAL_RESULTS_DIR ?? "test-results");
@@ -12,6 +17,7 @@ const device = process.env.AURA_EVAL_SCENARIO_DEVICE?.trim() || "local";
 const scenarioId = process.env.AURA_EVAL_SCENARIO_ID?.trim() || "harness-context-static-site";
 const verbose = process.env.AURA_EVAL_VERBOSE === "1";
 const sessionMaxTokens = Number(process.env.AURA_EVAL_MAX_TOKENS ?? 2048);
+const keepWorkspace = process.env.AURA_EVAL_KEEP_WORKSPACE === "1";
 
 const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
   "claude-opus-4-6": {
@@ -82,168 +88,7 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
   },
 };
 
-function createStaticSiteFiles() {
-  return new Map([
-    ["package.json", JSON.stringify({
-      name: "harness-context-static-site",
-      private: true,
-      version: "0.0.1",
-      scripts: {
-        test: "echo \"no tests\"",
-      },
-    }, null, 2)],
-    ["index.html", `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aura Starter</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="page">
-      <section class="hero">
-        <p class="eyebrow">Aura Starter</p>
-        <h1>Ship a clean demo fast.</h1>
-        <p class="lede">A tiny static site that is intentionally plain so the coding agent has room to improve it.</p>
-        <a class="cta" href="#details">Learn more</a>
-      </section>
-    </main>
-  </body>
-</html>
-`],
-    ["styles.css", `:root {
-  color-scheme: light;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  color: #14213d;
-  background: #f6f7fb;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-.page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 48px 20px;
-}
-
-.hero {
-  max-width: 720px;
-  background: white;
-  border-radius: 24px;
-  padding: 40px;
-  box-shadow: 0 20px 60px rgba(20, 33, 61, 0.08);
-}
-
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 12px;
-  color: #5c677d;
-}
-
-.hero h1 {
-  margin: 12px 0;
-  font-size: 48px;
-  line-height: 1.05;
-}
-
-.lede {
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-.cta {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 14px 22px;
-  border-radius: 999px;
-  background: #14213d;
-  color: white;
-  text-decoration: none;
-}
-`],
-    ["requirements.md", `# Requirements
-
-- Turn this into a better-looking small landing page.
-- Keep it as a static site.
-- Do not add build tooling.
-- Keep the structure easy to understand.
-`],
-  ]);
-}
-
-function createRepoIterationFiles() {
-  return new Map([
-    ["package.json", JSON.stringify({
-      name: "harness-context-repo-iteration",
-      private: true,
-      version: "0.0.1",
-      scripts: {
-        test: "echo \"no tests\"",
-      },
-    }, null, 2)],
-  ]);
-}
-
-const scenarios = {
-  "harness-context-static-site": {
-    title: "Harness Context Static Site",
-    prompts: [
-      "Inspect this small static site project and summarize its current structure. Read the important files first. Do not change any code in this turn.",
-      "Implement a stronger landing page. Update the hero copy, add a short three-item features section, and keep the styling simple and clean.",
-      "Refine the page without starting over. Add a compact footer, make the CTA copy consistent with the hero, and keep the files tidy.",
-      "Summarize exactly which files you changed and the user-visible improvements you made.",
-    ],
-    createFiles: createStaticSiteFiles,
-    expectedTerms: ["footer", "feature", "cta"],
-    preferredTools: ["write_file", "edit_file"],
-  },
-  "harness-context-repo-iteration": {
-    title: "Harness Context Repeated Repo Iteration",
-    prompts: [
-      `Create a small static landing page from scratch in this repo. Use exactly these files: \`index.html\`, \`styles.css\`, \`content.json\`, and \`README.md\`.
-
-Product brief:
-- Product name: Aura Launch
-- Positioning: an operator for founders and small product teams shipping their first reliable AI workflow
-- Tone: confident, clear, practical, not fluffy
-- Core promise: help teams move from prototype chaos to a workflow that can actually be repeated
-
-Content requirements:
-- A hero with eyebrow, headline, supporting body copy, and one CTA
-- A three-item features section
-- A short proof or trust section with three proof points
-- A compact FAQ with two questions and answers
-- A closing CTA area
-- A compact footer
-
-Implementation constraints:
-- Keep it as a plain static site with no framework and no build tooling
-- Put the page structure in \`index.html\`
-- Put styling in \`styles.css\`
-- Put reusable copy in \`content.json\`
-- Put a short project overview and a v0.1 changelog entry in \`README.md\`
-- Keep the code readable and avoid overengineering`,
-      "Refine the same files without starting over. Tighten the hero message, make the three features feel more operational and less generic, and keep the CTA language consistent.",
-      "Iterate again on the same files. Add a short proof section and a compact FAQ. Keep the changes focused and avoid bloating the page.",
-      "Make one final polish pass. Refine the CTA and footer, improve the responsive layout a bit, and update README.md with a short changelog section describing the refinements.",
-      "Summarize the exact files you changed and the user-visible improvements you made.",
-    ],
-    createFiles: createRepoIterationFiles,
-    expectedTerms: ["footer", "faq", "feature", "proof", "readme"],
-    preferredTools: ["write_file", "edit_file"],
-  },
-};
-
-const scenario = scenarios[scenarioId] ?? scenarios["harness-context-static-site"];
+const scenario = getHarnessBenchmarkScenario(interfaceRoot, scenarioId);
 const title = process.env.AURA_EVAL_SCENARIO_TITLE?.trim() || scenario.title;
 
 function logStep(message, details) {
@@ -475,6 +320,36 @@ async function summarizeWorkspaceQuality(rootDir) {
   };
 }
 
+async function snapshotWorkspace(rootDir) {
+  const entries = await fs.readdir(rootDir, { withFileTypes: true });
+  return entries
+    .map((entry) => ({
+      name: entry.name,
+      type: entry.isDirectory() ? "dir" : "file",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function verifyPreparedWorkspace(rootDir, scenarioConfig) {
+  const requiredFiles = Array.isArray(scenarioConfig.requiredFiles)
+    ? scenarioConfig.requiredFiles
+    : [];
+  const checks = await Promise.all(requiredFiles.map(async (relativePath) => {
+    try {
+      await fs.access(path.join(rootDir, relativePath));
+      return { relativePath, present: true };
+    } catch {
+      return { relativePath, present: false };
+    }
+  }));
+
+  return {
+    rootEntries: await snapshotWorkspace(rootDir),
+    requiredFiles: checks,
+    ready: checks.every((check) => check.present),
+  };
+}
+
 function evaluateTurnTraceQuality(turns, scenarioConfig) {
   const combinedTurnText = turns
     .map((turn) => (typeof turn?.text === "string" ? turn.text : ""))
@@ -496,13 +371,47 @@ function evaluateTurnTraceQuality(turns, scenarioConfig) {
   };
 }
 
-async function createWorkspace(rootDir) {
-  await fs.mkdir(rootDir, { recursive: true });
-  const files = scenario.createFiles();
+async function runScenarioValidation(rootDir, scenarioConfig) {
+  if (!scenarioConfig.validationCommand?.command) {
+    return null;
+  }
 
-  await Promise.all([...files.entries()].map(([relativePath, content]) =>
-    fs.writeFile(path.join(rootDir, relativePath), content, "utf8")
-  ));
+  return new Promise((resolve) => {
+    const child = spawn(
+      scenarioConfig.validationCommand.command,
+      scenarioConfig.validationCommand.args ?? [],
+      {
+        cwd: rootDir,
+        env: process.env,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("close", (code) => {
+      resolve({
+        passed: code === 0,
+        exitCode: code ?? null,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+      });
+    });
+    child.on("error", (error) => {
+      resolve({
+        passed: false,
+        exitCode: null,
+        stdout: stdout.trim(),
+        stderr: error.message,
+      });
+    });
+  });
 }
 
 function openHarnessSession() {
@@ -556,6 +465,7 @@ async function runTurn(state, prompt, turnIndex) {
       prompt,
       text: "",
       toolNames: [],
+      toolResults: [],
       usage: null,
       fileChangeCount: 0,
       rawEnd: null,
@@ -590,6 +500,17 @@ async function runTurn(state, prompt, turnIndex) {
           if (typeof message.name === "string") {
             turn.toolNames.push(message.name);
           }
+          break;
+        case "tool_result":
+          markFirstEvent();
+          turn.toolResults.push({
+            name: typeof message.name === "string" ? message.name : "unknown",
+            isError: Boolean(message.is_error),
+            resultPreview:
+              typeof message.result === "string"
+                ? message.result.slice(0, 240)
+                : "",
+          });
           break;
         case "assistant_message_end":
           markFirstEvent();
@@ -629,7 +550,8 @@ async function main() {
   const runId = `${scenarioId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
   const workspaceDir = path.join(os.tmpdir(), runId);
   const runStartedAt = Date.now();
-  await createWorkspace(workspaceDir);
+  await prepareHarnessBenchmarkWorkspace(interfaceRoot, scenario, workspaceDir);
+  const workspaceBeforeSession = await verifyPreparedWorkspace(workspaceDir, scenario);
   logStep("workspace prepared", { workspaceDir, harnessBaseUrl });
 
   const session = await openHarnessSession();
@@ -650,12 +572,20 @@ async function main() {
       });
     }
 
+    const validation = await runScenarioValidation(workspaceDir, scenario);
     const workspaceQuality = await summarizeWorkspaceQuality(workspaceDir);
     const traceQuality = evaluateTurnTraceQuality(turns, scenario);
+    const qualityPass = scenario.validationCommand?.command
+      ? Boolean(validation?.passed)
+      : (Boolean(workspaceQuality.qualityPass) || Boolean(traceQuality.qualityPass));
     const quality = {
+      validationPassed: validation?.passed ?? null,
+      validationExitCode: validation?.exitCode ?? null,
+      validationStdout: validation?.stdout ?? null,
+      validationStderr: validation?.stderr ?? null,
       ...workspaceQuality,
       ...traceQuality,
-      qualityPass: Boolean(workspaceQuality.qualityPass) || Boolean(traceQuality.qualityPass),
+      qualityPass,
     };
     const metrics = {
       ...summarizeTurns(turns),
@@ -676,6 +606,7 @@ async function main() {
       quality,
       turns,
       workspaceDir,
+      workspaceBeforeSession,
       harnessBaseUrl,
     };
 
@@ -684,7 +615,9 @@ async function main() {
     process.stdout.write(`${outputPath}\n`);
   } finally {
     session.socket.close();
-    await fs.rm(workspaceDir, { recursive: true, force: true });
+    if (!keepWorkspace) {
+      await fs.rm(workspaceDir, { recursive: true, force: true });
+    }
   }
 }
 
