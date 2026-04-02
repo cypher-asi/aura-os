@@ -44,14 +44,6 @@ body:has([role="dialog"][aria-modal="true"]) {
   background-color: #000000 !important;
 }
 
-[role="dialog"][aria-modal="true"] > div {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
-  border-radius: 0 !important;
-}
-
 @media (pointer: coarse), (max-width: 900px) {
   html,
   body,
