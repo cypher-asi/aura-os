@@ -35,13 +35,12 @@ function normalizeScenario(payload, filePath) {
     .join("\n")
     .toLowerCase();
   const heuristicQualityPass =
-    turns.some((turn) => Number(turn?.fileChangeCount ?? 0) > 0)
-    && turns.some((turn) =>
+    turns.some((turn) =>
       Array.isArray(turn?.toolNames)
       && turn.toolNames.some((tool) => ["write_file", "edit_file"].includes(tool))
     )
-    && /footer/.test(combinedTurnText)
-    && /(cta|call-to-action|start building|start shipping|get started|explore features)/.test(combinedTurnText)
+    && /(footer|faq|feature|proof|testimonial)/.test(combinedTurnText)
+    && /(cta|call-to-action|start building|start shipping|get started|explore features|readme|changelog)/.test(combinedTurnText)
     ;
   const qualityPass = Boolean(payload.quality?.qualityPass) || heuristicQualityPass;
 

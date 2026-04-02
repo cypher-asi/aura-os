@@ -10,8 +10,8 @@ const harnessWsUrl = `${harnessBaseUrl.replace(/^http/, "ws")}/stream`;
 const accessToken = process.env.AURA_EVAL_ACCESS_TOKEN?.trim() || "";
 const device = process.env.AURA_EVAL_SCENARIO_DEVICE?.trim() || "local";
 const scenarioId = process.env.AURA_EVAL_SCENARIO_ID?.trim() || "harness-context-static-site";
-const title = process.env.AURA_EVAL_SCENARIO_TITLE?.trim() || "Harness Context Static Site";
 const verbose = process.env.AURA_EVAL_VERBOSE === "1";
+const sessionMaxTokens = Number(process.env.AURA_EVAL_MAX_TOKENS ?? 2048);
 
 const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
   "claude-opus-4-6": {
@@ -82,12 +82,169 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
   },
 };
 
-const prompts = [
-  "Inspect this small static site project and summarize its current structure. Read the important files first. Do not change any code in this turn.",
-  "Implement a stronger landing page. Update the hero copy, add a short three-item features section, and keep the styling simple and clean.",
-  "Refine the page without starting over. Add a compact footer, make the CTA copy consistent with the hero, and keep the files tidy.",
-  "Summarize exactly which files you changed and the user-visible improvements you made.",
-];
+function createStaticSiteFiles() {
+  return new Map([
+    ["package.json", JSON.stringify({
+      name: "harness-context-static-site",
+      private: true,
+      version: "0.0.1",
+      scripts: {
+        test: "echo \"no tests\"",
+      },
+    }, null, 2)],
+    ["index.html", `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura Starter</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Aura Starter</p>
+        <h1>Ship a clean demo fast.</h1>
+        <p class="lede">A tiny static site that is intentionally plain so the coding agent has room to improve it.</p>
+        <a class="cta" href="#details">Learn more</a>
+      </section>
+    </main>
+  </body>
+</html>
+`],
+    ["styles.css", `:root {
+  color-scheme: light;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  color: #14213d;
+  background: #f6f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 48px 20px;
+}
+
+.hero {
+  max-width: 720px;
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(20, 33, 61, 0.08);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  color: #5c677d;
+}
+
+.hero h1 {
+  margin: 12px 0;
+  font-size: 48px;
+  line-height: 1.05;
+}
+
+.lede {
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.cta {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  background: #14213d;
+  color: white;
+  text-decoration: none;
+}
+`],
+    ["requirements.md", `# Requirements
+
+- Turn this into a better-looking small landing page.
+- Keep it as a static site.
+- Do not add build tooling.
+- Keep the structure easy to understand.
+`],
+  ]);
+}
+
+function createRepoIterationFiles() {
+  return new Map([
+    ["package.json", JSON.stringify({
+      name: "harness-context-repo-iteration",
+      private: true,
+      version: "0.0.1",
+      scripts: {
+        test: "echo \"no tests\"",
+      },
+    }, null, 2)],
+  ]);
+}
+
+const scenarios = {
+  "harness-context-static-site": {
+    title: "Harness Context Static Site",
+    prompts: [
+      "Inspect this small static site project and summarize its current structure. Read the important files first. Do not change any code in this turn.",
+      "Implement a stronger landing page. Update the hero copy, add a short three-item features section, and keep the styling simple and clean.",
+      "Refine the page without starting over. Add a compact footer, make the CTA copy consistent with the hero, and keep the files tidy.",
+      "Summarize exactly which files you changed and the user-visible improvements you made.",
+    ],
+    createFiles: createStaticSiteFiles,
+    expectedTerms: ["footer", "feature", "cta"],
+    preferredTools: ["write_file", "edit_file"],
+  },
+  "harness-context-repo-iteration": {
+    title: "Harness Context Repeated Repo Iteration",
+    prompts: [
+      `Create a small static landing page from scratch in this repo. Use exactly these files: \`index.html\`, \`styles.css\`, \`content.json\`, and \`README.md\`.
+
+Product brief:
+- Product name: Aura Launch
+- Positioning: an operator for founders and small product teams shipping their first reliable AI workflow
+- Tone: confident, clear, practical, not fluffy
+- Core promise: help teams move from prototype chaos to a workflow that can actually be repeated
+
+Content requirements:
+- A hero with eyebrow, headline, supporting body copy, and one CTA
+- A three-item features section
+- A short proof or trust section with three proof points
+- A compact FAQ with two questions and answers
+- A closing CTA area
+- A compact footer
+
+Implementation constraints:
+- Keep it as a plain static site with no framework and no build tooling
+- Put the page structure in \`index.html\`
+- Put styling in \`styles.css\`
+- Put reusable copy in \`content.json\`
+- Put a short project overview and a v0.1 changelog entry in \`README.md\`
+- Keep the code readable and avoid overengineering`,
+      "Refine the same files without starting over. Tighten the hero message, make the three features feel more operational and less generic, and keep the CTA language consistent.",
+      "Iterate again on the same files. Add a short proof section and a compact FAQ. Keep the changes focused and avoid bloating the page.",
+      "Make one final polish pass. Refine the CTA and footer, improve the responsive layout a bit, and update README.md with a short changelog section describing the refinements.",
+      "Summarize the exact files you changed and the user-visible improvements you made.",
+    ],
+    createFiles: createRepoIterationFiles,
+    expectedTerms: ["footer", "faq", "feature", "proof", "readme"],
+    preferredTools: ["write_file", "edit_file"],
+  },
+};
+
+const scenario = scenarios[scenarioId] ?? scenarios["harness-context-static-site"];
+const title = process.env.AURA_EVAL_SCENARIO_TITLE?.trim() || scenario.title;
 
 function logStep(message, details) {
   if (!verbose) return;
@@ -318,104 +475,30 @@ async function summarizeWorkspaceQuality(rootDir) {
   };
 }
 
+function evaluateTurnTraceQuality(turns, scenarioConfig) {
+  const combinedTurnText = turns
+    .map((turn) => (typeof turn?.text === "string" ? turn.text : ""))
+    .join("\n")
+    .toLowerCase();
+  const hasWriteLikeTools = turns.some((turn) =>
+    Array.isArray(turn?.toolNames)
+    && turn.toolNames.some((tool) => scenarioConfig.preferredTools.includes(tool))
+  );
+  const matchedTerms = scenarioConfig.expectedTerms.filter((term) => combinedTurnText.includes(term));
+
+  return {
+    hasWriteLikeTools,
+    matchedTerms,
+    matchedAllExpectedTerms: matchedTerms.length >= Math.min(2, scenarioConfig.expectedTerms.length),
+    qualityPass:
+      hasWriteLikeTools
+      && matchedTerms.length >= Math.min(2, scenarioConfig.expectedTerms.length),
+  };
+}
+
 async function createWorkspace(rootDir) {
   await fs.mkdir(rootDir, { recursive: true });
-
-  const files = new Map([
-    ["package.json", JSON.stringify({
-      name: "harness-context-static-site",
-      private: true,
-      version: "0.0.1",
-      scripts: {
-        test: "echo \"no tests\"",
-      },
-    }, null, 2)],
-    ["index.html", `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aura Starter</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <main class="page">
-      <section class="hero">
-        <p class="eyebrow">Aura Starter</p>
-        <h1>Ship a clean demo fast.</h1>
-        <p class="lede">A tiny static site that is intentionally plain so the coding agent has room to improve it.</p>
-        <a class="cta" href="#details">Learn more</a>
-      </section>
-    </main>
-  </body>
-</html>
-`],
-    ["styles.css", `:root {
-  color-scheme: light;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  color: #14213d;
-  background: #f6f7fb;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-.page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 48px 20px;
-}
-
-.hero {
-  max-width: 720px;
-  background: white;
-  border-radius: 24px;
-  padding: 40px;
-  box-shadow: 0 20px 60px rgba(20, 33, 61, 0.08);
-}
-
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 12px;
-  color: #5c677d;
-}
-
-.hero h1 {
-  margin: 12px 0;
-  font-size: 48px;
-  line-height: 1.05;
-}
-
-.lede {
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-.cta {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 14px 22px;
-  border-radius: 999px;
-  background: #14213d;
-  color: white;
-  text-decoration: none;
-}
-`],
-    ["requirements.md", `# Requirements
-
-- Turn this into a better-looking small landing page.
-- Keep it as a static site.
-- Do not add build tooling.
-- Keep the structure easy to understand.
-`],
-  ]);
+  const files = scenario.createFiles();
 
   await Promise.all([...files.entries()].map(([relativePath, content]) =>
     fs.writeFile(path.join(rootDir, relativePath), content, "utf8")
@@ -459,6 +542,7 @@ async function waitForSessionReady(state, workspacePath) {
     state.socket.send(toJsonMessage("session_init", {
       project_path: workspacePath,
       max_turns: 16,
+      max_tokens: Number.isFinite(sessionMaxTokens) ? sessionMaxTokens : 2048,
       token: accessToken || undefined,
     }));
   });
@@ -554,7 +638,7 @@ async function main() {
     logStep("session ready");
 
     const turns = [];
-    for (const [index, prompt] of prompts.entries()) {
+    for (const [index, prompt] of scenario.prompts.entries()) {
       logStep("turn start", { turn: index + 1 });
       const turn = await runTurn(session, prompt, index + 1);
       turns.push(turn);
@@ -566,7 +650,13 @@ async function main() {
       });
     }
 
-    const quality = await summarizeWorkspaceQuality(workspaceDir);
+    const workspaceQuality = await summarizeWorkspaceQuality(workspaceDir);
+    const traceQuality = evaluateTurnTraceQuality(turns, scenario);
+    const quality = {
+      ...workspaceQuality,
+      ...traceQuality,
+      qualityPass: Boolean(workspaceQuality.qualityPass) || Boolean(traceQuality.qualityPass),
+    };
     const metrics = {
       ...summarizeTurns(turns),
       runWallClockMs: Date.now() - runStartedAt,
