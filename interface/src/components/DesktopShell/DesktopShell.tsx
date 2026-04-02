@@ -16,6 +16,7 @@ import { useSidebarSearch } from "../../context/SidebarSearchContext";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
+import { useDesktopBackgroundStore } from "../../stores/desktop-background-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { apps } from "../../apps/registry";
@@ -27,6 +28,21 @@ function blurActiveElement() {
   if (active instanceof HTMLElement) {
     active.blur();
   }
+}
+
+function BackgroundLayer() {
+  const mode = useDesktopBackgroundStore((s) => s.mode);
+  const color = useDesktopBackgroundStore((s) => s.color);
+  const imageDataUrl = useDesktopBackgroundStore((s) => s.imageDataUrl);
+
+  if (mode === "none") return null;
+
+  const style: React.CSSProperties =
+    mode === "color"
+      ? { backgroundColor: color }
+      : { backgroundImage: `url(${imageDataUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
+
+  return <div className={styles.backgroundLayer} style={style} />;
 }
 
 function SidebarSearchInput() {
@@ -131,6 +147,7 @@ export function DesktopShell() {
   return (
     <>
       <div className={styles.desktopShell}>
+        <BackgroundLayer />
         <Topbar
           className="titlebar-drag"
           onDoubleClick={() => windowCommand("maximize")}

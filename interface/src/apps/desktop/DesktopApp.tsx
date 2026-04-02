@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 import type { AuraApp } from "../types";
 import { useSelectionMarquee } from "./useSelectionMarquee";
 import { useDesktopWindowStore } from "../../stores/desktop-window-store";
-import { useDesktopBackgroundStore } from "../../stores/desktop-background-store";
 import { AgentWindow } from "../../components/AgentWindow";
 import { BackgroundModal } from "./BackgroundModal";
 import styles from "./DesktopApp.module.css";
@@ -37,21 +36,6 @@ function WindowLayer() {
 const contextMenuItems: MenuItem[] = [
   { id: "set-background", label: "Set Background\u2026", icon: <Image size={14} /> },
 ];
-
-function BackgroundLayer() {
-  const mode = useDesktopBackgroundStore((s) => s.mode);
-  const color = useDesktopBackgroundStore((s) => s.color);
-  const imageDataUrl = useDesktopBackgroundStore((s) => s.imageDataUrl);
-
-  if (mode === "none") return null;
-
-  const style: React.CSSProperties =
-    mode === "color"
-      ? { backgroundColor: color }
-      : { backgroundImage: `url(${imageDataUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
-
-  return <div className={styles.backgroundLayer} style={style} />;
-}
 
 function MainPanel({ children }: { children?: ReactNode }) {
   const { rect, handlers } = useSelectionMarquee();
@@ -83,16 +67,15 @@ function MainPanel({ children }: { children?: ReactNode }) {
     };
   }, [ctxMenu]);
 
-  const handleMenuAction = useCallback((item: MenuItem) => {
+  const handleMenuAction = useCallback((id: string) => {
     setCtxMenu(null);
-    if (item.id === "set-background") {
+    if (id === "set-background") {
       setBgModalOpen(true);
     }
   }, []);
 
   return (
     <div className={styles.surface} {...handlers} onContextMenu={handleContextMenu}>
-      <BackgroundLayer />
       {rect && (
         <div
           className={styles.marquee}
