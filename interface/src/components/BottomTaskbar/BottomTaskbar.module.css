@@ -52,6 +52,7 @@
 }
 
 .favoriteBtn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -66,6 +67,21 @@
 
 .favoriteBtn:hover {
   background: var(--color-surface-hover);
+}
+
+.favoriteBtnOpen {
+  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
+}
+
+.openIndicator {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
 }
 
 .favoriteBtn [data-agent="true"] {
@@ -99,11 +115,12 @@
   font-size: var(--text-2xs);
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .creditsButton:hover {
   background: var(--color-surface-hover);
+  color: #ffffff;
 }
 
 .creditsLabel {
@@ -115,6 +132,11 @@
   width: 28px;
   height: 28px;
   flex-shrink: 0;
+  color: var(--color-text-secondary) !important;
+}
+
+.sidekickToggle:hover {
+  color: #ffffff !important;
 }
 
 .wifiIcon {
