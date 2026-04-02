@@ -267,6 +267,7 @@ pub fn build_test_app_from_store(
         Arc::new(AutomatonClient::new("http://localhost:19080")),
         network_client.clone(),
         storage_client.clone(),
+        None,
         store.clone(),
         event_broadcast.clone(),
     ));

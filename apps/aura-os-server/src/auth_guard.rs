@@ -354,6 +354,7 @@ mod tests {
             Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
             None,
             None,
+            None,
             store.clone(),
             event_broadcast.clone(),
         ));

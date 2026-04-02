@@ -17,6 +17,17 @@ fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
     SuperAgentError::ToolError(format!("{action}: {e}"))
 }
 
+fn slugify(name: &str) -> String {
+    let s: String = name
+        .trim()
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    let s = s.trim_matches('-').to_string();
+    if s.is_empty() { "project".to_string() } else { s }
+}
+
 // ---------------------------------------------------------------------------
 // 1. CreateProjectTool
 // ---------------------------------------------------------------------------
@@ -48,21 +59,43 @@ impl SuperAgentTool for CreateProjectTool {
             .as_str()
             .unwrap_or(&ctx.org_id)
             .to_string();
+
+        let orbit_repo_slug = slugify(&name);
         let req = CreateProjectRequest {
             name,
-            org_id,
+            org_id: org_id.clone(),
             description: input["description"].as_str().map(String::from),
             folder: None,
             git_repo_url: None,
-            git_branch: None,
+            git_branch: Some("main".to_string()),
             orbit_base_url: None,
-            orbit_owner: None,
-            orbit_repo: None,
+            orbit_owner: Some(org_id.clone()),
+            orbit_repo: Some(orbit_repo_slug.clone()),
         };
         let project = network
             .create_project(&ctx.jwt, &req)
             .await
             .map_err(|e| tool_err("create_project", e))?;
+
+        let orbit = ctx.orbit_client.as_deref().ok_or_else(|| {
+            SuperAgentError::ToolError(
+                "create_project: Orbit client not configured (ORBIT_BASE_URL not set); \
+                 cannot create required Orbit repo"
+                    .into(),
+            )
+        })?;
+
+        if let Err(e) = orbit
+            .ensure_repo(&orbit_repo_slug, &org_id, &project.id, &ctx.jwt)
+            .await
+        {
+            // Best-effort rollback: delete the project we just created.
+            let _ = network.delete_project(&project.id, &ctx.jwt).await;
+            return Err(tool_err("create_project", format!(
+                "project created but Orbit repo creation failed (project rolled back): {e}"
+            )));
+        }
+
         Ok(ToolResult {
             content: serde_json::to_value(&project).unwrap_or_default(),
             is_error: false,

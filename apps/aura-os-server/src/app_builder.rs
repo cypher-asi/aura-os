@@ -9,7 +9,7 @@ use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_link::{HarnessLink, LocalHarness, SwarmHarness};
-use aura_os_network::NetworkClient;
+use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
@@ -19,7 +19,6 @@ use aura_os_tasks::TaskService;
 use aura_os_super_agent::SuperAgentService;
 use aura_os_terminal::TerminalManager;
 
-use crate::orbit_client::OrbitClient;
 use crate::state::AppState;
 
 fn spawn_health_checks(
@@ -277,7 +276,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
     let store = Arc::new(RocksStore::open(db_path)?);
     let network_client = NetworkClient::from_env().map(Arc::new);
     let storage_client = StorageClient::from_env().map(Arc::new);
-    let orbit_client = OrbitClient::from_env();
+    let orbit_client = OrbitClient::from_env().map(Arc::new);
     if orbit_client.is_none() {
         info!("Orbit integration disabled (ORBIT_BASE_URL not set)");
     }
@@ -314,6 +313,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         automaton_client.clone(),
         network_client.clone(),
         storage_client.clone(),
+        orbit_client.clone(),
         store.clone(),
         event_broadcast.clone(),
     ));

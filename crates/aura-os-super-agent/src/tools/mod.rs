@@ -26,7 +26,7 @@ use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_billing::BillingClient;
 use aura_os_core::ToolDomain;
 use aura_os_link::AutomatonClient;
-use aura_os_network::NetworkClient;
+use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
@@ -68,6 +68,7 @@ pub struct SuperAgentContext {
     pub automaton_client: Arc<AutomatonClient>,
     pub network_client: Option<Arc<NetworkClient>>,
     pub storage_client: Option<Arc<StorageClient>>,
+    pub orbit_client: Option<Arc<OrbitClient>>,
     pub store: Arc<RocksStore>,
     pub event_broadcast: broadcast::Sender<serde_json::Value>,
 }
