@@ -1,4 +1,5 @@
-import { Check, Zap } from "lucide-react";
+import { Check } from "lucide-react";
+import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
 import type { SkillStoreCatalogEntry } from "../../types";
 import styles from "./SkillStoreModal.module.css";
@@ -12,8 +13,8 @@ interface SkillStoreCardProps {
 export function SkillStoreCard({ entry, installed, onClick }: SkillStoreCardProps) {
   return (
     <button type="button" className={styles.card} onClick={onClick}>
-      <div className={styles.cardEmoji}>
-        {entry.emoji ? <span>{entry.emoji}</span> : <Zap size={24} />}
+      <div className={styles.cardIcon}>
+        <SkillIcon name={entry.name} size={24} />
       </div>
       <div className={styles.cardBody}>
         <div className={styles.cardName}>

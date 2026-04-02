@@ -220,12 +220,16 @@
   background: var(--color-bg-hover);
 }
 
-.cardEmoji {
-  font-size: 28px;
-  line-height: 1;
-  height: 36px;
+.cardIcon {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.04));
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .cardBody {
@@ -309,9 +313,16 @@
   color: var(--color-text);
 }
 
-.detailEmoji {
-  font-size: 36px;
-  line-height: 1;
+.detailIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.04));
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .detailTitleBlock {

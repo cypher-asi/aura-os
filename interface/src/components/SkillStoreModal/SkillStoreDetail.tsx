@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Text, Badge, Button } from "@cypher-asi/zui";
-import { ArrowLeft, Check, Loader2, Zap, Terminal, Key, Settings } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Terminal, Key, Settings } from "lucide-react";
+import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
 import type { SkillStoreCatalogEntry } from "../../types";
 import styles from "./SkillStoreModal.module.css";
@@ -26,8 +26,8 @@ export function SkillStoreDetail({
         <button type="button" className={styles.detailBack} onClick={onBack}>
           <ArrowLeft size={16} />
         </button>
-        <div className={styles.detailEmoji}>
-          {entry.emoji ? <span>{entry.emoji}</span> : <Zap size={32} />}
+        <div className={styles.detailIcon}>
+          <SkillIcon name={entry.name} size={32} />
         </div>
         <div className={styles.detailTitleBlock}>
           <div className={styles.detailName}>{entry.name}</div>
