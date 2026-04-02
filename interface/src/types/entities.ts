@@ -556,3 +556,11 @@ export interface HarnessSkillActivation {
   allowed_tools: string[];
   fork_context: boolean;
 }
+
+export interface HarnessSkillInstallation {
+  agent_id: string;
+  skill_name: string;
+  source_url: string | null;
+  installed_at: string;
+  version: string | null;
+}

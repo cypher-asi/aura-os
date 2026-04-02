@@ -539,7 +539,7 @@ fn harness_proxy_routes() -> Router<AppState> {
             post(harness_proxy::trigger_consolidation),
         )
         // Skills
-        .route("/api/harness/skills", get(harness_proxy::list_skills))
+        .route("/api/harness/skills", get(harness_proxy::list_skills).post(harness_proxy::create_skill))
         .route(
             "/api/harness/skills/:name",
             get(harness_proxy::get_skill),
@@ -547,6 +547,15 @@ fn harness_proxy_routes() -> Router<AppState> {
         .route(
             "/api/harness/skills/:name/activate",
             post(harness_proxy::activate_skill),
+        )
+        // Per-agent skill installations
+        .route(
+            "/api/harness/agents/:agent_id/skills",
+            get(harness_proxy::list_agent_skills).post(harness_proxy::install_agent_skill),
+        )
+        .route(
+            "/api/harness/agents/:agent_id/skills/:name",
+            delete(harness_proxy::uninstall_agent_skill),
         )
 }
 

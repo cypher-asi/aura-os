@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 const { mockListSkills } = vi.hoisted(() => ({
   mockListSkills: vi.fn(),
@@ -9,14 +9,30 @@ const { mockListSkills } = vi.hoisted(() => ({
 vi.mock("@cypher-asi/zui", () => ({
   Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
   Badge: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  ),
+  Modal: ({ isOpen, children, footer }: any) =>
+    isOpen ? <div data-testid="modal">{children}{footer}</div> : null,
+  Input: (props: any) => <input {...props} />,
+  Textarea: (props: any) => <textarea {...props} />,
+  Spinner: () => <span>spinner</span>,
 }));
 
 vi.mock("../../../api/client", () => ({
   api: {
     harnessSkills: {
       listSkills: (...args: any[]) => mockListSkills(...args),
+      createSkill: vi.fn().mockResolvedValue({}),
+    },
+    agents: {
+      update: vi.fn().mockResolvedValue({ agent_id: "a1", skills: [] }),
     },
   },
+}));
+
+vi.mock("../stores", () => ({
+  useAgentStore: { getState: () => ({ patchAgent: vi.fn() }) },
 }));
 
 vi.mock("../stores/agent-sidekick-store", () => ({
@@ -30,12 +46,16 @@ vi.mock("./AgentInfoPanel.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 
+vi.mock("../../../components/AgentEditorModal/AgentEditorModal.module.css", () => ({
+  default: new Proxy({}, { get: (_target, prop) => String(prop) }),
+}));
+
 import { SkillsTab } from "./SkillsTab";
 
 const baseAgent = {
   agent_id: "a1",
   name: "Test Agent",
-  skills: [],
+  skills: ["orchestration", "fleet-management"],
 } as any;
 
 describe("SkillsTab", () => {
@@ -43,13 +63,16 @@ describe("SkillsTab", () => {
     vi.clearAllMocks();
   });
 
-  it("shows loading state initially", () => {
-    mockListSkills.mockReturnValue(new Promise(() => {}));
+  it("renders agent skill tags", async () => {
+    mockListSkills.mockResolvedValue([]);
     render(<SkillsTab agent={baseAgent} />);
-    expect(screen.getByText(/loading skills/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText("orchestration")).toBeDefined();
+      expect(screen.getByText("fleet-management")).toBeDefined();
+    });
   });
 
-  it("renders skill rows on success", async () => {
+  it("renders harness skill rows on success", async () => {
     mockListSkills.mockResolvedValue([
       { name: "deploy", description: "Deploy app", source: "workspace" },
       { name: "test", description: "Run tests", source: "personal" },
@@ -61,29 +84,32 @@ describe("SkillsTab", () => {
     });
   });
 
-  it("falls back to badges on error when agent has skills", async () => {
+  it("shows harness error without hiding agent skills", async () => {
     mockListSkills.mockRejectedValue(new Error("Network error"));
-    const agentWithSkills = { ...baseAgent, skills: ["deploy", "test"] };
-    render(<SkillsTab agent={agentWithSkills} />);
-    await waitFor(() => {
-      expect(screen.getByText("deploy")).toBeDefined();
-      expect(screen.getByText("test")).toBeDefined();
-    });
-  });
-
-  it("shows empty state when no skills", async () => {
-    mockListSkills.mockRejectedValue(new Error("fail"));
     render(<SkillsTab agent={baseAgent} />);
     await waitFor(() => {
-      expect(screen.getByText(/no skills configured/i)).toBeDefined();
+      expect(screen.getByText("orchestration")).toBeDefined();
+      expect(screen.getByText("Network error")).toBeDefined();
+      expect(screen.getByText("Retry")).toBeDefined();
     });
   });
 
-  it("renders empty list from API as empty state", async () => {
+  it("shows create prompt when no harness skills", async () => {
     mockListSkills.mockResolvedValue([]);
     render(<SkillsTab agent={baseAgent} />);
     await waitFor(() => {
-      expect(screen.getByText(/no skills configured/i)).toBeDefined();
+      expect(screen.getByText(/click \+ to create/i)).toBeDefined();
     });
+  });
+
+  it("opens creation modal when + is clicked", async () => {
+    mockListSkills.mockResolvedValue([]);
+    render(<SkillsTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText(/click \+ to create/i)).toBeDefined();
+    });
+    const addBtn = screen.getByTitle("Create skill");
+    fireEvent.click(addBtn);
+    expect(screen.getByTestId("modal")).toBeDefined();
   });
 });

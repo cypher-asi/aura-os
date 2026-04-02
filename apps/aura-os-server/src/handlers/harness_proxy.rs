@@ -314,6 +314,13 @@ pub(crate) async fn list_skills(
     proxy_to_harness(Method::GET, "api/skills", query, None).await
 }
 
+pub(crate) async fn create_skill(
+    State(_state): State<AppState>,
+    body: String,
+) -> Result<Response, StatusCode> {
+    proxy_to_harness(Method::POST, "api/skills", None, Some(body)).await
+}
+
 pub(crate) async fn get_skill(
     State(_state): State<AppState>,
     Path(name): Path<String>,
@@ -337,6 +344,46 @@ pub(crate) async fn activate_skill(
         &format!("api/skills/{name}/activate"),
         None,
         Some(body),
+    )
+    .await
+}
+
+pub(crate) async fn list_agent_skills(
+    State(_state): State<AppState>,
+    Path(agent_id): Path<String>,
+) -> Result<Response, StatusCode> {
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/skills"),
+        None,
+        None,
+    )
+    .await
+}
+
+pub(crate) async fn install_agent_skill(
+    State(_state): State<AppState>,
+    Path(agent_id): Path<String>,
+    body: String,
+) -> Result<Response, StatusCode> {
+    proxy_to_harness(
+        Method::POST,
+        &format!("api/agents/{agent_id}/skills"),
+        None,
+        Some(body),
+    )
+    .await
+}
+
+pub(crate) async fn uninstall_agent_skill(
+    State(_state): State<AppState>,
+    Path((agent_id, name)): Path<(String, String)>,
+) -> Result<Response, StatusCode> {
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/skills/{name}"),
+        None,
+        None,
     )
     .await
 }
