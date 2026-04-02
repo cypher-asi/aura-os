@@ -11,7 +11,7 @@ function AppSync(): null {
   const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
 
   useEffect(() => {
-    if (!pathname.startsWith("/desktop")) {
+    if (pathname !== "/" && !pathname.startsWith("/desktop")) {
       setPreviousPath(pathname);
     }
     syncActiveApp(pathname);

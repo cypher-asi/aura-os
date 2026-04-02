@@ -2,6 +2,29 @@ import { create } from "zustand";
 import type { ReactNode } from "react";
 import { PREVIOUS_PATH_KEY } from "../constants";
 
+function isValidPreviousPath(path: string | null): path is string {
+  return !!path && path !== "/" && !path.startsWith("/desktop");
+}
+
+function readPreviousPath(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(PREVIOUS_PATH_KEY);
+    return isValidPreviousPath(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePreviousPath(path: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PREVIOUS_PATH_KEY, path);
+  } catch {
+    // ignore storage failures
+  }
+}
+
 type AppUIState = {
   visitedAppIds: Set<string>;
   sidebarQuery: string;
@@ -21,7 +44,7 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
   sidebarQuery: "",
   sidebarActions: {},
   sidekickCollapsed: false,
-  previousPath: localStorage.getItem(PREVIOUS_PATH_KEY),
+  previousPath: readPreviousPath(),
 
   markAppVisited: (appId): void => {
     set((s) => {
@@ -41,7 +64,8 @@ export const useAppUIStore = create<AppUIState>()((set) => ({
   },
 
   setPreviousPath: (path): void => {
-    localStorage.setItem(PREVIOUS_PATH_KEY, path);
+    if (!isValidPreviousPath(path)) return;
+    writePreviousPath(path);
     set({ previousPath: path });
   },
 
