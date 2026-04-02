@@ -1,11 +1,26 @@
 use axum::extract::{Path, RawQuery, State};
 use axum::http::{header, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::Json;
+use serde::{Deserialize, Serialize};
 
 use crate::state::AppState;
 
-fn harness_base_url() -> String {
+pub(crate) fn harness_base_url() -> String {
     std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
+}
+
+pub(crate) async fn install_skill_for_agent(agent_id: &str, skill_name: &str) -> bool {
+    let base = harness_base_url();
+    let url = format!("{base}/api/agents/{agent_id}/skills");
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(format!(r#"{{"name":"{}"}}"#, skill_name))
+        .send()
+        .await;
+    matches!(resp, Ok(r) if r.status().is_success())
 }
 
 async fn proxy_to_harness(
@@ -314,11 +329,84 @@ pub(crate) async fn list_skills(
     proxy_to_harness(Method::GET, "api/skills", query, None).await
 }
 
+#[derive(Deserialize)]
+pub(crate) struct CreateSkillBody {
+    pub name: String,
+    pub description: String,
+    pub body: Option<String>,
+    pub allowed_tools: Option<Vec<String>>,
+    pub model: Option<String>,
+    pub context: Option<String>,
+    pub user_invocable: Option<bool>,
+    pub model_invocable: Option<bool>,
+}
+
+#[derive(Serialize)]
+struct CreateSkillResponse {
+    name: String,
+    path: String,
+    created: bool,
+}
+
 pub(crate) async fn create_skill(
     State(_state): State<AppState>,
-    body: String,
+    Json(payload): Json<CreateSkillBody>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::POST, "api/skills", None, Some(body)).await
+    let valid = !payload.name.is_empty()
+        && payload.name.len() <= 64
+        && payload
+            .name
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+    if !valid {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skill_dir = home.join(".aura").join("skills").join(&payload.name);
+    std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut frontmatter = format!(
+        "---\ndescription: \"{}\"\n",
+        payload.description.replace('"', "\\\"")
+    );
+    if let Some(ref tools) = payload.allowed_tools {
+        frontmatter.push_str(&format!("allowed_tools: [{}]\n", tools.join(", ")));
+    }
+    if let Some(ref model) = payload.model {
+        frontmatter.push_str(&format!("model: \"{model}\"\n"));
+    }
+    if let Some(ref context) = payload.context {
+        frontmatter.push_str(&format!("context: \"{context}\"\n"));
+    }
+    frontmatter.push_str(&format!(
+        "user_invocable: {}\n",
+        payload.user_invocable.unwrap_or(true)
+    ));
+    frontmatter.push_str(&format!(
+        "model_invocable: {}\n",
+        payload.model_invocable.unwrap_or(false)
+    ));
+    frontmatter.push_str("---\n");
+
+    let body_text = payload.body.unwrap_or_default();
+    let content = format!("{frontmatter}\n{body_text}");
+
+    let skill_path = skill_dir.join("SKILL.md");
+    std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let resp = CreateSkillResponse {
+        name: payload.name,
+        path: skill_path.to_string_lossy().into_owned(),
+        created: true,
+    };
+    let body = serde_json::to_string(&resp).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        StatusCode::CREATED,
+        [(header::CONTENT_TYPE, "application/json")],
+        body,
+    )
+        .into_response())
 }
 
 pub(crate) async fn get_skill(
@@ -351,11 +439,12 @@ pub(crate) async fn activate_skill(
 pub(crate) async fn list_agent_skills(
     State(_state): State<AppState>,
     Path(agent_id): Path<String>,
+    RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
     proxy_to_harness(
         Method::GET,
         &format!("api/agents/{agent_id}/skills"),
-        None,
+        query,
         None,
     )
     .await
@@ -386,4 +475,58 @@ pub(crate) async fn uninstall_agent_skill(
         None,
     )
     .await
+}
+
+// ---------------------------------------------------------------------------
+// Install skill from store (fetch SKILL.md from URL)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub(crate) struct InstallFromStoreBody {
+    pub name: String,
+    pub source_url: String,
+}
+
+pub(crate) async fn install_from_store(
+    State(_state): State<AppState>,
+    Json(body): Json<InstallFromStoreBody>,
+) -> Result<Response, StatusCode> {
+    let name = body.name.trim().to_lowercase().replace(' ', "-");
+    if name.is_empty()
+        || name.len() > 64
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let content = reqwest::Client::new()
+        .get(&body.source_url)
+        .send()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?
+        .text()
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+
+    let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let skill_dir = home.join(".aura").join("skills").join(&name);
+    std::fs::create_dir_all(&skill_dir).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let skill_path = skill_dir.join("SKILL.md");
+    std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let resp_json = serde_json::json!({
+        "name": name,
+        "path": skill_path.to_string_lossy(),
+        "installed": true,
+    });
+
+    Ok((
+        StatusCode::CREATED,
+        [(header::CONTENT_TYPE, "application/json")],
+        resp_json.to_string(),
+    )
+        .into_response())
 }

@@ -564,3 +564,32 @@ export interface HarnessSkillInstallation {
   installed_at: string;
   version: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Skill Store catalog
+// ---------------------------------------------------------------------------
+
+export type SkillCategory =
+  | "development"
+  | "communication"
+  | "productivity"
+  | "media"
+  | "ai-ml"
+  | "smart-home"
+  | "security"
+  | "notes"
+  | "automation"
+  | "utilities";
+
+export interface SkillStoreCatalogEntry {
+  name: string;
+  description: string;
+  emoji: string;
+  category: SkillCategory;
+  tags: string[];
+  security_rating: "safe" | "caution" | "warning";
+  security_notes: string;
+  source_url: string;
+  requires?: { bins?: string[]; env?: string[]; config?: string[] };
+  install_methods?: { kind: string; formula?: string; package?: string }[];
+}

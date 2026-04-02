@@ -6,8 +6,17 @@ export const harnessSkillsApi = {
     apiFetch<HarnessSkill[]>(`/api/harness/skills`),
   getSkill: (name: string) =>
     apiFetch<HarnessSkill>(`/api/harness/skills/${name}`),
-  createSkill: (data: { name: string; description: string; body: string; user_invocable?: boolean }) =>
-    apiFetch<HarnessSkill>(`/api/harness/skills`, {
+  createSkill: (data: {
+    name: string;
+    description: string;
+    body?: string;
+    allowed_tools?: string[];
+    model?: string;
+    context?: string;
+    user_invocable?: boolean;
+    model_invocable?: boolean;
+  }) =>
+    apiFetch<{ name: string; path: string; created: boolean }>(`/api/harness/skills`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -18,13 +27,18 @@ export const harnessSkillsApi = {
     }),
   listAgentSkills: (agentId: string) =>
     apiFetch<HarnessSkillInstallation[]>(`/api/harness/agents/${agentId}/skills`),
-  installForAgent: (agentId: string, skillName: string, sourceUrl?: string) =>
+  installAgentSkill: (agentId: string, skillName: string, sourceUrl?: string) =>
     apiFetch<HarnessSkillInstallation>(`/api/harness/agents/${agentId}/skills`, {
       method: "POST",
       body: JSON.stringify({ name: skillName, source_url: sourceUrl }),
     }),
-  uninstallFromAgent: (agentId: string, skillName: string) =>
+  uninstallAgentSkill: (agentId: string, skillName: string) =>
     apiFetch<void>(`/api/harness/agents/${agentId}/skills/${skillName}`, {
       method: "DELETE",
+    }),
+  installFromStore: (name: string, sourceUrl: string) =>
+    apiFetch<{ name: string; path: string; installed: boolean }>(`/api/harness/skills/install-from-store`, {
+      method: "POST",
+      body: JSON.stringify({ name, source_url: sourceUrl }),
     }),
 };

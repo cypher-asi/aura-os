@@ -548,6 +548,10 @@ fn harness_proxy_routes() -> Router<AppState> {
             "/api/harness/skills/:name/activate",
             post(harness_proxy::activate_skill),
         )
+        .route(
+            "/api/harness/skills/install-from-store",
+            post(harness_proxy::install_from_store),
+        )
         // Per-agent skill installations
         .route(
             "/api/harness/agents/:agent_id/skills",

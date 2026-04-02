@@ -80,12 +80,7 @@ pub(crate) async fn setup_super_agent(
                 .to_string(),
         ),
         system_prompt: Some(prompt),
-        skills: Some(vec![
-            "orchestration".into(),
-            "project-management".into(),
-            "fleet-management".into(),
-            "cost-analysis".into(),
-        ]),
+        skills: None,
         icon: None,
         harness: None,
         machine_type: Some("local".to_string()),
@@ -98,6 +93,12 @@ pub(crate) async fn setup_super_agent(
         .map_err(map_network_error)?;
 
     let agent = agent_from_net(&net_agent);
+
+    let default_skills = ["orchestration", "project-management", "fleet-management", "cost-analysis"];
+    let agent_id_str = agent.agent_id.to_string();
+    for skill in default_skills {
+        super::harness_proxy::install_skill_for_agent(&agent_id_str, skill).await;
+    }
 
     info!(agent_id = %agent.agent_id, "SuperAgent created");
     Ok(Json(SetupResponse {
