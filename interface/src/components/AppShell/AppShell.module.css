@@ -15,6 +15,12 @@
   pointer-events: none;
 }
 
+.topbarBlur {
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 .desktopContent {
   flex: 1;
   min-height: 0;
