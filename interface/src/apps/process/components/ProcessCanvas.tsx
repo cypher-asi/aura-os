@@ -267,6 +267,18 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     [],
   );
 
+  const onSelectionContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const selected = nodes.filter((n) => n.selected);
+      if (selected.length === 1) {
+        setCtxMenu(null);
+        setNodeCtxMenu({ x: event.clientX, y: event.clientY, nodeId: selected[0].id });
+      }
+    },
+    [nodes],
+  );
+
   useEffect(() => {
     const activeMenu = ctxMenu ? ctxMenuRef : nodeCtxMenu ? nodeCtxMenuRef : null;
     if (!activeMenu) return;
@@ -376,6 +388,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
         nodeTypes={nodeTypes}
         deleteKeyCode={null}
         connectionMode={ConnectionMode.Strict}
