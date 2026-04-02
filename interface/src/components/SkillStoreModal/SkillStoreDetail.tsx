@@ -105,7 +105,7 @@ export function SkillStoreDetail({
             <Text size="xs" variant="muted" weight="medium">Tags</Text>
             <div className={styles.detailTags}>
               {entry.tags.map((tag) => (
-                <Badge key={tag} variant="pending" style={{ fontSize: 10 }}>{tag}</Badge>
+                <span key={tag} className={styles.tag}>{tag}</span>
               ))}
             </div>
           </div>
