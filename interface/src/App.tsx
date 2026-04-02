@@ -35,6 +35,23 @@ function LastAppRedirect() {
 export default function App() {
   const restoreSession = useAuthStore((s) => s.restoreSession);
   useEffect(() => { restoreSession(); }, [restoreSession]);
+  useEffect(() => {
+    const startupPayload = {
+      runId: "drag-rootcause-pre",
+      hypothesisId: "H5",
+      location: "App.tsx:useEffect(startup)",
+      message: "app_start_probe",
+      pathname: window.location.pathname,
+      timestamp: Date.now(),
+    };
+    // #region agent log
+    console.debug("[drag-debug]", startupPayload);
+    console.debug("[drag-debug-json]", JSON.stringify(startupPayload));
+    // #endregion
+    // #region agent log
+    fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5df55f" }, body: JSON.stringify({ sessionId: "5df55f", runId: "drag-rootcause-pre", hypothesisId: "H5", location: "App.tsx:useEffect(startup)", message: "app_start_probe", data: { pathname: window.location.pathname }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
+  }, []);
 
   return (
     <BrowserRouter>

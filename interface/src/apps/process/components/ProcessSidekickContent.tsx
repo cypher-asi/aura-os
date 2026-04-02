@@ -1,10 +1,9 @@
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
-import { ArrowLeft } from "lucide-react";
-import { Button, Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { EmptyState } from "../../../components/EmptyState";
+import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { NodeInfoTab } from "./NodeInfoTab";
 import { NodeConfigTab } from "./NodeConfigTab";
 import { NodeConnectionsTab } from "./NodeConnectionsTab";
@@ -140,27 +139,21 @@ function StatsView({ runs }: { runs: ProcessRun[] }) {
   );
 }
 
-function RunPreview({ run, onClose }: { run: ProcessRun; onClose: () => void }) {
+function RunPreviewBody({ run }: { run: ProcessRun }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: "1px solid var(--color-border)" }}>
-        <Button variant="ghost" size="sm" iconOnly icon={<ArrowLeft size={14} />} onClick={onClose} />
-        <Text size="sm">Run Detail</Text>
+    <div style={{ padding: 12, fontSize: 13 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
+        <span style={{ color: "var(--color-text-muted)" }}>Status</span><span>{run.status}</span>
+        <span style={{ color: "var(--color-text-muted)" }}>Trigger</span><span>{run.trigger}</span>
+        <span style={{ color: "var(--color-text-muted)" }}>Started</span><span>{new Date(run.started_at).toLocaleString()}</span>
+        <span style={{ color: "var(--color-text-muted)" }}>Completed</span><span>{run.completed_at ? new Date(run.completed_at).toLocaleString() : "\u2014"}</span>
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: 12, fontSize: 13 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
-          <span style={{ color: "var(--color-text-muted)" }}>Status</span><span>{run.status}</span>
-          <span style={{ color: "var(--color-text-muted)" }}>Trigger</span><span>{run.trigger}</span>
-          <span style={{ color: "var(--color-text-muted)" }}>Started</span><span>{new Date(run.started_at).toLocaleString()}</span>
-          <span style={{ color: "var(--color-text-muted)" }}>Completed</span><span>{run.completed_at ? new Date(run.completed_at).toLocaleString() : "\u2014"}</span>
+      {run.error && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--color-error)" }}>Error</div>
+          <div style={{ background: "var(--color-bg-input)", padding: 8, borderRadius: "var(--radius-sm)", whiteSpace: "pre-wrap" }}>{run.error}</div>
         </div>
-        {run.error && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--color-error)" }}>Error</div>
-            <div style={{ background: "var(--color-bg-input)", padding: 8, borderRadius: "var(--radius-sm)", whiteSpace: "pre-wrap" }}>{run.error}</div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -206,9 +199,9 @@ export function ProcessSidekickContent() {
   if (previewRun) {
     return (
       <div className={styles.sidekickBody}>
-        <div className={styles.previewOverlay}>
-          <RunPreview run={previewRun} onClose={closePreview} />
-        </div>
+        <PreviewOverlay title="Run Detail" onClose={closePreview}>
+          <RunPreviewBody run={previewRun} />
+        </PreviewOverlay>
       </div>
     );
   }

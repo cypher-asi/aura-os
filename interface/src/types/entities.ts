@@ -479,3 +479,80 @@ export interface ProcessEvent {
   started_at: string;
   completed_at: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Memory entities (harness API)
+// ---------------------------------------------------------------------------
+
+export interface MemoryFact {
+  fact_id: string;
+  agent_id: string;
+  key: string;
+  value: any;
+  confidence: number;
+  source: "extracted" | "user_provided" | "consolidated";
+  importance: number;
+  access_count: number;
+  last_accessed: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemoryEvent {
+  event_id: string;
+  agent_id: string;
+  event_type: string;
+  summary: string;
+  metadata: any;
+  importance: number;
+  access_count: number;
+  last_accessed: string;
+  timestamp: string;
+}
+
+export interface MemoryProcedure {
+  procedure_id: string;
+  agent_id: string;
+  name: string;
+  trigger: string;
+  steps: string[];
+  context_constraints: any;
+  success_rate: number;
+  execution_count: number;
+  last_used: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemorySnapshot {
+  facts: MemoryFact[];
+  events: MemoryEvent[];
+  procedures: MemoryProcedure[];
+}
+
+export interface MemoryStats {
+  facts: number;
+  events: number;
+  procedures: number;
+}
+
+// ---------------------------------------------------------------------------
+// Harness skill entities
+// ---------------------------------------------------------------------------
+
+export interface HarnessSkill {
+  name: string;
+  description: string;
+  source: string;
+  model_invocable: boolean;
+  user_invocable: boolean;
+  body?: string;
+  supporting_files?: string[];
+  frontmatter: Record<string, any>;
+}
+
+export interface HarnessSkillActivation {
+  rendered_content: string;
+  allowed_tools: string[];
+  fork_context: boolean;
+}

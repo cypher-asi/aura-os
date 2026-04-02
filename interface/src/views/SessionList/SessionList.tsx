@@ -77,7 +77,7 @@ export function SessionList({ searchQuery }: { searchQuery: string }) {
 
   return (
     <div className={styles.sessionListWrap}>
-      {filtered.map((session, index) => {
+      {filtered.map((session) => {
         const totalTokens = session.total_input_tokens + session.total_output_tokens;
         const number = sessions.length - sessions.indexOf(session);
         const summary = summaries[session.session_id];

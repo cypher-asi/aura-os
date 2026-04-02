@@ -9,6 +9,7 @@ import {
   Cpu,
   Logs,
   ChartNoAxesColumnIncreasing,
+  Database,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const TAB_ICONS: TabItem[] = [
   { id: "profile", icon: <User size={16} />, title: "Profile" },
   { id: "chats", icon: <MessageSquare size={16} />, title: "Chats" },
   { id: "skills", icon: <Zap size={16} />, title: "Skills" },
+  { id: "memory", icon: <Database size={16} />, title: "Memory" },
   { id: "projects", icon: <FolderOpen size={16} />, title: "Projects" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
   { id: "processes", icon: <Cpu size={16} />, title: "Processes" },

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
 import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, X, ChevronRight, ChevronDown } from "lucide-react";
@@ -6,6 +6,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboardPanel";
 import { AgentEditorModal } from "../../../components/AgentEditorModal";
+import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { TaskStatusIcon } from "../../../components/TaskStatusIcon";
 import { api, ApiClientError } from "../../../api/client";
@@ -15,6 +16,10 @@ import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { formatTokens } from "../../../utils/format";
+import { SkillsTab } from "./SkillsTab";
+import { MemoryTab } from "./MemoryTab";
+import { SkillPreview } from "./SkillPreview";
+import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
 import type { Session, Task } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
@@ -34,6 +39,10 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     closeDeleteConfirm,
     requestEdit,
     requestDelete,
+    previewItem,
+    canGoBack,
+    goBackPreview,
+    closePreview,
   } = useAgentSidekickStore(
     useShallow((s) => ({
       activeTab: s.activeTab,
@@ -43,6 +52,10 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
       closeDeleteConfirm: s.closeDeleteConfirm,
       requestEdit: s.requestEdit,
       requestDelete: s.requestDelete,
+      previewItem: s.previewItem,
+      canGoBack: s.canGoBack,
+      goBackPreview: s.goBackPreview,
+      closePreview: s.closePreview,
     })),
   );
   const [deleting, setDeleting] = useState(false);
@@ -149,6 +162,10 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           <div className={styles.tabEmptyState}>No logs yet</div>
         )}
 
+        {effectiveTab === "memory" && (
+          <MemoryTab agent={a} />
+        )}
+
         {effectiveTab === "stats" && (
           <div className={styles.tabEmptyState}>No stats yet</div>
         )}
@@ -157,6 +174,25 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           <SuperAgentDashboardPanel agent={a} />
         )}
       </div>
+
+      {previewItem && (
+        <PreviewOverlay
+          title={
+            previewItem.kind === "skill" ? previewItem.skill.name
+            : previewItem.kind === "memory_fact" ? `Fact: ${previewItem.fact.key}`
+            : previewItem.kind === "memory_event" ? `Event: ${previewItem.event.event_type}`
+            : `Procedure: ${previewItem.procedure.name}`
+          }
+          canGoBack={canGoBack}
+          onBack={goBackPreview}
+          onClose={closePreview}
+        >
+          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} />}
+          {previewItem.kind === "memory_fact" && <FactPreview fact={previewItem.fact} />}
+          {previewItem.kind === "memory_event" && <EventPreview event={previewItem.event} />}
+          {previewItem.kind === "memory_procedure" && <ProcedurePreview procedure={previewItem.procedure} />}
+        </PreviewOverlay>
+      )}
 
       {isMobileStandalone && isOwnAgent && (
         <div className={styles.mobileActions}>
@@ -521,25 +557,6 @@ function ChatsTab({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/* ─── Skills Tab ─── */
-
-function SkillsTab({ agent: a }: { agent: import("../../../types").Agent }) {
-  if (a.skills.length === 0) {
-    return <div className={styles.tabEmptyState}>No skills configured</div>;
-  }
-
-  return (
-    <div className={styles.section}>
-      <Text size="xs" variant="muted" weight="medium">Skills</Text>
-      <div className={styles.skills}>
-        {a.skills.map((s) => (
-          <Badge key={s} variant="pending" className={styles.skillBadge}>{s}</Badge>
-        ))}
-      </div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { FileExplorer } from "../FileExplorer";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import styles from "../Sidekick/Sidekick.module.css";
+import overlayStyles from "../PreviewOverlay/PreviewOverlay.module.css";
 
 function InfoPanel({
   project,
@@ -244,7 +245,7 @@ export function SidekickContent() {
         </div>
       </div>
       {previewItem && (
-        <div className={styles.previewOverlay}>
+        <div className={overlayStyles.overlay}>
           <PreviewHeader />
           <PreviewContent />
         </div>

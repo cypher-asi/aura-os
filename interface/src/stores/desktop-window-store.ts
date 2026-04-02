@@ -61,6 +61,13 @@ function schedulePersist(windows: Record<string, WindowState>): void {
 
 let moveCount = 0;
 const DEBUG_RUN_ID = "drag-rootcause-pre";
+function debugConsole(hypothesisId: string, message: string, data: Record<string, unknown>) {
+  const payload = { runId: DEBUG_RUN_ID, hypothesisId, message, ...data, timestamp: Date.now() };
+  // #region agent log
+  console.debug("[drag-debug]", payload);
+  console.debug("[drag-debug-json]", JSON.stringify(payload));
+  // #endregion
+}
 
 function computeMaxZ(windows: Record<string, WindowState>): number {
   let max = 0;
@@ -161,6 +168,12 @@ export const useDesktopWindowStore = create<DesktopWindowState>()(
         const z = s.nextZ;
         const next = { ...s.windows, [agentId]: { ...w, zIndex: z } };
         persistWindows(next);
+        debugConsole("H3", "focus_window", {
+          location: "desktop-window-store.ts:focusWindow",
+          agentId,
+          nextZ: z,
+          windowCount: Object.keys(next).length,
+        });
         // #region agent log
         fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5df55f" }, body: JSON.stringify({ sessionId: "5df55f", runId: DEBUG_RUN_ID, hypothesisId: "H3", location: "desktop-window-store.ts:focusWindow", message: "focus_window", data: { agentId, nextZ: z, windowCount: Object.keys(next).length }, timestamp: Date.now() }) }).catch(() => {});
         // #endregion
@@ -176,6 +189,13 @@ export const useDesktopWindowStore = create<DesktopWindowState>()(
         schedulePersist(next);
         moveCount += 1;
         if (moveCount % 40 === 0) {
+          debugConsole("H3", "move_window_sample", {
+            location: "desktop-window-store.ts:moveWindow",
+            agentId,
+            moveCount,
+            x,
+            y,
+          });
           // #region agent log
           fetch("http://127.0.0.1:7836/ingest/c96ab900-9f38-42f7-81b1-bd596c64b5c4", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5df55f" }, body: JSON.stringify({ sessionId: "5df55f", runId: DEBUG_RUN_ID, hypothesisId: "H3", location: "desktop-window-store.ts:moveWindow", message: "move_window_sample", data: { agentId, moveCount, x, y }, timestamp: Date.now() }) }).catch(() => {});
           // #endregion

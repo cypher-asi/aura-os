@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import { api } from "../../api/client";
 import { useChatStreamAdapter } from "../../hooks/use-chat-stream-adapter";
@@ -39,7 +39,6 @@ export function AgentChatView() {
     agentId: string;
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const sessionId = searchParams.get("session");
 
   const mode: ChatMode = projectId && agentInstanceId ? "project" : "agent";
