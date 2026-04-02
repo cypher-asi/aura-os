@@ -17,6 +17,7 @@ use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::*;
 use aura_os_link::{AutomatonClient, HarnessLink, LocalHarness, SwarmHarness};
+use aura_os_super_agent::SuperAgentService;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -254,6 +255,22 @@ pub fn build_test_app_from_store(
         },
     );
 
+    let super_agent_service = Arc::new(SuperAgentService::new(
+        "http://localhost:19080".to_string(),
+        project_service.clone(),
+        agent_service.clone(),
+        agent_instance_service.clone(),
+        task_service.clone(),
+        session_service.clone(),
+        org_service.clone(),
+        billing_client.clone(),
+        Arc::new(AutomatonClient::new("http://localhost:19080")),
+        network_client.clone(),
+        storage_client.clone(),
+        store.clone(),
+        event_broadcast.clone(),
+    ));
+
     let state = AppState {
         store,
         data_dir,
@@ -281,6 +298,8 @@ pub fn build_test_app_from_store(
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),
         orbit_client: None,
         validation_cache,
+        super_agent_service,
+        super_agent_messages: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let app = aura_os_server::create_router_with_interface(state.clone(), None);
