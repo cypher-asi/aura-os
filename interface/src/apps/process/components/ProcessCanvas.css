@@ -65,6 +65,11 @@
   outline: none !important;
 }
 
+.react-flow__nodesselection-rect {
+  border: none !important;
+  background: transparent !important;
+}
+
 .react-flow__node.selected .react-flow__resize-control {
   display: none !important;
 }
