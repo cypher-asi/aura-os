@@ -164,7 +164,7 @@ export function BottomTaskbar() {
           className={styles.desktopBtn}
           onClick={() => {
             if (activeApp.id === "desktop") {
-              navigate(previousPath ?? "/agents");
+              if (previousPath) navigate(previousPath);
             } else {
               navigate("/desktop");
             }

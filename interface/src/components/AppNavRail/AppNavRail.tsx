@@ -1,11 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, type ReactNode, type ButtonHTMLAttributes } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@cypher-asi/zui";
 import { CircleUserRound } from "lucide-react";
 import { useAppStore } from "../../stores/app-store";
 import { getLastSelectedAgentId } from "../../apps/agents/stores";
 import { getLastProject, getLastAgent } from "../../utils/storage";
-import { OrgSelector } from "../OrgSelector";
 import styles from "./AppNavRail.module.css";
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
@@ -28,6 +26,29 @@ function resolveAppPath(app: { id: string; basePath: string }): string {
   return app.basePath;
 }
 
+interface NavRailButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: ReactNode;
+  label?: string;
+  selected?: boolean;
+}
+
+function NavRailButton({ icon, label, selected, className, ...props }: NavRailButtonProps) {
+  const cls = [
+    styles.navBtn,
+    selected ? styles.navBtnSelected : "",
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <button type="button" className={cls} {...props}>
+      {icon}
+      {label && <span>{label}</span>}
+    </button>
+  );
+}
+
 interface AppNavRailProps {
   layout?: "rail" | "bar";
 }
@@ -46,44 +67,56 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
 
   return (
     <nav className={isBar ? styles.bar : styles.rail} aria-label="Primary navigation">
-      {!isBar && (
-        <div className={styles.orgIcon}>
-          <OrgSelector variant="icon" />
-        </div>
+      {!isBar ? (
+        <>
+          <div className={styles.spacer} />
+          <div className={styles.floatingGroupMiddle}>
+            <div className={styles.appGroup}>
+              {primaryApps.map((app) => (
+                <NavRailButton
+                  key={app.id}
+                  icon={<app.icon size={24} />}
+                  selected={activeApp.id === app.id}
+                  title={app.label}
+                  aria-label={app.label}
+                  onClick={() => handleAppClick(app)}
+                  onMouseEnter={app.onPrefetch}
+                  onFocus={app.onPrefetch}
+                />
+              ))}
+            </div>
+          </div>
+          <div className={styles.spacer} />
+        </>
+      ) : (
+        <>
+          <div className={styles.barGroup}>
+            {primaryApps.map((app) => (
+              <NavRailButton
+                key={app.id}
+                icon={<app.icon size={24} />}
+                label={app.label}
+                selected={activeApp.id === app.id}
+                title={app.label}
+                aria-label={app.label}
+                className={styles.navBarBtn}
+                onClick={() => handleAppClick(app)}
+                onMouseEnter={app.onPrefetch}
+                onFocus={app.onPrefetch}
+              />
+            ))}
+          </div>
+          <NavRailButton
+            icon={<CircleUserRound size={24} />}
+            label="Profile"
+            selected={activeApp.id === "profile"}
+            title="Profile"
+            aria-label="Profile"
+            className={styles.navBarBtn}
+            onClick={() => navigate("/profile")}
+          />
+        </>
       )}
-      <div className={isBar ? styles.barGroup : styles.appGroup}>
-        {primaryApps.map((app) => (
-          <Button
-            key={app.id}
-            variant="ghost"
-            size="sm"
-            icon={<app.icon size={isBar ? 18 : 28} />}
-            iconOnly={!isBar}
-            selected={activeApp.id === app.id}
-            title={app.label}
-            aria-label={app.label}
-            className={isBar ? styles.barButton : styles.btn}
-            onClick={() => handleAppClick(app)}
-            onMouseEnter={app.onPrefetch}
-            onFocus={app.onPrefetch}
-          >
-            {isBar ? app.label : undefined}
-          </Button>
-        ))}
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        iconOnly={!isBar}
-        selected={activeApp.id === "profile"}
-        icon={<CircleUserRound size={isBar ? 18 : 28} />}
-        title="Profile"
-        aria-label="Profile"
-        className={isBar ? styles.barProfileBtn : styles.profileBtn}
-        onClick={() => navigate("/profile")}
-      >
-        {isBar ? "Profile" : undefined}
-      </Button>
     </nav>
   );
 }
