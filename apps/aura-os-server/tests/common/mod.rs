@@ -25,7 +25,6 @@ use aura_os_server::AppState;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
-use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
 
 pub fn store_zero_auth_session(store: &RocksStore) {
@@ -239,22 +238,6 @@ pub fn build_test_app_from_store(
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
     let automaton_client = Arc::new(AutomatonClient::new("http://localhost:19080"));
-    let super_agent_service = Arc::new(SuperAgentService::new(
-        "http://localhost:3000".to_string(),
-        project_service.clone(),
-        agent_service.clone(),
-        agent_instance_service.clone(),
-        task_service.clone(),
-        session_service.clone(),
-        org_service.clone(),
-        billing_client.clone(),
-        automaton_client.clone(),
-        network_client.clone(),
-        storage_client.clone(),
-        store.clone(),
-        event_broadcast.clone(),
-    ));
-
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
         TEST_JWT.to_string(),

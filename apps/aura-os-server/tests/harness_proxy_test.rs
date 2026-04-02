@@ -1,5 +1,7 @@
 mod common;
 
+use std::sync::{LazyLock, Mutex};
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::response::IntoResponse;
@@ -10,6 +12,8 @@ use tokio::net::TcpListener;
 use tower::ServiceExt;
 
 use common::*;
+
+static HARNESS_URL_ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 /// Start a lightweight mock harness that echoes back request info as JSON.
 async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>) {
@@ -55,6 +59,7 @@ async fn start_mock_harness() -> (String, tokio::task::JoinHandle<()>) {
 
 #[tokio::test]
 async fn proxy_forwards_get_facts() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", &mock_url); }
 
@@ -70,6 +75,7 @@ async fn proxy_forwards_get_facts() {
 
 #[tokio::test]
 async fn proxy_forwards_post_with_body() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", &mock_url); }
 
@@ -87,6 +93,7 @@ async fn proxy_forwards_post_with_body() {
 
 #[tokio::test]
 async fn proxy_forwards_delete() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", &mock_url); }
 
@@ -102,6 +109,7 @@ async fn proxy_forwards_delete() {
 
 #[tokio::test]
 async fn proxy_forwards_skills_list() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", &mock_url); }
 
@@ -117,6 +125,7 @@ async fn proxy_forwards_skills_list() {
 
 #[tokio::test]
 async fn proxy_forwards_skill_activate() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     let (mock_url, _handle) = start_mock_harness().await;
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", &mock_url); }
 
@@ -133,6 +142,7 @@ async fn proxy_forwards_skill_activate() {
 
 #[tokio::test]
 async fn proxy_returns_502_on_connection_failure() {
+    let _guard = HARNESS_URL_ENV_LOCK.lock().unwrap();
     unsafe { std::env::set_var("LOCAL_HARNESS_URL", "http://127.0.0.1:1"); }
 
     let (app, _, _db) = build_test_app_with_mocks().await;
