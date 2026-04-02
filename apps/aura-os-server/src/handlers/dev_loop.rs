@@ -331,34 +331,73 @@ fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
     ]
 }
 
-fn lookup_model_rates(model: &str) -> (f64, f64) {
+#[derive(Clone, Copy, Debug)]
+struct ModelRates {
+    input: f64,
+    output: f64,
+    cache_write: f64,
+    cache_read: f64,
+}
+
+fn lookup_model_rates(model: &str) -> ModelRates {
+    let normalized_model = model.trim().to_ascii_lowercase();
     let mut exact: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| *candidate == model)
+        .filter(|(candidate, _, _)| *candidate == normalized_model)
         .collect();
     if let Some((_, input, output)) = exact.pop() {
-        return (input, output);
+        return ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        };
     }
 
     let mut partial: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| model.starts_with(candidate) || candidate.starts_with(model))
+        .filter(|(candidate, _, _)| {
+            normalized_model.starts_with(candidate) || candidate.starts_with(&normalized_model)
+        })
         .collect();
     if let Some((_, input, output)) = partial.pop() {
-        return (input, output);
+        return ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        };
     }
 
     default_fee_schedule()
         .into_iter()
         .next()
-        .map(|(_, input, output)| (input, output))
-        .unwrap_or((5.0, 25.0))
+        .map(|(_, input, output)| ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        })
+        .unwrap_or(ModelRates {
+            input: 5.0,
+            output: 25.0,
+            cache_write: 6.25,
+            cache_read: 0.5,
+        })
 }
 
-fn estimate_usage_cost_usd(model: &str, input_tokens: u64, output_tokens: u64) -> f64 {
-    let (input_rate, output_rate) = lookup_model_rates(model);
-    input_tokens as f64 * input_rate / 1_000_000.0
-        + output_tokens as f64 * output_rate / 1_000_000.0
+fn estimate_usage_cost_usd(
+    model: &str,
+    input_tokens: u64,
+    output_tokens: u64,
+    cache_creation_input_tokens: u64,
+    cache_read_input_tokens: u64,
+) -> f64 {
+    let rates = lookup_model_rates(model);
+    input_tokens as f64 * rates.input / 1_000_000.0
+        + output_tokens as f64 * rates.output / 1_000_000.0
+        + cache_creation_input_tokens as f64 * rates.cache_write / 1_000_000.0
+        + cache_read_input_tokens as f64 * rates.cache_read / 1_000_000.0
 }
 
 #[derive(Clone)]
@@ -376,8 +415,13 @@ async fn report_automaton_usage(
     turn_usage: &TurnUsageSnapshot,
 ) {
     let model = turn_usage.model.as_deref().unwrap_or(&usage.model);
-    let estimated_cost_usd =
-        estimate_usage_cost_usd(model, turn_usage.input_tokens, turn_usage.output_tokens);
+    let estimated_cost_usd = estimate_usage_cost_usd(
+        model,
+        turn_usage.input_tokens,
+        turn_usage.output_tokens,
+        turn_usage.cache_creation_input_tokens,
+        turn_usage.cache_read_input_tokens,
+    );
     let req = ReportUsageRequest {
         user_id: usage.network_user_id.clone(),
         model: model.to_string(),
@@ -1832,8 +1876,8 @@ async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentI
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_run_command_steps, extract_files_changed, extract_run_command, extract_turn_usage,
-        VerificationStepKind,
+        classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
+        extract_run_command, extract_turn_usage, VerificationStepKind,
     };
 
     #[test]
@@ -1965,5 +2009,25 @@ mod tests {
         assert!(files
             .iter()
             .any(|file| file.op == "delete" && file.path == "src/old.rs"));
+    }
+
+    #[test]
+    fn estimate_usage_cost_includes_cache_tokens() {
+        let cost_without_cache =
+            estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 500_000, 0, 0);
+        let cost_with_cache =
+            estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 500_000, 500_000, 1_000_000);
+
+        assert!(cost_with_cache > cost_without_cache);
+        assert!((cost_with_cache - 12.675).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_versioned_model_ids() {
+        let exact = estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 0, 0, 0);
+        let versioned = estimate_usage_cost_usd("claude-sonnet-4-5-20250220", 1_000_000, 0, 0, 0);
+
+        assert!((exact - versioned).abs() < 1e-9);
+        assert!((exact - 3.0).abs() < 1e-9);
     }
 }

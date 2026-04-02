@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { calculateEstimatedCostUsd } from "./lib/benchmark-pricing.mjs";
 import {
   getHarnessBenchmarkScenario,
   prepareHarnessBenchmarkWorkspace,
@@ -18,75 +19,6 @@ const scenarioId = process.env.AURA_EVAL_SCENARIO_ID?.trim() || "harness-context
 const verbose = process.env.AURA_EVAL_VERBOSE === "1";
 const sessionMaxTokens = Number(process.env.AURA_EVAL_MAX_TOKENS ?? 2048);
 const keepWorkspace = process.env.AURA_EVAL_KEEP_WORKSPACE === "1";
-
-const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
-  "claude-opus-4-6": {
-    input: 5,
-    output: 25,
-    cacheWrite: 6.25,
-    cacheRead: 0.5,
-  },
-  "claude-opus-4.6": {
-    input: 5,
-    output: 25,
-    cacheWrite: 6.25,
-    cacheRead: 0.5,
-  },
-  "claude-opus-4-5": {
-    input: 5,
-    output: 25,
-    cacheWrite: 6.25,
-    cacheRead: 0.5,
-  },
-  "claude-opus-4.5": {
-    input: 5,
-    output: 25,
-    cacheWrite: 6.25,
-    cacheRead: 0.5,
-  },
-  "claude-opus-4-1": {
-    input: 15,
-    output: 75,
-    cacheWrite: 18.75,
-    cacheRead: 1.5,
-  },
-  "claude-opus-4.1": {
-    input: 15,
-    output: 75,
-    cacheWrite: 18.75,
-    cacheRead: 1.5,
-  },
-  "claude-opus-4": {
-    input: 15,
-    output: 75,
-    cacheWrite: 18.75,
-    cacheRead: 1.5,
-  },
-  "claude-sonnet-4-6": {
-    input: 3,
-    output: 15,
-    cacheWrite: 3.75,
-    cacheRead: 0.3,
-  },
-  "claude-sonnet-4.6": {
-    input: 3,
-    output: 15,
-    cacheWrite: 3.75,
-    cacheRead: 0.3,
-  },
-  "claude-sonnet-4-5": {
-    input: 3,
-    output: 15,
-    cacheWrite: 3.75,
-    cacheRead: 0.3,
-  },
-  "claude-sonnet-4.5": {
-    input: 3,
-    output: 15,
-    cacheWrite: 3.75,
-    cacheRead: 0.3,
-  },
-};
 
 const scenario = getHarnessBenchmarkScenario(interfaceRoot, scenarioId);
 const title = process.env.AURA_EVAL_SCENARIO_TITLE?.trim() || scenario.title;
@@ -106,55 +38,6 @@ function toJsonMessage(type, payload = {}) {
 
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : null;
-}
-
-function normalizeModelKey(model) {
-  return typeof model === "string" ? model.trim().toLowerCase() : "";
-}
-
-function inferProvider(model, provider) {
-  if (typeof provider === "string" && provider.trim()) return provider.trim().toLowerCase();
-  const modelKey = normalizeModelKey(model);
-  if (modelKey.startsWith("claude")) return "anthropic";
-  if (modelKey.startsWith("gpt") || modelKey.startsWith("o1") || modelKey.startsWith("o3")) {
-    return "openai";
-  }
-  return null;
-}
-
-function resolvePricing(model, provider) {
-  const inferredProvider = inferProvider(model, provider);
-  const modelKey = normalizeModelKey(model);
-  if (inferredProvider === "anthropic") {
-    const pricing = ANTHROPIC_MODEL_PRICING_PER_MTOK[modelKey];
-    if (pricing) {
-      return {
-        provider: inferredProvider,
-        model: modelKey,
-        source: "anthropic-pricing",
-        ...pricing,
-      };
-    }
-  }
-  return null;
-}
-
-function calculateEstimatedCostUsd(usage) {
-  const pricing = resolvePricing(usage.model, usage.provider);
-  if (!pricing) {
-    return { estimatedCostUsd: 0, pricing: null };
-  }
-
-  const estimatedCostUsd =
-    (usage.inputTokens / 1_000_000) * pricing.input
-    + (usage.outputTokens / 1_000_000) * pricing.output
-    + (usage.cacheCreationInputTokens / 1_000_000) * pricing.cacheWrite
-    + (usage.cacheReadInputTokens / 1_000_000) * pricing.cacheRead;
-
-  return {
-    estimatedCostUsd: Number(estimatedCostUsd.toFixed(6)),
-    pricing,
-  };
 }
 
 function readUsage(message) {
