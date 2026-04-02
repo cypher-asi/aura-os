@@ -60,6 +60,7 @@ impl SuperAgentTool for CreateProcessTool {
             name: name.to_string(),
             description: description.to_string(),
             enabled: true,
+            folder_id: None,
             schedule,
             tags: Vec::new(),
             last_run_at: None,

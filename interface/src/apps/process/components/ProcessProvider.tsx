@@ -4,12 +4,13 @@ import { useProcessStore } from "../stores/process-store";
 
 export function ProcessProvider({ children }: { children: ReactNode }) {
   const fetchProcesses = useProcessStore((s) => s.fetchProcesses);
+  const fetchFolders = useProcessStore((s) => s.fetchFolders);
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
   const { processId } = useParams<{ processId: string }>();
 
-  useEffect(() => { fetchProcesses(); }, [fetchProcesses]);
+  useEffect(() => { fetchProcesses(); fetchFolders(); }, [fetchProcesses, fetchFolders]);
 
   useEffect(() => {
     if (processId) {

@@ -1,37 +1,28 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Modal, Button } from "@cypher-asi/zui";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
 
-interface ProcessFormProps {
+interface ProcessFolderFormProps {
   onClose: () => void;
-  folderId?: string | null;
 }
 
-export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
+export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const addProcess = useProcessStore((s) => s.addProcess);
-  const navigate = useNavigate();
+  const addFolder = useProcessStore((s) => s.addFolder);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const process = await processApi.createProcess({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        folder_id: folderId ?? undefined,
-      });
-      addProcess(process);
-      navigate(`/process/${process.process_id}`);
+      const folder = await processApi.createFolder({ name: name.trim() });
+      addFolder(folder);
       onClose();
     } catch {
-      setError("Failed to create process.");
+      setError("Failed to create folder.");
     } finally {
       setLoading(false);
     }
@@ -41,7 +32,7 @@ export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
     <Modal
       isOpen
       onClose={onClose}
-      title="New Process"
+      title="New Folder"
       size="sm"
       footer={
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -65,21 +56,8 @@ export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) handleSubmit(); }}
-            placeholder="My Process"
+            placeholder="My Folder"
             autoFocus
-          />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Description</label>
-          <textarea
-            style={{
-              padding: "8px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-              background: "var(--color-bg-input)", color: "var(--color-text)", fontSize: 13, resize: "vertical",
-              minHeight: 60,
-            }}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description"
           />
         </div>
         {error && <div style={{ fontSize: 12, color: "var(--color-error)" }}>{error}</div>}

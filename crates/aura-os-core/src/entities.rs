@@ -8,7 +8,8 @@ use crate::enums::{
 };
 use crate::ids::{
     AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
-    ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId, ProjectId,
+    ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId,
+    ProjectId,
     SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 
@@ -539,6 +540,16 @@ pub struct Artifact {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessFolder {
+    pub folder_id: ProcessFolderId,
+    pub org_id: OrgId,
+    pub user_id: String,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Process {
     pub process_id: ProcessId,
     pub org_id: OrgId,
@@ -547,6 +558,8 @@ pub struct Process {
     #[serde(default)]
     pub description: String,
     pub enabled: bool,
+    #[serde(default)]
+    pub folder_id: Option<ProcessFolderId>,
     /// Optional cron expression for scheduled triggering.
     #[serde(default)]
     pub schedule: Option<String>,

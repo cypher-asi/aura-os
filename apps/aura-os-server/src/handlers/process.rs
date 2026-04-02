@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 
 use aura_os_core::{
-    Process, ProcessEvent, ProcessId, ProcessNode, ProcessNodeConnection,
-    ProcessNodeConnectionId, ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId,
-    ProcessRunTrigger,
+    Process, ProcessEvent, ProcessFolder, ProcessFolderId, ProcessId, ProcessNode,
+    ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId, ProcessNodeType, ProcessRun,
+    ProcessRunId, ProcessRunTrigger,
 };
 use chrono::Utc;
 
@@ -21,6 +21,7 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 pub(crate) struct CreateProcessRequest {
     pub name: String,
     pub description: Option<String>,
+    pub folder_id: Option<String>,
     pub schedule: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -30,9 +31,20 @@ pub(crate) struct CreateProcessRequest {
 pub(crate) struct UpdateProcessRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub folder_id: Option<Option<String>>,
     pub schedule: Option<String>,
     pub tags: Option<Vec<String>>,
     pub enabled: Option<bool>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct CreateFolderRequest {
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct UpdateFolderRequest {
+    pub name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -96,6 +108,7 @@ pub(crate) async fn create_process(
         name: req.name,
         description: req.description.unwrap_or_default(),
         enabled: true,
+        folder_id: req.folder_id.and_then(|id| id.parse().ok()),
         schedule: req.schedule,
         tags: req.tags,
         last_run_at: None,
@@ -187,6 +200,9 @@ pub(crate) async fn update_process(
 
     if let Some(name) = req.name { process.name = name; }
     if let Some(desc) = req.description { process.description = desc; }
+    if let Some(fid) = req.folder_id {
+        process.folder_id = fid.and_then(|id| id.parse().ok());
+    }
     if let Some(sched) = req.schedule { process.schedule = Some(sched); }
     if let Some(tags) = req.tags { process.tags = tags; }
     if let Some(enabled) = req.enabled { process.enabled = enabled; }
@@ -383,6 +399,12 @@ pub(crate) async fn list_connections(
         .list_connections(&process_id)
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
+    info!(
+        process_id = %process_id,
+        connection_count = conns.len(),
+        connections = ?conns
+    );
+
     Ok(Json(conns))
 }
 
@@ -411,6 +433,16 @@ pub(crate) async fn create_connection(
         .process_store
         .save_connection(&conn)
         .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    info!(
+        process_id = %process_id,
+        connection_id = %conn.connection_id,
+        source_node_id = %conn.source_node_id,
+        source_handle = ?conn.source_handle,
+        target_node_id = %conn.target_node_id,
+        target_handle = ?conn.target_handle,
+        "Created process connection"
+    );
 
     Ok(Json(conn))
 }
@@ -507,4 +539,120 @@ pub(crate) async fn list_run_events(
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     Ok(Json(events))
+}
+
+// ---------------------------------------------------------------------------
+// Folders
+// ---------------------------------------------------------------------------
+
+pub(crate) async fn list_folders(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+) -> ApiResult<Json<Vec<ProcessFolder>>> {
+    let folders = state
+        .super_agent_service
+        .process_store
+        .list_folders()
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+    Ok(Json(folders))
+}
+
+pub(crate) async fn create_folder(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(session): AuthSession,
+    Json(req): Json<CreateFolderRequest>,
+) -> ApiResult<Json<ProcessFolder>> {
+    let user_id = session
+        .network_user_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| session.user_id.clone());
+
+    let now = Utc::now();
+    let folder = ProcessFolder {
+        folder_id: ProcessFolderId::new(),
+        org_id: "default".parse().unwrap_or_default(),
+        user_id,
+        name: req.name,
+        created_at: now,
+        updated_at: now,
+    };
+
+    state
+        .super_agent_service
+        .process_store
+        .save_folder(&folder)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    info!(folder_id = %folder.folder_id, name = %folder.name, "Process folder created");
+    Ok(Json(folder))
+}
+
+pub(crate) async fn update_folder(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateFolderRequest>,
+) -> ApiResult<Json<ProcessFolder>> {
+    let folder_id: ProcessFolderId = id
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid folder ID"))?;
+
+    let mut folder = state
+        .super_agent_service
+        .process_store
+        .get_folder(&folder_id)
+        .map_err(|e| ApiError::internal(e.to_string()))?
+        .ok_or_else(|| ApiError::not_found("folder not found"))?;
+
+    if let Some(name) = req.name { folder.name = name; }
+    folder.updated_at = Utc::now();
+
+    state
+        .super_agent_service
+        .process_store
+        .save_folder(&folder)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok(Json(folder))
+}
+
+pub(crate) async fn delete_folder(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+    Path(id): Path<String>,
+) -> ApiResult<Json<DeleteResponse>> {
+    let folder_id: ProcessFolderId = id
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid folder ID"))?;
+
+    // Unassign processes from this folder before deleting it
+    let processes = state
+        .super_agent_service
+        .process_store
+        .list_processes()
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    for mut p in processes {
+        if p.folder_id == Some(folder_id) {
+            p.folder_id = None;
+            p.updated_at = Utc::now();
+            state
+                .super_agent_service
+                .process_store
+                .save_process(&p)
+                .map_err(|e| ApiError::internal(e.to_string()))?;
+        }
+    }
+
+    state
+        .super_agent_service
+        .process_store
+        .delete_folder(&folder_id)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok(Json(DeleteResponse { deleted: true }))
 }

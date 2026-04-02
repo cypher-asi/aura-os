@@ -410,6 +410,15 @@ export interface CronArtifact {
 // Process workflow entities
 // ---------------------------------------------------------------------------
 
+export interface ProcessFolder {
+  folder_id: string;
+  org_id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Process {
   process_id: string;
   org_id: string;
@@ -417,6 +426,7 @@ export interface Process {
   name: string;
   description: string;
   enabled: boolean;
+  folder_id: string | null;
   schedule: string | null;
   tags: string[];
   last_run_at: string | null;

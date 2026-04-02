@@ -1,14 +1,15 @@
 use std::sync::Arc;
 
 use aura_os_core::{
-    Process, ProcessEvent, ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId,
-    ProcessNodeId, ProcessRun, ProcessRunId,
+    Process, ProcessEvent, ProcessFolder, ProcessFolderId, ProcessId, ProcessNode,
+    ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId, ProcessRun, ProcessRunId,
 };
 use aura_os_store::RocksStore;
 
 use crate::error::ProcessError;
 
 const CF_PROCESSES: &str = "processes";
+const CF_PROCESS_FOLDERS: &str = "process_folders";
 const CF_PROCESS_NODES: &str = "process_nodes";
 const CF_PROCESS_NODE_CONNECTIONS: &str = "process_node_connections";
 const CF_PROCESS_RUNS: &str = "process_runs";
@@ -17,6 +18,7 @@ const CF_PROCESS_EVENTS: &str = "process_events";
 pub fn column_families() -> Vec<&'static str> {
     vec![
         CF_PROCESSES,
+        CF_PROCESS_FOLDERS,
         CF_PROCESS_NODES,
         CF_PROCESS_NODE_CONNECTIONS,
         CF_PROCESS_RUNS,
@@ -68,6 +70,48 @@ impl ProcessStore {
         self.store
             .write_batch(vec![aura_os_store::BatchOp::Delete {
                 cf: CF_PROCESSES.to_string(),
+                key: id.to_string(),
+            }])
+            .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    // -- Folders -------------------------------------------------------------
+
+    pub fn save_folder(&self, folder: &ProcessFolder) -> Result<(), ProcessError> {
+        let key = folder.folder_id.to_string();
+        let value =
+            serde_json::to_vec(folder).map_err(|e| ProcessError::Store(e.to_string()))?;
+        self.store
+            .put_cf_bytes(CF_PROCESS_FOLDERS, key.as_bytes(), &value)
+            .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    pub fn get_folder(&self, id: &ProcessFolderId) -> Result<Option<ProcessFolder>, ProcessError> {
+        let key = id.to_string();
+        match self.store.get_cf_bytes(CF_PROCESS_FOLDERS, key.as_bytes()) {
+            Ok(Some(bytes)) => {
+                let f = serde_json::from_slice(&bytes)
+                    .map_err(|e| ProcessError::Store(e.to_string()))?;
+                Ok(Some(f))
+            }
+            Ok(None) => Ok(None),
+            Err(e) => Err(ProcessError::Store(e.to_string())),
+        }
+    }
+
+    pub fn list_folders(&self) -> Result<Vec<ProcessFolder>, ProcessError> {
+        let mut results: Vec<ProcessFolder> = self
+            .store
+            .scan_cf_all(CF_PROCESS_FOLDERS)
+            .map_err(|e| ProcessError::Store(e.to_string()))?;
+        results.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        Ok(results)
+    }
+
+    pub fn delete_folder(&self, id: &ProcessFolderId) -> Result<(), ProcessError> {
+        self.store
+            .write_batch(vec![aura_os_store::BatchOp::Delete {
+                cf: CF_PROCESS_FOLDERS.to_string(),
                 key: id.to_string(),
             }])
             .map_err(|e| ProcessError::Store(e.to_string()))

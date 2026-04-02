@@ -469,6 +469,14 @@ fn process_routes() -> Router<AppState> {
             "/api/processes/:id/runs/:run_id/events",
             get(process::list_run_events),
         )
+        .route(
+            "/api/process-folders",
+            get(process::list_folders).post(process::create_folder),
+        )
+        .route(
+            "/api/process-folders/:id",
+            put(process::update_folder).delete(process::delete_folder),
+        )
 }
 
 fn system_routes() -> Router<AppState> {

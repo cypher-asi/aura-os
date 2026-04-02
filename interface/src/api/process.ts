@@ -1,6 +1,7 @@
 import { apiFetch } from "./core";
 import type {
   Process,
+  ProcessFolder,
   ProcessNode,
   ProcessNodeConnection,
   ProcessRun,
@@ -11,6 +12,7 @@ import type { ProcessNodeType } from "../types/enums";
 export interface CreateProcessRequest {
   name: string;
   description?: string;
+  folder_id?: string;
   schedule?: string;
   tags?: string[];
 }
@@ -18,6 +20,7 @@ export interface CreateProcessRequest {
 export interface UpdateProcessRequest {
   name?: string;
   description?: string;
+  folder_id?: string | null;
   schedule?: string;
   tags?: string[];
   enabled?: boolean;
@@ -87,4 +90,13 @@ export const processApi = {
     apiFetch<ProcessRun>(`/api/processes/${processId}/runs/${runId}`),
   listRunEvents: (processId: string, runId: string) =>
     apiFetch<ProcessEvent[]>(`/api/processes/${processId}/runs/${runId}/events`),
+
+  // Folders
+  listFolders: () => apiFetch<ProcessFolder[]>("/api/process-folders"),
+  createFolder: (data: { name: string }) =>
+    apiFetch<ProcessFolder>("/api/process-folders", { method: "POST", body: JSON.stringify(data) }),
+  updateFolder: (id: string, data: { name?: string }) =>
+    apiFetch<ProcessFolder>(`/api/process-folders/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteFolder: (id: string) =>
+    apiFetch<void>(`/api/process-folders/${id}`, { method: "DELETE" }),
 };

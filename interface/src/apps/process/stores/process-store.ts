@@ -1,9 +1,10 @@
 import { create } from "zustand";
-import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent } from "../../../types";
+import type { Process, ProcessFolder, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent } from "../../../types";
 import { processApi } from "../../../api/process";
 
 interface ProcessState {
   processes: Process[];
+  folders: ProcessFolder[];
   loading: boolean;
   nodes: Record<string, ProcessNode[]>;
   connections: Record<string, ProcessNodeConnection[]>;
@@ -11,6 +12,7 @@ interface ProcessState {
   events: Record<string, ProcessEvent[]>;
 
   fetchProcesses: () => Promise<void>;
+  fetchFolders: () => Promise<void>;
   fetchNodes: (processId: string) => Promise<void>;
   fetchConnections: (processId: string) => Promise<void>;
   fetchRuns: (processId: string) => Promise<void>;
@@ -20,12 +22,17 @@ interface ProcessState {
   updateProcess: (process: Process) => void;
   removeProcess: (processId: string) => void;
 
+  addFolder: (folder: ProcessFolder) => void;
+  updateFolder: (folder: ProcessFolder) => void;
+  removeFolder: (folderId: string) => void;
+
   setNodes: (processId: string, nodes: ProcessNode[]) => void;
   setConnections: (processId: string, connections: ProcessNodeConnection[]) => void;
 }
 
 export const useProcessStore = create<ProcessState>()((set) => ({
   processes: [],
+  folders: [],
   loading: false,
   nodes: {},
   connections: {},
@@ -40,6 +47,13 @@ export const useProcessStore = create<ProcessState>()((set) => ({
     } catch {
       set({ loading: false });
     }
+  },
+
+  fetchFolders: async () => {
+    try {
+      const folders = await processApi.listFolders();
+      set({ folders });
+    } catch { /* ignore */ }
   },
 
   fetchNodes: async (processId: string) => {
@@ -76,6 +90,15 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   })),
   removeProcess: (processId) => set((s) => ({
     processes: s.processes.filter((p) => p.process_id !== processId),
+  })),
+
+  addFolder: (folder) => set((s) => ({ folders: [folder, ...s.folders] })),
+  updateFolder: (folder) => set((s) => ({
+    folders: s.folders.map((f) => f.folder_id === folder.folder_id ? folder : f),
+  })),
+  removeFolder: (folderId) => set((s) => ({
+    folders: s.folders.filter((f) => f.folder_id !== folderId),
+    processes: s.processes.map((p) => p.folder_id === folderId ? { ...p, folder_id: null } : p),
   })),
 
   setNodes: (processId, nodes) => set((s) => ({ nodes: { ...s.nodes, [processId]: nodes } })),
