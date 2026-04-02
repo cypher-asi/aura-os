@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useRef } from "react";
-import { useOutlet } from "react-router-dom";
+import { useNavigate, useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
-import { Server } from "lucide-react";
+import { CircleUserRound, Server } from "lucide-react";
 import { Lane } from "../Lane";
 import { AppNavRail } from "../AppNavRail";
 import { BottomTaskbar } from "../BottomTaskbar";
+import { OrgSelector } from "../OrgSelector";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { HostSettingsModal } from "../HostSettingsModal";
 import { UpdateBanner } from "../UpdateBanner";
@@ -108,6 +109,7 @@ export function DesktopShell() {
   const activeApp = useAppStore((s) => s.activeApp);
   const { features } = useAuraCapabilities();
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
+  const navigate = useNavigate();
   const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
     useShallow((s) => ({
       hostSettingsOpen: s.hostSettingsOpen,
@@ -149,9 +151,9 @@ export function DesktopShell() {
       <div className={styles.desktopShell} data-desktop-mode={isDesktop || undefined}>
         {isDesktop && <BackgroundLayer />}
         <Topbar
-          className={`titlebar-drag ${isDesktop ? styles.topbarBlur : ""}`}
+          className={`titlebar-drag ${styles.topbarAlignRail} ${isDesktop ? styles.topbarBlur : ""}`}
           onDoubleClick={() => windowCommand("maximize")}
-          icon={null}
+          icon={<OrgSelector variant="icon" />}
           title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></span>}
           actions={(
             <div className={styles.titleActions}>
@@ -165,6 +167,16 @@ export function DesktopShell() {
                   onClick={openHostSettings}
                 />
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                selected={activeApp.id === "profile"}
+                icon={<CircleUserRound size={16} />}
+                title="Profile"
+                aria-label="Profile"
+                onClick={() => navigate("/profile")}
+              />
               <WindowControls />
             </div>
           )}

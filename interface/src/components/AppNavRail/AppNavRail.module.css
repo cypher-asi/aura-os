@@ -26,7 +26,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 /* ── NavRailButton base ── */
@@ -35,18 +35,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
   border-radius: var(--radius-md);
   opacity: 0.6;
   transition: opacity var(--transition-fast), color var(--transition-fast);
 }
 
+.navBtn svg {
+  stroke-width: 1.5;
+}
+
 .navBtn:hover {
   opacity: 1;
+  color: #ffffff;
 }
 
 .navBtn:focus-visible {
@@ -77,6 +84,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: stretch;
+  padding: 14px 0;
 }
 
 :global([data-desktop-mode]) .floatingGroupMiddle {

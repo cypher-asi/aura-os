@@ -14,6 +14,12 @@
   contain: layout;
 }
 
+:global([data-desktop-mode]) .window {
+  background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+  backdrop-filter: blur(64px) saturate(1.2);
+  -webkit-backdrop-filter: blur(64px) saturate(1.2);
+}
+
 .windowFocused {
   border-color: color-mix(in srgb, var(--color-border) 100%, white 20%);
   box-shadow:
@@ -31,13 +37,17 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  height: 36px;
+  height: var(--control-height-sm);
   padding: 0 8px 0 12px;
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg) 80%, transparent);
   cursor: grab;
   user-select: none;
   flex-shrink: 0;
+}
+
+:global([data-desktop-mode]) .titleBar {
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
 }
 
 .titleBar:active {

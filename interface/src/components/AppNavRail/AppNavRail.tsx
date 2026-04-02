@@ -75,7 +75,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
               {primaryApps.map((app) => (
                 <NavRailButton
                   key={app.id}
-                  icon={<app.icon size={26} />}
+                  icon={<app.icon size={18} />}
                   selected={activeApp.id === app.id}
                   title={app.label}
                   aria-label={app.label}
@@ -94,7 +94,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
             {primaryApps.map((app) => (
               <NavRailButton
                 key={app.id}
-                icon={<app.icon size={26} />}
+                icon={<app.icon size={18} />}
                 label={app.label}
                 selected={activeApp.id === app.id}
                 title={app.label}
@@ -107,7 +107,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
             ))}
           </div>
           <NavRailButton
-            icon={<CircleUserRound size={26} />}
+            icon={<CircleUserRound size={18} />}
             label="Profile"
             selected={activeApp.id === "profile"}
             title="Profile"

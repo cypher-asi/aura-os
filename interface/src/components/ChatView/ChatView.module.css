@@ -139,6 +139,18 @@
   background: linear-gradient(to bottom, transparent, var(--color-bg, #111));
 }
 
+:global([data-desktop-mode]) .inputWrapper {
+  background: color-mix(in srgb, var(--color-bg, #111) 92%, transparent);
+}
+
+:global([data-desktop-mode]) .inputWrapper::before {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--color-bg, #111) 92%, transparent)
+  );
+}
+
 .inputContainer {
   position: relative;
   display: flex;

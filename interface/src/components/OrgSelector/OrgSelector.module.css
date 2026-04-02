@@ -132,7 +132,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
+  width: var(--control-height-sm, 32px);
   height: var(--control-height-sm, 32px);
   border: none;
   border-radius: var(--radius-md);

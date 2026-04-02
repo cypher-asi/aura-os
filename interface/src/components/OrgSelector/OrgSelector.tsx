@@ -108,7 +108,7 @@ export function OrgSelector({
   };
 
   return (
-    <div className={containerClass} ref={isIcon ? undefined : dropdownRef}>
+    <div className={containerClass} ref={isIcon ? undefined : dropdownRef} onDoubleClick={isIcon ? (e) => e.stopPropagation() : undefined}>
       {isIcon ? (
         <button
           ref={iconTriggerRef}
@@ -118,7 +118,7 @@ export function OrgSelector({
           title={activeOrg?.name ?? "My Team"}
           aria-label="Switch team"
         >
-          <Layers size={18} />
+          <Layers size={15} />
         </button>
       ) : (
         <button
