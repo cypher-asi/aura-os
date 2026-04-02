@@ -50,6 +50,11 @@
   overflow: hidden;
 }
 
+.navRailWrapper {
+  flex-shrink: 0;
+  display: flex;
+}
+
 .panelActive {
   display: contents;
 }
