@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-04-02T19:36:52.824Z",
+  "totals": {
+    "scenarios": 1,
+    "successfulScenarios": 0,
+    "totalInputTokens": 14,
+    "totalOutputTokens": 227,
+    "totalTokens": 241,
+    "totalCacheCreationInputTokens": 6158,
+    "totalCacheReadInputTokens": 27462,
+    "promptInputFootprintTokens": 33634,
+    "maxEstimatedContextTokens": 5866,
+    "maxContextUtilization": 0.02933,
+    "richUsageTurns": 4,
+    "fallbackUsageTurns": 0,
+    "estimatedCostUsd": 0.058,
+    "fileChangeCount": 0,
+    "runWallClockMs": 20563,
+    "averageTurnWallClockMs": 5066,
+    "averageTimeToFirstEventMs": 2811.5,
+    "maxTurnWallClockMs": 7399,
+    "sessionInitMs": 9,
+    "turnsWithErrors": 0,
+    "qualityPasses": 0,
+    "unknownPricingScenarios": 0,
+    "cacheSharePct": 99.96,
+    "pricingSources": [
+      "anthropic-pricing"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenarioId": "harness-fixture-node-server-patch",
+      "title": "Harness Fixture Node Server Patch",
+      "device": "local",
+      "success": false,
+      "totalInputTokens": 14,
+      "totalOutputTokens": 227,
+      "totalTokens": 241,
+      "totalCacheCreationInputTokens": 6158,
+      "totalCacheReadInputTokens": 27462,
+      "promptInputFootprintTokens": 33634,
+      "maxEstimatedContextTokens": 5866,
+      "maxContextUtilization": 0.02933,
+      "richUsageTurns": 4,
+      "fallbackUsageTurns": 0,
+      "richUsageSessions": 1,
+      "fallbackUsageSessions": 0,
+      "fileChangeCount": 0,
+      "estimatedCostUsd": 0.057963,
+      "runWallClockMs": 20563,
+      "averageTurnWallClockMs": 5066,
+      "averageTimeToFirstEventMs": 2811.5,
+      "maxTurnWallClockMs": 7399,
+      "sessionInitMs": 9,
+      "turnsWithErrors": 0,
+      "qualityPass": false,
+      "pricingSources": [
+        "anthropic-pricing"
+      ],
+      "hasUnknownPricing": false,
+      "source": "test-results/clean-node-server-cache-on/harness-fixture-node-server-patch-1775158437672-16b02eb6.json",
+      "cacheSharePct": 99.96
+    }
+  ]
+}

@@ -1,10 +1,17 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import {
+  assertNoUnknownPricing,
+  buildSummary,
+  normalizeScenario,
+  percentage,
+} from "./lib/benchmark-summary.mjs";
 
 const cwd = process.cwd();
 const resultsDir = path.resolve(cwd, process.argv[2] ?? "test-results");
 const outputJson = path.join(resultsDir, "aura-benchmark-usage-summary.json");
 const outputMarkdown = path.join(resultsDir, "aura-benchmark-usage-summary.md");
+const requirePricedRuns = process.env.AURA_EVAL_REQUIRE_PRICED_RUNS === "1";
 
 async function walk(dir) {
   let entries = [];
@@ -23,62 +30,6 @@ async function walk(dir) {
   return files.flat();
 }
 
-function normalizeScenario(payload, filePath) {
-  if (!payload || typeof payload !== "object" || payload.suite !== "benchmark") {
-    return null;
-  }
-
-  const metrics = payload.metrics ?? {};
-  const turns = Array.isArray(payload.turns) ? payload.turns : [];
-  const combinedTurnText = turns
-    .map((turn) => (typeof turn?.text === "string" ? turn.text : ""))
-    .join("\n")
-    .toLowerCase();
-  const heuristicQualityPass =
-    turns.some((turn) =>
-      Array.isArray(turn?.toolNames)
-      && turn.toolNames.some((tool) => ["write_file", "edit_file"].includes(tool))
-    )
-    && /(footer|faq|feature|proof|testimonial)/.test(combinedTurnText)
-    && /(cta|call-to-action|start building|start shipping|get started|explore features|readme|changelog)/.test(combinedTurnText)
-    ;
-  const qualityPass = Boolean(payload.quality?.qualityPass) || heuristicQualityPass;
-
-  return {
-    scenarioId: payload.scenarioId,
-    title: payload.title ?? payload.scenarioId,
-    device: payload.device ?? "unknown",
-    success: qualityPass,
-    totalInputTokens: Number(metrics.totalInputTokens ?? 0),
-    totalOutputTokens: Number(metrics.totalOutputTokens ?? 0),
-    totalTokens: Number(metrics.totalTokens ?? 0),
-    totalCacheCreationInputTokens: Number(metrics.totalCacheCreationInputTokens ?? 0),
-    totalCacheReadInputTokens: Number(metrics.totalCacheReadInputTokens ?? 0),
-    promptInputFootprintTokens: Number(metrics.promptInputFootprintTokens ?? 0),
-    maxEstimatedContextTokens: Number(metrics.maxEstimatedContextTokens ?? 0),
-    maxContextUtilization: Number(metrics.maxContextUtilization ?? 0),
-    richUsageTurns: Number(metrics.richUsageTurns ?? 0),
-    fallbackUsageTurns: Number(metrics.fallbackUsageTurns ?? 0),
-    richUsageSessions: Number(metrics.richUsageSessions ?? 0),
-    fallbackUsageSessions: Number(metrics.fallbackUsageSessions ?? 0),
-    fileChangeCount: Number(metrics.fileChangeCount ?? 0),
-    estimatedCostUsd: Number(metrics.estimatedCostUsd ?? 0),
-    runWallClockMs: Number(metrics.runWallClockMs ?? metrics.totalWallClockMs ?? 0),
-    averageTurnWallClockMs: Number(metrics.averageTurnWallClockMs ?? 0),
-    averageTimeToFirstEventMs: Number(metrics.averageTimeToFirstEventMs ?? 0),
-    maxTurnWallClockMs: Number(metrics.maxTurnWallClockMs ?? 0),
-    sessionInitMs: Number(metrics.sessionInitMs ?? 0),
-    turnsWithErrors: Number(metrics.turnsWithErrors ?? 0),
-    qualityPass,
-    source: path.relative(cwd, filePath),
-  };
-}
-
-function percentage(part, whole) {
-  if (!whole) return 0;
-  return Number(((part / whole) * 100).toFixed(2));
-}
-
 function toMarkdown(summary) {
   const lines = [
     "# Aura Benchmark Usage Summary",
@@ -94,6 +45,8 @@ function toMarkdown(summary) {
     `Prompt footprint tokens: ${summary.totals.promptInputFootprintTokens}`,
     `Cache share of prompt footprint: ${summary.totals.cacheSharePct.toFixed(2)}%`,
     `Estimated effective cost (USD): ${summary.totals.estimatedCostUsd.toFixed(4)}`,
+    `Unknown pricing scenarios: ${summary.totals.unknownPricingScenarios}`,
+    `Pricing sources: ${(summary.totals.pricingSources ?? []).join(", ") || "none"}`,
     `Run wall clock (ms): ${summary.totals.runWallClockMs}`,
     `Average turn wall clock (ms): ${summary.totals.averageTurnWallClockMs.toFixed(2)}`,
     `Average time to first event (ms): ${summary.totals.averageTimeToFirstEventMs.toFixed(2)}`,
@@ -123,7 +76,7 @@ async function main() {
     try {
       const raw = await fs.readFile(filePath, "utf8");
       const payload = JSON.parse(raw);
-      const normalized = normalizeScenario(payload, filePath);
+      const normalized = normalizeScenario(payload, filePath, cwd);
       if (!normalized) continue;
       scenarios.push({
         ...normalized,
@@ -139,78 +92,11 @@ async function main() {
 
   scenarios.sort((left, right) => left.title.localeCompare(right.title));
 
-  const totals = scenarios.reduce((acc, scenario) => ({
-    scenarios: acc.scenarios + 1,
-    successfulScenarios: acc.successfulScenarios + (scenario.success ? 1 : 0),
-    totalInputTokens: acc.totalInputTokens + scenario.totalInputTokens,
-    totalOutputTokens: acc.totalOutputTokens + scenario.totalOutputTokens,
-    totalTokens: acc.totalTokens + scenario.totalTokens,
-    totalCacheCreationInputTokens:
-      acc.totalCacheCreationInputTokens + scenario.totalCacheCreationInputTokens,
-    totalCacheReadInputTokens: acc.totalCacheReadInputTokens + scenario.totalCacheReadInputTokens,
-    promptInputFootprintTokens:
-      acc.promptInputFootprintTokens + scenario.promptInputFootprintTokens,
-    maxEstimatedContextTokens: Math.max(
-      acc.maxEstimatedContextTokens,
-      scenario.maxEstimatedContextTokens,
-    ),
-    maxContextUtilization: Math.max(
-      acc.maxContextUtilization,
-      scenario.maxContextUtilization,
-    ),
-    richUsageTurns: acc.richUsageTurns + scenario.richUsageTurns,
-    fallbackUsageTurns: acc.fallbackUsageTurns + scenario.fallbackUsageTurns,
-    estimatedCostUsd: acc.estimatedCostUsd + scenario.estimatedCostUsd,
-    fileChangeCount: acc.fileChangeCount + scenario.fileChangeCount,
-    runWallClockMs: acc.runWallClockMs + scenario.runWallClockMs,
-    averageTurnWallClockMs: acc.averageTurnWallClockMs + scenario.averageTurnWallClockMs,
-    averageTimeToFirstEventMs: acc.averageTimeToFirstEventMs + scenario.averageTimeToFirstEventMs,
-    maxTurnWallClockMs: Math.max(acc.maxTurnWallClockMs, scenario.maxTurnWallClockMs),
-    sessionInitMs: acc.sessionInitMs + scenario.sessionInitMs,
-    turnsWithErrors: acc.turnsWithErrors + scenario.turnsWithErrors,
-    qualityPasses: acc.qualityPasses + (scenario.qualityPass ? 1 : 0),
-  }), {
-    scenarios: 0,
-    successfulScenarios: 0,
-    totalInputTokens: 0,
-    totalOutputTokens: 0,
-    totalTokens: 0,
-    totalCacheCreationInputTokens: 0,
-    totalCacheReadInputTokens: 0,
-    promptInputFootprintTokens: 0,
-    maxEstimatedContextTokens: 0,
-    maxContextUtilization: 0,
-    richUsageTurns: 0,
-    fallbackUsageTurns: 0,
-    estimatedCostUsd: 0,
-    fileChangeCount: 0,
-    runWallClockMs: 0,
-    averageTurnWallClockMs: 0,
-    averageTimeToFirstEventMs: 0,
-    maxTurnWallClockMs: 0,
-    sessionInitMs: 0,
-    turnsWithErrors: 0,
-    qualityPasses: 0,
-  });
+  const summary = buildSummary(scenarios);
 
-  const summary = {
-    generatedAt: new Date().toISOString(),
-    totals: {
-      ...totals,
-      cacheSharePct: percentage(
-        totals.totalCacheCreationInputTokens + totals.totalCacheReadInputTokens,
-        totals.promptInputFootprintTokens,
-      ),
-      estimatedCostUsd: Number(totals.estimatedCostUsd.toFixed(4)),
-      averageTurnWallClockMs: Number(
-        ((totals.averageTurnWallClockMs || 0) / Math.max(totals.scenarios, 1)).toFixed(2),
-      ),
-      averageTimeToFirstEventMs: Number(
-        ((totals.averageTimeToFirstEventMs || 0) / Math.max(totals.scenarios, 1)).toFixed(2),
-      ),
-    },
-    scenarios,
-  };
+  if (requirePricedRuns) {
+    assertNoUnknownPricing(summary);
+  }
 
   await fs.mkdir(resultsDir, { recursive: true });
   await fs.writeFile(outputJson, JSON.stringify(summary, null, 2), "utf8");

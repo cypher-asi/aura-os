@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-04-02T19:36:52.980Z",
+  "summaryPath": "test-results/clean-node-server-cache-on/aura-benchmark-usage-summary.json",
+  "baselinePath": "test-results/clean-node-server-cache-off/aura-benchmark-usage-summary.json",
+  "totals": {
+    "inputTokens": -188040,
+    "outputTokens": -3110,
+    "estimatedCostUsd": -0.965732,
+    "runWallClockMs": -77408,
+    "promptInputFootprintTokens": -154420,
+    "cacheReadTokens": 27462,
+    "cacheWriteTokens": 6158
+  },
+  "comparisons": [
+    {
+      "title": "Harness Fixture Node Server Patch",
+      "device": "local",
+      "success": false,
+      "baselineSuccess": true,
+      "qualityPass": false,
+      "baselineQualityPass": true,
+      "deltas": {
+        "inputTokens": -188040,
+        "outputTokens": -3110,
+        "cacheWriteTokens": 6158,
+        "cacheReadTokens": 27462,
+        "estimatedCostUsd": -0.965732,
+        "runWallClockMs": -77408,
+        "averageTurnWallClockMs": -19385,
+        "averageTimeToFirstEventMs": -364.5,
+        "promptInputFootprintTokens": -154420,
+        "maxContextUtilization": -0.0558
+      }
+    }
+  ]
+}

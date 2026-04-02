@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-04-02T18:25:21.289Z",
+  "summaryPath": "test-results/clean-post-merge-cache-on/aura-benchmark-usage-summary.json",
+  "baselinePath": "test-results/clean-post-merge-cache-off/aura-benchmark-usage-summary.json",
+  "totals": {
+    "inputTokens": -258205,
+    "outputTokens": -1482,
+    "estimatedCostUsd": -1.212202,
+    "runWallClockMs": -49764,
+    "promptInputFootprintTokens": -162099,
+    "cacheReadTokens": 84311,
+    "cacheWriteTokens": 11795
+  },
+  "comparisons": [
+    {
+      "title": "Harness Context Static Site",
+      "device": "local",
+      "success": true,
+      "baselineSuccess": true,
+      "qualityPass": true,
+      "baselineQualityPass": true,
+      "deltas": {
+        "inputTokens": -258205,
+        "outputTokens": -1482,
+        "cacheWriteTokens": 11795,
+        "cacheReadTokens": 84311,
+        "estimatedCostUsd": -1.212202,
+        "runWallClockMs": -49764,
+        "averageTurnWallClockMs": -12447.25,
+        "averageTimeToFirstEventMs": 206.5,
+        "promptInputFootprintTokens": -162099,
+        "maxContextUtilization": -0.1092
+      }
+    }
+  ]
+}

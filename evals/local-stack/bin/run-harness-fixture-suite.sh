@@ -29,6 +29,7 @@ fi
 export AURA_EVAL_HARNESS_URL="${AURA_EVAL_HARNESS_URL:-http://127.0.0.1:${AURA_STACK_HARNESS_PORT}}"
 export AURA_EVAL_RESULTS_DIR="${AURA_EVAL_RESULTS_DIR:-test-results/harness-fixture-suite}"
 export AURA_EVAL_SCENARIOS="${AURA_EVAL_SCENARIOS:-harness-fixture-static-site,harness-fixture-node-server-patch,harness-fixture-repeated-read-summary}"
+export AURA_EVAL_REQUIRE_PRICED_RUNS="${AURA_EVAL_REQUIRE_PRICED_RUNS:-1}"
 
 cd "$AURA_STACK_REPO_ROOT/interface"
 
