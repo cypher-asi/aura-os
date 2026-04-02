@@ -8,11 +8,16 @@ function AppSync(): null {
   const { pathname } = useLocation();
   const markAppVisited = useAppUIStore((s) => s.markAppVisited);
 
+  const setPreviousPath = useAppUIStore((s) => s.setPreviousPath);
+
   useEffect(() => {
+    if (!pathname.startsWith("/desktop")) {
+      setPreviousPath(pathname);
+    }
     syncActiveApp(pathname);
     const activeAppIdAfterSync = useAppStore.getState().activeApp.id;
     markAppVisited(activeAppIdAfterSync);
-  }, [pathname, markAppVisited]);
+  }, [pathname, markAppVisited, setPreviousPath]);
 
   const activeAppId = useAppStore((s) => s.activeApp.id);
 

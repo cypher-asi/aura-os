@@ -87,6 +87,7 @@ export function BottomTaskbar() {
   const toggleFavorite = useAgentStore((s) => s.toggleFavorite);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
   const toggleSidekick = useAppUIStore((s) => s.toggleSidekick);
+  const previousPath = useAppUIStore((s) => s.previousPath);
   const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
   const desktopWindows = useDesktopWindowStore((s) => s.windows);
@@ -161,7 +162,13 @@ export function BottomTaskbar() {
           title="Desktop"
           aria-label="Desktop"
           className={styles.desktopBtn}
-          onClick={() => navigate("/desktop")}
+          onClick={() => {
+            if (activeApp.id === "desktop") {
+              navigate(previousPath ?? "/agents");
+            } else {
+              navigate("/desktop");
+            }
+          }}
         />
       </div>
 
