@@ -28,11 +28,7 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
 
   useEffect(() => {
     if (isOpen && initialInstalledNames) {
-      setInstalledNames((prev) => {
-        const merged = new Set(prev);
-        for (const n of initialInstalledNames) merged.add(n);
-        return merged;
-      });
+      setInstalledNames(new Set(initialInstalledNames));
     }
   }, [isOpen, initialInstalledNames]);
 
@@ -87,6 +83,15 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
     setCategory("all");
     onClose();
   }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, handleClose]);
 
   if (!isOpen) return null;
 

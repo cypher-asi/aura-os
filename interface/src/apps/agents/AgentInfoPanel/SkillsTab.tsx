@@ -35,7 +35,7 @@ function SkillRow({ skill, installed, loading, onAction, onView }: SkillRowProps
             <div className={styles.skillRowDesc}>{skill.description}</div>
           )}
         </div>
-        <Badge variant="pending" className={styles.skillSourceBadge}>
+        <Badge variant="stopped" className={styles.skillSourceBadge}>
           {skill.source}
         </Badge>
       </button>

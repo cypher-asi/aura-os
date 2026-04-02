@@ -60,6 +60,13 @@
   flex-shrink: 0;
   margin-top: -4px;
   margin-bottom: -4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.explorerWrap [class*="itemContent"]:hover .newChatWrap,
+.explorerWrap [class*="itemContent"]:focus-within .newChatWrap {
+  opacity: 1;
 }
 
 /* Override Item's .item svg (18px) so the + icon matches the search-area + (16px) */

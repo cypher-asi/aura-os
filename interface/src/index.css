@@ -37,7 +37,19 @@ body:has([role="dialog"][aria-modal="true"]) {
 }
 
 [role="dialog"][aria-modal="true"] {
+  --color-bg: #000000;
+  --color-surface: #000000;
   --color-elevated: #000000;
+  --color-backdrop: #000000;
+  background-color: #000000 !important;
+}
+
+[role="dialog"][aria-modal="true"] > div {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
 }
 
 @media (pointer: coarse), (max-width: 900px) {
