@@ -21,7 +21,7 @@
   },
   {
     "name": "apple-notes",
-    "description": "Manage Apple Notes via the `memo` CLI on macOS (create, view, edit, delete, search, move, and export notes). Use when a user asks OpenClaw to add a note, list notes, search notes, or manage note folders.",
+    "description": "Manage Apple Notes via the `memo` CLI on macOS (create, view, edit, delete, search, move, and export notes). Use when a user asks AURA to add a note, list notes, search notes, or manage note folders.",
     "emoji": "📝",
     "category": "notes",
     "tags": ["notes", "macos", "apple", "memo"],
@@ -153,7 +153,7 @@
   },
   {
     "name": "canvas",
-    "description": "Display HTML content on connected OpenClaw nodes (Mac app, iOS, Android).",
+    "description": "Display HTML content on connected AURA nodes (Mac app, iOS, Android).",
     "emoji": null,
     "category": "development",
     "tags": ["html", "canvas", "display", "webview"],
@@ -378,7 +378,7 @@
   },
   {
     "name": "healthcheck",
-    "description": "Host security hardening and risk-tolerance configuration for OpenClaw deployments. Use when a user asks for security audits, firewall/SSH/update hardening, risk posture, or version status checks.",
+    "description": "Host security hardening and risk-tolerance configuration for AURA deployments. Use when a user asks for security audits, firewall/SSH/update hardening, risk posture, or version status checks.",
     "emoji": null,
     "category": "automation",
     "tags": ["security", "hardening", "audit", "system"],
@@ -490,7 +490,7 @@
   },
   {
     "name": "node-connect",
-    "description": "Diagnose OpenClaw node connection and pairing failures for Android, iOS, and macOS companion apps.",
+    "description": "Diagnose AURA node connection and pairing failures for Android, iOS, and macOS companion apps.",
     "emoji": null,
     "category": "automation",
     "tags": ["node", "pairing", "networking", "diagnostics"],
@@ -686,7 +686,7 @@
     "category": "development",
     "tags": ["logs", "sessions", "search", "analytics"],
     "security_rating": "caution",
-    "security_notes": "Reads session log files from the OpenClaw state directory containing conversation history.",
+    "security_notes": "Reads session log files from the AURA state directory containing conversation history.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/session-logs/SKILL.md",
     "requires": { "bins": ["jq", "rg"] },
     "install_methods": [
@@ -775,12 +775,12 @@
   },
   {
     "name": "slack",
-    "description": "Use when you need to control Slack from OpenClaw via the slack tool, including reacting to messages or pinning/unpinning items in Slack channels or DMs.",
+    "description": "Use when you need to control Slack from AURA via the slack tool, including reacting to messages or pinning/unpinning items in Slack channels or DMs.",
     "emoji": "💬",
     "category": "communication",
     "tags": ["slack", "messaging", "chat", "reactions"],
     "security_rating": "caution",
-    "security_notes": "Sends and manages Slack messages using a bot token configured in OpenClaw.",
+    "security_notes": "Sends and manages Slack messages using a bot token configured in AURA.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/slack/SKILL.md",
     "requires": { "config": ["channels.slack"] },
     "install_methods": []
@@ -979,7 +979,7 @@
   },
   {
     "name": "voice-call",
-    "description": "Start voice calls via the OpenClaw voice-call plugin.",
+    "description": "Start voice calls via the AURA voice-call plugin.",
     "emoji": "📞",
     "category": "communication",
     "tags": ["voice", "calls", "twilio", "telephony"],

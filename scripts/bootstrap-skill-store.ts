@@ -1,7 +1,7 @@
 /**
  * Bootstrap Skill Store Catalog
  *
- * Fetches all SKILL.md files from the OpenClaw repo, parses frontmatter,
+ * Fetches all SKILL.md files from the AURA skills repo, parses frontmatter,
  * assigns categories, and optionally audits each skill with Claude for
  * security ratings. Outputs skill-store-catalog.json.
  *
