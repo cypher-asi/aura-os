@@ -378,7 +378,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         onNodeContextMenu={onNodeContextMenu}
         nodeTypes={nodeTypes}
         deleteKeyCode={null}
-        connectionMode={ConnectionMode.Loose}
+        connectionMode={ConnectionMode.Strict}
         fitView
         snapToGrid
         snapGrid={[20, 20]}
