@@ -5,12 +5,16 @@
   width: 100%;
   height: var(--control-height-sm);
   border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--color-bg);
   flex-shrink: 0;
   padding: 0 var(--space-2);
   column-gap: var(--space-2);
+}
+
+:global([data-desktop-mode]) .bar {
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .left {

@@ -34,10 +34,14 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: border-color var(--transition-fast, 0.15s);
+}
+
+:global([data-desktop-mode]) .desktopSidebar {
   background: color-mix(in srgb, var(--color-bg) 72%, transparent);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  transition: border-color var(--transition-fast, 0.15s);
 }
 
 .desktopSidebar:has([data-lane-resize-handle]:hover),

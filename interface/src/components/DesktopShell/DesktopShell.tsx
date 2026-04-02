@@ -146,10 +146,10 @@ export function DesktopShell() {
 
   return (
     <>
-      <div className={styles.desktopShell}>
-        <BackgroundLayer />
+      <div className={styles.desktopShell} data-desktop-mode={isDesktop || undefined}>
+        {isDesktop && <BackgroundLayer />}
         <Topbar
-          className={`titlebar-drag ${styles.topbarBlur}`}
+          className={`titlebar-drag ${isDesktop ? styles.topbarBlur : ""}`}
           onDoubleClick={() => windowCommand("maximize")}
           icon={null}
           title={<span className="titlebar-center"><img src="/AURA_logo_text_mark.png" alt="AURA" style={{ height: 11, display: "block" }} /></span>}
