@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ReactFlow,
@@ -6,14 +6,17 @@ import {
   Background,
   Controls,
   MiniMap,
+  BaseEdge,
   useNodesState,
+  useEdgesState,
   useReactFlow,
   BackgroundVariant,
+  ConnectionMode,
   type Connection,
   type Node,
   type Edge,
-  type EdgeChange,
-  applyEdgeChanges,
+  type EdgeProps,
+  getBezierPath,
   SelectionMode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -29,6 +32,27 @@ import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { ProcessNodeCard } from "./ProcessNodeCard";
 
 const nodeTypes = { processNode: ProcessNodeCard };
+
+function ProcessEdge(props: EdgeProps) {
+  const [edgePath] = getBezierPath({
+    sourceX: props.sourceX,
+    sourceY: props.sourceY,
+    sourcePosition: props.sourcePosition,
+    targetX: props.targetX,
+    targetY: props.targetY,
+    targetPosition: props.targetPosition,
+  });
+
+  return (
+    <BaseEdge
+      {...props}
+      path={edgePath}
+      style={{ stroke: "#b8c4ff", strokeWidth: 2.5 }}
+    />
+  );
+}
+
+const edgeTypes = { processEdge: ProcessEdge };
 
 interface ProcessCanvasProps {
   processId: string;
@@ -49,41 +73,48 @@ function normalizeHandleId(
   rawHandle: string | null,
   direction: "source" | "target",
   nodeType: ProcessNodeType | undefined,
-): string | null {
+): string | undefined {
   const normalized = (rawHandle ?? "").trim().toLowerCase();
 
   if (direction === "source") {
     if (nodeType === "condition" && ["out-false", "false", "branch-false"].includes(normalized)) {
       return "false";
     }
-    return null;
+    return undefined;
   }
 
   if (nodeType === "merge" && ["in-2", "merge-2", "second", "2"].includes(normalized)) {
     return "merge-2";
   }
-  return null;
+  return undefined;
 }
 
 function toFlowEdges(connections: ProcessNodeConnection[], nodes: ProcessNode[]): Edge[] {
   const nodeTypeById = new Map(nodes.map((n) => [n.node_id, n.node_type]));
-  return connections.map((c) => ({
-    id: c.connection_id,
-    source: c.source_node_id,
-    sourceHandle: normalizeHandleId(
+  return connections.map((c) => {
+    const sourceHandle = normalizeHandleId(
       c.source_handle,
       "source",
       nodeTypeById.get(c.source_node_id),
-    ),
-    target: c.target_node_id,
-    targetHandle: normalizeHandleId(
+    );
+    const targetHandle = normalizeHandleId(
       c.target_handle,
       "target",
       nodeTypeById.get(c.target_node_id),
-    ),
-    animated: true,
-    style: { stroke: "#999", strokeWidth: 2 },
-  }));
+    );
+
+    return {
+      id: c.connection_id,
+      source: c.source_node_id,
+      ...(sourceHandle ? { sourceHandle } : {}),
+      target: c.target_node_id,
+      ...(targetHandle ? { targetHandle } : {}),
+      type: "processEdge",
+      animated: true,
+      zIndex: 10,
+      style: { stroke: "#999", strokeWidth: 2 },
+    };
+  });
 }
 
 const ADD_NODE_TYPES: { type: ProcessNodeType; label: string }[] = [
@@ -118,12 +149,12 @@ export function ProcessCanvas(props: ProcessCanvasProps) {
 
 function ProcessCanvasInner({ processId, processNodes, processConnections }: ProcessCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes));
-  const [localEdgeAdds, setLocalEdgeAdds] = useState<Edge[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections, processNodes));
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
-  const fetchConnections = useProcessStore((s) => s.fetchConnections);
+  const setConnections = useProcessStore((s) => s.setConnections);
   const selectNode = useProcessSidekickStore((s) => s.selectNode);
   const closeNodeInspector = useProcessSidekickStore((s) => s.closeNodeInspector);
 
@@ -131,46 +162,40 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     setNodes(toFlowNodes(processNodes));
   }, [processNodes, setNodes]);
 
-  const serverEdges = useMemo(
-    () => toFlowEdges(processConnections, processNodes),
-    [processConnections, processNodes],
-  );
-  const edges = useMemo(() => [...serverEdges, ...localEdgeAdds], [serverEdges, localEdgeAdds]);
-
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setLocalEdgeAdds((prev) => applyEdgeChanges(changes, prev));
-  }, []);
-
   useEffect(() => {
-    setLocalEdgeAdds([]);
-  }, [processConnections]);
+    setEdges(toFlowEdges(processConnections, processNodes));
+  }, [processConnections, processNodes, setEdges]);
 
   const onConnect = useCallback(
     async (params: Connection) => {
+      const tempId = `temp-${Date.now()}`;
       const optimisticEdge: Edge = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         source: params.source!,
         target: params.target!,
-        sourceHandle: params.sourceHandle ?? null,
-        targetHandle: params.targetHandle ?? null,
+        ...(params.sourceHandle ? { sourceHandle: params.sourceHandle } : {}),
+        ...(params.targetHandle ? { targetHandle: params.targetHandle } : {}),
+        type: "processEdge",
         animated: true,
-        style: { stroke: "#999", strokeWidth: 2 },
       };
-      setLocalEdgeAdds((prev) => [...prev, optimisticEdge]);
+      setEdges((prev) => [...prev, optimisticEdge]);
       try {
-        await processApi.createConnection(processId, {
+        const created = await processApi.createConnection(processId, {
           source_node_id: params.source!,
           source_handle: params.sourceHandle ?? undefined,
           target_node_id: params.target!,
           target_handle: params.targetHandle ?? undefined,
         });
-        fetchConnections(processId);
+        setConnections(
+          processId,
+          [...processConnections.filter((c) => c.connection_id !== created.connection_id), created],
+        );
       } catch (e) {
         console.error("Failed to save connection:", e);
-        setLocalEdgeAdds((prev) => prev.filter((e) => e.id !== optimisticEdge.id));
+        setEdges((prev) => prev.filter((edge) => edge.id !== tempId));
       }
     },
-    [processId, fetchConnections],
+    [processId, processConnections, setConnections, setEdges],
   );
 
   const handleAddNode = useCallback(
@@ -257,10 +282,12 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        connectionMode={ConnectionMode.Loose}
         fitView
         snapToGrid
         snapGrid={[20, 20]}
-        defaultEdgeOptions={{ animated: true }}
+        defaultEdgeOptions={{ animated: true, type: "processEdge" }}
         connectionLineStyle={{ stroke: "var(--color-text, #eee)", strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}
         selectionOnDrag
