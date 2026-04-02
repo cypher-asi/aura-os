@@ -12,16 +12,17 @@
 }
 
 :global([data-desktop-mode]) .bar {
-  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
 }
 
 .left {
   display: flex;
   align-items: center;
+  justify-content: center;
   justify-self: start;
-  min-width: 0;
+  width: var(--control-height-sm);
 }
 
 .center {
@@ -75,8 +76,10 @@
   background: var(--color-surface-hover);
 }
 
-.favoriteBtnOpen {
-  background: color-mix(in srgb, var(--color-text-secondary) 12%, transparent);
+.favoriteBtnOpen,
+.favoriteBtnOpen:hover {
+  background: color-mix(in srgb, var(--color-text-secondary) 66%, transparent);
+  border-radius: 3px;
 }
 
 .openIndicator {
@@ -92,6 +95,7 @@
 
 .favoriteBtn [data-agent="true"] {
   background: var(--color-overlay-medium, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 0 0 1px #000;
 }
 
 .contextMenuOverlay {

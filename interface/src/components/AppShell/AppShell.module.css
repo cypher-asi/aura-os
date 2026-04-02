@@ -16,9 +16,9 @@
 }
 
 .topbarBlur {
-  background: color-mix(in srgb, var(--color-bg) 72%, transparent) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent) !important;
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
 }
 
 .desktopContent {
@@ -39,9 +39,8 @@
 }
 
 :global([data-desktop-mode]) .desktopSidebar {
-  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: transparent;
+  border-right: none;
 }
 
 .desktopSidebar:has([data-lane-resize-handle]:hover),
@@ -638,4 +637,14 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.topbarAlignRail {
+  padding-left: var(--space-2);
+}
+
+.topbarAlignRail > :first-child > :first-child {
+  width: var(--control-height-sm);
+  justify-content: center;
+  flex-shrink: 0;
 }
