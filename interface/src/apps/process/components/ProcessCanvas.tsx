@@ -41,6 +41,9 @@ interface RenameState {
   onRenameSubmit: (newLabel: string) => void;
 }
 
+const GRID = 20;
+const snap = (v: number) => Math.round(v / GRID) * GRID;
+
 function toFlowNodes(
   nodes: ProcessNode[],
   renaming?: RenameState,
@@ -49,7 +52,7 @@ function toFlowNodes(
   return nodes.map((n) => ({
     id: n.node_id,
     type: "processNode",
-    position: { x: n.position_x, y: n.position_y },
+    position: { x: snap(n.position_x), y: snap(n.position_y) },
     data: {
       label: n.label,
       nodeType: n.node_type,
@@ -183,7 +186,15 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const edgeCtxMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setNodes(toFlowNodes(processNodes, renameState, nodeStatuses));
+    setNodes((currentNodes) => {
+      const incoming = toFlowNodes(processNodes, renameState, nodeStatuses);
+      if (currentNodes.length === 0) return incoming;
+      const currentById = new Map(currentNodes.map((n) => [n.id, n]));
+      return incoming.map((n) => {
+        const existing = currentById.get(n.id);
+        return existing ? { ...existing, data: n.data } : n;
+      });
+    });
   }, [processNodes, setNodes, renamingNodeId, nodeStatuses]);
 
   useEffect(() => {
@@ -252,15 +263,13 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     async (type: ProcessNodeType, label: string) => {
       if (!ctxMenu) return;
       const flowPos = screenToFlowPosition({ x: ctxMenu.x, y: ctxMenu.y });
-      const snappedX = Math.round(flowPos.x / 20) * 20;
-      const snappedY = Math.round(flowPos.y / 20) * 20;
       setCtxMenu(null);
       try {
         await processApi.createNode(processId, {
           node_type: type,
           label,
-          position_x: snappedX,
-          position_y: snappedY,
+          position_x: snap(flowPos.x),
+          position_y: snap(flowPos.y),
         });
         fetchNodes(processId);
       } catch (e) {
@@ -369,8 +378,8 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     async (_: unknown, node: Node) => {
       try {
         await processApi.updateNode(processId, node.id, {
-          position_x: node.position.x,
-          position_y: node.position.y,
+          position_x: snap(node.position.x),
+          position_y: snap(node.position.y),
         });
       } catch (e) {
         console.error("Failed to save node position:", e);
@@ -439,7 +448,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         connectionMode={ConnectionMode.Strict}
         fitView
         snapToGrid
-        snapGrid={[20, 20]}
+        snapGrid={[GRID, GRID]}
         defaultEdgeOptions={{ animated: true }}
         connectionLineStyle={{ stroke: "rgba(255, 255, 255, 0.55)", strokeWidth: 1 }}
         proOptions={{ hideAttribution: true }}
@@ -450,7 +459,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         selectionKeyCode={null}
         style={{ background: "var(--color-bg, #0d0d1a)" }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#444" />
+        <Background variant={BackgroundVariant.Dots} gap={GRID} size={1} color="#444" />
         <Controls
           showInteractive={false}
           style={{

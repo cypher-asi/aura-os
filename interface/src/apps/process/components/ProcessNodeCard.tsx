@@ -131,9 +131,6 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {agent && (
-          <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />
-        )}
         <div
           style={{
             width: 20, height: 20,
@@ -158,6 +155,9 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
             </div>
           )}
         </div>
+        {agent && (
+          <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />
+        )}
       </div>
 
       <Handle
