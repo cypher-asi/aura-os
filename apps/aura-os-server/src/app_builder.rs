@@ -316,6 +316,8 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         orbit_client.clone(),
         store.clone(),
         event_broadcast.clone(),
+        domain.local_harness.clone(),
+        data_dir.clone(),
     ));
 
     // Spawn cron scheduler

@@ -16,7 +16,7 @@ use tracing::info;
 
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_billing::BillingClient;
-use aura_os_link::AutomatonClient;
+use aura_os_link::{AutomatonClient, HarnessLink};
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -81,6 +81,8 @@ impl SuperAgentService {
         orbit_client: Option<Arc<OrbitClient>>,
         store: Arc<RocksStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
+        harness: Arc<dyn HarnessLink>,
+        data_dir: std::path::PathBuf,
     ) -> Self {
         let cron_store = Arc::new(cron_store::CronStore::new(store.clone()));
         let cron_executor = Arc::new(executor::CronJobExecutor::new(
@@ -92,6 +94,9 @@ impl SuperAgentService {
         let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
             process_store.clone(),
             event_broadcast.clone(),
+            harness,
+            data_dir,
+            store.clone(),
         ));
 
         let mut tool_registry = ToolRegistry::with_tier1_tools();
