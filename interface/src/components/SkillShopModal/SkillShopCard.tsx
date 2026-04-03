@@ -29,6 +29,9 @@ export function SkillShopCard({ entry, installed, onClick }: SkillShopCardProps)
       </div>
       <div className={styles.cardFooter}>
         <SecurityBadge rating={entry.security_rating} />
+        {entry.os !== "any" && (
+          <span className={styles.osBadge}>{entry.os}</span>
+        )}
       </div>
     </button>
   );

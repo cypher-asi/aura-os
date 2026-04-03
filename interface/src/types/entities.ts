@@ -583,15 +583,18 @@ export type SkillCategory =
   | "automation"
   | "utilities";
 
+export type SkillOS = "any" | "windows" | "mac" | "linux";
+
 export interface SkillShopCatalogEntry {
   name: string;
   description: string;
   emoji: string;
   category: SkillCategory;
+  os: SkillOS;
   tags: string[];
   security_rating: "safe" | "caution" | "warning";
   security_notes: string;
   source_url: string;
-  requires?: { bins?: string[]; env?: string[]; config?: string[] };
+  requires?: { bins?: string[]; env?: string[]; config?: string[]; anyBins?: string[] };
   install_methods?: { kind: string; formula?: string; package?: string }[];
 }

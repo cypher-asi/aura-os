@@ -4,17 +4,29 @@
     "description": "Set up and use 1Password CLI (op). Use when installing the CLI, enabling desktop app integration, signing in (single or multi-account), or reading/injecting/running secrets via op.",
     "emoji": "🔐",
     "category": "security",
-    "tags": ["password-manager", "secrets", "credentials", "cli"],
+    "os": "any",
+    "tags": [
+      "password-manager",
+      "secrets",
+      "credentials",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Reads and injects secrets via 1Password CLI, requiring tmux session for credential management.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/1password/SKILL.md",
-    "requires": { "bins": ["op"] },
+    "requires": {
+      "bins": [
+        "op"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "1password-cli",
-        "bins": ["op"],
+        "bins": [
+          "op"
+        ],
         "label": "Install 1Password CLI (brew)"
       }
     ]
@@ -24,17 +36,29 @@
     "description": "Manage Apple Notes via the `memo` CLI on macOS (create, view, edit, delete, search, move, and export notes). Use when a user asks AURA to add a note, list notes, search notes, or manage note folders.",
     "emoji": "📝",
     "category": "notes",
-    "tags": ["notes", "macos", "apple", "memo"],
+    "os": "mac",
+    "tags": [
+      "notes",
+      "macos",
+      "apple",
+      "memo"
+    ],
     "security_rating": "safe",
     "security_notes": "Accesses Apple Notes.app through the memo CLI with macOS Automation permissions.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/apple-notes/SKILL.md",
-    "requires": { "bins": ["memo"] },
+    "requires": {
+      "bins": [
+        "memo"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "antoniorodr/memo/memo",
-        "bins": ["memo"],
+        "bins": [
+          "memo"
+        ],
         "label": "Install memo via Homebrew"
       }
     ]
@@ -44,17 +68,29 @@
     "description": "Manage Apple Reminders via remindctl CLI (list, add, edit, complete, delete). Supports lists, date filters, and JSON/plain output.",
     "emoji": "⏰",
     "category": "productivity",
-    "tags": ["reminders", "macos", "apple", "tasks"],
+    "os": "mac",
+    "tags": [
+      "reminders",
+      "macos",
+      "apple",
+      "tasks"
+    ],
     "security_rating": "safe",
     "security_notes": "Accesses Apple Reminders through the remindctl CLI with scoped Reminders permission.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/apple-reminders/SKILL.md",
-    "requires": { "bins": ["remindctl"] },
+    "requires": {
+      "bins": [
+        "remindctl"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/remindctl",
-        "bins": ["remindctl"],
+        "bins": [
+          "remindctl"
+        ],
         "label": "Install remindctl via Homebrew"
       }
     ]
@@ -64,17 +100,29 @@
     "description": "Create, search, and manage Bear notes via grizzly CLI.",
     "emoji": "🐻",
     "category": "notes",
-    "tags": ["notes", "bear", "macos", "markdown"],
+    "os": "mac",
+    "tags": [
+      "notes",
+      "bear",
+      "macos",
+      "markdown"
+    ],
     "security_rating": "safe",
     "security_notes": "Interacts with Bear.app via URL scheme through the grizzly CLI.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/bear-notes/SKILL.md",
-    "requires": { "bins": ["grizzly"] },
+    "requires": {
+      "bins": [
+        "grizzly"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/tylerwince/grizzly/cmd/grizzly@latest",
-        "bins": ["grizzly"],
+        "bins": [
+          "grizzly"
+        ],
         "label": "Install grizzly (go)"
       }
     ]
@@ -84,17 +132,29 @@
     "description": "Monitor blogs and RSS/Atom feeds for updates using the blogwatcher CLI.",
     "emoji": "📰",
     "category": "automation",
-    "tags": ["rss", "blog", "feeds", "monitoring"],
+    "os": "any",
+    "tags": [
+      "rss",
+      "blog",
+      "feeds",
+      "monitoring"
+    ],
     "security_rating": "safe",
     "security_notes": "Only fetches public RSS/Atom feeds with no file system or credential access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/blogwatcher/SKILL.md",
-    "requires": { "bins": ["blogwatcher"] },
+    "requires": {
+      "bins": [
+        "blogwatcher"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/Hyaxia/blogwatcher/cmd/blogwatcher@latest",
-        "bins": ["blogwatcher"],
+        "bins": [
+          "blogwatcher"
+        ],
         "label": "Install blogwatcher (go)"
       }
     ]
@@ -104,17 +164,29 @@
     "description": "BluOS CLI (blu) for discovery, playback, grouping, and volume.",
     "emoji": "🫐",
     "category": "communication",
-    "tags": ["bluos", "audio", "speakers", "playback"],
+    "os": "mac",
+    "tags": [
+      "bluos",
+      "audio",
+      "speakers",
+      "playback"
+    ],
     "security_rating": "safe",
     "security_notes": "Controls Bluesound/NAD players on the local network via the blu CLI.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/blucli/SKILL.md",
-    "requires": { "bins": ["blu"] },
+    "requires": {
+      "bins": [
+        "blu"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/blucli/cmd/blu@latest",
-        "bins": ["blu"],
+        "bins": [
+          "blu"
+        ],
         "label": "Install blucli (go)"
       }
     ]
@@ -124,11 +196,21 @@
     "description": "Use when you need to send or manage iMessages via BlueBubbles (recommended iMessage integration). Calls go through the generic message tool with channel=\"bluebubbles\".",
     "emoji": "🫧",
     "category": "communication",
-    "tags": ["imessage", "messaging", "bluebubbles", "macos"],
+    "os": "mac",
+    "tags": [
+      "imessage",
+      "messaging",
+      "bluebubbles",
+      "macos"
+    ],
     "security_rating": "caution",
     "security_notes": "Sends and manages iMessages through BlueBubbles gateway with server credentials.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/bluebubbles/SKILL.md",
-    "requires": { "config": ["channels.bluebubbles"] },
+    "requires": {
+      "config": [
+        "channels.bluebubbles"
+      ]
+    },
     "install_methods": []
   },
   {
@@ -136,17 +218,29 @@
     "description": "Capture frames or clips from RTSP/ONVIF cameras.",
     "emoji": "📸",
     "category": "media",
-    "tags": ["camera", "rtsp", "snapshot", "video"],
+    "os": "mac",
+    "tags": [
+      "camera",
+      "rtsp",
+      "snapshot",
+      "video"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses network cameras with credentials stored in config and executes ffmpeg commands.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/camsnap/SKILL.md",
-    "requires": { "bins": ["camsnap"] },
+    "requires": {
+      "bins": [
+        "camsnap"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/camsnap",
-        "bins": ["camsnap"],
+        "bins": [
+          "camsnap"
+        ],
         "label": "Install camsnap (brew)"
       }
     ]
@@ -156,7 +250,13 @@
     "description": "Display HTML content on connected AURA nodes (Mac app, iOS, Android).",
     "emoji": null,
     "category": "development",
-    "tags": ["html", "canvas", "display", "webview"],
+    "os": "any",
+    "tags": [
+      "html",
+      "canvas",
+      "display",
+      "webview"
+    ],
     "security_rating": "caution",
     "security_notes": "Serves and renders HTML/JS content on connected nodes with network access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/canvas/SKILL.md",
@@ -168,17 +268,29 @@
     "description": "Use the ClawHub CLI to search, install, update, and publish agent skills from clawhub.com. Use when you need to fetch new skills on the fly, sync installed skills to latest or a specific version, or publish new/updated skill folders with the npm-installed clawhub CLI.",
     "emoji": null,
     "category": "utilities",
-    "tags": ["skills", "package-manager", "registry", "cli"],
+    "os": "any",
+    "tags": [
+      "skills",
+      "package-manager",
+      "registry",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Installs and publishes skill packages from a remote registry with shell execution.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/clawhub/SKILL.md",
-    "requires": { "bins": ["clawhub"] },
+    "requires": {
+      "bins": [
+        "clawhub"
+      ]
+    },
     "install_methods": [
       {
         "id": "node",
         "kind": "node",
         "package": "clawhub",
-        "bins": ["clawhub"],
+        "bins": [
+          "clawhub"
+        ],
         "label": "Install ClawHub CLI (npm)"
       }
     ]
@@ -188,24 +300,41 @@
     "description": "Delegate coding tasks to Codex, Claude Code, or Pi agents via background process. Use when building/creating new features or apps, reviewing PRs, refactoring large codebases, or iterative coding that needs file exploration.",
     "emoji": "🧩",
     "category": "development",
-    "tags": ["coding", "agents", "codex", "claude-code"],
+    "os": "any",
+    "tags": [
+      "coding",
+      "agents",
+      "codex",
+      "claude-code"
+    ],
     "security_rating": "warning",
     "security_notes": "Spawns coding agents with broad file system access and arbitrary command execution in project directories.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/coding-agent/SKILL.md",
-    "requires": { "anyBins": ["claude", "codex", "opencode", "pi"] },
+    "requires": {
+      "anyBins": [
+        "claude",
+        "codex",
+        "opencode",
+        "pi"
+      ]
+    },
     "install_methods": [
       {
         "id": "node-claude",
         "kind": "node",
         "package": "@anthropic-ai/claude-code",
-        "bins": ["claude"],
+        "bins": [
+          "claude"
+        ],
         "label": "Install Claude Code CLI (npm)"
       },
       {
         "id": "node-codex",
         "kind": "node",
         "package": "@openai/codex",
-        "bins": ["codex"],
+        "bins": [
+          "codex"
+        ],
         "label": "Install Codex CLI (npm)"
       }
     ]
@@ -215,11 +344,21 @@
     "description": "Discord ops via the message tool (channel=discord).",
     "emoji": "🎮",
     "category": "communication",
-    "tags": ["discord", "messaging", "chat", "bots"],
+    "os": "any",
+    "tags": [
+      "discord",
+      "messaging",
+      "chat",
+      "bots"
+    ],
     "security_rating": "caution",
     "security_notes": "Sends and manages Discord messages using a bot token from configuration.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/discord/SKILL.md",
-    "requires": { "config": ["channels.discord.token"] },
+    "requires": {
+      "config": [
+        "channels.discord.token"
+      ]
+    },
     "install_methods": []
   },
   {
@@ -227,17 +366,29 @@
     "description": "Control Eight Sleep pods (status, temperature, alarms, schedules).",
     "emoji": "🛌",
     "category": "automation",
-    "tags": ["eight-sleep", "smart-bed", "iot", "automation"],
+    "os": "any",
+    "tags": [
+      "eight-sleep",
+      "smart-bed",
+      "iot",
+      "automation"
+    ],
     "security_rating": "caution",
     "security_notes": "Controls Eight Sleep hardware with stored credentials via an unofficial API.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/eightctl/SKILL.md",
-    "requires": { "bins": ["eightctl"] },
+    "requires": {
+      "bins": [
+        "eightctl"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/eightctl/cmd/eightctl@latest",
-        "bins": ["eightctl"],
+        "bins": [
+          "eightctl"
+        ],
         "label": "Install eightctl (go)"
       }
     ]
@@ -247,17 +398,29 @@
     "description": "Gemini CLI for one-shot Q&A, summaries, and generation.",
     "emoji": "✨",
     "category": "ai-ml",
-    "tags": ["gemini", "ai", "llm", "generation"],
+    "os": "any",
+    "tags": [
+      "gemini",
+      "ai",
+      "llm",
+      "generation"
+    ],
     "security_rating": "safe",
     "security_notes": "Calls Google Gemini API via CLI for text generation with no file system modification.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/gemini/SKILL.md",
-    "requires": { "bins": ["gemini"] },
+    "requires": {
+      "bins": [
+        "gemini"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "gemini-cli",
-        "bins": ["gemini"],
+        "bins": [
+          "gemini"
+        ],
         "label": "Install Gemini CLI (brew)"
       }
     ]
@@ -267,17 +430,31 @@
     "description": "Fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, then monitor and address PR review comments.",
     "emoji": null,
     "category": "development",
-    "tags": ["github", "issues", "pull-requests", "automation"],
+    "os": "any",
+    "tags": [
+      "github",
+      "issues",
+      "pull-requests",
+      "automation"
+    ],
     "security_rating": "warning",
     "security_notes": "Spawns sub-agents with code execution, creates git branches, and opens PRs using GitHub API tokens.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/gh-issues/SKILL.md",
-    "requires": { "bins": ["curl", "git", "gh"] },
+    "requires": {
+      "bins": [
+        "curl",
+        "git",
+        "gh"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "gh",
-        "bins": ["gh"],
+        "bins": [
+          "gh"
+        ],
         "label": "Install GitHub CLI (brew)"
       }
     ]
@@ -287,24 +464,38 @@
     "description": "Search GIF providers with CLI/TUI, download results, and extract stills/sheets.",
     "emoji": "🧲",
     "category": "media",
-    "tags": ["gif", "search", "media", "download"],
+    "os": "any",
+    "tags": [
+      "gif",
+      "search",
+      "media",
+      "download"
+    ],
     "security_rating": "safe",
     "security_notes": "Searches and downloads GIFs from public providers with optional API keys.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/gifgrep/SKILL.md",
-    "requires": { "bins": ["gifgrep"] },
+    "requires": {
+      "bins": [
+        "gifgrep"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/gifgrep",
-        "bins": ["gifgrep"],
+        "bins": [
+          "gifgrep"
+        ],
         "label": "Install gifgrep (brew)"
       },
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/gifgrep/cmd/gifgrep@latest",
-        "bins": ["gifgrep"],
+        "bins": [
+          "gifgrep"
+        ],
         "label": "Install gifgrep (go)"
       }
     ]
@@ -314,24 +505,38 @@
     "description": "GitHub operations via `gh` CLI: issues, PRs, CI runs, code review, API queries. Use when checking PR status or CI, creating/commenting on issues, listing/filtering PRs or issues, or viewing run logs.",
     "emoji": "🐙",
     "category": "development",
-    "tags": ["github", "git", "pull-requests", "ci-cd"],
+    "os": "any",
+    "tags": [
+      "github",
+      "git",
+      "pull-requests",
+      "ci-cd"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses GitHub repositories and API with authenticated gh CLI credentials.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/github/SKILL.md",
-    "requires": { "bins": ["gh"] },
+    "requires": {
+      "bins": [
+        "gh"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "gh",
-        "bins": ["gh"],
+        "bins": [
+          "gh"
+        ],
         "label": "Install GitHub CLI (brew)"
       },
       {
         "id": "apt",
         "kind": "apt",
         "package": "gh",
-        "bins": ["gh"],
+        "bins": [
+          "gh"
+        ],
         "label": "Install GitHub CLI (apt)"
       }
     ]
@@ -341,17 +546,29 @@
     "description": "Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, and Docs.",
     "emoji": "🎮",
     "category": "automation",
-    "tags": ["google-workspace", "gmail", "calendar", "drive"],
+    "os": "any",
+    "tags": [
+      "google-workspace",
+      "gmail",
+      "calendar",
+      "drive"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses Google Workspace services with OAuth credentials for email, calendar, and drive.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/gog/SKILL.md",
-    "requires": { "bins": ["gog"] },
+    "requires": {
+      "bins": [
+        "gog"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/gogcli",
-        "bins": ["gog"],
+        "bins": [
+          "gog"
+        ],
         "label": "Install gog (brew)"
       }
     ]
@@ -361,17 +578,32 @@
     "description": "Query Google Places API (New) via the goplaces CLI for text search, place details, resolve, and reviews.",
     "emoji": "📍",
     "category": "smart-home",
-    "tags": ["places", "google", "location", "search"],
+    "os": "any",
+    "tags": [
+      "places",
+      "google",
+      "location",
+      "search"
+    ],
     "security_rating": "safe",
     "security_notes": "Queries Google Places API with a scoped API key for location search only.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/goplaces/SKILL.md",
-    "requires": { "bins": ["goplaces"], "env": ["GOOGLE_PLACES_API_KEY"] },
+    "requires": {
+      "bins": [
+        "goplaces"
+      ],
+      "env": [
+        "GOOGLE_PLACES_API_KEY"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/goplaces",
-        "bins": ["goplaces"],
+        "bins": [
+          "goplaces"
+        ],
         "label": "Install goplaces (brew)"
       }
     ]
@@ -381,7 +613,13 @@
     "description": "Host security hardening and risk-tolerance configuration for AURA deployments. Use when a user asks for security audits, firewall/SSH/update hardening, risk posture, or version status checks.",
     "emoji": null,
     "category": "automation",
-    "tags": ["security", "hardening", "audit", "system"],
+    "os": "any",
+    "tags": [
+      "security",
+      "hardening",
+      "audit",
+      "system"
+    ],
     "security_rating": "warning",
     "security_notes": "Performs host security audits and may modify firewall, SSH, and system configurations with approval.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/healthcheck/SKILL.md",
@@ -393,17 +631,29 @@
     "description": "CLI to manage emails via IMAP/SMTP. Use `himalaya` to list, read, write, reply, forward, search, and organize emails from the terminal.",
     "emoji": "📧",
     "category": "utilities",
-    "tags": ["email", "imap", "smtp", "cli"],
+    "os": "any",
+    "tags": [
+      "email",
+      "imap",
+      "smtp",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses email accounts via IMAP/SMTP with stored credentials for read/send operations.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/himalaya/SKILL.md",
-    "requires": { "bins": ["himalaya"] },
+    "requires": {
+      "bins": [
+        "himalaya"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "himalaya",
-        "bins": ["himalaya"],
+        "bins": [
+          "himalaya"
+        ],
         "label": "Install Himalaya (brew)"
       }
     ]
@@ -413,17 +663,29 @@
     "description": "iMessage/SMS CLI for listing chats, history, and sending messages via Messages.app.",
     "emoji": "📨",
     "category": "communication",
-    "tags": ["imessage", "sms", "macos", "messaging"],
+    "os": "mac",
+    "tags": [
+      "imessage",
+      "sms",
+      "macos",
+      "messaging"
+    ],
     "security_rating": "caution",
     "security_notes": "Reads message history and sends iMessages/SMS with Full Disk Access and Automation permissions.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/imsg/SKILL.md",
-    "requires": { "bins": ["imsg"] },
+    "requires": {
+      "bins": [
+        "imsg"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/imsg",
-        "bins": ["imsg"],
+        "bins": [
+          "imsg"
+        ],
         "label": "Install imsg (brew)"
       }
     ]
@@ -433,17 +695,29 @@
     "description": "Use the mcporter CLI to list, configure, auth, and call MCP servers/tools directly (HTTP or stdio), including ad-hoc servers, config edits, and CLI/type generation.",
     "emoji": "📦",
     "category": "development",
-    "tags": ["mcp", "tools", "integration", "cli"],
+    "os": "any",
+    "tags": [
+      "mcp",
+      "tools",
+      "integration",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Calls arbitrary MCP server tools with authentication, including stdio-based server execution.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/mcporter/SKILL.md",
-    "requires": { "bins": ["mcporter"] },
+    "requires": {
+      "bins": [
+        "mcporter"
+      ]
+    },
     "install_methods": [
       {
         "id": "node",
         "kind": "node",
         "package": "mcporter",
-        "bins": ["mcporter"],
+        "bins": [
+          "mcporter"
+        ],
         "label": "Install mcporter (node)"
       }
     ]
@@ -453,17 +727,29 @@
     "description": "Use CodexBar CLI local cost usage to summarize per-model usage for Codex or Claude, including the current model or a full model breakdown.",
     "emoji": "📊",
     "category": "ai-ml",
-    "tags": ["usage", "cost", "models", "analytics"],
+    "os": "mac",
+    "tags": [
+      "usage",
+      "cost",
+      "models",
+      "analytics"
+    ],
     "security_rating": "safe",
     "security_notes": "Reads local cost log files from CodexBar with no network or credential access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/model-usage/SKILL.md",
-    "requires": { "bins": ["codexbar"] },
+    "requires": {
+      "bins": [
+        "codexbar"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew-cask",
         "kind": "brew",
         "formula": "steipete/tap/codexbar",
-        "bins": ["codexbar"],
+        "bins": [
+          "codexbar"
+        ],
         "label": "Install CodexBar (brew cask)"
       }
     ]
@@ -473,17 +759,29 @@
     "description": "Edit PDFs with natural-language instructions using the nano-pdf CLI.",
     "emoji": "📄",
     "category": "automation",
-    "tags": ["pdf", "editing", "documents", "cli"],
+    "os": "any",
+    "tags": [
+      "pdf",
+      "editing",
+      "documents",
+      "cli"
+    ],
     "security_rating": "safe",
     "security_notes": "Edits PDF files locally using natural-language instructions with no network access required.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/nano-pdf/SKILL.md",
-    "requires": { "bins": ["nano-pdf"] },
+    "requires": {
+      "bins": [
+        "nano-pdf"
+      ]
+    },
     "install_methods": [
       {
         "id": "uv",
         "kind": "uv",
         "package": "nano-pdf",
-        "bins": ["nano-pdf"],
+        "bins": [
+          "nano-pdf"
+        ],
         "label": "Install nano-pdf (uv)"
       }
     ]
@@ -493,7 +791,13 @@
     "description": "Diagnose AURA node connection and pairing failures for Android, iOS, and macOS companion apps.",
     "emoji": null,
     "category": "automation",
-    "tags": ["node", "pairing", "networking", "diagnostics"],
+    "os": "any",
+    "tags": [
+      "node",
+      "pairing",
+      "networking",
+      "diagnostics"
+    ],
     "security_rating": "caution",
     "security_notes": "Inspects gateway configuration, network bindings, and Tailscale status for connection diagnostics.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/node-connect/SKILL.md",
@@ -505,49 +809,70 @@
     "description": "Notion API for creating and managing pages, databases, and blocks.",
     "emoji": "📝",
     "category": "productivity",
-    "tags": ["notion", "databases", "pages", "api"],
+    "os": "any",
+    "tags": [
+      "notion",
+      "databases",
+      "pages",
+      "api"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses Notion workspace via API key with read/write permissions on shared content.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/notion/SKILL.md",
-    "requires": { "env": ["NOTION_API_KEY"] },
+    "requires": {
+      "env": [
+        "NOTION_API_KEY"
+      ]
+    },
     "install_methods": []
   },
   {
     "name": "obsidian",
-    "description": "Work with Obsidian vaults (plain Markdown notes) and automate via obsidian-cli.",
+    "description": "Create, read, search, and link notes in a local Obsidian vault on Windows.",
     "emoji": "💎",
     "category": "notes",
-    "tags": ["obsidian", "notes", "markdown", "vault"],
+    "os": "windows",
+    "tags": [
+      "obsidian",
+      "notes",
+      "markdown",
+      "vault",
+      "windows"
+    ],
     "security_rating": "caution",
-    "security_notes": "Reads and modifies Markdown files in Obsidian vaults with file system access.",
+    "security_notes": "Reads and writes Markdown files in Obsidian vaults. Can open notes in the Obsidian app via URI protocol.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/obsidian/SKILL.md",
-    "requires": { "bins": ["obsidian-cli"] },
-    "install_methods": [
-      {
-        "id": "brew",
-        "kind": "brew",
-        "formula": "yakitrak/yakitrak/obsidian-cli",
-        "bins": ["obsidian-cli"],
-        "label": "Install obsidian-cli (brew)"
-      }
-    ]
+    "requires": {},
+    "install_methods": []
   },
   {
     "name": "openai-whisper",
     "description": "Local speech-to-text with the Whisper CLI (no API key).",
     "emoji": "🎤",
     "category": "ai-ml",
-    "tags": ["whisper", "transcription", "speech-to-text", "local"],
+    "os": "any",
+    "tags": [
+      "whisper",
+      "transcription",
+      "speech-to-text",
+      "local"
+    ],
     "security_rating": "safe",
     "security_notes": "Runs speech-to-text locally with no network or API access required.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/openai-whisper/SKILL.md",
-    "requires": { "bins": ["whisper"] },
+    "requires": {
+      "bins": [
+        "whisper"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "openai-whisper",
-        "bins": ["whisper"],
+        "bins": [
+          "whisper"
+        ],
         "label": "Install OpenAI Whisper (brew)"
       }
     ]
@@ -557,17 +882,32 @@
     "description": "Transcribe audio via OpenAI Audio Transcriptions API (Whisper).",
     "emoji": "🌐",
     "category": "ai-ml",
-    "tags": ["whisper", "transcription", "openai", "api"],
+    "os": "any",
+    "tags": [
+      "whisper",
+      "transcription",
+      "openai",
+      "api"
+    ],
     "security_rating": "caution",
     "security_notes": "Sends audio files to OpenAI API for transcription using an API key from environment.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/openai-whisper-api/SKILL.md",
-    "requires": { "bins": ["curl"], "env": ["OPENAI_API_KEY"] },
+    "requires": {
+      "bins": [
+        "curl"
+      ],
+      "env": [
+        "OPENAI_API_KEY"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "curl",
-        "bins": ["curl"],
+        "bins": [
+          "curl"
+        ],
         "label": "Install curl (brew)"
       }
     ]
@@ -577,17 +917,29 @@
     "description": "Control Philips Hue lights and scenes via the OpenHue CLI.",
     "emoji": "💡",
     "category": "smart-home",
-    "tags": ["hue", "lights", "smart-home", "automation"],
+    "os": "any",
+    "tags": [
+      "hue",
+      "lights",
+      "smart-home",
+      "automation"
+    ],
     "security_rating": "safe",
     "security_notes": "Controls Philips Hue lights via local bridge connection with no cloud access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/openhue/SKILL.md",
-    "requires": { "bins": ["openhue"] },
+    "requires": {
+      "bins": [
+        "openhue"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "openhue/cli/openhue-cli",
-        "bins": ["openhue"],
+        "bins": [
+          "openhue"
+        ],
         "label": "Install OpenHue CLI (brew)"
       }
     ]
@@ -597,17 +949,29 @@
     "description": "Best practices for using the oracle CLI (prompt + file bundling, engines, sessions, and file attachment patterns).",
     "emoji": "🧿",
     "category": "utilities",
-    "tags": ["oracle", "llm", "prompt", "code-review"],
+    "os": "any",
+    "tags": [
+      "oracle",
+      "llm",
+      "prompt",
+      "code-review"
+    ],
     "security_rating": "caution",
     "security_notes": "Bundles and sends project files to external LLM APIs or browser sessions for analysis.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/oracle/SKILL.md",
-    "requires": { "bins": ["oracle"] },
+    "requires": {
+      "bins": [
+        "oracle"
+      ]
+    },
     "install_methods": [
       {
         "id": "node",
         "kind": "node",
         "package": "@steipete/oracle",
-        "bins": ["oracle"],
+        "bins": [
+          "oracle"
+        ],
         "label": "Install oracle (node)"
       }
     ]
@@ -617,24 +981,38 @@
     "description": "Foodora-only CLI for checking past orders and active order status (Deliveroo WIP).",
     "emoji": "🛵",
     "category": "productivity",
-    "tags": ["food-delivery", "orders", "foodora", "cli"],
+    "os": "any",
+    "tags": [
+      "food-delivery",
+      "orders",
+      "foodora",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses food delivery accounts with stored credentials and browser session cookies.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/ordercli/SKILL.md",
-    "requires": { "bins": ["ordercli"] },
+    "requires": {
+      "bins": [
+        "ordercli"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/ordercli",
-        "bins": ["ordercli"],
+        "bins": [
+          "ordercli"
+        ],
         "label": "Install ordercli (brew)"
       },
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/ordercli/cmd/ordercli@latest",
-        "bins": ["ordercli"],
+        "bins": [
+          "ordercli"
+        ],
         "label": "Install ordercli (go)"
       }
     ]
@@ -644,17 +1022,29 @@
     "description": "Capture and automate macOS UI with the Peekaboo CLI.",
     "emoji": "👀",
     "category": "media",
-    "tags": ["ui-automation", "macos", "screenshots", "accessibility"],
+    "os": "mac",
+    "tags": [
+      "ui-automation",
+      "macos",
+      "screenshots",
+      "accessibility"
+    ],
     "security_rating": "warning",
     "security_notes": "Has broad macOS UI automation access including screen recording, accessibility, and input control.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/peekaboo/SKILL.md",
-    "requires": { "bins": ["peekaboo"] },
+    "requires": {
+      "bins": [
+        "peekaboo"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/peekaboo",
-        "bins": ["peekaboo"],
+        "bins": [
+          "peekaboo"
+        ],
         "label": "Install Peekaboo (brew)"
       }
     ]
@@ -664,17 +1054,32 @@
     "description": "ElevenLabs text-to-speech with mac-style say UX.",
     "emoji": "🔊",
     "category": "automation",
-    "tags": ["tts", "elevenlabs", "speech", "audio"],
+    "os": "any",
+    "tags": [
+      "tts",
+      "elevenlabs",
+      "speech",
+      "audio"
+    ],
     "security_rating": "safe",
     "security_notes": "Calls ElevenLabs API for text-to-speech with a scoped API key.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/sag/SKILL.md",
-    "requires": { "bins": ["sag"], "env": ["ELEVENLABS_API_KEY"] },
+    "requires": {
+      "bins": [
+        "sag"
+      ],
+      "env": [
+        "ELEVENLABS_API_KEY"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/sag",
-        "bins": ["sag"],
+        "bins": [
+          "sag"
+        ],
         "label": "Install sag (brew)"
       }
     ]
@@ -684,24 +1089,39 @@
     "description": "Search and analyze your own session logs (older/parent conversations) using jq.",
     "emoji": "📜",
     "category": "development",
-    "tags": ["logs", "sessions", "search", "analytics"],
+    "os": "any",
+    "tags": [
+      "logs",
+      "sessions",
+      "search",
+      "analytics"
+    ],
     "security_rating": "caution",
     "security_notes": "Reads session log files from the AURA state directory containing conversation history.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/session-logs/SKILL.md",
-    "requires": { "bins": ["jq", "rg"] },
+    "requires": {
+      "bins": [
+        "jq",
+        "rg"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew-jq",
         "kind": "brew",
         "formula": "jq",
-        "bins": ["jq"],
+        "bins": [
+          "jq"
+        ],
         "label": "Install jq (brew)"
       },
       {
         "id": "brew-rg",
         "kind": "brew",
         "formula": "ripgrep",
-        "bins": ["rg"],
+        "bins": [
+          "rg"
+        ],
         "label": "Install ripgrep (brew)"
       }
     ]
@@ -711,16 +1131,29 @@
     "description": "Local text-to-speech via sherpa-onnx (offline, no cloud).",
     "emoji": "🔉",
     "category": "ai-ml",
-    "tags": ["tts", "offline", "onnx", "speech"],
+    "os": "any",
+    "tags": [
+      "tts",
+      "offline",
+      "onnx",
+      "speech"
+    ],
     "security_rating": "safe",
     "security_notes": "Runs text-to-speech entirely locally with no network access required.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/sherpa-onnx-tts/SKILL.md",
-    "requires": { "env": ["SHERPA_ONNX_RUNTIME_DIR", "SHERPA_ONNX_MODEL_DIR"] },
+    "requires": {
+      "env": [
+        "SHERPA_ONNX_RUNTIME_DIR",
+        "SHERPA_ONNX_MODEL_DIR"
+      ]
+    },
     "install_methods": [
       {
         "id": "download-runtime-macos",
         "kind": "download",
-        "os": ["darwin"],
+        "os": [
+          "darwin"
+        ],
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-v1.12.23-osx-universal2-shared.tar.bz2",
         "archive": "tar.bz2",
         "extract": true,
@@ -731,7 +1164,9 @@
       {
         "id": "download-runtime-linux-x64",
         "kind": "download",
-        "os": ["linux"],
+        "os": [
+          "linux"
+        ],
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-v1.12.23-linux-x64-shared.tar.bz2",
         "archive": "tar.bz2",
         "extract": true,
@@ -742,7 +1177,9 @@
       {
         "id": "download-runtime-win-x64",
         "kind": "download",
-        "os": ["win32"],
+        "os": [
+          "win32"
+        ],
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.23/sherpa-onnx-v1.12.23-win-x64-shared.tar.bz2",
         "archive": "tar.bz2",
         "extract": true,
@@ -766,7 +1203,13 @@
     "description": "Create, edit, improve, or audit AgentSkills. Use when creating a new skill from scratch or when asked to improve, review, audit, tidy up, or clean up an existing skill or SKILL.md file.",
     "emoji": null,
     "category": "utilities",
-    "tags": ["skills", "authoring", "templates", "development"],
+    "os": "any",
+    "tags": [
+      "skills",
+      "authoring",
+      "templates",
+      "development"
+    ],
     "security_rating": "caution",
     "security_notes": "Creates and modifies skill files and directories with file system write access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/skill-creator/SKILL.md",
@@ -778,11 +1221,21 @@
     "description": "Use when you need to control Slack from AURA via the slack tool, including reacting to messages or pinning/unpinning items in Slack channels or DMs.",
     "emoji": "💬",
     "category": "communication",
-    "tags": ["slack", "messaging", "chat", "reactions"],
+    "os": "any",
+    "tags": [
+      "slack",
+      "messaging",
+      "chat",
+      "reactions"
+    ],
     "security_rating": "caution",
     "security_notes": "Sends and manages Slack messages using a bot token configured in AURA.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/slack/SKILL.md",
-    "requires": { "config": ["channels.slack"] },
+    "requires": {
+      "config": [
+        "channels.slack"
+      ]
+    },
     "install_methods": []
   },
   {
@@ -790,17 +1243,29 @@
     "description": "Generate spectrograms and feature-panel visualizations from audio with the songsee CLI.",
     "emoji": "🌊",
     "category": "media",
-    "tags": ["audio", "spectrogram", "visualization", "analysis"],
+    "os": "any",
+    "tags": [
+      "audio",
+      "spectrogram",
+      "visualization",
+      "analysis"
+    ],
     "security_rating": "safe",
     "security_notes": "Processes local audio files to generate visual spectrograms with no network access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/songsee/SKILL.md",
-    "requires": { "bins": ["songsee"] },
+    "requires": {
+      "bins": [
+        "songsee"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/songsee",
-        "bins": ["songsee"],
+        "bins": [
+          "songsee"
+        ],
         "label": "Install songsee (brew)"
       }
     ]
@@ -810,17 +1275,29 @@
     "description": "Control Sonos speakers (discover/status/play/volume/group).",
     "emoji": "🔊",
     "category": "media",
-    "tags": ["sonos", "speakers", "audio", "playback"],
+    "os": "mac",
+    "tags": [
+      "sonos",
+      "speakers",
+      "audio",
+      "playback"
+    ],
     "security_rating": "safe",
     "security_notes": "Controls Sonos speakers on the local network via SSDP discovery with no credentials.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/sonoscli/SKILL.md",
-    "requires": { "bins": ["sonos"] },
+    "requires": {
+      "bins": [
+        "sonos"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/sonoscli/cmd/sonos@latest",
-        "bins": ["sonos"],
+        "bins": [
+          "sonos"
+        ],
         "label": "Install sonoscli (go)"
       }
     ]
@@ -830,25 +1307,40 @@
     "description": "Terminal Spotify playback/search via spogo (preferred) or spotify_player.",
     "emoji": "🎵",
     "category": "media",
-    "tags": ["spotify", "music", "playback", "search"],
+    "os": "any",
+    "tags": [
+      "spotify",
+      "music",
+      "playback",
+      "search"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses Spotify account with imported browser cookies for playback control.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/spotify-player/SKILL.md",
-    "requires": { "anyBins": ["spogo", "spotify_player"] },
+    "requires": {
+      "anyBins": [
+        "spogo",
+        "spotify_player"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "spogo",
         "tap": "steipete/tap",
-        "bins": ["spogo"],
+        "bins": [
+          "spogo"
+        ],
         "label": "Install spogo (brew)"
       },
       {
         "id": "brew",
         "kind": "brew",
         "formula": "spotify_player",
-        "bins": ["spotify_player"],
+        "bins": [
+          "spotify_player"
+        ],
         "label": "Install spotify_player (brew)"
       }
     ]
@@ -858,17 +1350,29 @@
     "description": "Summarize or extract text/transcripts from URLs, podcasts, and local files (great fallback for \"transcribe this YouTube/video\").",
     "emoji": "🧾",
     "category": "ai-ml",
-    "tags": ["summarize", "transcription", "youtube", "urls"],
+    "os": "any",
+    "tags": [
+      "summarize",
+      "transcription",
+      "youtube",
+      "urls"
+    ],
     "security_rating": "safe",
     "security_notes": "Fetches and summarizes public URLs and local files using configurable LLM APIs.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/summarize/SKILL.md",
-    "requires": { "bins": ["summarize"] },
+    "requires": {
+      "bins": [
+        "summarize"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/summarize",
-        "bins": ["summarize"],
+        "bins": [
+          "summarize"
+        ],
         "label": "Install summarize (brew)"
       }
     ]
@@ -878,7 +1382,13 @@
     "description": "Use when work should span one or more detached tasks but still behave like one job with a single owner context. TaskFlow is the durable flow substrate for flow identity, child-task linkage, waiting state, and revision-checked mutations.",
     "emoji": "🪝",
     "category": "productivity",
-    "tags": ["taskflow", "orchestration", "workflows", "automation"],
+    "os": "any",
+    "tags": [
+      "taskflow",
+      "orchestration",
+      "workflows",
+      "automation"
+    ],
     "security_rating": "caution",
     "security_notes": "Manages durable task flows with child task spawning and state persistence in the runtime.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/taskflow/SKILL.md",
@@ -890,7 +1400,13 @@
     "description": "Example TaskFlow authoring pattern for inbox triage. Use when messages need different treatment based on intent, with some routes notifying immediately, some waiting on outside answers, and others rolling into a later summary.",
     "emoji": "📥",
     "category": "productivity",
-    "tags": ["inbox", "triage", "taskflow", "routing"],
+    "os": "any",
+    "tags": [
+      "inbox",
+      "triage",
+      "taskflow",
+      "routing"
+    ],
     "security_rating": "caution",
     "security_notes": "Routes inbox messages to external channels like Slack with state management and notification.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/taskflow-inbox-triage/SKILL.md",
@@ -902,17 +1418,29 @@
     "description": "Manage Things 3 via the `things` CLI on macOS (add/update projects+todos via URL scheme; read/search/list from the local Things database).",
     "emoji": "✅",
     "category": "productivity",
-    "tags": ["things", "tasks", "macos", "todo"],
+    "os": "mac",
+    "tags": [
+      "things",
+      "tasks",
+      "macos",
+      "todo"
+    ],
     "security_rating": "safe",
     "security_notes": "Accesses Things 3 database and URL scheme for read/write task management on macOS.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/things-mac/SKILL.md",
-    "requires": { "bins": ["things"] },
+    "requires": {
+      "bins": [
+        "things"
+      ]
+    },
     "install_methods": [
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/ossianhempel/things3-cli/cmd/things@latest",
-        "bins": ["things"],
+        "bins": [
+          "things"
+        ],
         "label": "Install things3-cli (go)"
       }
     ]
@@ -922,17 +1450,29 @@
     "description": "Remote-control tmux sessions for interactive CLIs by sending keystrokes and scraping pane output.",
     "emoji": "🧵",
     "category": "development",
-    "tags": ["tmux", "terminal", "sessions", "multiplexer"],
+    "os": "linux",
+    "tags": [
+      "tmux",
+      "terminal",
+      "sessions",
+      "multiplexer"
+    ],
     "security_rating": "caution",
     "security_notes": "Sends keystrokes and reads output from tmux sessions controlling interactive CLIs.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/tmux/SKILL.md",
-    "requires": { "bins": ["tmux"] },
+    "requires": {
+      "bins": [
+        "tmux"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "tmux",
-        "bins": ["tmux"],
+        "bins": [
+          "tmux"
+        ],
         "label": "Install tmux (brew)"
       }
     ]
@@ -942,17 +1482,33 @@
     "description": "Manage Trello boards, lists, and cards via the Trello REST API.",
     "emoji": "📋",
     "category": "productivity",
-    "tags": ["trello", "boards", "cards", "project-management"],
+    "os": "any",
+    "tags": [
+      "trello",
+      "boards",
+      "cards",
+      "project-management"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses Trello account with API key and token for full board and card management.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/trello/SKILL.md",
-    "requires": { "bins": ["jq"], "env": ["TRELLO_API_KEY", "TRELLO_TOKEN"] },
+    "requires": {
+      "bins": [
+        "jq"
+      ],
+      "env": [
+        "TRELLO_API_KEY",
+        "TRELLO_TOKEN"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "jq",
-        "bins": ["jq"],
+        "bins": [
+          "jq"
+        ],
         "label": "Install jq (brew)"
       }
     ]
@@ -962,17 +1518,29 @@
     "description": "Extract frames or short clips from videos using ffmpeg.",
     "emoji": "🎬",
     "category": "media",
-    "tags": ["video", "ffmpeg", "frames", "extraction"],
+    "os": "any",
+    "tags": [
+      "video",
+      "ffmpeg",
+      "frames",
+      "extraction"
+    ],
     "security_rating": "safe",
     "security_notes": "Extracts video frames locally using ffmpeg with no network access.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/video-frames/SKILL.md",
-    "requires": { "bins": ["ffmpeg"] },
+    "requires": {
+      "bins": [
+        "ffmpeg"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "ffmpeg",
-        "bins": ["ffmpeg"],
+        "bins": [
+          "ffmpeg"
+        ],
         "label": "Install ffmpeg (brew)"
       }
     ]
@@ -982,11 +1550,21 @@
     "description": "Start voice calls via the AURA voice-call plugin.",
     "emoji": "📞",
     "category": "communication",
-    "tags": ["voice", "calls", "twilio", "telephony"],
+    "os": "any",
+    "tags": [
+      "voice",
+      "calls",
+      "twilio",
+      "telephony"
+    ],
     "security_rating": "caution",
     "security_notes": "Initiates phone calls through Twilio/Telnyx/Plivo with account credentials.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/voice-call/SKILL.md",
-    "requires": { "config": ["plugins.entries.voice-call.enabled"] },
+    "requires": {
+      "config": [
+        "plugins.entries.voice-call.enabled"
+      ]
+    },
     "install_methods": []
   },
   {
@@ -994,24 +1572,38 @@
     "description": "Send WhatsApp messages to other people or search/sync WhatsApp history via the wacli CLI (not for normal user chats).",
     "emoji": "📱",
     "category": "automation",
-    "tags": ["whatsapp", "messaging", "chat", "sync"],
+    "os": "any",
+    "tags": [
+      "whatsapp",
+      "messaging",
+      "chat",
+      "sync"
+    ],
     "security_rating": "caution",
     "security_notes": "Accesses WhatsApp account with QR auth and can send messages and sync history.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/wacli/SKILL.md",
-    "requires": { "bins": ["wacli"] },
+    "requires": {
+      "bins": [
+        "wacli"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "steipete/tap/wacli",
-        "bins": ["wacli"],
+        "bins": [
+          "wacli"
+        ],
         "label": "Install wacli (brew)"
       },
       {
         "id": "go",
         "kind": "go",
         "module": "github.com/steipete/wacli/cmd/wacli@latest",
-        "bins": ["wacli"],
+        "bins": [
+          "wacli"
+        ],
         "label": "Install wacli (go)"
       }
     ]
@@ -1021,17 +1613,29 @@
     "description": "Get current weather and forecasts via wttr.in or Open-Meteo. No API key needed.",
     "emoji": "☔",
     "category": "smart-home",
-    "tags": ["weather", "forecast", "temperature", "cli"],
+    "os": "any",
+    "tags": [
+      "weather",
+      "forecast",
+      "temperature",
+      "cli"
+    ],
     "security_rating": "safe",
     "security_notes": "Fetches public weather data from wttr.in with no API key or credentials needed.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/weather/SKILL.md",
-    "requires": { "bins": ["curl"] },
+    "requires": {
+      "bins": [
+        "curl"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "curl",
-        "bins": ["curl"],
+        "bins": [
+          "curl"
+        ],
         "label": "Install curl (brew)"
       }
     ]
@@ -1041,24 +1645,38 @@
     "description": "A CLI tool for making authenticated requests to the X (Twitter) API. Use for posting tweets, replying, quoting, searching, reading posts, managing followers, sending DMs, uploading media, or interacting with any X API v2 endpoint.",
     "emoji": "🐦",
     "category": "automation",
-    "tags": ["twitter", "x-api", "social-media", "cli"],
+    "os": "any",
+    "tags": [
+      "twitter",
+      "x-api",
+      "social-media",
+      "cli"
+    ],
     "security_rating": "caution",
     "security_notes": "Makes authenticated X API requests with stored OAuth tokens for posting and account management.",
     "source_url": "https://raw.githubusercontent.com/openclaw/openclaw/main/skills/xurl/SKILL.md",
-    "requires": { "bins": ["xurl"] },
+    "requires": {
+      "bins": [
+        "xurl"
+      ]
+    },
     "install_methods": [
       {
         "id": "brew",
         "kind": "brew",
         "formula": "xdevplatform/tap/xurl",
-        "bins": ["xurl"],
+        "bins": [
+          "xurl"
+        ],
         "label": "Install xurl (brew)"
       },
       {
         "id": "npm",
         "kind": "npm",
         "package": "@xdevplatform/xurl",
-        "bins": ["xurl"],
+        "bins": [
+          "xurl"
+        ],
         "label": "Install xurl (npm)"
       }
     ]

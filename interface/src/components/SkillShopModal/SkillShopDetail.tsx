@@ -43,20 +43,21 @@ export function SkillShopDetail({
   const fetchedUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!sourceOpen || !entry.source_url) return;
-    if (fetchedUrlRef.current === entry.source_url && sourceContent !== null) return;
+    if (!sourceOpen) return;
+    const cacheKey = `${entry.category}/${entry.name}`;
+    if (fetchedUrlRef.current === cacheKey && sourceContent !== null) return;
 
     let cancelled = false;
     setSourceLoading(true);
     setSourceError(false);
-    fetch(entry.source_url)
+    fetch(`/api/skills/${entry.category}/${entry.name}/content`)
       .then((r) => {
         if (!r.ok) throw new Error(r.statusText);
         return r.text();
       })
       .then((text) => {
         if (cancelled) return;
-        fetchedUrlRef.current = entry.source_url;
+        fetchedUrlRef.current = cacheKey;
         setSourceContent(text);
       })
       .catch(() => {
@@ -66,7 +67,7 @@ export function SkillShopDetail({
         if (!cancelled) setSourceLoading(false);
       });
     return () => { cancelled = true; };
-  }, [sourceOpen, entry.source_url, sourceContent]);
+  }, [sourceOpen, entry.category, entry.name, sourceContent]);
 
   return (
     <div className={styles.detail}>
@@ -82,6 +83,9 @@ export function SkillShopDetail({
           <div className={styles.detailCategory}>
             <span className={styles.detailCategoryLabel}>{entry.category}</span>
             <SecurityBadge rating={entry.security_rating} size="md" />
+            {entry.os !== "any" && (
+              <span className={styles.osBadge}>{entry.os}</span>
+            )}
           </div>
         </div>
         <div className={styles.detailInstallArea}>

@@ -1,64 +1,38 @@
 /**
  * Bootstrap Skill Shop Catalog
  *
- * Fetches all SKILL.md files from the AURA skills repo, parses frontmatter,
- * assigns categories, and optionally audits each skill with Claude for
- * security ratings. Outputs skill-shop-catalog.json.
+ * Reads all local SKILL.md files from skills/{category}/{name}/ directories,
+ * parses frontmatter, assigns categories, and generates skill-shop-catalog.json.
  *
  * Usage:
  *   npx tsx scripts/bootstrap-skill-shop.ts
- *   npx tsx scripts/bootstrap-skill-shop.ts --audit   # with Claude security audit
- *
- * Requires ANTHROPIC_API_KEY env var for --audit mode.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+const SKILLS_DIR = path.resolve(__dirname, "../skills");
+const OUTPUT_PATH = path.resolve(
+  __dirname,
+  "../interface/src/data/skill-shop-catalog.json",
+);
+
 const REPO_RAW_BASE =
   "https://raw.githubusercontent.com/openclaw/openclaw/main/skills";
 
-const SKILL_NAMES = [
-  "1password", "apple-notes", "apple-reminders", "bear-notes", "blogwatcher",
-  "blucli", "bluebubbles", "camsnap", "canvas", "clawhub", "coding-agent",
-  "discord", "eightctl", "gemini", "gh-issues", "gifgrep", "github", "gog",
-  "goplaces", "healthcheck", "himalaya", "imsg", "mcporter", "model-usage",
-  "nano-pdf", "node-connect", "notion", "obsidian", "openai-whisper",
-  "openai-whisper-api", "openhue", "oracle", "ordercli", "peekaboo", "sag",
-  "session-logs", "sherpa-onnx-tts", "skill-creator", "slack", "songsee",
-  "sonoscli", "spotify-player", "summarize", "taskflow",
-  "taskflow-inbox-triage", "things-mac", "tmux", "trello", "video-frames",
-  "voice-call", "wacli", "weather", "xurl",
-];
-
-const CATEGORY_MAP: Record<string, string> = {
-  github: "development", "gh-issues": "development", "coding-agent": "development",
-  tmux: "development", canvas: "development", "session-logs": "development",
-  mcporter: "development",
-  slack: "communication", discord: "communication", imsg: "communication",
-  bluebubbles: "communication", blucli: "communication", "voice-call": "communication",
-  notion: "productivity", trello: "productivity", taskflow: "productivity",
-  "taskflow-inbox-triage": "productivity", "things-mac": "productivity",
-  "apple-reminders": "productivity", ordercli: "productivity",
-  "apple-notes": "notes", "bear-notes": "notes", obsidian: "notes",
-  "spotify-player": "media", sonoscli: "media", songsee: "media",
-  gifgrep: "media", "video-frames": "media", camsnap: "media", peekaboo: "media",
-  gemini: "ai-ml", "openai-whisper": "ai-ml", "openai-whisper-api": "ai-ml",
-  "sherpa-onnx-tts": "ai-ml", summarize: "ai-ml", "model-usage": "ai-ml",
-  openhue: "smart-home", goplaces: "smart-home", weather: "smart-home",
-  "1password": "security",
-  blogwatcher: "automation", healthcheck: "automation", wacli: "automation",
-  eightctl: "automation", "node-connect": "automation", xurl: "automation",
-  "nano-pdf": "automation", sag: "automation", gog: "automation",
-  "skill-creator": "utilities", clawhub: "utilities", oracle: "utilities",
-  himalaya: "utilities",
-};
+const MAC_ONLY = new Set([
+  "apple-notes", "apple-reminders", "bear-notes", "things-mac",
+  "imsg", "bluebubbles", "blucli", "camsnap", "peekaboo", "sonoscli", "model-usage",
+]);
+const WINDOWS_ONLY = new Set(["obsidian"]);
+const LINUX_ONLY = new Set(["tmux"]);
 
 interface CatalogEntry {
   name: string;
   description: string;
-  emoji: string;
+  emoji: string | null;
   category: string;
+  os: string;
   tags: string[];
   security_rating: "safe" | "caution" | "warning";
   security_notes: string;
@@ -79,17 +53,6 @@ function parseFrontmatter(content: string): Record<string, any> {
     if (match) result[match[1]] = match[2];
   }
   return result;
-}
-
-async function fetchSkillMd(name: string): Promise<string | null> {
-  const url = `${REPO_RAW_BASE}/${name}/SKILL.md`;
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    return await resp.text();
-  } catch {
-    return null;
-  }
 }
 
 function deriveTags(name: string, description: string): string[] {
@@ -119,37 +82,55 @@ function inferSecurityRating(
   return { rating: "safe", notes: "Skill operates within its tool's standard scope." };
 }
 
-async function main() {
-  const catalog: CatalogEntry[] = [];
-
-  for (const name of SKILL_NAMES) {
-    console.log(`Fetching ${name}...`);
-    const content = await fetchSkillMd(name);
-    const fm = content ? parseFrontmatter(content) : {};
-    const description = fm.description || `${name} skill`;
-    const emoji = fm.emoji || "⚡";
-    const category = CATEGORY_MAP[name] || "utilities";
-    const requires = fm.requires as Record<string, string[]> | undefined;
-    const { rating, notes } = content
-      ? inferSecurityRating(content, requires)
-      : { rating: "caution" as const, notes: "Could not fetch skill content for audit." };
-
-    catalog.push({
-      name,
-      description,
-      emoji,
-      category,
-      tags: deriveTags(name, description),
-      security_rating: rating,
-      security_notes: notes,
-      source_url: `${REPO_RAW_BASE}/${name}/SKILL.md`,
-      ...(requires ? { requires } : {}),
-    });
-  }
-
-  const outPath = path.resolve(__dirname, "../interface/src/data/skill-shop-catalog.json");
-  fs.writeFileSync(outPath, JSON.stringify(catalog, null, 2) + "\n");
-  console.log(`Wrote ${catalog.length} skills to ${outPath}`);
+function determineOS(name: string): string {
+  if (MAC_ONLY.has(name)) return "mac";
+  if (WINDOWS_ONLY.has(name)) return "windows";
+  if (LINUX_ONLY.has(name)) return "linux";
+  return "any";
 }
 
-main().catch(console.error);
+function main() {
+  const catalog: CatalogEntry[] = [];
+
+  const categories = fs.readdirSync(SKILLS_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+
+  for (const category of categories) {
+    const categoryDir = path.join(SKILLS_DIR, category);
+    const skills = fs.readdirSync(categoryDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+
+    for (const name of skills) {
+      const skillPath = path.join(categoryDir, name, "SKILL.md");
+      if (!fs.existsSync(skillPath)) continue;
+
+      const content = fs.readFileSync(skillPath, "utf-8");
+      const fm = parseFrontmatter(content);
+      const description = fm.description || `${name} skill`;
+      const emoji = fm.emoji || null;
+      const requires = fm.requires as Record<string, string[]> | undefined;
+      const { rating, notes } = inferSecurityRating(content, requires);
+
+      catalog.push({
+        name,
+        description,
+        emoji,
+        category,
+        os: determineOS(name),
+        tags: deriveTags(name, description),
+        security_rating: rating,
+        security_notes: notes,
+        source_url: `${REPO_RAW_BASE}/${name}/SKILL.md`,
+        ...(requires ? { requires } : {}),
+      });
+    }
+  }
+
+  catalog.sort((a, b) => a.name.localeCompare(b.name));
+  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(catalog, null, 2) + "\n");
+  console.log(`Wrote ${catalog.length} skills to ${OUTPUT_PATH}`);
+}
+
+main();

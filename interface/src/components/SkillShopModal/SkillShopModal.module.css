@@ -439,6 +439,56 @@
   padding: var(--space-2) 0;
 }
 
+/* ── OS Filter Bar ── */
+
+.osFilterBar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  flex-shrink: 0;
+}
+
+.osFilterBtn {
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.osFilterBtn:hover {
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.04));
+  color: var(--color-text-secondary);
+}
+
+.osFilterActive {
+  background: var(--color-overlay-medium, rgba(255, 255, 255, 0.08));
+  color: var(--color-text);
+}
+
+/* ── OS Badge ── */
+
+.osBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
 /* ── Utility ── */
 
 .spin {

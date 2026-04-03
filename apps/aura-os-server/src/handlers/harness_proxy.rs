@@ -376,10 +376,18 @@ pub(crate) async fn uninstall_agent_skill(
 // Install skill from shop (fetch SKILL.md from URL)
 // ---------------------------------------------------------------------------
 
+fn skills_base_dir() -> std::path::PathBuf {
+    std::env::var("SKILLS_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("skills"))
+}
+
 #[derive(Deserialize)]
 pub(crate) struct InstallFromShopBody {
     pub name: String,
-    pub source_url: String,
+    pub category: Option<String>,
+    #[serde(default)]
+    pub source_url: Option<String>,
 }
 
 pub(crate) async fn install_from_shop(
@@ -396,14 +404,21 @@ pub(crate) async fn install_from_shop(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let content = reqwest::Client::new()
-        .get(&body.source_url)
-        .send()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?
-        .text()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let content = if let Some(ref category) = body.category {
+        let local_path = skills_base_dir().join(category).join(&name).join("SKILL.md");
+        std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?
+    } else if let Some(ref source_url) = body.source_url {
+        reqwest::Client::new()
+            .get(source_url)
+            .send()
+            .await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?
+            .text()
+            .await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
 
     let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
     let skill_dir = home.join(".aura").join("skills").join(&name);
@@ -412,8 +427,6 @@ pub(crate) async fn install_from_shop(
     let skill_path = skill_dir.join("SKILL.md");
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Register the skill with the harness. Try POST first (explicit
-    // registration), then fall back to a GET poke for lazy-indexing harnesses.
     let base = harness_base_url();
     let client = reqwest::Client::new();
     let post_ok = client
@@ -449,6 +462,30 @@ pub(crate) async fn install_from_shop(
         StatusCode::CREATED,
         [(header::CONTENT_TYPE, "application/json")],
         resp_json.to_string(),
+    )
+        .into_response())
+}
+
+pub(crate) async fn get_skill_content(
+    Path((category, name)): Path<(String, String)>,
+) -> Result<Response, StatusCode> {
+    let safe = |s: &str| {
+        !s.is_empty()
+            && !s.contains("..")
+            && s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    };
+    if !safe(&category) || !safe(&name) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let local_path = skills_base_dir().join(&category).join(&name).join("SKILL.md");
+    let content = std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?;
+
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
+        content,
     )
         .into_response())
 }

@@ -3,12 +3,21 @@ import { X, Search } from "lucide-react";
 import { SkillShopCategories } from "./SkillShopCategories";
 import { SkillShopGrid } from "./SkillShopGrid";
 import { SkillShopDetail } from "./SkillShopDetail";
+import { OsFilterBar } from "./OsFilterBar";
 import { api } from "../../api/client";
 import catalogData from "../../data/skill-shop-catalog.json";
-import type { SkillCategory, SkillShopCatalogEntry } from "../../types";
+import type { SkillCategory, SkillOS, SkillShopCatalogEntry } from "../../types";
 import styles from "./SkillShopModal.module.css";
 
 const catalog = catalogData as SkillShopCatalogEntry[];
+
+function detectCurrentOS(): SkillOS {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("win")) return "windows";
+  if (ua.includes("mac")) return "mac";
+  if (ua.includes("linux")) return "linux";
+  return "any";
+}
 
 interface SkillShopModalProps {
   isOpen: boolean;
@@ -21,6 +30,7 @@ interface SkillShopModalProps {
 export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose, onInstalled }: SkillShopModalProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<SkillCategory | "all">("all");
+  const [osFilter, setOsFilter] = useState<SkillOS | "all">(detectCurrentOS());
   const [selected, setSelected] = useState<SkillShopCatalogEntry | null>(null);
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [installing, setInstalling] = useState(false);
@@ -40,6 +50,9 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
 
   const filtered = useMemo(() => {
     let result = catalog;
+    if (osFilter !== "all") {
+      result = result.filter((e) => e.os === "any" || e.os === osFilter);
+    }
     if (category !== "all") {
       result = result.filter((e) => e.category === category);
     }
@@ -53,20 +66,18 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
       );
     }
     return result;
-  }, [category, search]);
+  }, [category, osFilter, search]);
 
   const handleInstall = useCallback(async (entry: SkillShopCatalogEntry) => {
     setInstalling(true);
     try {
-      await api.harnessSkills.installFromShop(entry.name, entry.source_url);
+      await api.harnessSkills.installFromShop(entry.name, entry.category);
       if (agentId) {
         await api.harnessSkills.installAgentSkill(agentId, entry.name);
       }
       setInstalledNames((prev) => new Set(prev).add(entry.name));
       onInstalled?.();
     } catch {
-      // Global install succeeded but agent attachment may have failed.
-      // Still mark as installed so the catalog reflects the global state.
       setInstalledNames((prev) => new Set(prev).add(entry.name));
       onInstalled?.();
     }
@@ -92,6 +103,7 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
     setSelected(null);
     setSearch("");
     setCategory("all");
+    setOsFilter(detectCurrentOS());
     onClose();
   }, [onClose]);
 
@@ -121,6 +133,7 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <OsFilterBar selected={osFilter} onSelect={setOsFilter} />
           <button type="button" className={styles.closeBtn} onClick={handleClose}>
             <X size={18} />
           </button>
