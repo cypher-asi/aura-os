@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
-import { useIsStreaming } from "../../hooks/stream/hooks";
+import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
@@ -71,7 +71,7 @@ export function ChatPanel({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const { handleScroll, scrollToBottom, scrollToBottomIfPinned, isReady } = useScrollAnchor(
+  const { handleScroll, scrollToBottom, scrollToBottomIfPinned, holdPosition, isReady } = useScrollAnchor(
     messageAreaRef,
     {
       resetKey: scrollResetKey,
@@ -81,6 +81,21 @@ export function ChatPanel({
 
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
+  const messages = useStreamEvents(streamKey);
+  const prevMessageCountRef = useRef(messages.length);
+  const pendingScrollToTopRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      messages.length > prevMessageCountRef.current &&
+      pendingScrollToTopRef.current
+    ) {
+      pendingScrollToTopRef.current = false;
+      scrollToBottom();
+      requestAnimationFrame(() => holdPosition());
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length, scrollToBottom, holdPosition]);
 
   useEffect(() => {
     if (isMobileLayout) return;
@@ -124,10 +139,11 @@ export function ChatPanel({
           attachments: apiAttachments,
           commands: commandIds,
         });
+        scrollToBottom();
       } else {
+        pendingScrollToTopRef.current = true;
         onSend(content, action ?? null, selectedModel, apiAttachments, commandIds, selectedProjectId);
       }
-      scrollToBottom();
     },
     [buildApiAttachments, commands, isStreaming, onSend, scrollToBottom, selectedModel, selectedProjectId, streamKey],
   );
@@ -225,6 +241,9 @@ export function ChatPanel({
               scrollRef={messageAreaRef}
               emptyState={emptyState}
             />
+            {!isStreaming && messages.length > 0 && (
+              <div className={styles.scrollSpacer} />
+            )}
           </div>
         </div>
 

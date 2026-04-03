@@ -49,11 +49,13 @@ export function useScrollAnchor(
   handleScroll: () => void;
   scrollToBottom: () => void;
   scrollToBottomIfPinned: () => void;
+  holdPosition: () => void;
   isReady: boolean;
 } {
   const { resetKey, contentReady } = options;
 
   const pinnedRef = useRef(true);
+  const holdScrollRef = useRef(false);
   const phaseRef = useRef<"settling" | "active">("settling");
   const guardRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
@@ -174,6 +176,18 @@ export function useScrollAnchor(
       if (phaseRef.current !== "active") return;
       const newSH = el.scrollHeight;
       if (newSH === prevScrollHeightRef.current) return;
+
+      if (holdScrollRef.current) {
+        const contentBelowViewport = newSH - el.scrollTop - el.clientHeight;
+        if (contentBelowViewport > BOTTOM_THRESHOLD_PX) {
+          holdScrollRef.current = false;
+          pinnedRef.current = true;
+          guardedScroll(el, el.scrollHeight, guardRef);
+        }
+        syncHeight();
+        return;
+      }
+
       if (pinnedRef.current) {
         guardedScroll(el, el.scrollHeight, guardRef);
         syncHeight();
@@ -251,6 +265,9 @@ export function useScrollAnchor(
       return;
     }
 
+    if (holdScrollRef.current) {
+      holdScrollRef.current = false;
+    }
     pinnedRef.current = atBottom;
     lastScrollTopRef.current = el.scrollTop;
   }, [ref]);
@@ -273,5 +290,15 @@ export function useScrollAnchor(
     }
   }, [ref]);
 
-  return { handleScroll, scrollToBottom, scrollToBottomIfPinned, isReady };
+  /**
+   * Freeze the current scroll position. Auto-scroll is suppressed until
+   * content grows past the viewport bottom, at which point normal pinned
+   * auto-scroll resumes automatically.
+   */
+  const holdPosition = useCallback(() => {
+    holdScrollRef.current = true;
+    pinnedRef.current = false;
+  }, []);
+
+  return { handleScroll, scrollToBottom, scrollToBottomIfPinned, holdPosition, isReady };
 }
