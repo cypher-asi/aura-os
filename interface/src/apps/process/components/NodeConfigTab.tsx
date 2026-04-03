@@ -74,6 +74,12 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
   const [delaySeconds, setDelaySeconds] = useState(
     node.node_type === "delay" ? String(cfg?.delay_seconds ?? "60") : "60",
   );
+  const [vaultPath, setVaultPath] = useState(
+    node.node_type === "action" ? (cfg?.vault_path as string) ?? "" : "",
+  );
+  const [watchlist, setWatchlist] = useState(
+    node.node_type === "ignition" ? JSON.stringify(cfg?.watchlist ?? {}, null, 2) : "{}",
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
@@ -91,6 +97,8 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
       setArtifactName((c?.artifact_name as string) ?? "");
     }
     if (node.node_type === "delay") setDelaySeconds(String(c?.delay_seconds ?? "60"));
+    if (node.node_type === "action") setVaultPath((c?.vault_path as string) ?? "");
+    if (node.node_type === "ignition") setWatchlist(JSON.stringify(c?.watchlist ?? {}, null, 2));
   }, [node]);
 
   const handleSave = useCallback(async () => {
@@ -105,6 +113,10 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
         config.artifact_name = artifactName;
       }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
+      if (node.node_type === "action" && vaultPath) config.vault_path = vaultPath;
+      if (node.node_type === "ignition" && watchlist) {
+        try { config.watchlist = JSON.parse(watchlist); } catch { /* keep existing */ }
+      }
 
       await processApi.updateNode(processId, node.node_id, {
         label,
@@ -215,6 +227,25 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
                 <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
               </EditField>
             )}
+
+            {node.node_type === "action" && (
+              <EditField label="Vault Path (optional)">
+                <input style={inputStyle} value={vaultPath} onChange={(e) => setVaultPath(e.target.value)} placeholder="e.g. Research/" />
+                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Obsidian vault output folder for publisher nodes</Text>
+              </EditField>
+            )}
+
+            {node.node_type === "ignition" && (
+              <EditField label="Watchlist (JSON)">
+                <textarea
+                  style={{ ...inputStyle, minHeight: 120, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
+                  value={watchlist}
+                  onChange={(e) => setWatchlist(e.target.value)}
+                  placeholder={'{\n  "sources": [\n    {\n      "name": "Cursor",\n      "signals": {\n        "urls": ["https://cursor.com/blog"],\n        "search_keywords": ["Cursor IDE"]\n      }\n    }\n  ]\n}'}
+                />
+                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Structured monitoring sources for research workflows</Text>
+              </EditField>
+            )}
           </div>
         </div>
       </div>
@@ -287,6 +318,22 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Delay</span>
               <Text variant="secondary" size="sm">{String(cfg?.delay_seconds ?? 60)} seconds</Text>
+            </div>
+          )}
+
+          {node.node_type === "action" && (cfg?.vault_path as string) && (
+            <div className={styles.taskField}>
+              <span className={styles.fieldLabel}>Vault Path</span>
+              <Text variant="secondary" size="sm">{cfg.vault_path as string}</Text>
+            </div>
+          )}
+
+          {node.node_type === "ignition" && cfg?.watchlist && (
+            <div className={styles.taskField}>
+              <span className={styles.fieldLabel}>Watchlist</span>
+              <Text variant="secondary" size="sm" style={{ fontFamily: "var(--font-mono)", fontSize: 11, whiteSpace: "pre-wrap" }}>
+                {JSON.stringify(cfg.watchlist, null, 2)}
+              </Text>
             </div>
           )}
         </div>

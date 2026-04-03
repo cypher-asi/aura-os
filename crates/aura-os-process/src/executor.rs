@@ -219,7 +219,28 @@ async fn execute_run(
             continue;
         }
 
-        let upstream_context = upstream_parts.join("\n\n---\n\n");
+        let mut upstream_context = upstream_parts.join("\n\n---\n\n");
+
+        // ── resolve input artifact refs ────────────────────────────────
+        if let Some(refs) = node.config.get("input_artifact_refs").and_then(|v| v.as_array()) {
+            for aref in refs {
+                if let Some(artifact_ctx) = resolve_artifact_ref(aref, store, data_dir).await {
+                    if !upstream_context.is_empty() {
+                        upstream_context.push_str("\n\n---\n\n");
+                    }
+                    upstream_context.push_str(&artifact_ctx);
+                }
+            }
+        }
+
+        // ── inject vault_path into context if configured ───────────────
+        if let Some(vault_path) = node.config.get("vault_path").and_then(|v| v.as_str()) {
+            if !vault_path.is_empty() {
+                upstream_context.push_str(&format!(
+                    "\n\n## Obsidian Vault\n\nWrite output to: {vault_path}"
+                ));
+            }
+        }
 
         // ── broadcast running status ───────────────────────────────────
         let _started_at = Utc::now();
@@ -531,6 +552,41 @@ async fn collect_harness_response(
 fn parse_condition_result(output: &str) -> bool {
     let normalized = output.trim().to_lowercase();
     normalized.contains("true") && !normalized.contains("false")
+}
+
+async fn resolve_artifact_ref(
+    aref: &serde_json::Value,
+    store: &ProcessStore,
+    data_dir: &Path,
+) -> Option<String> {
+    let source_process_id: ProcessId = aref
+        .get("source_process_id")
+        .and_then(|v| v.as_str())
+        .and_then(|s| s.parse().ok())?;
+
+    let artifact_name = aref.get("artifact_name").and_then(|v| v.as_str());
+    let use_latest = aref
+        .get("use_latest")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+
+    if !use_latest {
+        return None;
+    }
+
+    let artifacts = store
+        .list_artifacts_for_process(&source_process_id)
+        .ok()?;
+
+    let matched = if let Some(name) = artifact_name {
+        artifacts.into_iter().filter(|a| a.name == name).last()
+    } else {
+        artifacts.into_iter().last()
+    };
+
+    let artifact = matched?;
+    let file_path = data_dir.join(&artifact.file_path);
+    tokio::fs::read_to_string(&file_path).await.ok()
 }
 
 fn record_event(
