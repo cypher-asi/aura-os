@@ -1,9 +1,12 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Cpu, Play, Pause, Trash2 } from "lucide-react";
 import { Button, PageEmptyState } from "@cypher-asi/zui";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { useProcessStore, LAST_PROCESS_ID_KEY } from "../stores/process-store";
+import { useProcessSidekickStore, type NodeRunStatus } from "../stores/process-sidekick-store";
+import { useEventStore } from "../../../stores/event-store";
+import { EventType } from "../../../types/aura-events";
 import { processApi } from "../../../api/process";
 import { ProcessCanvas } from "./ProcessCanvas";
 import type { ReactNode } from "react";
@@ -21,9 +24,38 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   const removeProcess = useProcessStore((s) => s.removeProcess);
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
 
+  const setNodeStatus = useProcessSidekickStore((s) => s.setNodeStatus);
+  const clearNodeStatuses = useProcessSidekickStore((s) => s.clearNodeStatuses);
+
   const process = processes.find((p) => p.process_id === processId);
   const processNodes = useMemo(() => (processId ? nodes[processId] ?? EMPTY_NODES : EMPTY_NODES), [processId, nodes]);
   const processConnections = useMemo(() => (processId ? connections[processId] ?? EMPTY_CONNECTIONS : EMPTY_CONNECTIONS), [processId, connections]);
+
+  useEffect(() => {
+    const unsub1 = useEventStore.getState().subscribe(EventType.ProcessNodeExecuted, (event) => {
+      const c = event.content;
+      if (c.process_id === processId && c.node_id && c.status) {
+        const status = c.status.toLowerCase();
+        const mapped: NodeRunStatus | undefined =
+          status.includes("running") ? "running"
+          : status.includes("completed") ? "completed"
+          : status.includes("failed") ? "failed"
+          : status.includes("skipped") ? "skipped"
+          : undefined;
+        if (mapped) setNodeStatus(c.node_id, mapped);
+      }
+    });
+    const unsub2 = useEventStore.getState().subscribe(EventType.ProcessRunStarted, (event) => {
+      if (event.content.process_id === processId) clearNodeStatuses();
+    });
+    const unsub3 = useEventStore.getState().subscribe(EventType.ProcessRunCompleted, (event) => {
+      if (event.content.process_id === processId && processId) fetchRuns(processId);
+    });
+    const unsub4 = useEventStore.getState().subscribe(EventType.ProcessRunFailed, (event) => {
+      if (event.content.process_id === processId && processId) fetchRuns(processId);
+    });
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+  }, [processId, setNodeStatus, clearNodeStatuses, fetchRuns]);
 
   const handleToggle = useCallback(async () => {
     if (!process) return;

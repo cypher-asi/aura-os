@@ -109,6 +109,12 @@ export enum EventType {
   // Billing
   CreditBalanceUpdated  = "credit_balance_updated",
 
+  // Process execution
+  ProcessRunStarted     = "process_run_started",
+  ProcessRunCompleted   = "process_run_completed",
+  ProcessRunFailed      = "process_run_failed",
+  ProcessNodeExecuted   = "process_node_executed",
+
   // Other
   LogLine               = "log_line",
   NetworkEvent          = "network_event",
@@ -410,6 +416,28 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.CreditBalanceUpdated; content: {
       balance_cents: number;
       balance_formatted: string;
+    } }
+
+  // ── Process execution ────────────────────────────────────────
+  | { type: EventType.ProcessRunStarted; content: {
+      process_id: string;
+      run_id: string;
+    } }
+  | { type: EventType.ProcessRunCompleted; content: {
+      process_id: string;
+      run_id: string;
+    } }
+  | { type: EventType.ProcessRunFailed; content: {
+      process_id: string;
+      run_id: string;
+      error?: string;
+    } }
+  | { type: EventType.ProcessNodeExecuted; content: {
+      process_id: string;
+      run_id: string;
+      node_id: string;
+      node_type: string;
+      status: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────

@@ -30,6 +30,7 @@ interface ProcessNodeData {
   nodeType: ProcessNodeType;
   prompt?: string;
   agentId?: string;
+  runStatus?: "running" | "completed" | "failed" | "skipped";
   isRenaming?: boolean;
   onRenameSubmit?: (newLabel: string) => void;
   [key: string]: unknown;
@@ -80,11 +81,22 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
     data.agentId ? s.agents.find((a) => a.agent_id === data.agentId) : undefined,
   );
 
+  const statusColor = data.runStatus === "running" ? "#3b82f6"
+    : data.runStatus === "completed" ? "#10b981"
+    : data.runStatus === "failed" ? "#ef4444"
+    : data.runStatus === "skipped" ? "#6b7280"
+    : undefined;
+
+  const borderColor = statusColor ?? (selected ? color : "var(--color-border)");
+  const shadow = statusColor
+    ? `0 0 0 1px ${statusColor}40, 0 0 8px ${statusColor}30`
+    : selected ? `0 0 0 1px ${color}40` : "0 2px 8px rgba(0,0,0,0.2)";
+
   return (
     <div
       style={{
         background: "var(--color-bg, #0d0d1a)",
-        border: `1px solid ${selected ? color : "var(--color-border)"}`,
+        border: `1px solid ${borderColor}`,
         borderRadius: 0,
         padding: "0 12px",
         height: "var(--control-height-sm, 32px)",
@@ -94,7 +106,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
         minWidth: 140,
         maxWidth: 240,
         cursor: "grab",
-        boxShadow: selected ? `0 0 0 1px ${color}40` : "0 2px 8px rgba(0,0,0,0.2)",
+        boxShadow: shadow,
         transition: "border-color 0.15s, box-shadow 0.15s",
       }}
     >

@@ -25,7 +25,7 @@ import type { ProcessNode, ProcessNodeConnection } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
-import { useProcessSidekickStore } from "../stores/process-sidekick-store";
+import { useProcessSidekickStore, type NodeRunStatus } from "../stores/process-sidekick-store";
 import { ProcessNodeCard } from "./ProcessNodeCard";
 
 const nodeTypes = { processNode: ProcessNodeCard };
@@ -41,7 +41,11 @@ interface RenameState {
   onRenameSubmit: (newLabel: string) => void;
 }
 
-function toFlowNodes(nodes: ProcessNode[], renaming?: RenameState): Node[] {
+function toFlowNodes(
+  nodes: ProcessNode[],
+  renaming?: RenameState,
+  nodeStatuses?: Record<string, NodeRunStatus>,
+): Node[] {
   return nodes.map((n) => ({
     id: n.node_id,
     type: "processNode",
@@ -51,6 +55,7 @@ function toFlowNodes(nodes: ProcessNode[], renaming?: RenameState): Node[] {
       nodeType: n.node_type,
       prompt: n.prompt,
       agentId: n.agent_id,
+      runStatus: nodeStatuses?.[n.node_id],
       ...(renaming && renaming.nodeId === n.node_id
         ? { isRenaming: true, onRenameSubmit: renaming.onRenameSubmit }
         : {}),
@@ -147,6 +152,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
   const selectNode = useProcessSidekickStore((s) => s.selectNode);
   const closeNodeInspector = useProcessSidekickStore((s) => s.closeNodeInspector);
+  const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);
 
   const handleRenameSubmit = useCallback(
     async (nodeId: string, newLabel: string) => {
@@ -167,7 +173,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     ? { nodeId: renamingNodeId, onRenameSubmit: (label: string) => handleRenameSubmit(renamingNodeId, label) }
     : undefined;
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes, renameState));
+  const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes, renameState, nodeStatuses));
   const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections, processNodes));
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [nodeCtxMenu, setNodeCtxMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
@@ -175,8 +181,8 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const nodeCtxMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setNodes(toFlowNodes(processNodes, renameState));
-  }, [processNodes, setNodes, renamingNodeId]);
+    setNodes(toFlowNodes(processNodes, renameState, nodeStatuses));
+  }, [processNodes, setNodes, renamingNodeId, nodeStatuses]);
 
   useEffect(() => {
     setEdges(toFlowEdges(processConnections, processNodes));

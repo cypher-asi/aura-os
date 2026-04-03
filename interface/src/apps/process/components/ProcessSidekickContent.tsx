@@ -1,12 +1,16 @@
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
+import type { ProcessArtifact } from "../../../types";
+import { processApi } from "../../../api/process";
 import { EmptyState } from "../../../components/EmptyState";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { NodeInfoTab } from "./NodeInfoTab";
 import { NodeConfigTab } from "./NodeConfigTab";
 import { NodeConnectionsTab } from "./NodeConnectionsTab";
+import { NodeOutputTab } from "./NodeOutputTab";
 import {
   StatCard,
   SectionHeader,
@@ -140,6 +144,17 @@ function StatsView({ runs }: { runs: ProcessRun[] }) {
 }
 
 function RunPreviewBody({ run }: { run: ProcessRun }) {
+  const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
+
+  const loadArtifacts = useCallback(async () => {
+    try {
+      const list = await processApi.listRunArtifacts(run.process_id, run.run_id);
+      setArtifacts(list);
+    } catch { /* ignore */ }
+  }, [run.process_id, run.run_id]);
+
+  useEffect(() => { loadArtifacts(); }, [loadArtifacts]);
+
   return (
     <div style={{ padding: 12, fontSize: 13 }}>
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
@@ -152,6 +167,52 @@ function RunPreviewBody({ run }: { run: ProcessRun }) {
         <div style={{ marginTop: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--color-error)" }}>Error</div>
           <div style={{ background: "var(--color-bg-input)", padding: 8, borderRadius: "var(--radius-sm)", whiteSpace: "pre-wrap" }}>{run.error}</div>
+        </div>
+      )}
+      {artifacts.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Artifacts</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {artifacts.map((a) => (
+              <div
+                key={a.artifact_id}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "6px 8px", border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)", fontSize: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600 }}>{a.name}</div>
+                  <div style={{ color: "var(--color-text-muted)", fontSize: 11 }}>
+                    {a.artifact_type} &middot; {(a.size_bytes / 1024).toFixed(1)} KB
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const content = await processApi.getArtifactContent(a.artifact_id);
+                      const blob = new Blob([content as unknown as string], { type: "text/markdown" });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `${a.name}.md`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch { /* ignore */ }
+                  }}
+                  style={{
+                    background: "transparent", border: "1px solid var(--color-border)",
+                    borderRadius: "var(--radius-sm)", padding: "4px 8px", cursor: "pointer",
+                    fontSize: 11, color: "var(--color-text)",
+                  }}
+                >
+                  Download
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -190,6 +251,7 @@ export function ProcessSidekickContent() {
             {activeNodeTab === "info" && <NodeInfoTab node={selectedNode} />}
             {activeNodeTab === "config" && <NodeConfigTab node={selectedNode} />}
             {activeNodeTab === "connections" && <NodeConnectionsTab node={selectedNode} />}
+            {activeNodeTab === "output" && <NodeOutputTab node={selectedNode} />}
           </div>
         </div>
       </div>

@@ -328,11 +328,11 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             </div>
           )}
 
-          {node.node_type === "ignition" && cfg?.watchlist && (
+          {node.node_type === "ignition" && cfg?.watchlist != null && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Watchlist</span>
               <Text variant="secondary" size="sm" style={{ fontFamily: "var(--font-mono)", fontSize: 11, whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(cfg.watchlist, null, 2)}
+                {String(JSON.stringify(cfg.watchlist, null, 2))}
               </Text>
             </div>
           )}
