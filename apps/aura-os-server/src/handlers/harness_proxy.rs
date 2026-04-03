@@ -475,6 +475,60 @@ pub(crate) async fn install_from_shop(
         .into_response())
 }
 
+pub(crate) async fn discover_skill_paths(
+    Path(name): Path<String>,
+) -> Result<Response, StatusCode> {
+    let paths = match name.as_str() {
+        "obsidian" => discover_obsidian_vaults(),
+        _ => vec![],
+    };
+
+    let resp = serde_json::json!({ "paths": paths });
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        resp.to_string(),
+    )
+        .into_response())
+}
+
+fn discover_obsidian_vaults() -> Vec<String> {
+    let appdata = match std::env::var("APPDATA") {
+        Ok(v) => std::path::PathBuf::from(v),
+        Err(_) => {
+            if let Some(home) = dirs::home_dir() {
+                home.join("Library/Application Support")
+            } else {
+                return vec![];
+            }
+        }
+    };
+
+    let config_path = appdata.join("obsidian").join("obsidian.json");
+    let content = match std::fs::read_to_string(&config_path) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+
+    let Some(vaults) = parsed.get("vaults").and_then(|v| v.as_object()) else {
+        return vec![];
+    };
+
+    vaults
+        .values()
+        .filter_map(|v| {
+            let open = v.get("open").and_then(|o| o.as_bool()).unwrap_or(false);
+            let path = v.get("path").and_then(|p| p.as_str()).map(String::from);
+            if open { path } else { None }
+        })
+        .collect()
+}
+
 pub(crate) async fn get_skill_content(
     Path((category, name)): Path<(String, String)>,
 ) -> Result<Response, StatusCode> {

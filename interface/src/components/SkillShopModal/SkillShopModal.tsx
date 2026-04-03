@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { X, Search } from "lucide-react";
 import { SkillShopCategories } from "./SkillShopCategories";
 import { SkillShopGrid } from "./SkillShopGrid";
-import { SkillShopDetail } from "./SkillShopDetail";
+import { SkillShopDetail, type SkillInstallPermissions } from "./SkillShopDetail";
 import { OsFilterBar } from "./OsFilterBar";
 import { api } from "../../api/client";
 import catalogData from "../../data/skill-shop-catalog.json";
@@ -68,7 +68,7 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
     return result;
   }, [category, osFilter, search]);
 
-  const handleInstall = useCallback(async (entry: SkillShopCatalogEntry) => {
+  const handleInstall = useCallback(async (entry: SkillShopCatalogEntry, perms?: SkillInstallPermissions) => {
     setInstalling(true);
     try {
       await api.harnessSkills.installFromShop(entry.name, entry.category);
@@ -77,8 +77,8 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
           agentId,
           entry.name,
           undefined,
-          entry.permissions?.paths,
-          entry.permissions?.commands,
+          perms?.paths,
+          perms?.commands,
         );
       }
       setInstalledNames((prev) => new Set(prev).add(entry.name));
@@ -162,7 +162,7 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
                 installing={installing}
                 uninstalling={uninstalling}
                 onBack={() => setSelected(null)}
-                onInstall={() => handleInstall(selected)}
+                onInstall={(perms) => handleInstall(selected, perms)}
                 onUninstall={() => handleUninstall(selected)}
               />
             ) : (

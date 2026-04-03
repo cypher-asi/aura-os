@@ -561,6 +561,11 @@ fn harness_proxy_routes() -> Router<AppState> {
             "/api/harness/agents/:agent_id/skills/:name",
             delete(harness_proxy::uninstall_agent_skill),
         )
+        // Skill path discovery
+        .route(
+            "/api/skills/:name/discover-paths",
+            get(harness_proxy::discover_skill_paths),
+        )
         // Local skill content
         .route(
             "/api/skills/:category/:name/content",

@@ -403,6 +403,76 @@
   border-radius: 9999px;
 }
 
+/* ── Permission editor ── */
+
+.permAddRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-1);
+}
+
+.permAddInput {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  outline: none;
+}
+
+.permAddInput:focus {
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.permAddInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.permAddBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.permAddBtn:hover {
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.04));
+  color: var(--color-text);
+}
+
+.permRemoveBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.permRemoveBtn:hover {
+  background: rgba(232, 17, 35, 0.15);
+  color: #e81123;
+}
+
 /* ── View Source ── */
 
 .viewSourceBtn {

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Text, Badge, Button } from "@cypher-asi/zui";
-import { ArrowLeft, Check, Loader2, Terminal, Key, Settings, FileText, FolderOpen, Wrench } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Terminal, Key, Settings, FileText, FolderOpen, Wrench, Plus, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { SkillIcon } from "./SkillIcon";
@@ -19,13 +19,18 @@ function stripFrontmatter(raw: string): string {
   return trimmed.slice(end + 3).trimStart();
 }
 
+export interface SkillInstallPermissions {
+  paths: string[];
+  commands: string[];
+}
+
 interface SkillShopDetailProps {
   entry: SkillShopCatalogEntry;
   installed: boolean;
   installing: boolean;
   uninstalling: boolean;
   onBack: () => void;
-  onInstall: () => void;
+  onInstall: (perms: SkillInstallPermissions) => void;
   onUninstall: () => void;
 }
 
@@ -43,6 +48,58 @@ export function SkillShopDetail({
   const [sourceLoading, setSourceLoading] = useState(false);
   const [sourceError, setSourceError] = useState(false);
   const fetchedUrlRef = useRef<string | null>(null);
+
+  const [approvedPaths, setApprovedPaths] = useState<string[]>([]);
+  const [approvedCommands, setApprovedCommands] = useState<string[]>([]);
+  const [newPath, setNewPath] = useState("");
+  const [newCommand, setNewCommand] = useState("");
+  const [discoveredPaths, setDiscoveredPaths] = useState<string[]>([]);
+
+  useEffect(() => {
+    setApprovedPaths(entry.permissions?.paths ?? []);
+    setApprovedCommands(entry.permissions?.commands ?? []);
+    setNewPath("");
+    setNewCommand("");
+  }, [entry.name, entry.permissions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(resolveApiUrl(`/api/skills/${entry.name}/discover-paths`), { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (cancelled || !data?.paths?.length) return;
+        setDiscoveredPaths(data.paths);
+        setApprovedPaths((prev) => {
+          const set = new Set(prev);
+          for (const p of data.paths) set.add(p);
+          return [...set];
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [entry.name]);
+
+  const addPath = useCallback(() => {
+    const p = newPath.trim();
+    if (!p) return;
+    setApprovedPaths((prev) => prev.includes(p) ? prev : [...prev, p]);
+    setNewPath("");
+  }, [newPath]);
+
+  const removePath = useCallback((p: string) => {
+    setApprovedPaths((prev) => prev.filter((x) => x !== p));
+  }, []);
+
+  const addCommand = useCallback(() => {
+    const c = newCommand.trim();
+    if (!c) return;
+    setApprovedCommands((prev) => prev.includes(c) ? prev : [...prev, c]);
+    setNewCommand("");
+  }, [newCommand]);
+
+  const removeCommand = useCallback((c: string) => {
+    setApprovedCommands((prev) => prev.filter((x) => x !== c));
+  }, []);
 
   useEffect(() => {
     if (!sourceOpen) return;
@@ -111,7 +168,7 @@ export function SkillShopDetail({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onInstall}
+              onClick={() => onInstall({ paths: approvedPaths, commands: approvedCommands })}
               disabled={installing}
               style={{ background: "transparent", borderColor: "rgba(255,255,255,0.6)", color: "#fff" }}
             >
@@ -138,25 +195,78 @@ export function SkillShopDetail({
           </div>
         </div>
 
-        {entry.permissions && (
+        {!installed && (
           <div className={styles.detailSection}>
-            <Text size="xs" variant="muted" weight="medium">Permissions</Text>
+            <Text size="xs" variant="muted" weight="medium">Approved Paths</Text>
+            <Text size="xs" variant="muted" style={{ marginTop: 2, marginBottom: 6 }}>
+              Directories this skill can read/write. Add your data paths here.
+            </Text>
             <div className={styles.detailRequirements}>
-              {entry.permissions.paths?.map((p) => (
+              {approvedPaths.map((p) => (
                 <div key={p} className={styles.requirementItem}>
                   <FolderOpen size={12} />
-                  <Text size="sm">{p}</Text>
-                  <Badge variant="pending" style={{ fontSize: 9 }}>path</Badge>
+                  <Text size="sm" style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: 11 }}>{p}</Text>
+                  {discoveredPaths.includes(p) && <Badge variant="running" style={{ fontSize: 9 }}>discovered</Badge>}
+                  <button type="button" className={styles.permRemoveBtn} onClick={() => removePath(p)} title="Remove">
+                    <X size={10} />
+                  </button>
                 </div>
               ))}
-              {entry.permissions.commands?.map((c) => (
+              <div className={styles.permAddRow}>
+                <input
+                  type="text"
+                  className={styles.permAddInput}
+                  placeholder="C:\path\to\directory"
+                  value={newPath}
+                  onChange={(e) => setNewPath(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addPath()}
+                />
+                <button type="button" className={styles.permAddBtn} onClick={addPath} title="Add path">
+                  <Plus size={12} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!installed && (
+          <div className={styles.detailSection}>
+            <Text size="xs" variant="muted" weight="medium">Approved Commands</Text>
+            <Text size="xs" variant="muted" style={{ marginTop: 2, marginBottom: 6 }}>
+              Shell commands this skill is allowed to execute.
+            </Text>
+            <div className={styles.detailRequirements}>
+              {approvedCommands.map((c) => (
                 <div key={c} className={styles.requirementItem}>
                   <Terminal size={12} />
-                  <Text size="sm">{c}</Text>
-                  <Badge variant="pending" style={{ fontSize: 9 }}>command</Badge>
+                  <Text size="sm" style={{ flex: 1 }}>{c}</Text>
+                  <button type="button" className={styles.permRemoveBtn} onClick={() => removeCommand(c)} title="Remove">
+                    <X size={10} />
+                  </button>
                 </div>
               ))}
-              {entry.permissions.tools?.map((t) => (
+              <div className={styles.permAddRow}>
+                <input
+                  type="text"
+                  className={styles.permAddInput}
+                  placeholder="command prefix"
+                  value={newCommand}
+                  onChange={(e) => setNewCommand(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addCommand()}
+                />
+                <button type="button" className={styles.permAddBtn} onClick={addCommand} title="Add command">
+                  <Plus size={12} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {entry.permissions?.tools && entry.permissions.tools.length > 0 && (
+          <div className={styles.detailSection}>
+            <Text size="xs" variant="muted" weight="medium">Tools Used</Text>
+            <div className={styles.detailRequirements}>
+              {entry.permissions.tools.map((t) => (
                 <div key={t} className={styles.requirementItem}>
                   <Wrench size={12} />
                   <Text size="sm">{t}</Text>
