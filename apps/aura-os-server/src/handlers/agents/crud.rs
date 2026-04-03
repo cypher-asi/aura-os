@@ -158,6 +158,7 @@ pub(crate) async fn create_agent(
         }
     }
 
+    let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }
 
@@ -356,6 +357,7 @@ pub(crate) async fn update_agent(
         .await
         .map_err(map_network_error)?;
     let agent = agent_from_network(&net_agent);
+    let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }
 
@@ -390,6 +392,7 @@ pub(crate) async fn delete_agent(
         .delete_agent(&agent_id.to_string(), &jwt)
         .await
         .map_err(map_network_error)?;
+    let _ = state.agent_service.delete_agent_shadow(&agent_id);
     Ok(Json(()))
 }
 
