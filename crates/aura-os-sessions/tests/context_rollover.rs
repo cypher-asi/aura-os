@@ -231,6 +231,9 @@ async fn update_context_usage_accumulates() {
             session_id: session.session_id,
             input_tokens: 20_000,
             output_tokens: 20_000,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            context_usage_estimate: None,
         })
         .await
         .expect("context usage update should succeed");
@@ -250,6 +253,9 @@ async fn update_context_usage_accumulates() {
             session_id: session.session_id,
             input_tokens: 40_000,
             output_tokens: 40_000,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            context_usage_estimate: None,
         })
         .await
         .expect("context usage update should succeed");
@@ -295,6 +301,9 @@ async fn context_usage_caps_at_one() {
             session_id: session.session_id,
             input_tokens: 250_000,
             output_tokens: 250_000,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            context_usage_estimate: None,
         })
         .await
         .expect("context usage update should succeed");
@@ -303,6 +312,50 @@ async fn context_usage_caps_at_one() {
         updated.context_usage_estimate, 1.0,
         "usage should cap at 1.0"
     );
+}
+
+#[tokio::test]
+async fn exact_context_usage_overrides_additive_estimate() {
+    let (storage_url, _db) = start_mock_storage().await;
+    let tmp = tempfile::TempDir::new().expect("temp dir should be created");
+    let store =
+        Arc::new(aura_os_store::RocksStore::open(tmp.path()).expect("RocksStore should open"));
+    store_test_jwt(&store);
+
+    let svc = make_session_service(&store, &storage_url, 0.8);
+
+    let pid = ProjectId::new();
+    let aid = AgentInstanceId::new();
+
+    let session = svc
+        .create_session(CreateSessionParams {
+            agent_instance_id: aid,
+            project_id: pid,
+            active_task_id: None,
+            summary: String::new(),
+            user_id: None,
+            model: None,
+        })
+        .await
+        .expect("session creation should succeed");
+
+    let updated = svc
+        .update_context_usage(UpdateContextUsageParams {
+            project_id: pid,
+            agent_instance_id: aid,
+            session_id: session.session_id,
+            input_tokens: 12_000,
+            output_tokens: 4_000,
+            total_input_tokens: Some(120_000),
+            total_output_tokens: Some(30_000),
+            context_usage_estimate: Some(0.73),
+        })
+        .await
+        .expect("context usage update should succeed");
+
+    assert_eq!(updated.total_input_tokens, 120_000);
+    assert_eq!(updated.total_output_tokens, 30_000);
+    assert!((updated.context_usage_estimate - 0.73).abs() < 0.001);
 }
 
 #[tokio::test]
@@ -338,6 +391,9 @@ async fn end_to_end_usage_triggers_rollover() {
         session_id: session.session_id,
         input_tokens: 30_000,
         output_tokens: 30_000,
+        total_input_tokens: None,
+        total_output_tokens: None,
+        context_usage_estimate: None,
     })
     .await
     .expect("context usage update should succeed");
@@ -358,6 +414,9 @@ async fn end_to_end_usage_triggers_rollover() {
         session_id: session.session_id,
         input_tokens: 30_000,
         output_tokens: 30_000,
+        total_input_tokens: None,
+        total_output_tokens: None,
+        context_usage_estimate: None,
     })
     .await
     .expect("context usage update should succeed");

@@ -37,6 +37,7 @@ mod tests {
             org_service: Arc::new(OrgService::new(store.clone())),
             billing_client: Arc::new(BillingClient::new()),
             automaton_client: Arc::new(AutomatonClient::new("http://localhost:0".into())),
+            orbit_client: None,
             network_client: None,
             storage_client: None,
             store: store.clone(),

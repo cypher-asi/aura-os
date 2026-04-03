@@ -201,39 +201,41 @@ impl SuperAgentStream {
                 return self.messages;
             }
 
-            let (stop_reason, usage) =
-                match self.process_stream_response(resp).await {
-                    Ok(outcome) => outcome,
-                    Err(e) => {
-                        self.emit(HarnessOutbound::Error(ErrorMsg {
-                            code: "stream_parse_error".into(),
-                            message: format!("Failed to parse Claude stream: {e}"),
-                            recoverable: false,
-                        }));
-                        return self.messages;
-                    }
-                };
+            let (stop_reason, usage) = match self.process_stream_response(resp).await {
+                Ok(outcome) => outcome,
+                Err(e) => {
+                    self.emit(HarnessOutbound::Error(ErrorMsg {
+                        code: "stream_parse_error".into(),
+                        message: format!("Failed to parse Claude stream: {e}"),
+                        recoverable: false,
+                    }));
+                    return self.messages;
+                }
+            };
 
             cumulative_input += usage.input_tokens;
             cumulative_output += usage.output_tokens;
 
             if stop_reason.as_deref() != Some("tool_use") {
-                self.emit(HarnessOutbound::AssistantMessageEnd(
-                    AssistantMessageEnd {
-                        message_id: msg_id,
-                        stop_reason: stop_reason.unwrap_or_else(|| "end_turn".into()),
-                        usage: SessionUsage {
-                            input_tokens: usage.input_tokens,
-                            output_tokens: usage.output_tokens,
-                            cumulative_input_tokens: cumulative_input,
-                            cumulative_output_tokens: cumulative_output,
-                            context_utilization: 0.0,
-                            model: self.model.clone(),
-                            provider: "anthropic".into(),
-                        },
-                        files_changed: FilesChanged::default(),
+                self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
+                    message_id: msg_id,
+                    stop_reason: stop_reason.unwrap_or_else(|| "end_turn".into()),
+                    usage: SessionUsage {
+                        input_tokens: usage.input_tokens,
+                        output_tokens: usage.output_tokens,
+                        estimated_context_tokens: 0,
+                        cache_creation_input_tokens: 0,
+                        cache_read_input_tokens: 0,
+                        cumulative_input_tokens: cumulative_input,
+                        cumulative_output_tokens: cumulative_output,
+                        cumulative_cache_creation_input_tokens: 0,
+                        cumulative_cache_read_input_tokens: 0,
+                        context_utilization: 0.0,
+                        model: self.model.clone(),
+                        provider: "anthropic".into(),
                     },
-                ));
+                    files_changed: FilesChanged::default(),
+                }));
                 return self.messages;
             }
 
@@ -241,22 +243,25 @@ impl SuperAgentStream {
         }
 
         warn!("Super Agent hit max tool turns ({MAX_TOOL_TURNS})");
-        self.emit(HarnessOutbound::AssistantMessageEnd(
-            AssistantMessageEnd {
-                message_id: msg_id,
-                stop_reason: "max_turns".into(),
-                usage: SessionUsage {
-                    input_tokens: 0,
-                    output_tokens: 0,
-                    cumulative_input_tokens: cumulative_input,
-                    cumulative_output_tokens: cumulative_output,
-                    context_utilization: 0.0,
-                    model: self.model.clone(),
-                    provider: "anthropic".into(),
-                },
-                files_changed: FilesChanged::default(),
+        self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
+            message_id: msg_id,
+            stop_reason: "max_turns".into(),
+            usage: SessionUsage {
+                input_tokens: 0,
+                output_tokens: 0,
+                estimated_context_tokens: 0,
+                cache_creation_input_tokens: 0,
+                cache_read_input_tokens: 0,
+                cumulative_input_tokens: cumulative_input,
+                cumulative_output_tokens: cumulative_output,
+                cumulative_cache_creation_input_tokens: 0,
+                cumulative_cache_read_input_tokens: 0,
+                context_utilization: 0.0,
+                model: self.model.clone(),
+                provider: "anthropic".into(),
             },
-        ));
+            files_changed: FilesChanged::default(),
+        }));
         self.messages
     }
 
@@ -345,11 +350,9 @@ impl SuperAgentStream {
                                 }
                                 Some("thinking_delta") => {
                                     if let Some(ref thinking) = delta.thinking {
-                                        self.emit(HarnessOutbound::ThinkingDelta(
-                                            ThinkingDelta {
-                                                thinking: thinking.clone(),
-                                            },
-                                        ));
+                                        self.emit(HarnessOutbound::ThinkingDelta(ThinkingDelta {
+                                            thinking: thinking.clone(),
+                                        }));
                                     }
                                 }
                                 Some("input_json_delta") => {
@@ -376,8 +379,7 @@ impl SuperAgentStream {
                             Some("tool_use") => {
                                 if let Some(acc) = tool_accumulators.last() {
                                     let input: Value =
-                                        serde_json::from_str(&acc.input_json)
-                                            .unwrap_or(json!({}));
+                                        serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
                                     assistant_content_blocks.push(json!({
                                         "type": "tool_use",
                                         "id": acc.id,
@@ -423,8 +425,7 @@ impl SuperAgentStream {
             let mut tool_results: Vec<Value> = Vec::new();
 
             for acc in &tool_accumulators {
-                let input: Value =
-                    serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
+                let input: Value = serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
 
                 info!(tool = %acc.name, id = %acc.id, "Executing super agent tool");
 
@@ -443,8 +444,8 @@ impl SuperAgentStream {
                     }
                 };
 
-                let result_str = serde_json::to_string(&result.content)
-                    .unwrap_or_else(|_| "{}".to_string());
+                let result_str =
+                    serde_json::to_string(&result.content).unwrap_or_else(|_| "{}".to_string());
 
                 self.emit(HarnessOutbound::ToolResult(ToolResultMsg {
                     name: acc.name.clone(),

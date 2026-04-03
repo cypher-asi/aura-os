@@ -10,6 +10,7 @@ use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, T
 use aura_os_link::{AutomatonStartError, AutomatonStartParams};
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
+use aura_os_storage::StorageTaskFileChangeSummary;
 use aura_os_tasks::TaskService;
 
 use super::projects_helpers::resolve_agent_instance_workspace_path;
@@ -225,11 +226,101 @@ fn classify_run_command_steps(
     kinds
 }
 
+#[derive(Clone, Debug, Default)]
+struct TurnUsageSnapshot {
+    input_tokens: u64,
+    output_tokens: u64,
+    cache_creation_input_tokens: u64,
+    cache_read_input_tokens: u64,
+    cumulative_input_tokens: Option<u64>,
+    cumulative_output_tokens: Option<u64>,
+    cumulative_cache_creation_input_tokens: Option<u64>,
+    cumulative_cache_read_input_tokens: Option<u64>,
+    estimated_context_tokens: Option<u64>,
+    context_utilization: Option<f64>,
+    model: Option<String>,
+    provider: Option<String>,
+}
+
+fn usage_payload(event: &serde_json::Value) -> &serde_json::Value {
+    event.get("usage").unwrap_or(event)
+}
+
+fn extract_u64(value: &serde_json::Value, key: &str) -> Option<u64> {
+    value.get(key).and_then(serde_json::Value::as_u64)
+}
+
+fn extract_string(value: &serde_json::Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+fn extract_turn_usage(event: &serde_json::Value) -> Option<TurnUsageSnapshot> {
+    let usage = usage_payload(event);
+    let input_tokens = extract_u64(usage, "input_tokens")?;
+    let output_tokens = extract_u64(usage, "output_tokens")?;
+
+    Some(TurnUsageSnapshot {
+        input_tokens,
+        output_tokens,
+        cache_creation_input_tokens: extract_u64(usage, "cache_creation_input_tokens")
+            .unwrap_or_default(),
+        cache_read_input_tokens: extract_u64(usage, "cache_read_input_tokens").unwrap_or_default(),
+        cumulative_input_tokens: extract_u64(usage, "cumulative_input_tokens"),
+        cumulative_output_tokens: extract_u64(usage, "cumulative_output_tokens"),
+        cumulative_cache_creation_input_tokens: extract_u64(
+            usage,
+            "cumulative_cache_creation_input_tokens",
+        ),
+        cumulative_cache_read_input_tokens: extract_u64(
+            usage,
+            "cumulative_cache_read_input_tokens",
+        ),
+        estimated_context_tokens: extract_u64(usage, "estimated_context_tokens"),
+        context_utilization: usage
+            .get("context_utilization")
+            .and_then(serde_json::Value::as_f64),
+        model: extract_string(usage, "model"),
+        provider: extract_string(usage, "provider"),
+    })
+}
+
 fn extract_token_usage(event: &serde_json::Value) -> Option<(u64, u64)> {
-    Some((
-        event.get("input_tokens")?.as_u64()?,
-        event.get("output_tokens")?.as_u64()?,
-    ))
+    let usage = extract_turn_usage(event)?;
+    Some((usage.input_tokens, usage.output_tokens))
+}
+
+fn extract_files_changed(event: &serde_json::Value) -> Vec<StorageTaskFileChangeSummary> {
+    let Some(files_changed) = event.get("files_changed") else {
+        return Vec::new();
+    };
+
+    [
+        ("create", "created"),
+        ("modify", "modified"),
+        ("delete", "deleted"),
+    ]
+    .into_iter()
+    .flat_map(|(op, key)| {
+        files_changed
+            .get(key)
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(move |value| {
+                value.as_str().map(|path| StorageTaskFileChangeSummary {
+                    op: op.to_string(),
+                    path: path.to_string(),
+                    lines_added: 0,
+                    lines_removed: 0,
+                })
+            })
+    })
+    .collect()
 }
 
 fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
@@ -240,34 +331,73 @@ fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
     ]
 }
 
-fn lookup_model_rates(model: &str) -> (f64, f64) {
+#[derive(Clone, Copy, Debug)]
+struct ModelRates {
+    input: f64,
+    output: f64,
+    cache_write: f64,
+    cache_read: f64,
+}
+
+fn lookup_model_rates(model: &str) -> ModelRates {
+    let normalized_model = model.trim().to_ascii_lowercase();
     let mut exact: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| *candidate == model)
+        .filter(|(candidate, _, _)| *candidate == normalized_model)
         .collect();
     if let Some((_, input, output)) = exact.pop() {
-        return (input, output);
+        return ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        };
     }
 
     let mut partial: Vec<_> = default_fee_schedule()
         .into_iter()
-        .filter(|(candidate, _, _)| model.starts_with(candidate) || candidate.starts_with(model))
+        .filter(|(candidate, _, _)| {
+            normalized_model.starts_with(candidate) || candidate.starts_with(&normalized_model)
+        })
         .collect();
     if let Some((_, input, output)) = partial.pop() {
-        return (input, output);
+        return ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        };
     }
 
     default_fee_schedule()
         .into_iter()
         .next()
-        .map(|(_, input, output)| (input, output))
-        .unwrap_or((5.0, 25.0))
+        .map(|(_, input, output)| ModelRates {
+            input,
+            output,
+            cache_write: input * 1.25,
+            cache_read: input * 0.10,
+        })
+        .unwrap_or(ModelRates {
+            input: 5.0,
+            output: 25.0,
+            cache_write: 6.25,
+            cache_read: 0.5,
+        })
 }
 
-fn estimate_usage_cost_usd(model: &str, input_tokens: u64, output_tokens: u64) -> f64 {
-    let (input_rate, output_rate) = lookup_model_rates(model);
-    input_tokens as f64 * input_rate / 1_000_000.0
-        + output_tokens as f64 * output_rate / 1_000_000.0
+fn estimate_usage_cost_usd(
+    model: &str,
+    input_tokens: u64,
+    output_tokens: u64,
+    cache_creation_input_tokens: u64,
+    cache_read_input_tokens: u64,
+) -> f64 {
+    let rates = lookup_model_rates(model);
+    input_tokens as f64 * rates.input / 1_000_000.0
+        + output_tokens as f64 * rates.output / 1_000_000.0
+        + cache_creation_input_tokens as f64 * rates.cache_write / 1_000_000.0
+        + cache_read_input_tokens as f64 * rates.cache_read / 1_000_000.0
 }
 
 #[derive(Clone)]
@@ -282,15 +412,21 @@ struct UsageReportingContext {
 async fn report_automaton_usage(
     usage: &UsageReportingContext,
     project_id: ProjectId,
-    input_tokens: u64,
-    output_tokens: u64,
+    turn_usage: &TurnUsageSnapshot,
 ) {
-    let estimated_cost_usd = estimate_usage_cost_usd(&usage.model, input_tokens, output_tokens);
+    let model = turn_usage.model.as_deref().unwrap_or(&usage.model);
+    let estimated_cost_usd = estimate_usage_cost_usd(
+        model,
+        turn_usage.input_tokens,
+        turn_usage.output_tokens,
+        turn_usage.cache_creation_input_tokens,
+        turn_usage.cache_read_input_tokens,
+    );
     let req = ReportUsageRequest {
         user_id: usage.network_user_id.clone(),
-        model: usage.model.clone(),
-        input_tokens,
-        output_tokens,
+        model: model.to_string(),
+        input_tokens: turn_usage.input_tokens,
+        output_tokens: turn_usage.output_tokens,
         estimated_cost_usd,
         org_id: usage.org_id.clone(),
         agent_id: None,
@@ -303,7 +439,7 @@ async fn report_automaton_usage(
         .report_usage(&req, &usage.access_token)
         .await
     {
-        warn!(%project_id, model = %usage.model, %error, "Failed to report automaton usage");
+        warn!(%project_id, model, %error, "Failed to report automaton usage");
     }
 }
 
@@ -638,6 +774,50 @@ fn forward_automaton_events(params: ForwardParams) {
                                     {
                                         entry.live_output.push_str("\n\n");
                                     }
+                                    if let Some(turn_usage) = extract_turn_usage(&event) {
+                                        entry.saw_rich_usage = true;
+                                        entry.input_tokens = turn_usage.input_tokens;
+                                        entry.output_tokens = turn_usage.output_tokens;
+                                        entry.total_input_tokens =
+                                            turn_usage.cumulative_input_tokens.unwrap_or(
+                                                entry.total_input_tokens + turn_usage.input_tokens,
+                                            );
+                                        entry.total_output_tokens =
+                                            turn_usage.cumulative_output_tokens.unwrap_or(
+                                                entry.total_output_tokens
+                                                    + turn_usage.output_tokens,
+                                            );
+                                        entry.total_cache_creation_input_tokens = turn_usage
+                                            .cumulative_cache_creation_input_tokens
+                                            .unwrap_or(
+                                                entry.total_cache_creation_input_tokens
+                                                    + turn_usage.cache_creation_input_tokens,
+                                            );
+                                        entry.total_cache_read_input_tokens = turn_usage
+                                            .cumulative_cache_read_input_tokens
+                                            .unwrap_or(
+                                                entry.total_cache_read_input_tokens
+                                                    + turn_usage.cache_read_input_tokens,
+                                            );
+                                        if let Some(estimated_context_tokens) =
+                                            turn_usage.estimated_context_tokens
+                                        {
+                                            entry.estimated_context_tokens =
+                                                estimated_context_tokens;
+                                        }
+                                        entry.context_usage_estimate =
+                                            turn_usage.context_utilization;
+                                        if let Some(model) = turn_usage.model {
+                                            entry.model = Some(model);
+                                        }
+                                        if let Some(provider) = turn_usage.provider {
+                                            entry.provider = Some(provider);
+                                        }
+                                    }
+                                    let files_changed = extract_files_changed(&event);
+                                    if !files_changed.is_empty() {
+                                        entry.files_changed = files_changed;
+                                    }
                                 }
                                 "build_verification_skipped"
                                 | "build_verification_started"
@@ -653,11 +833,15 @@ fn forward_automaton_events(params: ForwardParams) {
                                     entry.test_steps.push(event.clone());
                                 }
                                 "token_usage" => {
-                                    if let Some((input_tokens, output_tokens)) =
-                                        extract_token_usage(&event)
-                                    {
-                                        entry.total_input_tokens += input_tokens;
-                                        entry.total_output_tokens += output_tokens;
+                                    if !entry.saw_rich_usage {
+                                        if let Some((input_tokens, output_tokens)) =
+                                            extract_token_usage(&event)
+                                        {
+                                            entry.input_tokens = input_tokens;
+                                            entry.output_tokens = output_tokens;
+                                            entry.total_input_tokens += input_tokens;
+                                            entry.total_output_tokens += output_tokens;
+                                        }
                                     }
                                 }
                                 _ => {
@@ -676,33 +860,55 @@ fn forward_automaton_events(params: ForwardParams) {
                         }
                     }
 
-                    if event_type == "token_usage" {
-                        if let (Some(session_id), Some((input_tokens, output_tokens))) =
-                            (current_session_id, extract_token_usage(&event))
+                    if event_type == "assistant_message_end" {
+                        if let (Some(session_id), Some(turn_usage)) =
+                            (current_session_id, extract_turn_usage(&event))
                         {
                             if let Err(error) = session_service
                                 .update_context_usage(UpdateContextUsageParams {
                                     project_id,
                                     agent_instance_id,
                                     session_id,
-                                    input_tokens,
-                                    output_tokens,
+                                    input_tokens: turn_usage.input_tokens,
+                                    output_tokens: turn_usage.output_tokens,
+                                    total_input_tokens: turn_usage.cumulative_input_tokens,
+                                    total_output_tokens: turn_usage.cumulative_output_tokens,
+                                    context_usage_estimate: turn_usage.context_utilization,
                                 })
                                 .await
                             {
-                                warn!(%session_id, %error, "Failed to persist automaton token usage");
+                                warn!(%session_id, %error, "Failed to persist automaton session usage");
                             }
                         }
-                        if let (Some(usage_reporting), Some((input_tokens, output_tokens))) =
-                            (usage_reporting.as_ref(), extract_token_usage(&event))
+                        if let (Some(usage_reporting), Some(turn_usage)) =
+                            (usage_reporting.as_ref(), extract_turn_usage(&event))
                         {
-                            report_automaton_usage(
-                                usage_reporting,
-                                project_id,
-                                input_tokens,
-                                output_tokens,
-                            )
-                            .await;
+                            report_automaton_usage(usage_reporting, project_id, &turn_usage).await;
+                        }
+                    } else if event_type == "token_usage" {
+                        if let (Some(session_id), Some(turn_usage)) =
+                            (current_session_id, extract_turn_usage(&event))
+                        {
+                            if let Err(error) = session_service
+                                .update_context_usage(UpdateContextUsageParams {
+                                    project_id,
+                                    agent_instance_id,
+                                    session_id,
+                                    input_tokens: turn_usage.input_tokens,
+                                    output_tokens: turn_usage.output_tokens,
+                                    total_input_tokens: None,
+                                    total_output_tokens: None,
+                                    context_usage_estimate: None,
+                                })
+                                .await
+                            {
+                                warn!(%session_id, %error, "Failed to persist fallback automaton token usage");
+                            }
+                        }
+                        if let (Some(usage_reporting), Some(turn_usage)) =
+                            (usage_reporting.as_ref(), extract_turn_usage(&event))
+                        {
+                            report_automaton_usage(usage_reporting, project_id, &turn_usage).await;
                         }
                     }
 
@@ -746,8 +952,9 @@ fn forward_automaton_events(params: ForwardParams) {
                                         order_index: None,
                                         dependency_ids: None,
                                         execution_notes: None,
-                                        files_changed: None,
-                                        model: None,
+                                        files_changed: (!cached.files_changed.is_empty())
+                                            .then_some(cached.files_changed.clone()),
+                                        model: cached.model.clone(),
                                         total_input_tokens: Some(cached.total_input_tokens),
                                         total_output_tokens: Some(cached.total_output_tokens),
                                         session_id: Some(session_id),
@@ -803,8 +1010,9 @@ fn forward_automaton_events(params: ForwardParams) {
                                         order_index: None,
                                         dependency_ids: None,
                                         execution_notes: None,
-                                        files_changed: None,
-                                        model: None,
+                                        files_changed: (!cached.files_changed.is_empty())
+                                            .then_some(cached.files_changed.clone()),
+                                        model: cached.model.clone(),
                                         total_input_tokens: Some(cached.total_input_tokens),
                                         total_output_tokens: Some(cached.total_output_tokens),
                                         session_id: Some(session_id),
@@ -862,7 +1070,9 @@ fn forward_automaton_events(params: ForwardParams) {
                                     tokio::spawn(async move {
                                         if let Err(e) = super::agents::generate_session_summary(
                                             &sc, &hclient, &rurl, &j, &sid,
-                                        ).await {
+                                        )
+                                        .await
+                                        {
                                             warn!(session_id = %sid, error = %e, "Background session summary generation failed");
                                         }
                                     });
@@ -901,6 +1111,26 @@ fn forward_automaton_events(params: ForwardParams) {
                     }
                     let _ = app_broadcast.send(forwarded.clone());
 
+                    if let Some(session_id) = current_session_id_string.as_deref() {
+                        let event_type =
+                            forwarded.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                        if persistence::is_session_event_worthy(event_type) {
+                            let sc = storage_client.clone();
+                            let j = jwt.clone();
+                            let sid = session_id.to_string();
+                            let ev = forwarded.clone();
+                            tokio::spawn(async move {
+                                persistence::persist_session_event(
+                                    sc.as_ref(),
+                                    j.as_deref(),
+                                    &sid,
+                                    &ev,
+                                )
+                                .await;
+                            });
+                        }
+                    }
+
                     if persistence::is_log_worthy(
                         forwarded.get("type").and_then(|t| t.as_str()).unwrap_or(""),
                     ) {
@@ -908,7 +1138,13 @@ fn forward_automaton_events(params: ForwardParams) {
                         let j = jwt.clone();
                         let p = pid.clone();
                         tokio::spawn(async move {
-                            persistence::persist_log_event(sc.as_ref(), j.as_deref(), &p, &forwarded).await;
+                            persistence::persist_log_event(
+                                sc.as_ref(),
+                                j.as_deref(),
+                                &p,
+                                &forwarded,
+                            )
+                            .await;
                         });
                     }
                 }
@@ -938,7 +1174,9 @@ fn forward_automaton_events(params: ForwardParams) {
                             tokio::spawn(async move {
                                 if let Err(e) = super::agents::generate_session_summary(
                                     &sc, &hclient, &rurl, &j, &sid,
-                                ).await {
+                                )
+                                .await
+                                {
                                     warn!(session_id = %sid, error = %e, "Background session summary generation failed");
                                 }
                             });
@@ -1029,7 +1267,12 @@ pub(crate) async fn start_loop(
                 warn!(%project_id, error = %e, "Harness workspace resolve failed; using local computation");
                 resolve_agent_instance_workspace_path(&state, &project_id, Some(agent_instance_id))
                     .await
-                    .unwrap_or_else(|| format!("/home/aura/{}", super::projects_helpers::slugify(project_name)))
+                    .unwrap_or_else(|| {
+                        format!(
+                            "/home/aura/{}",
+                            super::projects_helpers::slugify(project_name)
+                        )
+                    })
             }
         }
     } else {
@@ -1232,7 +1475,14 @@ pub(crate) async fn start_loop(
             .ok()
             .and_then(|instance| instance.current_session_id)
     } else {
-        create_automaton_session(&state, project_id, agent_instance_id, first_task_uuid, jwt_for_persist.as_deref()).await
+        create_automaton_session(
+            &state,
+            project_id,
+            agent_instance_id,
+            first_task_uuid,
+            jwt_for_persist.as_deref(),
+        )
+        .await
     };
 
     if let Some(ref tid) = first_task_id {
@@ -1496,7 +1746,12 @@ pub(crate) async fn run_single_task(
                 warn!(%project_id, error = %e, "Harness workspace resolve failed; using local computation");
                 resolve_agent_instance_workspace_path(&state, &project_id, Some(agent_instance_id))
                     .await
-                    .unwrap_or_else(|| format!("/home/aura/{}", super::projects_helpers::slugify(project_name)))
+                    .unwrap_or_else(|| {
+                        format!(
+                            "/home/aura/{}",
+                            super::projects_helpers::slugify(project_name)
+                        )
+                    })
             }
         }
     } else {
@@ -1589,8 +1844,14 @@ pub(crate) async fn run_single_task(
     );
 
     // Pre-seed the output cache so the REST endpoint can serve partial output.
-    let session_id =
-        create_automaton_session(&state, project_id, agent_instance_id, Some(task_id), jwt_for_persist.as_deref()).await;
+    let session_id = create_automaton_session(
+        &state,
+        project_id,
+        agent_instance_id,
+        Some(task_id),
+        jwt_for_persist.as_deref(),
+    )
+    .await;
     {
         let mut cache = state.task_output_cache.lock().await;
         cache.insert(
@@ -1672,7 +1933,10 @@ async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentI
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_run_command_steps, extract_run_command, VerificationStepKind};
+    use super::{
+        classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
+        extract_run_command, extract_turn_usage, VerificationStepKind,
+    };
 
     #[test]
     fn extracts_run_command_shell_string() {
@@ -1748,5 +2012,80 @@ mod tests {
             })
         )
         .is_empty());
+    }
+
+    #[test]
+    fn extracts_rich_turn_usage_from_assistant_message_end() {
+        let event = serde_json::json!({
+            "type": "assistant_message_end",
+            "usage": {
+                "input_tokens": 1200,
+                "output_tokens": 800,
+                "estimated_context_tokens": 42000,
+                "cache_creation_input_tokens": 300,
+                "cache_read_input_tokens": 900,
+                "cumulative_input_tokens": 5000,
+                "cumulative_output_tokens": 2200,
+                "cumulative_cache_creation_input_tokens": 700,
+                "cumulative_cache_read_input_tokens": 1400,
+                "context_utilization": 0.42,
+                "model": "claude-sonnet-4-5",
+                "provider": "anthropic"
+            }
+        });
+
+        let usage = extract_turn_usage(&event).expect("usage should parse");
+        assert_eq!(usage.input_tokens, 1200);
+        assert_eq!(usage.output_tokens, 800);
+        assert_eq!(usage.estimated_context_tokens, Some(42_000));
+        assert_eq!(usage.cumulative_input_tokens, Some(5_000));
+        assert_eq!(usage.cumulative_output_tokens, Some(2_200));
+        assert_eq!(usage.context_utilization, Some(0.42));
+        assert_eq!(usage.model.as_deref(), Some("claude-sonnet-4-5"));
+        assert_eq!(usage.provider.as_deref(), Some("anthropic"));
+    }
+
+    #[test]
+    fn extracts_files_changed_from_assistant_message_end() {
+        let event = serde_json::json!({
+            "type": "assistant_message_end",
+            "files_changed": {
+                "created": ["src/new.rs"],
+                "modified": ["src/lib.rs"],
+                "deleted": ["src/old.rs"]
+            }
+        });
+
+        let files = extract_files_changed(&event);
+        assert_eq!(files.len(), 3);
+        assert!(files
+            .iter()
+            .any(|file| file.op == "create" && file.path == "src/new.rs"));
+        assert!(files
+            .iter()
+            .any(|file| file.op == "modify" && file.path == "src/lib.rs"));
+        assert!(files
+            .iter()
+            .any(|file| file.op == "delete" && file.path == "src/old.rs"));
+    }
+
+    #[test]
+    fn estimate_usage_cost_includes_cache_tokens() {
+        let cost_without_cache =
+            estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 500_000, 0, 0);
+        let cost_with_cache =
+            estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 500_000, 500_000, 1_000_000);
+
+        assert!(cost_with_cache > cost_without_cache);
+        assert!((cost_with_cache - 12.675).abs() < 1e-9);
+    }
+
+    #[test]
+    fn estimate_usage_cost_matches_versioned_model_ids() {
+        let exact = estimate_usage_cost_usd("claude-sonnet-4-5", 1_000_000, 0, 0, 0);
+        let versioned = estimate_usage_cost_usd("claude-sonnet-4-5-20250220", 1_000_000, 0, 0, 0);
+
+        assert!((exact - versioned).abs() < 1e-9);
+        assert!((exact - 3.0).abs() < 1e-9);
     }
 }

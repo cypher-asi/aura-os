@@ -28,6 +28,9 @@ pub struct UpdateContextUsageParams {
     pub session_id: SessionId,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub total_input_tokens: Option<u64>,
+    pub total_output_tokens: Option<u64>,
+    pub context_usage_estimate: Option<f64>,
 }
 
 #[derive(Debug)]
@@ -157,14 +160,21 @@ impl SessionService {
             session_id,
             input_tokens,
             output_tokens,
+            total_input_tokens,
+            total_output_tokens,
+            context_usage_estimate,
         } = params;
         let mut session = self
             .get_session(&project_id, &agent_instance_id, &session_id)
             .await?;
         let turn_usage = (input_tokens + output_tokens) as f64 / self.model_context_window as f64;
-        session.context_usage_estimate = (session.context_usage_estimate + turn_usage).min(1.0);
-        session.total_input_tokens += input_tokens;
-        session.total_output_tokens += output_tokens;
+        session.context_usage_estimate = context_usage_estimate
+            .unwrap_or(session.context_usage_estimate + turn_usage)
+            .clamp(0.0, 1.0);
+        session.total_input_tokens =
+            total_input_tokens.unwrap_or(session.total_input_tokens + input_tokens);
+        session.total_output_tokens =
+            total_output_tokens.unwrap_or(session.total_output_tokens + output_tokens);
 
         if let Some(ref storage) = self.storage_client {
             let jwt = self.get_jwt()?;

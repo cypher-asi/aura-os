@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-04-02T19:39:32.672Z",
+  "totals": {
+    "scenarios": 1,
+    "successfulScenarios": 1,
+    "totalInputTokens": 26,
+    "totalOutputTokens": 2983,
+    "totalTokens": 3009,
+    "totalCacheCreationInputTokens": 18204,
+    "totalCacheReadInputTokens": 152982,
+    "promptInputFootprintTokens": 171212,
+    "maxEstimatedContextTokens": 17351,
+    "maxContextUtilization": 0.086755,
+    "richUsageTurns": 4,
+    "fallbackUsageTurns": 0,
+    "estimatedCostUsd": 0.265,
+    "fileChangeCount": 1,
+    "runWallClockMs": 84321,
+    "averageTurnWallClockMs": 21030,
+    "averageTimeToFirstEventMs": 2678.5,
+    "maxTurnWallClockMs": 34630,
+    "sessionInitMs": 2,
+    "turnsWithErrors": 0,
+    "qualityPasses": 1,
+    "unknownPricingScenarios": 0,
+    "cacheSharePct": 99.98,
+    "pricingSources": [
+      "anthropic-pricing"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenarioId": "harness-fixture-node-server-patch",
+      "title": "Harness Fixture Node Server Patch",
+      "device": "local",
+      "success": true,
+      "totalInputTokens": 26,
+      "totalOutputTokens": 2983,
+      "totalTokens": 3009,
+      "totalCacheCreationInputTokens": 18204,
+      "totalCacheReadInputTokens": 152982,
+      "promptInputFootprintTokens": 171212,
+      "maxEstimatedContextTokens": 17351,
+      "maxContextUtilization": 0.086755,
+      "richUsageTurns": 4,
+      "fallbackUsageTurns": 0,
+      "richUsageSessions": 1,
+      "fallbackUsageSessions": 0,
+      "fileChangeCount": 1,
+      "estimatedCostUsd": 0.264972,
+      "runWallClockMs": 84321,
+      "averageTurnWallClockMs": 21030,
+      "averageTimeToFirstEventMs": 2678.5,
+      "maxTurnWallClockMs": 34630,
+      "sessionInitMs": 2,
+      "turnsWithErrors": 0,
+      "qualityPass": true,
+      "pricingSources": [
+        "anthropic-pricing"
+      ],
+      "hasUnknownPricing": false,
+      "source": "test-results/clean-node-server-cache-on-restart/harness-fixture-node-server-patch-1775158682018-0c732a0e.json",
+      "cacheSharePct": 99.98
+    }
+  ]
+}

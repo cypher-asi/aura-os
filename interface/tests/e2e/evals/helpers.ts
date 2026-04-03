@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { aggregateUsageSummaries, summarizeSessionUsage, type RawStorageSessionEvent } from "../../../src/lib/benchmark-usage";
 import { mockAuthenticatedApp } from "../helpers/mockAuthenticatedApp";
 
 type DeviceName =
@@ -158,8 +159,40 @@ interface BenchmarkTask {
 }
 
 interface BenchmarkSession {
+  session_id: string;
   total_input_tokens: number;
   total_output_tokens: number;
+  context_usage_estimate?: number;
+  model?: string;
+  status?: string;
+}
+
+interface RichSessionUsageSummary {
+  richUsageSessions: number;
+  fallbackUsageSessions: number;
+  richUsageTurns: number;
+  fallbackUsageTurns: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCacheCreationInputTokens: number;
+  totalCacheReadInputTokens: number;
+  promptInputFootprintTokens: number;
+  maxEstimatedContextTokens: number;
+  maxContextUtilization: number;
+  fileChangeCount: number;
+  models: string[];
+  providers: string[];
+  sessionBreakdown: Array<{
+    sessionId: string;
+    source: "assistant_message_end" | "token_usage" | "none";
+    turnCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number;
+    cacheReadInputTokens: number;
+    maxEstimatedContextTokens: number;
+    maxContextUtilization: number;
+  }>;
 }
 
 interface BenchmarkTaskOutput {
@@ -391,6 +424,34 @@ async function apiJson<T>(
   return JSON.parse(text) as T;
 }
 
+async function authedAbsoluteJson<T>(
+  page: Page,
+  method: "GET" | "POST" | "DELETE",
+  url: string,
+  body?: unknown,
+): Promise<T> {
+  const jwt = await page.evaluate(() => window.localStorage.getItem("aura-jwt"));
+  const headers = jwt ? { Authorization: `Bearer ${jwt}` } : undefined;
+
+  let response;
+  if (method === "GET") {
+    response = await page.request.get(url, { headers });
+  } else if (method === "DELETE") {
+    response = await page.request.delete(url, { headers });
+  } else {
+    response = await page.request.post(url, { data: body, headers });
+  }
+
+  const text = await response.text();
+  if (!response.ok()) {
+    throw new Error(`${method} ${url} failed with ${response.status()}: ${text}`);
+  }
+  if (!text) {
+    return undefined as T;
+  }
+  return JSON.parse(text) as T;
+}
+
 async function maybePauseForDemo(page: Page, milliseconds = demoStepDelayMs) {
   if (!demoModeEnabled || milliseconds <= 0) return;
   await page.waitForTimeout(milliseconds);
@@ -542,6 +603,11 @@ async function verifyArtifactFiles(
   },
 ) {
   const results = [];
+  const matchesExpectedText = (content: string, expected: string) => {
+    if (content.includes(expected)) return true;
+    const squashWhitespace = (value: string) => value.replace(/\s+/g, "");
+    return squashWhitespace(content).includes(squashWhitespace(expected));
+  };
 
   for (const check of checks ?? []) {
     const response = await readArtifactFile(
@@ -555,7 +621,10 @@ async function verifyArtifactFiles(
     expect(response.ok, `Expected ${check.path} to be readable`).toBe(true);
     const content = response.content ?? "";
     for (const text of check.mustContain) {
-      expect(content).toContain(text);
+      expect(
+        matchesExpectedText(content, text),
+        `Expected ${check.path} to contain ${text}`,
+      ).toBe(true);
     }
 
     results.push({
@@ -624,6 +693,59 @@ function sumSessionTokens(sessions: BenchmarkSession[]) {
   );
 }
 
+async function collectRichSessionUsage(
+  page: Page,
+  sessions: BenchmarkSession[],
+): Promise<RichSessionUsageSummary | null> {
+  const storageUrl = process.env.AURA_EVAL_STORAGE_URL?.trim();
+  if (!storageUrl) {
+    return null;
+  }
+
+  const summaries = await Promise.all(sessions.map(async (session) => {
+    const events = await authedAbsoluteJson<RawStorageSessionEvent[]>(
+      page,
+      "GET",
+      `${storageUrl}/api/sessions/${session.session_id}/events`,
+    );
+    const summary = summarizeSessionUsage(events);
+    return {
+      summary,
+      sessionBreakdown: {
+        sessionId: session.session_id,
+        source: summary.source,
+        turnCount: summary.turnCount,
+        inputTokens: summary.inputTokens,
+        outputTokens: summary.outputTokens,
+        cacheCreationInputTokens: summary.cacheCreationInputTokens,
+        cacheReadInputTokens: summary.cacheReadInputTokens,
+        maxEstimatedContextTokens: summary.maxEstimatedContextTokens,
+        maxContextUtilization: summary.maxContextUtilization,
+      },
+    };
+  }));
+
+  const aggregate = aggregateUsageSummaries(summaries.map((entry) => entry.summary));
+
+  return {
+    richUsageSessions: aggregate.richUsageSessions,
+    fallbackUsageSessions: aggregate.fallbackUsageSessions,
+    richUsageTurns: aggregate.richUsageTurns,
+    fallbackUsageTurns: aggregate.fallbackUsageTurns,
+    totalInputTokens: aggregate.inputTokens,
+    totalOutputTokens: aggregate.outputTokens,
+    totalCacheCreationInputTokens: aggregate.cacheCreationInputTokens,
+    totalCacheReadInputTokens: aggregate.cacheReadInputTokens,
+    promptInputFootprintTokens: aggregate.promptInputFootprintTokens,
+    maxEstimatedContextTokens: aggregate.maxEstimatedContextTokens,
+    maxContextUtilization: aggregate.maxContextUtilization,
+    fileChangeCount: aggregate.fileChangeCount,
+    models: aggregate.models,
+    providers: aggregate.providers,
+    sessionBreakdown: summaries.map((entry) => entry.sessionBreakdown),
+  };
+}
+
 async function timedStep<T>(
   results: RunStepResult[],
   label: string,
@@ -685,6 +807,16 @@ function formatBenchmarkRunLog(payload: unknown): string | null {
       totalOutputTokens?: number;
       totalTokens?: number;
       estimatedCostUsd?: number;
+      totalCacheCreationInputTokens?: number;
+      totalCacheReadInputTokens?: number;
+      promptInputFootprintTokens?: number;
+      maxEstimatedContextTokens?: number;
+      maxContextUtilization?: number;
+      richUsageTurns?: number;
+      fallbackUsageTurns?: number;
+      richUsageSessions?: number;
+      fallbackUsageSessions?: number;
+      fileChangeCount?: number;
       buildSteps?: number;
       testSteps?: number;
       artifactVerificationPassed?: number;
@@ -749,6 +881,16 @@ function formatBenchmarkRunLog(payload: unknown): string | null {
   lines.push(`Output tokens: ${formatMetricValue(benchmark.metrics?.totalOutputTokens)}`);
   lines.push(`Total tokens: ${formatMetricValue(benchmark.metrics?.totalTokens)}`);
   lines.push(`Estimated cost (USD): ${formatMetricValue(benchmark.metrics?.estimatedCostUsd, 4)}`);
+  lines.push(`Cache write tokens: ${formatMetricValue(benchmark.metrics?.totalCacheCreationInputTokens)}`);
+  lines.push(`Cache read tokens: ${formatMetricValue(benchmark.metrics?.totalCacheReadInputTokens)}`);
+  lines.push(`Prompt footprint tokens: ${formatMetricValue(benchmark.metrics?.promptInputFootprintTokens)}`);
+  lines.push(`Max estimated context tokens: ${formatMetricValue(benchmark.metrics?.maxEstimatedContextTokens)}`);
+  lines.push(`Max context utilization: ${formatMetricValue(benchmark.metrics?.maxContextUtilization, 3)}`);
+  lines.push(`Rich usage turns: ${formatMetricValue(benchmark.metrics?.richUsageTurns)}`);
+  lines.push(`Fallback usage turns: ${formatMetricValue(benchmark.metrics?.fallbackUsageTurns)}`);
+  lines.push(`Rich usage sessions: ${formatMetricValue(benchmark.metrics?.richUsageSessions)}`);
+  lines.push(`Fallback usage sessions: ${formatMetricValue(benchmark.metrics?.fallbackUsageSessions)}`);
+  lines.push(`Files changed: ${formatMetricValue(benchmark.metrics?.fileChangeCount)}`);
   lines.push(`Build steps: ${formatMetricValue(benchmark.metrics?.buildSteps)}`);
   lines.push(`Test steps: ${formatMetricValue(benchmark.metrics?.testSteps)}`);
   lines.push(`Artifact checks passed: ${formatMetricValue(benchmark.metrics?.artifactVerificationPassed)}`);
@@ -845,6 +987,7 @@ export async function runLiveBenchmarkScenario(
   let outputs: Record<string, BenchmarkTaskOutput> = {};
   let projectStats: Record<string, number> = {};
   let sessions: BenchmarkSession[] = [];
+  let richUsageSummary: RichSessionUsageSummary | null = null;
   let artifactChecks: Array<{ path: string; ok: boolean; matchedTexts: string[] }> = [];
   const operationLog: BenchmarkOperationLogEntry[] = [];
 
@@ -1055,6 +1198,49 @@ export async function runLiveBenchmarkScenario(
       details: sumSessionTokens(sessions),
     });
 
+    richUsageSummary = await timedStep(results, "collect_rich_usage", async () => {
+      try {
+        return await collectRichSessionUsage(page, sessions);
+      } catch (error) {
+        return {
+          richUsageSessions: 0,
+          fallbackUsageSessions: 0,
+          richUsageTurns: 0,
+          fallbackUsageTurns: 0,
+          totalInputTokens: 0,
+          totalOutputTokens: 0,
+          totalCacheCreationInputTokens: 0,
+          totalCacheReadInputTokens: 0,
+          promptInputFootprintTokens: 0,
+          maxEstimatedContextTokens: 0,
+          maxContextUtilization: 0,
+          fileChangeCount: 0,
+          models: [],
+          providers: [],
+          sessionBreakdown: [],
+          error: error instanceof Error ? error.message : String(error),
+        } as RichSessionUsageSummary & { error: string };
+      }
+    });
+    operationLog.push({
+      step: "collect_rich_usage",
+      summary: richUsageSummary
+        ? `Collected rich usage from ${richUsageSummary.richUsageSessions} rich and ${richUsageSummary.fallbackUsageSessions} fallback session${richUsageSummary.richUsageSessions + richUsageSummary.fallbackUsageSessions === 1 ? "" : "s"}`
+        : "Skipped rich usage collection because storage access is unavailable",
+      durationMs: latestStepDuration(results),
+      details: richUsageSummary
+        ? {
+          richUsageTurns: richUsageSummary.richUsageTurns,
+          fallbackUsageTurns: richUsageSummary.fallbackUsageTurns,
+          cacheReadInputTokens: richUsageSummary.totalCacheReadInputTokens,
+          cacheCreationInputTokens: richUsageSummary.totalCacheCreationInputTokens,
+          maxContextUtilization: richUsageSummary.maxContextUtilization,
+          models: richUsageSummary.models,
+          providers: richUsageSummary.providers,
+        }
+        : { skipped: true },
+    });
+
     if (agentMachineType === "remote") {
       operationLog.push({
         step: "verify_artifacts",
@@ -1174,11 +1360,25 @@ export async function runLiveBenchmarkScenario(
         totalOutputTokens: tokenSummary.output,
         totalTokens: Number(projectStats.total_tokens ?? tokenSummary.input + tokenSummary.output),
         estimatedCostUsd: Number(projectStats.estimated_cost_usd ?? 0),
+        totalCacheCreationInputTokens: richUsageSummary?.totalCacheCreationInputTokens ?? 0,
+        totalCacheReadInputTokens: richUsageSummary?.totalCacheReadInputTokens ?? 0,
+        promptInputFootprintTokens: richUsageSummary?.promptInputFootprintTokens ?? tokenSummary.input,
+        maxEstimatedContextTokens: richUsageSummary?.maxEstimatedContextTokens ?? 0,
+        maxContextUtilization: richUsageSummary?.maxContextUtilization ?? Math.max(
+          ...sessions.map((session) => session.context_usage_estimate ?? 0),
+          0,
+        ),
+        richUsageTurns: richUsageSummary?.richUsageTurns ?? 0,
+        fallbackUsageTurns: richUsageSummary?.fallbackUsageTurns ?? 0,
+        richUsageSessions: richUsageSummary?.richUsageSessions ?? 0,
+        fallbackUsageSessions: richUsageSummary?.fallbackUsageSessions ?? 0,
+        fileChangeCount: richUsageSummary?.fileChangeCount ?? 0,
         buildSteps: stepSummary.buildSteps,
         testSteps: stepSummary.testSteps,
         artifactVerificationPassed: artifactChecks.length,
       },
       projectStats,
+      richUsageSummary,
       artifactChecks,
       cleanup,
       taskStatuses: completedTasks.map((task) => ({

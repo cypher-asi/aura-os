@@ -58,7 +58,8 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
     let now_post = now.clone();
     let now_put_get = now_put.clone();
     let now_put_put = now_put.clone();
-    let created_ids: Arc<StdMutex<HashMap<String, String>>> = Arc::new(StdMutex::new(HashMap::new()));
+    let created_ids: Arc<StdMutex<HashMap<String, String>>> =
+        Arc::new(StdMutex::new(HashMap::new()));
     let created_ids_post = created_ids.clone();
     let created_ids_get = created_ids.clone();
     let created_ids_put = created_ids.clone();
@@ -87,7 +88,10 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
                 let created_ids = created_ids_post.clone();
                 let id = ProjectId::new().to_string();
                 let org_id = OrgId::new().to_string();
-                created_ids.lock().unwrap().insert(id.clone(), org_id.clone());
+                created_ids
+                    .lock()
+                    .unwrap()
+                    .insert(id.clone(), org_id.clone());
                 async move {
                     (
                         StatusCode::CREATED,
@@ -161,7 +165,8 @@ pub async fn build_test_app_with_mocks() -> (Router, AppState, tempfile::TempDir
                 let created_ids = created_ids_del.clone();
                 async move {
                     created_ids.lock().unwrap().remove(&project_id);
-                    StatusCode::NO_CONTENT                }
+                    StatusCode::NO_CONTENT
+                }
             }),
         );
     let net_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -232,7 +237,7 @@ pub fn build_test_app_from_store(
         Arc::new(LocalHarness::new("http://localhost:19080".to_string()));
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
-
+    let automaton_client = Arc::new(AutomatonClient::new("http://localhost:19080"));
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
         TEST_JWT.to_string(),
@@ -293,7 +298,7 @@ pub fn build_test_app_from_store(
         network_client,
         storage_client,
         require_zero_pro: false,
-        automaton_client: Arc::new(AutomatonClient::new("http://localhost:19080")),
+        automaton_client,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url,
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),

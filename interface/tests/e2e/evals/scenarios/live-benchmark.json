@@ -132,7 +132,7 @@
       "artifactChecks": [
         {
           "path": "server.js",
-          "mustContain": ["Aura Patch Complete", "Patched by Aura", "/health", "\"source\":\"patched\"", "process.env.PORT"]
+          "mustContain": ["Aura Patch Complete", "Patched by Aura", "/health", "source: \"patched\"", "process.env.PORT"]
         }
       ]
     },

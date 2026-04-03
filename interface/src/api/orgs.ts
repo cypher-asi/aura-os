@@ -33,8 +33,11 @@ export const orgsApi = {
     apiFetch<void>(`/api/orgs/${orgId}/invites/${inviteId}`, {
       method: "DELETE",
     }),
-  acceptInvite: (token: string) =>
-    apiFetch<OrgMember>(`/api/invites/${token}/accept`, { method: "POST" }),
+  acceptInvite: (token: string, displayName: string) =>
+    apiFetch<OrgMember>(`/api/invites/${token}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ displayName }),
+    }),
   getBilling: (orgId: string) =>
     apiFetch<OrgBilling | null>(`/api/orgs/${orgId}/billing`),
   setBilling: (orgId: string, billing_email: string | null, plan: string) =>

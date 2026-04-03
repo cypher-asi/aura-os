@@ -1,0 +1,66 @@
+{
+  "generatedAt": "2026-04-02T19:36:52.907Z",
+  "totals": {
+    "scenarios": 1,
+    "successfulScenarios": 1,
+    "totalInputTokens": 188054,
+    "totalOutputTokens": 3337,
+    "totalTokens": 191391,
+    "totalCacheCreationInputTokens": 0,
+    "totalCacheReadInputTokens": 0,
+    "promptInputFootprintTokens": 188054,
+    "maxEstimatedContextTokens": 17033,
+    "maxContextUtilization": 0.085165,
+    "richUsageTurns": 4,
+    "fallbackUsageTurns": 0,
+    "estimatedCostUsd": 1.0237,
+    "fileChangeCount": 1,
+    "runWallClockMs": 97971,
+    "averageTurnWallClockMs": 24451,
+    "averageTimeToFirstEventMs": 3176,
+    "maxTurnWallClockMs": 40537,
+    "sessionInitMs": 2,
+    "turnsWithErrors": 0,
+    "qualityPasses": 1,
+    "unknownPricingScenarios": 0,
+    "cacheSharePct": 0,
+    "pricingSources": [
+      "anthropic-pricing"
+    ]
+  },
+  "scenarios": [
+    {
+      "scenarioId": "harness-fixture-node-server-patch",
+      "title": "Harness Fixture Node Server Patch",
+      "device": "local",
+      "success": true,
+      "totalInputTokens": 188054,
+      "totalOutputTokens": 3337,
+      "totalTokens": 191391,
+      "totalCacheCreationInputTokens": 0,
+      "totalCacheReadInputTokens": 0,
+      "promptInputFootprintTokens": 188054,
+      "maxEstimatedContextTokens": 17033,
+      "maxContextUtilization": 0.085165,
+      "richUsageTurns": 4,
+      "fallbackUsageTurns": 0,
+      "richUsageSessions": 1,
+      "fallbackUsageSessions": 0,
+      "fileChangeCount": 1,
+      "estimatedCostUsd": 1.023695,
+      "runWallClockMs": 97971,
+      "averageTurnWallClockMs": 24451,
+      "averageTimeToFirstEventMs": 3176,
+      "maxTurnWallClockMs": 40537,
+      "sessionInitMs": 2,
+      "turnsWithErrors": 0,
+      "qualityPass": true,
+      "pricingSources": [
+        "anthropic-pricing"
+      ],
+      "hasUnknownPricing": false,
+      "source": "test-results/clean-node-server-cache-off/harness-fixture-node-server-patch-1775158503550-2a24c356.json",
+      "cacheSharePct": 0
+    }
+  ]
+}

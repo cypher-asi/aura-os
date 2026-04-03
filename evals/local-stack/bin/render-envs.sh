@@ -111,7 +111,9 @@ write_optional_export "$aura_os_env" "Z_BILLING_URL" "$AURA_STACK_BILLING_URL"
 write_header "$evals_env"
 write_export "$evals_env" "AURA_EVAL_LIVE" "1"
 write_export "$evals_env" "AURA_EVAL_BASE_URL" "$AURA_STACK_EVAL_BASE_URL"
+write_export "$evals_env" "AURA_EVAL_API_BASE_URL" "$(stack_local_url aura_os)"
 write_export "$evals_env" "AURA_EVAL_BUNDLE_ID" "$AURA_STACK_EVAL_BUNDLE_ID"
+write_optional_export "$evals_env" "AURA_EVAL_STORAGE_URL" "$storage_url"
 if stack_is_local harness; then
   write_export "$evals_env" "AURA_EVAL_AGENT_MACHINE_TYPE" "local"
 else
