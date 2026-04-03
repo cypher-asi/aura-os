@@ -436,30 +436,26 @@ pub(crate) async fn install_from_shop(
     let skill_path = skill_dir.join("SKILL.md");
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let description = extract_frontmatter_field(&content, "description")
+        .unwrap_or_else(|| format!("{name} skill"));
+    let body_text = strip_frontmatter(&content);
+
     let base = harness_base_url();
     let client = reqwest::Client::new();
-    let post_ok = client
+    let _ = client
         .post(format!("{base}/api/skills"))
         .header("Content-Type", "application/json")
         .body(
             serde_json::json!({
                 "name": name,
-                "path": skill_path.to_string_lossy().to_string(),
-                "content": content,
+                "description": description,
+                "body": body_text,
+                "user_invocable": true,
             })
             .to_string(),
         )
         .send()
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-
-    if !post_ok {
-        let _ = client
-            .get(format!("{base}/api/skills/{name}"))
-            .send()
-            .await;
-    }
+        .await;
 
     let resp_json = serde_json::json!({
         "name": name,
@@ -551,4 +547,32 @@ pub(crate) async fn get_skill_content(
         content,
     )
         .into_response())
+}
+
+fn extract_frontmatter_field(content: &str, key: &str) -> Option<String> {
+    let trimmed = content.trim();
+    if !trimmed.starts_with("---") {
+        return None;
+    }
+    let end = trimmed[3..].find("\n---")?;
+    let yaml = &trimmed[3..3 + end];
+    let prefix = format!("{key}:");
+    for line in yaml.lines() {
+        let line = line.trim();
+        if let Some(val) = line.strip_prefix(&prefix) {
+            return Some(val.trim().trim_matches('"').to_string());
+        }
+    }
+    None
+}
+
+fn strip_frontmatter(content: &str) -> String {
+    let trimmed = content.trim();
+    if !trimmed.starts_with("---") {
+        return content.to_string();
+    }
+    match trimmed[3..].find("\n---") {
+        Some(end) => trimmed[3 + end + 4..].trim_start().to_string(),
+        None => content.to_string(),
+    }
 }
