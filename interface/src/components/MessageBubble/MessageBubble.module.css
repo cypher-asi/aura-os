@@ -87,6 +87,9 @@
   font-size: 12px;
   line-height: 1.65;
   color: #ffffff;
+}
+
+.bubbleAssistantFadeIn {
   animation: bubbleFadeIn 0.3s ease both;
 }
 

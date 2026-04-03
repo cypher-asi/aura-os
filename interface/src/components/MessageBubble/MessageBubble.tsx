@@ -15,6 +15,7 @@ import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
 interface Props {
   message: DisplaySessionEvent;
+  fadeIn?: boolean;
 }
 
 function ArtifactRefsList({ refs }: { refs: ArtifactRef[] }) {
@@ -68,7 +69,7 @@ function FileAttachmentBlock({ text }: { text: string }) {
   );
 }
 
-export const MessageBubble = memo(function MessageBubble({ message }: Props) {
+export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
@@ -121,7 +122,9 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
     >
       <div
         className={`${styles.bubble} ${
-          message.role === "user" ? styles.bubbleUser : styles.bubbleAssistant
+          message.role === "user"
+            ? styles.bubbleUser
+            : `${styles.bubbleAssistant}${fadeIn ? ` ${styles.bubbleAssistantFadeIn}` : ""}`
         }`}
       >
         {message.role === "user" ? (

@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject, useCallback } from "react";
+import { type ReactNode, type RefObject, useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageBubble } from "../MessageBubble";
 import { StreamingBubble } from "../StreamingBubble";
@@ -32,6 +32,13 @@ export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessag
   const activeToolCalls = useActiveToolCalls(streamKey);
   const timeline = useTimeline(streamKey);
   const progressText = useProgressText(streamKey);
+
+  const initialMountRef = useRef(true);
+  useEffect(() => {
+    if (messages.length > 0) {
+      initialMountRef.current = false;
+    }
+  }, [messages.length]);
 
   const getItemKey = useCallback(
     (index: number) => messages[index].id,
@@ -72,7 +79,7 @@ export function ChatMessageList({ streamKey, scrollRef, emptyState }: ChatMessag
               transform: `translateY(${virtualRow.start}px)`,
             }}
           >
-            <MessageBubble message={messages[virtualRow.index]} />
+            <MessageBubble message={messages[virtualRow.index]} fadeIn={initialMountRef.current} />
           </div>
         ))}
       </div>
