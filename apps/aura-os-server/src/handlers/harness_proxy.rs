@@ -177,6 +177,24 @@ pub(crate) async fn delete_procedure(
     proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
 }
 
+pub(crate) async fn list_procedures_by_skill(
+    State(_state): State<AppState>,
+    Path((agent_id, skill_name)): Path<(AgentId, String)>,
+    RawQuery(query): RawQuery,
+) -> Result<Response, StatusCode> {
+    let mut qs = format!("skill={skill_name}");
+    if let Some(q) = query {
+        qs = format!("{qs}&{q}");
+    }
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/procedures"),
+        Some(qs),
+        None,
+    )
+    .await
+}
+
 // ---------------------------------------------------------------------------
 // Memory – Aggregate
 // ---------------------------------------------------------------------------

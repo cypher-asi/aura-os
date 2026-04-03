@@ -217,7 +217,7 @@ export function MemoryTab({ agent }: MemoryTabProps) {
             key={proc.procedure_id}
             icon={<GitBranch size={13} />}
             label={proc.name}
-            detail={`${proc.steps.length} steps`}
+            detail={`${proc.steps.length} steps${proc.skill_name ? ` · ${proc.skill_name}` : ""}`}
             badge={`${Math.round(proc.success_rate * 100)}%`}
             onClick={() => viewMemoryProcedure(proc)}
             onContextMenu={(e) => handleContextMenu(e, { kind: "procedure", id: proc.procedure_id })}

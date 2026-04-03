@@ -520,6 +520,10 @@ fn harness_proxy_routes() -> Router<AppState> {
             get(harness_proxy::list_procedures).post(harness_proxy::create_procedure),
         )
         .route(
+            "/api/harness/agents/:agent_id/memory/procedures/by-skill/:skill_name",
+            get(harness_proxy::list_procedures_by_skill),
+        )
+        .route(
             "/api/harness/agents/:agent_id/memory/procedures/:proc_id",
             get(harness_proxy::get_procedure)
                 .put(harness_proxy::update_procedure)

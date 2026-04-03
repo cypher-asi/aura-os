@@ -522,6 +522,8 @@ export interface MemoryProcedure {
   last_used: string;
   created_at: string;
   updated_at: string;
+  skill_name?: string;
+  skill_relevance?: number;
 }
 
 export interface MemorySnapshot {

@@ -48,7 +48,7 @@ const mockSnapshot = {
     { event_id: "e1", event_type: "task_run", summary: "Did stuff", timestamp: "2024-01-15T10:00:00Z" },
   ],
   procedures: [
-    { procedure_id: "p1", name: "deploy-flow", steps: ["build", "push"], success_rate: 0.8 },
+    { procedure_id: "p1", name: "deploy-flow", steps: ["build", "push"], success_rate: 0.8, skill_name: "deploy", skill_relevance: 0.95 },
   ],
 };
 
@@ -110,6 +110,15 @@ describe("MemoryTab", () => {
     render(<MemoryTab agent={baseAgent} />);
     await waitFor(() => {
       expect(screen.getByText(/no memories yet/i)).toBeDefined();
+    });
+  });
+
+  it("shows skill name in procedure detail", async () => {
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText("deploy-flow")).toBeDefined();
+      expect(screen.getByText(/deploy/)).toBeDefined();
     });
   });
 
