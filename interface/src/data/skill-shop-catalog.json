@@ -643,6 +643,9 @@
       "bins": ["tvly"],
       "env": ["TAVILY_API_KEY"]
     },
+    "install_methods": [
+      { "kind": "pip", "package": "tavily-cli" }
+    ],
     "permissions": {
       "commands": ["tvly"]
     }

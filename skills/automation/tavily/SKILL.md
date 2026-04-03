@@ -10,18 +10,18 @@ metadata:
         "install":
           [
             {
-              "id": "shell-unix",
-              "kind": "shell",
-              "command": "curl -fsSL https://cli.tavily.com/install.sh | bash",
+              "id": "pip",
+              "kind": "pip",
+              "package": "tavily-cli",
               "bins": ["tvly"],
-              "label": "Install tvly (Unix/macOS)",
+              "label": "Install tvly (pip)",
             },
             {
-              "id": "shell-windows",
+              "id": "uv",
               "kind": "shell",
-              "command": "powershell -c \"irm https://cli.tavily.com/install.ps1 | iex\"",
+              "command": "uv tool install tavily-cli",
               "bins": ["tvly"],
-              "label": "Install tvly (Windows)",
+              "label": "Install tvly (uv)",
             },
           ],
       },
@@ -37,19 +37,35 @@ metadata:
 ## Installation
 
 ```bash
-# Unix / macOS
-curl -fsSL https://cli.tavily.com/install.sh | bash
+pip install tavily-cli
+# or with uv:
+uv tool install tavily-cli
+```
 
-# Windows (PowerShell)
-powershell -c "irm https://cli.tavily.com/install.ps1 | iex"
+Verify the install:
+
+```bash
+tvly --version
 ```
 
 ## Prerequisites
 
-Requires a `TAVILY_API_KEY` environment variable. Get one at <https://tavily.com>.
+Requires a Tavily API key. Get one for free at <https://tavily.com>.
+
+Authenticate with one of:
 
 ```bash
+# Option 1: Login (stores key in ~/.tavily/config.json)
+tvly login --api-key tvly-YOUR_API_KEY
+
+# Option 2: Environment variable
 export TAVILY_API_KEY="tvly-..."
+```
+
+Check auth status:
+
+```bash
+tvly auth
 ```
 
 ---
