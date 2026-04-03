@@ -188,7 +188,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           onClose={closePreview}
           fullLane
         >
-          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} />}
+          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} installation={previewItem.installation} />}
           {previewItem.kind === "memory_fact" && <FactPreview fact={previewItem.fact} />}
           {previewItem.kind === "memory_event" && <EventPreview event={previewItem.event} />}
           {previewItem.kind === "memory_procedure" && <ProcedurePreview procedure={previewItem.procedure} />}

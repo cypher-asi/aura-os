@@ -67,6 +67,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
   const [showCreator, setShowCreator] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const viewSkill = useAgentSidekickStore((s) => s.viewSkill);
+  const installationByName = new Map(installations.map((i) => [i.skill_name, i]));
 
   const agentId = agent.agent_id;
 
@@ -172,7 +173,7 @@ export function SkillsTab({ agent }: SkillsTabProps) {
             installed
             loading={!!actionLoading[skill.name]}
             onAction={() => handleUninstall(skill.name)}
-            onView={viewSkill}
+            onView={(s) => viewSkill(s, installationByName.get(s.name))}
           />
         ))
       ))}
