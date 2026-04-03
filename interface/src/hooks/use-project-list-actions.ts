@@ -35,6 +35,8 @@ export function useProjectListActions() {
   const [agentSelectorProjectId, setAgentSelectorProjectId] = useState<string | null>(null);
 
   const ctxMenuRef = useRef<HTMLDivElement>(null);
+  const ctxMenuStateRef = useRef(ctxMenu);
+  ctxMenuStateRef.current = ctxMenu;
 
   useEffect(() => {
     if (!ctxMenu) return;
@@ -60,9 +62,10 @@ export function useProjectListActions() {
   );
 
   const handleMenuAction = useCallback((actionId: string) => {
-    if (!ctxMenu) return;
-    const target = ctxMenu.project;
-    const agentTarget = ctxMenu.agent;
+    const menu = ctxMenuStateRef.current;
+    if (!menu) return;
+    const target = menu.project;
+    const agentTarget = menu.agent;
     setCtxMenu(null);
 
     if (actionId === "add-agent" && target) {
@@ -76,7 +79,7 @@ export function useProjectListActions() {
     } else if (actionId === "delete-agent" && agentTarget) {
       setDeleteAgentTarget(agentTarget);
     }
-  }, [ctxMenu, handleAddAgent]);
+  }, [handleAddAgent]);
 
   const handleRename = useCallback(
     async (newName: string) => {

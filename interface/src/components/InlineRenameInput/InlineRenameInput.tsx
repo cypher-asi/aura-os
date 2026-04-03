@@ -29,6 +29,8 @@ export function InlineRenameInput({ target, onSave, onCancel }: InlineRenameInpu
   const inputRef = useRef<HTMLInputElement>(null);
   const saved = useRef(false);
   const labelRef = useRef<HTMLElement | null>(null);
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
 
   useEffect(() => {
     const input = inputRef.current;
@@ -57,7 +59,7 @@ export function InlineRenameInput({ target, onSave, onCancel }: InlineRenameInpu
 
       attempt++;
       if (attempt >= MAX_RETRIES) {
-        onCancel();
+        onCancelRef.current();
         return;
       }
       timerId = setTimeout(() => { rafId = requestAnimationFrame(tryPosition); }, RETRY_MS);
@@ -73,7 +75,7 @@ export function InlineRenameInput({ target, onSave, onCancel }: InlineRenameInpu
         labelRef.current = null;
       }
     };
-  }, [target.id, onCancel]);
+  }, [target.id]);
 
   const commit = useCallback(() => {
     if (saved.current) return;
