@@ -64,6 +64,7 @@ export function ChatPanel({
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
@@ -71,8 +72,9 @@ export function ChatPanel({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const { handleScroll, scrollToBottom, scrollToBottomIfPinned, holdPosition, isReady } = useScrollAnchor(
+  const { handleScroll, scrollToBottom, scrollToBottomIfPinned, scrollToTop, holdPosition, isReady } = useScrollAnchor(
     messageAreaRef,
+    scrollSentinelRef,
     {
       resetKey: scrollResetKey,
       contentReady: historyResolved,
@@ -91,11 +93,19 @@ export function ChatPanel({
       pendingScrollToTopRef.current
     ) {
       pendingScrollToTopRef.current = false;
-      scrollToBottom();
-      requestAnimationFrame(() => holdPosition());
+      const lastIndex = messages.length - 1;
+      const el = messageAreaRef.current?.querySelector<HTMLElement>(
+        `[data-index="${lastIndex}"]`,
+      );
+      if (el) {
+        scrollToTop(el);
+        holdPosition();
+      } else {
+        scrollToBottom();
+      }
     }
     prevMessageCountRef.current = messages.length;
-  }, [messages.length, scrollToBottom, holdPosition]);
+  }, [messages.length, scrollToTop, scrollToBottom, holdPosition]);
 
   useEffect(() => {
     if (isMobileLayout) return;
@@ -241,7 +251,8 @@ export function ChatPanel({
               scrollRef={messageAreaRef}
               emptyState={emptyState}
             />
-            {!isStreaming && messages.length > 0 && (
+            <div ref={scrollSentinelRef} className={styles.scrollSentinel} />
+            {messages.length > 0 && (
               <div className={styles.scrollSpacer} />
             )}
           </div>

@@ -49,6 +49,8 @@ const DEFAULT_OPTIONS: Required<HookOptions> = {
   contentReady: true,
 };
 
+const NULL_SENTINEL: React.RefObject<HTMLElement | null> = { current: null };
+
 describe("useScrollAnchor", () => {
   let origMO: typeof MutationObserver;
   let origRO: typeof ResizeObserver;
@@ -164,7 +166,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const opts = { ...DEFAULT_OPTIONS, ...optOverrides };
     const hook = renderHook(
-      (p: typeof opts) => useScrollAnchor(ref, p),
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: opts },
     );
     // First flush: settling RAFs + reveal guard.
@@ -183,7 +185,7 @@ describe("useScrollAnchor", () => {
   it("returns handleScroll, scrollToBottom, scrollToBottomIfPinned, and isReady", () => {
     const ref = { current: makeEl() };
     const { result } = renderHook(() =>
-      useScrollAnchor(ref, DEFAULT_OPTIONS),
+      useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS),
     );
     expect(typeof result.current.handleScroll).toBe("function");
     expect(typeof result.current.scrollToBottom).toBe("function");
@@ -193,7 +195,7 @@ describe("useScrollAnchor", () => {
 
   it("sets up MutationObserver and ResizeObservers on mount", () => {
     const ref = { current: makeEl() };
-    renderHook(() => useScrollAnchor(ref, DEFAULT_OPTIONS));
+    renderHook(() => useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS));
     expect(MockMutationObserver.instances).toHaveLength(1);
     expect(MockResizeObserver.instances).toHaveLength(2);
     expect(latestMO().observe).toHaveBeenCalledWith(ref.current, {
@@ -217,7 +219,7 @@ describe("useScrollAnchor", () => {
   it("handles null ref without throwing", () => {
     const ref: React.RefObject<HTMLElement | null> = { current: null };
     const { result } = renderHook(() =>
-      useScrollAnchor(ref, DEFAULT_OPTIONS),
+      useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS),
     );
     expect(() => {
       act(() => result.current.handleScroll());
@@ -232,7 +234,7 @@ describe("useScrollAnchor", () => {
   it("isReady starts false", () => {
     const ref = { current: makeEl() };
     const { result } = renderHook(() =>
-      useScrollAnchor(ref, DEFAULT_OPTIONS),
+      useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS),
     );
     // Don't flush RAFs — still settling
     expect(result.current.isReady).toBe(false);
@@ -252,7 +254,7 @@ describe("useScrollAnchor", () => {
     const el = makeEl();
     const ref = { current: el };
     const { result } = renderHook(() =>
-      useScrollAnchor(ref, DEFAULT_OPTIONS),
+      useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS),
     );
     act(() => flushRafs());
     expect(result.current.isReady).toBe(true);
@@ -263,7 +265,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const opts = { ...DEFAULT_OPTIONS, contentReady: false };
     const { result, rerender } = renderHook(
-      (p: typeof opts) => useScrollAnchor(ref, p),
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: opts },
     );
     act(() => flushRafs());
@@ -289,7 +291,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const opts = { ...DEFAULT_OPTIONS, contentReady: false };
     const { result, rerender } = renderHook(
-      (p: typeof opts) => useScrollAnchor(ref, p),
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: opts },
     );
 
@@ -316,7 +318,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const opts = { ...DEFAULT_OPTIONS, contentReady: false };
     const { result } = renderHook(
-      (p: typeof opts) => useScrollAnchor(ref, p),
+      (p: typeof opts) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: opts },
     );
     expect(result.current.isReady).toBe(false);
@@ -539,7 +541,7 @@ describe("useScrollAnchor", () => {
     el.appendChild(child);
     const ref = { current: el };
     const hook = renderHook(
-      (p: Required<HookOptions>) => useScrollAnchor(ref, p),
+      (p: Required<HookOptions>) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: DEFAULT_OPTIONS },
     );
     act(() => flushRafs());
@@ -555,7 +557,7 @@ describe("useScrollAnchor", () => {
     el.appendChild(child);
     const ref = { current: el };
     const { result } = renderHook(
-      (p: Required<HookOptions>) => useScrollAnchor(ref, p),
+      (p: Required<HookOptions>) => useScrollAnchor(ref, NULL_SENTINEL, p),
       { initialProps: DEFAULT_OPTIONS },
     );
     act(() => flushRafs());
@@ -576,7 +578,7 @@ describe("useScrollAnchor", () => {
     el.appendChild(child1);
     el.appendChild(child2);
     const ref = { current: el };
-    renderHook(() => useScrollAnchor(ref, DEFAULT_OPTIONS));
+    renderHook(() => useScrollAnchor(ref, NULL_SENTINEL, DEFAULT_OPTIONS));
 
     const cro = contentRO();
     expect(cro.observe).toHaveBeenCalledTimes(2);
@@ -666,7 +668,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const { result, rerender } = renderHook(
       ({ key }: { key: string }) =>
-        useScrollAnchor(ref, { ...DEFAULT_OPTIONS, resetKey: key }),
+        useScrollAnchor(ref, NULL_SENTINEL, { ...DEFAULT_OPTIONS, resetKey: key }),
       { initialProps: { key: "a" } },
     );
     act(() => flushRafs());
@@ -708,7 +710,7 @@ describe("useScrollAnchor", () => {
     const ref = { current: el };
     const { rerender } = renderHook(
       ({ key }: { key: string }) =>
-        useScrollAnchor(ref, { ...DEFAULT_OPTIONS, resetKey: key }),
+        useScrollAnchor(ref, NULL_SENTINEL, { ...DEFAULT_OPTIONS, resetKey: key }),
       { initialProps: { key: "a" } },
     );
     act(() => flushRafs());
@@ -735,7 +737,7 @@ describe("useScrollAnchor", () => {
     const el = makeEl();
     const ref = { current: el };
     const { unmount } = renderHook(() =>
-      useScrollAnchor(ref, { ...DEFAULT_OPTIONS, contentReady: false }),
+      useScrollAnchor(ref, NULL_SENTINEL, { ...DEFAULT_OPTIONS, contentReady: false }),
     );
 
     // Settling RAF is queued, timeout is scheduled
