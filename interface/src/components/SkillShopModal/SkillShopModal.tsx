@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { X, Search } from "lucide-react";
 import { SkillShopCategories } from "./SkillShopCategories";
 import { SkillShopGrid } from "./SkillShopGrid";
@@ -25,10 +25,16 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
   const [installedNames, setInstalledNames] = useState<Set<string>>(new Set());
   const [installing, setInstalling] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
+  const syncedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen && initialInstalledNames) {
+    if (!isOpen) {
+      syncedRef.current = false;
+      return;
+    }
+    if (!syncedRef.current && initialInstalledNames) {
       setInstalledNames(new Set(initialInstalledNames));
+      syncedRef.current = true;
     }
   }, [isOpen, initialInstalledNames]);
 
