@@ -191,8 +191,9 @@ export function SchedulePicker({ value, onChange, disabled }: SchedulePickerProp
   const minutes = useMemo(() => Array.from({ length: 60 }, (_, i) => i), []);
   const daysOfMonth = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
 
-  const FREQ_OPTIONS: { value: Frequency; label: string }[] = [
-    { value: "manual", label: "Manual" },
+  const isRecurring = state.freq !== "manual";
+
+  const TIMEFRAME_OPTIONS: { value: Frequency; label: string }[] = [
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
     { value: "monthly", label: "Monthly" },
@@ -210,7 +211,7 @@ export function SchedulePicker({ value, onChange, disabled }: SchedulePickerProp
         aria-expanded={open}
       >
         <Clock size={14} className={styles.triggerIcon} />
-        <span className={`${styles.triggerLabel}${state.freq === "manual" ? ` ${styles.placeholder}` : ""}`}>
+        <span className={`${styles.triggerLabel}${!isRecurring ? ` ${styles.placeholder}` : ""}`}>
           {description}
         </span>
         <ChevronDown size={14} className={`${styles.chevron}${open ? ` ${styles.chevronOpen}` : ""}`} />
@@ -226,22 +227,40 @@ export function SchedulePicker({ value, onChange, disabled }: SchedulePickerProp
                 className={styles.dropdown}
                 style={{ top: pos.top, left: pos.left, width: pos.width }}
               >
-                {/* Frequency tabs */}
-                <div className={styles.freqRow}>
-                  {FREQ_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`${styles.freqTab}${state.freq === opt.value ? ` ${styles.freqTabActive}` : ""}`}
-                      onClick={() => update({ freq: opt.value })}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                {/* Manual vs Recurring toggle */}
+                <div className={styles.modeRow}>
+                  <button
+                    type="button"
+                    className={`${styles.modeTab}${!isRecurring ? ` ${styles.modeTabActive}` : ""}`}
+                    onClick={() => update({ freq: "manual" })}
+                  >
+                    Manual
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeTab}${isRecurring ? ` ${styles.modeTabActive}` : ""}`}
+                    onClick={() => { if (!isRecurring) update({ freq: "daily" }); }}
+                  >
+                    Recurring
+                  </button>
                 </div>
 
-                {state.freq !== "manual" && (
+                {isRecurring && (
                   <div className={styles.fields}>
+                    {/* Timeframe pills */}
+                    <div className={styles.pillRow}>
+                      {TIMEFRAME_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          className={`${styles.pill}${state.freq === opt.value ? ` ${styles.pillActive}` : ""}`}
+                          onClick={() => update({ freq: opt.value })}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
                     {/* Time row */}
                     <div className={styles.fieldGroup}>
                       <span className={styles.fieldLabel}>Time</span>

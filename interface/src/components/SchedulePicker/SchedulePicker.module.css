@@ -93,34 +93,66 @@
   }
 }
 
-/* ── Frequency tabs ── */
+/* ── Mode toggle (Manual / Recurring) ── */
 
-.freqRow {
+.modeRow {
   display: flex;
   border-bottom: 1px solid var(--color-border);
 }
 
-.freqTab {
+.modeTab {
   flex: 1;
   padding: 8px 0;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s;
 }
 
-.freqTab:hover {
+.modeTab:hover {
   color: var(--color-text);
 }
 
-.freqTabActive {
+.modeTabActive {
   color: var(--color-accent, #60a5fa);
   border-bottom-color: var(--color-accent, #60a5fa);
+}
+
+/* ── Timeframe pills (Daily / Weekly / Monthly) ── */
+
+.pillRow {
+  display: flex;
+  gap: 6px;
+}
+
+.pill {
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+
+.pill:hover {
+  border-color: var(--color-accent, #60a5fa);
+  color: var(--color-text);
+}
+
+.pillActive {
+  background: var(--color-accent, #60a5fa);
+  border-color: var(--color-accent, #60a5fa);
+  color: #fff;
 }
 
 /* ── Fields area ── */

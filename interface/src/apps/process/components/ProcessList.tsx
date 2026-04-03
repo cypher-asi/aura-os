@@ -91,6 +91,7 @@ export function ProcessList() {
   const [addMenuAnchor, setAddMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<(InlineRenameTarget & { kind: "folder" | "process" }) | null>(null);
+  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
 
   // Close context menu on outside click
@@ -216,8 +217,12 @@ export function ProcessList() {
     () => explorerData.filter((n) => n.children && n.children.length > 0).map((n) => n.id),
     [explorerData],
   );
-  const explorerKey = useMemo(() => folders.map((f) => f.folder_id).join(), [folders]);
-  const defaultSelectedIds = useMemo(() => (processId ? [processId] : []), [processId]);
+  const activeId = pendingSelectId ?? processId;
+  const explorerKey = useMemo(
+    () => folders.map((f) => f.folder_id).join() + ":" + (pendingSelectId ?? ""),
+    [folders, pendingSelectId],
+  );
+  const defaultSelectedIds = useMemo(() => (activeId ? [activeId] : []), [activeId]);
 
   const handleSelect = useCallback((ids: Iterable<string>) => {
     const id = getLastSelectedId(ids);
@@ -347,7 +352,7 @@ export function ProcessList() {
           title="No processes yet"
           description="Create a process to build automated workflows."
         />
-        {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} />}
+        {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} onCreated={setPendingSelectId} />}
         {showFolderForm && <ProcessFolderForm onClose={() => setShowFolderForm(false)} />}
         {addMenuAnchor && createPortal(
           <div ref={addMenuRef} style={{ position: "fixed", left: addMenuAnchor.x, top: addMenuAnchor.y, zIndex: 9999 }}>
@@ -404,7 +409,7 @@ export function ProcessList() {
         />
       )}
 
-      {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} />}
+      {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} onCreated={setPendingSelectId} />}
       {showFolderForm && <ProcessFolderForm onClose={() => setShowFolderForm(false)} />}
     </div>
   );
