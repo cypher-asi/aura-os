@@ -563,6 +563,8 @@ export interface HarnessSkillInstallation {
   source_url: string | null;
   installed_at: string;
   version: string | null;
+  approved_paths: string[];
+  approved_commands: string[];
 }
 
 // ---------------------------------------------------------------------------
