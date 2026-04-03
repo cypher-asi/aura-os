@@ -1,0 +1,247 @@
+/* ── Trigger button ── */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  text-align: left;
+  line-height: 1.3;
+}
+
+.trigger:hover {
+  border-color: var(--color-border-hover, var(--color-accent));
+}
+
+.trigger:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.triggerIcon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.triggerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown panel ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.dropdown {
+  position: fixed;
+  z-index: 10000;
+  min-width: 280px;
+  padding: 0;
+  background: var(--color-bg-solid, #1e1e1e);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: scheduleDropIn 120ms ease-out;
+  overflow: hidden;
+}
+
+@keyframes scheduleDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Frequency tabs ── */
+
+.freqRow {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.freqTab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.freqTab:hover {
+  color: var(--color-text);
+}
+
+.freqTabActive {
+  color: var(--color-accent, #60a5fa);
+  border-bottom-color: var(--color-accent, #60a5fa);
+}
+
+/* ── Fields area ── */
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Time row ── */
+
+.timeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.select {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-input);
+  color: var(--color-text);
+  color-scheme: dark;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.timeSep {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.timeAmPm {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+}
+
+/* ── Day toggles (weekly) ── */
+
+.dayRow {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.dayToggle {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-input);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+  line-height: 1.3;
+}
+
+.dayToggle:hover {
+  border-color: var(--color-accent, #60a5fa);
+  color: var(--color-text);
+}
+
+.dayToggleActive {
+  background: var(--color-accent, #60a5fa);
+  border-color: var(--color-accent, #60a5fa);
+  color: #fff;
+}
+
+.dayToggleActive:hover {
+  opacity: 0.9;
+}
+
+/* ── Cron preview ── */
+
+.cronPreview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.cronLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cronValue {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary, var(--color-text-muted));
+}

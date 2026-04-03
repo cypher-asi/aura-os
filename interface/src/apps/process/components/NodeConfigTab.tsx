@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
@@ -8,6 +8,8 @@ import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { useAgentStore } from "../../agents/stores";
+import { Select } from "../../../components/Select";
+import { SchedulePicker } from "../../../components/SchedulePicker";
 import styles from "../../../components/Preview/Preview.module.css";
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
@@ -46,6 +48,14 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const ARTIFACT_TYPE_OPTIONS = [
+  { value: "report", label: "Report" },
+  { value: "data", label: "Data" },
+  { value: "media", label: "Media" },
+  { value: "code", label: "Code" },
+  { value: "custom", label: "Custom" },
+];
+
 export function NodeConfigTab({ node }: NodeConfigTabProps) {
   const { processId } = useParams<{ processId: string }>();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
@@ -53,7 +63,17 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
   const agents = useAgentStore((s) => s.agents);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
 
+  const nodeEditRequested = useProcessSidekickStore((s) => s.nodeEditRequested);
+  const clearNodeEditRequested = useProcessSidekickStore((s) => s.clearNodeEditRequested);
+
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (nodeEditRequested) {
+      setEditing(true);
+      clearNodeEditRequested();
+    }
+  }, [nodeEditRequested, clearNodeEditRequested]);
 
   const [label, setLabel] = useState(node.label);
   const [prompt, setPrompt] = useState(node.prompt);
@@ -81,6 +101,14 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
     node.node_type === "ignition" ? JSON.stringify(cfg?.watchlist ?? {}, null, 2) : "{}",
   );
   const [saving, setSaving] = useState(false);
+
+  const agentOptions = useMemo(
+    () => [
+      { value: "", label: "No agent assigned" },
+      ...agents.map((a) => ({ value: a.agent_id, label: a.name })),
+    ],
+    [agents],
+  );
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
 
@@ -169,18 +197,19 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             </EditField>
 
             {node.node_type === "ignition" && (
-              <EditField label="Schedule (cron expression)">
-                <input style={inputStyle} value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="e.g. 0 9 * * * (daily at 9 AM)" />
-                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Leave empty for manual-only triggering</Text>
+              <EditField label="Schedule">
+                <SchedulePicker value={schedule} onChange={setSchedule} />
               </EditField>
             )}
 
             {(node.node_type === "action" || node.node_type === "ignition") && (
               <EditField label="Agent">
-                <select style={{ ...inputStyle, cursor: "pointer" }} value={agentId} onChange={(e) => setAgentId(e.target.value)}>
-                  <option value="">No agent assigned</option>
-                  {agents.map((a) => <option key={a.agent_id} value={a.agent_id}>{a.name}</option>)}
-                </select>
+                <Select
+                  value={agentId}
+                  onChange={setAgentId}
+                  placeholder="No agent assigned"
+                  options={agentOptions}
+                />
               </EditField>
             )}
 
@@ -211,13 +240,7 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
                   <input style={inputStyle} value={artifactName} onChange={(e) => setArtifactName(e.target.value)} placeholder="e.g. Daily Report" />
                 </EditField>
                 <EditField label="Artifact Type">
-                  <select style={{ ...inputStyle, cursor: "pointer" }} value={artifactType} onChange={(e) => setArtifactType(e.target.value)}>
-                    <option value="report">Report</option>
-                    <option value="data">Data</option>
-                    <option value="media">Media</option>
-                    <option value="code">Code</option>
-                    <option value="custom">Custom</option>
-                  </select>
+                  <Select value={artifactType} onChange={setArtifactType} options={ARTIFACT_TYPE_OPTIONS} />
                 </EditField>
               </>
             )}
