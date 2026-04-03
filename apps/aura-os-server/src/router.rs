@@ -134,6 +134,11 @@ fn protected_auth_routes() -> Router<AppState> {
         .route("/api/auth/session", get(auth::get_session))
         .route("/api/auth/validate", post(auth::validate))
         .route("/api/auth/jwt-issuer", get(auth::get_jwt_issuer))
+        .route(
+            "/api/auth/redeem-access-code",
+            post(auth::redeem_access_code),
+        )
+        .route("/api/auth/access-codes", get(auth::list_access_codes))
 }
 
 fn user_routes() -> Router<AppState> {

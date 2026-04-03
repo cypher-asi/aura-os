@@ -478,6 +478,8 @@ pub struct ZeroAuthSession {
     pub access_token: String,
     #[serde(default)]
     pub is_zero_pro: bool,
+    #[serde(default)]
+    pub is_access_granted: bool,
     pub created_at: DateTime<Utc>,
     pub validated_at: DateTime<Utc>,
 }

@@ -46,4 +46,28 @@ impl NetworkClient {
         )
         .await
     }
+
+    pub async fn redeem_access_code(
+        &self,
+        jwt: &str,
+        code: &str,
+    ) -> Result<serde_json::Value, NetworkError> {
+        self.post_authed(
+            &format!("{}/api/access-codes/redeem", self.base_url),
+            jwt,
+            &serde_json::json!({ "code": code }),
+        )
+        .await
+    }
+
+    pub async fn list_access_codes(
+        &self,
+        jwt: &str,
+    ) -> Result<Vec<serde_json::Value>, NetworkError> {
+        self.get_authed(
+            &format!("{}/api/access-codes", self.base_url),
+            jwt,
+        )
+        .await
+    }
 }

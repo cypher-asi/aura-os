@@ -30,6 +30,8 @@ pub struct NetworkUser {
     pub website: Option<String>,
     #[serde(alias = "profile_id")]
     pub profile_id: Option<String>,
+    #[serde(default)]
+    pub is_access_granted: bool,
     #[serde(default, alias = "created_at")]
     pub created_at: Option<String>,
     #[serde(default, alias = "updated_at")]

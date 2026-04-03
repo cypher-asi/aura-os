@@ -294,6 +294,7 @@ impl AuthService {
                 .collect(),
             access_token: access_token.to_string(),
             is_zero_pro: false,
+            is_access_granted: false,
             created_at: now,
             validated_at: now,
         };

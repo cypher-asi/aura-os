@@ -181,6 +181,7 @@ pub(crate) async fn sync_user_to_network(state: &AppState, session: &mut ZeroAut
             Ok(user) => {
                 session.network_user_id = user.user_id_typed();
                 session.profile_id = user.profile_id_typed();
+                session.is_access_granted = user.is_access_granted;
 
                 // Update validation cache with enriched session
                 state.validation_cache.insert(

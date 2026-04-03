@@ -181,6 +181,7 @@ mod tests {
             wallets: vec![],
             access_token: "test-jwt-token".into(),
             is_zero_pro,
+            is_access_granted: false,
             created_at: validated_at,
             validated_at,
         }
