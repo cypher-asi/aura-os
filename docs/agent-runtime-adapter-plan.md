@@ -128,7 +128,113 @@ Phase 1 should stay small:
 4. Keep current Aura behavior compatible
 5. Make Aura harness the first adapter on this model
 6. Keep workflow and task authority in Aura OS
-7. Add Claude Code and Codex after the foundation is in place
+7. Support a thin but real end-to-end product flow
+8. Add Claude Code and Codex after the foundation is in place
+
+## V1 End-to-End Flow
+
+V1 should be more than backend wiring. It should provide a real visible product flow.
+
+The minimum usable flow should be:
+
+1. Create or edit an organization
+2. Add an org integration
+3. Optionally test that integration or environment
+4. Create or edit an agent
+5. Choose adapter, integration, and environment
+6. Run the agent through the normal Aura flow
+7. Verify that execution actually went through the selected runtime
+
+That means a user should be able to do at least this from the product:
+
+- add an Anthropic integration at the org level
+- create an agent that uses `aura_harness`
+- create an agent that uses `claude_code`
+- create an agent that uses `codex`
+- choose `local_host` or `swarm_microvm` where supported
+- run the agent and observe the result
+
+This does not need a fully polished final UI in V1, but it does need a real end-to-end slice.
+
+## V1 UI Surface
+
+The first UI/backend slice should be simple:
+
+### Organization
+
+Add a basic integrations area where an organization can store reusable connections.
+
+Initial integration types:
+- Anthropic
+- OpenAI
+
+Each integration should support:
+- label or name
+- provider type
+- API key or credential reference
+- optional default model
+- optional connection metadata later
+
+### Agent
+
+When creating or editing an agent, allow:
+- adapter selection
+- integration selection
+- environment selection
+
+Initial adapter list:
+- `aura_harness`
+- `claude_code`
+- `codex`
+
+Initial environment list:
+- `local_host`
+- `swarm_microvm`
+
+## Test Environment
+
+We should include a lightweight "test environment" capability in V1.
+
+This is inspired by Paperclip's adapter test flow and helps avoid blind configuration.
+
+The goal is to answer:
+- is the command available?
+- is the working directory valid?
+- is auth present?
+- is the configured model likely usable?
+- can a small hello probe run?
+
+This should return structured results such as:
+- pass
+- warn
+- fail
+
+It does not need to be a full playground in V1, but it should make configuration failures obvious before a user tries a real run.
+
+## Security and Key Handling
+
+We should treat integrations as sensitive system data.
+
+Simple V1 rules:
+
+- store credentials in the integration layer, not on the agent record
+- prefer org-owned integrations first
+- allow user-owned integrations later if needed
+- pass secrets to runtimes through environment or secret resolution, not through prompts
+- do not duplicate raw keys across multiple agents
+- keep logs, prompts, and transcripts free of secret values
+
+Recommended storage shape:
+- integration metadata stored normally
+- secret material stored through a dedicated secret mechanism or encrypted secret store
+- agent records only reference integrations, they do not embed the credential itself
+
+Paperclip's shape is a useful reference here:
+- secret refs instead of raw config spread everywhere
+- local encrypted secret storage as a default option
+- environment tests before execution
+
+We do not need the full final secrets platform in V1, but we should keep the structure compatible with secure growth.
 
 ## Compatibility Mapping
 
