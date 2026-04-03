@@ -252,6 +252,7 @@ impl HarnessLink for SwarmHarness {
             aura_session_id: config.aura_session_id,
             aura_org_id: config.aura_org_id,
             agent_id: config.agent_id,
+            provider_config: config.provider_config,
         })))?;
 
         Ok(HarnessSession {

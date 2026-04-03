@@ -25,12 +25,16 @@ use aura_os_storage::StorageClient;
 
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
+use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::harness_proxy::to_harness_agent_id;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
 use crate::state::{AppState, AuthJwt, ChatSession};
 
 use super::conversions::events_to_session_history;
-use super::runtime::send_external_agent_event_stream;
+use super::runtime::{
+    build_harness_provider_config, effective_model, resolve_integration, resolve_integration_ref,
+    send_external_agent_event_stream,
+};
 
 // ---------------------------------------------------------------------------
 // Chat persistence helpers
@@ -1046,9 +1050,6 @@ pub(crate) async fn send_agent_event_stream(
     Path(agent_id): Path<AgentId>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
-    super::super::billing::require_credits(&state, &jwt).await?;
-    info!(%agent_id, action = ?body.action, "Agent message stream requested");
-
     let agent = match state.agent_service.get_agent_async("", &agent_id).await {
         Ok(a) => a,
         Err(_) => state
@@ -1056,6 +1057,8 @@ pub(crate) async fn send_agent_event_stream(
             .get_agent_local(&agent_id)
             .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?,
     };
+    require_credits_for_auth_source(&state, &jwt, &agent.auth_source).await?;
+    info!(%agent_id, action = ?body.action, "Agent message stream requested");
 
     if agent.role == "super_agent" || agent.tags.contains(&"super_agent".to_string()) {
         info!(%agent_id, "SuperAgent detected — routing to SuperAgent handler");
@@ -1087,14 +1090,17 @@ pub(crate) async fn send_agent_event_stream(
     };
 
     let harness_id = to_harness_agent_id(&agent_id.to_string());
+    let integration = resolve_integration(&state, &agent)?;
+    let model = effective_model(&agent, integration.as_ref(), body.model.clone());
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(harness_id),
         agent_name: Some(agent.name.clone()),
-        model: body.model.clone(),
+        model: model.clone(),
         token: Some(jwt.clone()),
         conversation_messages,
         project_id: body.project_id.clone(),
+        provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         ..Default::default()
     };
 
@@ -1141,14 +1147,13 @@ pub(crate) async fn send_event_stream(
     Path((project_id, agent_instance_id)): Path<(ProjectId, AgentInstanceId)>,
     Json(body): Json<SendChatRequest>,
 ) -> ApiResult<SseResponse> {
-    super::super::billing::require_credits(&state, &jwt).await?;
-    info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
-
     let instance = state
         .agent_instance_service
         .get_instance(&project_id, &agent_instance_id)
         .await
         .map_err(|e| ApiError::internal(format!("looking up agent instance: {e}")))?;
+    require_credits_for_auth_source(&state, &jwt, &instance.auth_source).await?;
+    info!(%project_id, %agent_instance_id, action = ?body.action, "Message stream requested");
 
     let persist_ctx =
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt).await;
@@ -1179,15 +1184,38 @@ pub(crate) async fn send_event_stream(
     );
 
     let harness_id = to_harness_agent_id(&instance.agent_id.to_string());
+    let integration = resolve_integration_ref(
+        &state,
+        instance.org_id,
+        &instance.auth_source,
+        instance.integration_id.as_deref(),
+    )?;
+    let model = body
+        .model
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| {
+            instance
+                .default_model
+                .clone()
+                .filter(|value| !value.trim().is_empty())
+        })
+        .or_else(|| {
+            integration
+                .as_ref()
+                .and_then(|resolved| resolved.metadata.default_model.clone())
+                .filter(|value| !value.trim().is_empty())
+        });
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
         agent_id: Some(harness_id),
         agent_name: Some(instance.name.clone()),
-        model: body.model.clone(),
+        model: model.clone(),
         token: Some(jwt),
         conversation_messages,
         project_id: Some(pid_str),
         project_path,
+        provider_config: build_harness_provider_config(integration.as_ref(), model.as_deref())?,
         ..Default::default()
     };
 

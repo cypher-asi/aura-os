@@ -15,6 +15,7 @@ pub use swarm_harness::{CreateAgentResponse, SwarmHarness};
 pub use aura_protocol::{
     ApprovalResponse, AssistantMessageEnd, AssistantMessageStart, ConversationMessage, ErrorMsg,
     FileOp, FilesChanged, InboundMessage as HarnessInbound, InstalledTool,
-    OutboundMessage as HarnessOutbound, SessionInit, SessionReady, SessionUsage, TextDelta,
-    ThinkingDelta, ToolAuth, ToolInfo, ToolResultMsg, ToolUseStart, UserMessage,
+    OutboundMessage as HarnessOutbound, SessionInit, SessionProviderConfig, SessionReady,
+    SessionUsage, TextDelta, ThinkingDelta, ToolAuth, ToolInfo, ToolResultMsg, ToolUseStart,
+    UserMessage,
 };

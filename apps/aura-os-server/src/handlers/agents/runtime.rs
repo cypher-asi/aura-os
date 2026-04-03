@@ -17,7 +17,8 @@ use uuid::Uuid;
 use aura_os_core::{Agent, AgentId, OrgIntegration, ProjectId};
 use aura_os_link::{
     AssistantMessageEnd, AssistantMessageStart, FilesChanged, HarnessInbound, HarnessOutbound,
-    SessionConfig, SessionReady, SessionUsage, TextDelta, ToolInfo, UserMessage,
+    SessionConfig, SessionProviderConfig, SessionReady, SessionUsage, TextDelta, ToolInfo,
+    UserMessage,
 };
 
 use crate::dto::{AgentRuntimeTestResponse, SendChatRequest};
@@ -29,9 +30,9 @@ use crate::handlers::sse::harness_event_to_sse;
 use crate::state::{AppState, AuthJwt};
 
 #[derive(Clone)]
-struct ResolvedIntegration {
-    metadata: OrgIntegration,
-    secret: Option<String>,
+pub(crate) struct ResolvedIntegration {
+    pub(crate) metadata: OrgIntegration,
+    pub(crate) secret: Option<String>,
 }
 
 struct RuntimeOutcome {
@@ -55,7 +56,7 @@ pub(crate) async fn test_agent_runtime(
     let model = effective_model(&agent, integration.as_ref(), None);
 
     let outcome = if agent.adapter_type == "aura_harness" {
-        run_harness_test(&state, &agent, &jwt, model.clone()).await?
+        run_harness_test(&state, &agent, &jwt, model.clone(), integration.as_ref()).await?
     } else {
         let prompt = "Reply with exactly `hello from aura` and stop.";
         run_external_adapter_prompt(
@@ -82,15 +83,7 @@ pub(crate) async fn test_agent_runtime(
         integration_name: integration
             .as_ref()
             .map(|resolved| resolved.metadata.name.clone()),
-        message: if agent.adapter_type == "aura_harness" && agent.auth_source == "org_integration"
-        {
-            format!(
-                "{} (Aura org integrations currently influence model defaults only; full harness BYOK is a follow-on pass.)",
-                outcome.text.trim()
-            )
-        } else {
-            outcome.text.trim().to_string()
-        },
+        message: outcome.text.trim().to_string(),
     }))
 }
 
@@ -125,7 +118,6 @@ pub(crate) async fn send_external_agent_event_stream(
         HarnessOutbound::SessionReady(SessionReady {
             session_id: Uuid::new_v4().to_string(),
             tools: Vec::<ToolInfo>::new(),
-            skills: Vec::new(),
         }),
         HarnessOutbound::AssistantMessageStart(AssistantMessageStart {
             message_id: Uuid::new_v4().to_string(),
@@ -154,7 +146,7 @@ pub(crate) async fn send_external_agent_event_stream(
     ))
 }
 
-fn effective_model(
+pub(crate) fn effective_model(
     agent: &Agent,
     integration: Option<&ResolvedIntegration>,
     override_model: Option<String>,
@@ -183,7 +175,7 @@ fn non_empty_string(value: &str) -> Option<String> {
     }
 }
 
-fn resolve_integration(
+pub(crate) fn resolve_integration(
     state: &AppState,
     agent: &Agent,
 ) -> Result<Option<ResolvedIntegration>, (axum::http::StatusCode, Json<ApiError>)> {
@@ -211,19 +203,79 @@ fn resolve_integration(
     Ok(Some(ResolvedIntegration { metadata, secret }))
 }
 
+pub(crate) fn resolve_integration_ref(
+    state: &AppState,
+    org_id: Option<aura_os_core::OrgId>,
+    auth_source: &str,
+    integration_id: Option<&str>,
+) -> Result<Option<ResolvedIntegration>, (axum::http::StatusCode, Json<ApiError>)> {
+    if auth_source != "org_integration" {
+        return Ok(None);
+    }
+
+    let Some(integration_id) = integration_id else {
+        return Ok(None);
+    };
+
+    let org_id = org_id.ok_or_else(|| {
+        ApiError::bad_request("Agent must belong to an organization before using integrations")
+    })?;
+    let metadata = state
+        .org_service
+        .get_integration(&org_id, integration_id)
+        .map_err(|e| ApiError::internal(format!("loading integration: {e}")))?
+        .ok_or_else(|| ApiError::not_found("Selected integration was not found"))?;
+    let secret = state
+        .org_service
+        .get_integration_secret(integration_id)
+        .map_err(|e| ApiError::internal(format!("loading integration secret: {e}")))?;
+
+    Ok(Some(ResolvedIntegration { metadata, secret }))
+}
+
+pub(crate) fn build_harness_provider_config(
+    integration: Option<&ResolvedIntegration>,
+    model: Option<&str>,
+) -> ApiResult<Option<SessionProviderConfig>> {
+    let Some(integration) = integration else {
+        return Ok(None);
+    };
+
+    match integration.metadata.provider.as_str() {
+        "anthropic" => Ok(Some(SessionProviderConfig {
+            provider: "anthropic".to_string(),
+            routing_mode: Some("direct".to_string()),
+            api_key: integration.secret.clone(),
+            base_url: None,
+            default_model: model
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .or_else(|| integration.metadata.default_model.clone()),
+            fallback_model: None,
+            prompt_caching_enabled: Some(true),
+        })),
+        other => Err(ApiError::bad_request(format!(
+            "Aura currently supports org integrations only for the Anthropic provider, received `{other}`"
+        ))),
+    }
+}
+
 async fn run_harness_test(
     state: &AppState,
     agent: &Agent,
     jwt: &str,
     model: Option<String>,
+    integration: Option<&ResolvedIntegration>,
 ) -> ApiResult<RuntimeOutcome> {
     let harness_id = to_harness_agent_id(&agent.agent_id.to_string());
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
         agent_id: Some(harness_id),
         agent_name: Some(agent.name.clone()),
-        model,
+        model: model.clone(),
         token: Some(jwt.to_string()),
+        provider_config: build_harness_provider_config(integration, model.as_deref())?,
         ..Default::default()
     };
 

@@ -132,4 +132,29 @@ describe("useAgentEditorForm", () => {
       expect(result.current.integrationId).toBe("int-anthropic");
     });
   });
+
+  it("allows Aura to switch to an org-backed Anthropic integration", async () => {
+    mockOrgState.integrations = [
+      {
+        integration_id: "int-aura-anthropic",
+        provider: "anthropic",
+        default_model: "claude-opus-4-6",
+        name: "Aura Anthropic",
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useAgentEditorForm(true, undefined, vi.fn(), vi.fn()),
+    );
+
+    act(() => {
+      result.current.setAuthSource("org_integration");
+    });
+
+    await waitFor(() => {
+      expect(result.current.adapterType).toBe("aura_harness");
+      expect(result.current.authSource).toBe("org_integration");
+      expect(result.current.integrationId).toBe("int-aura-anthropic");
+    });
+  });
 });

@@ -26,6 +26,8 @@ pub struct SessionConfig {
     pub aura_session_id: Option<String>,
     /// Org UUID for X-Aura-Org-Id billing header.
     pub aura_org_id: Option<String>,
+    /// Optional per-session provider override for Aura BYOK.
+    pub provider_config: Option<aura_protocol::SessionProviderConfig>,
 }
 
 impl Default for SessionConfig {
@@ -46,6 +48,7 @@ impl Default for SessionConfig {
             aura_agent_id: None,
             aura_session_id: None,
             aura_org_id: None,
+            provider_config: None,
         }
     }
 }

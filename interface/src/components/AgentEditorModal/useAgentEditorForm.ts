@@ -55,6 +55,7 @@ function defaultAuthSource(adapterType: string, integrationId?: string | null): 
 }
 
 function requiredProviderForAdapter(adapterType: string): string | null {
+  if (adapterType === "aura_harness") return "anthropic";
   if (adapterType === "claude_code") return "anthropic";
   if (adapterType === "codex") return "openai";
   return null;
@@ -115,22 +116,20 @@ export function useAgentEditorForm(
   }, [isOpen, agent, isMobileLayout]);
 
   useEffect(() => {
-    if (adapterType === "aura_harness") {
-      setAuthSource("aura_managed");
-      return;
+    const allowedAuthSources = adapterType === "aura_harness"
+      ? ["aura_managed", "org_integration"]
+      : ["local_cli_auth", "org_integration"];
+
+    if (adapterType !== "aura_harness") {
+      setEnvironment("local_host");
     }
-    setEnvironment("local_host");
-    if (authSource === "aura_managed") {
-      setAuthSource("local_cli_auth");
+
+    if (!allowedAuthSources.includes(authSource)) {
+      setAuthSource(allowedAuthSources[0]);
     }
   }, [adapterType, authSource]);
 
   useEffect(() => {
-    if (adapterType === "aura_harness") {
-      if (integrationId) setIntegrationId("");
-      return;
-    }
-
     if (authSource !== "org_integration") {
       if (integrationId) setIntegrationId("");
       return;

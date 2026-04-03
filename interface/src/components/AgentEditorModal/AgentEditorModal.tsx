@@ -28,11 +28,12 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
 
   const isEditing = !!agent;
   const integrationChoices = availableIntegrations.filter((integration) => {
+    if (adapterType === "aura_harness") return integration.provider === "anthropic";
     if (adapterType === "claude_code") return integration.provider === "anthropic";
     if (adapterType === "codex") return integration.provider === "openai";
     return false;
   });
-  const showsIntegrationPicker = adapterType !== "aura_harness" && authSource === "org_integration";
+  const showsIntegrationPicker = authSource === "org_integration";
 
   return (
     <>
@@ -164,13 +165,22 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
             <label className={styles.label}>Auth Source</label>
             <div className={styles.machineTypeToggle}>
               {adapterType === "aura_harness" ? (
-                <button
-                  type="button"
-                  className={`${styles.machineTypeOption} ${authSource === "aura_managed" ? styles.machineTypeActive : ""}`}
-                  onClick={() => setAuthSource("aura_managed")}
-                >
-                  Aura Managed
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.machineTypeOption} ${authSource === "aura_managed" ? styles.machineTypeActive : ""}`}
+                    onClick={() => setAuthSource("aura_managed")}
+                  >
+                    Aura Managed
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
+                    onClick={() => setAuthSource("org_integration")}
+                  >
+                    Org Integration
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -192,7 +202,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
             </div>
             {adapterType === "aura_harness" ? (
               <Text variant="muted" size="sm">
-                Aura currently uses Aura-managed billing and provider routing. Harness BYOK is the next pass.
+                Aura can run on Aura-managed billing or use a shared Anthropic org integration for BYOK execution.
               </Text>
             ) : authSource === "local_cli_auth" ? (
               <Text variant="muted" size="sm">
