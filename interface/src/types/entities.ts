@@ -196,6 +196,7 @@ export interface ZeroUser {
   zero_wallet: string;
   wallets: string[];
   is_zero_pro?: boolean;
+  is_access_granted?: boolean;
 }
 
 export interface AuthSession {
@@ -208,6 +209,7 @@ export interface AuthSession {
   zero_wallet: string;
   wallets: string[];
   is_zero_pro?: boolean;
+  is_access_granted?: boolean;
   zero_pro_refresh_error?: string;
   access_token?: string;
   created_at: string;

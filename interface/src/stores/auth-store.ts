@@ -16,6 +16,7 @@ function sessionToUser(session: AuthSession): ZeroUser {
     zero_wallet: session.zero_wallet,
     wallets: session.wallets,
     is_zero_pro: session.is_zero_pro,
+    is_access_granted: session.is_access_granted,
   };
 }
 
