@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
@@ -65,7 +65,9 @@ export function ChatPanel({
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
   const scrollSentinelRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
+  const [needsSpacer, setNeedsSpacer] = useState(false);
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
   useEffect(() => {
@@ -206,6 +208,29 @@ export function ChatPanel({
     [streamKey],
   );
 
+  const checkSpacer = useCallback(() => {
+    const container = messageAreaRef.current;
+    const spacer = spacerRef.current;
+    if (!container) return;
+    const spacerH = spacer?.offsetHeight ?? 0;
+    const contentH = container.scrollHeight - spacerH;
+    setNeedsSpacer(contentH > container.clientHeight);
+  }, []);
+
+  useLayoutEffect(() => {
+    checkSpacer();
+  }, [messages.length, checkSpacer]);
+
+  useEffect(() => {
+    const container = messageAreaRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(checkSpacer);
+    ro.observe(container);
+    const content = container.firstElementChild;
+    if (content) ro.observe(content);
+    return () => ro.disconnect();
+  }, [checkSpacer]);
+
   let emptyState: React.ReactNode = null;
   if (errorMessage) {
     emptyState = (
@@ -253,7 +278,11 @@ export function ChatPanel({
             />
             <div ref={scrollSentinelRef} className={styles.scrollSentinel} />
             {messages.length > 0 && (
-              <div className={styles.scrollSpacer} />
+              <div
+                ref={spacerRef}
+                className={styles.scrollSpacer}
+                style={needsSpacer ? undefined : { minHeight: 0 }}
+              />
             )}
           </div>
         </div>
