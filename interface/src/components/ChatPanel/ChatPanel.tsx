@@ -50,7 +50,7 @@ export function ChatPanel({
   machineType,
   templateAgentId,
   agentId,
-  isLoading,
+  isLoading: _isLoading,
   historyResolved = true,
   errorMessage,
   emptyMessage,
