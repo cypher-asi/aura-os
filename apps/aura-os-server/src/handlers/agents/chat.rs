@@ -48,18 +48,39 @@ async fn resolve_chat_session(
     project_agent_id: &str,
     project_id: &str,
 ) -> Option<String> {
-    if let Ok(sessions) = storage.list_sessions(project_agent_id, jwt).await {
-        for session in sessions.iter().rev() {
-            match storage.list_events(&session.id, jwt, Some(1), None).await {
-                Ok(_) => return Some(session.id.clone()),
-                Err(e) => {
-                    tracing::debug!(
-                        session_id = %session.id,
-                        error = %e,
-                        "Skipping stale session during resolution"
-                    );
+    match storage.list_sessions(project_agent_id, jwt).await {
+        Ok(sessions) => {
+            info!(
+                %project_agent_id,
+                count = sessions.len(),
+                "resolve_chat_session: listed existing sessions"
+            );
+            for session in sessions.iter().rev() {
+                match storage.list_events(&session.id, jwt, Some(1), None).await {
+                    Ok(_) => {
+                        info!(
+                            session_id = %session.id,
+                            %project_agent_id,
+                            "resolve_chat_session: reusing existing session"
+                        );
+                        return Some(session.id.clone());
+                    }
+                    Err(e) => {
+                        warn!(
+                            session_id = %session.id,
+                            error = %e,
+                            "resolve_chat_session: skipping stale session"
+                        );
+                    }
                 }
             }
+        }
+        Err(e) => {
+            warn!(
+                %project_agent_id,
+                error = %e,
+                "resolve_chat_session: failed to list sessions"
+            );
         }
     }
     let req = aura_os_storage::CreateSessionRequest {
@@ -71,9 +92,22 @@ async fn resolve_chat_session(
         summary_of_previous_context: None,
     };
     match storage.create_session(project_agent_id, jwt, &req).await {
-        Ok(session) => Some(session.id),
+        Ok(session) => {
+            info!(
+                session_id = %session.id,
+                %project_agent_id,
+                %project_id,
+                "resolve_chat_session: created new session"
+            );
+            Some(session.id)
+        }
         Err(e) => {
-            warn!(error = %e, "Failed to create chat session in storage");
+            error!(
+                error = %e,
+                %project_agent_id,
+                %project_id,
+                "resolve_chat_session: failed to create session"
+            );
             None
         }
     }
@@ -93,17 +127,27 @@ fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
             event_type: "user_message".to_string(),
             content: Some(serde_json::json!({ "text": content })),
         };
-        if let Err(e) = ctx
+        match ctx
             .storage
             .create_event(&ctx.session_id, &ctx.jwt, &req)
             .await
         {
-            error!(
-                error = %e,
-                session_id = %ctx.session_id,
-                project_agent_id = %ctx.project_agent_id,
-                "Failed to persist user message event"
-            );
+            Ok(evt) => {
+                info!(
+                    event_id = %evt.id,
+                    session_id = %ctx.session_id,
+                    project_agent_id = %ctx.project_agent_id,
+                    "Persisted user message event"
+                );
+            }
+            Err(e) => {
+                error!(
+                    error = %e,
+                    session_id = %ctx.session_id,
+                    project_agent_id = %ctx.project_agent_id,
+                    "Failed to persist user message event"
+                );
+            }
         }
     });
 }
@@ -526,8 +570,14 @@ async fn find_matching_project_agents(
                 let filtered: Vec<_> = agents
                     .into_iter()
                     .filter(|a| a.agent_id.as_deref() == Some(agent_id_str))
+                    .map(|mut a| {
+                        if a.project_id.as_ref().map_or(true, |p| p.is_empty()) {
+                            a.project_id = Some(pid.clone());
+                        }
+                        a
+                    })
                     .collect();
-                if total > 0 || filtered.len() > 0 {
+                if total > 0 || !filtered.is_empty() {
                     info!(
                         project_id = %pid, total_agents = total, matched = filtered.len(),
                         %agent_id_str, "agent matching: project agents listed"
@@ -575,7 +625,10 @@ async fn auto_create_project_agent(
         harness: None,
     };
     match storage.create_project_agent(&project_id_str, jwt, &req).await {
-        Ok(pa) => {
+        Ok(mut pa) => {
+            if pa.project_id.as_ref().map_or(true, |p| p.is_empty()) {
+                pa.project_id = Some(project_id_str.clone());
+            }
             info!(
                 %agent_id,
                 project_agent_id = %pa.id,
