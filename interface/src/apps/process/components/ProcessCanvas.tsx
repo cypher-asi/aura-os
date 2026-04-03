@@ -177,8 +177,10 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections, processNodes));
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [nodeCtxMenu, setNodeCtxMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [edgeCtxMenu, setEdgeCtxMenu] = useState<{ x: number; y: number; edgeId: string } | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
   const nodeCtxMenuRef = useRef<HTMLDivElement>(null);
+  const edgeCtxMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNodes(toFlowNodes(processNodes, renameState, nodeStatuses));
@@ -211,6 +213,15 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
 
   const onConnect = useCallback(
     async (params: Connection) => {
+      const duplicate = edges.some(
+        (e) =>
+          e.source === params.source &&
+          e.target === params.target &&
+          (e.sourceHandle ?? null) === (params.sourceHandle ?? null) &&
+          (e.targetHandle ?? null) === (params.targetHandle ?? null),
+      );
+      if (duplicate) return;
+
       const tempId = `temp-${Date.now()}`;
       const optimisticEdge: Edge = {
         id: tempId,
@@ -234,7 +245,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         setEdges((prev) => prev.filter((edge) => edge.id !== tempId));
       }
     },
-    [processId, fetchConnections, setEdges],
+    [processId, fetchConnections, setEdges, edges],
   );
 
   const handleAddNode = useCallback(
@@ -262,6 +273,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
   const onPaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault();
     setNodeCtxMenu(null);
+    setEdgeCtxMenu(null);
     setCtxMenu({ x: event.clientX, y: event.clientY });
   }, []);
 
@@ -269,6 +281,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
       setCtxMenu(null);
+      setEdgeCtxMenu(null);
       setNodeCtxMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });
     },
     [],
@@ -286,17 +299,41 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
     [nodes],
   );
 
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault();
+      setCtxMenu(null);
+      setNodeCtxMenu(null);
+      setEdgeCtxMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id });
+    },
+    [],
+  );
+
+  const deleteConnection = useCallback(
+    async (connectionId: string) => {
+      setEdges((prev) => prev.filter((e) => e.id !== connectionId));
+      try {
+        await processApi.deleteConnection(processId, connectionId);
+      } catch (e) {
+        console.error("Failed to delete connection:", e);
+      }
+      fetchConnections(processId);
+    },
+    [processId, setEdges, fetchConnections],
+  );
+
   useEffect(() => {
-    const activeMenu = ctxMenu ? ctxMenuRef : nodeCtxMenu ? nodeCtxMenuRef : null;
+    const activeMenu = ctxMenu ? ctxMenuRef : nodeCtxMenu ? nodeCtxMenuRef : edgeCtxMenu ? edgeCtxMenuRef : null;
     if (!activeMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (activeMenu.current && !activeMenu.current.contains(e.target as HTMLElement)) {
         setCtxMenu(null);
         setNodeCtxMenu(null);
+        setEdgeCtxMenu(null);
       }
     };
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setCtxMenu(null); setNodeCtxMenu(null); }
+      if (e.key === "Escape") { setCtxMenu(null); setNodeCtxMenu(null); setEdgeCtxMenu(null); }
     };
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -304,7 +341,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [ctxMenu, nodeCtxMenu]);
+  }, [ctxMenu, nodeCtxMenu, edgeCtxMenu]);
 
   const onNodeClick = useCallback(
     (_: unknown, flowNode: Node) => {
@@ -395,6 +432,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
         onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
         onSelectionContextMenu={onSelectionContextMenu}
         nodeTypes={nodeTypes}
         deleteKeyCode={null}
@@ -471,6 +509,27 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
             border="solid"
             rounded="md"
             width={160}
+            isOpen
+          />
+        </div>,
+        document.body,
+      )}
+
+      {edgeCtxMenu && createPortal(
+        <div
+          ref={edgeCtxMenuRef}
+          style={{ position: "fixed", left: edgeCtxMenu.x, top: edgeCtxMenu.y, zIndex: 9999 }}
+        >
+          <Menu
+            items={[{ id: "delete", label: "Delete connection", icon: <Trash2 size={14} /> }]}
+            onChange={(id) => {
+              if (id === "delete") deleteConnection(edgeCtxMenu.edgeId);
+              setEdgeCtxMenu(null);
+            }}
+            background="solid"
+            border="solid"
+            rounded="md"
+            width={180}
             isOpen
           />
         </div>,
