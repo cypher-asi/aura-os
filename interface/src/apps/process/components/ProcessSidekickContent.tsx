@@ -9,6 +9,7 @@ import { processApi } from "../../../api/process";
 import { EmptyState } from "../../../components/EmptyState";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { ProcessEditorModal } from "./ProcessEditorModal";
+import { NodeEditorModal } from "./NodeEditorModal";
 import { NodeInfoTab } from "./NodeInfoTab";
 import { NodeConfigTab } from "./NodeConfigTab";
 import { NodeConnectionsTab } from "./NodeConnectionsTab";
@@ -245,7 +246,7 @@ function RunPreviewBody({ run }: { run: ProcessRun }) {
 
 export function ProcessSidekickContent() {
   const { processId } = useParams<{ processId: string }>();
-  const { activeTab, activeNodeTab, previewRun, selectedNode, showEditor, viewRun, closePreview, closeEditor } =
+  const { activeTab, activeNodeTab, previewRun, selectedNode, showEditor, nodeEditRequested, viewRun, closePreview, closeEditor, clearNodeEditRequested } =
     useProcessSidekickStore(
       useShallow((s) => ({
         activeTab: s.activeTab,
@@ -253,9 +254,11 @@ export function ProcessSidekickContent() {
         previewRun: s.previewRun,
         selectedNode: s.selectedNode,
         showEditor: s.showEditor,
+        nodeEditRequested: s.nodeEditRequested,
         viewRun: s.viewRun,
         closePreview: s.closePreview,
         closeEditor: s.closeEditor,
+        clearNodeEditRequested: s.clearNodeEditRequested,
       })),
     );
 
@@ -282,6 +285,11 @@ export function ProcessSidekickContent() {
             {activeNodeTab === "output" && <NodeOutputTab node={selectedNode} />}
           </div>
         </div>
+        <NodeEditorModal
+          isOpen={nodeEditRequested}
+          node={selectedNode}
+          onClose={clearNodeEditRequested}
+        />
       </div>
     );
   }

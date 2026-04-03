@@ -51,7 +51,7 @@ export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get)
   closeNodeInspector: () => set({ selectedNode: null, activeNodeTab: "info" }),
   requestEdit: () => {
     if (get().selectedNode) {
-      set({ activeNodeTab: "config", nodeEditRequested: true });
+      set({ nodeEditRequested: true });
     } else {
       set({ showEditor: true });
     }
