@@ -91,6 +91,9 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
   const [artifactName, setArtifactName] = useState(
     node.node_type === "artifact" ? (cfg?.artifact_name as string) ?? "" : "",
   );
+  const [artifactData, setArtifactData] = useState(
+    node.node_type === "artifact" ? JSON.stringify(cfg?.data ?? {}, null, 2) : "{}",
+  );
   const [delaySeconds, setDelaySeconds] = useState(
     node.node_type === "delay" ? String(cfg?.delay_seconds ?? "60") : "60",
   );
@@ -123,6 +126,7 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
     if (node.node_type === "artifact") {
       setArtifactType((c?.artifact_type as string) ?? "report");
       setArtifactName((c?.artifact_name as string) ?? "");
+      setArtifactData(JSON.stringify(c?.data ?? {}, null, 2));
     }
     if (node.node_type === "delay") setDelaySeconds(String(c?.delay_seconds ?? "60"));
     if (node.node_type === "action") setVaultPath((c?.vault_path as string) ?? "");
@@ -139,6 +143,9 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
       if (node.node_type === "artifact") {
         config.artifact_type = artifactType;
         config.artifact_name = artifactName;
+        if (artifactData) {
+          try { config.data = JSON.parse(artifactData); } catch { /* keep existing */ }
+        }
       }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
       if (node.node_type === "action" && vaultPath) config.vault_path = vaultPath;
@@ -162,7 +169,7 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactType, artifactName, delaySeconds, fetchNodes]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactType, artifactName, artifactData, delaySeconds, fetchNodes]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -241,6 +248,15 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
                 </EditField>
                 <EditField label="Artifact Type">
                   <Select value={artifactType} onChange={setArtifactType} options={ARTIFACT_TYPE_OPTIONS} />
+                </EditField>
+                <EditField label="Data (JSON)">
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 200, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
+                    value={artifactData}
+                    onChange={(e) => setArtifactData(e.target.value)}
+                    placeholder={'{\n  "competitors": {\n    "Cursor": { "website": "https://cursor.com" }\n  }\n}'}
+                  />
+                  <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Static JSON data for this artifact. Merged with upstream output when both are present.</Text>
                 </EditField>
               </>
             )}
@@ -334,6 +350,14 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
                 <span className={styles.fieldLabel}>Artifact Type</span>
                 <Text variant="secondary" size="sm">{(cfg?.artifact_type as string) || "report"}</Text>
               </div>
+              {cfg?.data != null && Object.keys(cfg.data as object).length > 0 && (
+                <div className={styles.taskField}>
+                  <span className={styles.fieldLabel}>Data</span>
+                  <Text variant="secondary" size="sm" style={{ fontFamily: "var(--font-mono)", fontSize: 11, whiteSpace: "pre-wrap" }}>
+                    {String(JSON.stringify(cfg.data, null, 2))}
+                  </Text>
+                </div>
+              )}
             </>
           )}
 

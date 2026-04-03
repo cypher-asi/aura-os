@@ -485,8 +485,25 @@ async fn execute_artifact(
         .await
         .map_err(|e| ProcessError::Execution(format!("Failed to create artifact dir: {e}")))?;
 
+    let data_content = cfg.get("data").and_then(|v| {
+        if v.is_null() {
+            return None;
+        }
+        Some(if v.is_string() {
+            v.as_str().unwrap_or_default().to_string()
+        } else {
+            serde_json::to_string_pretty(v).unwrap_or_default()
+        })
+    });
+
+    let content = match (data_content.as_deref(), upstream_context.is_empty()) {
+        (Some(data), true) => data.to_string(),
+        (Some(data), false) => format!("{upstream_context}\n\n---\n\n{data}"),
+        (None, _) => upstream_context.to_string(),
+    };
+
     let file_path = dir.join(&filename);
-    tokio::fs::write(&file_path, upstream_context.as_bytes())
+    tokio::fs::write(&file_path, content.as_bytes())
         .await
         .map_err(|e| ProcessError::Execution(format!("Failed to write artifact: {e}")))?;
 
@@ -498,7 +515,7 @@ async fn execute_artifact(
         artifact_type,
         name: artifact_name.to_string(),
         file_path: rel_path,
-        size_bytes: upstream_context.len() as u64,
+        size_bytes: content.len() as u64,
         metadata: serde_json::json!({}),
         created_at: Utc::now(),
     };
@@ -508,11 +525,11 @@ async fn execute_artifact(
         node_id = %node.node_id,
         artifact_id = %artifact.artifact_id,
         path = %file_path.display(),
-        bytes = upstream_context.len(),
+        bytes = content.len(),
         "Artifact saved"
     );
 
-    Ok(upstream_context.to_string())
+    Ok(content)
 }
 
 // ---------------------------------------------------------------------------
