@@ -4,6 +4,7 @@ import { Loader2, FileText, Clock, GitBranch, RefreshCw, Trash2 } from "lucide-r
 import { Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { api, ApiClientError } from "../../../api/client";
+import { useIsStreaming } from "../../../hooks/stream/hooks";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import type { Agent, MemorySnapshot } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
@@ -65,9 +66,29 @@ export function MemoryTab({ agent }: MemoryTabProps) {
     return () => { cancelled = true; };
   }, [agent.agent_id]);
 
+  const softRefresh = useCallback(() => {
+    let cancelled = false;
+    api.memory.getSnapshot(agent.agent_id)
+      .then((data) => { if (!cancelled) setSnapshot(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [agent.agent_id]);
+
   useEffect(() => {
     return fetchMemory();
   }, [fetchMemory]);
+
+  const isStreaming = useIsStreaming(agent.agent_id);
+  const prevStreamingRef = useRef(isStreaming);
+
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = isStreaming;
+    if (wasStreaming && !isStreaming) {
+      const timer = setTimeout(() => softRefresh(), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isStreaming, softRefresh]);
 
   useEffect(() => {
     if (!ctxMenu) return;
