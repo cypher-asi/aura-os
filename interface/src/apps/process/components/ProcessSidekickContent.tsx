@@ -8,6 +8,7 @@ import type { ProcessArtifact } from "../../../types";
 import { processApi } from "../../../api/process";
 import { EmptyState } from "../../../components/EmptyState";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
+import { ProcessEditorModal } from "./ProcessEditorModal";
 import { NodeInfoTab } from "./NodeInfoTab";
 import { NodeConfigTab } from "./NodeConfigTab";
 import { NodeConnectionsTab } from "./NodeConnectionsTab";
@@ -244,19 +245,23 @@ function RunPreviewBody({ run }: { run: ProcessRun }) {
 
 export function ProcessSidekickContent() {
   const { processId } = useParams<{ processId: string }>();
-  const { activeTab, activeNodeTab, previewRun, selectedNode, viewRun, closePreview } =
+  const { activeTab, activeNodeTab, previewRun, selectedNode, showEditor, viewRun, closePreview, closeEditor } =
     useProcessSidekickStore(
       useShallow((s) => ({
         activeTab: s.activeTab,
         activeNodeTab: s.activeNodeTab,
         previewRun: s.previewRun,
         selectedNode: s.selectedNode,
+        showEditor: s.showEditor,
         viewRun: s.viewRun,
         closePreview: s.closePreview,
+        closeEditor: s.closeEditor,
       })),
     );
 
+  const processes = useProcessStore((s) => s.processes);
   const runs = useProcessStore((s) => (processId ? s.runs[processId] ?? EMPTY_RUNS : EMPTY_RUNS));
+  const process = processes.find((p) => p.process_id === processId);
 
   if (!processId) {
     return (
@@ -302,6 +307,9 @@ export function ProcessSidekickContent() {
           {activeTab === "log" && <EmptyState>Activity log coming soon</EmptyState>}
         </div>
       </div>
+      {process && (
+        <ProcessEditorModal isOpen={showEditor} process={process} onClose={closeEditor} />
+      )}
     </div>
   );
 }
