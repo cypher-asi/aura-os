@@ -22,6 +22,8 @@ interface AgentEditorFormResult {
   setAdapterType: (v: string) => void;
   environment: string;
   setEnvironment: (v: string) => void;
+  authSource: string;
+  setAuthSource: (v: string) => void;
   integrationId: string;
   setIntegrationId: (v: string) => void;
   defaultModel: string;
@@ -46,6 +48,18 @@ interface AgentEditorFormResult {
   handleChangeImage: () => void;
 }
 
+function defaultAuthSource(adapterType: string, integrationId?: string | null): string {
+  if (integrationId?.trim()) return "org_integration";
+  if (adapterType === "aura_harness") return "aura_managed";
+  return "local_cli_auth";
+}
+
+function requiredProviderForAdapter(adapterType: string): string | null {
+  if (adapterType === "claude_code") return "anthropic";
+  if (adapterType === "codex") return "openai";
+  return null;
+}
+
 export function useAgentEditorForm(
   isOpen: boolean,
   agent: Agent | undefined,
@@ -60,6 +74,7 @@ export function useAgentEditorForm(
   const [icon, setIcon] = useState("");
   const [adapterType, setAdapterType] = useState("aura_harness");
   const [environment, setEnvironment] = useState("swarm_microvm");
+  const [authSource, setAuthSource] = useState("aura_managed");
   const [integrationId, setIntegrationId] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
   const [saving, setSaving] = useState(false);
@@ -85,12 +100,14 @@ export function useAgentEditorForm(
       setIcon(agent.icon ?? "");
       setAdapterType(agent.adapter_type ?? "aura_harness");
       setEnvironment(agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"));
+      setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
       setIntegrationId(agent.integration_id ?? "");
       setDefaultModel(agent.default_model ?? "");
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
       setAdapterType("aura_harness");
       setEnvironment(isMobileLayout ? "swarm_microvm" : "local_host");
+      setAuthSource("aura_managed");
       setIntegrationId("");
       setDefaultModel("");
     }
@@ -98,15 +115,34 @@ export function useAgentEditorForm(
   }, [isOpen, agent, isMobileLayout]);
 
   useEffect(() => {
-    if (adapterType === "aura_harness") return;
+    if (adapterType === "aura_harness") {
+      setAuthSource("aura_managed");
+      return;
+    }
     setEnvironment("local_host");
-    const requiredProvider = adapterType === "claude_code" ? "anthropic" : "openai";
+    if (authSource === "aura_managed") {
+      setAuthSource("local_cli_auth");
+    }
+  }, [adapterType, authSource]);
+
+  useEffect(() => {
+    if (adapterType === "aura_harness") {
+      if (integrationId) setIntegrationId("");
+      return;
+    }
+
+    if (authSource !== "org_integration") {
+      if (integrationId) setIntegrationId("");
+      return;
+    }
+
+    const requiredProvider = requiredProviderForAdapter(adapterType);
     const selected = integrations.find((integration) => integration.integration_id === integrationId);
     if (!selected || selected.provider !== requiredProvider) {
       const fallback = integrations.find((integration) => integration.provider === requiredProvider);
       setIntegrationId(fallback?.integration_id ?? "");
     }
-  }, [adapterType, integrationId, integrations]);
+  }, [adapterType, authSource, integrationId, integrations]);
 
   const handleClose = useCallback(() => {
     if (rawImageSrc) URL.revokeObjectURL(rawImageSrc);
@@ -171,7 +207,8 @@ export function useAgentEditorForm(
         machine_type: !agent && isMobileLayout && adapterType === "aura_harness" ? "remote" : machineType,
         adapter_type: adapterType,
         environment,
-        integration_id: integrationId || null,
+        auth_source: authSource,
+        integration_id: authSource === "org_integration" ? (integrationId || null) : null,
         default_model: defaultModel.trim() || null,
       };
       const saved = agent
@@ -181,7 +218,7 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, adapterType, environment, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, onClose]);
 
   const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
 
@@ -189,6 +226,7 @@ export function useAgentEditorForm(
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
     systemPrompt, setSystemPrompt, icon, setIcon,
     adapterType, setAdapterType, environment, setEnvironment,
+    authSource, setAuthSource,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
     availableIntegrations: integrations,
     saving, error, nameError, setNameError,

@@ -68,7 +68,7 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
           <div className={styles.rowInfo}>
             <div className={styles.rowLabel}>Connection details</div>
             <div className={styles.rowDescription}>
-              Store reusable provider credentials once at the organization level, then attach them to agents.
+              Store reusable provider credentials once at the organization level, then attach them only where API-backed runtime auth is needed.
             </div>
           </div>
           <div className={styles.rowControl} style={{ flexDirection: "column", alignItems: "stretch", width: "360px", maxWidth: "100%" }}>

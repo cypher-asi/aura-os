@@ -27,6 +27,30 @@ interface AgentInfoPanelProps {
   variant?: "default" | "mobileStandalone";
 }
 
+function formatAdapterLabel(adapterType?: string | null): string {
+  switch (adapterType) {
+    case "claude_code":
+      return "Claude Code";
+    case "codex":
+      return "Codex";
+    case "aura_harness":
+    default:
+      return "Aura";
+  }
+}
+
+function formatAuthSourceLabel(authSource?: string | null): string {
+  switch (authSource) {
+    case "org_integration":
+      return "Org Integration";
+    case "local_cli_auth":
+      return "Local CLI Auth";
+    case "aura_managed":
+    default:
+      return "Aura Managed";
+  }
+}
+
 export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
@@ -343,11 +367,14 @@ function ProfileTab({
         </div>
         <div className={styles.metaRow}>
           <Bot size={13} className={styles.metaIcon} />
-          <span className={styles.metaValue}>{a.adapter_type || "aura_harness"}</span>
+          <span className={styles.metaValue}>{formatAdapterLabel(a.adapter_type)}</span>
         </div>
         <div className={styles.metaRow}>
           <FolderOpen size={13} className={styles.metaIcon} />
-          <span className={styles.metaValue}>{a.integration_id ? "Org integration attached" : "No integration attached"}</span>
+          <span className={styles.metaValue}>
+            {formatAuthSourceLabel(a.auth_source)}
+            {a.integration_id ? " • org integration attached" : ""}
+          </span>
         </div>
         <div className={styles.metaRow}>
           <Calendar size={13} className={styles.metaIcon} />
@@ -360,7 +387,7 @@ function ProfileTab({
       <div className={styles.section}>
         <Text size="xs" variant="muted" weight="medium">Runtime</Text>
         <Text size="sm">
-          Adapter: {a.adapter_type || "aura_harness"} • Environment: {a.environment || (a.machine_type === "remote" ? "swarm_microvm" : "local_host")}
+          Adapter: {formatAdapterLabel(a.adapter_type)} • Environment: {a.environment || (a.machine_type === "remote" ? "swarm_microvm" : "local_host")} • Auth: {formatAuthSourceLabel(a.auth_source)}
         </Text>
         <div className={styles.nameAction} style={{ marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>

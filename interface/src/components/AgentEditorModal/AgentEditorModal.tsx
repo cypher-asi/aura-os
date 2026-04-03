@@ -17,6 +17,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
     systemPrompt, setSystemPrompt, icon,
     adapterType, setAdapterType, environment, setEnvironment,
+    authSource, setAuthSource,
     integrationId, setIntegrationId, defaultModel, setDefaultModel, availableIntegrations,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,
@@ -26,6 +27,12 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
   } = useAgentEditorForm(isOpen, agent, onClose, onSaved);
 
   const isEditing = !!agent;
+  const integrationChoices = availableIntegrations.filter((integration) => {
+    if (adapterType === "claude_code") return integration.provider === "anthropic";
+    if (adapterType === "codex") return integration.provider === "openai";
+    return false;
+  });
+  const showsIntegrationPicker = adapterType !== "aura_harness" && authSource === "org_integration";
 
   return (
     <>
@@ -108,7 +115,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                 className={`${styles.machineTypeOption} ${adapterType === "aura_harness" ? styles.machineTypeActive : ""}`}
                 onClick={() => setAdapterType("aura_harness")}
               >
-                Aura Harness
+                Aura
               </button>
               <button
                 type="button"
@@ -154,15 +161,55 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Org Integration</label>
-            <div className={styles.integrationList}>
-              {availableIntegrations
-                .filter((integration) => adapterType === "aura_harness"
-                  ? true
-                  : adapterType === "claude_code"
-                    ? integration.provider === "anthropic"
-                    : integration.provider === "openai")
-                .map((integration) => (
+            <label className={styles.label}>Auth Source</label>
+            <div className={styles.machineTypeToggle}>
+              {adapterType === "aura_harness" ? (
+                <button
+                  type="button"
+                  className={`${styles.machineTypeOption} ${authSource === "aura_managed" ? styles.machineTypeActive : ""}`}
+                  onClick={() => setAuthSource("aura_managed")}
+                >
+                  Aura Managed
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className={`${styles.machineTypeOption} ${authSource === "local_cli_auth" ? styles.machineTypeActive : ""}`}
+                    onClick={() => setAuthSource("local_cli_auth")}
+                  >
+                    Local CLI Auth
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
+                    onClick={() => setAuthSource("org_integration")}
+                  >
+                    Org Integration
+                  </button>
+                </>
+              )}
+            </div>
+            {adapterType === "aura_harness" ? (
+              <Text variant="muted" size="sm">
+                Aura currently uses Aura-managed billing and provider routing. Harness BYOK is the next pass.
+              </Text>
+            ) : authSource === "local_cli_auth" ? (
+              <Text variant="muted" size="sm">
+                This agent will use the CLI login or shell auth already available on the host. No org integration is required.
+              </Text>
+            ) : (
+              <Text variant="muted" size="sm">
+                This agent will inject a shared organization integration into the runtime for API-key-backed execution.
+              </Text>
+            )}
+          </div>
+
+          {showsIntegrationPicker && (
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Org Integration</label>
+              <div className={styles.integrationList}>
+                {integrationChoices.map((integration) => (
                   <button
                     key={integration.integration_id}
                     type="button"
@@ -176,18 +223,29 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                     </span>
                   </button>
                 ))}
+              </div>
+              {integrationChoices.length === 0 && (
+                <Text variant="muted" size="sm">
+                  Add a matching org integration in Team Settings if you want API-key-backed auth for this runtime.
+                </Text>
+              )}
             </div>
-            {availableIntegrations.length === 0 && (
-              <Text variant="muted" size="sm">Add an org integration in Team Settings before attaching it to an agent.</Text>
-            )}
-          </div>
+          )}
+
+          {!showsIntegrationPicker && adapterType !== "aura_harness" && availableIntegrations.length === 0 && (
+            <div className={styles.fieldGroup}>
+              <Text variant="muted" size="sm">
+                Org integrations are optional for Claude Code and Codex. You can keep using local CLI auth.
+              </Text>
+            </div>
+          )}
 
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Default Model</label>
             <Input
               value={defaultModel}
               onChange={(e) => setDefaultModel(e.target.value)}
-              placeholder="Optional override (otherwise uses the integration default)"
+              placeholder="Optional override (otherwise uses the adapter or integration default)"
             />
           </div>
 
