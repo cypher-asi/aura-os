@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import type { ProjectId, Session } from "../../types";
 import { StatusBadge } from "../../components/StatusBadge";
 import { Panel, Badge, Text, Item } from "@cypher-asi/zui";
 import { ChevronDown } from "lucide-react";
 import { formatRelativeTime } from "../../utils/format";
+import { Select } from "../../components/Select";
 import { useAgentStatusBarData } from "./useAgentStatusBarData";
 import styles from "./AgentStatusBar.module.css";
 
@@ -16,6 +18,11 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
     dropdownOpen, setDropdownOpen, dropdownRef, sessionCount,
     setSelectedAgentId, handleSessionClick,
   } = useAgentStatusBarData(projectId);
+
+  const agentOptions = useMemo(
+    () => agents.map((a) => ({ value: a.agent_instance_id, label: `${a.name} (${a.status})` })),
+    [agents],
+  );
 
   return (
     <Panel variant="solid" border="solid" className={styles.statusBar}>
@@ -33,17 +40,12 @@ export function AgentStatusBar({ projectId }: AgentStatusBarProps) {
             {selectedAgent && <StatusBadge status={selectedAgent.status} />}
           </>
         ) : (
-          <select
+          <Select
             value={selectedAgent?.agent_instance_id ?? ""}
-            onChange={(e) => setSelectedAgentId(e.target.value)}
+            onChange={setSelectedAgentId}
             className={styles.agentSelect}
-          >
-            {agents.map((a) => (
-              <option key={a.agent_instance_id} value={a.agent_instance_id}>
-                {a.name} ({a.status})
-              </option>
-            ))}
-          </select>
+            options={agentOptions}
+          />
         )}
         {agents.length > 1 && (
           <Text variant="muted" size="xs" as="span">

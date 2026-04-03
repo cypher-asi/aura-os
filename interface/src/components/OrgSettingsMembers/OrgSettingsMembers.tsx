@@ -1,8 +1,15 @@
 import { Button } from "@cypher-asi/zui";
 import { UserMinus } from "lucide-react";
 import { EmptyState } from "../EmptyState";
+import { Select } from "../Select";
 import type { OrgMember, OrgRole } from "../../types";
 import styles from "../OrgSettingsPanel/OrgSettingsPanel.module.css";
+
+const ROLE_OPTIONS = [
+  { value: "member", label: "Member" },
+  { value: "admin", label: "Admin" },
+  { value: "owner", label: "Owner" },
+];
 
 interface Props {
   members: OrgMember[];
@@ -36,15 +43,12 @@ export function OrgSettingsMembers({
           <div key={m.user_id} className={styles.memberRow}>
             <span className={styles.memberName}>{name}</span>
             {myRole === "owner" && m.user_id !== currentUserId ? (
-              <select
+              <Select
                 className={styles.roleSelect}
                 value={m.role}
-                onChange={(e) => onRoleChange(m.user_id, e.target.value as OrgRole)}
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
+                onChange={(v) => onRoleChange(m.user_id, v as OrgRole)}
+                options={ROLE_OPTIONS}
+              />
             ) : (
               <span className={styles.roleBadge}>{m.role}</span>
             )}

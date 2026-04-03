@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Input, Spinner, Text } from "@cypher-asi/zui";
 import type { OrbitRepo } from "../../api/client";
 import type { OrbitRepoMode } from "../../hooks/use-new-project-form";
+import { Select } from "../Select";
 import styles from "./OrbitRepoSection.module.css";
 
 export function OrbitRepoSection({
@@ -30,6 +32,14 @@ export function OrbitRepoSection({
   selectedOrbitRepo: OrbitRepo | null;
   setSelectedOrbitRepo: (repo: OrbitRepo | null) => void;
 }) {
+  const repoOptions = useMemo(
+    () => orbitRepos.map((repo) => ({
+      value: `${repo.owner}/${repo.name}`,
+      label: `${repo.owner}/${repo.name}`,
+    })),
+    [orbitRepos],
+  );
+
   return (
     <div className={styles.container}>
       <Text variant="muted" size="sm" className={styles.topMargin}>
@@ -110,23 +120,18 @@ export function OrbitRepoSection({
                   <Text variant="muted" size="sm">
                     Select a repo to link:
                   </Text>
-                  <select
+                  <Select
                     value={selectedOrbitRepo ? `${selectedOrbitRepo.owner}/${selectedOrbitRepo.name}` : ""}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const repo = orbitRepos.find(
-                        (candidate) => `${candidate.owner}/${candidate.name}` === e.target.value,
+                        (candidate) => `${candidate.owner}/${candidate.name}` === v,
                       );
                       setSelectedOrbitRepo(repo ?? null);
                     }}
                     className={styles.selectInput}
-                  >
-                    <option value="">— Select repo —</option>
-                    {orbitRepos.map((repo) => (
-                      <option key={`${repo.owner}/${repo.name}`} value={`${repo.owner}/${repo.name}`}>
-                        {repo.owner}/{repo.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select repo"
+                    options={repoOptions}
+                  />
                 </div>
               )}
             </div>

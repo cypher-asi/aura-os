@@ -1,8 +1,14 @@
 import { Modal, Heading, Button, Spinner, Text } from "@cypher-asi/zui";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../../stores/auth-store";
+import { Select } from "../Select";
 import { useSettingsData } from "./useSettingsData";
 import styles from "./SettingsModal.module.css";
+
+const CHANNEL_OPTIONS = [
+  { value: "stable", label: "Stable" },
+  { value: "nightly", label: "Nightly" },
+];
 
 export function SettingsModal({
   isOpen,
@@ -34,14 +40,12 @@ export function SettingsModal({
                     {currentVersion || "—"}
                   </Text>
                   <Text variant="muted" size="sm" as="span">Channel</Text>
-                  <select
+                  <Select
                     className={styles.channelSelect}
                     value={updateChannel}
-                    onChange={(e) => handleChannelChange(e.target.value as "stable" | "nightly")}
-                  >
-                    <option value="stable">Stable</option>
-                    <option value="nightly">Nightly</option>
-                  </select>
+                    onChange={(v) => handleChannelChange(v as "stable" | "nightly")}
+                    options={CHANNEL_OPTIONS}
+                  />
                 </div>
 
                 <Text variant="muted" size="sm">
