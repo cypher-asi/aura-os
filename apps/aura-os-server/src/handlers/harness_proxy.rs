@@ -441,13 +441,26 @@ pub(crate) async fn list_agent_skills(
     Path(agent_id): Path<String>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(
+    let resp = proxy_to_harness(
         Method::GET,
         &format!("api/agents/{agent_id}/skills"),
         query,
         None,
     )
-    .await
+    .await?;
+
+    // Harness returns 400 for agents it hasn't seen yet (no session opened).
+    // Return an empty list so the UI degrades gracefully.
+    if resp.status() == StatusCode::BAD_REQUEST {
+        return Ok((
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            "[]",
+        )
+            .into_response());
+    }
+
+    Ok(resp)
 }
 
 pub(crate) async fn install_agent_skill(
@@ -455,13 +468,35 @@ pub(crate) async fn install_agent_skill(
     Path(agent_id): Path<String>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(
-        Method::POST,
-        &format!("api/agents/{agent_id}/skills"),
-        None,
-        Some(body),
-    )
-    .await
+    let path = format!("api/agents/{agent_id}/skills");
+
+    // Forward only the "name" field to the harness — it rejects unknown fields
+    // like source_url, and returns 400 for agents it hasn't bootstrapped yet.
+    let clean_body = serde_json::from_str::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|v| v.get("name")?.as_str().map(String::from))
+        .map(|name| format!(r#"{{"name":"{}"}}"#, name));
+
+    let send_body = clean_body.unwrap_or(body);
+
+    let resp = proxy_to_harness(Method::POST, &path, None, Some(send_body.clone())).await?;
+
+    if resp.status() != StatusCode::BAD_REQUEST {
+        return Ok(resp);
+    }
+
+    // Harness may not know this agent yet. Bootstrap it by ensuring the agent
+    // entry exists (POST to agent root), then retry the skill installation.
+    let base = harness_base_url();
+    let client = reqwest::Client::new();
+    let _ = client
+        .post(format!("{base}/api/agents/{agent_id}"))
+        .header("Content-Type", "application/json")
+        .body(format!(r#"{{"agent_id":"{}"}}"#, agent_id))
+        .send()
+        .await;
+
+    proxy_to_harness(Method::POST, &path, None, Some(send_body)).await
 }
 
 pub(crate) async fn uninstall_agent_skill(

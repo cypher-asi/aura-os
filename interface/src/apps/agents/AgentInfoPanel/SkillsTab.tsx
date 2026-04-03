@@ -72,23 +72,19 @@ export function SkillsTab({ agent }: SkillsTabProps) {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    try {
-      const [skillsData, installData] = await Promise.all([
-        api.harnessSkills.listSkills(),
-        api.harnessSkills.listAgentSkills(agentId),
-      ]);
-      const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
-      const installs = Array.isArray(installData)
-        ? installData
-        : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
-      setCatalog(skills);
-      setInstallations(installs);
-    } catch {
-      setCatalog([]);
-      setInstallations([]);
-    } finally {
-      setLoading(false);
-    }
+    const [skillsResult, installResult] = await Promise.allSettled([
+      api.harnessSkills.listSkills(),
+      api.harnessSkills.listAgentSkills(agentId),
+    ]);
+    const skillsData = skillsResult.status === "fulfilled" ? skillsResult.value : [];
+    const installData = installResult.status === "fulfilled" ? installResult.value : [];
+    const skills = Array.isArray(skillsData) ? skillsData : (skillsData as any)?.skills ?? [];
+    const installs = Array.isArray(installData)
+      ? installData
+      : (installData as any)?.skills ?? (installData as any)?.installations ?? [];
+    setCatalog(skills);
+    setInstallations(installs);
+    setLoading(false);
   }, [agentId]);
 
   useEffect(() => {

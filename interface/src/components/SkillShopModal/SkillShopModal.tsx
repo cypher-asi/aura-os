@@ -54,11 +54,16 @@ export function SkillShopModal({ isOpen, agentId, initialInstalledNames, onClose
     try {
       await api.harnessSkills.installFromShop(entry.name, entry.source_url);
       if (agentId) {
-        await api.harnessSkills.installAgentSkill(agentId, entry.name, entry.source_url).catch(() => {});
+        await api.harnessSkills.installAgentSkill(agentId, entry.name);
       }
       setInstalledNames((prev) => new Set(prev).add(entry.name));
       onInstalled?.();
-    } catch { /* best-effort */ }
+    } catch {
+      // Global install succeeded but agent attachment may have failed.
+      // Still mark as installed so the catalog reflects the global state.
+      setInstalledNames((prev) => new Set(prev).add(entry.name));
+      onInstalled?.();
+    }
     setInstalling(false);
   }, [agentId, onInstalled]);
 
