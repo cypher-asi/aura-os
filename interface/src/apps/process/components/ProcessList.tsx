@@ -212,7 +212,10 @@ export function ProcessList() {
   }, [folders, processesByFolder]);
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
-  const defaultExpandedIds = useMemo(() => folders.map((f) => f.folder_id), [folders]);
+  const defaultExpandedIds = useMemo(
+    () => explorerData.filter((n) => n.children && n.children.length > 0).map((n) => n.id),
+    [explorerData],
+  );
   const explorerKey = useMemo(() => folders.map((f) => f.folder_id).join(), [folders]);
   const defaultSelectedIds = useMemo(() => (processId ? [processId] : []), [processId]);
 

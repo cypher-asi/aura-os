@@ -227,7 +227,10 @@ export function ProjectList() {
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
-  const defaultExpandedIds = useMemo(() => projects.map((p) => p.project_id), [projects]);
+  const defaultExpandedIds = useMemo(
+    () => explorerData.filter((n) => n.children && n.children.length > 0).map((n) => n.id),
+    [explorerData],
+  );
   const defaultSelectedIds = useMemo(() => {
     if (agentInstanceId) return [agentInstanceId];
     if (isMobileLayout && projectId && (location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/stats"))) {
