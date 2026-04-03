@@ -635,6 +635,7 @@
 
 .topbarAlignRail {
   padding-left: 0;
+  padding-right: 0;
 }
 
 .topbarAlignRail > :first-child > :first-child {
