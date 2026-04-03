@@ -11,6 +11,10 @@
   overflow-y: auto;
 }
 
+.explorerWrap [class*="itemContent"] {
+  min-height: 28px;
+}
+
 .explorerWrap [class*="itemContent"]:focus-visible,
 .explorerWrap [class*="item"]:focus-visible {
   outline: none;
