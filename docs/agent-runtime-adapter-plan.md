@@ -8,7 +8,7 @@ There are only **three concepts**:
    Which runtime does the work?
 2. **Integration**
    What provider/auth/model config does that runtime use?
-3. **Execution mode**
+3. **Environment**
    Where does that runtime run?
 
 That is the clearest model I see.
@@ -59,9 +59,11 @@ Examples:
 
 So adapters do the work, and integrations tell them how to authenticate and which model/provider setup to use.
 
-## 3. Execution mode
+Execution itself happens at the runtime/harness layer, inside the selected environment.
 
-Execution mode describes where the adapter runs.
+## 3. Environment
+
+Environment describes where the adapter runs.
 
 For Aura v1, I think we only need:
 
@@ -73,7 +75,7 @@ This is the part that maps to the old `machine_type` concept.
 So the old harness/swarm story still matters:
 
 - Aura Harness = runtime engine
-- Aura Swarm = remote isolated execution mode
+- Aura Swarm = remote isolated environment
 
 ## The core model
 
@@ -95,7 +97,7 @@ flowchart LR
 
 - Adapter: `aura_harness`
 - Integration: `anthropic_default`
-- Execution mode: `local_host`
+- Environment: `local_host`
 
 Meaning:
 
@@ -106,7 +108,7 @@ Meaning:
 
 - Adapter: `claude_code`
 - Integration: `anthropic_default`
-- Execution mode: `local_host`
+- Environment: `local_host`
 
 Meaning:
 
@@ -117,7 +119,7 @@ Meaning:
 
 - Adapter: `codex`
 - Integration: `openai_default`
-- Execution mode: `local_host`
+- Environment: `local_host`
 
 Meaning:
 
@@ -128,7 +130,7 @@ Meaning:
 
 - Adapter: `aura_harness`
 - Integration: `anthropic_default`
-- Execution mode: `swarm_microvm`
+- Environment: `swarm_microvm`
 
 Meaning:
 
@@ -171,8 +173,8 @@ But I would keep its meaning.
 
 Recommended mapping:
 
-- `machine_type = local` -> `execution_mode = local_host`
-- `machine_type = remote` -> `execution_mode = swarm_microvm`
+- `machine_type = local` -> `environment = local_host`
+- `machine_type = remote` -> `environment = swarm_microvm`
 
 So:
 
@@ -189,7 +191,7 @@ sequenceDiagram
     participant Runtime as Adapter Runtime
 
     User->>AuraOS: Start task with agent
-    AuraOS->>Config: Resolve adapter + integration + execution mode
+    AuraOS->>Config: Resolve adapter + integration + environment
     Config-->>AuraOS: aura_harness + anthropic_default + local_host
     AuraOS->>Runtime: Open runtime with resolved config
     Runtime-->>AuraOS: Stream output + usage + files changed
@@ -272,7 +274,7 @@ Keep v1 simple.
 - `anthropic`
 - `openai`
 
-### Execution modes
+### Environments
 
 - `local_host`
 - `swarm_microvm`
@@ -282,13 +284,13 @@ That is enough for a strong first version.
 ## Recommended implementation order
 
 1. add `adapter_type`
-2. add `execution_mode`
+2. add `environment`
 3. keep compatibility with current `machine_type`
 4. introduce a runtime adapter abstraction above `HarnessLink`
 5. make Aura local/swarm the first concrete adapters
 6. add org-level integration profiles
 7. add Claude Code and Codex runtime adapters
-8. wire the API/UI to select adapter + integration + execution mode
+8. wire the API/UI to select adapter + integration + environment
 
 ## Final recommendation
 
