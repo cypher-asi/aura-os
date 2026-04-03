@@ -19,7 +19,7 @@ Examples:
 
 ### Integration
 
-What provider, auth, and connection config that runtime uses.
+Reusable provider and connection config owned outside the agent.
 
 Examples:
 - org Anthropic integration
@@ -35,23 +35,36 @@ Examples:
 - `local_host`
 - `swarm_microvm`
 
+### Auth Source
+
+How the adapter gets its credentials or provider config.
+
+Examples:
+- `aura_managed`
+- `org_integration`
+- `local_cli_auth`
+
 ## Simple Rule
 
 - Adapter chooses the runtime
-- Integration gives the runtime credentials and config
+- Integration is an optional shared config source
 - Environment tells us where it runs
+- Auth source tells us how the runtime authenticates
 
 ## Examples
 
-- Aura harness + org integration + local host
-- Aura harness + org integration + swarm microVM
+- Aura + Aura-managed auth + local host
+- Aura + Aura-managed auth + swarm microVM
+- Claude Code + local CLI auth + local host
 - Claude Code + org Anthropic integration + local host
+- Codex + local CLI auth + local host
 - Codex + org OpenAI integration + local host
 
 Important:
-- Aura harness also consumes integrations
-- It is not special here
-- Aura OS should resolve the integration and pass runtime config into the harness session
+- the user-facing name should be **Aura**
+- we can keep `aura_harness` as the internal adapter id
+- CLI adapters should not require an org integration when local auth already exists
+- Aura BYOK is a follow-on harness pass, not something we should pretend is already fully wired
 
 ## System Layers
 
@@ -123,13 +136,13 @@ Agents should consume integrations, not own duplicated copies of them.
 Phase 1 should stay small:
 
 1. Add adapter selection to agents
-2. Add integration selection and resolution
-3. Add environment selection
+2. Add environment selection
+3. Add auth source selection
 4. Keep current Aura behavior compatible
-5. Make Aura harness the first adapter on this model
-6. Keep workflow and task authority in Aura OS
-7. Support a thin but real end-to-end product flow
-8. Add Claude Code and Codex after the foundation is in place
+5. Keep workflow and task authority in Aura OS
+6. Support a thin but real end-to-end product flow
+7. Make CLI adapters usable with either local auth or org integrations
+8. Keep Aura BYOK explicitly out of scope until harness session config supports it cleanly
 
 ## V1 End-to-End Flow
 
@@ -138,19 +151,21 @@ V1 should be more than backend wiring. It should provide a real visible product 
 The minimum usable flow should be:
 
 1. Create or edit an organization
-2. Add an org integration
-3. Optionally test that integration or environment
+2. Optionally add an org integration
+3. Optionally test that environment or auth mode
 4. Create or edit an agent
-5. Choose adapter, integration, and environment
+5. Choose adapter, environment, and auth source
+6. If using org integration auth, attach an integration
+7. If using local CLI auth, do not require an integration
 6. Run the agent through the normal Aura flow
 7. Verify that execution actually went through the selected runtime
 
 That means a user should be able to do at least this from the product:
 
-- add an Anthropic integration at the org level
-- create an agent that uses `aura_harness`
-- create an agent that uses `claude_code`
-- create an agent that uses `codex`
+- create an Aura agent that uses Aura-managed auth
+- create a Claude Code agent that uses local CLI auth
+- create a Codex agent that uses local CLI auth
+- optionally add org Anthropic/OpenAI integrations and attach them to Claude/Codex
 - choose `local_host` or `swarm_microvm` where supported
 - run the agent and observe the result
 
@@ -179,8 +194,9 @@ Each integration should support:
 
 When creating or editing an agent, allow:
 - adapter selection
-- integration selection
 - environment selection
+- auth source selection
+- integration selection only when auth source is `org_integration`
 
 Initial adapter list:
 - `aura_harness`
@@ -190,6 +206,21 @@ Initial adapter list:
 Initial environment list:
 - `local_host`
 - `swarm_microvm`
+
+Initial auth-source rules:
+- `aura_harness`
+  - `aura_managed`
+- `claude_code`
+  - `local_cli_auth`
+  - `org_integration`
+- `codex`
+  - `local_cli_auth`
+  - `org_integration`
+
+User-facing labels:
+- `aura_harness` -> `Aura`
+- `claude_code` -> `Claude Code`
+- `codex` -> `Codex`
 
 ## Test Environment
 
@@ -203,6 +234,11 @@ The goal is to answer:
 - is auth present?
 - is the configured model likely usable?
 - can a small hello probe run?
+
+Paperclip provides a good mental model here:
+- local CLI auth is treated as a real supported mode
+- API-key auth is optional, not mandatory
+- environment tests should explain which mode is being used instead of hiding it
 
 This should return structured results such as:
 - pass
@@ -240,10 +276,24 @@ We do not need the full final secrets platform in V1, but we should keep the str
 
 Current Aura behavior can map into the new model like this:
 
-- current local Aura flow -> `aura_harness + org integration + local_host`
-- current remote Aura flow -> `aura_harness + org integration + swarm_microvm`
+- current local Aura flow -> `aura_harness + aura_managed + local_host`
+- current remote Aura flow -> `aura_harness + aura_managed + swarm_microvm`
+- current Claude/Codex direct runtime flow -> local CLI auth unless an org integration is explicitly attached
 
 This lets us introduce the new model without breaking the current system first.
+
+## Aura BYOK Follow-On
+
+Aura should eventually support:
+- `Aura + aura_managed`
+- `Aura + org_integration`
+
+But that requires harness-side provider config to become more session-aware.
+
+So the near-term rule should be:
+- do not imply Aura BYOK is already implemented if it is still backed by process-global provider config
+- keep the current UI and runtime behavior honest
+- treat Aura BYOK as the next harness-aware extension after this slice ships
 
 ## Why This Model
 
@@ -252,7 +302,7 @@ This keeps responsibilities clear:
 - the control plane thinks
 - Aura OS governs state
 - adapters execute work
-- integrations provide connectivity
+- integrations provide shared connectivity when needed
 - environments decide placement
 
 That separation should make the next phase easier to build, reason about, and extend.
