@@ -50,6 +50,7 @@ function toFlowNodes(nodes: ProcessNode[], renaming?: RenameState): Node[] {
       label: n.label,
       nodeType: n.node_type,
       prompt: n.prompt,
+      agentId: n.agent_id,
       ...(renaming && renaming.nodeId === n.node_id
         ? { isRenaming: true, onRenameSubmit: renaming.onRenameSubmit }
         : {}),

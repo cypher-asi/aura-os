@@ -4,6 +4,8 @@ import {
   Zap, Play, GitBranch, FileOutput, Timer, Merge,
 } from "lucide-react";
 import type { ProcessNodeType } from "../../../types/enums";
+import { useAgentStore } from "../../agents/stores";
+import { Avatar } from "../../../components/Avatar";
 
 const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
   ignition: <Zap size={14} />,
@@ -27,6 +29,7 @@ interface ProcessNodeData {
   label: string;
   nodeType: ProcessNodeType;
   prompt?: string;
+  agentId?: string;
   isRenaming?: boolean;
   onRenameSubmit?: (newLabel: string) => void;
   [key: string]: unknown;
@@ -73,6 +76,9 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
   const isIgnition = nodeType === "ignition";
   const isCondition = nodeType === "condition";
   const isMerge = nodeType === "merge";
+  const agent = useAgentStore((s) =>
+    data.agentId ? s.agents.find((a) => a.agent_id === data.agentId) : undefined,
+  );
 
   return (
     <div
@@ -113,6 +119,9 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {agent && (
+          <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />
+        )}
         <div
           style={{
             width: 20, height: 20,
