@@ -1,8 +1,23 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const interfaceRoot = process.cwd();
-const resultsDir = path.resolve(interfaceRoot, process.argv[2] ?? "test-results");
+const interfaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+const repoRoot = path.resolve(interfaceRoot, "..");
+
+function resolveResultsDir(value) {
+  if (!value) return path.join(interfaceRoot, "test-results");
+  if (path.isAbsolute(value)) return value;
+  if (value === "interface" || value.startsWith(`interface${path.sep}`)) {
+    return path.resolve(repoRoot, value);
+  }
+  return path.resolve(interfaceRoot, value);
+}
+
+const resultsDir = resolveResultsDir(process.argv[2]);
 
 function formatMetric(value) {
   if (value == null) return "n/a";

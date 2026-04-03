@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import {
   defaultExternalAgentResultsDir,
   getExternalAgentScenario,
@@ -11,14 +12,25 @@ import { runAuraAdapter } from "./adapters/aura.mjs";
 import { runClaudeCodeAdapter } from "./adapters/claude-code.mjs";
 import { runCodexAdapter } from "./adapters/codex.mjs";
 
-const interfaceRoot = process.cwd();
+const interfaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../..",
+);
+const repoRoot = path.resolve(interfaceRoot, "..");
 const adapterId = process.env.AURA_EXT_AGENT_ADAPTER?.trim() || "aura";
 const scenarioId = process.env.AURA_EXT_AGENT_SCENARIO?.trim() || "external-static-site";
 const keepWorkspace = process.env.AURA_EVAL_KEEP_WORKSPACE === "1";
-const resultsDir = path.resolve(
-  interfaceRoot,
-  process.env.AURA_EVAL_RESULTS_DIR ?? defaultExternalAgentResultsDir(interfaceRoot),
-);
+
+function resolveResultsDir(value) {
+  if (!value) return defaultExternalAgentResultsDir(interfaceRoot);
+  if (path.isAbsolute(value)) return value;
+  if (value === "interface" || value.startsWith(`interface${path.sep}`)) {
+    return path.resolve(repoRoot, value);
+  }
+  return path.resolve(interfaceRoot, value);
+}
+
+const resultsDir = resolveResultsDir(process.env.AURA_EVAL_RESULTS_DIR);
 
 const scenario = getExternalAgentScenario(interfaceRoot, scenarioId);
 
