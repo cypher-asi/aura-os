@@ -45,6 +45,7 @@ fn network_agent_to_core(net: &NetworkAgent) -> Agent {
         machine_type,
         adapter_type: "aura_harness".to_string(),
         environment,
+        auth_source: "aura_managed".to_string(),
         integration_id: None,
         default_model: None,
         vm_id: net.vm_id.clone(),
@@ -146,6 +147,11 @@ impl AgentService {
         if let Some(config) = self.load_agent_runtime_config(&agent.agent_id)? {
             agent.adapter_type = config.adapter_type;
             agent.environment = config.environment;
+            agent.auth_source = aura_os_core::effective_auth_source(
+                &agent.adapter_type,
+                Some(config.auth_source.as_str()),
+                config.integration_id.as_deref(),
+            );
             agent.integration_id = config.integration_id;
             agent.default_model = config.default_model;
             agent.machine_type = if agent.environment == "swarm_microvm" {
@@ -497,6 +503,15 @@ pub fn merge_agent_instance(
         environment: agent
             .map(|a| a.environment.clone())
             .unwrap_or_else(|| "local_host".to_string()),
+        auth_source: agent
+            .map(|a| {
+                aura_os_core::effective_auth_source(
+                    &a.adapter_type,
+                    Some(a.auth_source.as_str()),
+                    a.integration_id.as_deref(),
+                )
+            })
+            .unwrap_or_else(|| "aura_managed".to_string()),
         integration_id: agent.and_then(|a| a.integration_id.clone()),
         default_model: agent.and_then(|a| a.default_model.clone()),
         workspace_path: None,

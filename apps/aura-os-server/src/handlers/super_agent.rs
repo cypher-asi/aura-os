@@ -187,6 +187,7 @@ fn agent_from_net(net: &aura_os_network::NetworkAgent) -> Agent {
         } else {
             "local_host".to_string()
         },
+        auth_source: "aura_managed".to_string(),
         integration_id: None,
         default_model: None,
         vm_id: net.vm_id.clone(),

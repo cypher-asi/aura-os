@@ -73,6 +73,7 @@ pub(crate) async fn test_agent_runtime(
         ok: true,
         adapter_type: agent.adapter_type.clone(),
         environment: agent.environment.clone(),
+        auth_source: agent.auth_source.clone(),
         provider: non_empty_string(&outcome.usage.provider),
         model: non_empty_string(&outcome.usage.model),
         integration_id: integration
@@ -81,7 +82,15 @@ pub(crate) async fn test_agent_runtime(
         integration_name: integration
             .as_ref()
             .map(|resolved| resolved.metadata.name.clone()),
-        message: outcome.text.trim().to_string(),
+        message: if agent.adapter_type == "aura_harness" && agent.auth_source == "org_integration"
+        {
+            format!(
+                "{} (Aura org integrations currently influence model defaults only; full harness BYOK is a follow-on pass.)",
+                outcome.text.trim()
+            )
+        } else {
+            outcome.text.trim().to_string()
+        },
     }))
 }
 
@@ -178,6 +187,10 @@ fn resolve_integration(
     state: &AppState,
     agent: &Agent,
 ) -> Result<Option<ResolvedIntegration>, (axum::http::StatusCode, Json<ApiError>)> {
+    if agent.auth_source != "org_integration" {
+        return Ok(None);
+    }
+
     let Some(integration_id) = agent.integration_id.as_deref() else {
         return Ok(None);
     };

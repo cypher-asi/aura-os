@@ -19,6 +19,7 @@ export const agentTemplatesApi = {
     machine_type?: string;
     adapter_type?: string;
     environment?: string;
+    auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
   }) =>
@@ -35,6 +36,7 @@ export const agentTemplatesApi = {
     machine_type?: string;
     adapter_type?: string;
     environment?: string;
+    auth_source?: string;
     integration_id?: string | null;
     default_model?: string | null;
   }) =>

@@ -59,6 +59,7 @@ pub(crate) fn agent_from_network(net: &NetworkAgent) -> Agent {
         machine_type,
         adapter_type: "aura_harness".to_string(),
         environment,
+        auth_source: "aura_managed".to_string(),
         integration_id: None,
         default_model: None,
         vm_id: net.vm_id.clone(),

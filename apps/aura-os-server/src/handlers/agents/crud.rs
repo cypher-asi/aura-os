@@ -4,7 +4,7 @@ use futures_util::future::join_all;
 use serde::Serialize;
 use std::time::Duration;
 
-use aura_os_core::{Agent, AgentId, AgentRuntimeConfig, HarnessMode};
+use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
 
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
@@ -42,6 +42,7 @@ fn normalize_environment(
 fn build_runtime_config(
     adapter_type: Option<String>,
     environment: Option<String>,
+    auth_source: Option<String>,
     integration_id: Option<String>,
     default_model: Option<String>,
     machine_type: Option<String>,
@@ -57,9 +58,52 @@ fn build_runtime_config(
     }
 
     let environment = normalize_environment(&adapter_type, environment, machine_type)?;
+    let auth_source = effective_auth_source(
+        &adapter_type,
+        auth_source.as_deref(),
+        integration_id.as_deref(),
+    );
+
+    match (adapter_type.as_str(), auth_source.as_str()) {
+        ("aura_harness", "aura_managed" | "org_integration") => {}
+        ("claude_code" | "codex", "local_cli_auth" | "org_integration") => {}
+        ("aura_harness", other) => {
+            return Err(ApiError::bad_request(format!(
+                "adapter `{adapter_type}` does not support auth source `{other}`"
+            )))
+        }
+        (_, other) => {
+            return Err(ApiError::bad_request(format!(
+                "adapter `{adapter_type}` does not support auth source `{other}`"
+            )))
+        }
+    }
+
+    if auth_source == "org_integration"
+        && integration_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .is_none()
+    {
+        return Err(ApiError::bad_request(
+            "auth source `org_integration` requires an attached integration",
+        ));
+    }
+
+    let integration_id = if auth_source == "org_integration" {
+        integration_id.and_then(|value| {
+            let trimmed = value.trim().to_string();
+            (!trimmed.is_empty()).then_some(trimmed)
+        })
+    } else {
+        None
+    };
+
     Ok(AgentRuntimeConfig {
         adapter_type,
         environment,
+        auth_source,
         integration_id,
         default_model,
     })
@@ -74,6 +118,7 @@ pub(crate) async fn create_agent(
     let runtime_config = build_runtime_config(
         body.adapter_type.clone(),
         body.environment.clone(),
+        body.auth_source.clone(),
         body.integration_id.clone(),
         body.default_model.clone(),
         body.machine_type.clone(),
@@ -427,6 +472,9 @@ pub(crate) async fn update_agent(
         body.environment
             .clone()
             .or_else(|| Some(existing.environment.clone())),
+        body.auth_source
+            .clone()
+            .or_else(|| Some(existing.auth_source.clone())),
         match body.integration_id {
             Some(value) => value,
             None => existing.integration_id.clone(),
@@ -506,6 +554,74 @@ pub(crate) async fn delete_agent(
         .map_err(map_network_error)?;
     let _ = state.agent_service.delete_agent_runtime_config(&agent_id);
     Ok(Json(()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_runtime_config;
+
+    #[test]
+    fn aura_defaults_to_aura_managed() {
+        let config = build_runtime_config(
+            Some("aura_harness".to_string()),
+            Some("local_host".to_string()),
+            None,
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "aura_managed");
+        assert_eq!(config.integration_id, None);
+    }
+
+    #[test]
+    fn cli_defaults_to_local_cli_auth_without_integration() {
+        let config = build_runtime_config(
+            Some("claude_code".to_string()),
+            Some("local_host".to_string()),
+            None,
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "local_cli_auth");
+        assert_eq!(config.integration_id, None);
+    }
+
+    #[test]
+    fn integration_attachment_implies_org_integration_for_cli_adapters() {
+        let config = build_runtime_config(
+            Some("codex".to_string()),
+            Some("local_host".to_string()),
+            None,
+            Some("int-openai".to_string()),
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "org_integration");
+        assert_eq!(config.integration_id.as_deref(), Some("int-openai"));
+    }
+
+    #[test]
+    fn org_integration_requires_integration_id() {
+        let error = build_runtime_config(
+            Some("claude_code".to_string()),
+            Some("local_host".to_string()),
+            Some("org_integration".to_string()),
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect_err("missing integration should fail");
+
+        assert!(format!("{error:?}").contains("requires an attached integration"));
+    }
 }
 
 #[derive(Serialize)]

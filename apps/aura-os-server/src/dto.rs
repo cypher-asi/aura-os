@@ -87,6 +87,8 @@ pub(crate) struct CreateAgentRequest {
     #[serde(default)]
     pub environment: Option<String>,
     #[serde(default)]
+    pub auth_source: Option<String>,
+    #[serde(default)]
     pub integration_id: Option<String>,
     #[serde(default)]
     pub default_model: Option<String>,
@@ -105,6 +107,8 @@ pub(crate) struct UpdateAgentRequest {
     pub adapter_type: Option<String>,
     #[serde(default)]
     pub environment: Option<String>,
+    #[serde(default)]
+    pub auth_source: Option<String>,
     #[serde(default)]
     pub integration_id: Option<Option<String>>,
     #[serde(default)]
@@ -139,6 +143,7 @@ pub(crate) struct AgentRuntimeTestResponse {
     pub ok: bool,
     pub adapter_type: String,
     pub environment: String,
+    pub auth_source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
