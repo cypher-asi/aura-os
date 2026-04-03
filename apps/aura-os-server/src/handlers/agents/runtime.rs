@@ -24,7 +24,6 @@ use aura_os_link::{
 use crate::dto::{AgentRuntimeTestResponse, SendChatRequest};
 use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{setup_agent_chat_persistence, SseResponse, SseStream};
-use crate::handlers::harness_proxy::to_harness_agent_id;
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
 use crate::state::{AppState, AuthJwt};
@@ -118,6 +117,7 @@ pub(crate) async fn send_external_agent_event_stream(
         HarnessOutbound::SessionReady(SessionReady {
             session_id: Uuid::new_v4().to_string(),
             tools: Vec::<ToolInfo>::new(),
+            skills: Vec::new(),
         }),
         HarnessOutbound::AssistantMessageStart(AssistantMessageStart {
             message_id: Uuid::new_v4().to_string(),
@@ -268,10 +268,9 @@ async fn run_harness_test(
     model: Option<String>,
     integration: Option<&ResolvedIntegration>,
 ) -> ApiResult<RuntimeOutcome> {
-    let harness_id = to_harness_agent_id(&agent.agent_id.to_string());
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
-        agent_id: Some(harness_id),
+        agent_id: Some(agent.agent_id.to_string()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.to_string()),

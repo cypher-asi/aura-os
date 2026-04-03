@@ -179,7 +179,6 @@ pub struct NetworkOrgInvite {
     pub org_id: String,
     #[serde(default)]
     pub email: Option<String>,
-    pub role: String,
     pub token: String,
     #[serde(default)]
     pub status: Option<String>,

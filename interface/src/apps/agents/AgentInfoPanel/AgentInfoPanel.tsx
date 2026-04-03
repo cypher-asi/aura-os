@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
-import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, X, ChevronRight, ChevronDown } from "lucide-react";
+import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, X, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboardPanel";
@@ -20,7 +20,7 @@ import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
 import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
-import type { Session, Task } from "../../../types";
+import type { Session, Task, HarnessSkillInstallation } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
@@ -231,7 +231,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           onClose={closePreview}
           fullLane
         >
-          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} />}
+          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} installation={previewItem.installation} />}
           {previewItem.kind === "memory_fact" && <FactPreview fact={previewItem.fact} />}
           {previewItem.kind === "memory_event" && <EventPreview event={previewItem.event} />}
           {previewItem.kind === "memory_procedure" && <ProcedurePreview procedure={previewItem.procedure} />}
@@ -307,6 +307,23 @@ function ProfileTab({
   runtimeTestMessage: string | null;
   onRuntimeTest: () => void;
 }) {
+  const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.harnessSkills
+      .listAgentSkills(a.agent_id)
+      .then((result) => {
+        if (cancelled) return;
+        const list = Array.isArray(result) ? result : (result as any)?.skills ?? (result as any)?.installations ?? [];
+        setInstallations(list);
+      })
+      .catch(() => {
+        if (!cancelled) setInstallations([]);
+      });
+    return () => { cancelled = true; };
+  }, [a.agent_id]);
+
   return (
     <>
       {imageUrl && (
@@ -398,6 +415,16 @@ function ProfileTab({
           <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
         )}
       </div>
+      {installations.length > 0 && (
+        <div className={styles.skillTagsSection}>
+          {installations.map((inst) => (
+            <span key={inst.skill_name} className={styles.skillTag}>
+              <Zap size={10} className={styles.skillTagIcon} />
+              {inst.skill_name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {a.system_prompt && (
         <div className={styles.section}>

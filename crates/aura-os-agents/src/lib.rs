@@ -163,6 +163,12 @@ impl AgentService {
         Ok(())
     }
 
+    /// Remove an agent from the local RocksDB shadow store.
+    pub fn delete_agent_shadow(&self, agent_id: &AgentId) -> Result<(), AgentError> {
+        self.store
+            .delete_setting(&Self::agent_key(agent_id))
+            .map_err(AgentError::Store)
+    }
     fn list_local_agents(&self) -> Result<Vec<Agent>, AgentError> {
         let entries = self
             .store

@@ -127,6 +127,34 @@
   text-overflow: ellipsis;
 }
 
+/* ── Profile skill tags ── */
+
+.skillTagsSection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 var(--space-3) var(--space-1);
+}
+
+.skillTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-overlay-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.skillTagIcon {
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
 /* ── Skills ── */
 
 .skillsListWrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }

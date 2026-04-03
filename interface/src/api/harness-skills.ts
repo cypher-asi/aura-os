@@ -27,10 +27,21 @@ export const harnessSkillsApi = {
     }),
   listAgentSkills: (agentId: string) =>
     apiFetch<HarnessSkillInstallation[]>(`/api/harness/agents/${agentId}/skills`),
-  installAgentSkill: (agentId: string, skillName: string, sourceUrl?: string) =>
+  installAgentSkill: (
+    agentId: string,
+    skillName: string,
+    sourceUrl?: string,
+    approvedPaths?: string[],
+    approvedCommands?: string[],
+  ) =>
     apiFetch<HarnessSkillInstallation>(`/api/harness/agents/${agentId}/skills`, {
       method: "POST",
-      body: JSON.stringify({ name: skillName, source_url: sourceUrl }),
+      body: JSON.stringify({
+        name: skillName,
+        source_url: sourceUrl,
+        approved_paths: approvedPaths ?? [],
+        approved_commands: approvedCommands ?? [],
+      }),
     }),
   uninstallAgentSkill: (agentId: string, skillName: string) =>
     apiFetch<void>(`/api/harness/agents/${agentId}/skills/${skillName}`, {

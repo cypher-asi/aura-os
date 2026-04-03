@@ -46,7 +46,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { status: pollingStatus, settledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
 
   const orgId = activeOrg?.org_id;
-  const myRole = members.find((m) => m.user_id === user?.user_id)?.role;
+  const myRole = members.find((m) => m.user_id === user?.network_user_id)?.role;
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
 
   useEffect(() => { setTeamName(activeOrg?.name ?? ""); }, [activeOrg?.name, activeOrg?.org_id]);

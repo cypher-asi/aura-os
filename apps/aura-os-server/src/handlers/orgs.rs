@@ -454,11 +454,12 @@ pub(crate) async fn revoke_invite(
 pub(crate) async fn accept_invite(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
+    AuthSession(session): AuthSession,
     Path(token): Path<String>,
 ) -> ApiResult<Json<MemberResponse>> {
     let client = state.require_network_client()?;
     let member = client
-        .accept_invite(&token, &jwt)
+        .accept_invite(&token, &jwt, &session.display_name)
         .await
         .map_err(map_network_error)?;
 

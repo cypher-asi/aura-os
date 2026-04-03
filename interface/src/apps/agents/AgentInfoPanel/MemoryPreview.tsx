@@ -1,4 +1,4 @@
-import { Text, Badge } from "@cypher-asi/zui";
+import { Text } from "@cypher-asi/zui";
 import type { MemoryFact, MemoryEvent, MemoryProcedure } from "../../../types";
 import previewStyles from "../../../components/Preview/Preview.module.css";
 
@@ -30,7 +30,7 @@ export function FactPreview({ fact }: { fact: MemoryFact }) {
       </div>
       <div className={previewStyles.taskField}>
         <span className={previewStyles.fieldLabel}>Source</span>
-        <Badge variant={fact.source === "user_provided" ? "running" : "pending"}>{fact.source}</Badge>
+        <Text size="sm">{fact.source}</Text>
       </div>
       <div className={previewStyles.taskField}>
         <span className={previewStyles.fieldLabel}>Access Count</span>

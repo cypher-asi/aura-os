@@ -4,24 +4,17 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::{Deserialize, Serialize};
 
+use aura_os_core::AgentId;
+
 use crate::state::AppState;
 
 pub(crate) fn harness_base_url() -> String {
     std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())
 }
 
-/// Convert a UUID string to the harness's AgentId format (blake3 hash, 64 hex chars).
-pub(crate) fn to_harness_agent_id(uuid_str: &str) -> String {
-    match uuid::Uuid::parse_str(uuid_str) {
-        Ok(uuid) => blake3::hash(uuid.as_bytes()).to_hex().to_string(),
-        Err(_) => uuid_str.to_string(),
-    }
-}
-
 pub(crate) async fn install_skill_for_agent(agent_id: &str, skill_name: &str) -> bool {
     let base = harness_base_url();
-    let harness_id = to_harness_agent_id(agent_id);
-    let url = format!("{base}/api/agents/{harness_id}/skills");
+    let url = format!("{base}/api/agents/{agent_id}/skills");
     let client = reqwest::Client::new();
     let resp = client
         .post(&url)
@@ -72,53 +65,47 @@ async fn proxy_to_harness(
 
 pub(crate) async fn list_facts(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/facts"), query, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts"), query, None).await
 }
 
 pub(crate) async fn get_fact(
     State(_state): State<AppState>,
-    Path((agent_id, fact_id)): Path<(String, String)>,
+    Path((agent_id, fact_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/facts/{fact_id}"), None, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, None).await
 }
 
 pub(crate) async fn create_fact(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::POST, &format!("api/agents/{hid}/memory/facts"), None, Some(body)).await
+    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/facts"), None, Some(body)).await
 }
 
 pub(crate) async fn update_fact(
     State(_state): State<AppState>,
-    Path((agent_id, fact_id)): Path<(String, String)>,
+    Path((agent_id, fact_id)): Path<(AgentId, String)>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::PUT, &format!("api/agents/{hid}/memory/facts/{fact_id}"), None, Some(body)).await
+    proxy_to_harness(Method::PUT, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, Some(body)).await
 }
 
 pub(crate) async fn delete_fact(
     State(_state): State<AppState>,
-    Path((agent_id, fact_id)): Path<(String, String)>,
+    Path((agent_id, fact_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{hid}/memory/facts/{fact_id}"), None, None).await
+    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, None).await
 }
 
 pub(crate) async fn get_fact_by_key(
     State(_state): State<AppState>,
-    Path((agent_id, key)): Path<(String, String)>,
+    Path((agent_id, key)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/facts/by-key/{key}"), None, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts/by-key/{key}"), None, None).await
 }
 
 // ---------------------------------------------------------------------------
@@ -127,28 +114,25 @@ pub(crate) async fn get_fact_by_key(
 
 pub(crate) async fn list_events(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/events"), query, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/events"), query, None).await
 }
 
 pub(crate) async fn create_event(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::POST, &format!("api/agents/{hid}/memory/events"), None, Some(body)).await
+    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/events"), None, Some(body)).await
 }
 
 pub(crate) async fn delete_event(
     State(_state): State<AppState>,
-    Path((agent_id, event_id)): Path<(String, String)>,
+    Path((agent_id, event_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{hid}/memory/events/{event_id}"), None, None).await
+    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/events/{event_id}"), None, None).await
 }
 
 // ---------------------------------------------------------------------------
@@ -157,45 +141,40 @@ pub(crate) async fn delete_event(
 
 pub(crate) async fn list_procedures(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/procedures"), query, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/procedures"), query, None).await
 }
 
 pub(crate) async fn get_procedure(
     State(_state): State<AppState>,
-    Path((agent_id, proc_id)): Path<(String, String)>,
+    Path((agent_id, proc_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/procedures/{proc_id}"), None, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
 }
 
 pub(crate) async fn create_procedure(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::POST, &format!("api/agents/{hid}/memory/procedures"), None, Some(body)).await
+    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/procedures"), None, Some(body)).await
 }
 
 pub(crate) async fn update_procedure(
     State(_state): State<AppState>,
-    Path((agent_id, proc_id)): Path<(String, String)>,
+    Path((agent_id, proc_id)): Path<(AgentId, String)>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::PUT, &format!("api/agents/{hid}/memory/procedures/{proc_id}"), None, Some(body)).await
+    proxy_to_harness(Method::PUT, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, Some(body)).await
 }
 
 pub(crate) async fn delete_procedure(
     State(_state): State<AppState>,
-    Path((agent_id, proc_id)): Path<(String, String)>,
+    Path((agent_id, proc_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{hid}/memory/procedures/{proc_id}"), None, None).await
+    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
 }
 
 // ---------------------------------------------------------------------------
@@ -204,37 +183,33 @@ pub(crate) async fn delete_procedure(
 
 pub(crate) async fn get_memory_snapshot(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory"), query, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory"), query, None).await
 }
 
 pub(crate) async fn wipe_memory(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{hid}/memory"), None, None).await
+    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory"), None, None).await
 }
 
 pub(crate) async fn get_memory_stats(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::GET, &format!("api/agents/{hid}/memory/stats"), query, None).await
+    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/stats"), query, None).await
 }
 
 pub(crate) async fn trigger_consolidation(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::POST, &format!("api/agents/{hid}/memory/consolidate"), None, Some(body)).await
+    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/consolidate"), None, Some(body)).await
 }
 
 // ---------------------------------------------------------------------------
@@ -357,11 +332,10 @@ pub(crate) async fn activate_skill(
 
 pub(crate) async fn list_agent_skills(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    let resp = proxy_to_harness(Method::GET, &format!("api/agents/{hid}/skills"), query, None).await?;
+    let resp = proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/skills"), query, None).await?;
 
     if resp.status() == StatusCode::BAD_REQUEST {
         return Ok((
@@ -377,11 +351,10 @@ pub(crate) async fn list_agent_skills(
 
 pub(crate) async fn install_agent_skill(
     State(_state): State<AppState>,
-    Path(agent_id): Path<String>,
+    Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    let path = format!("api/agents/{hid}/skills");
+    let path = format!("api/agents/{agent_id}/skills");
 
     let clean_body = serde_json::from_str::<serde_json::Value>(&body)
         .ok()
@@ -394,10 +367,9 @@ pub(crate) async fn install_agent_skill(
 
 pub(crate) async fn uninstall_agent_skill(
     State(_state): State<AppState>,
-    Path((agent_id, name)): Path<(String, String)>,
+    Path((agent_id, name)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    let hid = to_harness_agent_id(&agent_id);
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{hid}/skills/{name}"), None, None).await
+    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/skills/{name}"), None, None).await
 }
 
 // ---------------------------------------------------------------------------

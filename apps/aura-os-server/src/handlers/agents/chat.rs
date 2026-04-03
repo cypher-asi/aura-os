@@ -26,7 +26,6 @@ use aura_os_storage::StorageClient;
 use crate::dto::SendChatRequest;
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
-use crate::handlers::harness_proxy::to_harness_agent_id;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
 use crate::state::{AppState, AuthJwt, ChatSession};
 
@@ -371,43 +370,17 @@ pub(crate) async fn setup_agent_chat_persistence(
         (pa.id.clone(), pid)
     } else {
         warn!(%agent_id, "agent chat persistence: no matching project agents found, attempting auto-create");
-        let all_projects = match projects::list_all_projects_from_network(state, &jwt).await {
-            Ok(p) => p,
-            Err((status, body)) => {
-                warn!(%agent_id, ?status, ?body, "agent chat persistence: failed to list projects for auto-create");
-                return None;
-            }
-        };
-        let project = match all_projects.first() {
-            Some(p) => p,
-            None => {
-                warn!(%agent_id, "agent chat persistence: no projects available for auto-create");
-                return None;
-            }
-        };
-        let project_id_str = project.project_id.to_string();
-        let req = aura_os_storage::CreateProjectAgentRequest {
-            agent_id: agent_id.to_string(),
-            name: agent_name.to_string(),
-            org_id: None,
-            role: None,
-            personality: None,
-            system_prompt: None,
-            skills: None,
-            icon: None,
-            harness: None,
-        };
-        match storage
-            .create_project_agent(&project_id_str, &jwt, &req)
-            .await
-        {
-            Ok(pa) => {
-                let pid = pa.project_id.clone().unwrap_or(project_id_str);
-                info!(%agent_id, project_agent_id = %pa.id, %pid, "agent chat persistence: auto-created project agent");
+        match auto_create_project_agent(state, &storage, &jwt, agent_id, agent_name).await {
+            Some(pa) => {
+                let pid = pa.project_id.clone().unwrap_or_default();
+                if pid.is_empty() {
+                    warn!(%agent_id, "agent chat persistence: auto-created project agent has no project_id");
+                    return None;
+                }
                 (pa.id, pid)
             }
-            Err(e) => {
-                warn!(error = %e, %agent_id, "Failed to auto-create project_agent for chat persistence");
+            None => {
+                warn!(%agent_id, "agent chat persistence: auto-create failed");
                 return None;
             }
         }
@@ -558,9 +531,17 @@ async fn find_matching_project_agents(
             info!(count = p.len(), %agent_id_str, "agent matching: projects discovered from network");
             p
         }
-        Err((status, body)) => {
-            warn!(?status, ?body, %agent_id_str, "agent matching: failed to list projects from network");
-            return Vec::new();
+        Err(_) => {
+            match state.project_service.list_projects() {
+                Ok(local) if !local.is_empty() => {
+                    info!(count = local.len(), %agent_id_str, "agent matching: using local project cache (network unavailable)");
+                    local
+                }
+                _ => {
+                    warn!(%agent_id_str, "agent matching: network unavailable and no local projects");
+                    return Vec::new();
+                }
+            }
         }
     };
     let pids: Vec<String> = all_projects
@@ -600,6 +581,51 @@ async fn find_matching_project_agents(
 
     info!(matched = matched.len(), %agent_id_str, "agent matching: total project agents matched");
     matched
+}
+
+/// Auto-create a project agent binding for an agent that doesn't have one yet.
+/// Returns the newly created `StorageProjectAgent`, or `None` on failure.
+async fn auto_create_project_agent(
+    state: &AppState,
+    storage: &aura_os_storage::StorageClient,
+    jwt: &str,
+    agent_id: &AgentId,
+    agent_name: &str,
+) -> Option<aura_os_storage::StorageProjectAgent> {
+    let all_projects = match projects::list_all_projects_from_network(state, jwt).await {
+        Ok(p) => p,
+        Err(_) => {
+            state.project_service.list_projects().unwrap_or_default()
+        }
+    };
+    let project = all_projects.first()?;
+    let project_id_str = project.project_id.to_string();
+    let req = aura_os_storage::CreateProjectAgentRequest {
+        agent_id: agent_id.to_string(),
+        name: agent_name.to_string(),
+        org_id: None,
+        role: None,
+        personality: None,
+        system_prompt: None,
+        skills: None,
+        icon: None,
+        harness: None,
+    };
+    match storage.create_project_agent(&project_id_str, jwt, &req).await {
+        Ok(pa) => {
+            info!(
+                %agent_id,
+                project_agent_id = %pa.id,
+                project_id = %project_id_str,
+                "auto-create project agent: created"
+            );
+            Some(pa)
+        }
+        Err(e) => {
+            warn!(error = %e, %agent_id, "auto-create project agent: failed");
+            None
+        }
+    }
 }
 
 async fn collect_session_events(
@@ -714,10 +740,20 @@ async fn aggregate_agent_events_from_storage_result(
         return Ok(Vec::new());
     };
     let agent_id_str = agent_id.to_string();
-    let matching = find_matching_project_agents(state, storage, &jwt, &agent_id_str).await;
+    let mut matching = find_matching_project_agents(state, storage, jwt, &agent_id_str).await;
     if matching.is_empty() {
-        warn!(%agent_id, "aggregate events: no matching project agents — returning empty history");
-        return Ok(Vec::new());
+        let agent_name = state
+            .agent_service
+            .get_agent_local(agent_id)
+            .map(|a| a.name)
+            .unwrap_or_else(|_| agent_id_str.clone());
+        if let Some(pa) = auto_create_project_agent(state, storage, jwt, agent_id, &agent_name).await {
+            info!(%agent_id, "aggregate events: auto-created project agent for event retrieval");
+            matching.push(pa);
+        } else {
+            warn!(%agent_id, "aggregate events: no matching project agents and auto-create failed — returning empty history");
+            return Ok(Vec::new());
+        }
     }
     let sessions_outcome = fetch_all_sessions(storage, &jwt, &matching).await;
     info!(
@@ -1089,12 +1125,11 @@ pub(crate) async fn send_agent_event_stream(
         None
     };
 
-    let harness_id = to_harness_agent_id(&agent_id.to_string());
     let integration = resolve_integration(&state, &agent)?;
     let model = effective_model(&agent, integration.as_ref(), body.model.clone());
     let config = SessionConfig {
         system_prompt: Some(agent.system_prompt.clone()),
-        agent_id: Some(harness_id),
+        agent_id: Some(agent_id.to_string()),
         agent_name: Some(agent.name.clone()),
         model: model.clone(),
         token: Some(jwt.clone()),
@@ -1183,7 +1218,6 @@ pub(crate) async fn send_event_stream(
         project_path.as_deref(),
     );
 
-    let harness_id = to_harness_agent_id(&instance.agent_id.to_string());
     let integration = resolve_integration_ref(
         &state,
         instance.org_id,
@@ -1208,7 +1242,7 @@ pub(crate) async fn send_event_stream(
         });
     let config = SessionConfig {
         system_prompt: Some(system_prompt),
-        agent_id: Some(harness_id),
+        agent_id: Some(instance.agent_id.to_string()),
         agent_name: Some(instance.name.clone()),
         model: model.clone(),
         token: Some(jwt),
