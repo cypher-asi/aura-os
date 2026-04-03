@@ -18,8 +18,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./ProcessCanvas.css";
-import { Play, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2 } from "lucide-react";
-import { Menu } from "@cypher-asi/zui";
+import { Play, Pause, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2 } from "lucide-react";
+import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNode, ProcessNodeConnection } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
@@ -34,6 +34,10 @@ interface ProcessCanvasProps {
   processId: string;
   processNodes: ProcessNode[];
   processConnections: ProcessNodeConnection[];
+  onTrigger?: () => void;
+  onToggle?: () => void;
+  onDelete?: () => void;
+  isEnabled?: boolean;
 }
 
 interface RenameState {
@@ -147,7 +151,7 @@ export function ProcessCanvas(props: ProcessCanvasProps) {
   );
 }
 
-function ProcessCanvasInner({ processId, processNodes, processConnections }: ProcessCanvasProps) {
+function ProcessCanvasInner({ processId, processNodes, processConnections, onTrigger, onToggle, onDelete, isEnabled }: ProcessCanvasProps) {
   const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
@@ -491,6 +495,21 @@ function ProcessCanvasInner({ processId, processNodes, processConnections }: Pro
           pannable
         />
       </ReactFlow>
+
+      {onTrigger && (
+        <div className="process-floating-toolbar">
+          <Button variant="ghost" size="sm" iconOnly icon={<Play size={14} />} title="Trigger" onClick={onTrigger} />
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            icon={isEnabled ? <Pause size={14} /> : <Play size={14} />}
+            title={isEnabled ? "Pause" : "Resume"}
+            onClick={onToggle}
+          />
+          <Button variant="ghost" size="sm" iconOnly icon={<Trash2 size={14} />} title="Delete" onClick={onDelete} />
+        </div>
+      )}
 
       {ctxMenu && createPortal(
         <div

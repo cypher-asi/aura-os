@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Cpu, Play, Pause, Trash2 } from "lucide-react";
-import { Button, PageEmptyState } from "@cypher-asi/zui";
+import { Cpu } from "lucide-react";
+import { PageEmptyState } from "@cypher-asi/zui";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
 import { useProcessStore, LAST_PROCESS_ID_KEY } from "../stores/process-store";
 import { useProcessSidekickStore, type NodeRunStatus } from "../stores/process-sidekick-store";
@@ -115,19 +115,11 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
           processId={processId}
           processNodes={processNodes}
           processConnections={processConnections}
+          onTrigger={handleTrigger}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          isEnabled={process.enabled}
         />
-        <div className="process-floating-toolbar">
-          <Button variant="ghost" size="sm" iconOnly icon={<Play size={14} />} title="Trigger" onClick={handleTrigger} />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={process.enabled ? <Pause size={14} /> : <Play size={14} />}
-            title={process.enabled ? "Pause" : "Resume"}
-            onClick={handleToggle}
-          />
-          <Button variant="ghost" size="sm" iconOnly icon={<Trash2 size={14} />} title="Delete" onClick={handleDelete} />
-        </div>
         {children}
       </div>
     </ResponsiveMainLane>
