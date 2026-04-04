@@ -725,13 +725,21 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     };
   }, [isActive, loadData, refreshRun]);
 
+  const [runningNodeIds, setRunningNodeIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const unsub1 = useEventStore.getState().subscribe(EventType.ProcessNodeExecuted, (event) => {
       if (event.content.run_id === run.run_id) {
         const status = event.content.status.toLowerCase();
         if (status.includes("running")) {
+          setRunningNodeIds((prev) => new Set(prev).add(event.content.node_id));
           setStreamingTexts((prev) => ({ ...prev, [event.content.node_id]: "" }));
         } else {
+          setRunningNodeIds((prev) => {
+            const next = new Set(prev);
+            next.delete(event.content.node_id);
+            return next;
+          });
           setStreamingTexts((prev) => {
             const next = { ...prev };
             delete next[event.content.node_id];
@@ -743,6 +751,7 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     });
     const unsub2 = useEventStore.getState().subscribe(EventType.ProcessRunCompleted, (event) => {
       if (event.content.run_id === run.run_id) {
+        setRunningNodeIds(new Set());
         setStreamingTexts({});
         refreshRun();
         loadData();
@@ -750,6 +759,7 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     });
     const unsub3 = useEventStore.getState().subscribe(EventType.ProcessRunFailed, (event) => {
       if (event.content.run_id === run.run_id) {
+        setRunningNodeIds(new Set());
         setStreamingTexts({});
         refreshRun();
         loadData();
@@ -766,17 +776,15 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [run.run_id, loadData, refreshRun]);
 
-  const liveRunNodeId = useProcessSidekickStore((s) => s.liveRunNodeId);
-
   const sortedEvents = useMemo(() => {
     const sorted = [...events].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
-    if (liveRunNodeId && !sorted.some((e) => e.node_id === liveRunNodeId && e.status === "running")) {
-      const alreadyCompleted = sorted.some((e) => e.node_id === liveRunNodeId);
-      if (!alreadyCompleted) {
+    for (const nodeId of runningNodeIds) {
+      const hasEvent = sorted.some((e) => e.node_id === nodeId);
+      if (!hasEvent) {
         sorted.push({
-          event_id: `live-${liveRunNodeId}`,
+          event_id: `live-${nodeId}`,
           run_id: run.run_id,
-          node_id: liveRunNodeId,
+          node_id: nodeId,
           process_id: run.process_id,
           status: "running" as ProcessEvent["status"],
           input_snapshot: "",
@@ -787,7 +795,7 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
       }
     }
     return sorted;
-  }, [events, liveRunNodeId, run.run_id, run.process_id]);
+  }, [events, runningNodeIds, run.run_id, run.process_id]);
 
   const models = useMemo(() => {
     const set = new Set<string>();
