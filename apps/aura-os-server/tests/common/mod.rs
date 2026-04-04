@@ -39,6 +39,7 @@ pub fn store_zero_auth_session(store: &RocksStore) {
         wallets: vec![],
         access_token: "test-token".into(),
         is_zero_pro: true,
+        is_access_granted: false,
         created_at: chrono::Utc::now(),
         validated_at: chrono::Utc::now(),
     })
@@ -277,6 +278,7 @@ pub fn build_test_app_from_store(
                 wallets: vec![],
                 access_token: TEST_JWT.into(),
                 is_zero_pro: true,
+                is_access_granted: false,
                 created_at: chrono::Utc::now(),
                 validated_at: chrono::Utc::now(),
             },

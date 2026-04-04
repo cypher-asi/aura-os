@@ -85,6 +85,7 @@ mod tests {
             wallets: vec![],
             access_token: "the-jwt".into(),
             is_zero_pro: false,
+            is_access_granted: false,
             created_at: Utc::now(),
             validated_at: Utc::now(),
         }

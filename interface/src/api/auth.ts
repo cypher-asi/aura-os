@@ -22,4 +22,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+  redeemAccessCode: (code: string) =>
+    apiFetch<{ code: string; maxUses: number; useCount: number }>("/api/auth/redeem-access-code", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  getAccessCode: () =>
+    apiFetch<{ code: string; maxUses: number; useCount: number } | null>("/api/auth/access-codes"),
 };
