@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Panel, Input, Button, Tabs, Heading, Text, Spinner, Topbar, Badge } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
@@ -74,7 +74,7 @@ function formatAuthError(err: unknown, hostLabel: string): string {
 }
 
 export function LoginView() {
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated, isLoading } = useAuth();
   const status = useHostStore((s) => s.status);
   const refreshStatus = useHostStore((s) => s.refreshStatus);
   const hostLabel = getHostDisplayLabel();
@@ -102,6 +102,11 @@ export function LoginView() {
     })),
   );
   const [hostRefreshing, setHostRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+    navigate(from === "/login" ? "/" : from, { replace: true });
+  }, [from, isAuthenticated, isLoading, navigate]);
 
   function resetForm(): void {
     setEmail("");
