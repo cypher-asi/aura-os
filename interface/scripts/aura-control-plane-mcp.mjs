@@ -87,6 +87,22 @@ function normalizeDependencyIds(args) {
   return dependencyIds.map((value) => value.trim()).filter(Boolean);
 }
 
+function normalizeTaskId(args) {
+  const taskId = args?.task_id ?? args?.taskId;
+  if (typeof taskId !== "string" || !taskId.trim()) {
+    throw new Error("tool requires a non-empty task_id string");
+  }
+  return taskId.trim();
+}
+
+function normalizeNewStatus(args) {
+  const newStatus = args?.new_status ?? args?.newStatus;
+  if (typeof newStatus !== "string" || !newStatus.trim()) {
+    throw new Error("transition_task requires a non-empty new_status string");
+  }
+  return newStatus.trim();
+}
+
 async function listSpecs() {
   const specs = await api(`/api/projects/${projectId}/specs`);
   return {
@@ -161,6 +177,18 @@ async function createTask(args) {
       description,
       order_index: orderIndex,
       dependency_ids: dependencyIds,
+    }),
+  });
+  return { task };
+}
+
+async function transitionTask(args) {
+  const taskId = normalizeTaskId(args);
+  const newStatus = normalizeNewStatus(args);
+  const task = await api(`/api/projects/${projectId}/tasks/${taskId}/transition`, {
+    method: "POST",
+    body: JSON.stringify({
+      new_status: newStatus,
     }),
   });
   return { task };
@@ -252,6 +280,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["spec_id", "title", "description"],
       },
     },
+    {
+      name: "transition_task",
+      description: "Transition an existing Aura task to a new workflow status.",
+      inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          task_id: {
+            type: "string",
+            description: "UUID of the task to update.",
+          },
+          new_status: {
+            type: "string",
+            description: "Target task status, such as ready, in_progress, done, blocked, or failed.",
+          },
+        },
+        required: ["task_id", "new_status"],
+      },
+    },
   ],
 }));
 
@@ -269,6 +316,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           return listTasks(args ?? {});
         case "create_task":
           return createTask(args ?? {});
+        case "transition_task":
+          return transitionTask(args ?? {});
         default:
           throw new Error(`Unknown tool: ${name}`);
       }

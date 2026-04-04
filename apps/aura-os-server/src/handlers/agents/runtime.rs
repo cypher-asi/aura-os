@@ -291,6 +291,11 @@ fn external_project_tool_infos() -> Vec<ToolInfo> {
             description: "Create a persisted Aura task under a spec in the attached project"
                 .to_string(),
         },
+        ToolInfo {
+            name: "transition_task".to_string(),
+            description: "Update the status of a persisted Aura task in the attached project"
+                .to_string(),
+        },
     ]
 }
 
@@ -1458,7 +1463,13 @@ fn claude_tool_use_starts(event: &Value) -> Vec<aura_os_link::ToolUseStart> {
         .filter_map(|block| {
             let name = block.get("name").and_then(Value::as_str)?;
             let normalized = normalize_external_tool_name(name);
-            if !["list_specs", "create_spec", "list_tasks", "create_task"]
+            if ![
+                "list_specs",
+                "create_spec",
+                "list_tasks",
+                "create_task",
+                "transition_task",
+            ]
                 .contains(&normalized.as_str())
             {
                 return None;
@@ -1661,9 +1672,11 @@ fn build_external_prompt(
         prompt.push_str("- create_spec(title, markdown_contents): Persists a real spec in Aura OS for this project.\n");
         prompt.push_str("- list_tasks(spec_id?): Lists persisted tasks for this project, optionally filtered to a spec.\n");
         prompt.push_str("- create_task(spec_id, title, description, dependency_ids?): Persists a real task under an existing spec in Aura OS.\n");
+        prompt.push_str("- transition_task(task_id, new_status): Changes the status of an existing Aura task.\n");
         prompt.push_str("When the user asks to create, save, or persist a project spec or task, use these tools directly instead of only drafting prose or writing a file.\n");
         prompt.push_str("Spec creation and task creation are separate steps. Do not create tasks in the same turn as creating specs.\n");
-        prompt.push_str("After creating tasks, stop and summarize what was created. Do not start implementation work unless the user explicitly asks for it.\n\n");
+        prompt.push_str("When the user asks to move an existing task between states, use transition_task instead of describing the change in prose.\n");
+        prompt.push_str("After creating or transitioning tasks, stop and summarize what changed. Do not start implementation work unless the user explicitly asks for it.\n\n");
     }
     prompt.push_str("User request:\n");
     prompt.push_str(user_content.trim());
