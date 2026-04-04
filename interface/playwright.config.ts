@@ -29,6 +29,7 @@ export default defineConfig({
         "**/layout-capability.desktop.spec.ts",
         "**/responsive-unification.spec.ts",
         "**/desktop-visual.spec.ts",
+        "**/team-settings-integrations.spec.ts",
         "**/agent-runtime-config.spec.ts",
       ],
       use: {

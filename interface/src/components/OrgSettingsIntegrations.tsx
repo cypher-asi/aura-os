@@ -69,54 +69,74 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
       <div className={styles.settingsGroup}>
         <div className={styles.settingsGroupLabel}>Create New Integration</div>
         <div className={`${styles.formRow} ${styles.integrationRow}`}>
-          <div className={`${styles.rowInfo} ${styles.integrationMeta}`}>
-            <div className={styles.rowLabel}>New integration</div>
-            <div className={styles.rowDescription}>
+          <div className={styles.integrationMeta}>
+            <div className={styles.integrationHeader}>New integration</div>
+            <div className={styles.integrationHint}>
               Store reusable provider credentials once at the organization level, then attach them only where API-backed runtime auth is needed.
             </div>
           </div>
           <div className={styles.integrationFields}>
-            <Input
-              value={newIntegration.name}
-              onChange={(e) => setNewIntegration((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g. Anthropic Prod"
-            />
-            <ProviderButtons
-              value={newIntegration.provider}
-              onChange={(provider) => setNewIntegration((prev) => ({ ...prev, provider }))}
-            />
-            <Input
-              value={newIntegration.defaultModel}
-              onChange={(e) => setNewIntegration((prev) => ({ ...prev, defaultModel: e.target.value }))}
-              placeholder="Default model (optional)"
-            />
-            <Input
-              type="password"
-              value={newIntegration.apiKey}
-              onChange={(e) => setNewIntegration((prev) => ({ ...prev, apiKey: e.target.value }))}
-              placeholder="API key"
-            />
-            <Button
-              variant="primary"
-              onClick={async () => {
-                if (!newIntegration.name.trim()) return;
-                await onCreate({
-                  name: newIntegration.name.trim(),
-                  provider: newIntegration.provider,
-                  default_model: newIntegration.defaultModel.trim() || null,
-                  api_key: newIntegration.apiKey.trim() || null,
-                });
-                setNewIntegration({
-                  name: "",
-                  provider: newIntegration.provider,
-                  defaultModel: "",
-                  apiKey: "",
-                });
-              }}
-              disabled={busyId === "new"}
-            >
-              {busyId === "new" ? "Saving..." : "Add Integration"}
-            </Button>
+            <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+              <label className={styles.integrationFieldLabel} htmlFor="new-integration-name">Integration Name</label>
+              <Input
+                id="new-integration-name"
+                aria-label="New integration name"
+                value={newIntegration.name}
+                onChange={(e) => setNewIntegration((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Anthropic Prod…"
+              />
+            </div>
+            <div className={styles.integrationFieldGroup}>
+              <span className={styles.integrationFieldLabel}>Provider</span>
+              <ProviderButtons
+                value={newIntegration.provider}
+                onChange={(provider) => setNewIntegration((prev) => ({ ...prev, provider }))}
+              />
+            </div>
+            <div className={styles.integrationFieldGroup}>
+              <label className={styles.integrationFieldLabel} htmlFor="new-integration-model">Default Model</label>
+              <Input
+                id="new-integration-model"
+                aria-label="New default model"
+                value={newIntegration.defaultModel}
+                onChange={(e) => setNewIntegration((prev) => ({ ...prev, defaultModel: e.target.value }))}
+                placeholder="Optional model override…"
+              />
+            </div>
+            <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+              <label className={styles.integrationFieldLabel} htmlFor="new-integration-key">API Key</label>
+              <Input
+                id="new-integration-key"
+                aria-label="New API key"
+                type="password"
+                value={newIntegration.apiKey}
+                onChange={(e) => setNewIntegration((prev) => ({ ...prev, apiKey: e.target.value }))}
+                placeholder="Paste the provider key…"
+              />
+            </div>
+            <div className={styles.integrationActions}>
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  if (!newIntegration.name.trim()) return;
+                  await onCreate({
+                    name: newIntegration.name.trim(),
+                    provider: newIntegration.provider,
+                    default_model: newIntegration.defaultModel.trim() || null,
+                    api_key: newIntegration.apiKey.trim() || null,
+                  });
+                  setNewIntegration({
+                    name: "",
+                    provider: newIntegration.provider,
+                    defaultModel: "",
+                    apiKey: "",
+                  });
+                }}
+                disabled={busyId === "new"}
+              >
+                {busyId === "new" ? "Saving..." : "Add Integration"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -131,46 +151,64 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
             const isBusy = busyId === integration.integration_id;
             return (
               <div key={integration.integration_id} className={`${styles.formRow} ${styles.integrationRow}`}>
-                <div className={`${styles.rowInfo} ${styles.integrationMeta}`}>
-                  <div className={styles.rowLabel}>{integration.name}</div>
-                  <div className={styles.rowDescription}>
+                <div className={styles.integrationMeta}>
+                  <div className={styles.integrationHeader}>{integration.name}</div>
+                  <div className={styles.integrationHint}>
                     {integration.provider}
                     {integration.secret_last4 ? ` • key ending in ${integration.secret_last4}` : " • no key saved"}
                   </div>
                 </div>
                 <div className={styles.integrationFields}>
-                  <Input
-                    value={draft.name}
-                    onChange={(e) => setDrafts((prev) => ({
-                      ...prev,
-                      [integration.integration_id]: { ...draft, name: e.target.value },
-                    }))}
-                    placeholder="Name"
-                  />
-                  <ProviderButtons
-                    value={draft.provider}
-                    onChange={(provider) => setDrafts((prev) => ({
-                      ...prev,
-                      [integration.integration_id]: { ...draft, provider },
-                    }))}
-                  />
-                  <Input
-                    value={draft.defaultModel}
-                    onChange={(e) => setDrafts((prev) => ({
-                      ...prev,
-                      [integration.integration_id]: { ...draft, defaultModel: e.target.value },
-                    }))}
-                    placeholder="Default model (optional)"
-                  />
-                  <Input
-                    type="password"
-                    value={draft.apiKey}
-                    onChange={(e) => setDrafts((prev) => ({
-                      ...prev,
-                      [integration.integration_id]: { ...draft, apiKey: e.target.value },
-                    }))}
-                    placeholder={integration.has_secret ? "Leave blank to keep existing key" : "API key"}
-                  />
+                  <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                    <label className={styles.integrationFieldLabel} htmlFor={`integration-name-${integration.integration_id}`}>Integration Name</label>
+                    <Input
+                      id={`integration-name-${integration.integration_id}`}
+                      aria-label={`Integration name for ${integration.name}`}
+                      value={draft.name}
+                      onChange={(e) => setDrafts((prev) => ({
+                        ...prev,
+                        [integration.integration_id]: { ...draft, name: e.target.value },
+                      }))}
+                      placeholder="Integration name…"
+                    />
+                  </div>
+                  <div className={styles.integrationFieldGroup}>
+                    <span className={styles.integrationFieldLabel}>Provider</span>
+                    <ProviderButtons
+                      value={draft.provider}
+                      onChange={(provider) => setDrafts((prev) => ({
+                        ...prev,
+                        [integration.integration_id]: { ...draft, provider },
+                      }))}
+                    />
+                  </div>
+                  <div className={styles.integrationFieldGroup}>
+                    <label className={styles.integrationFieldLabel} htmlFor={`integration-model-${integration.integration_id}`}>Default Model</label>
+                    <Input
+                      id={`integration-model-${integration.integration_id}`}
+                      aria-label={`Default model for ${integration.name}`}
+                      value={draft.defaultModel}
+                      onChange={(e) => setDrafts((prev) => ({
+                        ...prev,
+                        [integration.integration_id]: { ...draft, defaultModel: e.target.value },
+                      }))}
+                      placeholder="Optional model override…"
+                    />
+                  </div>
+                  <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                    <label className={styles.integrationFieldLabel} htmlFor={`integration-key-${integration.integration_id}`}>API Key</label>
+                    <Input
+                      id={`integration-key-${integration.integration_id}`}
+                      aria-label={`API key for ${integration.name}`}
+                      type="password"
+                      value={draft.apiKey}
+                      onChange={(e) => setDrafts((prev) => ({
+                        ...prev,
+                        [integration.integration_id]: { ...draft, apiKey: e.target.value },
+                      }))}
+                      placeholder={integration.has_secret ? "Leave blank to keep the existing key…" : "Paste the provider key…"}
+                    />
+                  </div>
                   <div className={styles.integrationActions}>
                     <Button variant="ghost" onClick={() => onDelete(integration.integration_id)} disabled={isBusy}>
                       Delete

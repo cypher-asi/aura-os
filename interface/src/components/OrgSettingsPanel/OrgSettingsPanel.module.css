@@ -202,26 +202,62 @@
 
 .integrationRow {
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .integrationMeta {
-  max-width: 560px;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.integrationHeader {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.integrationHint {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-muted);
 }
 
 .integrationFields {
   width: 100%;
-  max-width: 420px;
+  max-width: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.integrationFieldGroup {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-2);
+  gap: 6px;
+  min-width: 0;
+}
+
+.integrationFieldGroupFull {
+  grid-column: 1 / -1;
+}
+
+.integrationFieldLabel {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .integrationActions {
   display: flex;
   gap: var(--space-2);
   justify-content: flex-end;
+  grid-column: 1 / -1;
+  margin-top: var(--space-1);
 }
 
 .providerButtonRow {
@@ -321,6 +357,10 @@
 
   .inviteActions button {
     width: 100%;
+  }
+
+  .integrationFields {
+    grid-template-columns: 1fr;
   }
 }
 
