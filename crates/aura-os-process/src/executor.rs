@@ -106,7 +106,12 @@ CRITICAL: Your final text response is the ONLY data passed to downstream nodes. 
 Tool outputs and file writes do NOT flow downstream — only your text does. \
 After using tools, you MUST repeat all collected data in your final text response. \
 Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
-Never describe your process — just output the finished product as text.";
+Never describe your process — just output the finished product as text.\n\n\
+TOOL-FAILURE RULE: If the majority of your tool calls fail or return errors, \
+STOP immediately and output a structured error report listing each failed tool call, \
+the error, and what data is missing. Do NOT fabricate results, echo back your search \
+queries, or produce placeholder output. Downstream nodes depend on real data — passing \
+garbage forward is worse than reporting an honest failure.";
 
 pub struct ProcessExecutor {
     store: Arc<ProcessStore>,
@@ -834,6 +839,17 @@ async fn execute_artifact(
 
     let is_schema_mode = artifact_mode == "json_schema";
 
+    let upstream_degraded = upstream_context.contains("⚠ DEGRADED OUTPUT:");
+
+    let upstream_warning = if upstream_degraded {
+        "\n\n⚠ WARNING: The input from previous steps is flagged as degraded \
+         (most tool calls failed). The data below may be incomplete or missing \
+         entirely. Use null for any fields you cannot populate from the available \
+         input. Do NOT invent data.\n"
+    } else {
+        ""
+    };
+
     let (preamble, user_message) = if is_schema_mode {
         let schema = data_content.as_deref().unwrap_or("{}");
         let instructions = if node.prompt.trim().is_empty() {
@@ -844,7 +860,7 @@ async fn execute_artifact(
         let msg = if upstream_context.is_empty() {
             format!("## Target JSON structure\n\n{schema}\n\n## Instructions\n\n{instructions}")
         } else {
-            format!("## Input from previous steps\n\n{upstream_context}\n\n## Target JSON structure\n\n{schema}\n\n## Instructions\n\n{instructions}")
+            format!("## Input from previous steps\n{upstream_warning}\n{upstream_context}\n\n## Target JSON structure\n\n{schema}\n\n## Instructions\n\n{instructions}")
         };
         (ARTIFACT_SCHEMA_PREAMBLE, msg)
     } else {
@@ -852,7 +868,7 @@ async fn execute_artifact(
             format!("## Instructions\n\n{}", node.prompt)
         } else {
             format!(
-                "## Input from previous steps\n\n{upstream_context}\n\n## Instructions\n\n{}",
+                "## Input from previous steps\n{upstream_warning}\n{upstream_context}\n\n## Instructions\n\n{}",
                 node.prompt
             )
         };
@@ -871,7 +887,12 @@ async fn execute_artifact(
         agent_service,
         Some(preamble.to_string()),
     );
-    session_config.max_turns = Some(1);
+    let artifact_max_turns = cfg
+        .get("max_turns")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32)
+        .unwrap_or(1);
+    session_config.max_turns = Some(artifact_max_turns);
 
     let session = harness
         .open_session(session_config)
@@ -1131,38 +1152,71 @@ const MIN_SUBSTANTIAL_OUTPUT_LEN: usize = 200;
 /// session involved tool calls, falls back to extracting data from non-error
 /// `tool_result` content blocks so the actual research data reaches downstream
 /// nodes even if the model forgot to repeat it in its final message.
+///
+/// If the vast majority of tool calls errored, prepends a degraded-output
+/// warning so downstream nodes can detect that the data may be incomplete.
 fn build_downstream_output(resp: &HarnessResponse) -> String {
     let text = resp.final_text.trim();
 
-    if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN {
-        return text.to_string();
+    let (total_tool_calls, error_tool_calls, ok_results) = count_tool_outcomes(&resp.content_blocks);
+
+    let degraded = total_tool_calls > 0
+        && error_tool_calls as f64 / total_tool_calls as f64 > 0.5;
+
+    if degraded {
+        warn!(
+            total = total_tool_calls,
+            errors = error_tool_calls,
+            "Majority of tool calls failed — marking output as degraded"
+        );
     }
 
-    let mut tool_results: Vec<&str> = Vec::new();
-    for block in &resp.content_blocks {
+    let mut output = if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN {
+        text.to_string()
+    } else if ok_results.is_empty() {
+        text.to_string()
+    } else {
+        ok_results.join("\n\n---\n\n")
+    };
+
+    if degraded {
+        output = format!(
+            "⚠ DEGRADED OUTPUT: {error_tool_calls}/{total_tool_calls} tool calls failed. \
+             Data below may be incomplete.\n\n{output}"
+        );
+    }
+
+    output
+}
+
+/// Count total tool calls, error count, and collect non-error result strings.
+fn count_tool_outcomes(blocks: &[serde_json::Value]) -> (usize, usize, Vec<&str>) {
+    let mut total: usize = 0;
+    let mut errors: usize = 0;
+    let mut ok_results: Vec<&str> = Vec::new();
+
+    for block in blocks {
         if block.get("type").and_then(|t| t.as_str()) != Some("tool_result") {
             continue;
         }
+        total += 1;
         let is_error = block
             .get("is_error")
             .and_then(|e| e.as_bool())
             .unwrap_or(false);
         if is_error {
+            errors += 1;
             continue;
         }
         if let Some(result) = block.get("result").and_then(|r| r.as_str()) {
             let r = result.trim();
             if r.len() > 50 {
-                tool_results.push(r);
+                ok_results.push(r);
             }
         }
     }
 
-    if tool_results.is_empty() {
-        return text.to_string();
-    }
-
-    tool_results.join("\n\n---\n\n")
+    (total, errors, ok_results)
 }
 
 /// Extract the final meaningful output from a multi-turn agentic response.
