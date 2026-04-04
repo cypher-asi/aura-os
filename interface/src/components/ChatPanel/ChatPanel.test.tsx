@@ -53,6 +53,8 @@ vi.mock("../../stores/message-queue-store", () => ({
 
 vi.mock("../../constants/models", () => ({
   loadPersistedModel: () => "gpt-5.4",
+  availableModelsForAdapter: () => [],
+  defaultModelForAdapter: () => "gpt-5.4",
   persistModel: vi.fn(),
 }));
 

@@ -449,7 +449,11 @@ async fn run_cli_command(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| ApiError::bad_gateway(format!("failed to start {bin}: {e}")))?;
+        .map_err(|e| {
+            ApiError::bad_gateway(format!(
+                "failed to start {bin} in `{cwd}`: {e}. If this agent is bound to a project, verify the workspace path still exists."
+            ))
+        })?;
 
     if let Some(mut stdin) = child.stdin.take() {
         stdin

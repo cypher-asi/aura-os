@@ -73,7 +73,7 @@ export function AgentChatView() {
     if (selectedProjectId && agentProjects.some((p) => p.project_id === selectedProjectId)) {
       return selectedProjectId;
     }
-    return agentProjects[0]?.project_id;
+    return undefined;
   }, [mode, selectedProjectId, agentProjects]);
 
   const handleProjectChange = useCallback(
@@ -89,7 +89,7 @@ export function AgentChatView() {
     useChatStreamAdapter(mode, { projectId, agentInstanceId, agentId });
 
   // ── Unified agent metadata (name, machineType, templateAgentId) ────
-  const { agentName, machineType, templateAgentId } = useAgentChatMeta(mode, {
+  const { agentName, machineType, templateAgentId, adapterType, defaultModel } = useAgentChatMeta(mode, {
     projectId,
     agentInstanceId,
     agentId,
@@ -216,6 +216,8 @@ export function AgentChatView() {
         agentName={agentName}
         machineType={machineType}
         templateAgentId={templateAgentId}
+        adapterType={adapterType}
+        defaultModel={defaultModel}
         agentId={entityId}
         isLoading={deferredLoading}
         historyResolved={historyResolved}
