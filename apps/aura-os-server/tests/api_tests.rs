@@ -98,6 +98,70 @@ async fn project_create_invalid_name() {
     assert_eq!(body["code"], "bad_request");
 }
 
+#[tokio::test]
+async fn org_integrations_support_tool_and_model_provider_strings() {
+    let (app, _state, _db) = build_test_app();
+    let org_id = OrgId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/orgs/{org_id}/integrations"),
+        Some(serde_json::json!({
+            "name": "GitHub Ops",
+            "provider": "github",
+            "default_model": null,
+            "api_key": "ghp_test_123"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created = response_json(resp).await;
+    let integration_id = created["integration_id"].as_str().unwrap().to_string();
+    assert_eq!(created["name"], "GitHub Ops");
+    assert_eq!(created["provider"], "github");
+    assert_eq!(created["default_model"], serde_json::Value::Null);
+    assert_eq!(created["has_secret"], true);
+
+    let req = json_request("GET", &format!("/api/orgs/{org_id}/integrations"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["provider"], "github");
+
+    let req = json_request(
+        "PUT",
+        &format!("/api/orgs/{org_id}/integrations/{integration_id}"),
+        Some(serde_json::json!({
+            "name": "OpenAI Shared",
+            "provider": "openai",
+            "default_model": "gpt-5.1",
+            "api_key": "sk-test"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated = response_json(resp).await;
+    assert_eq!(updated["name"], "OpenAI Shared");
+    assert_eq!(updated["provider"], "openai");
+    assert_eq!(updated["default_model"], "gpt-5.1");
+    assert_eq!(updated["has_secret"], true);
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/orgs/{org_id}/integrations/{integration_id}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let req = json_request("GET", &format!("/api/orgs/{org_id}/integrations"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert!(listed.as_array().unwrap().is_empty());
+}
+
 // ---------------------------------------------------------------------------
 // Task/Progress Endpoint Tests
 // ---------------------------------------------------------------------------
