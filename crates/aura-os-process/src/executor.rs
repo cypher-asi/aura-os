@@ -850,7 +850,9 @@ async fn execute_artifact(
 
     let safe_name = artifact_name
         .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], "_");
-    let filename = format!("{safe_name}.md");
+    let date_str = Utc::now().format("%Y-%m-%d");
+    let short_id = &run_id.to_string()[..8];
+    let filename = format!("{safe_name} - {date_str} - {short_id}.md");
 
     let rel_path = format!(
         "process-artifacts/{}/{}/{}",
