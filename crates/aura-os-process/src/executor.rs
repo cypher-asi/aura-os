@@ -31,6 +31,12 @@ struct NodeTokenUsage {
     model: Option<String>,
 }
 
+struct NodeResult {
+    output: String,
+    token_usage: Option<NodeTokenUsage>,
+    content_blocks: Option<Vec<serde_json::Value>>,
+}
+
 struct DeltaForwarder<'a> {
     broadcast: &'a broadcast::Sender<serde_json::Value>,
     process_id: ProcessId,
@@ -321,7 +327,7 @@ async fn execute_run(
 
         // Nodes with upstream dependencies but no valid completed parent → skip
         if !incoming.is_empty() && !has_valid_upstream {
-            record_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", None, None, None);
+            record_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", None, None, None, None);
             continue;
         }
 
@@ -366,15 +372,15 @@ async fn execute_run(
             run_id: run.run_id,
             node_id,
         };
-        let result: Result<(String, Option<NodeTokenUsage>), ProcessError> = match node.node_type {
-            ProcessNodeType::Ignition => execute_ignition(node).map(|s| (s, None)),
+        let result: Result<NodeResult, ProcessError> = match node.node_type {
+            ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult { output: s, token_usage: None, content_blocks: None }),
             ProcessNodeType::Action => {
                 execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service, Some(&fwd)).await
             }
             ProcessNodeType::Condition => {
                 execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service, Some(&fwd)).await
             }
-            ProcessNodeType::Delay => execute_delay(node).await.map(|s| (s, None)),
+            ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult { output: s, token_usage: None, content_blocks: None }),
             ProcessNodeType::Artifact => {
                 execute_artifact(
                     node,
@@ -390,33 +396,33 @@ async fn execute_run(
                 )
                 .await
             }
-            ProcessNodeType::Merge => Ok((upstream_context.clone(), None)),
+            ProcessNodeType::Merge => Ok(NodeResult { output: upstream_context.clone(), token_usage: None, content_blocks: None }),
         };
 
         let node_completed_at = Utc::now();
 
         match result {
-            Ok((output, token_usage)) => {
+            Ok(node_result) => {
                 if node.node_type == ProcessNodeType::Condition {
-                    condition_results.insert(node_id, parse_condition_result(&output));
+                    condition_results.insert(node_id, parse_condition_result(&node_result.output));
                 }
 
-                if let Some(ref usage) = token_usage {
+                if let Some(ref usage) = node_result.token_usage {
                     run_input_tokens += usage.input_tokens;
                     run_output_tokens += usage.output_tokens;
                 }
 
                 let event_output = match node.node_type {
                     ProcessNodeType::Merge => {
-                        format!("Merged {} upstream output(s) ({} bytes)", incoming.len(), output.len())
+                        format!("Merged {} upstream output(s) ({} bytes)", incoming.len(), node_result.output.len())
                     }
                     ProcessNodeType::Artifact => {
                         let name = node.config.get("artifact_name")
                             .and_then(|v| v.as_str())
                             .unwrap_or(&node.label);
-                        format!("Artifact saved: {} ({} bytes)", name, output.len())
+                        format!("Artifact saved: {} ({} bytes)", name, node_result.output.len())
                     }
-                    _ => output.clone(),
+                    _ => node_result.output.clone(),
                 };
 
                 record_event(
@@ -429,9 +435,10 @@ async fn execute_run(
                     &event_output,
                     Some(node_started_at),
                     Some(node_completed_at),
-                    token_usage.as_ref(),
+                    node_result.token_usage.as_ref(),
+                    node_result.content_blocks.as_deref(),
                 );
-                node_outputs.insert(node_id, output);
+                node_outputs.insert(node_id, node_result.output);
             }
             Err(e) => {
                 let err_msg = e.to_string();
@@ -445,6 +452,7 @@ async fn execute_run(
                     &err_msg,
                     Some(node_started_at),
                     Some(node_completed_at),
+                    None,
                     None,
                 );
 
@@ -580,7 +588,7 @@ async fn execute_action(
     token: Option<&str>,
     agent_service: &AgentService,
     forwarder: Option<&DeltaForwarder<'_>>,
-) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
+) -> Result<NodeResult, ProcessError> {
     let timeout_secs = node
         .config
         .get("timeout_seconds")
@@ -611,21 +619,25 @@ async fn execute_action(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
 
-    let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
+    let resp = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
     }
 
-    let text = extract_final_output(&raw_text);
+    let output = extract_final_output(&resp.final_text);
 
-    let token_usage = usage.map(|u| NodeTokenUsage {
+    let token_usage = resp.usage.map(|u| NodeTokenUsage {
         input_tokens: u.cumulative_input_tokens,
         output_tokens: u.cumulative_output_tokens,
         model: Some(u.model),
     });
 
-    Ok((text, token_usage))
+    Ok(NodeResult {
+        output,
+        token_usage,
+        content_blocks: Some(resp.content_blocks),
+    })
 }
 
 async fn execute_condition(
@@ -635,7 +647,7 @@ async fn execute_condition(
     token: Option<&str>,
     agent_service: &AgentService,
     forwarder: Option<&DeltaForwarder<'_>>,
-) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
+) -> Result<NodeResult, ProcessError> {
     let cfg = &node.config;
     let condition_expr = cfg
         .get("condition_expression")
@@ -668,19 +680,23 @@ async fn execute_condition(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send condition message: {e}")))?;
 
-    let (text, usage) = collect_harness_response(&session.events_tx, 60, forwarder).await?;
+    let resp = collect_harness_response(&session.events_tx, 60, forwarder).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close condition session");
     }
 
-    let token_usage = usage.map(|u| NodeTokenUsage {
+    let token_usage = resp.usage.map(|u| NodeTokenUsage {
         input_tokens: u.cumulative_input_tokens,
         output_tokens: u.cumulative_output_tokens,
         model: Some(u.model),
     });
 
-    Ok((text, token_usage))
+    Ok(NodeResult {
+        output: resp.final_text,
+        token_usage,
+        content_blocks: Some(resp.content_blocks),
+    })
 }
 
 async fn execute_delay(node: &ProcessNode) -> Result<String, ProcessError> {
@@ -715,7 +731,7 @@ async fn execute_artifact(
     token: Option<&str>,
     agent_service: &AgentService,
     forwarder: Option<&DeltaForwarder<'_>>,
-) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
+) -> Result<NodeResult, ProcessError> {
     let cfg = &node.config;
     let artifact_name = cfg
         .get("artifact_name")
@@ -763,7 +779,7 @@ async fn execute_artifact(
         (None, _) => upstream_context.to_string(),
     };
 
-    let (content, token_usage) = if !node.prompt.trim().is_empty() && !raw_content.is_empty() {
+    let (content, token_usage, blocks) = if !node.prompt.trim().is_empty() && !raw_content.is_empty() {
         let timeout_secs = node
             .config
             .get("timeout_seconds")
@@ -795,21 +811,21 @@ async fn execute_artifact(
             }))
             .map_err(|e| ProcessError::Execution(format!("Failed to send artifact message: {e}")))?;
 
-        let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
+        let resp = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
 
         if let Err(e) = harness.close_session(&session.session_id).await {
             warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
         }
 
-        let refined = extract_final_output(&raw_text);
-        let tu = usage.map(|u| NodeTokenUsage {
+        let refined = extract_final_output(&resp.final_text);
+        let tu = resp.usage.map(|u| NodeTokenUsage {
             input_tokens: u.cumulative_input_tokens,
             output_tokens: u.cumulative_output_tokens,
             model: Some(u.model),
         });
-        (refined, tu)
+        (refined, tu, Some(resp.content_blocks))
     } else {
-        (raw_content, None)
+        (raw_content, None, None)
     };
 
     let file_path = dir.join(&filename);
@@ -839,30 +855,47 @@ async fn execute_artifact(
         "Artifact saved"
     );
 
-    Ok((content, token_usage))
+    Ok(NodeResult {
+        output: content,
+        token_usage,
+        content_blocks: blocks,
+    })
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Collect the harness response, keeping only text from the final turn.
+struct HarnessResponse {
+    /// Text from the model's final turn only (after the last tool result).
+    final_text: String,
+    /// All text concatenated across every turn (fallback).
+    #[allow(dead_code)]
+    full_text: String,
+    /// Structured content blocks mirroring the agents-app conversation format.
+    content_blocks: Vec<serde_json::Value>,
+    usage: Option<SessionUsage>,
+}
+
+/// Collect the full harness conversation, capturing structured content blocks
+/// (text, tool_use, tool_result, thinking) exactly like the agents app does.
 ///
-/// In multi-turn agentic sessions the model emits narration between tool calls.
-/// We track `ToolUseStart` / `ToolResult` events as turn boundaries and reset
-/// the text buffer after each `ToolResult`, so the returned string contains
-/// only the model's output from its last turn (the actual answer).  The full
-/// accumulated text is kept as a fallback in case the final segment is empty.
+/// Also tracks tool-call boundaries so `final_text` contains only the model's
+/// output from its last turn — the actual answer, not intermediate narration.
 async fn collect_harness_response(
     events_tx: &broadcast::Sender<HarnessOutbound>,
     timeout_secs: u64,
     forwarder: Option<&DeltaForwarder<'_>>,
-) -> Result<(String, Option<SessionUsage>), ProcessError> {
+) -> Result<HarnessResponse, ProcessError> {
     let mut rx = events_tx.subscribe();
-    let mut full_output = String::new();
-    let mut last_turn_output = String::new();
+    let mut full_text = String::new();
+    let mut last_turn_text = String::new();
+    let mut text_segment = String::new();
+    let mut thinking_buf = String::new();
     let mut in_tool_call = false;
     let mut had_tool_calls = false;
+    let mut content_blocks: Vec<serde_json::Value> = Vec::new();
+    let mut last_tool_use_id = String::new();
     let mut usage: Option<SessionUsage> = None;
     let deadline = Duration::from_secs(timeout_secs);
 
@@ -873,18 +906,47 @@ async fn collect_harness_response(
                     if let Some(fwd) = forwarder {
                         fwd.forward(&delta.text);
                     }
-                    full_output.push_str(&delta.text);
+                    full_text.push_str(&delta.text);
+                    text_segment.push_str(&delta.text);
                     if !in_tool_call {
-                        last_turn_output.push_str(&delta.text);
+                        last_turn_text.push_str(&delta.text);
                     }
                 }
-                Ok(HarnessOutbound::ToolUseStart(_)) => {
+                Ok(HarnessOutbound::ThinkingDelta(delta)) => {
+                    thinking_buf.push_str(&delta.thinking);
+                }
+                Ok(HarnessOutbound::ToolUseStart(tool)) => {
+                    if !text_segment.is_empty() {
+                        content_blocks.push(serde_json::json!({
+                            "type": "text", "text": &text_segment
+                        }));
+                        text_segment.clear();
+                    }
+                    if !thinking_buf.is_empty() {
+                        content_blocks.push(serde_json::json!({
+                            "type": "thinking", "thinking": &thinking_buf
+                        }));
+                        thinking_buf.clear();
+                    }
+                    last_tool_use_id = tool.id.clone();
+                    content_blocks.push(serde_json::json!({
+                        "type": "tool_use",
+                        "id": &tool.id,
+                        "name": &tool.name,
+                    }));
                     in_tool_call = true;
                     had_tool_calls = true;
                 }
-                Ok(HarnessOutbound::ToolResult(_)) => {
+                Ok(HarnessOutbound::ToolResult(result)) => {
+                    content_blocks.push(serde_json::json!({
+                        "type": "tool_result",
+                        "tool_use_id": &last_tool_use_id,
+                        "name": &result.name,
+                        "result": &result.result,
+                        "is_error": result.is_error,
+                    }));
                     in_tool_call = false;
-                    last_turn_output.clear();
+                    last_turn_text.clear();
                 }
                 Ok(HarnessOutbound::AssistantMessageEnd(end)) => {
                     usage = Some(end.usage);
@@ -897,13 +959,13 @@ async fn collect_harness_response(
                     )));
                 }
                 Err(broadcast::error::RecvError::Closed) => {
-                    if full_output.is_empty() {
+                    if full_text.is_empty() {
                         return Err(ProcessError::Execution(
                             "Harness connection closed before producing any output".into(),
                         ));
                     }
                     warn!(
-                        bytes = full_output.len(),
+                        bytes = full_text.len(),
                         "Harness connection closed before AssistantMessageEnd; returning partial output"
                     );
                     break;
@@ -922,26 +984,42 @@ async fn collect_harness_response(
         Ok(Ok(())) => {}
         Ok(Err(e)) => return Err(e),
         Err(_) => {
-            if full_output.is_empty() {
+            if full_text.is_empty() {
                 return Err(ProcessError::Execution(format!(
                     "Harness timed out after {timeout_secs}s without producing output"
                 )));
             }
             warn!(
-                bytes = full_output.len(),
+                bytes = full_text.len(),
                 timeout_secs,
                 "Harness timed out; returning partial output"
             );
         }
     };
 
-    let text = if had_tool_calls && !last_turn_output.trim().is_empty() {
-        last_turn_output
+    if !text_segment.is_empty() {
+        content_blocks.push(serde_json::json!({
+            "type": "text", "text": &text_segment
+        }));
+    }
+    if !thinking_buf.is_empty() {
+        content_blocks.push(serde_json::json!({
+            "type": "thinking", "thinking": &thinking_buf
+        }));
+    }
+
+    let final_text = if had_tool_calls && !last_turn_text.trim().is_empty() {
+        last_turn_text
     } else {
-        full_output
+        full_text.clone()
     };
 
-    Ok((text, usage))
+    Ok(HarnessResponse {
+        final_text,
+        full_text,
+        content_blocks,
+        usage,
+    })
 }
 
 /// Extract the final meaningful output from a multi-turn agentic response.
@@ -1030,6 +1108,7 @@ fn record_event(
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     token_usage: Option<&NodeTokenUsage>,
+    content_blocks: Option<&[serde_json::Value]>,
 ) {
     let now = Utc::now();
     let event = ProcessEvent {
@@ -1045,6 +1124,7 @@ fn record_event(
         input_tokens: token_usage.map(|u| u.input_tokens),
         output_tokens: token_usage.map(|u| u.output_tokens),
         model: token_usage.and_then(|u| u.model.clone()),
+        content_blocks: content_blocks.map(|b| b.to_vec()),
     };
 
     if let Err(e) = store.save_event(&event) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import type { ProcessNode, ProcessEvent, ProcessArtifact, ProcessRun } from "../../../types";
+import type { ProcessNode, ProcessEvent, ProcessEventContentBlock, ProcessArtifact, ProcessRun } from "../../../types";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
@@ -13,6 +13,79 @@ interface NodeOutputTabProps {
 
 const POLL_INTERVAL = 4000;
 const EMPTY_RUNS: ProcessRun[] = [];
+
+const monoBox: React.CSSProperties = {
+  background: "var(--color-bg-input)",
+  padding: 8,
+  borderRadius: "var(--radius-sm)",
+  whiteSpace: "pre-wrap",
+  fontSize: 12,
+  fontFamily: "var(--font-mono)",
+  maxHeight: 400,
+  overflow: "auto",
+  lineHeight: 1.5,
+  color: "var(--color-text)",
+};
+
+function ContentBlockView({ block }: { block: ProcessEventContentBlock }) {
+  if (block.type === "text" && block.text) {
+    return <div style={monoBox}>{block.text}</div>;
+  }
+  if (block.type === "thinking" && block.thinking) {
+    return (
+      <div style={{ ...monoBox, borderLeft: "2px solid rgba(139,92,246,0.5)", color: "var(--color-text-muted)" }}>
+        {block.thinking}
+      </div>
+    );
+  }
+  if (block.type === "tool_use") {
+    return (
+      <div style={{ ...monoBox, borderLeft: "2px solid rgba(59,130,246,0.6)" }}>
+        <span style={{ color: "#3b82f6", fontWeight: 600, fontSize: 11 }}>
+          tool call
+        </span>{" "}
+        <span style={{ fontWeight: 600 }}>{block.name}</span>
+      </div>
+    );
+  }
+  if (block.type === "tool_result") {
+    const resultText = block.result && block.result.length > 2000
+      ? `${block.result.slice(0, 2000)}…`
+      : block.result;
+    return (
+      <div
+        style={{
+          ...monoBox,
+          borderLeft: block.is_error
+            ? "2px solid rgba(239,68,68,0.6)"
+            : "2px solid rgba(16,185,129,0.6)",
+          color: "var(--color-text-muted)",
+          fontSize: 11,
+          maxHeight: 200,
+        }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 11, color: block.is_error ? "#ef4444" : "#10b981" }}>
+          {block.is_error ? "error" : "result"}
+        </span>{" "}
+        <span style={{ color: "var(--color-text-muted)" }}>{block.name}</span>
+        {resultText && (
+          <div style={{ marginTop: 4 }}>{resultText}</div>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+function ContentBlocksView({ blocks }: { blocks: ProcessEventContentBlock[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {blocks.map((block, i) => (
+        <ContentBlockView key={i} block={block} />
+      ))}
+    </div>
+  );
+}
 
 export function NodeOutputTab({ node }: NodeOutputTabProps) {
   const { processId } = useParams<{ processId: string }>();
@@ -60,7 +133,6 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
     };
   }, [isRunActive, loadEvents, loadArtifacts]);
 
-  // Re-fetch when a node status changes (broadcast fired)
   const currentNodeStatus = nodeStatuses[node.node_id];
   useEffect(() => {
     if (currentNodeStatus) {
@@ -70,6 +142,7 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
   }, [currentNodeStatus, loadEvents, loadArtifacts]);
 
   const nodeEvent = events.find((e) => e.node_id === node.node_id);
+  const hasBlocks = nodeEvent?.content_blocks && nodeEvent.content_blocks.length > 0;
 
   return (
     <div className={styles.previewBody}>
@@ -122,42 +195,25 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
               </span>
             </div>
 
-            {nodeEvent.output && (
+            {hasBlocks ? (
+              <div className={styles.taskField}>
+                <span className={styles.fieldLabel}>Conversation</span>
+                <ContentBlocksView blocks={nodeEvent.content_blocks!} />
+              </div>
+            ) : nodeEvent.output ? (
               <div className={styles.taskField}>
                 <span className={styles.fieldLabel}>Output</span>
-                <div
-                  style={{
-                    background: "var(--color-bg-input)",
-                    padding: 8,
-                    borderRadius: "var(--radius-sm)",
-                    whiteSpace: "pre-wrap",
-                    fontSize: 12,
-                    fontFamily: "var(--font-mono)",
-                    maxHeight: 400,
-                    overflow: "auto",
-                    lineHeight: 1.5,
-                    color: "var(--color-text)",
-                  }}
-                >
-                  {nodeEvent.output}
-                </div>
+                <div style={monoBox}>{nodeEvent.output}</div>
               </div>
-            )}
+            ) : null}
 
             {nodeEvent.input_snapshot && (
               <div className={styles.taskField}>
                 <span className={styles.fieldLabel}>Input</span>
                 <div
                   style={{
-                    background: "var(--color-bg-input)",
-                    padding: 8,
-                    borderRadius: "var(--radius-sm)",
-                    whiteSpace: "pre-wrap",
-                    fontSize: 12,
-                    fontFamily: "var(--font-mono)",
+                    ...monoBox,
                     maxHeight: 200,
-                    overflow: "auto",
-                    lineHeight: 1.5,
                     color: "var(--color-text-muted)",
                   }}
                 >
