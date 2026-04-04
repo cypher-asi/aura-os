@@ -114,6 +114,7 @@ export enum EventType {
   ProcessRunCompleted   = "process_run_completed",
   ProcessRunFailed      = "process_run_failed",
   ProcessNodeExecuted   = "process_node_executed",
+  ProcessNodeOutputDelta = "process_node_output_delta",
 
   // Other
   LogLine               = "log_line",
@@ -447,6 +448,12 @@ export type AuraEvent = AuraEventBase & (
       input_tokens?: number;
       output_tokens?: number;
       model?: string;
+    } }
+  | { type: EventType.ProcessNodeOutputDelta; content: {
+      process_id: string;
+      run_id: string;
+      node_id: string;
+      text: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────

@@ -644,6 +644,11 @@ pub struct ProcessEvent {
     pub output_tokens: Option<u64>,
     #[serde(default)]
     pub model: Option<String>,
+    /// Structured content blocks from the harness conversation (text, tool_use,
+    /// tool_result, thinking).  Present for action/condition/artifact nodes that
+    /// invoke the LLM; `None` for ignition/delay/merge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_blocks: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -471,6 +471,17 @@ export interface ProcessRun {
   cost_usd?: number;
 }
 
+export interface ProcessEventContentBlock {
+  type: "text" | "tool_use" | "tool_result" | "thinking";
+  text?: string;
+  thinking?: string;
+  name?: string;
+  id?: string;
+  tool_use_id?: string;
+  result?: string;
+  is_error?: boolean;
+}
+
 export interface ProcessEvent {
   event_id: string;
   run_id: string;
@@ -484,6 +495,7 @@ export interface ProcessEvent {
   input_tokens?: number;
   output_tokens?: number;
   model?: string;
+  content_blocks?: ProcessEventContentBlock[];
 }
 
 export interface ProcessArtifact {

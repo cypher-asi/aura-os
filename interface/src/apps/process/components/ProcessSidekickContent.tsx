@@ -268,28 +268,38 @@ function EventTimelineItem({
   event,
   nodes,
   isLive,
+  streamingText,
 }: {
   event: ProcessEvent;
   nodes: { node_id: string; label: string }[];
   isLive?: boolean;
+  streamingText?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const streamRef = useRef<HTMLDivElement>(null);
   const isRunning = event.status === "running";
 
   useEffect(() => {
     if (isLive && isRunning) setExpanded(true);
   }, [isLive, isRunning]);
 
+  useEffect(() => {
+    if (streamRef.current && streamingText) {
+      streamRef.current.scrollTop = streamRef.current.scrollHeight;
+    }
+  }, [streamingText]);
+
   const nodeLabel = nodes.find((n) => n.node_id === event.node_id)?.label ?? event.node_id.slice(0, 8);
   const colors = EVENT_STATUS_COLORS[event.status] ?? EVENT_STATUS_COLORS.pending;
 
   const hasTokens = event.input_tokens != null || event.output_tokens != null;
   const totalTokens = (event.input_tokens ?? 0) + (event.output_tokens ?? 0);
+  const displayOutput = event.output || (streamingText && !isRunning ? streamingText : "");
 
   return (
     <div
       style={{
-        border: "1px solid var(--color-border)",
+        border: `1px solid ${isRunning && streamingText ? "rgba(59,130,246,0.3)" : "var(--color-border)"}`,
         borderRadius: "var(--radius-sm)",
         fontSize: 12,
         overflow: "hidden",
@@ -340,12 +350,33 @@ function EventTimelineItem({
       </button>
       {expanded && (
         <div style={{ padding: "0 8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
-          {isRunning && (
-            <div style={{ fontSize: 11, color: "#3b82f6", fontStyle: "italic" }}>
-              Processing...
+          {isRunning && streamingText && (
+            <div>
+              <div style={{ fontSize: 10, color: "#3b82f6", marginBottom: 2, fontWeight: 600 }}>Live Output</div>
+              <div
+                ref={streamRef}
+                style={{
+                  background: "var(--color-bg-input)", padding: 6, borderRadius: "var(--radius-sm)",
+                  whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)", fontSize: 11,
+                  maxHeight: 250, overflow: "auto", lineHeight: 1.4,
+                  borderLeft: "2px solid #3b82f6",
+                }}
+              >
+                {streamingText}
+                <span style={{
+                  display: "inline-block", width: 6, height: 14, marginLeft: 1,
+                  background: "#3b82f6", animation: "aura-pulse 1s ease-in-out infinite",
+                  verticalAlign: "text-bottom",
+                }} />
+              </div>
             </div>
           )}
-          {event.output && (
+          {isRunning && !streamingText && (
+            <div style={{ fontSize: 11, color: "#3b82f6", fontStyle: "italic" }}>
+              Waiting for output...
+            </div>
+          )}
+          {displayOutput && !isRunning && (
             <div>
               <div style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 2 }}>Output</div>
               <div style={{
@@ -353,7 +384,7 @@ function EventTimelineItem({
                 whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)", fontSize: 11,
                 maxHeight: 200, overflow: "auto", lineHeight: 1.4,
               }}>
-                {event.output}
+                {displayOutput}
               </div>
             </div>
           )}
@@ -655,6 +686,7 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
   const [events, setEvents] = useState<ProcessEvent[]>([]);
+  const [streamingTexts, setStreamingTexts] = useState<Record<string, string>>({});
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -696,22 +728,42 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   useEffect(() => {
     const unsub1 = useEventStore.getState().subscribe(EventType.ProcessNodeExecuted, (event) => {
       if (event.content.run_id === run.run_id) {
+        const status = event.content.status.toLowerCase();
+        if (status.includes("running")) {
+          setStreamingTexts((prev) => ({ ...prev, [event.content.node_id]: "" }));
+        } else {
+          setStreamingTexts((prev) => {
+            const next = { ...prev };
+            delete next[event.content.node_id];
+            return next;
+          });
+        }
         loadData();
       }
     });
     const unsub2 = useEventStore.getState().subscribe(EventType.ProcessRunCompleted, (event) => {
       if (event.content.run_id === run.run_id) {
+        setStreamingTexts({});
         refreshRun();
         loadData();
       }
     });
     const unsub3 = useEventStore.getState().subscribe(EventType.ProcessRunFailed, (event) => {
       if (event.content.run_id === run.run_id) {
+        setStreamingTexts({});
         refreshRun();
         loadData();
       }
     });
-    return () => { unsub1(); unsub2(); unsub3(); };
+    const unsub4 = useEventStore.getState().subscribe(EventType.ProcessNodeOutputDelta, (event) => {
+      if (event.content.run_id === run.run_id) {
+        setStreamingTexts((prev) => ({
+          ...prev,
+          [event.content.node_id]: (prev[event.content.node_id] ?? "") + event.content.text,
+        }));
+      }
+    });
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
   }, [run.run_id, loadData, refreshRun]);
 
   const sortedEvents = useMemo(
@@ -825,7 +877,13 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
             <div style={{ fontWeight: 600, marginBottom: 8 }}>Node Events</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {sortedEvents.map((evt) => (
-                <EventTimelineItem key={evt.event_id} event={evt} nodes={nodes} isLive={isActive} />
+                <EventTimelineItem
+                  key={evt.event_id}
+                  event={evt}
+                  nodes={nodes}
+                  isLive={isActive}
+                  streamingText={streamingTexts[evt.node_id]}
+                />
               ))}
             </div>
           </div>

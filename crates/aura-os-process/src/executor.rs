@@ -360,13 +360,19 @@ async fn execute_run(
         }));
 
         // ── execute node ───────────────────────────────────────────────
+        let fwd = DeltaForwarder {
+            broadcast,
+            process_id: run.process_id,
+            run_id: run.run_id,
+            node_id,
+        };
         let result: Result<(String, Option<NodeTokenUsage>), ProcessError> = match node.node_type {
             ProcessNodeType::Ignition => execute_ignition(node).map(|s| (s, None)),
             ProcessNodeType::Action => {
-                execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service).await
+                execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service, Some(&fwd)).await
             }
             ProcessNodeType::Condition => {
-                execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service).await
+                execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service, Some(&fwd)).await
             }
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| (s, None)),
             ProcessNodeType::Artifact => {
@@ -380,6 +386,7 @@ async fn execute_run(
                     harness,
                     jwt.as_deref(),
                     agent_service,
+                    Some(&fwd),
                 )
                 .await
             }
@@ -572,6 +579,7 @@ async fn execute_action(
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
+    forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let timeout_secs = node
         .config
@@ -603,7 +611,7 @@ async fn execute_action(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
 
-    let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
+    let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
@@ -626,6 +634,7 @@ async fn execute_condition(
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
+    forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let cfg = &node.config;
     let condition_expr = cfg
@@ -659,7 +668,7 @@ async fn execute_condition(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send condition message: {e}")))?;
 
-    let (text, usage) = collect_harness_response(&session.events_tx, 60).await?;
+    let (text, usage) = collect_harness_response(&session.events_tx, 60, forwarder).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close condition session");
@@ -705,6 +714,7 @@ async fn execute_artifact(
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
+    forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let cfg = &node.config;
     let artifact_name = cfg
@@ -785,7 +795,7 @@ async fn execute_artifact(
             }))
             .map_err(|e| ProcessError::Execution(format!("Failed to send artifact message: {e}")))?;
 
-        let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
+        let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
 
         if let Err(e) = harness.close_session(&session.session_id).await {
             warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
@@ -846,6 +856,7 @@ async fn execute_artifact(
 async fn collect_harness_response(
     events_tx: &broadcast::Sender<HarnessOutbound>,
     timeout_secs: u64,
+    forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<(String, Option<SessionUsage>), ProcessError> {
     let mut rx = events_tx.subscribe();
     let mut full_output = String::new();
@@ -859,6 +870,9 @@ async fn collect_harness_response(
         loop {
             match rx.recv().await {
                 Ok(HarnessOutbound::TextDelta(delta)) => {
+                    if let Some(fwd) = forwarder {
+                        fwd.forward(&delta.text);
+                    }
                     full_output.push_str(&delta.text);
                     if !in_tool_call {
                         last_turn_output.push_str(&delta.text);
