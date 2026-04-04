@@ -304,6 +304,43 @@ async fn get_spec(
         .ok_or(axum::http::StatusCode::NOT_FOUND)
 }
 
+async fn update_spec(
+    Path(spec_id): Path<String>,
+    State(db): State<SharedDb>,
+    Json(req): Json<UpdateSpecRequest>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    if let Some(spec) = db.specs.iter_mut().find(|s| s.id == spec_id) {
+        if let Some(title) = req.title {
+            spec.title = Some(title);
+        }
+        if let Some(order_index) = req.order_index {
+            spec.order_index = Some(order_index);
+        }
+        if let Some(markdown_contents) = req.markdown_contents {
+            spec.markdown_contents = Some(markdown_contents);
+        }
+        spec.updated_at = Some(Utc::now().to_rfc3339());
+        axum::http::StatusCode::OK
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
+async fn delete_spec(
+    Path(spec_id): Path<String>,
+    State(db): State<SharedDb>,
+) -> axum::http::StatusCode {
+    let mut db = db.lock().await;
+    let len_before = db.specs.len();
+    db.specs.retain(|s| s.id != spec_id);
+    if db.specs.len() < len_before {
+        axum::http::StatusCode::NO_CONTENT
+    } else {
+        axum::http::StatusCode::NOT_FOUND
+    }
+}
+
 async fn list_specs(
     Path(project_id): Path<String>,
     State(db): State<SharedDb>,
@@ -478,7 +515,10 @@ pub fn mock_storage_router(db: SharedDb) -> Router {
             "/api/projects/:project_id/specs",
             post(create_spec).get(list_specs),
         )
-        .route("/api/specs/:spec_id", get(get_spec))
+        .route(
+            "/api/specs/:spec_id",
+            get(get_spec).put(update_spec).delete(delete_spec),
+        )
         // Events
         .route(
             "/api/sessions/:session_id/events",

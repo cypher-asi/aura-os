@@ -105,6 +105,196 @@ async fn project_create_invalid_name() {
 // task_list_and_progress test removed -- requires seeding tasks via local RocksDB
 // which was removed in Phase 5e. Will be rewritten with aura-storage mock in Phase 9e.
 
+#[tokio::test]
+async fn spec_routes_support_storage_backed_crud() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/specs"),
+        Some(serde_json::json!({
+            "title": "API Spec",
+            "markdownContents": "# API Spec",
+            "orderIndex": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let created = response_json(resp).await;
+    let spec_id = created["spec_id"].as_str().unwrap().to_string();
+    assert_eq!(created["title"], "API Spec");
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/specs"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["spec_id"], spec_id);
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/specs/{spec_id}"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fetched = response_json(resp).await;
+    assert_eq!(fetched["title"], "API Spec");
+
+    let req = json_request(
+        "PUT",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        Some(serde_json::json!({
+            "title": "Updated API Spec",
+            "markdownContents": "# Updated API Spec"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated = response_json(resp).await;
+    assert_eq!(updated["title"], "Updated API Spec");
+    assert_eq!(updated["markdown_contents"], "# Updated API Spec");
+
+    let req = json_request(
+        "DELETE",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/specs"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert!(listed.as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn task_routes_support_storage_backed_crud_and_state_changes() {
+    let (app, _state, _storage, _db) = build_test_app_with_storage().await;
+    let project_id = ProjectId::new();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/specs"),
+        Some(serde_json::json!({
+            "title": "Task Parent Spec",
+            "markdownContents": "# Parent",
+            "orderIndex": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let spec = response_json(resp).await;
+    let spec_id = spec["spec_id"].as_str().unwrap().to_string();
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks"),
+        Some(serde_json::json!({
+            "spec_id": spec_id.clone(),
+            "title": "Primary Task",
+            "description": "Initial description",
+            "status": "pending",
+            "order_index": 0
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let created = response_json(resp).await;
+    let task_id = created["task_id"].as_str().unwrap().to_string();
+    assert_eq!(created["title"], "Primary Task");
+    assert_eq!(created["status"], "pending");
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks/{task_id}"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fetched = response_json(resp).await;
+    assert_eq!(fetched["description"], "Initial description");
+
+    let req = json_request(
+        "PUT",
+        &format!("/api/projects/{project_id}/tasks/{task_id}"),
+        Some(serde_json::json!({
+            "title": "Primary Task Updated",
+            "description": "Updated description"
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated = response_json(resp).await;
+    assert_eq!(updated["title"], "Primary Task Updated");
+    assert_eq!(updated["description"], "Updated description");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks/{task_id}/transition"),
+        Some(serde_json::json!({ "new_status": "ready" })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let transitioned = response_json(resp).await;
+    assert_eq!(transitioned["status"], "ready");
+
+    let req = json_request(
+        "GET",
+        &format!("/api/projects/{project_id}/specs/{spec_id}/tasks"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let by_spec = response_json(resp).await;
+    assert_eq!(by_spec.as_array().unwrap().len(), 1);
+    assert_eq!(by_spec[0]["task_id"], task_id);
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks"),
+        Some(serde_json::json!({
+            "spec_id": spec_id.clone(),
+            "title": "Retry Task",
+            "description": "Should return to ready",
+            "status": "failed",
+            "order_index": 1
+        })),
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let failed = response_json(resp).await;
+    let failed_task_id = failed["task_id"].as_str().unwrap().to_string();
+    assert_eq!(failed["status"], "failed");
+
+    let req = json_request(
+        "POST",
+        &format!("/api/projects/{project_id}/tasks/{failed_task_id}/retry"),
+        None,
+    );
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let retried = response_json(resp).await;
+    assert_eq!(retried["status"], "ready");
+
+    for task_id in [&task_id, &failed_task_id] {
+        let req = json_request(
+            "DELETE",
+            &format!("/api/projects/{project_id}/tasks/{task_id}"),
+            None,
+        );
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    }
+
+    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks"), None);
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let listed = response_json(resp).await;
+    assert!(listed.as_array().unwrap().is_empty());
+}
+
 // ---------------------------------------------------------------------------
 // Agent Endpoint Tests
 // ---------------------------------------------------------------------------

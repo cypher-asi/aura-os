@@ -1,44 +1,14 @@
 mod common;
 
-use std::sync::Arc;
-
 use axum::http::StatusCode;
 use tower::ServiceExt;
 
 use aura_os_core::*;
-use aura_os_server::AppState;
 use aura_os_storage::{
     CreateSessionEventRequest, CreateSessionRequest, StorageClient, StorageSessionEvent,
 };
 
 use common::*;
-
-// ---------------------------------------------------------------------------
-// Helper: build test app with full mock storage (supports events)
-// ---------------------------------------------------------------------------
-
-async fn build_app_with_event_storage() -> (
-    axum::Router,
-    AppState,
-    Arc<StorageClient>,
-    tempfile::TempDir,
-) {
-    let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
-    let storage = Arc::new(StorageClient::with_base_url(&storage_url));
-
-    let db_dir = tempfile::tempdir().unwrap();
-    let store = Arc::new(aura_os_store::RocksStore::open(db_dir.path()).unwrap());
-    store_zero_auth_session(&store);
-
-    let (app, state) = build_test_app_from_store(
-        store,
-        db_dir.path().to_path_buf(),
-        None,
-        Some(storage.clone()),
-        None,
-    );
-    (app, state, storage, db_dir)
-}
 
 // ---------------------------------------------------------------------------
 // 1. Storage client: create and list events
@@ -286,7 +256,7 @@ async fn session_events_to_conversation_history_correct_roles() {
 
 #[tokio::test]
 async fn events_endpoint_returns_session_event_shape() {
-    let (app, _state, storage, _db) = build_app_with_event_storage().await;
+    let (app, _state, storage, _db) = build_test_app_with_storage().await;
     let jwt = "test-token";
 
     let pid = ProjectId::new();
