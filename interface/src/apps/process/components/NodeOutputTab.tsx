@@ -183,9 +183,34 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
     [hasBlocks, nodeEvent?.content_blocks],
   );
 
+  const pinnedOutput = node.config?.pinned_output as string | undefined;
+
   return (
     <div className={styles.previewBody}>
       <div className={styles.taskMeta}>
+        {pinnedOutput && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <Pin size={11} style={{ color: "#f59e0b" }} />
+              Pinned Output
+              <span style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 400 }}>
+                — this is what downstream nodes receive
+              </span>
+            </span>
+            <div
+              style={{
+                ...monoBox,
+                maxHeight: 300,
+                borderLeft: "2px solid #f59e0b40",
+              }}
+            >
+              {pinnedOutput.length > 2000
+                ? pinnedOutput.slice(0, 2000) + `\n\n… (${(pinnedOutput.length / 1024).toFixed(1)} KB total)`
+                : pinnedOutput}
+            </div>
+          </div>
+        )}
+
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Run</span>
           <Text variant="secondary" size="sm">
