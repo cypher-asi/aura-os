@@ -21,7 +21,7 @@ import "./ProcessCanvas.css";
 import { Play, Pause, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2 } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
-import type { ProcessNode, ProcessNodeConnection } from "../../../types";
+import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
@@ -29,6 +29,7 @@ import { useProcessSidekickStore, type NodeRunStatus } from "../stores/process-s
 import { ProcessNodeCard } from "./ProcessNodeCard";
 
 const nodeTypes = { processNode: ProcessNodeCard };
+const EMPTY_RUNS: ProcessRun[] = [];
 
 interface ProcessCanvasProps {
   processId: string;
@@ -157,7 +158,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections, onTri
   const { screenToFlowPosition } = useReactFlow();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
-  const runs = useProcessStore((s) => s.runs[processId] ?? []);
+  const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
   const selectNode = useProcessSidekickStore((s) => s.selectNode);
   const closeNodeInspector = useProcessSidekickStore((s) => s.closeNodeInspector);
   const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);

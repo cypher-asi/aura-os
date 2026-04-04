@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import type { ProcessNode, ProcessEvent, ProcessArtifact } from "../../../types";
+import type { ProcessNode, ProcessEvent, ProcessArtifact, ProcessRun } from "../../../types";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
@@ -12,10 +12,11 @@ interface NodeOutputTabProps {
 }
 
 const POLL_INTERVAL = 4000;
+const EMPTY_RUNS: ProcessRun[] = [];
 
 export function NodeOutputTab({ node }: NodeOutputTabProps) {
   const { processId } = useParams<{ processId: string }>();
-  const runs = useProcessStore((s) => (processId ? s.runs[processId] ?? [] : []));
+  const runs = useProcessStore((s) => (processId ? s.runs[processId] : undefined)) ?? EMPTY_RUNS;
   const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);
   const [events, setEvents] = useState<ProcessEvent[]>([]);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);

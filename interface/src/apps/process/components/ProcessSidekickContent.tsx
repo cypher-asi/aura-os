@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
-import type { ProcessArtifact } from "../../../types";
+import type { ProcessArtifact, ProcessEvent, ProcessNode } from "../../../types";
 import { processApi } from "../../../api/process";
+import { desktopApi } from "../../../api/desktop";
 import { EmptyState } from "../../../components/EmptyState";
 import { PreviewOverlay } from "../../../components/PreviewOverlay";
 import { ProcessEditorModal } from "./ProcessEditorModal";
@@ -250,9 +251,11 @@ function EventTimelineItem({ event, nodes }: { event: ProcessEvent; nodes: { nod
   );
 }
 
+const EMPTY_NODES: ProcessNode[] = [];
+
 function EventsTimeline({ processId }: { processId: string }) {
-  const runs = useProcessStore((s) => s.runs[processId] ?? []);
-  const nodes = useProcessStore((s) => s.nodes[processId] ?? []);
+  const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
+  const nodes = useProcessStore((s) => s.nodes[processId]) ?? EMPTY_NODES;
   const [events, setEvents] = useState<ProcessEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -316,7 +319,7 @@ function artifactFilename(a: ProcessArtifact): string {
 }
 
 function RunPreviewBody({ run }: { run: ProcessRun }) {
-  const nodes = useProcessStore((s) => s.nodes[run.process_id] ?? []);
+  const nodes = useProcessStore((s) => s.nodes[run.process_id]) ?? EMPTY_NODES;
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
   const [events, setEvents] = useState<ProcessEvent[]>([]);
 
@@ -405,7 +408,7 @@ function RunPreviewBody({ run }: { run: ProcessRun }) {
         <div style={{ marginTop: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Node Events</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {events.map((evt) => (
+            {[...events].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime()).map((evt) => (
               <EventTimelineItem key={evt.event_id} event={evt} nodes={nodes} />
             ))}
           </div>
