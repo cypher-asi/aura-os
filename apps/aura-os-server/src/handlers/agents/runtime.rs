@@ -45,7 +45,7 @@ struct RuntimeOutcome {
 }
 
 #[derive(Clone)]
-struct CodexProjectMcpConfig {
+struct ExternalProjectMcpConfig {
     server_name: String,
     command: String,
     args: Vec<String>,
@@ -105,8 +105,8 @@ pub(crate) async fn send_external_agent_event_stream(
     agent: &Agent,
     body: SendChatRequest,
 ) -> ApiResult<SseResponse> {
-    if agent.adapter_type == "codex" && body.project_id.is_some() {
-        return send_codex_project_agent_event_stream(state, jwt, agent, body).await;
+    if supports_external_project_tools(&agent.adapter_type) && body.project_id.is_some() {
+        return send_external_project_agent_event_stream(state, jwt, agent, body).await;
     }
 
     let integration = resolve_integration(state, agent)?;
@@ -165,7 +165,7 @@ pub(crate) async fn send_external_agent_event_stream(
     ))
 }
 
-async fn send_codex_project_agent_event_stream(
+async fn send_external_project_agent_event_stream(
     state: &AppState,
     jwt: &str,
     agent: &Agent,
@@ -174,7 +174,7 @@ async fn send_codex_project_agent_event_stream(
     let project_id = body
         .project_id
         .clone()
-        .ok_or_else(|| ApiError::bad_request("Codex project chat requires a project id"))?;
+        .ok_or_else(|| ApiError::bad_request("External project chat requires a project id"))?;
     let integration = resolve_integration(state, agent)?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
@@ -183,7 +183,7 @@ async fn send_codex_project_agent_event_stream(
     }
 
     let prompt = build_external_prompt(state, agent, &body.content, Some(project_id.as_str()));
-    let mcp_config = build_codex_project_mcp_config(&project_id, jwt)?;
+    let mcp_config = build_external_project_mcp_config(&project_id, jwt)?;
     let (events_tx, _) = broadcast::channel::<HarnessOutbound>(256);
     let (sse_tx, sse_rx) = mpsc::unbounded_channel::<Result<Event, Infallible>>();
     let message_id = Uuid::new_v4().to_string();
@@ -201,11 +201,7 @@ async fn send_codex_project_agent_event_stream(
             &sse_tx,
             HarnessOutbound::SessionReady(SessionReady {
                 session_id: Uuid::new_v4().to_string(),
-                tools: vec![ToolInfo {
-                    name: "create_spec".to_string(),
-                    description: "Create a persisted Aura spec for the attached project"
-                        .to_string(),
-                }],
+                tools: external_project_tool_infos(),
                 skills: Vec::new(),
             }),
         );
@@ -217,20 +213,42 @@ async fn send_codex_project_agent_event_stream(
             }),
         );
 
-        if let Err(err) = stream_codex_project_turn(
-            &state,
-            &agent,
-            integration.as_ref(),
-            &prompt,
-            model,
-            &project_id,
-            &message_id,
-            &mcp_config,
-            &events_tx,
-            &sse_tx,
-        )
-        .await
-        {
+        let result = match agent.adapter_type.as_str() {
+            "codex" => {
+                stream_codex_project_turn(
+                    &state,
+                    &agent,
+                    integration.as_ref(),
+                    &prompt,
+                    model,
+                    &project_id,
+                    &message_id,
+                    &mcp_config,
+                    &events_tx,
+                    &sse_tx,
+                )
+                .await
+            }
+            "claude_code" => {
+                stream_claude_project_turn(
+                    &state,
+                    integration.as_ref(),
+                    &prompt,
+                    model,
+                    &project_id,
+                    &message_id,
+                    &mcp_config,
+                    &events_tx,
+                    &sse_tx,
+                )
+                .await
+            }
+            other => Err(ApiError::bad_request(format!(
+                "unsupported external adapter `{other}`"
+            ))),
+        };
+
+        if let Err(err) = result {
             let (_, error) = err;
             emit_harness_event(
                 &events_tx,
@@ -248,6 +266,32 @@ async fn send_codex_project_agent_event_stream(
         [("x-accel-buffering", HeaderValue::from_static("no"))],
         Sse::new(sse_stream).keep_alive(KeepAlive::default()),
     ))
+}
+
+fn supports_external_project_tools(adapter_type: &str) -> bool {
+    matches!(adapter_type, "codex" | "claude_code")
+}
+
+fn external_project_tool_infos() -> Vec<ToolInfo> {
+    vec![
+        ToolInfo {
+            name: "list_specs".to_string(),
+            description: "List persisted Aura specs for the attached project".to_string(),
+        },
+        ToolInfo {
+            name: "create_spec".to_string(),
+            description: "Create a persisted Aura spec for the attached project".to_string(),
+        },
+        ToolInfo {
+            name: "list_tasks".to_string(),
+            description: "List persisted Aura tasks for the attached project".to_string(),
+        },
+        ToolInfo {
+            name: "create_task".to_string(),
+            description: "Create a persisted Aura task under a spec in the attached project"
+                .to_string(),
+        },
+    ]
 }
 
 pub(crate) fn effective_model(
@@ -524,7 +568,7 @@ async fn stream_codex_project_turn(
     model: Option<String>,
     project_id: &str,
     message_id: &str,
-    mcp_config: &CodexProjectMcpConfig,
+    mcp_config: &ExternalProjectMcpConfig,
     events_tx: &broadcast::Sender<HarnessOutbound>,
     sse_tx: &mpsc::UnboundedSender<Result<Event, Infallible>>,
 ) -> ApiResult<()> {
@@ -660,11 +704,6 @@ async fn stream_codex_project_turn(
             saw_tool_event = true;
             let tool_result_id = tool_result.tool_use_id.clone();
             let tool_name = tool_result.name.clone();
-            let tool_result_value = if !tool_result.is_error && tool_name == "create_spec" {
-                parse_tool_result_json(&tool_result.result)
-            } else {
-                None
-            };
             let _ = events_tx.send(HarnessOutbound::ToolResult(tool_result.clone()));
             emit_json_sse_event(
                 sse_tx,
@@ -676,9 +715,12 @@ async fn stream_codex_project_turn(
                     "is_error": tool_result.is_error,
                 }),
             );
-            if let Some(spec) = tool_result_value {
-                emit_json_sse_event(sse_tx, "spec_saved", serde_json::json!({ "spec": spec }));
-            }
+            emit_saved_artifact_events(
+                sse_tx,
+                &tool_name,
+                tool_result.is_error,
+                &tool_result.result,
+            );
             continue;
         }
 
@@ -711,6 +753,215 @@ async fn stream_codex_project_turn(
     if !saw_text && !saw_tool_event {
         return Err(ApiError::bad_gateway(
             "Codex returned no assistant message or tool activity. Check the runtime auth/session and try again.",
+        ));
+    }
+
+    emit_harness_event(
+        events_tx,
+        sse_tx,
+        HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
+            message_id: message_id.to_string(),
+            stop_reason: "end_turn".to_string(),
+            usage,
+            files_changed: FilesChanged::default(),
+        }),
+    );
+
+    Ok(())
+}
+
+async fn stream_claude_project_turn(
+    state: &AppState,
+    integration: Option<&ResolvedIntegration>,
+    prompt: &str,
+    model: Option<String>,
+    project_id: &str,
+    message_id: &str,
+    mcp_config: &ExternalProjectMcpConfig,
+    events_tx: &broadcast::Sender<HarnessOutbound>,
+    sse_tx: &mpsc::UnboundedSender<Result<Event, Infallible>>,
+) -> ApiResult<()> {
+    let cwd = resolve_runtime_cwd(state, Some(project_id))
+        .unwrap_or_else(|| state.data_dir.to_string_lossy().to_string());
+    let mut env_overrides = HashMap::new();
+    let mut env_removals = Vec::new();
+    if let Some(resolved) = integration {
+        if resolved.metadata.provider != "anthropic" {
+            return Err(ApiError::bad_request(
+                "Claude Code integrations must use the Anthropic provider",
+            ));
+        }
+        if let Some(secret) = resolved.secret.as_deref() {
+            env_overrides.insert("ANTHROPIC_API_KEY".to_string(), secret.to_string());
+        }
+    }
+    env_removals.extend([
+        "CLAUDE_CODE_USE_VERTEX".to_string(),
+        "ANTHROPIC_VERTEX_PROJECT_ID".to_string(),
+        "GOOGLE_APPLICATION_CREDENTIALS".to_string(),
+    ]);
+
+    let mut args = vec![
+        "--print".to_string(),
+        "--output-format".to_string(),
+        "stream-json".to_string(),
+        "--verbose".to_string(),
+        "--dangerously-skip-permissions".to_string(),
+        "--add-dir".to_string(),
+        cwd.clone(),
+        "--strict-mcp-config".to_string(),
+        "--mcp-config".to_string(),
+        claude_mcp_config_json(mcp_config),
+        "-".to_string(),
+    ];
+    if let Some(model) = model.as_deref() {
+        let insert_at = args.len() - 1;
+        args.insert(insert_at, model.to_string());
+        args.insert(insert_at, "--model".to_string());
+    }
+
+    let mut cmd = Command::new("claude");
+    cmd.args(&args)
+        .current_dir(&cwd)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    for (key, value) in &env_overrides {
+        cmd.env(key, value);
+    }
+    for key in &env_removals {
+        cmd.env_remove(key);
+    }
+
+    let mut child = cmd.spawn().map_err(|e| {
+        ApiError::bad_gateway(format!(
+            "failed to start claude in `{cwd}`: {e}. If this agent is bound to a project, verify the workspace path still exists."
+        ))
+    })?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(format!("{prompt}\n").as_bytes())
+            .await
+            .map_err(|e| ApiError::bad_gateway(format!("failed writing prompt to claude: {e}")))?;
+        let _ = stdin.shutdown().await;
+    }
+
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| ApiError::bad_gateway("claude stdout unavailable"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| ApiError::bad_gateway("claude stderr unavailable"))?;
+
+    let stderr_task = tokio::spawn(async move {
+        let mut reader = BufReader::new(stderr);
+        let mut output = String::new();
+        let _ = reader.read_to_string(&mut output).await;
+        output
+    });
+
+    let mut lines = BufReader::new(stdout).lines();
+    let mut usage = SessionUsage {
+        model: model.unwrap_or_else(|| "claude".to_string()),
+        provider: "anthropic".to_string(),
+        ..Default::default()
+    };
+    let mut saw_text = false;
+    let mut saw_tool_event = false;
+    let mut tool_names_by_id = HashMap::<String, String>::new();
+
+    loop {
+        let next_line = timeout(Duration::from_secs(120), lines.next_line())
+            .await
+            .map_err(|_| ApiError::bad_gateway("claude timed out"))?;
+        let Some(line) = next_line
+            .map_err(|e| ApiError::bad_gateway(format!("reading claude output failed: {e}")))?
+        else {
+            break;
+        };
+
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(event) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+
+        if let Some(error_message) = claude_result_error(&event) {
+            return Err(ApiError::bad_gateway(error_message));
+        }
+
+        if let Some(turn_usage) = claude_result_usage(&event, usage.model.clone()) {
+            usage = turn_usage;
+        }
+
+        for tool_start in claude_tool_use_starts(&event) {
+            saw_tool_event = true;
+            tool_names_by_id.insert(tool_start.id.clone(), tool_start.name.clone());
+            let tool_id = tool_start.id.clone();
+            let tool_name = tool_start.name.clone();
+            emit_harness_event(events_tx, sse_tx, HarnessOutbound::ToolUseStart(tool_start));
+            if let Some(tool_call) = claude_tool_call_payload(&event, &tool_id, &tool_name) {
+                emit_json_sse_event(sse_tx, "tool_call", tool_call);
+            }
+        }
+
+        for tool_result in claude_tool_results(&event, &tool_names_by_id) {
+            saw_tool_event = true;
+            let tool_name = tool_result.name.clone();
+            let tool_result_id = tool_result.tool_use_id.clone();
+            let _ = events_tx.send(HarnessOutbound::ToolResult(tool_result.clone()));
+            emit_json_sse_event(
+                sse_tx,
+                "tool_result",
+                serde_json::json!({
+                    "id": tool_result_id,
+                    "name": tool_result.name,
+                    "result": tool_result.result,
+                    "is_error": tool_result.is_error,
+                }),
+            );
+            emit_saved_artifact_events(
+                sse_tx,
+                &tool_name,
+                tool_result.is_error,
+                &tool_result.result,
+            );
+        }
+
+        if let Some(text) = claude_result_text(&event) {
+            if !text.trim().is_empty() {
+                saw_text = true;
+                emit_harness_event(
+                    events_tx,
+                    sse_tx,
+                    HarnessOutbound::TextDelta(TextDelta { text }),
+                );
+            }
+        }
+    }
+
+    let status = timeout(Duration::from_secs(5), child.wait())
+        .await
+        .map_err(|_| ApiError::bad_gateway("waiting for claude failed"))?
+        .map_err(|e| ApiError::bad_gateway(format!("waiting for claude failed: {e}")))?;
+    let stderr_output = stderr_task.await.unwrap_or_default();
+
+    if !status.success() && !saw_text && !saw_tool_event {
+        return Err(ApiError::bad_gateway(format!(
+            "claude exited with {}: {}",
+            status,
+            stderr_output.trim()
+        )));
+    }
+
+    if !saw_text && !saw_tool_event {
+        return Err(ApiError::bad_gateway(
+            "Claude Code returned no assistant message or tool activity. Check the runtime auth/session and try again.",
         ));
     }
 
@@ -795,10 +1046,13 @@ async fn run_cli_command(
     Ok(stdout)
 }
 
-fn build_codex_project_mcp_config(project_id: &str, jwt: &str) -> ApiResult<CodexProjectMcpConfig> {
+fn build_external_project_mcp_config(
+    project_id: &str,
+    jwt: &str,
+) -> ApiResult<ExternalProjectMcpConfig> {
     let script_path = find_control_plane_mcp_script().ok_or_else(|| {
         ApiError::bad_gateway(
-            "Codex project tool bridge is unavailable because the Aura control-plane MCP script could not be found.",
+            "External project tool bridge is unavailable because the Aura control-plane MCP script could not be found.",
         )
     })?;
 
@@ -810,12 +1064,25 @@ fn build_codex_project_mcp_config(project_id: &str, jwt: &str) -> ApiResult<Code
     env.insert("AURA_MCP_PROJECT_ID".to_string(), project_id.to_string());
     env.insert("AURA_MCP_JWT".to_string(), jwt.to_string());
 
-    Ok(CodexProjectMcpConfig {
+    Ok(ExternalProjectMcpConfig {
         server_name: "aura".to_string(),
         command: "node".to_string(),
         args: vec![script_path.to_string_lossy().to_string()],
         env,
     })
+}
+
+fn claude_mcp_config_json(mcp_config: &ExternalProjectMcpConfig) -> String {
+    serde_json::json!({
+        "mcpServers": {
+            mcp_config.server_name.clone(): {
+                "command": mcp_config.command,
+                "args": mcp_config.args,
+                "env": mcp_config.env,
+            }
+        }
+    })
+    .to_string()
 }
 
 fn find_control_plane_mcp_script() -> Option<PathBuf> {
@@ -866,6 +1133,31 @@ fn emit_json_sse_event(
         .json_data(value)
         .unwrap_or_else(|_| Event::default().event(event_type).data("{}"));
     let _ = sse_tx.send(Ok(event));
+}
+
+fn emit_saved_artifact_events(
+    sse_tx: &mpsc::UnboundedSender<Result<Event, Infallible>>,
+    tool_name: &str,
+    is_error: bool,
+    result: &str,
+) {
+    if is_error {
+        return;
+    }
+    let Some(value) = parse_tool_result_json(result) else {
+        return;
+    };
+    match tool_name {
+        "create_spec" => {
+            let spec = value.get("spec").cloned().unwrap_or(value);
+            emit_json_sse_event(sse_tx, "spec_saved", serde_json::json!({ "spec": spec }));
+        }
+        "create_task" => {
+            let task = value.get("task").cloned().unwrap_or(value);
+            emit_json_sse_event(sse_tx, "task_saved", serde_json::json!({ "task": task }));
+        }
+        _ => {}
+    }
 }
 
 fn codex_inline_env(values: &HashMap<String, String>) -> String {
@@ -1054,6 +1346,10 @@ fn sanitize_model(model: &str) -> String {
         .to_string()
 }
 
+fn normalize_external_tool_name(name: &str) -> String {
+    name.strip_prefix("mcp__aura__").unwrap_or(name).to_string()
+}
+
 fn codex_agent_message_text(event: &Value) -> Option<String> {
     event
         .get("item")
@@ -1147,6 +1443,166 @@ fn parse_tool_result_json(result: &str) -> Option<Value> {
     serde_json::from_str::<Value>(result).ok()
 }
 
+fn claude_tool_use_starts(event: &Value) -> Vec<aura_os_link::ToolUseStart> {
+    let Some(content) = event
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+
+    content
+        .iter()
+        .filter(|block| block.get("type") == Some(&Value::String("tool_use".to_string())))
+        .filter_map(|block| {
+            let name = block.get("name").and_then(Value::as_str)?;
+            let normalized = normalize_external_tool_name(name);
+            if !["list_specs", "create_spec", "list_tasks", "create_task"]
+                .contains(&normalized.as_str())
+            {
+                return None;
+            }
+            Some(aura_os_link::ToolUseStart {
+                id: block.get("id")?.as_str()?.to_string(),
+                name: normalized,
+            })
+        })
+        .collect()
+}
+
+fn claude_tool_call_payload(event: &Value, id: &str, name: &str) -> Option<Value> {
+    let block = event
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|block| {
+            block.get("type") == Some(&Value::String("tool_use".to_string()))
+                && block.get("id").and_then(Value::as_str) == Some(id)
+        })?;
+    let mut input = block
+        .get("input")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    if let Some(object) = input.as_object_mut() {
+        if let Some(markdown_contents) = object.get("markdownContents").cloned() {
+            object
+                .entry("markdown_contents".to_string())
+                .or_insert(markdown_contents);
+        }
+    }
+    Some(serde_json::json!({
+        "id": id,
+        "name": name,
+        "input": input,
+    }))
+}
+
+fn claude_tool_results(
+    event: &Value,
+    tool_names_by_id: &HashMap<String, String>,
+) -> Vec<aura_os_link::ToolResultMsg> {
+    let Some(content) = event
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+
+    content
+        .iter()
+        .filter(|block| block.get("type") == Some(&Value::String("tool_result".to_string())))
+        .filter_map(|block| {
+            let tool_use_id = block.get("tool_use_id").and_then(Value::as_str)?;
+            let name = tool_names_by_id.get(tool_use_id)?.clone();
+            Some(aura_os_link::ToolResultMsg {
+                name,
+                result: claude_tool_result_content(block.get("content")),
+                is_error: block
+                    .get("is_error")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+                tool_use_id: Some(tool_use_id.to_string()),
+            })
+        })
+        .collect()
+}
+
+fn claude_tool_result_content(content: Option<&Value>) -> String {
+    match content {
+        Some(Value::String(text)) => text.to_string(),
+        Some(Value::Array(blocks)) => blocks
+            .iter()
+            .filter_map(|block| block.get("text").and_then(Value::as_str))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => String::new(),
+    }
+}
+
+fn claude_result_text(event: &Value) -> Option<String> {
+    if event.get("type") != Some(&Value::String("result".to_string())) {
+        return None;
+    }
+    event
+        .get("result")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+}
+
+fn claude_result_error(event: &Value) -> Option<String> {
+    if event.get("type") != Some(&Value::String("result".to_string())) {
+        return None;
+    }
+    if !event
+        .get("is_error")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        return None;
+    }
+    let message = event
+        .get("result")
+        .and_then(Value::as_str)
+        .unwrap_or("Claude execution failed");
+    Some(if message.contains("Not logged in") {
+        "Claude Code is not logged in for the aura-os-server process. Run `claude` and complete `/login` in the same host environment, or switch this agent to org integration.".to_string()
+    } else {
+        message.to_string()
+    })
+}
+
+fn claude_result_usage(event: &Value, fallback_model: String) -> Option<SessionUsage> {
+    if event.get("type") != Some(&Value::String("result".to_string())) {
+        return None;
+    }
+    let usage = event.get("usage").cloned().unwrap_or(Value::Null);
+    let model = event
+        .get("message")
+        .and_then(|message| message.get("model"))
+        .and_then(Value::as_str)
+        .map(sanitize_model)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(fallback_model);
+
+    Some(SessionUsage {
+        input_tokens: usage_number(&usage, "input_tokens"),
+        output_tokens: usage_number(&usage, "output_tokens"),
+        estimated_context_tokens: 0,
+        cache_creation_input_tokens: usage_number(&usage, "cache_creation_input_tokens"),
+        cache_read_input_tokens: usage_number(&usage, "cache_read_input_tokens"),
+        cumulative_input_tokens: usage_number(&usage, "input_tokens"),
+        cumulative_output_tokens: usage_number(&usage, "output_tokens"),
+        cumulative_cache_creation_input_tokens: usage_number(&usage, "cache_creation_input_tokens"),
+        cumulative_cache_read_input_tokens: usage_number(&usage, "cache_read_input_tokens"),
+        context_utilization: 0.0,
+        model,
+        provider: "anthropic".to_string(),
+    })
+}
+
 fn codex_turn_usage(event: &Value, model: String) -> Option<SessionUsage> {
     if event.get("type") != Some(&Value::String("turn.completed".to_string())) {
         return None;
@@ -1199,10 +1655,15 @@ fn build_external_prompt(
             prompt.push('\n');
         }
     }
-    if agent.adapter_type == "codex" && project_id.is_some() {
-        prompt.push_str("Aura control-plane tool:\n");
-        prompt.push_str("- create_spec(title, markdownContents): Persists a real spec in Aura OS for this project.\n");
-        prompt.push_str("Use this tool when the user asks to create, save, or persist a project spec. Do not only draft the spec in prose if the user's intent is to create one.\n\n");
+    if supports_external_project_tools(&agent.adapter_type) && project_id.is_some() {
+        prompt.push_str("Aura control-plane tools:\n");
+        prompt.push_str("- list_specs(): Lists persisted specs for this project.\n");
+        prompt.push_str("- create_spec(title, markdown_contents): Persists a real spec in Aura OS for this project.\n");
+        prompt.push_str("- list_tasks(spec_id?): Lists persisted tasks for this project, optionally filtered to a spec.\n");
+        prompt.push_str("- create_task(spec_id, title, description, dependency_ids?): Persists a real task under an existing spec in Aura OS.\n");
+        prompt.push_str("When the user asks to create, save, or persist a project spec or task, use these tools directly instead of only drafting prose or writing a file.\n");
+        prompt.push_str("Spec creation and task creation are separate steps. Do not create tasks in the same turn as creating specs.\n");
+        prompt.push_str("After creating tasks, stop and summarize what was created. Do not start implementation work unless the user explicitly asks for it.\n\n");
     }
     prompt.push_str("User request:\n");
     prompt.push_str(user_content.trim());
@@ -1211,7 +1672,10 @@ fn build_external_prompt(
 
 #[cfg(test)]
 mod tests {
-    use super::{codex_tool_result, codex_tool_use_start, codex_turn_usage};
+    use super::{
+        claude_tool_results, claude_tool_use_starts, codex_tool_result, codex_tool_use_start,
+        codex_turn_usage,
+    };
     use serde_json::json;
     use std::collections::HashMap;
 
@@ -1279,5 +1743,54 @@ mod tests {
         assert!(rendered.ends_with('}'));
         assert!(rendered.contains("AURA_MCP_PROJECT_ID=\"proj-1\""));
         assert!(rendered.contains("AURA_MCP_JWT=\"secret\""));
+    }
+
+    #[test]
+    fn claude_mcp_tool_events_map_to_protocol_messages() {
+        let assistant = json!({
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_1",
+                        "name": "mcp__aura__create_task",
+                        "input": {
+                            "spec_id": "spec-1",
+                            "title": "Task 1",
+                            "description": "Do it"
+                        }
+                    }
+                ]
+            }
+        });
+        let starts = claude_tool_use_starts(&assistant);
+        assert_eq!(starts.len(), 1);
+        assert_eq!(starts[0].id, "toolu_1");
+        assert_eq!(starts[0].name, "create_task");
+
+        let mut names = HashMap::new();
+        names.insert("toolu_1".to_string(), "create_task".to_string());
+        let user = json!({
+            "type": "user",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "toolu_1",
+                        "content": [
+                            {"type": "text", "text": "{\"task\":{\"task_id\":\"task-1\"}}"}
+                        ],
+                        "is_error": false
+                    }
+                ]
+            }
+        });
+        let results = claude_tool_results(&user, &names);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].tool_use_id.as_deref(), Some("toolu_1"));
+        assert_eq!(results[0].name, "create_task");
+        assert_eq!(results[0].result, "{\"task\":{\"task_id\":\"task-1\"}}");
+        assert!(!results[0].is_error);
     }
 }

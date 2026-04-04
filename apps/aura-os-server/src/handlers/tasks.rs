@@ -412,6 +412,7 @@ pub(crate) struct CreateTaskBody {
     pub description: Option<String>,
     pub status: Option<String>,
     pub order_index: Option<i32>,
+    pub dependency_ids: Option<Vec<String>>,
     pub assigned_agent_instance_id: Option<String>,
 }
 
@@ -430,7 +431,7 @@ pub(crate) async fn create_task(
         description: req.description,
         status: Some(req.status.unwrap_or_else(|| "backlog".to_string())),
         order_index: req.order_index,
-        dependency_ids: None,
+        dependency_ids: req.dependency_ids,
         assigned_project_agent_id: req.assigned_agent_instance_id,
     };
 
