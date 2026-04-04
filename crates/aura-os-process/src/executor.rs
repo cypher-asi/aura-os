@@ -107,6 +107,10 @@ Tool outputs and file writes do NOT flow downstream — only your text does. \
 After using tools, you MUST repeat all collected data in your final text response. \
 Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
 Never describe your process — just output the finished product as text.\n\n\
+NEVER use write_file to produce your final output. Data inside write_file tool \
+inputs is invisible to downstream nodes. Always emit your result as plain text in \
+your assistant message. If your output is large (JSON, reports, etc.), output it \
+directly as text — do NOT try to save it to a file.\n\n\
 TOOL-FAILURE RULE: If the majority of your tool calls fail or return errors, \
 STOP immediately and output a structured error report listing each failed tool call, \
 the error, and what data is missing. Do NOT fabricate results, echo back your search \
@@ -1169,6 +1173,10 @@ const MIN_SUBSTANTIAL_OUTPUT_LEN: usize = 200;
 /// `tool_result` content blocks so the actual research data reaches downstream
 /// nodes even if the model forgot to repeat it in its final message.
 ///
+/// As a last resort, extracts content from `write_file` tool inputs — models
+/// sometimes put their output into file writes despite being told not to, and
+/// that data would otherwise be lost.
+///
 /// If the vast majority of tool calls errored, prepends a degraded-output
 /// warning so downstream nodes can detect that the data may be incomplete.
 fn build_downstream_output(resp: &HarnessResponse) -> String {
@@ -1187,8 +1195,19 @@ fn build_downstream_output(resp: &HarnessResponse) -> String {
         );
     }
 
-    let mut output = if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN {
+    let write_file_content = extract_write_file_content(&resp.content_blocks);
+
+    let mut output = if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN
+        && text.len() >= write_file_content.as_ref().map_or(0, |s| s.len())
+    {
         text.to_string()
+    } else if let Some(ref wf) = write_file_content {
+        warn!(
+            text_len = text.len(),
+            write_file_len = wf.len(),
+            "Final text is thin but write_file content found — using write_file content"
+        );
+        wf.clone()
     } else if ok_results.is_empty() {
         text.to_string()
     } else {
@@ -1203,6 +1222,31 @@ fn build_downstream_output(resp: &HarnessResponse) -> String {
     }
 
     output
+}
+
+/// Extract the largest `write_file` / `edit_file` content from tool_use blocks.
+/// Models sometimes put their final output into a file write despite being told
+/// not to; this salvages that data so it can flow downstream.
+fn extract_write_file_content(blocks: &[serde_json::Value]) -> Option<String> {
+    let mut best: Option<String> = None;
+    for block in blocks {
+        if block.get("type").and_then(|t| t.as_str()) != Some("tool_use") {
+            continue;
+        }
+        let name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
+        if name != "write_file" && name != "edit_file" {
+            continue;
+        }
+        let content = block
+            .get("input")
+            .and_then(|inp| inp.get("content").or_else(|| inp.get("new_content")))
+            .and_then(|c| c.as_str())
+            .unwrap_or("");
+        if content.len() > best.as_ref().map_or(0, |s| s.len()) {
+            best = Some(content.to_string());
+        }
+    }
+    best.filter(|s| s.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN)
 }
 
 /// Count total tool calls, error count, and collect non-error result strings.
