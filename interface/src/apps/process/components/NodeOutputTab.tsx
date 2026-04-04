@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Text } from "@cypher-asi/zui";
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProcessNode, ProcessEvent, ProcessEventContentBlock, ProcessArtifact, ProcessRun } from "../../../types";
 import type { ToolCallEntry, TimelineItem } from "../../../types/stream";
 import { processApi } from "../../../api/process";
@@ -71,6 +71,55 @@ function contentBlocksToTimeline(blocks: ProcessEventContentBlock[]): {
   }
 
   return { timeline, toolCalls, thinkingText };
+}
+
+const PIN_TRUNCATE = 400;
+
+function PinnedOutputField({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncation = text.length > PIN_TRUNCATE;
+  const display = !expanded && needsTruncation ? text.slice(0, PIN_TRUNCATE) + "…" : text;
+
+  return (
+    <div className={styles.taskField}>
+      <span className={styles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <Pin size={11} style={{ color: "#f59e0b" }} />
+        Pinned Output
+        <span style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 400 }}>
+          — this is what downstream nodes receive
+        </span>
+      </span>
+      <div
+        style={{
+          ...monoBox,
+          maxHeight: expanded ? "none" : 200,
+          borderLeft: "2px solid #f59e0b40",
+        }}
+      >
+        {display}
+      </div>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            background: "none",
+            border: "none",
+            padding: 0,
+            marginTop: 4,
+            fontSize: 11,
+            color: "var(--color-text-link, #3b82f6)",
+            cursor: "pointer",
+          }}
+        >
+          {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          {expanded ? "Show less" : `Show more (${(text.length / 1024).toFixed(1)} KB)`}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function PinOutputButton({ node, output }: { node: ProcessNode; output: string }) {
@@ -189,26 +238,7 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
     <div className={styles.previewBody}>
       <div className={styles.taskMeta}>
         {pinnedOutput && (
-          <div className={styles.taskField}>
-            <span className={styles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <Pin size={11} style={{ color: "#f59e0b" }} />
-              Pinned Output
-              <span style={{ fontSize: 10, color: "var(--color-text-muted)", fontWeight: 400 }}>
-                — this is what downstream nodes receive
-              </span>
-            </span>
-            <div
-              style={{
-                ...monoBox,
-                maxHeight: 300,
-                borderLeft: "2px solid #f59e0b40",
-              }}
-            >
-              {pinnedOutput.length > 2000
-                ? pinnedOutput.slice(0, 2000) + `\n\n… (${(pinnedOutput.length / 1024).toFixed(1)} KB total)`
-                : pinnedOutput}
-            </div>
-          </div>
+          <PinnedOutputField text={pinnedOutput} />
         )}
 
         <div className={styles.taskField}>

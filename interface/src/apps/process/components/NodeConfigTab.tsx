@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pencil, Pin } from "lucide-react";
 import { Button, Text } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../types";
@@ -5,6 +6,43 @@ import type { ProcessNodeType } from "../../../types/enums";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
 import { useAgentStore } from "../../agents/stores";
 import styles from "../../../components/Preview/Preview.module.css";
+
+const TRUNCATE_LIMIT = 400;
+
+function TruncatedText({ text, mono }: { text: string; mono?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncation = text.length > TRUNCATE_LIMIT;
+  const display = !expanded && needsTruncation ? text.slice(0, TRUNCATE_LIMIT) + "…" : text;
+
+  return (
+    <div>
+      <Text
+        variant="secondary"
+        size="sm"
+        className={styles.preWrapText}
+        style={mono ? { fontFamily: "var(--font-mono)", fontSize: 12 } : undefined}
+      >
+        {display}
+      </Text>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            marginTop: 4,
+            fontSize: 11,
+            color: "var(--color-text-link, #3b82f6)",
+            cursor: "pointer",
+          }}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   ignition: "Ignition",
@@ -43,27 +81,6 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             <Text size="sm">{node.label}</Text>
           </div>
 
-          {!!cfg?.pinned_output && (
-            <div className={styles.taskField}>
-              <span className={styles.fieldLabel}>Status</span>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "2px 8px",
-                  borderRadius: 0,
-                  background: "rgba(245,158,11,0.1)",
-                  color: "#f59e0b",
-                }}
-              >
-                <Pin size={10} /> Pinned — will skip execution
-              </span>
-            </div>
-          )}
-
           {node.node_type === "ignition" && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Schedule</span>
@@ -83,7 +100,18 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
           {node.node_type !== "merge" && node.node_type !== "delay" && node.prompt && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Prompt</span>
-              <Text variant="secondary" size="sm" className={styles.preWrapText}>{node.prompt}</Text>
+              <TruncatedText text={node.prompt} />
+            </div>
+          )}
+
+          {!!cfg?.pinned_output && (
+            <div className={styles.taskField}>
+              <span className={styles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Pin size={10} style={{ color: "#f59e0b" }} />
+                Pinned Output
+                <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>— skips execution</span>
+              </span>
+              <TruncatedText text={cfg.pinned_output as string} mono />
             </div>
           )}
 
