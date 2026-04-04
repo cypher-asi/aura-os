@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pin, PinOff } from "lucide-react";
 import { Modal, Button, Text } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../types";
 import type { ProcessNodeType } from "../../../types/enums";
@@ -101,6 +101,9 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [watchlist, setWatchlist] = useState(
     node.node_type === "ignition" ? JSON.stringify(cfg?.watchlist ?? {}, null, 2) : "{}",
   );
+  const [isPinned, setIsPinned] = useState(!!cfg?.pinned_output);
+  const [pinnedOutput, setPinnedOutput] = useState((cfg?.pinned_output as string) ?? "");
+  const [pinLoading, setPinLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const agentOptions = useMemo(
@@ -131,8 +134,39 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       if (node.node_type === "delay") setDelaySeconds(String(c?.delay_seconds ?? "60"));
       if (node.node_type === "action") setVaultPath((c?.vault_path as string) ?? "");
       if (node.node_type === "ignition") setWatchlist(JSON.stringify(c?.watchlist ?? {}, null, 2));
+      setIsPinned(!!c?.pinned_output);
+      setPinnedOutput((c?.pinned_output as string) ?? "");
     }
   }, [isOpen, node]);
+
+  const handlePinToggle = useCallback(async () => {
+    if (isPinned) {
+      setIsPinned(false);
+      setPinnedOutput("");
+      return;
+    }
+    if (pinnedOutput) {
+      setIsPinned(true);
+      return;
+    }
+    if (!processId) return;
+    setPinLoading(true);
+    try {
+      const runs = await processApi.listRuns(processId);
+      const latestRun = runs[0];
+      if (!latestRun) return;
+      const events = await processApi.listRunEvents(processId, latestRun.run_id);
+      const nodeEvent = events.find(
+        (e) => e.node_id === node.node_id && e.status === "completed" && e.output,
+      );
+      if (nodeEvent?.output) {
+        setPinnedOutput(nodeEvent.output);
+        setIsPinned(true);
+      }
+    } finally {
+      setPinLoading(false);
+    }
+  }, [isPinned, pinnedOutput, processId, node.node_id]);
 
   const handleSave = useCallback(async () => {
     if (!processId) return;
@@ -153,6 +187,11 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
       if (node.node_type === "action" && vaultPath) config.vault_path = vaultPath;
+      if (isPinned && pinnedOutput) {
+        config.pinned_output = pinnedOutput;
+      } else {
+        delete config.pinned_output;
+      }
       if (node.node_type === "ignition" && watchlist) {
         try { config.watchlist = JSON.parse(watchlist); } catch { /* keep existing */ }
       }
@@ -173,7 +212,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, vaultPath, watchlist, fetchNodes, onClose]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, vaultPath, watchlist, isPinned, pinnedOutput, fetchNodes, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -213,6 +252,38 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         <EditField label="Label">
           <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
         </EditField>
+
+        {node.node_type !== "ignition" && (
+          <EditField label="Pin Output">
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={handlePinToggle}
+                disabled={pinLoading}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: isPinned ? "1px solid #f59e0b40" : "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  background: isPinned ? "rgba(245,158,11,0.1)" : "var(--color-bg-input)",
+                  color: isPinned ? "#f59e0b" : "var(--color-text-muted)",
+                  cursor: pinLoading ? "wait" : "pointer",
+                }}
+              >
+                {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+                {pinLoading ? "Loading..." : isPinned ? "Unpin" : "Pin"}
+              </button>
+              <Text variant="secondary" size="xs">
+                {isPinned
+                  ? "Output is pinned. Node will skip execution and replay this output."
+                  : "Pin the latest output so this node skips execution on re-runs."}
+              </Text>
+            </div>
+          </EditField>
+        )}
 
         {node.node_type === "ignition" && (
           <EditField label="Schedule">
