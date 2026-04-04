@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
+import { Copy, Check } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore } from "../stores/process-sidekick-store";
@@ -677,6 +678,73 @@ function LiveRunBanner({
 }
 
 // ---------------------------------------------------------------------------
+// CopyAllOutputButton — copies full run output for all nodes
+// ---------------------------------------------------------------------------
+
+function buildFullRunOutput(
+  events: ProcessEvent[],
+  nodes: { node_id: string; label: string }[],
+): string {
+  const parts: string[] = [];
+  for (const evt of events) {
+    if (evt.status === "running" || evt.status === "pending") continue;
+    const label = nodes.find((n) => n.node_id === evt.node_id)?.label ?? evt.node_id;
+    parts.push(`## ${label} [${evt.status}]`);
+
+    if (evt.content_blocks && evt.content_blocks.length > 0) {
+      for (const block of evt.content_blocks) {
+        const b = block as Record<string, unknown>;
+        if (b.type === "text" && b.text) parts.push(b.text as string);
+        else if (b.type === "thinking" && b.thinking) parts.push(`<thinking>\n${b.thinking as string}\n</thinking>`);
+        else if (b.type === "tool_use") parts.push(`[tool_call: ${b.name as string}]`);
+        else if (b.type === "tool_result") {
+          const errTag = b.is_error ? " (error)" : "";
+          parts.push(`[tool_result: ${b.name as string}${errTag}]\n${(b.result as string) ?? ""}`);
+        }
+      }
+    } else if (evt.output) {
+      parts.push(evt.output);
+    }
+
+    if (evt.input_snapshot) {
+      parts.push(`\n--- Input ---\n${evt.input_snapshot}`);
+    }
+    parts.push("");
+  }
+  return parts.join("\n").trim();
+}
+
+function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes: { node_id: string; label: string }[] }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    const text = buildFullRunOutput(events, nodes);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  }, [events, nodes]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title="Copy all node output"
+      style={{
+        display: "flex", alignItems: "center", gap: 4,
+        background: "transparent", border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-sm)", padding: "2px 8px",
+        cursor: "pointer", fontSize: 10, color: "var(--color-text-muted)",
+      }}
+    >
+      {copied ? <Check size={10} /> : <Copy size={10} />}
+      {copied ? "Copied" : "Copy All"}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ProcessNodeLiveOutput — StreamingBubble wrapper for process node execution
 // ---------------------------------------------------------------------------
 
@@ -952,7 +1020,10 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
         )}
         {sortedEvents.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Node Events</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontWeight: 600 }}>Node Events</div>
+              <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {sortedEvents.map((evt) => (
                 <EventTimelineItem
