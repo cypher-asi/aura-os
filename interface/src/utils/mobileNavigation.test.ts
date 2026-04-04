@@ -89,10 +89,6 @@ describe("getMobileShellMode", () => {
     expect(getMobileShellMode("/profile", null, false)).toBe("global");
   });
 
-  it("returns global for /leaderboard", () => {
-    expect(getMobileShellMode("/leaderboard", null, false)).toBe("global");
-  });
-
   it("returns project when currentProjectId is set and resolved", () => {
     expect(getMobileShellMode("/projects/p1/work", "p1", true)).toBe("project");
   });

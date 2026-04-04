@@ -5,6 +5,7 @@ interface MockAuthenticatedAppOptions {
   projects?: Record<string, unknown>[];
   agentInstances?: Record<string, unknown>[];
   agents?: Record<string, unknown>[];
+  integrations?: Record<string, unknown>[];
   tasks?: Record<string, unknown>[];
   specs?: Record<string, unknown>[];
   orgsUnavailable?: boolean;
@@ -125,6 +126,10 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     const pathname = url.pathname !== "/" ? url.pathname.replace(/\/+$/, "") : url.pathname;
     const path = `${pathname}${url.search}`;
 
+    if (pathname !== "/api" && !pathname.startsWith("/api/")) {
+      return route.fallback();
+    }
+
     const session = {
       user_id: "user-1",
       display_name: "Test User",
@@ -210,6 +215,8 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
         updated_at: "2026-03-17T01:00:00.000Z",
       },
     ];
+
+    const integrations = options.integrations ?? [];
 
     const agents = options.agents ?? [
       {
@@ -311,6 +318,7 @@ export async function mockAuthenticatedApp(page: Page, options: MockAuthenticate
     if (path === "/api/orgs/org-1/billing") return json({ billing_email: "billing@example.com", plan: "free" });
     if (path === "/api/orgs/org-1/integrations/github") return json(null);
     if (path === "/api/orgs/org-1/integrations/github/app") return json([]);
+    if (path === "/api/orgs/org-1/integrations") return json(integrations);
     if (path === "/api/orgs/org-1/credits/transactions") return json({ transactions: [], has_more: false });
     if (pathname === "/api/projects" && (!url.search || url.search === "?org_id=org-1")) return json(projects);
 

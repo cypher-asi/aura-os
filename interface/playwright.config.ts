@@ -25,7 +25,13 @@ export default defineConfig({
   projects: [
     {
       name: "desktop-chromium",
-      testMatch: ["**/layout-capability.desktop.spec.ts", "**/responsive-unification.spec.ts", "**/desktop-visual.spec.ts"],
+      testMatch: [
+        "**/layout-capability.desktop.spec.ts",
+        "**/responsive-unification.spec.ts",
+        "**/desktop-visual.spec.ts",
+        "**/team-settings-integrations.spec.ts",
+        "**/agent-runtime-config.spec.ts",
+      ],
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },

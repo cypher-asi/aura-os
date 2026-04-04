@@ -9,8 +9,7 @@ use crate::enums::{
 use crate::ids::{
     AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
     ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId,
-    ProjectId,
-    SessionEventId, SessionId, SpecId, TaskId, UserId,
+    ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -143,10 +142,67 @@ fn default_machine_type() -> String {
     "local".to_string()
 }
 
+fn default_adapter_type() -> String {
+    "aura_harness".to_string()
+}
+
+fn default_environment() -> String {
+    "local_host".to_string()
+}
+
+fn default_auth_source() -> String {
+    "aura_managed".to_string()
+}
+
+pub fn effective_auth_source(
+    adapter_type: &str,
+    auth_source: Option<&str>,
+    integration_id: Option<&str>,
+) -> String {
+    match auth_source.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => value.to_string(),
+        None if integration_id.is_some() => "org_integration".to_string(),
+        None if adapter_type == "aura_harness" => "aura_managed".to_string(),
+        None => "local_cli_auth".to_string(),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OrgIntegration {
+    pub integration_id: String,
+    pub org_id: OrgId,
+    pub name: String,
+    pub provider: String,
+    #[serde(default)]
+    pub default_model: Option<String>,
+    #[serde(default)]
+    pub has_secret: bool,
+    #[serde(default)]
+    pub secret_last4: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentRuntimeConfig {
+    #[serde(default = "default_adapter_type")]
+    pub adapter_type: String,
+    #[serde(default = "default_environment")]
+    pub environment: String,
+    #[serde(default = "default_auth_source")]
+    pub auth_source: String,
+    #[serde(default)]
+    pub integration_id: Option<String>,
+    #[serde(default)]
+    pub default_model: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Agent {
     pub agent_id: AgentId,
     pub user_id: String,
+    #[serde(default)]
+    pub org_id: Option<OrgId>,
     pub name: String,
     pub role: String,
     pub personality: String,
@@ -157,6 +213,16 @@ pub struct Agent {
     pub icon: Option<String>,
     #[serde(default = "default_machine_type")]
     pub machine_type: String,
+    #[serde(default = "default_adapter_type")]
+    pub adapter_type: String,
+    #[serde(default = "default_environment")]
+    pub environment: String,
+    #[serde(default = "default_auth_source")]
+    pub auth_source: String,
+    #[serde(default)]
+    pub integration_id: Option<String>,
+    #[serde(default)]
+    pub default_model: Option<String>,
     #[serde(default)]
     pub vm_id: Option<String>,
     #[serde(default)]
@@ -182,6 +248,8 @@ pub struct AgentInstance {
     pub agent_instance_id: AgentInstanceId,
     pub project_id: ProjectId,
     pub agent_id: AgentId,
+    #[serde(default)]
+    pub org_id: Option<OrgId>,
     pub name: String,
     pub role: String,
     pub personality: String,
@@ -192,6 +260,16 @@ pub struct AgentInstance {
     pub icon: Option<String>,
     #[serde(default = "default_machine_type")]
     pub machine_type: String,
+    #[serde(default = "default_adapter_type")]
+    pub adapter_type: String,
+    #[serde(default = "default_environment")]
+    pub environment: String,
+    #[serde(default = "default_auth_source")]
+    pub auth_source: String,
+    #[serde(default)]
+    pub integration_id: Option<String>,
+    #[serde(default)]
+    pub default_model: Option<String>,
     #[serde(default)]
     pub workspace_path: Option<String>,
     pub status: AgentStatus,

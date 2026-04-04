@@ -6,6 +6,7 @@ Aura now has the beginnings of a scenario-driven evaluation system for two diffe
 2. A deterministic workflow lane for the Aura lifecycle using stateful mocked APIs and imported fixture projects.
 3. A live benchmark lane for the autonomous build loop that measures whether Aura can turn a fixture project into a working result.
 4. A Promptfoo behavior lane for narrow planning/execution regressions.
+5. An external-agent benchmark adapter lane for black-box comparisons against other coding agents.
 
 ## Why this shape
 
@@ -16,6 +17,8 @@ The product has two different kinds of risk:
 - Regressions in prompt/model-driven agent behavior that need a narrower, cheaper test surface.
 
 Those need different test strategies. The smoke and workflow lanes are lightweight and safe for CI. The benchmark lane is heavier and requires a fully working Aura environment with authentication, storage, and model access.
+
+The external-agent lane has a different purpose again: compare Aura, Claude Code, Codex, and later other tools on the same fixture and validator without forcing them into Aura's internal telemetry model.
 
 ## Scenario files
 
@@ -36,9 +39,16 @@ The current benchmark fixtures are:
 - `hello-world-node-server`
 - `existing-node-server-patch`
 
+The external-agent adapter layer currently reuses the same fixture family for:
+
+- `external-static-site`
+- `external-node-server-patch`
+
 The deterministic workflow lane uses the same fixture format, but runs against a stateful mocked Aura backend so CI can prove the lifecycle still works without depending on live model behavior.
 
 The live benchmark lane now also supports repo-owned artifact checks, so a run can verify that Aura produced the expected source files in addition to passing build/test commands.
+
+The external-agent lane uses the same basic idea, but runs one black-box task prompt per tool and grades the workspace with the same validator after the run.
 
 ## What gets measured
 
@@ -134,6 +144,10 @@ cp evals/local-stack/stack.env.example evals/local-stack/stack.env
 ```
 
 Full instructions live in `evals/local-stack/README.md`.
+
+The external-agent adapter plan and architecture live in:
+
+- `docs/external-agent-benchmark-adapters.md`
 
 To run the behavior evals:
 

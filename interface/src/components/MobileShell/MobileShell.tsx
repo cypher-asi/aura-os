@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import { ErrorBoundary } from "../ErrorBoundary";
 import {
   ArrowLeft, ChevronDown, CircleUserRound,
-  Settings, Building2, Server, FolderOpen, Bot, GitCommitVertical, Gem, Menu,
+  Settings, Building2, Server, FolderOpen, Bot, GitCommitVertical, Menu,
 } from "lucide-react";
 import { PanelSearch } from "../PanelSearch";
 import { UpdateBanner } from "../UpdateBanner";
@@ -267,13 +267,6 @@ function AppSwitcherContent({ state }: { state: ReturnType<typeof useMobileShell
       description: "Activity across your projects",
       icon: GitCommitVertical,
       path: "/feed",
-    },
-    {
-      id: "leaderboard",
-      label: "Leaderboard",
-      description: "Usage and ranking",
-      icon: Gem,
-      path: "/leaderboard",
     },
     {
       id: "profile",

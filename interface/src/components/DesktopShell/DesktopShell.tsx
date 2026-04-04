@@ -186,29 +186,31 @@ export function DesktopShell() {
         <div className={styles.desktopContent}>
           <div ref={leftPanelRef} className={styles.desktopSidebar}>
             <div className={styles.desktopSidebarBody}>
-              <AppNavRail />
-              {!isDesktop && (
-                <Lane
-                  resizable
-                  resizePosition="right"
-                  defaultWidth={200}
-                  maxWidth={600}
-                  storageKey="aura-sidebar"
-                  header={<SidebarSearchInput />}
-                >
-                  {apps.map((app) => {
-                    if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
-                    return (
-                      <div
-                        key={app.id}
-                        className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
-                      >
-                        <app.LeftPanel />
-                      </div>
-                    );
-                  })}
-                </Lane>
-              )}
+              <div className={styles.navRailWrapper}>
+                <AppNavRail />
+              </div>
+              <Lane
+                resizable
+                resizePosition="right"
+                defaultWidth={200}
+                maxWidth={600}
+                storageKey="aura-sidebar"
+                collapsible
+                collapsed={isDesktop}
+                header={<SidebarSearchInput />}
+              >
+                {apps.map((app) => {
+                  if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
+                  return (
+                    <div
+                      key={app.id}
+                      className={app.id === activeApp.id ? styles.panelActive : styles.panelHidden}
+                    >
+                      <app.LeftPanel />
+                    </div>
+                  );
+                })}
+              </Lane>
             </div>
           </div>
 

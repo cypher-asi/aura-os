@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Text } from "@cypher-asi/zui";
+import { Button, Text, cn } from "@cypher-asi/zui";
 import { ArrowLeft, GitBranch, RefreshCw } from "lucide-react";
 import { EmptyState } from "../EmptyState";
 import { PanelSearch } from "../PanelSearch";
@@ -244,12 +245,42 @@ export function SidekickContent() {
           <SidekickLog searchQuery={searchQuery} />
         </div>
       </div>
-      {previewItem && (
-        <div className={overlayStyles.overlay}>
-          <PreviewHeader />
-          <PreviewContent />
-        </div>
-      )}
+      {previewItem && <LaneOverlay />}
     </div>
+  );
+}
+
+function LaneOverlay() {
+  const markerRef = useRef<HTMLDivElement>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (markerRef.current) {
+      const lane = markerRef.current.closest("[data-lane]") as HTMLElement | null;
+      if (lane) setPortalTarget(lane);
+    }
+  }, []);
+
+  const content = (
+    <div className={cn(overlayStyles.overlay, overlayStyles.fullLane)}>
+      <PreviewHeader />
+      <PreviewContent />
+    </div>
+  );
+
+  if (portalTarget) {
+    return (
+      <>
+        <div ref={markerRef} style={{ display: "none" }} />
+        {createPortal(content, portalTarget)}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div ref={markerRef} style={{ display: "none" }} />
+      {content}
+    </>
   );
 }

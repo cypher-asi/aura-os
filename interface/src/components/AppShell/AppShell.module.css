@@ -40,12 +40,7 @@
 
 :global([data-desktop-mode]) .desktopSidebar {
   background: transparent;
-  border-right: none;
-}
-
-.desktopSidebar:has([data-lane-resize-handle]:hover),
-.desktopSidebar:has([data-resizing]) {
-  border-right-color: #fff;
+  border-right-color: transparent;
 }
 
 .desktopSidebarBody {
@@ -53,6 +48,11 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+.navRailWrapper {
+  flex-shrink: 0;
+  display: flex;
 }
 
 .panelActive {
@@ -620,12 +620,6 @@
 
 .laneLeftBorder {
   box-shadow: -1px 0 0 0 var(--color-border);
-  transition: box-shadow var(--transition-fast, 0.15s);
-}
-
-.laneLeftBorder:has([data-lane-resize-handle]:hover),
-.laneLeftBorder:has([data-resizing]) {
-  box-shadow: -1px 0 0 0 #fff;
 }
 
 .titleLink {

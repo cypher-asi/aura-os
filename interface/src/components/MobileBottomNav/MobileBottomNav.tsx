@@ -1,4 +1,4 @@
-import { Brain, CheckSquare, ChartNoAxesColumnIncreasing } from "lucide-react";
+import { Brain, CheckSquare, BarChart3 } from "lucide-react";
 import styles from "../AppShell/AppShell.module.css";
 
 export type MobileNavId = "agent" | "tasks" | "stats";
@@ -6,7 +6,7 @@ export type MobileNavId = "agent" | "tasks" | "stats";
 const MOBILE_NAV_ITEMS: Array<{ id: MobileNavId; label: string; icon: typeof Brain }> = [
   { id: "agent", label: "Agent", icon: Brain },
   { id: "tasks", label: "Execution", icon: CheckSquare },
-  { id: "stats", label: "Stats", icon: ChartNoAxesColumnIncreasing },
+  { id: "stats", label: "Stats", icon: BarChart3 },
 ];
 
 export function MobileBottomNav({

@@ -13,6 +13,7 @@ use aura_os_storage::{
     CreateTaskRequest, StorageClient, StorageTaskFileChangeSummary, TransitionTaskRequest,
     UpdateProjectAgentRequest, UpdateSessionRequest, UpdateTaskRequest,
 };
+use aura_os_storage::types::UpdateSpecRequest;
 
 const JWT: &str = "test-token";
 
@@ -396,8 +397,27 @@ async fn spec_crud_lifecycle() {
         Some("# User Auth\n\nLogin/register flow.")
     );
 
-    // update_spec and delete_spec work against real storage; mock doesn't
-    // implement PUT/DELETE for individual specs. CRUD verified through create + list + get.
+    sc.update_spec(
+        &spec1.id,
+        JWT,
+        &UpdateSpecRequest {
+            title: Some("01: Auth Updated".into()),
+            order_index: Some(3),
+            markdown_contents: Some("# Updated Auth".into()),
+        },
+    )
+    .await
+    .unwrap();
+
+    let updated = sc.get_spec(&spec1.id, JWT).await.unwrap();
+    assert_eq!(updated.title.as_deref(), Some("01: Auth Updated"));
+    assert_eq!(updated.order_index, Some(3));
+    assert_eq!(updated.markdown_contents.as_deref(), Some("# Updated Auth"));
+
+    sc.delete_spec(&spec1.id, JWT).await.unwrap();
+    let specs = sc.list_specs(&pid, JWT).await.unwrap();
+    assert_eq!(specs.len(), 1);
+    assert_eq!(specs[0].title.as_deref(), Some("02: Dashboard"));
 }
 
 // =========================================================================

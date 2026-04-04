@@ -68,7 +68,6 @@ export default function App() {
             <Route path="process" element={null} />
             <Route path="process/:processId" element={null} />
 
-            <Route path="leaderboard" element={null} />
             <Route path="feed" element={null} />
             <Route path="profile" element={null} />
             <Route path="desktop" element={null} />

@@ -11,23 +11,57 @@ export const AVAILABLE_MODELS: ModelOption[] = [
 ];
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS[0];
+export const CODEX_MODELS: ModelOption[] = [
+  { id: "codex", label: "Codex", tier: "sonnet" },
+];
 
-const STORAGE_KEY = "aura-selected-model";
-
-export function loadPersistedModel(): string {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && AVAILABLE_MODELS.some((m) => m.id === stored)) return stored;
-  } catch {}
-  return DEFAULT_MODEL.id;
+function storageKey(adapterType?: string): string {
+  return `aura-selected-model:${adapterType ?? "default"}`;
 }
 
-export function persistModel(modelId: string): void {
+export function availableModelsForAdapter(adapterType?: string): ModelOption[] {
+  return adapterType === "codex" ? CODEX_MODELS : AVAILABLE_MODELS;
+}
+
+export function defaultModelForAdapter(
+  adapterType?: string,
+  explicitDefault?: string | null,
+): string {
+  const models = availableModelsForAdapter(adapterType);
+  if (explicitDefault && models.some((m) => m.id === explicitDefault)) {
+    return explicitDefault;
+  }
+  return models[0]?.id ?? DEFAULT_MODEL.id;
+}
+
+export function loadPersistedModel(
+  adapterType?: string,
+  explicitDefault?: string | null,
+): string {
   try {
-    localStorage.setItem(STORAGE_KEY, modelId);
+    const models = availableModelsForAdapter(adapterType);
+    const stored = localStorage.getItem(storageKey(adapterType));
+    if (stored && models.some((m) => m.id === stored)) return stored;
+  } catch {}
+  return defaultModelForAdapter(adapterType, explicitDefault);
+}
+
+export function persistModel(modelId: string, adapterType?: string): void {
+  try {
+    localStorage.setItem(storageKey(adapterType), modelId);
   } catch {}
 }
 
-export function modelLabel(modelId: string): string {
-  return AVAILABLE_MODELS.find((m) => m.id === modelId)?.label ?? DEFAULT_MODEL.label;
+export function modelLabel(
+  modelId: string,
+  adapterType?: string,
+  explicitDefault?: string | null,
+): string {
+  const models = availableModelsForAdapter(adapterType);
+  return (
+    models.find((m) => m.id === modelId)?.label ??
+    models.find((m) => m.id === explicitDefault)?.label ??
+    explicitDefault ??
+    DEFAULT_MODEL.label
+  );
 }

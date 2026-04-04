@@ -32,7 +32,9 @@ const { mockOrgStore, mockApis } = vi.hoisted(() => {
       activeOrg: mockOrg as typeof mockOrg | null,
       renameOrg: vi.fn(),
       members: [{ user_id: "u1", role: "owner", display_name: "Owner" }],
+      integrations: [],
       refreshMembers: vi.fn(),
+      refreshIntegrations: vi.fn(),
       refreshOrgs: vi.fn(),
       isLoading: false,
     },
@@ -47,6 +49,10 @@ const { mockOrgStore, mockApis } = vi.hoisted(() => {
         setBilling: vi.fn().mockResolvedValue(undefined),
         getCreditBalance: vi.fn().mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" }),
         createCreditCheckout: vi.fn().mockResolvedValue({ checkout_url: "https://checkout", session_id: "sess_1" }),
+        listIntegrations: vi.fn().mockResolvedValue([]),
+        createIntegration: vi.fn().mockResolvedValue(undefined),
+        updateIntegration: vi.fn().mockResolvedValue(undefined),
+        deleteIntegration: vi.fn().mockResolvedValue(undefined),
       },
     },
   };
@@ -58,6 +64,10 @@ vi.mock("../../stores/org-store", () => ({
 
 vi.mock("../../stores/auth-store", () => ({
   useAuth: () => ({ user: { user_id: "u1" } }),
+}));
+
+vi.mock("../../hooks/use-aura-capabilities", () => ({
+  useAuraCapabilities: () => ({ isNativeApp: false }),
 }));
 
 vi.mock("../../api/client", () => ({
@@ -113,6 +123,9 @@ vi.mock("../OrgSettingsInvites", () => ({
 vi.mock("../OrgSettingsBilling", () => ({
   OrgSettingsBilling: () => <div data-testid="section-billing">Billing</div>,
 }));
+vi.mock("../OrgSettingsIntegrations", () => ({
+  OrgSettingsIntegrations: () => <div data-testid="section-integrations">Integrations</div>,
+}));
 
 vi.mock("./OrgSettingsPanel.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
@@ -132,11 +145,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockOrgStore.activeOrg = { org_id: "org-1", name: "Team Aura" };
   mockOrgStore.isLoading = false;
+  mockOrgStore.integrations = [];
   mockOrgStore.refreshMembers = vi.fn();
+  mockOrgStore.refreshIntegrations = vi.fn();
   mockOrgStore.refreshOrgs = vi.fn().mockResolvedValue(undefined);
   mockApis.orgs.listInvites.mockResolvedValue([]);
   mockApis.orgs.getBilling.mockResolvedValue(null);
   mockApis.orgs.getCreditBalance.mockResolvedValue({ balance_cents: 1000, plan: "free", balance_formatted: "$10.00" });
+  mockApis.orgs.listIntegrations.mockResolvedValue([]);
 });
 
 describe("OrgSettingsPanel", () => {
@@ -186,11 +202,13 @@ describe("OrgSettingsPanel", () => {
     expect(screen.getByText("Members")).toBeInTheDocument();
     expect(screen.getByText("Invites")).toBeInTheDocument();
     expect(screen.getByText("Billing")).toBeInTheDocument();
+    expect(screen.getByText("Integrations")).toBeInTheDocument();
   });
 
   it("fetches data on open", () => {
     renderPanel();
     expect(mockOrgStore.refreshMembers).toHaveBeenCalled();
+    expect(mockOrgStore.refreshIntegrations).toHaveBeenCalled();
     expect(mockApis.orgs.listInvites).toHaveBeenCalledWith("org-1");
     expect(mockApis.orgs.getBilling).toHaveBeenCalledWith("org-1");
   });

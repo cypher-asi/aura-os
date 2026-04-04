@@ -50,7 +50,7 @@
   padding: 1px 0;
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #999);
+  color: var(--color-text-secondary);
   font-family: inherit;
   font-size: 13px;
   line-height: 1;
@@ -94,9 +94,9 @@
   color: var(--color-text, #fff);
 }
 
-/* Done: green checkmark (Lucide icon) */
+/* Done: green checkmark (Lucide icon), no square border */
 .taskDone .taskCheck {
-  border-color: var(--color-success, #4c9);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -104,11 +104,11 @@
 }
 
 .taskDone .toolName {
-  color: var(--color-text-muted, #666);
+  color: var(--color-text-secondary);
 }
 
 .taskDone .toolSummary {
-  color: var(--color-text-muted, #666);
+  color: var(--color-text-secondary);
 }
 
 /* Error: square with X in red */
@@ -159,12 +159,12 @@
 
 .toolName {
   font-weight: 400;
-  color: var(--color-text-muted, #aaa);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .toolSummary {
-  color: var(--color-text-muted, #666);
+  color: var(--color-text-secondary);
   font-family: var(--font-mono, monospace);
   font-size: 11px;
   overflow: hidden;
@@ -207,7 +207,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--color-text-muted, #777);
+  color: var(--color-text-secondary);
   margin-bottom: 3px;
   font-weight: 600;
 }
@@ -251,7 +251,7 @@
 
 .taskIndicatorLabel {
   font-weight: 600;
-  color: var(--color-text-muted, #aaa);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
@@ -264,7 +264,7 @@
 }
 
 .taskIndicatorDesc {
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-secondary);
   font-size: 11px;
   margin-top: 2px;
   padding-left: 20px;
@@ -294,7 +294,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
-  color: var(--color-text-muted, #777);
+  color: var(--color-text-secondary);
   min-width: 32px;
 }
 
@@ -305,7 +305,7 @@
 
 .generatingHint {
   font-size: 11px;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 

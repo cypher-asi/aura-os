@@ -115,7 +115,7 @@ export interface FeedComment {
   timestamp: string;
 }
 
-export type FeedFilter = "my-agents" | "organization" | "following" | "everything";
+export type FeedFilter = "my-agents" | "organization" | "following" | "leaderboard" | "everything";
 
 export interface FeedSelectedProfile {
   name: string;

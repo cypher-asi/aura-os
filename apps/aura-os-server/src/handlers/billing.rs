@@ -38,7 +38,10 @@ fn billing_err(e: aura_os_billing::BillingError) -> (StatusCode, Json<ApiError>)
 ///
 /// Results are cached for 60 seconds when credits are available to avoid
 /// hitting the billing API on every chat message.
-pub(crate) async fn require_credits(state: &AppState, jwt: &str) -> Result<(), (StatusCode, Json<ApiError>)> {
+pub(crate) async fn require_credits(
+    state: &AppState,
+    jwt: &str,
+) -> Result<(), (StatusCode, Json<ApiError>)> {
     use crate::state::CreditCache;
     use std::time::{Duration, Instant};
 
@@ -53,10 +56,7 @@ pub(crate) async fn require_credits(state: &AppState, jwt: &str) -> Result<(), (
         }
     }
 
-    let result = state
-        .billing_client
-        .ensure_has_credits(jwt)
-        .await;
+    let result = state.billing_client.ensure_has_credits(jwt).await;
 
     let has_credits = result.is_ok();
     {
@@ -69,6 +69,18 @@ pub(crate) async fn require_credits(state: &AppState, jwt: &str) -> Result<(), (
 
     result.map_err(billing_err)?;
     Ok(())
+}
+
+pub(crate) async fn require_credits_for_auth_source(
+    state: &AppState,
+    jwt: &str,
+    auth_source: &str,
+) -> Result<(), (StatusCode, Json<ApiError>)> {
+    if auth_source == "aura_managed" {
+        require_credits(state, jwt).await
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) async fn get_credit_balance(

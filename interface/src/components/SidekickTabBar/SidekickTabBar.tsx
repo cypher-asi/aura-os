@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button, Menu, type MenuItem } from "@cypher-asi/zui";
-import { Ellipsis } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useOverflowTabs } from "../../hooks/use-overflow-tabs";
 import styles from "../Sidekick/Sidekick.module.css";
@@ -142,7 +142,7 @@ export function SidekickTabBar({
             variant="ghost"
             size="sm"
             iconOnly
-            icon={<Ellipsis size={16} />}
+            icon={<MoreHorizontal size={16} />}
             onClick={() => setMoreOpen((v) => !v)}
             title="More"
             aria-label="More"

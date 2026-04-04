@@ -17,7 +17,7 @@ use tracing::info;
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_billing::BillingClient;
 use aura_os_link::AutomatonClient;
-use aura_os_network::NetworkClient;
+use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
 use aura_os_sessions::SessionService;
@@ -59,6 +59,7 @@ pub struct SuperAgentService {
     automaton_client: Arc<AutomatonClient>,
     network_client: Option<Arc<NetworkClient>>,
     storage_client: Option<Arc<StorageClient>>,
+    orbit_client: Option<Arc<OrbitClient>>,
     store: Arc<RocksStore>,
     event_broadcast: broadcast::Sender<serde_json::Value>,
 }
@@ -77,6 +78,7 @@ impl SuperAgentService {
         automaton_client: Arc<AutomatonClient>,
         network_client: Option<Arc<NetworkClient>>,
         storage_client: Option<Arc<StorageClient>>,
+        orbit_client: Option<Arc<OrbitClient>>,
         store: Arc<RocksStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
     ) -> Self {
@@ -118,6 +120,7 @@ impl SuperAgentService {
             automaton_client,
             network_client,
             storage_client,
+            orbit_client,
             store,
             event_broadcast,
         }
@@ -154,6 +157,7 @@ impl SuperAgentService {
             automaton_client: self.automaton_client.clone(),
             network_client: self.network_client.clone(),
             storage_client: self.storage_client.clone(),
+            orbit_client: self.orbit_client.clone(),
             store: self.store.clone(),
             event_broadcast: self.event_broadcast.clone(),
         }

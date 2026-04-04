@@ -1,0 +1,349 @@
+[
+  {
+    "name": "list_specs",
+    "description": "List all specs in the current project",
+    "promptSignature": "list_specs()",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_spec",
+    "description": "Fetch a single persisted Aura spec by ID",
+    "promptSignature": "get_spec(spec_id)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec_id": {
+          "type": "string",
+          "description": "UUID of the spec to fetch."
+        }
+      },
+      "required": ["spec_id"]
+    }
+  },
+  {
+    "name": "create_spec",
+    "description": "Create a new persisted Aura spec in the current project",
+    "promptSignature": "create_spec(title, markdown_contents)",
+    "savedEvent": "spec_saved",
+    "savedPayloadKey": "spec",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short human-readable title for the spec."
+        },
+        "markdown_contents": {
+          "type": "string",
+          "description": "Full markdown body of the spec that should be saved into Aura OS."
+        }
+      },
+      "required": ["title", "markdown_contents"]
+    }
+  },
+  {
+    "name": "update_spec",
+    "description": "Update an existing persisted Aura spec",
+    "promptSignature": "update_spec(spec_id, title?, markdown_contents?)",
+    "savedEvent": "spec_saved",
+    "savedPayloadKey": "spec",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec_id": {
+          "type": "string",
+          "description": "UUID of the spec to update."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional replacement title."
+        },
+        "markdown_contents": {
+          "type": "string",
+          "description": "Optional replacement markdown body."
+        }
+      },
+      "required": ["spec_id"]
+    }
+  },
+  {
+    "name": "delete_spec",
+    "description": "Delete an existing persisted Aura spec",
+    "promptSignature": "delete_spec(spec_id)",
+    "savedEvent": "spec_deleted",
+    "savedPayloadKey": "deleted",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec_id": {
+          "type": "string",
+          "description": "UUID of the spec to delete."
+        }
+      },
+      "required": ["spec_id"]
+    }
+  },
+  {
+    "name": "list_tasks",
+    "description": "List persisted Aura tasks in the current project",
+    "promptSignature": "list_tasks(spec_id?)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec_id": {
+          "type": "string",
+          "description": "Optional spec UUID to filter tasks to a single spec."
+        }
+      }
+    }
+  },
+  {
+    "name": "get_task",
+    "description": "Fetch a single persisted Aura task by ID",
+    "promptSignature": "get_task(task_id)",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to fetch."
+        }
+      },
+      "required": ["task_id"]
+    }
+  },
+  {
+    "name": "create_task",
+    "description": "Create a persisted Aura task under an existing project spec",
+    "promptSignature": "create_task(spec_id, title, description, dependency_ids?)",
+    "savedEvent": "task_saved",
+    "savedPayloadKey": "task",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec_id": {
+          "type": "string",
+          "description": "UUID of the parent spec from list_specs."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short human-readable title for the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "Full task description that should be saved into Aura OS."
+        },
+        "dependency_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional task UUIDs this task depends on."
+        }
+      },
+      "required": ["spec_id", "title", "description"]
+    }
+  },
+  {
+    "name": "update_task",
+    "description": "Update an existing persisted Aura task",
+    "promptSignature": "update_task(task_id, title?, description?, status?)",
+    "savedEvent": "task_saved",
+    "savedPayloadKey": "task",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to update."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional replacement title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional replacement description."
+        },
+        "status": {
+          "type": "string",
+          "description": "Optional replacement status."
+        }
+      },
+      "required": ["task_id"]
+    }
+  },
+  {
+    "name": "delete_task",
+    "description": "Delete an existing persisted Aura task",
+    "promptSignature": "delete_task(task_id, spec_id)",
+    "savedEvent": "task_deleted",
+    "savedPayloadKey": "deleted",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to delete."
+        },
+        "spec_id": {
+          "type": "string",
+          "description": "UUID of the parent spec for parity with shared task tool semantics."
+        }
+      },
+      "required": ["task_id", "spec_id"]
+    }
+  },
+  {
+    "name": "transition_task",
+    "description": "Transition a persisted Aura task to a new workflow status",
+    "promptSignature": "transition_task(task_id, status)",
+    "savedEvent": "task_saved",
+    "savedPayloadKey": "task",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to update."
+        },
+        "status": {
+          "type": "string",
+          "description": "Target task status, such as ready, in_progress, done, blocked, or failed."
+        }
+      },
+      "required": ["task_id", "status"]
+    }
+  },
+  {
+    "name": "retry_task",
+    "description": "Retry a failed or blocked Aura task by returning it to ready",
+    "promptSignature": "retry_task(task_id)",
+    "savedEvent": "task_saved",
+    "savedPayloadKey": "task",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to retry."
+        }
+      },
+      "required": ["task_id"]
+    }
+  },
+  {
+    "name": "run_task",
+    "description": "Trigger execution of a single Aura task by the project dev loop",
+    "promptSignature": "run_task(task_id)",
+    "savedEvent": "task_run_requested",
+    "savedPayloadKey": "task_run",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID of the task to run."
+        }
+      },
+      "required": ["task_id"]
+    }
+  },
+  {
+    "name": "get_project",
+    "description": "Fetch the current Aura project details",
+    "promptSignature": "get_project()",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "update_project",
+    "description": "Update the current Aura project metadata or commands",
+    "promptSignature": "update_project(name?, description?, build_command?, test_command?)",
+    "savedEvent": "project_saved",
+    "savedPayloadKey": "project",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "build_command": { "type": "string" },
+        "test_command": { "type": "string" }
+      }
+    }
+  },
+  {
+    "name": "get_project_stats",
+    "description": "Fetch aggregate stats for the current Aura project",
+    "promptSignature": "get_project_stats()",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "start_dev_loop",
+    "description": "Start the Aura project dev loop",
+    "promptSignature": "start_dev_loop()",
+    "savedEvent": "loop_started",
+    "savedPayloadKey": "loop_status",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "pause_dev_loop",
+    "description": "Pause the Aura project dev loop",
+    "promptSignature": "pause_dev_loop()",
+    "savedEvent": "loop_paused",
+    "savedPayloadKey": "loop_status",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "stop_dev_loop",
+    "description": "Stop the Aura project dev loop",
+    "promptSignature": "stop_dev_loop()",
+    "savedEvent": "loop_stopped",
+    "savedPayloadKey": "loop_status",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_loop_status",
+    "description": "Fetch the current Aura project dev-loop status",
+    "promptSignature": "get_loop_status()",
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    }
+  }
+]

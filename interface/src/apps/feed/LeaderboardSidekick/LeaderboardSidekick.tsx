@@ -8,7 +8,7 @@ import { useLeaderboard, useLeaderboardStore } from "../../../stores/leaderboard
 import { useAuth } from "../../../stores/auth-store";
 import { formatTokens, formatCurrency } from "../../../utils/format";
 import { api } from "../../../api/client";
-import styles from "./LeaderboardSidekickPanel.module.css";
+import styles from "./LeaderboardSidekick.module.css";
 
 interface PlatformStats {
   daily_active_users: number;
@@ -20,7 +20,7 @@ interface PlatformStats {
   total_revenue_usd: number;
 }
 
-export function LeaderboardSidekickPanel() {
+export function LeaderboardSidekick() {
   const init = useLeaderboardStore((s) => s.init);
   useEffect(() => { init(); }, [init]);
   const { selectedUserId, entries } = useLeaderboard();

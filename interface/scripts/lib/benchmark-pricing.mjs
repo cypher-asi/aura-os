@@ -79,6 +79,39 @@ const ANTHROPIC_MODEL_PRICING_PER_MTOK = {
   },
 };
 
+const OPENAI_MODEL_PRICING_PER_MTOK = {
+  "gpt-5.4": {
+    input: 2.5,
+    output: 15,
+    cacheWrite: 2.5,
+    cacheRead: 0.25,
+  },
+  "gpt-5.4-mini": {
+    input: 0.75,
+    output: 4.5,
+    cacheWrite: 0.75,
+    cacheRead: 0.075,
+  },
+  "gpt-5.4-nano": {
+    input: 0.2,
+    output: 1.25,
+    cacheWrite: 0.2,
+    cacheRead: 0.02,
+  },
+  "gpt-5.3-codex": {
+    input: 1.75,
+    output: 14,
+    cacheWrite: 1.75,
+    cacheRead: 0.175,
+  },
+  "codex-mini-latest": {
+    input: 1.5,
+    output: 6,
+    cacheWrite: 1.5,
+    cacheRead: 0.375,
+  },
+};
+
 function normalizeModelKey(model) {
   return typeof model === "string" ? model.trim().toLowerCase() : "";
 }
@@ -116,11 +149,44 @@ function findAnthropicPricing(modelKey) {
   };
 }
 
+function findOpenAIPricing(modelKey) {
+  const exactMatch = OPENAI_MODEL_PRICING_PER_MTOK[modelKey];
+  if (exactMatch) {
+    return {
+      model: modelKey,
+      source: "openai-pricing",
+      ...exactMatch,
+    };
+  }
+
+  const partialEntry = Object.entries(OPENAI_MODEL_PRICING_PER_MTOK).find(([candidate]) =>
+    modelKey.startsWith(candidate) || candidate.startsWith(modelKey),
+  );
+  if (!partialEntry) return null;
+
+  const [matchedModel, pricing] = partialEntry;
+  return {
+    model: matchedModel,
+    source: "openai-pricing-family-match",
+    ...pricing,
+  };
+}
+
 export function resolvePricing(model, provider) {
   const inferredProvider = inferProvider(model, provider);
   const modelKey = normalizeModelKey(model);
   if (inferredProvider === "anthropic") {
     const pricing = findAnthropicPricing(modelKey);
+    if (pricing) {
+      return {
+        provider: inferredProvider,
+        ...pricing,
+      };
+    }
+  }
+
+  if (inferredProvider === "openai") {
+    const pricing = findOpenAIPricing(modelKey);
     if (pricing) {
       return {
         provider: inferredProvider,

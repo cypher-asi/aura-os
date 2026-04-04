@@ -11,11 +11,21 @@ stack_validate_modes
 
 grep_pattern="${1:-}"
 baseline_path="${AURA_EVAL_BENCHMARK_BASELINE:-}"
+api_base_url_override="${AURA_EVAL_API_BASE_URL:-}"
+base_url_override="${AURA_EVAL_BASE_URL:-}"
 
 set -a
 # shellcheck disable=SC1090
 source "$AURA_STACK_RUNTIME_DIR/evals.env"
 set +a
+
+if [[ -n "$api_base_url_override" ]]; then
+  export AURA_EVAL_API_BASE_URL="$api_base_url_override"
+fi
+
+if [[ -n "$base_url_override" ]]; then
+  export AURA_EVAL_BASE_URL="$base_url_override"
+fi
 
 if [[ -f "$AURA_STACK_RUNTIME_DIR/auth.env" ]]; then
   set -a

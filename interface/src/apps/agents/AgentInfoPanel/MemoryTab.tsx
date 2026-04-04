@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
-import { Loader2, FileText, Clock, GitBranch } from "lucide-react";
-import { api } from "../../../api/client";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { Loader2, FileText, Clock, GitBranch, RefreshCw } from "lucide-react";
+import { api, ApiClientError } from "../../../api/client";
 import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import type { Agent, MemorySnapshot } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
 type MemoryFilter = "all" | "facts" | "events" | "procedures";
+type MemoryError = "connection" | "unknown" | null;
 
 interface MemoryTabProps {
   agent: Agent;
@@ -14,26 +15,40 @@ interface MemoryTabProps {
 export function MemoryTab({ agent }: MemoryTabProps) {
   const [snapshot, setSnapshot] = useState<MemorySnapshot | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<MemoryError>(null);
   const [filter, setFilter] = useState<MemoryFilter>("all");
   const { viewMemoryFact, viewMemoryEvent, viewMemoryProcedure } = useAgentSidekickStore();
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchMemory = useCallback(() => {
     setLoading(true);
-    setError(false);
+    setError(null);
+    setSnapshot(null);
+    let cancelled = false;
     api.memory.getSnapshot(agent.agent_id)
       .then((data) => {
         if (!cancelled) setSnapshot(data);
       })
-      .catch(() => {
-        if (!cancelled) setError(true);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        if (err instanceof ApiClientError && err.status === 404) {
+          setSnapshot(null);
+          return;
+        }
+        if (err instanceof ApiClientError && err.status === 502) {
+          setError("connection");
+          return;
+        }
+        setError("unknown");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
   }, [agent.agent_id]);
+
+  useEffect(() => {
+    return fetchMemory();
+  }, [fetchMemory]);
 
   const counts = useMemo(() => {
     if (!snapshot) return { facts: 0, events: 0, procedures: 0 };
@@ -53,7 +68,23 @@ export function MemoryTab({ agent }: MemoryTabProps) {
   }
 
   if (error) {
-    return <div className={styles.tabEmptyState}>Could not connect to harness</div>;
+    return (
+      <div className={styles.tabEmptyState}>
+        <span>{error === "connection" ? "Could not connect to harness" : "Failed to load memory"}</span>
+        <button
+          type="button"
+          onClick={fetchMemory}
+          style={{
+            marginTop: 8, display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "4px 10px", fontSize: 11, borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--color-border)", background: "transparent",
+            color: "var(--color-text-muted)", cursor: "pointer",
+          }}
+        >
+          <RefreshCw size={12} /> Retry
+        </button>
+      </div>
+    );
   }
 
   if (!snapshot || (counts.facts === 0 && counts.events === 0 && counts.procedures === 0)) {

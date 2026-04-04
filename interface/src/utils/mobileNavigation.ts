@@ -49,7 +49,6 @@ export function getMobileShellMode(
     pathname === "/projects"
     || pathname.startsWith("/feed")
     || pathname.startsWith("/profile")
-    || pathname.startsWith("/leaderboard")
   ) {
     return "global";
   }

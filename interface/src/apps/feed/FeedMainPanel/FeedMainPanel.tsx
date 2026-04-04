@@ -6,6 +6,7 @@ import { ActivityCard } from "../../../components/ActivityCard";
 import { EmptyState } from "../../../components/EmptyState";
 import { useAuraCapabilities } from "../../../hooks/use-aura-capabilities";
 import { FEED_FILTERS } from "../feedFilters";
+import { LeaderboardContent } from "../LeaderboardContent";
 import { useFeed, useFeedStore } from "../../../stores/feed-store";
 import styles from "./FeedMainPanel.module.css";
 
@@ -14,6 +15,8 @@ export function FeedMainPanel() {
   useEffect(() => { init(); }, [init]);
   const { isMobileLayout } = useAuraCapabilities();
   const { filter, setFilter, filteredEvents, commitActivity, selectedEventId, selectEvent, selectProfile, getCommentsForEvent } = useFeed();
+
+  const isLeaderboard = filter === "leaderboard";
 
   return (
     <Lane flex className={styles.borderLeft}>
@@ -37,7 +40,9 @@ export function FeedMainPanel() {
               })}
             </div>
           ) : null}
-          {filteredEvents.length === 0 ? (
+          {isLeaderboard ? (
+            <LeaderboardContent />
+          ) : filteredEvents.length === 0 ? (
             <div className={styles.emptyWrapper}>
               <EmptyState icon={<GitCommitVertical size={32} />}>It's quiet here.</EmptyState>
             </div>

@@ -292,7 +292,7 @@ pub struct AppState {
     /// In-memory cache of accumulated task output (live + completed).
     pub task_output_cache: TaskOutputCache,
     /// Optional Orbit client for repo operations. `None` when `ORBIT_BASE_URL` is not set.
-    pub orbit_client: Option<crate::orbit_client::OrbitClient>,
+    pub orbit_client: Option<Arc<aura_os_network::OrbitClient>>,
     /// Per-JWT validation cache. Avoids calling zOS on every request.
     pub validation_cache: ValidationCache,
     pub super_agent_service: Arc<SuperAgentService>,

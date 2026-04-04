@@ -180,6 +180,10 @@ export async function installWorkflowMockApp(page: Page, scenario: WorkflowE2ESc
     const search = url.searchParams;
     const body = parseBody(route);
 
+    if (pathname !== "/api" && !pathname.startsWith("/api/")) {
+      return route.fallback();
+    }
+
     if (pathname === "/api/auth/session" || pathname === "/api/auth/validate") {
       return json(route, session);
     }

@@ -47,6 +47,7 @@ export interface SessionInit {
   token?: string | null;
   project_id?: string | null;
   conversation_messages?: ConversationMessage[] | null;
+  agent_id?: string | null;
 }
 
 export interface UserMessage {
@@ -74,9 +75,15 @@ export interface ToolInfo {
   description: string;
 }
 
+export interface SkillInfo {
+  name: string;
+  description: string;
+}
+
 export interface SessionReady {
   session_id: string;
   tools: ToolInfo[];
+  skills: SkillInfo[];
 }
 
 export interface AssistantMessageStart {

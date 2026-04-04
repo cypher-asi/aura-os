@@ -4,7 +4,7 @@ use futures_util::future::join_all;
 use serde::Serialize;
 use std::time::Duration;
 
-use aura_os_core::{Agent, AgentId, HarnessMode};
+use aura_os_core::{effective_auth_source, Agent, AgentId, AgentRuntimeConfig, HarnessMode};
 
 use crate::dto::{CreateAgentRequest, UpdateAgentRequest};
 use crate::error::{map_network_error, ApiError, ApiResult};
@@ -17,16 +17,120 @@ use tracing::{info, warn};
 const SWARM_AGENT_READY_POLL_INTERVAL: Duration = Duration::from_secs(2);
 const SWARM_AGENT_READY_TIMEOUT: Duration = Duration::from_secs(90);
 
+fn normalize_environment(
+    adapter_type: &str,
+    environment: Option<String>,
+    machine_type: Option<String>,
+) -> ApiResult<String> {
+    let resolved = environment.unwrap_or_else(|| match machine_type.as_deref() {
+        Some("remote") => "swarm_microvm".to_string(),
+        _ => "local_host".to_string(),
+    });
+
+    match resolved.as_str() {
+        "local_host" => Ok(resolved),
+        "swarm_microvm" if adapter_type == "aura_harness" => Ok(resolved),
+        "swarm_microvm" => Err(ApiError::bad_request(format!(
+            "adapter `{adapter_type}` currently supports only local_host"
+        ))),
+        _ => Err(ApiError::bad_request(format!(
+            "unsupported environment `{resolved}`"
+        ))),
+    }
+}
+
+fn build_runtime_config(
+    adapter_type: Option<String>,
+    environment: Option<String>,
+    auth_source: Option<String>,
+    integration_id: Option<String>,
+    default_model: Option<String>,
+    machine_type: Option<String>,
+) -> ApiResult<AgentRuntimeConfig> {
+    let adapter_type = adapter_type.unwrap_or_else(|| "aura_harness".to_string());
+    match adapter_type.as_str() {
+        "aura_harness" | "claude_code" | "codex" => {}
+        other => {
+            return Err(ApiError::bad_request(format!(
+                "unsupported adapter `{other}`"
+            )))
+        }
+    }
+
+    let environment = normalize_environment(&adapter_type, environment, machine_type)?;
+    let auth_source = effective_auth_source(
+        &adapter_type,
+        auth_source.as_deref(),
+        integration_id.as_deref(),
+    );
+
+    match (adapter_type.as_str(), auth_source.as_str()) {
+        ("aura_harness", "aura_managed" | "org_integration") => {}
+        ("claude_code" | "codex", "local_cli_auth" | "org_integration") => {}
+        ("aura_harness", other) => {
+            return Err(ApiError::bad_request(format!(
+                "adapter `{adapter_type}` does not support auth source `{other}`"
+            )))
+        }
+        (_, other) => {
+            return Err(ApiError::bad_request(format!(
+                "adapter `{adapter_type}` does not support auth source `{other}`"
+            )))
+        }
+    }
+
+    if auth_source == "org_integration"
+        && integration_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .is_none()
+    {
+        return Err(ApiError::bad_request(
+            "auth source `org_integration` requires an attached integration",
+        ));
+    }
+
+    let integration_id = if auth_source == "org_integration" {
+        integration_id.and_then(|value| {
+            let trimmed = value.trim().to_string();
+            (!trimmed.is_empty()).then_some(trimmed)
+        })
+    } else {
+        None
+    };
+
+    Ok(AgentRuntimeConfig {
+        adapter_type,
+        environment,
+        auth_source,
+        integration_id,
+        default_model,
+    })
+}
+
 pub(crate) async fn create_agent(
     State(state): State<AppState>,
     AuthJwt(jwt): AuthJwt,
     Json(body): Json<CreateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
     let client = state.require_network_client()?;
-
-    let machine_type = body.machine_type.clone();
+    let runtime_config = build_runtime_config(
+        body.adapter_type.clone(),
+        body.environment.clone(),
+        body.auth_source.clone(),
+        body.integration_id.clone(),
+        body.default_model.clone(),
+        body.machine_type.clone(),
+    )?;
+    let machine_type = Some(if runtime_config.environment == "swarm_microvm" {
+        "remote".to_string()
+    } else {
+        "local".to_string()
+    });
 
     let net_req = aura_os_network::CreateAgentRequest {
+        org_id: body.org_id.map(|id| id.to_string()),
         name: body.name,
         role: Some(body.role),
         personality: Some(body.personality),
@@ -35,7 +139,6 @@ pub(crate) async fn create_agent(
         icon: body.icon,
         machine_type: machine_type.clone(),
         harness: None,
-        org_id: None,
     };
 
     let net_agent = client
@@ -45,6 +148,15 @@ pub(crate) async fn create_agent(
 
     let agent_id_str = net_agent.id.clone();
     let mut agent = agent_from_network(&net_agent);
+    state
+        .agent_service
+        .save_agent_runtime_config(&agent.agent_id, &runtime_config)
+        .map_err(|e| ApiError::internal(format!("saving agent runtime config: {e}")))?;
+    state
+        .agent_service
+        .apply_runtime_config(&mut agent)
+        .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let _ = state.agent_service.save_agent_shadow(&agent);
 
     let is_remote = HarnessMode::from_machine_type(machine_type.as_deref().unwrap_or("remote"))
         == HarnessMode::Swarm;
@@ -92,6 +204,11 @@ pub(crate) async fn create_agent(
             })?;
 
         agent = agent_from_network(&updated_net_agent);
+        state
+            .agent_service
+            .apply_runtime_config(&mut agent)
+            .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+        let _ = state.agent_service.save_agent_shadow(&agent);
 
         info!(
             agent_id = %agent_id_str,
@@ -158,6 +275,7 @@ pub(crate) async fn create_agent(
         }
     }
 
+    let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }
 
@@ -289,7 +407,8 @@ pub(crate) async fn list_agents(
         let agents: Vec<Agent> = net_agents
             .iter()
             .map(|na| {
-                let agent = agent_from_network(na);
+                let mut agent = agent_from_network(na);
+                let _ = state.agent_service.apply_runtime_config(&mut agent);
                 let _ = state.agent_service.save_agent_shadow(&agent);
                 agent
             })
@@ -314,7 +433,8 @@ pub(crate) async fn get_agent(
             .get_agent(&agent_id.to_string(), &jwt)
             .await
             .map_err(map_network_error)?;
-        let agent = agent_from_network(&net_agent);
+        let mut agent = agent_from_network(&net_agent);
+        let _ = state.agent_service.apply_runtime_config(&mut agent);
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));
     }
@@ -336,6 +456,36 @@ pub(crate) async fn update_agent(
     Json(body): Json<UpdateAgentRequest>,
 ) -> ApiResult<Json<Agent>> {
     let client = state.require_network_client()?;
+    let existing = state
+        .agent_service
+        .get_agent_async("", &agent_id)
+        .await
+        .or_else(|_| state.agent_service.get_agent_local(&agent_id))
+        .map_err(|e| ApiError::not_found(format!("agent not found: {e}")))?;
+    let merged_machine_type = body
+        .machine_type
+        .clone()
+        .unwrap_or_else(|| existing.machine_type.clone());
+    let runtime_config = build_runtime_config(
+        body.adapter_type
+            .clone()
+            .or_else(|| Some(existing.adapter_type.clone())),
+        body.environment
+            .clone()
+            .or_else(|| Some(existing.environment.clone())),
+        body.auth_source
+            .clone()
+            .or_else(|| Some(existing.auth_source.clone())),
+        match body.integration_id {
+            Some(value) => value,
+            None => existing.integration_id.clone(),
+        },
+        match body.default_model {
+            Some(value) => value,
+            None => existing.default_model.clone(),
+        },
+        Some(merged_machine_type.clone()),
+    )?;
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name,
         role: body.role,
@@ -347,7 +497,11 @@ pub(crate) async fn update_agent(
             Some(None) => Some(String::new()),
             None => None,
         },
-        machine_type: body.machine_type,
+        machine_type: Some(if runtime_config.environment == "swarm_microvm" {
+            "remote".to_string()
+        } else {
+            "local".to_string()
+        }),
         harness: None,
         vm_id: None,
     };
@@ -355,7 +509,16 @@ pub(crate) async fn update_agent(
         .update_agent(&agent_id.to_string(), &jwt, &net_req)
         .await
         .map_err(map_network_error)?;
-    let agent = agent_from_network(&net_agent);
+    state
+        .agent_service
+        .save_agent_runtime_config(&agent_id, &runtime_config)
+        .map_err(|e| ApiError::internal(format!("saving agent runtime config: {e}")))?;
+    let mut agent = agent_from_network(&net_agent);
+    state
+        .agent_service
+        .apply_runtime_config(&mut agent)
+        .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }
 
@@ -390,7 +553,77 @@ pub(crate) async fn delete_agent(
         .delete_agent(&agent_id.to_string(), &jwt)
         .await
         .map_err(map_network_error)?;
+    let _ = state.agent_service.delete_agent_runtime_config(&agent_id);
+    let _ = state.agent_service.delete_agent_shadow(&agent_id);
     Ok(Json(()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_runtime_config;
+
+    #[test]
+    fn aura_defaults_to_aura_managed() {
+        let config = build_runtime_config(
+            Some("aura_harness".to_string()),
+            Some("local_host".to_string()),
+            None,
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "aura_managed");
+        assert_eq!(config.integration_id, None);
+    }
+
+    #[test]
+    fn cli_defaults_to_local_cli_auth_without_integration() {
+        let config = build_runtime_config(
+            Some("claude_code".to_string()),
+            Some("local_host".to_string()),
+            None,
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "local_cli_auth");
+        assert_eq!(config.integration_id, None);
+    }
+
+    #[test]
+    fn integration_attachment_implies_org_integration_for_cli_adapters() {
+        let config = build_runtime_config(
+            Some("codex".to_string()),
+            Some("local_host".to_string()),
+            None,
+            Some("int-openai".to_string()),
+            None,
+            Some("local".to_string()),
+        )
+        .expect("runtime config");
+
+        assert_eq!(config.auth_source, "org_integration");
+        assert_eq!(config.integration_id.as_deref(), Some("int-openai"));
+    }
+
+    #[test]
+    fn org_integration_requires_integration_id() {
+        let error = build_runtime_config(
+            Some("claude_code".to_string()),
+            Some("local_host".to_string()),
+            Some("org_integration".to_string()),
+            None,
+            None,
+            Some("local".to_string()),
+        )
+        .expect_err("missing integration should fail");
+
+        assert!(format!("{error:?}").contains("requires an attached integration"));
+    }
 }
 
 #[derive(Serialize)]

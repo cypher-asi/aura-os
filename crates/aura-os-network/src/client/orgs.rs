@@ -116,11 +116,12 @@ impl NetworkClient {
         &self,
         token: &str,
         jwt: &str,
+        display_name: &str,
     ) -> Result<NetworkOrgMember, NetworkError> {
         self.post_authed(
             &format!("{}/api/invites/{}/accept", self.base_url, token),
             jwt,
-            &serde_json::json!({}),
+            &serde_json::json!({ "displayName": display_name }),
         )
         .await
     }

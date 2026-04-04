@@ -112,17 +112,32 @@ async fn create_project_impl(
 
     if let (Some(owner), Some(repo)) = (&project.orbit_owner, &project.orbit_repo) {
         if !owner.is_empty() && !repo.is_empty() && project.git_repo_url.is_none() {
-            if let Some(orbit) = &state.orbit_client {
-                if let Err(e) = orbit
-                    .ensure_repo(repo, owner, &project.project_id.to_string(), &jwt)
-                    .await
-                {
-                    tracing::warn!(
-                        %owner, %repo,
-                        error = %e,
-                        "Orbit repo creation failed (project was created, repo may need manual setup)"
-                    );
+            let orbit = state.orbit_client.as_deref().ok_or_else(|| {
+                ApiError::service_unavailable(
+                    "Orbit client not configured (ORBIT_BASE_URL not set); \
+                     cannot create required Orbit repo",
+                )
+            })?;
+
+            if let Err(e) = orbit
+                .ensure_repo(repo, owner, &project.project_id.to_string(), jwt)
+                .await
+            {
+                tracing::error!(
+                    %owner, %repo,
+                    error = %e,
+                    "Orbit repo creation failed — rolling back project"
+                );
+                // Best-effort rollback: remove the project we just created.
+                if let Some(client) = &state.network_client {
+                    let _ = client
+                        .delete_project(&project.project_id.to_string(), jwt)
+                        .await;
                 }
+                let _ = state.project_service.delete_project(&project.project_id);
+                return Err(ApiError::internal(format!(
+                    "Orbit repo creation failed (project rolled back): {e}"
+                )));
             }
         }
     }

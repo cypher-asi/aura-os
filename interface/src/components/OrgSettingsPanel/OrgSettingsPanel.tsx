@@ -5,10 +5,11 @@ import { OrgSettingsGeneral } from "../OrgSettingsGeneral";
 import { OrgSettingsMembers } from "../OrgSettingsMembers";
 import { OrgSettingsInvites } from "../OrgSettingsInvites";
 import { OrgSettingsBilling } from "../OrgSettingsBilling";
+import { OrgSettingsIntegrations } from "../OrgSettingsIntegrations";
 import { useOrgSettingsData } from "./useOrgSettingsData";
 import styles from "./OrgSettingsPanel.module.css";
 
-type Section = "general" | "members" | "invites" | "billing";
+type Section = "general" | "members" | "invites" | "billing" | "integrations";
 
 interface Props {
   isOpen: boolean;
@@ -21,6 +22,7 @@ const NAV_ITEMS: NavigatorItemProps[] = [
   { id: "members", label: "Members", icon: <Users size={14} /> },
   { id: "invites", label: "Invites", icon: <Mail size={14} /> },
   { id: "billing", label: "Billing", icon: <CreditCard size={14} /> },
+  { id: "integrations", label: "Integrations", icon: <Settings size={14} /> },
 ];
 
 function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsData> }) {
@@ -37,6 +39,15 @@ function OrgSettingsContent({ data }: { data: ReturnType<typeof useOrgSettingsDa
       )}
       {data.section === "billing" && (
         <OrgSettingsBilling billing={data.billing} billingEmail={data.billingEmail} onBillingEmailChange={data.setBillingEmail} isAdminOrOwner={data.isAdminOrOwner} saving={data.saving} onSave={data.handleSaveBilling} balance={data.balance} balanceLoading={data.balanceLoading} balanceError={data.balanceError} checkoutError={data.checkoutError} pollingStatus={data.pollingStatus} onPurchase={data.handlePurchase} onRetryBalance={data.loadCreditBalance} />
+      )}
+      {data.section === "integrations" && (
+        <OrgSettingsIntegrations
+          integrations={data.integrations}
+          busyId={data.integrationBusyId}
+          onCreate={data.createIntegration}
+          onUpdate={data.updateIntegration}
+          onDelete={data.deleteIntegration}
+        />
       )}
     </>
   );

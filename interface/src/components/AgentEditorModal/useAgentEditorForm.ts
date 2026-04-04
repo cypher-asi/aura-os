@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { api } from "../../api/client";
-import type { Agent } from "../../types";
+import type { Agent, OrgIntegration } from "../../types";
 import { useModalInitialFocus } from "../../hooks/use-modal-initial-focus";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
+import { useOrgStore } from "../../stores/org-store";
 
 interface AgentEditorFormResult {
   name: string;
@@ -16,8 +18,17 @@ interface AgentEditorFormResult {
   setSystemPrompt: (v: string) => void;
   icon: string;
   setIcon: (v: string) => void;
-  machineType: string;
-  setMachineType: (v: string) => void;
+  adapterType: string;
+  setAdapterType: (v: string) => void;
+  environment: string;
+  setEnvironment: (v: string) => void;
+  authSource: string;
+  setAuthSource: (v: string) => void;
+  integrationId: string;
+  setIntegrationId: (v: string) => void;
+  defaultModel: string;
+  setDefaultModel: (v: string) => void;
+  availableIntegrations: OrgIntegration[];
   saving: boolean;
   error: string;
   nameError: string;
@@ -37,6 +48,19 @@ interface AgentEditorFormResult {
   handleChangeImage: () => void;
 }
 
+function defaultAuthSource(adapterType: string, integrationId?: string | null): string {
+  if (integrationId?.trim()) return "org_integration";
+  if (adapterType === "aura_harness") return "aura_managed";
+  return "local_cli_auth";
+}
+
+function requiredProviderForAdapter(adapterType: string): string | null {
+  if (adapterType === "aura_harness") return "anthropic";
+  if (adapterType === "claude_code") return "anthropic";
+  if (adapterType === "codex") return "openai";
+  return null;
+}
+
 export function useAgentEditorForm(
   isOpen: boolean,
   agent: Agent | undefined,
@@ -49,14 +73,25 @@ export function useAgentEditorForm(
   const [personality, setPersonality] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [icon, setIcon] = useState("");
-  const [machineType, setMachineType] = useState("remote");
+  const [adapterType, setAdapterType] = useState("aura_harness");
+  const [environment, setEnvironment] = useState("swarm_microvm");
+  const [authSource, setAuthSource] = useState("aura_managed");
+  const [integrationId, setIntegrationId] = useState("");
+  const [defaultModel, setDefaultModel] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
   const [cropOpen, setCropOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState("");
+  const rememberedIntegrationIdsRef = useRef<Record<string, string>>({});
   const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { activeOrg, integrations } = useOrgStore(
+    useShallow((s) => ({
+      activeOrg: s.activeOrg,
+      integrations: s.integrations,
+    })),
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,13 +100,57 @@ export function useAgentEditorForm(
       setName(agent.name); setRole(isSuperRole ? "" : agent.role);
       setPersonality(agent.personality); setSystemPrompt(agent.system_prompt);
       setIcon(agent.icon ?? "");
-      setMachineType(agent.machine_type ?? "local");
+      setAdapterType(agent.adapter_type ?? "aura_harness");
+      setEnvironment(agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"));
+      setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
+      setIntegrationId(agent.integration_id ?? "");
+      setDefaultModel(agent.default_model ?? "");
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
-      setMachineType("remote");
+      setAdapterType("aura_harness");
+      setEnvironment(isMobileLayout ? "swarm_microvm" : "local_host");
+      setAuthSource("aura_managed");
+      setIntegrationId("");
+      setDefaultModel("");
     }
     setError(""); setNameError("");
-  }, [isOpen, agent]);
+  }, [isOpen, agent, isMobileLayout]);
+
+  useEffect(() => {
+    const allowedAuthSources = adapterType === "aura_harness"
+      ? ["aura_managed", "org_integration"]
+      : ["local_cli_auth", "org_integration"];
+
+    if (adapterType !== "aura_harness") {
+      setEnvironment("local_host");
+    }
+
+    if (!allowedAuthSources.includes(authSource)) {
+      setAuthSource(allowedAuthSources[0]);
+    }
+  }, [adapterType, authSource]);
+
+  useEffect(() => {
+    if (authSource === "org_integration" && integrationId) {
+      rememberedIntegrationIdsRef.current[adapterType] = integrationId;
+    }
+  }, [adapterType, authSource, integrationId]);
+
+  useEffect(() => {
+    if (authSource !== "org_integration") {
+      return;
+    }
+
+    const requiredProvider = requiredProviderForAdapter(adapterType);
+    const selected = integrations.find((integration) => integration.integration_id === integrationId);
+    if (!selected || selected.provider !== requiredProvider) {
+      const remembered = rememberedIntegrationIdsRef.current[adapterType];
+      const fallback = integrations.find((integration) => (
+        integration.integration_id === remembered && integration.provider === requiredProvider
+      )) ?? integrations.find((integration) => integration.provider === requiredProvider);
+      setIntegrationId(fallback?.integration_id ?? "");
+    }
+  }, [adapterType, authSource, integrationId, integrations]);
 
   const handleClose = useCallback(() => {
     if (rawImageSrc) URL.revokeObjectURL(rawImageSrc);
@@ -125,11 +204,20 @@ export function useAgentEditorForm(
     setNameError(""); setSaving(true); setError("");
     try {
       const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent");
+      const machineType = adapterType === "aura_harness"
+        ? environment === "swarm_microvm" ? "remote" : "local"
+        : "local";
       const payload = {
+        org_id: agent?.org_id ?? activeOrg?.org_id,
         name: name.trim(), role: isSuperAgent ? "super_agent" : role.trim(),
         personality: personality.trim(), system_prompt: systemPrompt.trim(),
         icon: icon || (agent?.icon ? null : undefined),
-        machine_type: !agent && isMobileLayout ? "remote" : machineType,
+        machine_type: !agent && isMobileLayout && adapterType === "aura_harness" ? "remote" : machineType,
+        adapter_type: adapterType,
+        environment,
+        auth_source: authSource,
+        integration_id: authSource === "org_integration" ? (integrationId || null) : null,
+        default_model: defaultModel.trim() || null,
       };
       const saved = agent
         ? await api.agents.update(agent.agent_id, payload)
@@ -138,13 +226,17 @@ export function useAgentEditorForm(
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save agent");
     } finally { setSaving(false); }
-  }, [name, role, personality, systemPrompt, icon, machineType, agent, isMobileLayout, onSaved, onClose]);
+  }, [name, role, personality, systemPrompt, icon, adapterType, environment, authSource, integrationId, defaultModel, agent, activeOrg?.org_id, isMobileLayout, onSaved, onClose]);
 
   const isSuperAgent = agent?.role === "super_agent" || agent?.tags?.includes("super_agent") || false;
 
   return {
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
-    systemPrompt, setSystemPrompt, icon, setIcon, machineType, setMachineType,
+    systemPrompt, setSystemPrompt, icon, setIcon,
+    adapterType, setAdapterType, environment, setEnvironment,
+    authSource, setAuthSource,
+    integrationId, setIntegrationId, defaultModel, setDefaultModel,
+    availableIntegrations: integrations,
     saving, error, nameError, setNameError,
     nameRef, initialFocusRef, fileInputRef,
     cropOpen, rawImageSrc,

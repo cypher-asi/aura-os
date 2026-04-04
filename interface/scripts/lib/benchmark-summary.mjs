@@ -5,7 +5,13 @@ function asRecord(value) {
 }
 
 export function normalizeScenario(payload, filePath, cwd) {
-  if (!payload || typeof payload !== "object" || payload.suite !== "benchmark") {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const isHarnessBenchmark = payload.suite === "benchmark";
+  const isApiBenchmark = payload.kind === "live_api_benchmark" || payload.device === "api-local";
+  if (!isHarnessBenchmark && !isApiBenchmark) {
     return null;
   }
 
@@ -22,7 +28,10 @@ export function normalizeScenario(payload, filePath, cwd) {
     )
     && /(footer|faq|feature|proof|testimonial)/.test(combinedTurnText)
     && /(cta|call-to-action|start building|start shipping|get started|explore features|readme|changelog)/.test(combinedTurnText);
-  const qualityPass = Boolean(payload.quality?.qualityPass) || heuristicQualityPass;
+  const apiQualityPass =
+    Number(payload?.counts?.failedTasks ?? 0) === 0
+    && Number(metrics.artifactVerificationPassed ?? 0) > 0;
+  const qualityPass = Boolean(payload.quality?.qualityPass) || apiQualityPass || heuristicQualityPass;
 
   const metricPricingSources = Array.isArray(metrics.pricingSources)
     ? metrics.pricingSources.filter((value) => typeof value === "string" && value.trim())
@@ -51,7 +60,7 @@ export function normalizeScenario(payload, filePath, cwd) {
     fallbackUsageSessions: Number(metrics.fallbackUsageSessions ?? 0),
     fileChangeCount: Number(metrics.fileChangeCount ?? 0),
     estimatedCostUsd: Number(metrics.estimatedCostUsd ?? 0),
-    runWallClockMs: Number(metrics.runWallClockMs ?? metrics.totalWallClockMs ?? 0),
+    runWallClockMs: Number(metrics.runWallClockMs ?? metrics.totalWallClockMs ?? metrics.totalDurationMs ?? 0),
     averageTurnWallClockMs: Number(metrics.averageTurnWallClockMs ?? 0),
     averageTimeToFirstEventMs: Number(metrics.averageTimeToFirstEventMs ?? 0),
     maxTurnWallClockMs: Number(metrics.maxTurnWallClockMs ?? 0),

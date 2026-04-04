@@ -18,27 +18,44 @@ pub type RuntimeAgentStateMap = Arc<Mutex<HashMap<AgentInstanceId, RuntimeAgentS
 fn network_agent_to_core(net: &NetworkAgent) -> Agent {
     let agent_id = net.id.parse::<AgentId>().unwrap_or_else(|_| AgentId::new());
     let profile_id: Option<ProfileId> = net.profile_id.as_ref().and_then(|s| s.parse().ok());
+    let org_id: Option<OrgId> = net.org_id.as_ref().and_then(|s| s.parse().ok());
     let created_at = parse_dt(&net.created_at);
     let updated_at = parse_dt(&net.updated_at);
     let is_super = net.role.as_deref() == Some("super_agent");
+    let machine_type = net
+        .machine_type
+        .clone()
+        .unwrap_or_else(|| "local".to_string());
+    let environment = if machine_type == "remote" {
+        "swarm_microvm".to_string()
+    } else {
+        "local_host".to_string()
+    };
 
     Agent {
         agent_id,
         user_id: net.user_id.clone(),
+        org_id,
         name: net.name.clone(),
         role: net.role.clone().unwrap_or_default(),
         personality: net.personality.clone().unwrap_or_default(),
         system_prompt: net.system_prompt.clone().unwrap_or_default(),
         skills: net.skills.clone().unwrap_or_default(),
         icon: net.icon.clone(),
-        machine_type: net
-            .machine_type
-            .clone()
-            .unwrap_or_else(|| "local".to_string()),
+        machine_type,
+        adapter_type: "aura_harness".to_string(),
+        environment,
+        auth_source: "aura_managed".to_string(),
+        integration_id: None,
+        default_model: None,
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,
-        tags: if is_super { vec!["super_agent".to_string()] } else { Vec::new() },
+        tags: if is_super {
+            vec!["super_agent".to_string()]
+        } else {
+            Vec::new()
+        },
         is_pinned: is_super,
         created_at,
         updated_at,
@@ -63,6 +80,10 @@ impl AgentService {
         format!("agent:{agent_id}")
     }
 
+    fn agent_runtime_key(agent_id: &AgentId) -> String {
+        format!("agent_runtime:{agent_id}")
+    }
+
     pub fn new(
         store: Arc<RocksStore>,
         network_client: Option<Arc<aura_os_network::NetworkClient>>,
@@ -81,13 +102,73 @@ impl AgentService {
 
     /// Persist an agent to the local RocksDB shadow store.
     pub fn save_agent_shadow(&self, agent: &Agent) -> Result<(), AgentError> {
-        let payload =
-            serde_json::to_vec(agent).map_err(|e| AgentError::Parse(e.to_string()))?;
+        let payload = serde_json::to_vec(agent).map_err(|e| AgentError::Parse(e.to_string()))?;
         self.store
             .put_setting(&Self::agent_key(&agent.agent_id), &payload)
             .map_err(AgentError::Store)
     }
 
+    pub fn save_agent_runtime_config(
+        &self,
+        agent_id: &AgentId,
+        config: &AgentRuntimeConfig,
+    ) -> Result<(), AgentError> {
+        let payload = serde_json::to_vec(config).map_err(|e| AgentError::Parse(e.to_string()))?;
+        self.store
+            .put_setting(&Self::agent_runtime_key(agent_id), &payload)
+            .map_err(AgentError::Store)
+    }
+
+    pub fn load_agent_runtime_config(
+        &self,
+        agent_id: &AgentId,
+    ) -> Result<Option<AgentRuntimeConfig>, AgentError> {
+        let bytes = match self.store.get_setting(&Self::agent_runtime_key(agent_id)) {
+            Ok(bytes) => bytes,
+            Err(aura_os_store::StoreError::NotFound(_)) => return Ok(None),
+            Err(e) => return Err(AgentError::Store(e)),
+        };
+        let config =
+            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
+        Ok(Some(config))
+    }
+
+    pub fn delete_agent_runtime_config(&self, agent_id: &AgentId) -> Result<(), AgentError> {
+        match self
+            .store
+            .delete_setting(&Self::agent_runtime_key(agent_id))
+        {
+            Ok(()) | Err(aura_os_store::StoreError::NotFound(_)) => Ok(()),
+            Err(e) => Err(AgentError::Store(e)),
+        }
+    }
+
+    pub fn apply_runtime_config(&self, agent: &mut Agent) -> Result<(), AgentError> {
+        if let Some(config) = self.load_agent_runtime_config(&agent.agent_id)? {
+            agent.adapter_type = config.adapter_type;
+            agent.environment = config.environment;
+            agent.auth_source = aura_os_core::effective_auth_source(
+                &agent.adapter_type,
+                Some(config.auth_source.as_str()),
+                config.integration_id.as_deref(),
+            );
+            agent.integration_id = config.integration_id;
+            agent.default_model = config.default_model;
+            agent.machine_type = if agent.environment == "swarm_microvm" {
+                "remote".to_string()
+            } else {
+                "local".to_string()
+            };
+        }
+        Ok(())
+    }
+
+    /// Remove an agent from the local RocksDB shadow store.
+    pub fn delete_agent_shadow(&self, agent_id: &AgentId) -> Result<(), AgentError> {
+        self.store
+            .delete_setting(&Self::agent_key(agent_id))
+            .map_err(AgentError::Store)
+    }
     fn list_local_agents(&self) -> Result<Vec<Agent>, AgentError> {
         let entries = self
             .store
@@ -95,7 +176,8 @@ impl AgentService {
             .map_err(AgentError::Store)?;
         let mut agents = Vec::new();
         for (_key, value) in entries {
-            if let Ok(agent) = serde_json::from_slice::<Agent>(&value) {
+            if let Ok(mut agent) = serde_json::from_slice::<Agent>(&value) {
+                let _ = self.apply_runtime_config(&mut agent);
                 agents.push(agent);
             }
         }
@@ -116,7 +198,10 @@ impl AgentService {
                 aura_os_store::StoreError::NotFound(_) => AgentError::NotFound,
                 other => AgentError::Store(other),
             })?;
-        serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))
+        let mut agent: Agent =
+            serde_json::from_slice(&bytes).map_err(|e| AgentError::Parse(e.to_string()))?;
+        let _ = self.apply_runtime_config(&mut agent);
+        Ok(agent)
     }
 
     // -- network ---------------------------------------------------------------
@@ -139,7 +224,8 @@ impl AgentService {
                 aura_os_network::NetworkError::Server { status: 404, .. } => AgentError::NotFound,
                 _ => AgentError::Network(e),
             })?;
-        let agent = network_agent_to_core(&net);
+        let mut agent = network_agent_to_core(&net);
+        let _ = self.apply_runtime_config(&mut agent);
         let _ = self.save_agent_shadow(&agent);
         Ok(agent)
     }
@@ -191,7 +277,13 @@ impl AgentInstanceService {
         let client = self.network_client.as_ref()?;
         let jwt = self.get_jwt().ok()?;
         let net = client.get_agent(agent_id_str, &jwt).await.ok()?;
-        Some(network_agent_to_core(&net))
+        let mut agent = network_agent_to_core(&net);
+        let runtime_config_service = AgentService {
+            store: self.store.clone(),
+            network_client: self.network_client.clone(),
+        };
+        let _ = runtime_config_service.apply_runtime_config(&mut agent);
+        Some(agent)
     }
 
     pub async fn create_instance_from_agent(
@@ -395,6 +487,7 @@ pub fn merge_agent_instance(
             .map(|a| a.agent_id)
             .or_else(|| spa.agent_id.as_deref().and_then(|s: &str| s.parse().ok()))
             .unwrap_or_default(),
+        org_id: agent.and_then(|a| a.org_id),
         name: agent
             .map(|a| a.name.clone())
             .unwrap_or_else(|| spa.name.clone().unwrap_or_default()),
@@ -416,6 +509,23 @@ pub fn merge_agent_instance(
         machine_type: agent
             .map(|a| a.machine_type.clone())
             .unwrap_or_else(|| "local".to_string()),
+        adapter_type: agent
+            .map(|a| a.adapter_type.clone())
+            .unwrap_or_else(|| "aura_harness".to_string()),
+        environment: agent
+            .map(|a| a.environment.clone())
+            .unwrap_or_else(|| "local_host".to_string()),
+        auth_source: agent
+            .map(|a| {
+                aura_os_core::effective_auth_source(
+                    &a.adapter_type,
+                    Some(a.auth_source.as_str()),
+                    a.integration_id.as_deref(),
+                )
+            })
+            .unwrap_or_else(|| "aura_managed".to_string()),
+        integration_id: agent.and_then(|a| a.integration_id.clone()),
+        default_model: agent.and_then(|a| a.default_model.clone()),
         workspace_path: None,
         status: spa
             .status

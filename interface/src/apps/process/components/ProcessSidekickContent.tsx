@@ -199,7 +199,7 @@ export function ProcessSidekickContent() {
   if (previewRun) {
     return (
       <div className={styles.sidekickBody}>
-        <PreviewOverlay title="Run Detail" onClose={closePreview}>
+        <PreviewOverlay title="Run Detail" onClose={closePreview} fullLane>
           <RunPreviewBody run={previewRun} />
         </PreviewOverlay>
       </div>

@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
-import { Button, Text } from "@cypher-asi/zui";
+import { useRef, useLayoutEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { Button, Text, cn } from "@cypher-asi/zui";
 import { ArrowLeft, X } from "lucide-react";
 import styles from "./PreviewOverlay.module.css";
 
@@ -10,6 +11,8 @@ interface PreviewOverlayProps {
   onClose: () => void;
   /** Optional action buttons rendered between title and close button */
   actions?: ReactNode;
+  /** Portal overlay to the nearest Lane so it covers the full sidekick (header included). */
+  fullLane?: boolean;
   children: ReactNode;
 }
 
@@ -19,10 +22,21 @@ export function PreviewOverlay({
   onBack,
   onClose,
   actions,
+  fullLane = false,
   children,
 }: PreviewOverlayProps) {
-  return (
-    <div className={styles.overlay}>
+  const markerRef = useRef<HTMLDivElement>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (fullLane && markerRef.current) {
+      const lane = markerRef.current.closest("[data-lane]") as HTMLElement | null;
+      if (lane) setPortalTarget(lane);
+    }
+  }, [fullLane]);
+
+  const overlay = (
+    <div className={cn(styles.overlay, fullLane && styles.fullLane)}>
       <div className={styles.header}>
         {canGoBack && onBack && (
           <Button
@@ -52,4 +66,24 @@ export function PreviewOverlay({
       </div>
     </div>
   );
+
+  if (fullLane && portalTarget) {
+    return (
+      <>
+        <div ref={markerRef} style={{ display: "none" }} />
+        {createPortal(overlay, portalTarget)}
+      </>
+    );
+  }
+
+  if (fullLane) {
+    return (
+      <>
+        <div ref={markerRef} style={{ display: "none" }} />
+        {overlay}
+      </>
+    );
+  }
+
+  return overlay;
 }

@@ -1,4 +1,4 @@
-import type { ProjectId, AgentId, AgentInstanceId, Agent, AgentInstance, Session, SessionEvent, Task } from "../types";
+import type { ProjectId, AgentId, AgentInstanceId, Agent, AgentInstance, AgentRuntimeTestResult, Session, SessionEvent, Task } from "../types";
 import { apiFetch } from "./core";
 import { sendAgentEventStream, sendEventStream } from "./streams";
 
@@ -8,11 +8,38 @@ type ApiRequestOptions = {
 
 export const agentTemplatesApi = {
   list: () => apiFetch<Agent[]>("/api/agents"),
-  create: (data: { name: string; role: string; personality: string; system_prompt: string; skills?: string[]; icon?: string; machine_type?: string }) =>
+  create: (data: {
+    org_id?: string;
+    name: string;
+    role: string;
+    personality: string;
+    system_prompt: string;
+    skills?: string[];
+    icon?: string;
+    machine_type?: string;
+    adapter_type?: string;
+    environment?: string;
+    auth_source?: string;
+    integration_id?: string | null;
+    default_model?: string | null;
+  }) =>
     apiFetch<Agent>("/api/agents", { method: "POST", body: JSON.stringify(data) }),
   get: (agentId: AgentId, options?: ApiRequestOptions) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { signal: options?.signal }),
-  update: (agentId: AgentId, data: { name?: string; role?: string; personality?: string; system_prompt?: string; skills?: string[]; icon?: string | null; machine_type?: string }) =>
+  update: (agentId: AgentId, data: {
+    name?: string;
+    role?: string;
+    personality?: string;
+    system_prompt?: string;
+    skills?: string[];
+    icon?: string | null;
+    machine_type?: string;
+    adapter_type?: string;
+    environment?: string;
+    auth_source?: string;
+    integration_id?: string | null;
+    default_model?: string | null;
+  }) =>
     apiFetch<Agent>(`/api/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   delete: (agentId: AgentId) => apiFetch<void>(`/api/agents/${agentId}`, { method: "DELETE" }),
   listProjectBindings: (agentId: AgentId) =>
@@ -22,6 +49,8 @@ export const agentTemplatesApi = {
   listEvents: (agentId: AgentId, options?: ApiRequestOptions) =>
     apiFetch<SessionEvent[]>(`/api/agents/${agentId}/events`, { signal: options?.signal }),
   sendEventStream: sendAgentEventStream,
+  testRuntime: (agentId: AgentId) =>
+    apiFetch<AgentRuntimeTestResult>(`/api/agents/${agentId}/runtime/test`, { method: "POST" }),
 };
 
 export const agentInstancesApi = {

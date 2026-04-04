@@ -98,6 +98,7 @@ export interface Task {
 export interface Agent {
   agent_id: AgentId;
   user_id: string;
+  org_id?: string | null;
   name: string;
   role: string;
   personality: string;
@@ -105,6 +106,11 @@ export interface Agent {
   skills: string[];
   icon: string | null;
   machine_type: string;
+  adapter_type: string;
+  environment: string;
+  auth_source: string;
+  integration_id?: string | null;
+  default_model?: string | null;
   vm_id?: string | null;
   network_agent_id?: string;
   profile_id?: string;
@@ -118,6 +124,7 @@ export interface AgentInstance {
   agent_instance_id: AgentInstanceId;
   project_id: ProjectId;
   agent_id: AgentId;
+  org_id?: string | null;
   name: string;
   role: string;
   personality: string;
@@ -125,6 +132,11 @@ export interface AgentInstance {
   skills: string[];
   icon: string | null;
   machine_type: string;
+  adapter_type: string;
+  environment: string;
+  auth_source?: string;
+  integration_id?: string | null;
+  default_model?: string | null;
   workspace_path?: string | null;
   status: AgentStatus;
   current_task_id: TaskId | null;
@@ -216,6 +228,30 @@ export interface Org {
   billing: OrgBilling | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface OrgIntegration {
+  integration_id: string;
+  org_id: string;
+  name: string;
+  provider: string;
+  default_model?: string | null;
+  has_secret: boolean;
+  secret_last4?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentRuntimeTestResult {
+  ok: boolean;
+  adapter_type: string;
+  environment: string;
+  auth_source: string;
+  provider?: string | null;
+  model?: string | null;
+  integration_id?: string | null;
+  integration_name?: string | null;
+  message: string;
 }
 
 export interface OrgMember {
@@ -555,4 +591,43 @@ export interface HarnessSkillActivation {
   rendered_content: string;
   allowed_tools: string[];
   fork_context: boolean;
+}
+
+export interface HarnessSkillInstallation {
+  agent_id: string;
+  skill_name: string;
+  source_url: string | null;
+  installed_at: string;
+  version: string | null;
+  approved_paths: string[];
+  approved_commands: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Skill Shop catalog
+// ---------------------------------------------------------------------------
+
+export type SkillCategory =
+  | "development"
+  | "communication"
+  | "productivity"
+  | "media"
+  | "ai-ml"
+  | "smart-home"
+  | "security"
+  | "notes"
+  | "automation"
+  | "utilities";
+
+export interface SkillShopCatalogEntry {
+  name: string;
+  description: string;
+  emoji: string;
+  category: SkillCategory;
+  tags: string[];
+  security_rating: "safe" | "caution" | "warning";
+  security_notes: string;
+  source_url: string;
+  requires?: { bins?: string[]; env?: string[]; config?: string[] };
+  install_methods?: { kind: string; formula?: string; package?: string }[];
 }

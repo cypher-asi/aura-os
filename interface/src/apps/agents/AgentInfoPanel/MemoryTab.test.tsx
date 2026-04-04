@@ -1,9 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
-const { mockGetSnapshot } = vi.hoisted(() => ({
-  mockGetSnapshot: vi.fn(),
-}));
+const { mockGetSnapshot, MockApiClientError } = vi.hoisted(() => {
+  class _MockApiClientError extends Error {
+    status: number;
+    body: { error: string; code: string; details: null };
+    constructor(status: number, message: string) {
+      super(message);
+      this.name = "ApiClientError";
+      this.status = status;
+      this.body = { error: message, code: "unknown", details: null };
+    }
+  }
+  return { mockGetSnapshot: vi.fn(), MockApiClientError: _MockApiClientError };
+});
 
 vi.mock("../../../api/client", () => ({
   api: {
@@ -11,6 +21,7 @@ vi.mock("../../../api/client", () => ({
       getSnapshot: (...args: any[]) => mockGetSnapshot(...args),
     },
   },
+  ApiClientError: MockApiClientError,
 }));
 
 vi.mock("../stores/agent-sidekick-store", () => ({
@@ -62,11 +73,35 @@ describe("MemoryTab", () => {
     });
   });
 
-  it("shows error state", async () => {
-    mockGetSnapshot.mockRejectedValue(new Error("Connection failed"));
+  it("shows connection error for 502", async () => {
+    mockGetSnapshot.mockRejectedValue(new MockApiClientError(502, "Bad Gateway"));
     render(<MemoryTab agent={baseAgent} />);
     await waitFor(() => {
-      expect(screen.getByText(/could not connect/i)).toBeDefined();
+      expect(screen.getByText(/could not connect to harness/i)).toBeDefined();
+    });
+  });
+
+  it("shows generic error for unknown failures", async () => {
+    mockGetSnapshot.mockRejectedValue(new Error("Something broke"));
+    render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText(/failed to load memory/i)).toBeDefined();
+    });
+  });
+
+  it("shows retry button on error", async () => {
+    mockGetSnapshot.mockRejectedValue(new MockApiClientError(502, "Bad Gateway"));
+    render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText("Retry")).toBeDefined();
+    });
+  });
+
+  it("treats 404 as empty (no memories yet)", async () => {
+    mockGetSnapshot.mockRejectedValue(new MockApiClientError(404, "Not Found"));
+    render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText(/no memories yet/i)).toBeDefined();
     });
   });
 

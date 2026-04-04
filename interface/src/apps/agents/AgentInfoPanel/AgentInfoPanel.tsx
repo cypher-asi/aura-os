@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
-import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, X, ChevronRight, ChevronDown } from "lucide-react";
+import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, KeyRound, X, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboardPanel";
@@ -15,21 +15,104 @@ import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { useOrgStore } from "../../../stores/org-store";
 import { formatTokens } from "../../../utils/format";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
 import { SkillPreview } from "./SkillPreview";
 import { FactPreview, EventPreview, ProcedurePreview } from "./MemoryPreview";
-import type { Session, Task } from "../../../types";
+import type { Session, Task, HarnessSkillInstallation } from "../../../types";
 import styles from "./AgentInfoPanel.module.css";
 
 interface AgentInfoPanelProps {
   variant?: "default" | "mobileStandalone";
 }
 
+function formatAdapterLabel(adapterType?: string | null): string {
+  switch (adapterType) {
+    case "claude_code":
+      return "Claude Code";
+    case "codex":
+      return "Codex";
+    case "aura_harness":
+    default:
+      return "Aura";
+  }
+}
+
+function formatAuthSourceLabel(authSource?: string | null): string {
+  switch (authSource) {
+    case "org_integration":
+      return "Team Integration";
+    case "local_cli_auth":
+      return "Local Login";
+    case "aura_managed":
+    default:
+      return "Aura Billing";
+  }
+}
+
+function formatRunsOnLabel(environment?: string | null, machineType?: string | null): string {
+  const effective = environment || (machineType === "remote" ? "swarm_microvm" : "local_host");
+  switch (effective) {
+    case "swarm_microvm":
+      return "Isolated Cloud Runtime";
+    case "local_host":
+    default:
+      return "This Machine";
+  }
+}
+
+function describeRuntimeReadiness(
+  agent: import("../../../types").Agent,
+  integration?: { name: string; has_secret: boolean } | null,
+): { tone: "info" | "success" | "warning"; title: string; message: string } {
+  if (agent.auth_source === "org_integration") {
+    if (!integration) {
+      return {
+        tone: "warning",
+        title: "Team integration missing",
+        message: "This agent expects a team integration, but none is currently attached. Attach one before running the agent.",
+      };
+    }
+    if (!integration.has_secret) {
+      return {
+        tone: "warning",
+        title: "Integration missing a key",
+        message: `${integration.name} is attached, but it does not have a stored key yet. Add one in Integrations before running this agent.`,
+      };
+    }
+    return {
+      tone: "success",
+      title: "Team integration ready",
+      message: `${integration.name} has a stored key. Keys stay at the org integration layer and are resolved only at runtime.`,
+    };
+  }
+
+  if (agent.auth_source === "local_cli_auth") {
+    const runtimeName = agent.adapter_type === "claude_code" ? "Claude Code" : "Codex";
+    return {
+      tone: "info",
+      title: "Uses a local login",
+      message: `${runtimeName} uses the CLI login available to aura-os-server on this machine. Check Runtime verifies that the CLI is installed and logged in.`,
+    };
+  }
+
+  return {
+    tone: "success",
+    title: "Uses Aura billing",
+    message: "Aura Billing is managed by Aura. Check Runtime verifies the live runtime path for this agent.",
+  };
+}
+
 export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
+  const { integrations } = useOrgStore(
+    useShallow((s) => ({
+      integrations: s.integrations,
+    })),
+  );
   const navigate = useNavigate();
   const {
     activeTab,
@@ -61,9 +144,14 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [iconFailed, setIconFailed] = useState(false);
+  const [runtimeTesting, setRuntimeTesting] = useState(false);
+  const [runtimeTestMessage, setRuntimeTestMessage] = useState<string | null>(null);
+  const [runtimeTestDetails, setRuntimeTestDetails] = useState<string | null>(null);
+  const [runtimeTestStatus, setRuntimeTestStatus] = useState<"success" | "error" | null>(null);
   const [projectBindings, setProjectBindings] = useState<
     { project_agent_id: string; project_id: string; project_name: string }[]
   >([]);
+  const runtimeResultRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIconFailed(false);
@@ -73,6 +161,13 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         .catch(() => setProjectBindings([]));
     }
   }, [selectedAgent?.agent_id]);
+
+  useEffect(() => {
+    if (!runtimeTestMessage || !runtimeResultRef.current) return;
+    requestAnimationFrame(() => {
+      runtimeResultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, [runtimeTestMessage]);
 
   const openDeleteConfirm = useCallback(() => {
     setDeleteError(null);
@@ -105,6 +200,33 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     }
   }, [selectedAgent, setSelectedAgent, navigate, handleCloseDeleteConfirm]);
 
+  const handleRuntimeTest = useCallback(async () => {
+    if (!selectedAgent) return;
+    setRuntimeTesting(true);
+    setRuntimeTestMessage(null);
+    setRuntimeTestDetails(null);
+    setRuntimeTestStatus(null);
+    try {
+      const result = await api.agents.testRuntime(selectedAgent.agent_id);
+      setRuntimeTestMessage(result.message || "Runtime test passed.");
+      const details = [
+        `${formatAdapterLabel(result.adapter_type)} on ${formatRunsOnLabel(result.environment)}`,
+        `Authentication: ${formatAuthSourceLabel(result.auth_source)}`,
+        result.integration_name ? `Integration: ${result.integration_name}` : null,
+        result.provider ? `Provider: ${result.provider}` : null,
+        result.model ? `Model: ${result.model}` : null,
+      ].filter(Boolean).join(" • ");
+      setRuntimeTestDetails(details || null);
+      setRuntimeTestStatus("success");
+    } catch (err) {
+      setRuntimeTestMessage(err instanceof Error ? err.message : "Runtime test failed.");
+      setRuntimeTestDetails(null);
+      setRuntimeTestStatus("error");
+    } finally {
+      setRuntimeTesting(false);
+    }
+  }, [selectedAgent]);
+
   if (!selectedAgent) {
     return (
       <EmptyState>Select an agent to see details</EmptyState>
@@ -112,6 +234,10 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   }
 
   const a = selectedAgent;
+  const selectedIntegration = a.integration_id
+    ? integrations.find((integration) => integration.integration_id === a.integration_id) ?? null
+    : null;
+  const runtimeReadiness = describeRuntimeReadiness(a, selectedIntegration);
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
   const isMobileStandalone = variant === "mobileStandalone";
@@ -127,6 +253,13 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
             imageUrl={imageUrl}
             isOwnAgent={isOwnAgent}
             onIconError={() => setIconFailed(true)}
+            runtimeTesting={runtimeTesting}
+            runtimeTestMessage={runtimeTestMessage}
+            runtimeTestDetails={runtimeTestDetails}
+            runtimeTestStatus={runtimeTestStatus}
+            onRuntimeTest={handleRuntimeTest}
+            runtimeResultRef={runtimeResultRef}
+            runtimeReadiness={runtimeReadiness}
           />
         )}
 
@@ -186,8 +319,9 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
           canGoBack={canGoBack}
           onBack={goBackPreview}
           onClose={closePreview}
+          fullLane
         >
-          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} />}
+          {previewItem.kind === "skill" && <SkillPreview skill={previewItem.skill} installation={previewItem.installation} />}
           {previewItem.kind === "memory_fact" && <FactPreview fact={previewItem.fact} />}
           {previewItem.kind === "memory_event" && <EventPreview event={previewItem.event} />}
           {previewItem.kind === "memory_procedure" && <ProcedurePreview procedure={previewItem.procedure} />}
@@ -251,12 +385,43 @@ function ProfileTab({
   imageUrl,
   isOwnAgent,
   onIconError,
+  runtimeTesting,
+  runtimeTestMessage,
+  runtimeTestDetails,
+  runtimeTestStatus,
+  onRuntimeTest,
+  runtimeResultRef,
+  runtimeReadiness,
 }: {
   agent: import("../../../types").Agent;
   imageUrl: string | undefined;
   isOwnAgent: boolean;
   onIconError: () => void;
+  runtimeTesting: boolean;
+  runtimeTestMessage: string | null;
+  runtimeTestDetails: string | null;
+  runtimeTestStatus: "success" | "error" | null;
+  onRuntimeTest: () => void;
+  runtimeResultRef: React.RefObject<HTMLDivElement | null>;
+  runtimeReadiness: { tone: "info" | "success" | "warning"; title: string; message: string };
 }) {
+  const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.harnessSkills
+      .listAgentSkills(a.agent_id)
+      .then((result) => {
+        if (cancelled) return;
+        const list = Array.isArray(result) ? result : (result as any)?.skills ?? (result as any)?.installations ?? [];
+        setInstallations(list);
+      })
+      .catch(() => {
+        if (!cancelled) setInstallations([]);
+      });
+    return () => { cancelled = true; };
+  }, [a.agent_id]);
+
   return (
     <>
       {imageUrl && (
@@ -312,7 +477,18 @@ function ProfileTab({
             <Monitor size={13} className={styles.metaIcon} />
           )}
           <span className={styles.metaValue}>
-            {a.machine_type === "remote" ? "Remote Machine" : "Local Machine"}
+            {formatRunsOnLabel(a.environment, a.machine_type)}
+          </span>
+        </div>
+        <div className={styles.metaRow}>
+          <Bot size={13} className={styles.metaIcon} />
+          <span className={styles.metaValue}>{formatAdapterLabel(a.adapter_type)}</span>
+        </div>
+        <div className={styles.metaRow}>
+          <KeyRound size={13} className={styles.metaIcon} />
+          <span className={styles.metaValue}>
+            {formatAuthSourceLabel(a.auth_source)}
+            {a.integration_id ? " • team integration attached" : ""}
           </span>
         </div>
         <div className={styles.metaRow}>
@@ -322,6 +498,59 @@ function ProfileTab({
           </span>
         </div>
       </div>
+
+      <div className={styles.section}>
+        <Text size="xs" variant="muted" weight="medium">Runtime</Text>
+        <Text size="sm">
+          {formatAdapterLabel(a.adapter_type)} • Runs On: {formatRunsOnLabel(a.environment, a.machine_type)} • Authentication: {formatAuthSourceLabel(a.auth_source)}
+        </Text>
+        <div
+          className={`${styles.runtimeReadiness} ${
+            runtimeReadiness.tone === "success" ? styles.runtimeReadinessSuccess
+            : runtimeReadiness.tone === "warning" ? styles.runtimeReadinessWarning
+            : styles.runtimeReadinessInfo
+          }`}
+        >
+          <Text size="xs" weight="medium" className={styles.runtimeReadinessTitle}>
+            {runtimeReadiness.title}
+          </Text>
+          <Text size="xs" variant="muted">{runtimeReadiness.message}</Text>
+        </div>
+        <div className={styles.nameAction} style={{ marginTop: 8 }}>
+          <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>
+            {runtimeTesting ? "Checking..." : "Check Runtime"}
+          </Button>
+        </div>
+        {runtimeTestMessage && (
+          <div
+            ref={runtimeResultRef}
+            className={`${styles.runtimeTestResult} ${
+              runtimeTestStatus === "error" ? styles.runtimeTestError : styles.runtimeTestSuccess
+            }`}
+            aria-live="polite"
+          >
+            <Text size="xs" weight="medium" className={styles.runtimeTestTitle}>
+              {runtimeTestStatus === "error" ? "Runtime check failed" : "Runtime ready"}
+            </Text>
+            <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
+            {runtimeTestDetails && (
+              <Text size="xs" variant="muted" className={styles.runtimeTestMeta}>
+                {runtimeTestDetails}
+              </Text>
+            )}
+          </div>
+        )}
+      </div>
+      {installations.length > 0 && (
+        <div className={styles.skillTagsSection}>
+          {installations.map((inst) => (
+            <span key={inst.skill_name} className={styles.skillTag}>
+              <Zap size={10} className={styles.skillTagIcon} />
+              {inst.skill_name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {a.system_prompt && (
         <div className={styles.section}>

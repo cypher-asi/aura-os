@@ -5,19 +5,20 @@ import { useAuth } from "../../stores/auth-store";
 import { useBillingStore } from "../../stores/billing-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { api, ApiClientError } from "../../api/client";
-import type { OrgInvite, OrgBilling, OrgRole } from "../../types";
+import type { OrgBilling, OrgInvite, OrgRole } from "../../types";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
 import { CREDITS_UPDATED_EVENT } from "../CreditsBadge";
 import { NATIVE_BILLING_MESSAGE } from "../../lib/billing";
 
-type Section = "general" | "members" | "invites" | "billing";
+type Section = "general" | "members" | "invites" | "billing" | "integrations";
 
 export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { isNativeApp } = useAuraCapabilities();
-  const { activeOrg, renameOrg, members, refreshMembers, refreshOrgs, isLoading } = useOrgStore(
+  const { activeOrg, renameOrg, members, integrations, refreshMembers, refreshIntegrations, refreshOrgs, isLoading } = useOrgStore(
     useShallow((s) => ({
       activeOrg: s.activeOrg, renameOrg: s.renameOrg, members: s.members,
-      refreshMembers: s.refreshMembers, refreshOrgs: s.refreshOrgs, isLoading: s.isLoading,
+      integrations: s.integrations, refreshMembers: s.refreshMembers, refreshIntegrations: s.refreshIntegrations,
+      refreshOrgs: s.refreshOrgs, isLoading: s.isLoading,
     })),
   );
   const { user } = useAuth();
@@ -36,6 +37,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const [billingEmail, setBillingEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [integrationBusyId, setIntegrationBusyId] = useState<string | null>(null);
 
   const balance = useBillingStore((s) => s.balance);
   const balanceLoading = useBillingStore((s) => s.balanceLoading);
@@ -44,7 +46,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const { status: pollingStatus, settledBalance, startPolling, reset: resetPolling } = useCheckoutPolling(activeOrg?.org_id);
 
   const orgId = activeOrg?.org_id;
-  const myRole = members.find((m) => m.user_id === user?.user_id)?.role;
+  const myRole = members.find((m) => m.user_id === user?.network_user_id)?.role;
   const isAdminOrOwner = myRole === "owner" || myRole === "admin";
 
   useEffect(() => { setTeamName(activeOrg?.name ?? ""); }, [activeOrg?.name, activeOrg?.org_id]);
@@ -80,14 +82,49 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
 
   useEffect(() => {
     if (!isOpen || !orgId) return;
-    refreshMembers(); loadInvites(); loadBilling(); loadCreditBalance();
-  }, [isOpen, orgId, refreshMembers, loadInvites, loadBilling, loadCreditBalance]);
+    refreshMembers(); refreshIntegrations(); loadInvites(); loadBilling(); loadCreditBalance();
+  }, [isOpen, orgId, refreshMembers, refreshIntegrations, loadInvites, loadBilling, loadCreditBalance]);
 
   const handleCreateInvite = async () => { if (orgId) { try { await api.orgs.createInvite(orgId); loadInvites(); } catch (err) { console.error("Failed to create invite", err); } } };
   const handleRevokeInvite = async (inviteId: string) => { if (orgId) { try { await api.orgs.revokeInvite(orgId, inviteId); loadInvites(); } catch (err) { console.error("Failed to revoke invite", err); } } };
   const handleRemoveMember = async (userId: string) => { if (orgId) { try { await api.orgs.removeMember(orgId, userId); refreshMembers(); } catch (err) { console.error("Failed to remove member", err); } } };
   const handleRoleChange = async (userId: string, role: OrgRole) => { if (orgId) { try { await api.orgs.updateMemberRole(orgId, userId, role); refreshMembers(); refreshOrgs(); } catch (err) { console.error("Failed to change role", err); } } };
   const handleSaveBilling = async () => { if (orgId) { setSaving(true); try { await api.orgs.setBilling(orgId, billingEmail || null, billing?.plan ?? "free"); loadBilling(); } catch (err) { console.error("Failed to save billing", err); } finally { setSaving(false); } } };
+  const createIntegration = useCallback(async (data: { name: string; provider: string; default_model?: string | null; api_key?: string | null }) => {
+    if (!orgId) return null;
+    setIntegrationBusyId("new");
+    try {
+      const integration = await api.orgs.createIntegration(orgId, data);
+      await refreshIntegrations();
+      return integration;
+    } finally {
+      setIntegrationBusyId(null);
+    }
+  }, [orgId, refreshIntegrations]);
+  const updateIntegration = useCallback(async (
+    integrationId: string,
+    data: { name?: string; provider?: string; default_model?: string | null; api_key?: string | null },
+  ) => {
+    if (!orgId) return null;
+    setIntegrationBusyId(integrationId);
+    try {
+      const integration = await api.orgs.updateIntegration(orgId, integrationId, data);
+      await refreshIntegrations();
+      return integration;
+    } finally {
+      setIntegrationBusyId(null);
+    }
+  }, [orgId, refreshIntegrations]);
+  const deleteIntegration = useCallback(async (integrationId: string) => {
+    if (!orgId) return;
+    setIntegrationBusyId(integrationId);
+    try {
+      await api.orgs.deleteIntegration(orgId, integrationId);
+      await refreshIntegrations();
+    } finally {
+      setIntegrationBusyId(null);
+    }
+  }, [orgId, refreshIntegrations]);
 
   const handleRetryOrg = useCallback(async () => { setRetryingOrg(true); try { await refreshOrgs(); } finally { setRetryingOrg(false); } }, [refreshOrgs]);
 
@@ -120,6 +157,7 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
     activeOrg, isLoading, user, section, setSection, retryingOrg,
     teamName, handleTeamNameChange, teamSaving, teamMessage,
     members, myRole, isAdminOrOwner,
+    integrations, integrationBusyId, createIntegration, updateIntegration, deleteIntegration,
     invites, handleCreateInvite, handleRevokeInvite,
     handleRemoveMember, handleRoleChange,
     billing, billingEmail, setBillingEmail, saving, handleSaveBilling,

@@ -5,6 +5,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { EntityCard } from "../../../components/EntityCard";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { Avatar } from "../../../components/Avatar";
+import { LeaderboardSidekick } from "../LeaderboardSidekick";
 import { useFeed } from "../../../stores/feed-store";
 import { useAuth } from "../../../stores/auth-store";
 import { timeAgo } from "../../../utils/format";
@@ -153,7 +154,11 @@ function CommentsPanel() {
 }
 
 export function FeedSidekickPanel() {
-  const { selectedEventId, selectedProfile } = useFeed();
+  const { selectedEventId, selectedProfile, filter } = useFeed();
+
+  if (filter === "leaderboard") {
+    return <LeaderboardSidekick />;
+  }
 
   if (selectedProfile) {
     return <ProfilePanel />;
@@ -167,3 +172,4 @@ export function FeedSidekickPanel() {
     <EmptyState icon={<MessageSquare size={32} />}>Select a post to view comments</EmptyState>
   );
 }
+

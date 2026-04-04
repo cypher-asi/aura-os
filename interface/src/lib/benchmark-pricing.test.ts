@@ -37,4 +37,13 @@ describe("benchmark pricing", () => {
     expect(pricing.source).toBe("anthropic-pricing");
     expect(estimatedCostUsd).toBeCloseTo(12.675, 6);
   });
+
+  it("resolves OpenAI codex pricing when the model is known", () => {
+    const pricing = resolvePricing("gpt-5.3-codex", "openai");
+
+    expect(pricing.source).toBe("openai-pricing");
+    expect(pricing.input).toBe(1.75);
+    expect(pricing.cacheRead).toBe(0.175);
+    expect(pricing.output).toBe(14);
+  });
 });

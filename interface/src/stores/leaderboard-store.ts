@@ -1,7 +1,21 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { TimePeriod, LeaderboardFilter, LeaderboardUser } from "../apps/leaderboard/mockData";
 import { api } from "../api/client";
+
+export type TimePeriod = "all" | "month" | "week" | "day";
+
+export type LeaderboardFilter = "my-agents" | "organization" | "following" | "everything";
+
+export interface LeaderboardUser {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  profileId?: string;
+  type: "user" | "agent";
+  tokens: number;
+  estimatedCostUsd: number;
+  eventCount: number;
+}
 import { useOrgStore } from "./org-store";
 import { useEventStore } from "./event-store";
 import { EventType } from "../types/aura-events";

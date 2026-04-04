@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { Org, OrgMember } from "../types";
+import type { Org, OrgIntegration, OrgMember } from "../types";
 import { api } from "../api/client";
 import { useAuthStore } from "./auth-store";
 import { ACTIVE_ORG_KEY } from "../constants";
@@ -9,10 +9,12 @@ interface OrgState {
   orgs: Org[];
   activeOrg: Org | null;
   members: OrgMember[];
+  integrations: OrgIntegration[];
   isLoading: boolean;
   switchOrg: (orgId: string) => void;
   refreshOrgs: () => Promise<void>;
   refreshMembers: () => Promise<void>;
+  refreshIntegrations: () => Promise<void>;
   createOrg: (name: string) => Promise<Org>;
   renameOrg: (orgId: string, name: string) => Promise<void>;
 }
@@ -21,6 +23,7 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
   orgs: [],
   activeOrg: null,
   members: [],
+  integrations: [],
   isLoading: true,
 
   refreshOrgs: async () => {
@@ -59,6 +62,20 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
     }
   },
 
+  refreshIntegrations: async () => {
+    const { activeOrg } = get();
+    if (!activeOrg) {
+      set({ integrations: [] });
+      return;
+    }
+    try {
+      const integrations = await api.orgs.listIntegrations(activeOrg.org_id);
+      set({ integrations });
+    } catch (err) {
+      console.error("Failed to load integrations", err);
+    }
+  },
+
   switchOrg: (orgId: string) => {
     const { orgs } = get();
     const org = orgs.find((o) => o.org_id === orgId);
@@ -92,7 +109,7 @@ useAuthStore.subscribe((state) => {
   if (userId) {
     useOrgStore.getState().refreshOrgs();
   } else {
-    useOrgStore.setState({ orgs: [], activeOrg: null, members: [], isLoading: false });
+    useOrgStore.setState({ orgs: [], activeOrg: null, members: [], integrations: [], isLoading: false });
   }
 });
 
@@ -103,6 +120,7 @@ useOrgStore.subscribe((state) => {
   if (orgId === _prevActiveOrgId) return;
   _prevActiveOrgId = orgId;
   state.refreshMembers();
+  state.refreshIntegrations();
 });
 
 /**
@@ -115,10 +133,12 @@ export function useOrg() {
       orgs: s.orgs,
       activeOrg: s.activeOrg,
       members: s.members,
+      integrations: s.integrations,
       isLoading: s.isLoading,
       switchOrg: s.switchOrg,
       refreshOrgs: s.refreshOrgs,
       refreshMembers: s.refreshMembers,
+      refreshIntegrations: s.refreshIntegrations,
       createOrg: s.createOrg,
       renameOrg: s.renameOrg,
     })),

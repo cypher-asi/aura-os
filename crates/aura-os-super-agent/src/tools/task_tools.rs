@@ -3,7 +3,7 @@ use serde_json::json;
 
 use aura_os_core::ToolDomain;
 
-use super::helpers::{network_get, network_post, require_network, require_str};
+use super::helpers::{network_delete, network_get, network_post, network_put, require_network, require_str};
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
 
@@ -68,7 +68,38 @@ impl SuperAgentTool for ListTasksBySpecTool {
 }
 
 // ---------------------------------------------------------------------------
-// 3. CreateTaskTool
+// 3. GetTaskTool
+// ---------------------------------------------------------------------------
+
+pub struct GetTaskTool;
+
+#[async_trait]
+impl SuperAgentTool for GetTaskTool {
+    fn name(&self) -> &str { "get_task" }
+    fn description(&self) -> &str { "Get details of a specific task" }
+    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+
+    fn parameters_schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "project_id": { "type": "string", "description": "Project ID" },
+                "task_id": { "type": "string", "description": "Task ID" }
+            },
+            "required": ["project_id", "task_id"]
+        })
+    }
+
+    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+        let network = require_network(ctx)?;
+        let project_id = require_str(&input, "project_id")?;
+        let task_id = require_str(&input, "task_id")?;
+        network_get(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 4. CreateTaskTool
 // ---------------------------------------------------------------------------
 
 pub struct CreateTaskTool;
@@ -113,7 +144,86 @@ impl SuperAgentTool for CreateTaskTool {
 }
 
 // ---------------------------------------------------------------------------
-// 4. ExtractTasksTool
+// ---------------------------------------------------------------------------
+// 5. UpdateTaskTool
+// ---------------------------------------------------------------------------
+
+pub struct UpdateTaskTool;
+
+#[async_trait]
+impl SuperAgentTool for UpdateTaskTool {
+    fn name(&self) -> &str { "update_task" }
+    fn description(&self) -> &str { "Update an existing task" }
+    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+
+    fn parameters_schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "project_id": { "type": "string", "description": "Project ID" },
+                "task_id": { "type": "string", "description": "Task ID" },
+                "title": { "type": "string", "description": "Optional replacement title" },
+                "description": { "type": "string", "description": "Optional replacement description" },
+                "status": { "type": "string", "description": "Optional replacement status" },
+                "order_index": { "type": "integer", "description": "Optional replacement order index" },
+                "dependency_ids": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Optional replacement dependency IDs"
+                }
+            },
+            "required": ["project_id", "task_id"]
+        })
+    }
+
+    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+        let network = require_network(ctx)?;
+        let project_id = require_str(&input, "project_id")?;
+        let task_id = require_str(&input, "task_id")?;
+        let body = json!({
+            "title": input.get("title").and_then(|value| value.as_str()),
+            "description": input.get("description").and_then(|value| value.as_str()),
+            "status": input.get("status").and_then(|value| value.as_str()),
+            "order_index": input.get("order_index").and_then(|value| value.as_i64()),
+            "dependency_ids": input.get("dependency_ids"),
+        });
+        network_put(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt, &body).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 6. DeleteTaskTool
+// ---------------------------------------------------------------------------
+
+pub struct DeleteTaskTool;
+
+#[async_trait]
+impl SuperAgentTool for DeleteTaskTool {
+    fn name(&self) -> &str { "delete_task" }
+    fn description(&self) -> &str { "Delete an existing task" }
+    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+
+    fn parameters_schema(&self) -> serde_json::Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "project_id": { "type": "string", "description": "Project ID" },
+                "task_id": { "type": "string", "description": "Task ID" }
+            },
+            "required": ["project_id", "task_id"]
+        })
+    }
+
+    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+        let network = require_network(ctx)?;
+        let project_id = require_str(&input, "project_id")?;
+        let task_id = require_str(&input, "task_id")?;
+        network_delete(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt).await
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 7. ExtractTasksTool
 // ---------------------------------------------------------------------------
 
 pub struct ExtractTasksTool;
@@ -142,7 +252,7 @@ impl SuperAgentTool for ExtractTasksTool {
 }
 
 // ---------------------------------------------------------------------------
-// 5. TransitionTaskTool
+// 8. TransitionTaskTool
 // ---------------------------------------------------------------------------
 
 pub struct TransitionTaskTool;
@@ -176,7 +286,7 @@ impl SuperAgentTool for TransitionTaskTool {
 }
 
 // ---------------------------------------------------------------------------
-// 6. RetryTaskTool
+// 9. RetryTaskTool
 // ---------------------------------------------------------------------------
 
 pub struct RetryTaskTool;
@@ -207,7 +317,7 @@ impl SuperAgentTool for RetryTaskTool {
 }
 
 // ---------------------------------------------------------------------------
-// 7. RunTaskTool
+// 10. RunTaskTool
 // ---------------------------------------------------------------------------
 
 pub struct RunTaskTool;
@@ -238,7 +348,7 @@ impl SuperAgentTool for RunTaskTool {
 }
 
 // ---------------------------------------------------------------------------
-// 8. GetTaskOutputTool
+// 11. GetTaskOutputTool
 // ---------------------------------------------------------------------------
 
 pub struct GetTaskOutputTool;

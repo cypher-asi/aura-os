@@ -210,6 +210,7 @@ export function ProcessList() {
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
   const defaultExpandedIds = useMemo(() => folders.map((f) => f.folder_id), [folders]);
+  const explorerKey = useMemo(() => folders.map((f) => f.folder_id).join(), [folders]);
   const defaultSelectedIds = useMemo(() => (processId ? [processId] : []), [processId]);
 
   const handleSelect = useCallback((ids: Iterable<string>) => {
@@ -341,6 +342,7 @@ export function ProcessList() {
     <div className={styles.root}>
       <div className={styles.explorerWrap} onContextMenu={handleContextMenu}>
         <Explorer
+          key={explorerKey}
           data={filteredExplorerData}
           enableDragDrop
           enableMultiSelect={false}

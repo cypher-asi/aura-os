@@ -94,7 +94,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
             {primaryApps.map((app) => (
               <NavRailButton
                 key={app.id}
-                icon={<app.icon size={18} />}
+                icon={<app.icon size={17} />}
                 label={app.label}
                 selected={activeApp.id === app.id}
                 title={app.label}
@@ -107,7 +107,7 @@ export function AppNavRail({ layout = "rail" }: AppNavRailProps) {
             ))}
           </div>
           <NavRailButton
-            icon={<CircleUserRound size={18} />}
+            icon={<CircleUserRound size={17} />}
             label="Profile"
             selected={activeApp.id === "profile"}
             title="Profile"

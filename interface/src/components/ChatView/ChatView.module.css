@@ -84,6 +84,12 @@
   padding-bottom: 140px;
   display: flex;
   flex-direction: column;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.messageAreaHidden {
+  opacity: 0;
 }
 
 .messageContent {

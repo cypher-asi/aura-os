@@ -52,6 +52,27 @@ async function apiJson(method, endpoint, body) {
   return text ? JSON.parse(text) : null;
 }
 
+async function ensureImportedAccessToken() {
+  const response = await fetch(`${apiBaseUrl}/api/auth/import-access-token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+
+  if (response.ok) {
+    logStep("access token imported", { apiBaseUrl });
+    return;
+  }
+
+  if ([403, 404, 405].includes(response.status)) {
+    logStep("access token import skipped", { status: response.status });
+    return;
+  }
+
+  const text = await response.text();
+  throw new Error(`POST /api/auth/import-access-token failed with ${response.status}: ${text}`);
+}
+
 async function storageJson(sessionId) {
   if (!storageUrl) return [];
   const response = await fetch(`${storageUrl}/api/sessions/${sessionId}/events`, {
@@ -224,6 +245,61 @@ async function resolveEvalOrg() {
   return { ...created, created: true };
 }
 
+function resolveAgentRuntimeConfig(scenario) {
+  const template = scenario.agentTemplate ?? {};
+  const adapterType =
+    process.env.AURA_EVAL_AGENT_ADAPTER_TYPE?.trim()
+    || template.adapterType
+    || "aura_harness";
+  const integrationProvider =
+    process.env.AURA_EVAL_AGENT_INTEGRATION_PROVIDER?.trim()
+    || template.integrationProvider
+    || "";
+
+  return {
+    adapterType,
+    environment:
+      process.env.AURA_EVAL_AGENT_ENVIRONMENT?.trim()
+      || template.environment
+      || (template.machineType === "remote" ? "swarm_microvm" : "local_host"),
+    authSource:
+      process.env.AURA_EVAL_AGENT_AUTH_SOURCE?.trim()
+      || template.authSource
+      || (adapterType === "aura_harness"
+        ? "aura_managed"
+        : integrationProvider
+          ? "org_integration"
+          : "local_cli_auth"),
+    integrationProvider,
+    integrationName:
+      process.env.AURA_EVAL_AGENT_INTEGRATION_NAME?.trim()
+      || template.integrationName
+      || "",
+    defaultModel:
+      process.env.AURA_EVAL_AGENT_DEFAULT_MODEL?.trim()
+      || template.defaultModel
+      || "",
+    apiKey:
+      process.env.AURA_EVAL_AGENT_INTEGRATION_API_KEY?.trim()
+      || "",
+  };
+}
+
+async function createEvalIntegration(orgId, runtimeConfig) {
+  if (runtimeConfig.authSource !== "org_integration" || !runtimeConfig.integrationProvider) return null;
+
+  const payload = {
+    name:
+      runtimeConfig.integrationName
+      || `${runtimeConfig.adapterType}-${runtimeConfig.integrationProvider}-eval`,
+    provider: runtimeConfig.integrationProvider,
+    default_model: runtimeConfig.defaultModel || null,
+    api_key: runtimeConfig.apiKey || null,
+  };
+
+  return apiJson("POST", `/api/orgs/${orgId}/integrations`, payload);
+}
+
 async function pollForLoopCompletion(projectId, timeoutMs, pollIntervalMs) {
   const deadline = Date.now() + timeoutMs;
   let latestTasks = [];
@@ -292,6 +368,13 @@ async function cleanupEntity(resource, id, endpoint) {
 async function cleanupEntities(ids) {
   const results = [];
   results.push(await cleanupEntity(
+    "integration",
+    ids.integrationId,
+    ids.orgId && ids.integrationId
+      ? `/api/orgs/${ids.orgId}/integrations/${ids.integrationId}`
+      : "",
+  ));
+  results.push(await cleanupEntity(
     "agent_instance",
     ids.agentInstanceId,
     ids.projectId && ids.agentInstanceId
@@ -329,8 +412,10 @@ async function runScenario(scenario) {
   let sessions = [];
   let richUsageSummary = null;
   let artifactChecks = [];
+  let integration = null;
 
   try {
+    await ensureImportedAccessToken();
     const files = await walkFixtureDir(path.join(fixturesDir, scenario.project.fixtureDir));
     logStep("fixture prepared", { scenarioId: scenario.id, fileCount: files.length });
 
@@ -338,12 +423,31 @@ async function runScenario(scenario) {
     logStep("org resolved", { orgId: org.org_id, created: org.created });
     operationLog.push({ step: "resolve_org", summary: org.created ? "Created org" : "Reused org" });
 
+    const runtimeConfig = resolveAgentRuntimeConfig(scenario);
+    integration = await createEvalIntegration(org.org_id, runtimeConfig);
+    if (integration) {
+      logStep("integration created", {
+        integrationId: integration.integration_id,
+        provider: integration.provider,
+      });
+      operationLog.push({
+        step: "create_integration",
+        summary: `Created org integration ${integration.integration_id}`,
+      });
+    }
+
     agent = await apiJson("POST", "/api/agents", {
+      org_id: org.org_id,
       name: scenario.agentTemplate.name,
       role: scenario.agentTemplate.role,
       personality: scenario.agentTemplate.personality,
       system_prompt: scenario.agentTemplate.systemPrompt,
       machine_type: process.env.AURA_EVAL_AGENT_MACHINE_TYPE ?? scenario.agentTemplate.machineType ?? "local",
+      adapter_type: runtimeConfig.adapterType,
+      environment: runtimeConfig.environment,
+      auth_source: runtimeConfig.authSource,
+      integration_id: runtimeConfig.authSource === "org_integration" ? (integration?.integration_id ?? null) : null,
+      default_model: runtimeConfig.defaultModel || null,
       skills: [],
       icon: null,
     });
@@ -482,6 +586,8 @@ async function runScenario(scenario) {
           projectId: project.project_id,
           agentId: agent.agent_id,
           agentInstanceId: agentInstance.agent_instance_id,
+          orgId: org.org_id,
+          integrationId: integration?.integration_id ?? null,
         }) };
 
     const payload = {

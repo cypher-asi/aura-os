@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text, Button } from "@cypher-asi/zui";
-import { Bot, CheckSquare, ChartNoAxesColumnIncreasing } from "lucide-react";
+import { Bot, CheckSquare, BarChart3 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PanelSearch } from "../../components/PanelSearch";
 import { FileExplorer } from "../../components/FileExplorer";
@@ -65,7 +65,7 @@ export function ProjectFilesView() {
               <Button variant="secondary" icon={<CheckSquare size={16} />} onClick={() => navigate(projectWorkRoute(project.project_id))}>
                 Open Execution
               </Button>
-              <Button variant="secondary" icon={<ChartNoAxesColumnIncreasing size={16} />} onClick={() => navigate(projectStatsRoute(project.project_id))}>
+              <Button variant="secondary" icon={<BarChart3 size={16} />} onClick={() => navigate(projectStatsRoute(project.project_id))}>
                 Open Stats
               </Button>
             </div>

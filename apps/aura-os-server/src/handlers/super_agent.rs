@@ -22,10 +22,7 @@ pub(crate) async fn setup_super_agent(
 ) -> ApiResult<Json<SetupResponse>> {
     let network = state.require_network_client()?;
 
-    let net_agents = network
-        .list_agents(&jwt)
-        .await
-        .map_err(map_network_error)?;
+    let net_agents = network.list_agents(&jwt).await.map_err(map_network_error)?;
 
     let (org_name, org_id) = match network.list_orgs(&jwt).await {
         Ok(orgs) => orgs
@@ -61,16 +58,21 @@ pub(crate) async fn setup_super_agent(
             };
             if let Ok(updated) = network.update_agent(&net_agent.id, &jwt, &update_req).await {
                 let agent = agent_from_net(&updated);
-                return Ok(Json(SetupResponse { agent, created: false }));
+                return Ok(Json(SetupResponse {
+                    agent,
+                    created: false,
+                }));
             }
         }
 
         let agent = agent_from_net(net_agent);
-        return Ok(Json(SetupResponse { agent, created: false }));
+        return Ok(Json(SetupResponse {
+            agent,
+            created: false,
+        }));
     }
 
-    let prompt =
-        aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
+    let prompt = aura_os_super_agent::prompt::super_agent_system_prompt(&org_name, &org_id);
 
     let net_req = aura_os_network::CreateAgentRequest {
         name: "CEO".to_string(),
@@ -80,12 +82,7 @@ pub(crate) async fn setup_super_agent(
                 .to_string(),
         ),
         system_prompt: Some(prompt),
-        skills: Some(vec![
-            "orchestration".into(),
-            "project-management".into(),
-            "fleet-management".into(),
-            "cost-analysis".into(),
-        ]),
+        skills: None,
         icon: None,
         harness: None,
         machine_type: Some("local".to_string()),
@@ -98,6 +95,17 @@ pub(crate) async fn setup_super_agent(
         .map_err(map_network_error)?;
 
     let agent = agent_from_net(&net_agent);
+
+    let default_skills = [
+        "orchestration",
+        "project-management",
+        "fleet-management",
+        "cost-analysis",
+    ];
+    let agent_id_str = agent.agent_id.to_string();
+    for skill in default_skills {
+        super::harness_proxy::install_skill_for_agent(&agent_id_str, skill).await;
+    }
 
     info!(agent_id = %agent.agent_id, "SuperAgent created");
     Ok(Json(SetupResponse {
@@ -161,6 +169,7 @@ fn agent_from_net(net: &aura_os_network::NetworkAgent) -> Agent {
 
     Agent {
         agent_id,
+        org_id: net.org_id.clone().and_then(|id| id.parse().ok()),
         user_id: net.user_id.clone(),
         name: net.name.clone(),
         role: net.role.clone().unwrap_or_default(),
@@ -172,6 +181,15 @@ fn agent_from_net(net: &aura_os_network::NetworkAgent) -> Agent {
             .machine_type
             .clone()
             .unwrap_or_else(|| "local".to_string()),
+        adapter_type: "aura_harness".to_string(),
+        environment: if net.machine_type.as_deref() == Some("remote") {
+            "swarm_microvm".to_string()
+        } else {
+            "local_host".to_string()
+        },
+        auth_source: "aura_managed".to_string(),
+        integration_id: None,
+        default_model: None,
         vm_id: net.vm_id.clone(),
         network_agent_id: net.id.parse().ok(),
         profile_id,

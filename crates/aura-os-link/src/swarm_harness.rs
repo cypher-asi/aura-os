@@ -248,9 +248,11 @@ impl HarnessLink for SwarmHarness {
             token: config.token,
             project_id: config.project_id,
             conversation_messages: config.conversation_messages,
-            aura_agent_id: config.aura_agent_id,
+            aura_agent_id: config.agent_id.clone(),
             aura_session_id: config.aura_session_id,
             aura_org_id: config.aura_org_id,
+            agent_id: config.agent_id,
+            provider_config: config.provider_config,
         })))?;
 
         Ok(HarnessSession {

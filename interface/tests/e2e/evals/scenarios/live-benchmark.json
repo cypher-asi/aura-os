@@ -21,7 +21,9 @@
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
-      "machineType": "local"
+      "machineType": "local",
+      "adapterType": "aura_harness",
+      "environment": "local_host"
     },
     "project": {
       "name": "Aura Hello World Eval",
@@ -71,7 +73,9 @@
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
-      "machineType": "local"
+      "machineType": "local",
+      "adapterType": "aura_harness",
+      "environment": "local_host"
     },
     "project": {
       "name": "Aura Node Server Eval",
@@ -121,7 +125,9 @@
       "role": "Engineer",
       "personality": "Methodical, careful, and benchmark-focused.",
       "systemPrompt": "You are the benchmark coding agent for Aura. Complete the project requirements, keep build and test commands passing, and leave the workspace in a working state.",
-      "machineType": "local"
+      "machineType": "local",
+      "adapterType": "aura_harness",
+      "environment": "local_host"
     },
     "project": {
       "name": "Aura Existing Server Patch Eval",

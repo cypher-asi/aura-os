@@ -128,6 +128,22 @@ describe("ChatInputBar", () => {
     expect(onModelChange).toHaveBeenCalledWith("claude-sonnet-4-6");
   });
 
+  it("shows a fixed codex model without opening a dropdown", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatInputBar
+        {...makeProps({
+          selectedModel: "codex",
+          adapterType: "codex",
+          availableModels: [{ id: "codex", label: "Codex", tier: "sonnet" }],
+        })}
+      />,
+    );
+
+    await user.click(screen.getByText("Codex"));
+    expect(screen.queryByText("Haiku 4.5")).not.toBeInTheDocument();
+  });
+
   it("renders attachment previews", () => {
     const attachment: AttachmentItem = {
       id: "a1",

@@ -37,7 +37,11 @@ body:has([role="dialog"][aria-modal="true"]) {
 }
 
 [role="dialog"][aria-modal="true"] {
+  --color-bg: #000000;
+  --color-surface: #000000;
   --color-elevated: #000000;
+  --color-backdrop: #000000;
+  background-color: #000000 !important;
 }
 
 @media (pointer: coarse), (max-width: 900px) {

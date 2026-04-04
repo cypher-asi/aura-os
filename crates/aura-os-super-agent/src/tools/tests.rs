@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::sync::Arc;
 
     use serde_json::json;
@@ -15,6 +16,12 @@ mod tests {
     use aura_os_tasks::TaskService;
 
     use crate::tools::{SuperAgentContext, SuperAgentTool, ToolRegistry};
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct SharedProjectToolManifestEntry {
+        name: String,
+    }
 
     fn build_test_ctx(store: Arc<RocksStore>) -> SuperAgentContext {
         let runtime_state: RuntimeAgentStateMap =
@@ -37,6 +44,7 @@ mod tests {
             org_service: Arc::new(OrgService::new(store.clone())),
             billing_client: Arc::new(BillingClient::new()),
             automaton_client: Arc::new(AutomatonClient::new("http://localhost:0".into())),
+            orbit_client: None,
             network_client: None,
             storage_client: None,
             store: store.clone(),
@@ -94,6 +102,29 @@ mod tests {
     }
 
     #[test]
+    fn shared_project_manifest_tools_exist_in_registry() {
+        let manifest: Vec<SharedProjectToolManifestEntry> = serde_json::from_str(include_str!(
+            "../../../../shared/project-control-plane-tools.json"
+        ))
+        .expect("shared project control-plane manifest should parse");
+
+        let registry = ToolRegistry::with_all_tools();
+        let registry_names: HashSet<String> = registry
+            .list_tools()
+            .into_iter()
+            .map(|tool| tool.name().to_string())
+            .collect();
+
+        for tool in manifest {
+            assert!(
+                registry_names.contains(&tool.name),
+                "shared project tool '{}' must exist in the harness registry",
+                tool.name
+            );
+        }
+    }
+
+    #[test]
     fn test_tool_definitions_format() {
         let registry = ToolRegistry::with_all_tools();
         let tools = registry.list_tools();
@@ -117,9 +148,11 @@ mod tests {
         let network_tools: &[&str] = &[
             "list_orgs", "create_org", "get_org", "update_org",
             "list_members", "update_member_role", "remove_member", "manage_invites",
-            "list_specs", "get_spec", "generate_specs", "generate_specs_summary",
-            "list_tasks", "create_task", "transition_task", "retry_task",
-            "run_task", "get_task_output", "extract_tasks", "list_tasks_by_spec",
+            "list_specs", "get_spec", "create_spec", "update_spec", "delete_spec",
+            "generate_specs", "generate_specs_summary",
+            "list_tasks", "list_tasks_by_spec", "get_task", "create_task", "update_task", "delete_task",
+            "transition_task", "retry_task",
+            "run_task", "get_task_output", "extract_tasks",
             "get_leaderboard", "get_usage_stats", "list_sessions", "list_log_entries",
             "get_transactions", "get_billing_account", "purchase_credits",
             "list_feed", "create_post", "get_post", "add_comment", "delete_comment",
@@ -185,6 +218,7 @@ mod tests {
         let agent = aura_os_core::Agent {
             agent_id: aid,
             user_id: "u1".into(),
+            org_id: None,
             name: "TestAgent".into(),
             role: "developer".into(),
             personality: String::new(),
@@ -192,6 +226,11 @@ mod tests {
             skills: vec![],
             icon: None,
             machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
             vm_id: None,
             network_agent_id: None,
             profile_id: None,
@@ -221,6 +260,7 @@ mod tests {
         let agent = aura_os_core::Agent {
             agent_id: aid,
             user_id: "u1".into(),
+            org_id: None,
             name: "MyAgent".into(),
             role: "dev".into(),
             personality: String::new(),
@@ -228,6 +268,11 @@ mod tests {
             skills: vec![],
             icon: None,
             machine_type: "local".into(),
+            adapter_type: "aura_harness".into(),
+            environment: "local_host".into(),
+            auth_source: "aura_managed".into(),
+            integration_id: None,
+            default_model: None,
             vm_id: None,
             network_agent_id: None,
             profile_id: None,
