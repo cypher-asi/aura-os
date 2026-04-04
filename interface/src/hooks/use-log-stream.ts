@@ -72,6 +72,7 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.ProcessRunCompleted]: "Process",
   [EventType.ProcessRunFailed]: "Process",
   [EventType.ProcessNodeExecuted]: "Process",
+  [EventType.ProcessNodeOutputDelta]: "Process",
   [EventType.LogLine]: "Log",
   [EventType.NetworkEvent]: "Network",
   [EventType.Error]: "Error",
