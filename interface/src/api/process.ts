@@ -89,6 +89,8 @@ export const processApi = {
     apiFetch<ProcessRun[]>(`/api/processes/${processId}/runs`),
   getRun: (processId: string, runId: string) =>
     apiFetch<ProcessRun>(`/api/processes/${processId}/runs/${runId}`),
+  cancelRun: (processId: string, runId: string) =>
+    apiFetch<void>(`/api/processes/${processId}/runs/${runId}/cancel`, { method: "POST" }),
   listRunEvents: (processId: string, runId: string) =>
     apiFetch<ProcessEvent[]>(`/api/processes/${processId}/runs/${runId}/events`),
 

@@ -77,16 +77,15 @@ impl ProcessExecutor {
             return Err(ProcessError::RunNotActive);
         }
 
-        run.status = ProcessRunStatus::Failed;
-        run.error = Some("Cancelled by user".to_string());
+        run.status = ProcessRunStatus::Cancelled;
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
 
         let _ = self.event_broadcast.send(serde_json::json!({
-            "type": "process_run_failed",
+            "type": "process_run_completed",
             "process_id": process_id.to_string(),
             "run_id": run_id.to_string(),
-            "error": "Cancelled by user",
+            "status": "cancelled",
         }));
 
         info!(process_id = %process_id, run_id = %run_id, "Process run cancelled");

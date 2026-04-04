@@ -521,6 +521,34 @@ pub(crate) async fn get_run(
     Ok(Json(run))
 }
 
+pub(crate) async fn cancel_run(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+    Path((id, run_id_str)): Path<(String, String)>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let process_id: ProcessId = id
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid process ID"))?;
+    let run_id: ProcessRunId = run_id_str
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid run ID"))?;
+
+    state
+        .super_agent_service
+        .process_executor
+        .cancel_run(&process_id, &run_id)
+        .map_err(|e| {
+            if matches!(e, aura_os_process::ProcessError::RunNotActive) {
+                ApiError::conflict(e.to_string())
+            } else {
+                ApiError::internal(e.to_string())
+            }
+        })?;
+
+    Ok(Json(serde_json::json!({ "status": "cancelled" })))
+}
+
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------

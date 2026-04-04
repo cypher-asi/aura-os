@@ -479,6 +479,10 @@ fn process_routes() -> Router<AppState> {
             get(process::get_run),
         )
         .route(
+            "/api/processes/:id/runs/:run_id/cancel",
+            post(process::cancel_run),
+        )
+        .route(
             "/api/processes/:id/runs/:run_id/events",
             get(process::list_run_events),
         )

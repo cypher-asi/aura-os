@@ -18,7 +18,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "./ProcessCanvas.css";
-import { Play, Pause, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2 } from "lucide-react";
+import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2 } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../types";
@@ -37,7 +37,7 @@ interface ProcessCanvasProps {
   processConnections: ProcessNodeConnection[];
   onTrigger?: () => void;
   onToggle?: () => void;
-  onDelete?: () => void;
+  onStop?: () => void;
   isEnabled?: boolean;
 }
 
@@ -152,7 +152,7 @@ export function ProcessCanvas(props: ProcessCanvasProps) {
   );
 }
 
-function ProcessCanvasInner({ processId, processNodes, processConnections, onTrigger, onToggle, onDelete, isEnabled }: ProcessCanvasProps) {
+function ProcessCanvasInner({ processId, processNodes, processConnections, onTrigger, onToggle, onStop, isEnabled }: ProcessCanvasProps) {
   const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
@@ -511,7 +511,7 @@ function ProcessCanvasInner({ processId, processNodes, processConnections, onTri
             title={isEnabled ? "Pause" : "Resume"}
             onClick={onToggle}
           />
-          <Button variant="ghost" size="sm" iconOnly icon={<Trash2 size={14} />} title="Delete" onClick={onDelete} />
+          <Button variant="ghost" size="sm" iconOnly icon={<Square size={14} />} title="Stop" onClick={onStop} disabled={!isRunActive} />
         </div>
       )}
 

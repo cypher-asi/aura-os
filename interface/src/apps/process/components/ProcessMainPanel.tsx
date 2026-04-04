@@ -20,6 +20,7 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   const processes = useProcessStore((s) => s.processes);
   const nodes = useProcessStore((s) => s.nodes);
   const connections = useProcessStore((s) => s.connections);
+  const runs = useProcessStore((s) => s.runs);
   const updateProcess = useProcessStore((s) => s.updateProcess);
   const removeProcess = useProcessStore((s) => s.removeProcess);
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
@@ -93,6 +94,19 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
     }
   }, [process, removeProcess, navigate]);
 
+  const handleStop = useCallback(async () => {
+    if (!process || !processId) return;
+    const processRuns = runs[processId] ?? [];
+    const activeRun = processRuns.find((r) => r.status === "running" || r.status === "pending");
+    if (!activeRun) return;
+    try {
+      await processApi.cancelRun(process.process_id, activeRun.run_id);
+      fetchRuns(process.process_id);
+    } catch (e) {
+      console.error("Failed to stop process run:", e);
+    }
+  }, [process, processId, runs, fetchRuns]);
+
   if (!processId || !process) {
     return (
       <ResponsiveMainLane>
@@ -117,7 +131,7 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
           processConnections={processConnections}
           onTrigger={handleTrigger}
           onToggle={handleToggle}
-          onDelete={handleDelete}
+          onStop={handleStop}
           isEnabled={process.enabled}
         />
         {children}
