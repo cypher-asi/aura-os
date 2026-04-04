@@ -1,5 +1,5 @@
 import { Button, Text } from "@cypher-asi/zui";
-import { Bot, CheckSquare, ChartNoAxesColumnIncreasing, MessageSquare } from "lucide-react";
+import { Bot, CheckSquare, BarChart3, MessageSquare } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -91,7 +91,7 @@ export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
             </Button>
             <Button
               variant="secondary"
-              icon={<ChartNoAxesColumnIncreasing size={16} />}
+              icon={<BarChart3 size={16} />}
               onClick={() => navigate(projectStatsRoute(project.project_id))}
               className={styles.actionButtonStart}
             >

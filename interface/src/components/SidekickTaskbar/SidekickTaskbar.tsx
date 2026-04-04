@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import type { MenuItem } from "@cypher-asi/zui";
-import { Archive, Info, File, Check, Logs, ChartNoAxesColumnIncreasing, MonitorCog, FolderClosed } from "lucide-react";
+import { Archive, Info, File, Check, ScrollText, BarChart3, Monitor, FolderClosed } from "lucide-react";
 import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useProjectContext } from "../../stores/project-action-store";
@@ -12,9 +12,9 @@ import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
 const TAB_ICONS: TabItem[] = [
   { id: "specs", icon: <File size={16} />, title: "Specs" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
-  { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
-  { id: "log", icon: <Logs size={16} />, title: "Log" },
-  { id: "sessions", icon: <MonitorCog size={16} />, title: "Sessions" },
+  { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
+  { id: "log", icon: <ScrollText size={16} />, title: "Log" },
+  { id: "sessions", icon: <Monitor size={16} />, title: "Sessions" },
   { id: "files", icon: <FolderClosed size={16} />, title: "Files" },
 ];
 

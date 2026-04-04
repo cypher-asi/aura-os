@@ -1,5 +1,5 @@
 import type { MenuItem } from "@cypher-asi/zui";
-import { Cpu, History, Activity, ChartNoAxesColumnIncreasing, Logs, Settings, Link2, Pencil, Trash2 } from "lucide-react";
+import { Cpu, History, Activity, BarChart3, ScrollText, Settings, Link2, Pencil, Trash2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useProcessSidekickStore, type ProcessSidekickTab, type NodeSidekickTab } from "../stores/process-sidekick-store";
 import { SidekickTabBar, type TabItem } from "../../../components/SidekickTabBar";
@@ -8,8 +8,8 @@ const PROCESS_TABS: TabItem[] = [
   { id: "process", icon: <Cpu size={16} />, title: "Process" },
   { id: "runs", icon: <History size={16} />, title: "Runs" },
   { id: "events", icon: <Activity size={16} />, title: "Events" },
-  { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
-  { id: "log", icon: <Logs size={16} />, title: "Log" },
+  { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
+  { id: "log", icon: <ScrollText size={16} />, title: "Log" },
 ];
 
 const NODE_TABS: TabItem[] = [

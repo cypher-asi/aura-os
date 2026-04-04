@@ -7,8 +7,8 @@ import {
   FolderOpen,
   Check,
   Cpu,
-  Logs,
-  ChartNoAxesColumnIncreasing,
+  ScrollText,
+  BarChart3,
   Database,
   Pencil,
   Trash2,
@@ -27,8 +27,8 @@ const TAB_ICONS: TabItem[] = [
   { id: "projects", icon: <FolderOpen size={16} />, title: "Projects" },
   { id: "tasks", icon: <Check size={16} />, title: "Tasks" },
   { id: "processes", icon: <Cpu size={16} />, title: "Processes" },
-  { id: "logs", icon: <Logs size={16} />, title: "Logs" },
-  { id: "stats", icon: <ChartNoAxesColumnIncreasing size={16} />, title: "Stats" },
+  { id: "logs", icon: <ScrollText size={16} />, title: "Logs" },
+  { id: "stats", icon: <BarChart3 size={16} />, title: "Stats" },
 ];
 
 export function AgentSidekickTaskbar() {
