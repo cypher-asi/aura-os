@@ -123,27 +123,6 @@
   pointer-events: auto;
 }
 
-.runtimeWaitBanner {
-  position: absolute;
-  bottom: 84px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: min(680px, calc(100% - 32px));
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg, #111) 92%, white 8%);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-}
-
-.runtimeWaitIcon {
-  flex-shrink: 0;
-  animation: spin 1s linear infinite;
-}
-
 /* Input area — floats over messages with fade-to-dark gradient */
 .inputWrapper {
   position: absolute;
@@ -190,15 +169,6 @@
   max-width: 680px;
   margin-left: auto;
   margin-right: auto;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .dropZoneActive {
