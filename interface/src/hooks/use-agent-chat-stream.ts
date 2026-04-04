@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
+import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
 import type { Spec, Task } from "../types";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
@@ -69,7 +70,8 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const userMsg: DisplaySessionEvent = {
         id: `temp-${Date.now()}`,
         role: "user",
-        content: trimmed || "",
+        content: trimmed || buildAttachmentLabel(attachments),
+        contentBlocks: buildContentBlocks(trimmed, attachments),
       };
 
       core.setEvents((prev) => [...prev, userMsg]);
