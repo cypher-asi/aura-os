@@ -426,11 +426,17 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.ProcessRunCompleted; content: {
       process_id: string;
       run_id: string;
+      total_input_tokens?: number;
+      total_output_tokens?: number;
+      cost_usd?: number;
     } }
   | { type: EventType.ProcessRunFailed; content: {
       process_id: string;
       run_id: string;
       error?: string;
+      total_input_tokens?: number;
+      total_output_tokens?: number;
+      cost_usd?: number;
     } }
   | { type: EventType.ProcessNodeExecuted; content: {
       process_id: string;
@@ -438,6 +444,9 @@ export type AuraEvent = AuraEventBase & (
       node_id: string;
       node_type: string;
       status: string;
+      input_tokens?: number;
+      output_tokens?: number;
+      model?: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────

@@ -17,6 +17,8 @@ interface ProcessSidekickState {
   nodeEditRequested: boolean;
   /** Live execution status per node (nodeId → status) during a run */
   nodeStatuses: Record<string, NodeRunStatus>;
+  /** Currently executing node for the active run (from WS events) */
+  liveRunNodeId: string | null;
 
   setActiveTab: (tab: ProcessSidekickTab) => void;
   setActiveNodeTab: (tab: NodeSidekickTab) => void;
@@ -31,6 +33,7 @@ interface ProcessSidekickState {
   clearNodeEditRequested: () => void;
   setNodeStatus: (nodeId: string, status: NodeRunStatus) => void;
   clearNodeStatuses: () => void;
+  setLiveRunNodeId: (nodeId: string | null) => void;
 }
 
 export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get) => ({
@@ -42,6 +45,7 @@ export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get)
   showDeleteConfirm: false,
   nodeEditRequested: false,
   nodeStatuses: {},
+  liveRunNodeId: null,
 
   setActiveTab: (tab) => set({ activeTab: tab, previewRun: null }),
   setActiveNodeTab: (tab) => set({ activeNodeTab: tab }),
@@ -62,5 +66,6 @@ export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get)
   clearNodeEditRequested: () => set({ nodeEditRequested: false }),
   setNodeStatus: (nodeId, status) =>
     set((s) => ({ nodeStatuses: { ...s.nodeStatuses, [nodeId]: status } })),
-  clearNodeStatuses: () => set({ nodeStatuses: {} }),
+  clearNodeStatuses: () => set({ nodeStatuses: {}, liveRunNodeId: null }),
+  setLiveRunNodeId: (nodeId) => set({ liveRunNodeId: nodeId }),
 }));

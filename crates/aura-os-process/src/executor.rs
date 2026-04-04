@@ -14,7 +14,7 @@ use aura_os_core::{
     ProcessRunStatus, ProcessRunTrigger, ProcessId,
 };
 use aura_os_link::{
-    HarnessInbound, HarnessLink, HarnessOutbound, SessionConfig, UserMessage,
+    HarnessInbound, HarnessLink, HarnessOutbound, SessionConfig, SessionUsage, UserMessage,
 };
 use aura_os_store::RocksStore;
 
@@ -23,6 +23,19 @@ use crate::process_store::ProcessStore;
 
 const DEFAULT_MAX_TURNS: u32 = 25;
 const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 300; // 5 minutes
+
+#[derive(Debug, Clone, Default)]
+struct NodeTokenUsage {
+    input_tokens: u64,
+    output_tokens: u64,
+    model: Option<String>,
+}
+
+fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
+    let input_cost = (input_tokens as f64) * 3.0 / 1_000_000.0;
+    let output_cost = (output_tokens as f64) * 15.0 / 1_000_000.0;
+    input_cost + output_cost
+}
 
 const PROCESS_EXECUTION_PREAMBLE: &str = "\
 You are executing a step in an automated workflow process. \
@@ -121,6 +134,9 @@ impl ProcessExecutor {
             error: None,
             started_at: now,
             completed_at: None,
+            total_input_tokens: None,
+            total_output_tokens: None,
+            cost_usd: None,
         };
         self.store.save_run(&run)?;
 
@@ -249,6 +265,9 @@ async fn execute_run(
     let mut node_outputs: HashMap<ProcessNodeId, String> = HashMap::new();
     // condition node_id → whether it evaluated true
     let mut condition_results: HashMap<ProcessNodeId, bool> = HashMap::new();
+    // aggregate token usage across the run
+    let mut run_input_tokens: u64 = 0;
+    let mut run_output_tokens: u64 = 0;
 
     for &node_id in &sorted {
         let node = *nodes_by_id
@@ -282,7 +301,7 @@ async fn execute_run(
 
         // Nodes with upstream dependencies but no valid completed parent → skip
         if !incoming.is_empty() && !has_valid_upstream {
-            record_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", None, None);
+            record_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", None, None, None);
             continue;
         }
 
@@ -321,15 +340,15 @@ async fn execute_run(
         }));
 
         // ── execute node ───────────────────────────────────────────────
-        let result = match node.node_type {
-            ProcessNodeType::Ignition => execute_ignition(node),
+        let result: Result<(String, Option<NodeTokenUsage>), ProcessError> = match node.node_type {
+            ProcessNodeType::Ignition => execute_ignition(node).map(|s| (s, None)),
             ProcessNodeType::Action => {
                 execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service).await
             }
             ProcessNodeType::Condition => {
                 execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service).await
             }
-            ProcessNodeType::Delay => execute_delay(node).await,
+            ProcessNodeType::Delay => execute_delay(node).await.map(|s| (s, None)),
             ProcessNodeType::Artifact => {
                 execute_artifact(
                     node,
@@ -340,16 +359,22 @@ async fn execute_run(
                     store,
                 )
                 .await
+                .map(|s| (s, None))
             }
-            ProcessNodeType::Merge => Ok(upstream_context.clone()),
+            ProcessNodeType::Merge => Ok((upstream_context.clone(), None)),
         };
 
         let node_completed_at = Utc::now();
 
         match result {
-            Ok(output) => {
+            Ok((output, token_usage)) => {
                 if node.node_type == ProcessNodeType::Condition {
                     condition_results.insert(node_id, parse_condition_result(&output));
+                }
+
+                if let Some(ref usage) = token_usage {
+                    run_input_tokens += usage.input_tokens;
+                    run_output_tokens += usage.output_tokens;
                 }
 
                 let event_output = match node.node_type {
@@ -375,6 +400,7 @@ async fn execute_run(
                     &event_output,
                     Some(node_started_at),
                     Some(node_completed_at),
+                    token_usage.as_ref(),
                 );
                 node_outputs.insert(node_id, output);
             }
@@ -390,11 +416,15 @@ async fn execute_run(
                     &err_msg,
                     Some(node_started_at),
                     Some(node_completed_at),
+                    None,
                 );
 
                 current_run.status = ProcessRunStatus::Failed;
                 current_run.error = Some(err_msg);
                 current_run.completed_at = Some(Utc::now());
+                current_run.total_input_tokens = Some(run_input_tokens);
+                current_run.total_output_tokens = Some(run_output_tokens);
+                current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
                 store.save_run(&current_run)?;
 
                 let _ = broadcast.send(serde_json::json!({
@@ -402,6 +432,9 @@ async fn execute_run(
                     "process_id": run.process_id.to_string(),
                     "run_id": run.run_id.to_string(),
                     "error": current_run.error,
+                    "total_input_tokens": run_input_tokens,
+                    "total_output_tokens": run_output_tokens,
+                    "cost_usd": current_run.cost_usd,
                 }));
 
                 return Err(e);
@@ -411,12 +444,18 @@ async fn execute_run(
 
     current_run.status = ProcessRunStatus::Completed;
     current_run.completed_at = Some(Utc::now());
+    current_run.total_input_tokens = Some(run_input_tokens);
+    current_run.total_output_tokens = Some(run_output_tokens);
+    current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
     store.save_run(&current_run)?;
 
     let _ = broadcast.send(serde_json::json!({
         "type": "process_run_completed",
         "process_id": run.process_id.to_string(),
         "run_id": run.run_id.to_string(),
+        "total_input_tokens": run_input_tokens,
+        "total_output_tokens": run_output_tokens,
+        "cost_usd": current_run.cost_usd,
     }));
 
     Ok(())
@@ -511,7 +550,7 @@ async fn execute_action(
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
-) -> Result<String, ProcessError> {
+) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let timeout_secs = node
         .config
         .get("timeout_seconds")
@@ -542,13 +581,19 @@ async fn execute_action(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
 
-    let result = collect_harness_response(&session.events_tx, timeout_secs).await;
+    let (text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
     }
 
-    result
+    let token_usage = usage.map(|u| NodeTokenUsage {
+        input_tokens: u.cumulative_input_tokens,
+        output_tokens: u.cumulative_output_tokens,
+        model: Some(u.model),
+    });
+
+    Ok((text, token_usage))
 }
 
 async fn execute_condition(
@@ -557,7 +602,7 @@ async fn execute_condition(
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
-) -> Result<String, ProcessError> {
+) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let cfg = &node.config;
     let condition_expr = cfg
         .get("condition_expression")
@@ -590,13 +635,19 @@ async fn execute_condition(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send condition message: {e}")))?;
 
-    let result = collect_harness_response(&session.events_tx, 60).await;
+    let (text, usage) = collect_harness_response(&session.events_tx, 60).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close condition session");
     }
 
-    result
+    let token_usage = usage.map(|u| NodeTokenUsage {
+        input_tokens: u.cumulative_input_tokens,
+        output_tokens: u.cumulative_output_tokens,
+        model: Some(u.model),
+    });
+
+    Ok((text, token_usage))
 }
 
 async fn execute_delay(node: &ProcessNode) -> Result<String, ProcessError> {
@@ -704,9 +755,10 @@ async fn execute_artifact(
 async fn collect_harness_response(
     events_tx: &broadcast::Sender<HarnessOutbound>,
     timeout_secs: u64,
-) -> Result<String, ProcessError> {
+) -> Result<(String, Option<SessionUsage>), ProcessError> {
     let mut rx = events_tx.subscribe();
     let mut output = String::new();
+    let mut usage: Option<SessionUsage> = None;
     let deadline = Duration::from_secs(timeout_secs);
 
     let collect = async {
@@ -715,7 +767,10 @@ async fn collect_harness_response(
                 Ok(HarnessOutbound::TextDelta(delta)) => {
                     output.push_str(&delta.text);
                 }
-                Ok(HarnessOutbound::AssistantMessageEnd(_)) => break,
+                Ok(HarnessOutbound::AssistantMessageEnd(end)) => {
+                    usage = Some(end.usage);
+                    break;
+                }
                 Ok(HarnessOutbound::Error(err)) => {
                     return Err(ProcessError::Execution(format!(
                         "Harness error ({}): {}",
@@ -745,7 +800,7 @@ async fn collect_harness_response(
     };
 
     match tokio::time::timeout(deadline, collect).await {
-        Ok(Ok(())) => Ok(output),
+        Ok(Ok(())) => Ok((output, usage)),
         Ok(Err(e)) => Err(e),
         Err(_) => {
             if output.is_empty() {
@@ -758,7 +813,7 @@ async fn collect_harness_response(
                     timeout_secs,
                     "Harness timed out; returning partial output"
                 );
-                Ok(output)
+                Ok((output, usage))
             }
         }
     }
@@ -814,6 +869,7 @@ fn record_event(
     output: &str,
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
+    token_usage: Option<&NodeTokenUsage>,
 ) {
     let now = Utc::now();
     let event = ProcessEvent {
@@ -826,18 +882,29 @@ fn record_event(
         output: output.to_string(),
         started_at: started_at.unwrap_or(now),
         completed_at: Some(completed_at.unwrap_or(now)),
+        input_tokens: token_usage.map(|u| u.input_tokens),
+        output_tokens: token_usage.map(|u| u.output_tokens),
+        model: token_usage.and_then(|u| u.model.clone()),
     };
 
     if let Err(e) = store.save_event(&event) {
         warn!(event_id = %event.event_id, error = %e, "Failed to save process event");
     }
 
-    let _ = broadcast.send(serde_json::json!({
+    let mut payload = serde_json::json!({
         "type": "process_node_executed",
         "process_id": run.process_id.to_string(),
         "run_id": run.run_id.to_string(),
         "node_id": node.node_id.to_string(),
         "node_type": format!("{:?}", node.node_type),
         "status": format!("{:?}", status),
-    }));
+    });
+    if let Some(usage) = token_usage {
+        payload["input_tokens"] = serde_json::json!(usage.input_tokens);
+        payload["output_tokens"] = serde_json::json!(usage.output_tokens);
+        if let Some(ref model) = usage.model {
+            payload["model"] = serde_json::json!(model);
+        }
+    }
+    let _ = broadcast.send(payload);
 }

@@ -466,6 +466,9 @@ export interface ProcessRun {
   error: string | null;
   started_at: string;
   completed_at: string | null;
+  total_input_tokens?: number;
+  total_output_tokens?: number;
+  cost_usd?: number;
 }
 
 export interface ProcessEvent {
@@ -478,6 +481,9 @@ export interface ProcessEvent {
   output: string;
   started_at: string;
   completed_at: string | null;
+  input_tokens?: number;
+  output_tokens?: number;
+  model?: string;
 }
 
 export interface ProcessArtifact {

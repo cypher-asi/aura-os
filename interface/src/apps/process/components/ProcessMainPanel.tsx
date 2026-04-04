@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Cpu } from "lucide-react";
 import { PageEmptyState } from "@cypher-asi/zui";
 import { ResponsiveMainLane } from "../../../components/ResponsiveMainLane";
-import { useProcessStore, LAST_PROCESS_ID_KEY } from "../stores/process-store";
+import { useProcessStore } from "../stores/process-store";
 import { useProcessSidekickStore, type NodeRunStatus } from "../stores/process-sidekick-store";
 import { useEventStore } from "../../../stores/event-store";
 import { EventType } from "../../../types/aura-events";
@@ -16,17 +16,16 @@ const EMPTY_CONNECTIONS: never[] = [];
 
 export function ProcessMainPanel({ children }: { children?: ReactNode }) {
   const { processId } = useParams<{ processId: string }>();
-  const navigate = useNavigate();
   const processes = useProcessStore((s) => s.processes);
   const nodes = useProcessStore((s) => s.nodes);
   const connections = useProcessStore((s) => s.connections);
   const runs = useProcessStore((s) => s.runs);
   const updateProcess = useProcessStore((s) => s.updateProcess);
-  const removeProcess = useProcessStore((s) => s.removeProcess);
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
 
   const setNodeStatus = useProcessSidekickStore((s) => s.setNodeStatus);
   const clearNodeStatuses = useProcessSidekickStore((s) => s.clearNodeStatuses);
+  const setLiveRunNodeId = useProcessSidekickStore((s) => s.setLiveRunNodeId);
 
   const process = processes.find((p) => p.process_id === processId);
   const processNodes = useMemo(() => (processId ? nodes[processId] ?? EMPTY_NODES : EMPTY_NODES), [processId, nodes]);
@@ -43,20 +42,33 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
           : status.includes("failed") ? "failed"
           : status.includes("skipped") ? "skipped"
           : undefined;
-        if (mapped) setNodeStatus(c.node_id, mapped);
+        if (mapped) {
+          setNodeStatus(c.node_id, mapped);
+          if (mapped === "running") {
+            setLiveRunNodeId(c.node_id);
+          } else {
+            setLiveRunNodeId(null);
+          }
+        }
       }
     });
     const unsub2 = useEventStore.getState().subscribe(EventType.ProcessRunStarted, (event) => {
       if (event.content.process_id === processId) clearNodeStatuses();
     });
     const unsub3 = useEventStore.getState().subscribe(EventType.ProcessRunCompleted, (event) => {
-      if (event.content.process_id === processId && processId) fetchRuns(processId);
+      if (event.content.process_id === processId && processId) {
+        setLiveRunNodeId(null);
+        fetchRuns(processId);
+      }
     });
     const unsub4 = useEventStore.getState().subscribe(EventType.ProcessRunFailed, (event) => {
-      if (event.content.process_id === processId && processId) fetchRuns(processId);
+      if (event.content.process_id === processId && processId) {
+        setLiveRunNodeId(null);
+        fetchRuns(processId);
+      }
     });
     return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
-  }, [processId, setNodeStatus, clearNodeStatuses, fetchRuns]);
+  }, [processId, setNodeStatus, clearNodeStatuses, setLiveRunNodeId, fetchRuns]);
 
   const handleToggle = useCallback(async () => {
     if (!process) return;
@@ -79,20 +91,6 @@ export function ProcessMainPanel({ children }: { children?: ReactNode }) {
       console.error("Failed to trigger process:", e);
     }
   }, [process, fetchRuns]);
-
-  const handleDelete = useCallback(async () => {
-    if (!process) return;
-    try {
-      await processApi.deleteProcess(process.process_id);
-      removeProcess(process.process_id);
-      if (localStorage.getItem(LAST_PROCESS_ID_KEY) === process.process_id) {
-        localStorage.removeItem(LAST_PROCESS_ID_KEY);
-      }
-      navigate("/process");
-    } catch (e) {
-      console.error("Failed to delete process:", e);
-    }
-  }, [process, removeProcess, navigate]);
 
   const handleStop = useCallback(async () => {
     if (!process || !processId) return;
