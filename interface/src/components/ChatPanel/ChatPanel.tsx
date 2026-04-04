@@ -12,7 +12,9 @@ import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queu
 import type { QueuedMessage } from "../../stores/message-queue-store";
 import type { ChatAttachment } from "../../api/streams";
 import type { SlashCommand } from "../../constants/commands";
+import { isGenerationCommand } from "../../constants/commands";
 import type { Project } from "../../types";
+import type { GenerationMode } from "../../constants/models";
 import { loadPersistedModel, persistModel } from "../../constants/models";
 import styles from "../ChatView/ChatView.module.css";
 
@@ -25,6 +27,7 @@ export interface ChatPanelProps {
     attachments?: ChatAttachment[],
     commands?: string[],
     projectId?: string,
+    generationMode?: GenerationMode,
   ) => void;
   onStop: () => void;
   agentName?: string;
@@ -145,10 +148,11 @@ export function ChatPanel({
   }, []);
 
   const handleSend = useCallback(
-    (content: string, action?: string, atts?: AttachmentItem[]) => {
+    (content: string, action?: string, atts?: AttachmentItem[], genMode?: GenerationMode) => {
       setInput("");
       const apiAttachments = buildApiAttachments(atts);
-      const commandIds = commands.length > 0 ? commands.map((c) => c.id) : undefined;
+      const commandIds = commands.length > 0 ? commands.map((c) => c.id).filter((id) => !isGenerationCommand(id)) : undefined;
+      const effectiveGenMode = genMode ?? (commands.some((c) => c.id === "generate_image") ? "image" as GenerationMode : commands.some((c) => c.id === "generate_3d") ? "3d" as GenerationMode : undefined);
       setAttachments([]);
       setCommands([]);
 
@@ -162,7 +166,7 @@ export function ChatPanel({
         scrollToBottom();
       } else {
         pendingScrollToTopRef.current = true;
-        onSend(content, action ?? null, selectedModel, apiAttachments, commandIds, selectedProjectId);
+        onSend(content, action ?? null, selectedModel, apiAttachments, commandIds, selectedProjectId, effectiveGenMode);
       }
     },
     [buildApiAttachments, commands, isStreaming, onSend, scrollToBottom, selectedModel, selectedProjectId, streamKey],

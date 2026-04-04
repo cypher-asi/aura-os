@@ -116,6 +116,13 @@ export enum EventType {
   ProcessNodeExecuted   = "process_node_executed",
   ProcessNodeOutputDelta = "process_node_output_delta",
 
+  // Generation (image / 3D)
+  GenerationStart       = "generation_start",
+  GenerationProgress    = "generation_progress",
+  GenerationPartialImage = "generation_partial_image",
+  GenerationCompleted   = "generation_completed",
+  GenerationError       = "generation_error",
+
   // Other
   LogLine               = "log_line",
   NetworkEvent          = "network_event",
@@ -460,6 +467,31 @@ export type AuraEvent = AuraEventBase & (
       name?: string;
       result?: string;
       is_error?: boolean;
+    } }
+
+  // ── Generation (image / 3D) ─────────────────────────────────
+  | { type: EventType.GenerationStart; content: {
+      mode: "image" | "3d";
+      ts?: string;
+    } }
+  | { type: EventType.GenerationProgress; content: {
+      percent: number;
+      message?: string;
+    } }
+  | { type: EventType.GenerationPartialImage; content: {
+      data: string;
+    } }
+  | { type: EventType.GenerationCompleted; content: {
+      mode: "image" | "3d";
+      imageUrl?: string;
+      originalUrl?: string;
+      glbUrl?: string;
+      polyCount?: number;
+      meta?: Record<string, unknown>;
+    } }
+  | { type: EventType.GenerationError; content: {
+      code?: string;
+      message: string;
     } }
 
   // ── Other ──────────────────────────────────────────────────

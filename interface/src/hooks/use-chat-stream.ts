@@ -6,6 +6,8 @@ import type { StreamEventHandler } from "../api/streams";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
 import type { ChatAttachment } from "../api/streams";
+import { generateImageStream, generate3dStream } from "../api/streams";
+import type { GenerationMode } from "../constants/models";
 
 import {
   useStreamCore,
@@ -383,6 +385,28 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
         break;
       case EventType.TokenUsage:
         break;
+      case EventType.GenerationStart:
+        setProgressText(event.content.mode === "image" ? "Generating image..." : "Generating 3D model...");
+        break;
+      case EventType.GenerationProgress:
+        setProgressText(event.content.message || `${event.content.percent}%`);
+        break;
+      case EventType.GenerationPartialImage:
+        break;
+      case EventType.GenerationCompleted: {
+        const gc = event.content;
+        const toolName = gc.mode === "3d" ? "generate_3d_model" : "generate_image";
+        const toolId = `gen-${Date.now()}`;
+        coreHandleToolCall(refs, setters, { id: toolId, name: toolName, input: {} });
+        coreHandleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
+        resetStreamBuffers(refs, setters);
+        setters.setIsStreaming(false);
+        sidekickRef.current.setStreamingAgentInstanceId(null);
+        break;
+      }
+      case EventType.GenerationError:
+        handleStreamError(refs, setters, event.content.message);
+        break;
       case EventType.Error:
         handleStreamError(refs, setters, event.content.message);
         break;
@@ -425,7 +449,7 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
   }, [projectId, agentInstanceId, core.key]);
 
   const sendMessage = useCallback(
-    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[]) => {
+    async (content: string, action: string | null = null, selectedModel?: string | null, attachments?: ChatAttachment[], commands?: string[], _projectIdOverride?: string, generationMode?: GenerationMode) => {
       if (!projectId || !agentInstanceId || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
       if (!trimmed && !action && !(attachments && attachments.length > 0)) return;
@@ -459,7 +483,16 @@ export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptio
       });
 
       try {
-        await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, selectedModel, attachments, handler, controller.signal, commands);
+        if (generationMode === "image") {
+          await generateImageStream(trimmed, selectedModel, attachments, handler, controller.signal, projectId);
+        } else if (generationMode === "3d") {
+          const imgUrl = attachments?.find((a) => a.type === "image")
+            ? `data:${attachments[0].media_type};base64,${attachments[0].data}`
+            : trimmed;
+          await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
+        } else {
+          await api.sendEventStream(projectId, agentInstanceId, userMsg.content, action, selectedModel, attachments, handler, controller.signal, commands);
+        }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));

@@ -128,6 +128,27 @@ pub(crate) struct SendChatRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub(crate) struct GenerateImageRequest {
+    pub prompt: String,
+    pub model: Option<String>,
+    pub size: Option<String>,
+    #[serde(default)]
+    pub images: Option<Vec<String>>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
+    #[serde(rename = "isIteration")]
+    pub is_iteration: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Generate3dRequest {
+    pub image_url: String,
+    pub prompt: Option<String>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub(crate) struct AuthLoginRequest {
     pub email: String,
     pub password: String,

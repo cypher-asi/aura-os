@@ -57,7 +57,17 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   // Network
   { id: "post_to_feed", label: "Post to Feed", description: "Post a status update", category: "Network" },
   { id: "check_budget", label: "Check Budget", description: "Check remaining credits", category: "Network" },
+
+  // Generation
+  { id: "generate_image", label: "Image", description: "Generate an image from a text prompt", category: "Generation" },
+  { id: "generate_3d", label: "3D", description: "Generate a 3D model from an image", category: "Generation" },
 ];
+
+export const GENERATION_COMMAND_IDS = new Set(["generate_image", "generate_3d"]);
+
+export function isGenerationCommand(id: string): boolean {
+  return GENERATION_COMMAND_IDS.has(id);
+}
 
 const commandIndex = new Map<string, SlashCommand>();
 for (const cmd of SLASH_COMMANDS) commandIndex.set(cmd.id, cmd);

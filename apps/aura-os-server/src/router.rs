@@ -11,9 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, cron, dev_loop, feed, files, follows, harness_proxy, leaderboard, log,
-    orgs, process, project_stats, projects, remote_files, remote_terminal, specs, super_agent,
-    swarm, system, tasks, terminal, users, ws,
+    agents, auth, billing, cron, dev_loop, feed, files, follows, generation, harness_proxy,
+    leaderboard, log, orgs, process, project_stats, projects, remote_files, remote_terminal, specs,
+    super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -81,6 +81,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(super_agent_routes())
         .merge(cron_routes())
         .merge(process_routes())
+        .merge(generation_routes())
         .merge(harness_proxy_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -509,6 +510,18 @@ fn process_routes() -> Router<AppState> {
         .route(
             "/api/process-folders/:id",
             put(process::update_folder).delete(process::delete_folder),
+        )
+}
+
+fn generation_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/generate/image/stream",
+            post(generation::generate_image_stream),
+        )
+        .route(
+            "/api/generate/3d/stream",
+            post(generation::generate_3d_stream),
         )
 }
 
