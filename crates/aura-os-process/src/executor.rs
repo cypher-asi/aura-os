@@ -102,10 +102,11 @@ fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
 
 const PROCESS_EXECUTION_PREAMBLE: &str = "\
 You are executing a step in an automated workflow process. \
-Your text output is passed DIRECTLY to downstream nodes as structured data. \
+CRITICAL: Your final text response is the ONLY data passed to downstream nodes. \
+Tool outputs and file writes do NOT flow downstream — only your text does. \
+After using tools, you MUST repeat all collected data in your final text response. \
 Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
-If you use tools, work silently and return only the finished product. \
-Never describe your process, failed attempts, or intermediate steps in text output.";
+Never describe your process — just output the finished product as text.";
 
 pub struct ProcessExecutor {
     store: Arc<ProcessStore>,
@@ -1121,54 +1122,47 @@ async fn collect_harness_response(
 
 /// Build the output text that gets passed to downstream nodes.
 ///
-/// For sessions without tool calls the final text is returned directly.
-/// When tool calls occurred, the output is assembled from all text blocks
-/// and non-error tool-result blocks so downstream nodes receive the actual
-/// data produced by tools, not just the model's narration.
-fn build_downstream_output(resp: &HarnessResponse) -> String {
-    let has_tool_results = resp
-        .content_blocks
-        .iter()
-        .any(|b| b.get("type").and_then(|t| t.as_str()) == Some("tool_result"));
+const MIN_SUBSTANTIAL_OUTPUT_LEN: usize = 200;
 
-    if !has_tool_results {
-        return resp.final_text.trim().to_string();
+/// Build the downstream output for an action node.
+///
+/// Prefers the model's final text when it contains substantial content.
+/// When the text is thin (under [`MIN_SUBSTANTIAL_OUTPUT_LEN`] chars) and the
+/// session involved tool calls, falls back to extracting data from non-error
+/// `tool_result` content blocks so the actual research data reaches downstream
+/// nodes even if the model forgot to repeat it in its final message.
+fn build_downstream_output(resp: &HarnessResponse) -> String {
+    let text = resp.final_text.trim();
+
+    if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN {
+        return text.to_string();
     }
 
-    let mut parts: Vec<String> = Vec::new();
+    let mut tool_results: Vec<&str> = Vec::new();
     for block in &resp.content_blocks {
-        match block.get("type").and_then(|t| t.as_str()) {
-            Some("text") => {
-                if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                    let t = text.trim();
-                    if !t.is_empty() {
-                        parts.push(t.to_string());
-                    }
-                }
+        if block.get("type").and_then(|t| t.as_str()) != Some("tool_result") {
+            continue;
+        }
+        let is_error = block
+            .get("is_error")
+            .and_then(|e| e.as_bool())
+            .unwrap_or(false);
+        if is_error {
+            continue;
+        }
+        if let Some(result) = block.get("result").and_then(|r| r.as_str()) {
+            let r = result.trim();
+            if r.len() > 50 {
+                tool_results.push(r);
             }
-            Some("tool_result") => {
-                let is_error = block
-                    .get("is_error")
-                    .and_then(|e| e.as_bool())
-                    .unwrap_or(false);
-                if !is_error {
-                    if let Some(result) = block.get("result").and_then(|r| r.as_str()) {
-                        let r = result.trim();
-                        if !r.is_empty() {
-                            parts.push(r.to_string());
-                        }
-                    }
-                }
-            }
-            _ => {}
         }
     }
 
-    if parts.is_empty() {
-        resp.final_text.trim().to_string()
-    } else {
-        parts.join("\n\n")
+    if tool_results.is_empty() {
+        return text.to_string();
     }
+
+    tool_results.join("\n\n---\n\n")
 }
 
 /// Extract the final meaningful output from a multi-turn agentic response.
