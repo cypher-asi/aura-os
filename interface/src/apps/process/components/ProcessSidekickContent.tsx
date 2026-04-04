@@ -898,7 +898,9 @@ export function ProcessSidekickContent() {
     return (
       <div className={styles.sidekickBody}>
         <PreviewOverlay title="Run Detail" onClose={closePreview} fullLane>
-          <RunPreviewBody run={previewRun} />
+          <div style={{ margin: "calc(-1 * var(--space-3, 12px)) 0" }}>
+            <RunPreviewBody run={previewRun} />
+          </div>
         </PreviewOverlay>
       </div>
     );
