@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Text, Badge, Button, Modal } from "@cypher-asi/zui";
-import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, X, ChevronRight, ChevronDown, Zap } from "lucide-react";
+import { Bot, Loader2, Calendar, Monitor, Cloud, FolderOpen, KeyRound, X, ChevronRight, ChevronDown, Zap } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { SuperAgentDashboardPanel } from "../../../components/SuperAgentDashboardPanel";
@@ -397,7 +397,7 @@ function ProfileTab({
             <Monitor size={13} className={styles.metaIcon} />
           )}
           <span className={styles.metaValue}>
-            {a.machine_type === "remote" ? "Cloud Runtime" : "This Machine"}
+            {formatRunsOnLabel(a.environment, a.machine_type)}
           </span>
         </div>
         <div className={styles.metaRow}>
@@ -405,7 +405,7 @@ function ProfileTab({
           <span className={styles.metaValue}>{formatAdapterLabel(a.adapter_type)}</span>
         </div>
         <div className={styles.metaRow}>
-          <FolderOpen size={13} className={styles.metaIcon} />
+          <KeyRound size={13} className={styles.metaIcon} />
           <span className={styles.metaValue}>
             {formatAuthSourceLabel(a.auth_source)}
             {a.integration_id ? " • team integration attached" : ""}
@@ -422,7 +422,7 @@ function ProfileTab({
       <div className={styles.section}>
         <Text size="xs" variant="muted" weight="medium">Runtime</Text>
         <Text size="sm">
-          Runtime: {formatAdapterLabel(a.adapter_type)} • Runs On: {formatRunsOnLabel(a.environment, a.machine_type)} • Authentication: {formatAuthSourceLabel(a.auth_source)}
+          {formatAdapterLabel(a.adapter_type)} • Runs On: {formatRunsOnLabel(a.environment, a.machine_type)} • Authentication: {formatAuthSourceLabel(a.auth_source)}
         </Text>
         <div className={styles.nameAction} style={{ marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>
