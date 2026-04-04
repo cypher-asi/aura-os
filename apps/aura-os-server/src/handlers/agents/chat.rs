@@ -261,6 +261,25 @@ fn spawn_chat_persist_task(
                             )
                             .await;
                         }
+                        HarnessOutbound::ToolCallSnapshot(ref snap) => {
+                            if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
+                                b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
+                                    && b.get("id").and_then(|i| i.as_str()) == Some(&snap.id)
+                            }) {
+                                block["input"] = snap.input.clone();
+                            }
+                            persist(
+                                "tool_call_snapshot",
+                                serde_json::json!({
+                                    "message_id": &message_id,
+                                    "id": &snap.id,
+                                    "name": &snap.name,
+                                    "input": &snap.input,
+                                    "seq": seq,
+                                }),
+                            )
+                            .await;
+                        }
                         HarnessOutbound::ToolResult(ref result) => {
                             content_blocks.push(serde_json::json!({
                                 "type": "tool_result",

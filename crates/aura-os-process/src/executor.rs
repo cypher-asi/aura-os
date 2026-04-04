@@ -45,51 +45,52 @@ struct DeltaForwarder<'a> {
 }
 
 impl DeltaForwarder<'_> {
-    fn forward_text(&self, text: &str) {
-        let _ = self.broadcast.send(serde_json::json!({
-            "type": "process_node_output_delta",
+    fn ctx(&self) -> serde_json::Value {
+        serde_json::json!({
             "process_id": self.process_id.to_string(),
             "run_id": self.run_id.to_string(),
             "node_id": self.node_id.to_string(),
-            "delta_type": "text",
-            "text": text,
-        }));
+        })
+    }
+
+    fn forward_text(&self, text: &str) {
+        let mut v = self.ctx();
+        v["type"] = "text_delta".into();
+        v["text"] = text.into();
+        let _ = self.broadcast.send(v);
     }
 
     fn forward_thinking(&self, thinking: &str) {
-        let _ = self.broadcast.send(serde_json::json!({
-            "type": "process_node_output_delta",
-            "process_id": self.process_id.to_string(),
-            "run_id": self.run_id.to_string(),
-            "node_id": self.node_id.to_string(),
-            "delta_type": "thinking",
-            "thinking": thinking,
-        }));
+        let mut v = self.ctx();
+        v["type"] = "thinking_delta".into();
+        v["thinking"] = thinking.into();
+        let _ = self.broadcast.send(v);
     }
 
     fn forward_tool_start(&self, id: &str, name: &str) {
-        let _ = self.broadcast.send(serde_json::json!({
-            "type": "process_node_output_delta",
-            "process_id": self.process_id.to_string(),
-            "run_id": self.run_id.to_string(),
-            "node_id": self.node_id.to_string(),
-            "delta_type": "tool_use_start",
-            "id": id,
-            "name": name,
-        }));
+        let mut v = self.ctx();
+        v["type"] = "tool_use_start".into();
+        v["id"] = id.into();
+        v["name"] = name.into();
+        let _ = self.broadcast.send(v);
+    }
+
+    fn forward_tool_snapshot(&self, id: &str, name: &str, input: &serde_json::Value) {
+        let mut v = self.ctx();
+        v["type"] = "tool_call_snapshot".into();
+        v["id"] = id.into();
+        v["name"] = name.into();
+        v["input"] = input.clone();
+        let _ = self.broadcast.send(v);
     }
 
     fn forward_tool_result(&self, name: &str, result: &str, is_error: bool) {
-        let _ = self.broadcast.send(serde_json::json!({
-            "type": "process_node_output_delta",
-            "process_id": self.process_id.to_string(),
-            "run_id": self.run_id.to_string(),
-            "node_id": self.node_id.to_string(),
-            "delta_type": "tool_result",
-            "name": name,
-            "result": result,
-            "is_error": is_error,
-        }));
+        let mut v = self.ctx();
+        v["type"] = "tool_result".into();
+        v["name"] = name.into();
+        v["result"] = result.into();
+        v["is_error"] = is_error.into();
+        let _ = self.broadcast.send(v);
     }
 }
 
@@ -1012,6 +1013,17 @@ async fn collect_harness_response(
                     }
                     in_tool_call = true;
                     had_tool_calls = true;
+                }
+                Ok(HarnessOutbound::ToolCallSnapshot(snap)) => {
+                    if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
+                        b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
+                            && b.get("id").and_then(|i| i.as_str()) == Some(&snap.id)
+                    }) {
+                        block["input"] = snap.input.clone();
+                    }
+                    if let Some(fwd) = forwarder {
+                        fwd.forward_tool_snapshot(&snap.id, &snap.name, &snap.input);
+                    }
                 }
                 Ok(HarnessOutbound::ToolResult(result)) => {
                     content_blocks.push(serde_json::json!({

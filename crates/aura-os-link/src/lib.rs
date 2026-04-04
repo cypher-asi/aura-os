@@ -16,5 +16,6 @@ pub use aura_protocol::{
     ApprovalResponse, AssistantMessageEnd, AssistantMessageStart, ConversationMessage, ErrorMsg,
     FileOp, FilesChanged, InboundMessage as HarnessInbound, InstalledTool, MessageAttachment,
     OutboundMessage as HarnessOutbound, SessionInit, SessionReady, SessionUsage, SkillInfo,
-    TextDelta, ThinkingDelta, ToolAuth, ToolInfo, ToolResultMsg, ToolUseStart, UserMessage,
+    TextDelta, ThinkingDelta, ToolAuth, ToolCallSnapshot, ToolInfo, ToolResultMsg, ToolUseStart,
+    UserMessage,
 };
