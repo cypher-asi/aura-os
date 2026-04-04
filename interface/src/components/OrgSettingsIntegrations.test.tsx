@@ -64,4 +64,24 @@ describe("OrgSettingsIntegrations", () => {
       api_key: "ghp_test_123",
     });
   });
+
+  it("shows provider-specific auth guidance for tool integrations", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[]}
+        busyId={null}
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Slack" }));
+
+    expect(
+      screen.getByText(/Slack bot tokens usually start with xoxb-/i),
+    ).toBeInTheDocument();
+  });
 });

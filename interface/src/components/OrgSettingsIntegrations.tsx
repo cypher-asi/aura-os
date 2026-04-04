@@ -60,6 +60,10 @@ function providerDescription(provider: string): string {
   return getIntegrationDefinition(provider)?.description ?? "Shared org-level integration.";
 }
 
+function providerAuthHint(provider: string): string | null {
+  return getIntegrationDefinition(provider)?.authHint ?? null;
+}
+
 export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpdate, onDelete }: Props) {
   const [drafts, setDrafts] = useState<DraftState>({});
   const [newIntegration, setNewIntegration] = useState<IntegrationDraft>({
@@ -86,6 +90,7 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
   const newSecretLabel = getSecretLabel(newIntegration.provider);
   const newSecretPlaceholder = getSecretPlaceholder(newIntegration.provider);
   const newSupportsModel = providerSupportsModel(newIntegration.provider);
+  const newAuthHint = providerAuthHint(newIntegration.provider);
 
   return (
     <div>
@@ -147,6 +152,11 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                 onChange={(e) => setNewIntegration((prev) => ({ ...prev, apiKey: e.target.value }))}
                 placeholder={newSecretPlaceholder}
               />
+              {newAuthHint && (
+                <Text size="xs" variant="muted">
+                  {newAuthHint}
+                </Text>
+              )}
             </div>
             <div className={styles.integrationActions}>
               <Button
@@ -187,6 +197,7 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
             const supportsModel = providerSupportsModel(draft.provider);
             const secretLabel = getSecretLabel(draft.provider);
             const secretPlaceholder = getSecretPlaceholder(draft.provider);
+            const authHint = providerAuthHint(draft.provider);
 
             return (
               <div key={integration.integration_id} className={`${styles.formRow} ${styles.integrationRow}`}>
@@ -252,6 +263,11 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                       }))}
                       placeholder={integration.has_secret ? "Leave blank to keep the existing secret" : secretPlaceholder}
                     />
+                    {authHint && (
+                      <Text size="xs" variant="muted">
+                        {authHint}
+                      </Text>
+                    )}
                   </div>
                   <div className={styles.integrationActions}>
                     <Button
