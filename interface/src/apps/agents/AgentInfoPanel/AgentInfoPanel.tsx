@@ -42,12 +42,23 @@ function formatAdapterLabel(adapterType?: string | null): string {
 function formatAuthSourceLabel(authSource?: string | null): string {
   switch (authSource) {
     case "org_integration":
-      return "Org Integration";
+      return "Team Integration";
     case "local_cli_auth":
-      return "Local CLI Auth";
+      return "Local Login";
     case "aura_managed":
     default:
-      return "Aura Managed";
+      return "Aura Billing";
+  }
+}
+
+function formatRunsOnLabel(environment?: string | null, machineType?: string | null): string {
+  const effective = environment || (machineType === "remote" ? "swarm_microvm" : "local_host");
+  switch (effective) {
+    case "swarm_microvm":
+      return "Isolated Cloud Runtime";
+    case "local_host":
+    default:
+      return "This Machine";
   }
 }
 
@@ -386,7 +397,7 @@ function ProfileTab({
             <Monitor size={13} className={styles.metaIcon} />
           )}
           <span className={styles.metaValue}>
-            {a.machine_type === "remote" ? "Remote Machine" : "Local Machine"}
+            {a.machine_type === "remote" ? "Cloud Runtime" : "This Machine"}
           </span>
         </div>
         <div className={styles.metaRow}>
@@ -397,7 +408,7 @@ function ProfileTab({
           <FolderOpen size={13} className={styles.metaIcon} />
           <span className={styles.metaValue}>
             {formatAuthSourceLabel(a.auth_source)}
-            {a.integration_id ? " • org integration attached" : ""}
+            {a.integration_id ? " • team integration attached" : ""}
           </span>
         </div>
         <div className={styles.metaRow}>
@@ -411,11 +422,11 @@ function ProfileTab({
       <div className={styles.section}>
         <Text size="xs" variant="muted" weight="medium">Runtime</Text>
         <Text size="sm">
-          Adapter: {formatAdapterLabel(a.adapter_type)} • Environment: {a.environment || (a.machine_type === "remote" ? "swarm_microvm" : "local_host")} • Auth: {formatAuthSourceLabel(a.auth_source)}
+          Runtime: {formatAdapterLabel(a.adapter_type)} • Runs On: {formatRunsOnLabel(a.environment, a.machine_type)} • Authentication: {formatAuthSourceLabel(a.auth_source)}
         </Text>
         <div className={styles.nameAction} style={{ marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>
-            {runtimeTesting ? "Testing..." : "Test Runtime"}
+            {runtimeTesting ? "Checking..." : "Check Runtime"}
           </Button>
         </div>
         {runtimeTestMessage && (

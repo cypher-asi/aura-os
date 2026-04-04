@@ -109,7 +109,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Adapter</label>
+            <label className={styles.label}>Runtime</label>
             <div className={styles.machineTypeToggle}>
               <button
                 type="button"
@@ -136,7 +136,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Environment</label>
+            <label className={styles.label}>Runs On</label>
             <div className={styles.machineTypeToggle}>
               <button
                 type="button"
@@ -144,7 +144,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                 onClick={() => setEnvironment("local_host")}
               >
                 <Monitor size={14} />
-                Local Host
+                This Machine
               </button>
               <button
                 type="button"
@@ -153,16 +153,16 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                 disabled={adapterType !== "aura_harness"}
               >
                 <Cloud size={14} />
-                Swarm MicroVM
+                Isolated Cloud Runtime
               </button>
             </div>
             {adapterType !== "aura_harness" && (
-              <Text variant="muted" size="sm">Claude Code and Codex currently run on the local host.</Text>
+              <Text variant="muted" size="sm">Claude Code and Codex currently run on this machine.</Text>
             )}
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Auth Source</label>
+            <label className={styles.label}>Authentication</label>
             <div className={styles.machineTypeToggle}>
               {adapterType === "aura_harness" ? (
                 <>
@@ -171,14 +171,14 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                     className={`${styles.machineTypeOption} ${authSource === "aura_managed" ? styles.machineTypeActive : ""}`}
                     onClick={() => setAuthSource("aura_managed")}
                   >
-                    Aura Managed
+                    Aura Billing
                   </button>
                   <button
                     type="button"
                     className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
                     onClick={() => setAuthSource("org_integration")}
                   >
-                    Org Integration
+                    Use Team Integration
                   </button>
                 </>
               ) : (
@@ -188,36 +188,36 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                     className={`${styles.machineTypeOption} ${authSource === "local_cli_auth" ? styles.machineTypeActive : ""}`}
                     onClick={() => setAuthSource("local_cli_auth")}
                   >
-                    Local CLI Auth
+                    Use Local Login
                   </button>
                   <button
                     type="button"
                     className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
                     onClick={() => setAuthSource("org_integration")}
                   >
-                    Org Integration
+                    Use Team Integration
                   </button>
                 </>
               )}
             </div>
             {adapterType === "aura_harness" ? (
               <Text variant="muted" size="sm">
-                Aura can run on Aura-managed billing or use a shared Anthropic org integration for BYOK execution.
+                Aura can run on Aura billing or use a shared Anthropic team integration for BYOK execution.
               </Text>
             ) : authSource === "local_cli_auth" ? (
               <Text variant="muted" size="sm">
-                This agent will use the CLI login or shell auth already available on the host. No org integration is required.
+                This agent will use the CLI login or shell auth already available on this machine. No team integration is required.
               </Text>
             ) : (
               <Text variant="muted" size="sm">
-                This agent will inject a shared organization integration into the runtime for API-key-backed execution.
+                This agent will inject a shared team integration into the runtime for API-key-backed execution.
               </Text>
             )}
           </div>
 
           {showsIntegrationPicker && (
             <div className={styles.fieldGroup}>
-              <label className={styles.label}>Org Integration</label>
+              <label className={styles.label}>Team Integration</label>
               <div className={styles.integrationList}>
                 {integrationChoices.map((integration) => (
                   <button
@@ -237,7 +237,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
               </div>
               {integrationChoices.length === 0 && (
                 <Text variant="muted" size="sm">
-                  Add a matching org integration in Team Settings if you want API-key-backed auth for this runtime.
+                  Add a matching team integration in Team Settings if you want API-key-backed auth for this runtime.
                 </Text>
               )}
               {integrationId && (
@@ -253,7 +253,7 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
           {!showsIntegrationPicker && adapterType !== "aura_harness" && availableIntegrations.length === 0 && (
             <div className={styles.fieldGroup}>
               <Text variant="muted" size="sm">
-                Org integrations are optional for Claude Code and Codex. You can keep using local CLI auth.
+                Team integrations are optional for Claude Code and Codex. You can keep using local login.
               </Text>
             </div>
           )}
