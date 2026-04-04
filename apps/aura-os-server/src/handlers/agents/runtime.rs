@@ -11,6 +11,7 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::Value;
+use tokio::fs;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::{broadcast, mpsc};
@@ -811,6 +812,7 @@ async fn stream_claude_project_turn(
 ) -> ApiResult<()> {
     let cwd = resolve_runtime_cwd(state, Some(project_id))
         .unwrap_or_else(|| state.data_dir.to_string_lossy().to_string());
+    let mcp_config_path = write_claude_mcp_config_file(mcp_config).await?;
     let mut env_overrides = HashMap::new();
     let mut env_removals = Vec::new();
     if let Some(resolved) = integration {
@@ -839,8 +841,9 @@ async fn stream_claude_project_turn(
         cwd.clone(),
         "--strict-mcp-config".to_string(),
         "--mcp-config".to_string(),
-        claude_mcp_config_json(mcp_config),
-        "-".to_string(),
+        mcp_config_path.to_string_lossy().to_string(),
+        "--".to_string(),
+        prompt.to_string(),
     ];
     if let Some(model) = model.as_deref() {
         let insert_at = args.len() - 1;
@@ -862,18 +865,13 @@ async fn stream_claude_project_turn(
     }
 
     let mut child = cmd.spawn().map_err(|e| {
+        let _ = std::fs::remove_file(&mcp_config_path);
         ApiError::bad_gateway(format!(
             "failed to start claude in `{cwd}`: {e}. If this agent is bound to a project, verify the workspace path still exists."
         ))
     })?;
 
-    if let Some(mut stdin) = child.stdin.take() {
-        stdin
-            .write_all(format!("{prompt}\n").as_bytes())
-            .await
-            .map_err(|e| ApiError::bad_gateway(format!("failed writing prompt to claude: {e}")))?;
-        let _ = stdin.shutdown().await;
-    }
+    drop(child.stdin.take());
 
     let stdout = child
         .stdout
@@ -977,6 +975,7 @@ async fn stream_claude_project_turn(
         .await
         .map_err(|_| ApiError::bad_gateway("waiting for claude failed"))?
         .map_err(|e| ApiError::bad_gateway(format!("waiting for claude failed: {e}")))?;
+    let _ = fs::remove_file(&mcp_config_path).await;
     let stderr_output = stderr_task.await.unwrap_or_default();
 
     if !status.success() && !saw_text && !saw_tool_event {
@@ -1116,6 +1115,14 @@ fn claude_mcp_config_json(mcp_config: &ExternalProjectMcpConfig) -> String {
         }
     })
     .to_string()
+}
+
+async fn write_claude_mcp_config_file(mcp_config: &ExternalProjectMcpConfig) -> ApiResult<PathBuf> {
+    let path = std::env::temp_dir().join(format!("aura-claude-mcp-{}.json", Uuid::new_v4()));
+    fs::write(&path, claude_mcp_config_json(mcp_config))
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to write Claude MCP config: {e}")))?;
+    Ok(path)
 }
 
 fn find_control_plane_mcp_script() -> Option<PathBuf> {

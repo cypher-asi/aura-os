@@ -129,13 +129,19 @@ impl ToolRegistry {
         // Spec tools (Tier 2)
         registry.register(Arc::new(spec_tools::ListSpecsTool));
         registry.register(Arc::new(spec_tools::GetSpecTool));
+        registry.register(Arc::new(spec_tools::CreateSpecTool));
+        registry.register(Arc::new(spec_tools::UpdateSpecTool));
+        registry.register(Arc::new(spec_tools::DeleteSpecTool));
         registry.register(Arc::new(spec_tools::GenerateSpecsTool));
         registry.register(Arc::new(spec_tools::GenerateSpecsSummaryTool));
 
         // Task tools (Tier 2)
         registry.register(Arc::new(task_tools::ListTasksTool));
         registry.register(Arc::new(task_tools::ListTasksBySpecTool));
+        registry.register(Arc::new(task_tools::GetTaskTool));
         registry.register(Arc::new(task_tools::CreateTaskTool));
+        registry.register(Arc::new(task_tools::UpdateTaskTool));
+        registry.register(Arc::new(task_tools::DeleteTaskTool));
         registry.register(Arc::new(task_tools::ExtractTasksTool));
         registry.register(Arc::new(task_tools::TransitionTaskTool));
         registry.register(Arc::new(task_tools::RetryTaskTool));
