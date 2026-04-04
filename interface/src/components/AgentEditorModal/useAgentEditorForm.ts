@@ -83,6 +83,7 @@ export function useAgentEditorForm(
   const [nameError, setNameError] = useState("");
   const [cropOpen, setCropOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState("");
+  const rememberedIntegrationIdsRef = useRef<Record<string, string>>({});
   const { inputRef: nameRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { activeOrg, integrations } = useOrgStore(
@@ -130,15 +131,23 @@ export function useAgentEditorForm(
   }, [adapterType, authSource]);
 
   useEffect(() => {
+    if (authSource === "org_integration" && integrationId) {
+      rememberedIntegrationIdsRef.current[adapterType] = integrationId;
+    }
+  }, [adapterType, authSource, integrationId]);
+
+  useEffect(() => {
     if (authSource !== "org_integration") {
-      if (integrationId) setIntegrationId("");
       return;
     }
 
     const requiredProvider = requiredProviderForAdapter(adapterType);
     const selected = integrations.find((integration) => integration.integration_id === integrationId);
     if (!selected || selected.provider !== requiredProvider) {
-      const fallback = integrations.find((integration) => integration.provider === requiredProvider);
+      const remembered = rememberedIntegrationIdsRef.current[adapterType];
+      const fallback = integrations.find((integration) => (
+        integration.integration_id === remembered && integration.provider === requiredProvider
+      )) ?? integrations.find((integration) => integration.provider === requiredProvider);
       setIntegrationId(fallback?.integration_id ?? "");
     }
   }, [adapterType, authSource, integrationId, integrations]);

@@ -95,6 +95,9 @@ pub(crate) async fn send_external_agent_event_stream(
     let integration = resolve_integration(state, agent)?;
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
+    if let Some(ref ctx) = persist_ctx {
+        super::chat::persist_user_message(ctx, &body.content);
+    }
 
     let outcome = run_external_adapter_prompt(
         state,
@@ -107,7 +110,6 @@ pub(crate) async fn send_external_agent_event_stream(
     .await?;
 
     if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_user_message(ctx, &body.content);
         super::chat::persist_external_agent_turn(ctx, &outcome.text, &outcome.usage);
     } else {
         warn!(agent_id = %agent.agent_id, "external agent chat: persistence context unavailable");
@@ -502,6 +504,11 @@ fn parse_claude_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
             .get("result")
             .and_then(Value::as_str)
             .unwrap_or("Claude execution failed");
+        if message.contains("Not logged in") {
+            return Err(ApiError::bad_gateway(
+                "Claude Code is not logged in for the aura-os-server process. Run `claude` and complete `/login` in the same host environment, or switch this agent to org integration.",
+            ));
+        }
         return Err(ApiError::bad_gateway(message));
     }
 
@@ -533,7 +540,7 @@ fn parse_claude_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
             .unwrap_or(""),
     );
 
-    Ok(RuntimeOutcome {
+    let outcome = RuntimeOutcome {
         text,
         usage: SessionUsage {
             input_tokens: usage_number(&usage, "input_tokens"),
@@ -552,7 +559,9 @@ fn parse_claude_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
             model,
             provider: "anthropic".to_string(),
         },
-    })
+    };
+
+    ensure_non_empty_external_text("Claude Code", outcome)
 }
 
 fn parse_codex_output(stdout: &str, fallback_model: Option<String>) -> ApiResult<RuntimeOutcome> {
@@ -583,7 +592,7 @@ fn parse_codex_output(stdout: &str, fallback_model: Option<String>) -> ApiResult
         .cloned()
         .unwrap_or(Value::Null);
 
-    Ok(RuntimeOutcome {
+    let outcome = RuntimeOutcome {
         text: result_text,
         usage: SessionUsage {
             input_tokens: usage_number(&usage, "input_tokens"),
@@ -599,7 +608,22 @@ fn parse_codex_output(stdout: &str, fallback_model: Option<String>) -> ApiResult
             model: fallback_model.unwrap_or_else(|| "codex".to_string()),
             provider: "openai".to_string(),
         },
-    })
+    };
+
+    ensure_non_empty_external_text("Codex", outcome)
+}
+
+fn ensure_non_empty_external_text(
+    adapter_label: &str,
+    outcome: RuntimeOutcome,
+) -> ApiResult<RuntimeOutcome> {
+    if outcome.text.trim().is_empty() {
+        return Err(ApiError::bad_gateway(format!(
+            "{adapter_label} returned no assistant message. Check the runtime auth/session and try again."
+        )));
+    }
+
+    Ok(outcome)
 }
 
 fn parse_jsonl(stdout: &str) -> Vec<Value> {

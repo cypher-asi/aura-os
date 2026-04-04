@@ -87,6 +87,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const [iconFailed, setIconFailed] = useState(false);
   const [runtimeTesting, setRuntimeTesting] = useState(false);
   const [runtimeTestMessage, setRuntimeTestMessage] = useState<string | null>(null);
+  const [runtimeTestStatus, setRuntimeTestStatus] = useState<"success" | "error" | null>(null);
   const [projectBindings, setProjectBindings] = useState<
     { project_agent_id: string; project_id: string; project_name: string }[]
   >([]);
@@ -135,11 +136,14 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     if (!selectedAgent) return;
     setRuntimeTesting(true);
     setRuntimeTestMessage(null);
+    setRuntimeTestStatus(null);
     try {
       const result = await api.agents.testRuntime(selectedAgent.agent_id);
       setRuntimeTestMessage(result.message || "Runtime test passed.");
+      setRuntimeTestStatus("success");
     } catch (err) {
       setRuntimeTestMessage(err instanceof Error ? err.message : "Runtime test failed.");
+      setRuntimeTestStatus("error");
     } finally {
       setRuntimeTesting(false);
     }
@@ -169,6 +173,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
             onIconError={() => setIconFailed(true)}
             runtimeTesting={runtimeTesting}
             runtimeTestMessage={runtimeTestMessage}
+            runtimeTestStatus={runtimeTestStatus}
             onRuntimeTest={handleRuntimeTest}
           />
         )}
@@ -297,6 +302,7 @@ function ProfileTab({
   onIconError,
   runtimeTesting,
   runtimeTestMessage,
+  runtimeTestStatus,
   onRuntimeTest,
 }: {
   agent: import("../../../types").Agent;
@@ -305,6 +311,7 @@ function ProfileTab({
   onIconError: () => void;
   runtimeTesting: boolean;
   runtimeTestMessage: string | null;
+  runtimeTestStatus: "success" | "error" | null;
   onRuntimeTest: () => void;
 }) {
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
@@ -412,7 +419,14 @@ function ProfileTab({
           </Button>
         </div>
         {runtimeTestMessage && (
-          <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
+          <div
+            className={`${styles.runtimeTestResult} ${
+              runtimeTestStatus === "error" ? styles.runtimeTestError : styles.runtimeTestSuccess
+            }`}
+            aria-live="polite"
+          >
+            <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
+          </div>
         )}
       </div>
       {installations.length > 0 && (
