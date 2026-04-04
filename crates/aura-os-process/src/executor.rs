@@ -31,6 +31,25 @@ struct NodeTokenUsage {
     model: Option<String>,
 }
 
+struct DeltaForwarder<'a> {
+    broadcast: &'a broadcast::Sender<serde_json::Value>,
+    process_id: ProcessId,
+    run_id: ProcessRunId,
+    node_id: ProcessNodeId,
+}
+
+impl DeltaForwarder<'_> {
+    fn forward(&self, text: &str) {
+        let _ = self.broadcast.send(serde_json::json!({
+            "type": "process_node_output_delta",
+            "process_id": self.process_id.to_string(),
+            "run_id": self.run_id.to_string(),
+            "node_id": self.node_id.to_string(),
+            "text": text,
+        }));
+    }
+}
+
 fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
     let input_cost = (input_tokens as f64) * 3.0 / 1_000_000.0;
     let output_cost = (output_tokens as f64) * 15.0 / 1_000_000.0;
@@ -817,12 +836,22 @@ async fn execute_artifact(
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Collect the harness response, keeping only text from the final turn.
+///
+/// In multi-turn agentic sessions the model emits narration between tool calls.
+/// We track `ToolUseStart` / `ToolResult` events as turn boundaries and reset
+/// the text buffer after each `ToolResult`, so the returned string contains
+/// only the model's output from its last turn (the actual answer).  The full
+/// accumulated text is kept as a fallback in case the final segment is empty.
 async fn collect_harness_response(
     events_tx: &broadcast::Sender<HarnessOutbound>,
     timeout_secs: u64,
 ) -> Result<(String, Option<SessionUsage>), ProcessError> {
     let mut rx = events_tx.subscribe();
-    let mut output = String::new();
+    let mut full_output = String::new();
+    let mut last_turn_output = String::new();
+    let mut in_tool_call = false;
+    let mut had_tool_calls = false;
     let mut usage: Option<SessionUsage> = None;
     let deadline = Duration::from_secs(timeout_secs);
 
@@ -830,7 +859,18 @@ async fn collect_harness_response(
         loop {
             match rx.recv().await {
                 Ok(HarnessOutbound::TextDelta(delta)) => {
-                    output.push_str(&delta.text);
+                    full_output.push_str(&delta.text);
+                    if !in_tool_call {
+                        last_turn_output.push_str(&delta.text);
+                    }
+                }
+                Ok(HarnessOutbound::ToolUseStart(_)) => {
+                    in_tool_call = true;
+                    had_tool_calls = true;
+                }
+                Ok(HarnessOutbound::ToolResult(_)) => {
+                    in_tool_call = false;
+                    last_turn_output.clear();
                 }
                 Ok(HarnessOutbound::AssistantMessageEnd(end)) => {
                     usage = Some(end.usage);
@@ -843,13 +883,13 @@ async fn collect_harness_response(
                     )));
                 }
                 Err(broadcast::error::RecvError::Closed) => {
-                    if output.is_empty() {
+                    if full_output.is_empty() {
                         return Err(ProcessError::Execution(
                             "Harness connection closed before producing any output".into(),
                         ));
                     }
                     warn!(
-                        bytes = output.len(),
+                        bytes = full_output.len(),
                         "Harness connection closed before AssistantMessageEnd; returning partial output"
                     );
                     break;
@@ -865,23 +905,29 @@ async fn collect_harness_response(
     };
 
     match tokio::time::timeout(deadline, collect).await {
-        Ok(Ok(())) => Ok((output, usage)),
-        Ok(Err(e)) => Err(e),
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => return Err(e),
         Err(_) => {
-            if output.is_empty() {
-                Err(ProcessError::Execution(format!(
+            if full_output.is_empty() {
+                return Err(ProcessError::Execution(format!(
                     "Harness timed out after {timeout_secs}s without producing output"
-                )))
-            } else {
-                warn!(
-                    bytes = output.len(),
-                    timeout_secs,
-                    "Harness timed out; returning partial output"
-                );
-                Ok((output, usage))
+                )));
             }
+            warn!(
+                bytes = full_output.len(),
+                timeout_secs,
+                "Harness timed out; returning partial output"
+            );
         }
-    }
+    };
+
+    let text = if had_tool_calls && !last_turn_output.trim().is_empty() {
+        last_turn_output
+    } else {
+        full_output
+    };
+
+    Ok((text, usage))
 }
 
 /// Extract the final meaningful output from a multi-turn agentic response.
