@@ -4,6 +4,7 @@ import type { OrgIntegration } from "../types";
 import {
   getIntegrationDefinition,
   getIntegrationLabel,
+  getIntegrationSurfaceLabel,
   getSecretLabel,
   getSecretPlaceholder,
   integrationSections,
@@ -129,6 +130,9 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
               <Text size="xs" variant="muted">
                 {providerDescription(newIntegration.provider)}
               </Text>
+              <Text size="xs" variant="muted">
+                {getIntegrationSurfaceLabel(newIntegration.provider)}
+              </Text>
             </div>
             {newSupportsModel && (
               <div className={styles.integrationFieldGroup}>
@@ -209,6 +213,9 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                   </div>
                   <Text size="xs" variant="muted">
                     {definition?.description ?? "Shared org-level integration."}
+                  </Text>
+                  <Text size="xs" variant="muted">
+                    {getIntegrationSurfaceLabel(draft.provider)}
                   </Text>
                 </div>
                 <div className={styles.integrationFields}>

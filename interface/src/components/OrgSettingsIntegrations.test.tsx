@@ -83,5 +83,24 @@ describe("OrgSettingsIntegrations", () => {
     expect(
       screen.getByText(/Slack bot tokens usually start with xoxb-/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Org integration only; this should be exposed through Aura OS tools, not as an adapter./i),
+    ).toBeInTheDocument();
+  });
+
+  it("shows runtime-auth classification for anthropic", () => {
+    render(
+      <OrgSettingsIntegrations
+        integrations={[]}
+        busyId={null}
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Org integration that can back runtime auth today./i),
+    ).toBeInTheDocument();
   });
 });

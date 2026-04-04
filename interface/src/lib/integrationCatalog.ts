@@ -1,11 +1,16 @@
 import type { OrgIntegration } from "../types";
 
 export type IntegrationKind = "model" | "tool";
+export type IntegrationSurface =
+  | "runtime_auth_provider"
+  | "future_runtime_provider"
+  | "org_tool";
 
 export interface IntegrationDefinition {
   id: string;
   label: string;
   kind: IntegrationKind;
+  surface: IntegrationSurface;
   description: string;
   secretLabel: string;
   secretPlaceholder: string;
@@ -20,6 +25,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "anthropic",
     label: "Anthropic",
     kind: "model",
+    surface: "runtime_auth_provider",
     description: "Claude models for Aura and Claude Code runtime execution.",
     secretLabel: "Anthropic API Key",
     secretPlaceholder: "Paste the Anthropic API key",
@@ -31,6 +37,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "openai",
     label: "OpenAI",
     kind: "model",
+    surface: "runtime_auth_provider",
     description: "OpenAI-backed models and API credentials for Codex-style execution.",
     secretLabel: "OpenAI API Key",
     secretPlaceholder: "Paste the OpenAI API key",
@@ -42,6 +49,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "google_gemini",
     label: "Google Gemini",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Gemini model access for future runtime support and shared org setup.",
     secretLabel: "Gemini API Key",
     secretPlaceholder: "Paste the Gemini API key",
@@ -52,6 +60,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "xai",
     label: "xAI",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Grok model access for future runtime support.",
     secretLabel: "xAI API Key",
     secretPlaceholder: "Paste the xAI API key",
@@ -62,6 +71,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "groq",
     label: "Groq",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Fast hosted inference with a shared org-level key.",
     secretLabel: "Groq API Key",
     secretPlaceholder: "Paste the Groq API key",
@@ -72,6 +82,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "openrouter",
     label: "OpenRouter",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Aggregator access to multiple model vendors through one integration.",
     secretLabel: "OpenRouter API Key",
     secretPlaceholder: "Paste the OpenRouter API key",
@@ -82,6 +93,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "together",
     label: "Together AI",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Hosted open-weight model access for future runtime support.",
     secretLabel: "Together API Key",
     secretPlaceholder: "Paste the Together API key",
@@ -92,6 +104,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "mistral",
     label: "Mistral",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Mistral-hosted model access for future runtime support.",
     secretLabel: "Mistral API Key",
     secretPlaceholder: "Paste the Mistral API key",
@@ -102,6 +115,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "perplexity",
     label: "Perplexity",
     kind: "model",
+    surface: "future_runtime_provider",
     description: "Perplexity-hosted model and search-backed answer access for future runtime support.",
     secretLabel: "Perplexity API Key",
     secretPlaceholder: "Paste the Perplexity API key",
@@ -113,6 +127,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "github",
     label: "GitHub",
     kind: "tool",
+    surface: "org_tool",
     description: "Repository, PR, issue, and automation access across org projects.",
     secretLabel: "GitHub Token",
     secretPlaceholder: "Paste the GitHub token",
@@ -125,6 +140,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "gitlab",
     label: "GitLab",
     kind: "tool",
+    surface: "org_tool",
     description: "Repository, merge request, and issue access for teams using GitLab.",
     secretLabel: "GitLab Token",
     secretPlaceholder: "Paste the GitLab token",
@@ -136,6 +152,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "linear",
     label: "Linear",
     kind: "tool",
+    surface: "org_tool",
     description: "Task tracking and sprint operations at the org level.",
     secretLabel: "Linear API Key",
     secretPlaceholder: "Paste the Linear API key",
@@ -148,6 +165,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "jira",
     label: "Jira",
     kind: "tool",
+    surface: "org_tool",
     description: "Project tracking, issue workflows, and enterprise sprint operations.",
     secretLabel: "Jira API Token",
     secretPlaceholder: "Paste the Jira API token",
@@ -160,6 +178,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "confluence",
     label: "Confluence",
     kind: "tool",
+    surface: "org_tool",
     description: "Shared docs, runbooks, and knowledge workflows for project context.",
     secretLabel: "Confluence API Token",
     secretPlaceholder: "Paste the Confluence API token",
@@ -172,6 +191,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "brave_search",
     label: "Brave Search",
     kind: "tool",
+    surface: "org_tool",
     description: "Web search and research access for shared team workflows.",
     secretLabel: "Brave Search API Key",
     secretPlaceholder: "Paste the Brave Search API key",
@@ -182,6 +202,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "apify",
     label: "Apify",
     kind: "tool",
+    surface: "org_tool",
     description: "Web scraping and automation jobs using a shared org token.",
     secretLabel: "Apify API Token",
     secretPlaceholder: "Paste the Apify API token",
@@ -192,6 +213,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "firecrawl",
     label: "Firecrawl",
     kind: "tool",
+    surface: "org_tool",
     description: "Structured crawling and page extraction for research-heavy workflows.",
     secretLabel: "Firecrawl API Key",
     secretPlaceholder: "Paste the Firecrawl API key",
@@ -203,6 +225,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "exa",
     label: "Exa",
     kind: "tool",
+    surface: "org_tool",
     description: "Search and research retrieval tuned for agent workflows.",
     secretLabel: "Exa API Key",
     secretPlaceholder: "Paste the Exa API key",
@@ -213,6 +236,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "tavily",
     label: "Tavily",
     kind: "tool",
+    surface: "org_tool",
     description: "Agent-native search and retrieval for web research tasks.",
     secretLabel: "Tavily API Key",
     secretPlaceholder: "Paste the Tavily API key",
@@ -224,6 +248,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "buffer",
     label: "Buffer",
     kind: "tool",
+    surface: "org_tool",
     description: "Publishing and scheduling workflows for social channels.",
     secretLabel: "Buffer Access Token",
     secretPlaceholder: "Paste the Buffer access token",
@@ -234,6 +259,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "metricool",
     label: "Metricool",
     kind: "tool",
+    surface: "org_tool",
     description: "Cross-channel social analytics and reporting access.",
     secretLabel: "Metricool API Token",
     secretPlaceholder: "Paste the Metricool API token",
@@ -244,6 +270,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "mailchimp",
     label: "Mailchimp",
     kind: "tool",
+    surface: "org_tool",
     description: "Audience, campaign, and email marketing operations.",
     secretLabel: "Mailchimp API Key",
     secretPlaceholder: "Paste the Mailchimp API key",
@@ -254,6 +281,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "hubspot",
     label: "HubSpot",
     kind: "tool",
+    surface: "org_tool",
     description: "CRM, lifecycle, and marketing automation workflows at the org level.",
     secretLabel: "HubSpot Access Token",
     secretPlaceholder: "Paste the HubSpot access token",
@@ -265,6 +293,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "freepik",
     label: "Freepik",
     kind: "tool",
+    surface: "org_tool",
     description: "Image and creative-generation asset access for content workflows.",
     secretLabel: "Freepik API Key",
     secretPlaceholder: "Paste the Freepik API key",
@@ -275,6 +304,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "slack",
     label: "Slack",
     kind: "tool",
+    surface: "org_tool",
     description: "Shared workspace messaging and notification workflows.",
     secretLabel: "Slack Bot Token",
     secretPlaceholder: "Paste the Slack bot token",
@@ -287,6 +317,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "discord",
     label: "Discord",
     kind: "tool",
+    surface: "org_tool",
     description: "Community, support, and notification workflows for Discord servers.",
     secretLabel: "Discord Bot Token",
     secretPlaceholder: "Paste the Discord bot token",
@@ -297,6 +328,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "notion",
     label: "Notion",
     kind: "tool",
+    surface: "org_tool",
     description: "Docs, knowledge base, and workspace data access.",
     secretLabel: "Notion Integration Token",
     secretPlaceholder: "Paste the Notion integration token",
@@ -309,6 +341,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "google_drive",
     label: "Google Drive",
     kind: "tool",
+    surface: "org_tool",
     description: "Shared file, doc, and workspace asset access across the org.",
     secretLabel: "Google Workspace Token",
     secretPlaceholder: "Paste the Google Workspace token",
@@ -319,6 +352,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "gmail",
     label: "Gmail",
     kind: "tool",
+    surface: "org_tool",
     description: "Inbox, email triage, and outbound workflow automation.",
     secretLabel: "Gmail Access Token",
     secretPlaceholder: "Paste the Gmail access token",
@@ -330,6 +364,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "figma",
     label: "Figma",
     kind: "tool",
+    surface: "org_tool",
     description: "Design files, handoff context, and product iteration workflows.",
     secretLabel: "Figma Personal Access Token",
     secretPlaceholder: "Paste the Figma personal access token",
@@ -342,6 +377,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "sentry",
     label: "Sentry",
     kind: "tool",
+    surface: "org_tool",
     description: "Production error and issue monitoring for developer workflows.",
     secretLabel: "Sentry Auth Token",
     secretPlaceholder: "Paste the Sentry auth token",
@@ -354,6 +390,7 @@ export const INTEGRATION_CATALOG: IntegrationDefinition[] = [
     id: "resend",
     label: "Resend",
     kind: "tool",
+    surface: "org_tool",
     description: "Transactional email delivery workflows and outbound automation.",
     secretLabel: "Resend API Key",
     secretPlaceholder: "Paste the Resend API key",
@@ -378,6 +415,20 @@ export function getSecretLabel(provider: string): string {
 
 export function getSecretPlaceholder(provider: string): string {
   return getIntegrationDefinition(provider)?.secretPlaceholder ?? "Paste the provider API key";
+}
+
+export function getIntegrationSurfaceLabel(provider: string): string {
+  const surface = getIntegrationDefinition(provider)?.surface;
+  if (surface === "runtime_auth_provider") {
+    return "Org integration that can back runtime auth today.";
+  }
+  if (surface === "future_runtime_provider") {
+    return "Org integration today; candidate runtime provider later if we add an adapter path.";
+  }
+  if (surface === "org_tool") {
+    return "Org integration only; this should be exposed through Aura OS tools, not as an adapter.";
+  }
+  return "Shared org integration.";
 }
 
 export function supportsDefaultModel(provider: string): boolean {
