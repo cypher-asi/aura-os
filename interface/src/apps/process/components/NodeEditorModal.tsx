@@ -58,6 +58,11 @@ const ARTIFACT_TYPE_OPTIONS = [
   { value: "custom", label: "Custom" },
 ];
 
+const ARTIFACT_MODE_OPTIONS = [
+  { value: "prompt", label: "Prompt" },
+  { value: "json_schema", label: "JSON Schema" },
+];
+
 export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps) {
   const { processId } = useParams<{ processId: string }>();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
@@ -74,6 +79,9 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   );
   const [conditionExpr, setConditionExpr] = useState(
     node.node_type === "condition" ? (cfg?.condition_expression as string) ?? "" : "",
+  );
+  const [artifactMode, setArtifactMode] = useState(
+    node.node_type === "artifact" ? (cfg?.artifact_mode as string) ?? "prompt" : "prompt",
   );
   const [artifactType, setArtifactType] = useState(
     node.node_type === "artifact" ? (cfg?.artifact_type as string) ?? "report" : "report",
@@ -115,6 +123,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       if (node.node_type === "ignition") setSchedule((c?.schedule as string) ?? "");
       if (node.node_type === "condition") setConditionExpr((c?.condition_expression as string) ?? "");
       if (node.node_type === "artifact") {
+        setArtifactMode((c?.artifact_mode as string) ?? "prompt");
         setArtifactType((c?.artifact_type as string) ?? "report");
         setArtifactName((c?.artifact_name as string) ?? "");
         setArtifactData(JSON.stringify(c?.data ?? {}, null, 2));
@@ -133,10 +142,13 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       if (node.node_type === "ignition" && schedule) config.schedule = schedule;
       if (node.node_type === "condition") config.condition_expression = conditionExpr;
       if (node.node_type === "artifact") {
+        config.artifact_mode = artifactMode;
         config.artifact_type = artifactType;
         config.artifact_name = artifactName;
-        if (artifactData) {
+        if (artifactMode === "json_schema" && artifactData) {
           try { config.data = JSON.parse(artifactData); } catch { /* keep existing */ }
+        } else {
+          delete config.data;
         }
       }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
@@ -161,7 +173,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactType, artifactName, artifactData, delaySeconds, vaultPath, watchlist, fetchNodes, onClose]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, vaultPath, watchlist, fetchNodes, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -248,15 +260,25 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
             <EditField label="Artifact Type">
               <Select value={artifactType} onChange={setArtifactType} options={ARTIFACT_TYPE_OPTIONS} />
             </EditField>
-            <EditField label="Data (JSON)">
-              <textarea
-                style={{ ...inputStyle, minHeight: 200, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
-                value={artifactData}
-                onChange={(e) => setArtifactData(e.target.value)}
-                placeholder={'{\n  "competitors": {\n    "Cursor": { "website": "https://cursor.com" }\n  }\n}'}
-              />
-              <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Static JSON data for this artifact. Merged with upstream output when both are present.</Text>
+            <EditField label="Mode">
+              <Select value={artifactMode} onChange={setArtifactMode} options={ARTIFACT_MODE_OPTIONS} />
+              <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>
+                {artifactMode === "prompt"
+                  ? "Apply the prompt directly to upstream input."
+                  : "Transform upstream input into the target JSON structure."}
+              </Text>
             </EditField>
+            {artifactMode === "json_schema" && (
+              <EditField label="Target JSON Shape">
+                <textarea
+                  style={{ ...inputStyle, minHeight: 200, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
+                  value={artifactData}
+                  onChange={(e) => setArtifactData(e.target.value)}
+                  placeholder={'{\n  "competitors": [\n    { "name": "...", "website": "...", "summary": "..." }\n  ]\n}'}
+                />
+                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>The JSON structure the LLM will transform upstream data into. Use example values to clarify the desired shape.</Text>
+              </EditField>
+            )}
           </>
         )}
 

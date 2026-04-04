@@ -658,6 +658,7 @@ async fn execute_action(
         .send(HarnessInbound::UserMessage(UserMessage {
             content: full_prompt,
             tool_hints: None,
+            attachments: None,
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
 
@@ -719,6 +720,7 @@ async fn execute_condition(
         .send(HarnessInbound::UserMessage(UserMessage {
             content: evaluation_prompt,
             tool_hints: None,
+            attachments: None,
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send condition message: {e}")))?;
 
@@ -754,12 +756,20 @@ async fn execute_delay(node: &ProcessNode) -> Result<String, ProcessError> {
     Ok(format!("Delayed {seconds} seconds"))
 }
 
-const ARTIFACT_REFINEMENT_PREAMBLE: &str = "\
+const ARTIFACT_PROMPT_PREAMBLE: &str = "\
 You are producing a structured artifact in an automated workflow. \
 You will receive context from previous steps and instructions for how to \
 refine or transform that context into the final artifact. \
 Output ONLY the refined result. No narration, no commentary, no markdown \
 wrappers unless the instructions explicitly request them.";
+
+const ARTIFACT_SCHEMA_PREAMBLE: &str = "\
+You are a data transformation engine in an automated workflow. \
+You will receive raw data from previous steps and a target JSON structure. \
+Your job is to extract and transform the input data so it conforms to the \
+target JSON structure. Output ONLY valid JSON matching the target shape. \
+No narration, no commentary, no markdown wrappers. \
+Fill in every field from the input data. Use null for fields you cannot populate.";
 
 #[allow(clippy::too_many_arguments)]
 async fn execute_artifact(
@@ -804,6 +814,11 @@ async fn execute_artifact(
         .await
         .map_err(|e| ProcessError::Execution(format!("Failed to create artifact dir: {e}")))?;
 
+    let artifact_mode = cfg
+        .get("artifact_mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("prompt");
+
     let data_content = cfg.get("data").and_then(|v| {
         if v.is_null() {
             return None;
@@ -815,13 +830,30 @@ async fn execute_artifact(
         })
     });
 
-    let raw_content = match (data_content.as_deref(), upstream_context.is_empty()) {
-        (Some(data), true) => data.to_string(),
-        (Some(data), false) => format!("{upstream_context}\n\n---\n\n{data}"),
-        (None, _) => upstream_context.to_string(),
+    let is_schema_mode = artifact_mode == "json_schema";
+
+    let (preamble, user_message, fallback_content) = if is_schema_mode {
+        let schema = data_content.as_deref().unwrap_or("{}");
+        let instructions = if node.prompt.trim().is_empty() {
+            "Transform the input data to match the target JSON structure.".to_string()
+        } else {
+            node.prompt.clone()
+        };
+        let msg = format!(
+            "## Input from previous steps\n\n{upstream_context}\n\n## Target JSON structure\n\n{schema}\n\n## Instructions\n\n{instructions}"
+        );
+        let needs_llm = !upstream_context.is_empty();
+        (ARTIFACT_SCHEMA_PREAMBLE, msg, if needs_llm { None } else { Some(schema.to_string()) })
+    } else {
+        let msg = format!(
+            "## Input from previous steps\n\n{upstream_context}\n\n## Instructions\n\n{}",
+            node.prompt
+        );
+        let needs_llm = !node.prompt.trim().is_empty() && !upstream_context.is_empty();
+        (ARTIFACT_PROMPT_PREAMBLE, msg, if needs_llm { None } else { Some(upstream_context.to_string()) })
     };
 
-    let (content, token_usage, blocks) = if !node.prompt.trim().is_empty() && !raw_content.is_empty() {
+    let (content, token_usage, blocks) = if fallback_content.is_none() {
         let timeout_secs = node
             .config
             .get("timeout_seconds")
@@ -832,7 +864,7 @@ async fn execute_artifact(
             node,
             token,
             agent_service,
-            Some(ARTIFACT_REFINEMENT_PREAMBLE.to_string()),
+            Some(preamble.to_string()),
         );
 
         let session = harness
@@ -840,16 +872,12 @@ async fn execute_artifact(
             .await
             .map_err(|e| ProcessError::Execution(format!("Failed to open artifact harness session: {e}")))?;
 
-        let refinement_prompt = format!(
-            "## Input from previous steps\n\n{raw_content}\n\n## Instructions\n\n{}",
-            node.prompt
-        );
-
         session
             .commands_tx
             .send(HarnessInbound::UserMessage(UserMessage {
-                content: refinement_prompt,
+                content: user_message,
                 tool_hints: None,
+                attachments: None,
             }))
             .map_err(|e| ProcessError::Execution(format!("Failed to send artifact message: {e}")))?;
 
@@ -867,7 +895,7 @@ async fn execute_artifact(
         });
         (refined, tu, Some(resp.content_blocks))
     } else {
-        (raw_content, None, None)
+        (fallback_content.unwrap(), None, None)
     };
 
     let file_path = dir.join(&filename);

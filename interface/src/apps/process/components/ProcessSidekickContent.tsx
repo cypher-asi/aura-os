@@ -748,7 +748,7 @@ function buildFullRunOutput(
 
     if (evt.content_blocks && evt.content_blocks.length > 0) {
       for (const block of evt.content_blocks) {
-        const b = block as Record<string, unknown>;
+        const b = block as unknown as Record<string, unknown>;
         if (b.type === "text" && b.text) parts.push(b.text as string);
         else if (b.type === "thinking" && b.thinking) parts.push(`<thinking>\n${b.thinking as string}\n</thinking>`);
         else if (b.type === "tool_use") parts.push(`[tool_call: ${b.name as string}]`);
@@ -785,7 +785,7 @@ function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes:
     <button
       type="button"
       onClick={handleCopy}
-      title="Copy all node output"
+      title="Copy all output"
       style={{
         display: "flex", alignItems: "center", gap: 4,
         background: "transparent", border: "1px solid var(--color-border)",
@@ -1011,6 +1011,10 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
       )}
 
       <div style={{ padding: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ fontWeight: 600 }}>Run Detail</div>
+          <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
           <span style={{ color: "var(--color-text-muted)" }}>Status</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1067,18 +1071,9 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
           </div>
         )}
 
-        {isActive && liveRunNodeId && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Output &mdash; {liveNodeLabel}</div>
-            <ProcessNodeLiveOutput runId={run.run_id} nodeId={liveRunNodeId} isActive />
-          </div>
-        )}
         {sortedEvents.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <div style={{ fontWeight: 600 }}>Node Events</div>
-              <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
-            </div>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Node Events</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {sortedEvents.map((evt) => (
                 <EventTimelineItem
@@ -1090,6 +1085,12 @@ function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
                 />
               ))}
             </div>
+          </div>
+        )}
+        {isActive && liveRunNodeId && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Output &mdash; {liveNodeLabel}</div>
+            <ProcessNodeLiveOutput runId={run.run_id} nodeId={liveRunNodeId} isActive />
           </div>
         )}
         {run.error && (
