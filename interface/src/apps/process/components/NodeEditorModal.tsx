@@ -208,7 +208,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
           </EditField>
         )}
 
-        {(node.node_type === "action" || node.node_type === "ignition") && (
+        {(node.node_type === "action" || node.node_type === "ignition" || node.node_type === "artifact") && (
           <EditField label="Agent">
             <Select
               value={agentId}

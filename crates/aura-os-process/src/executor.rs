@@ -39,9 +39,10 @@ fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
 
 const PROCESS_EXECUTION_PREAMBLE: &str = "\
 You are executing a step in an automated workflow process. \
-Focus on completing the assigned task and producing clean, actionable output. \
-Do not narrate your thinking process or describe failed attempts. \
-Return only the final, useful result.";
+Your text output is passed DIRECTLY to downstream nodes as structured data. \
+Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
+If you use tools, work silently and return only the finished product. \
+Never describe your process, failed attempts, or intermediate steps in text output.";
 
 pub struct ProcessExecutor {
     store: Arc<ProcessStore>,
@@ -357,9 +358,11 @@ async fn execute_run(
                     &run.run_id,
                     data_dir,
                     store,
+                    harness,
+                    jwt.as_deref(),
+                    agent_service,
                 )
                 .await
-                .map(|s| (s, None))
             }
             ProcessNodeType::Merge => Ok((upstream_context.clone(), None)),
         };
@@ -581,11 +584,13 @@ async fn execute_action(
         }))
         .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
 
-    let (text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
+    let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
 
     if let Err(e) = harness.close_session(&session.session_id).await {
         warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
     }
+
+    let text = extract_final_output(&raw_text);
 
     let token_usage = usage.map(|u| NodeTokenUsage {
         input_tokens: u.cumulative_input_tokens,
@@ -663,6 +668,14 @@ async fn execute_delay(node: &ProcessNode) -> Result<String, ProcessError> {
     Ok(format!("Delayed {seconds} seconds"))
 }
 
+const ARTIFACT_REFINEMENT_PREAMBLE: &str = "\
+You are producing a structured artifact in an automated workflow. \
+You will receive context from previous steps and instructions for how to \
+refine or transform that context into the final artifact. \
+Output ONLY the refined result. No narration, no commentary, no markdown \
+wrappers unless the instructions explicitly request them.";
+
+#[allow(clippy::too_many_arguments)]
 async fn execute_artifact(
     node: &ProcessNode,
     upstream_context: &str,
@@ -670,7 +683,10 @@ async fn execute_artifact(
     run_id: &ProcessRunId,
     data_dir: &Path,
     store: &ProcessStore,
-) -> Result<String, ProcessError> {
+    harness: &dyn HarnessLink,
+    token: Option<&str>,
+    agent_service: &AgentService,
+) -> Result<(String, Option<NodeTokenUsage>), ProcessError> {
     let cfg = &node.config;
     let artifact_name = cfg
         .get("artifact_name")
@@ -712,10 +728,59 @@ async fn execute_artifact(
         })
     });
 
-    let content = match (data_content.as_deref(), upstream_context.is_empty()) {
+    let raw_content = match (data_content.as_deref(), upstream_context.is_empty()) {
         (Some(data), true) => data.to_string(),
         (Some(data), false) => format!("{upstream_context}\n\n---\n\n{data}"),
         (None, _) => upstream_context.to_string(),
+    };
+
+    let (content, token_usage) = if !node.prompt.trim().is_empty() && !raw_content.is_empty() {
+        let timeout_secs = node
+            .config
+            .get("timeout_seconds")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+
+        let session_config = build_session_config(
+            node,
+            token,
+            agent_service,
+            Some(ARTIFACT_REFINEMENT_PREAMBLE.to_string()),
+        );
+
+        let session = harness
+            .open_session(session_config)
+            .await
+            .map_err(|e| ProcessError::Execution(format!("Failed to open artifact harness session: {e}")))?;
+
+        let refinement_prompt = format!(
+            "## Input from previous steps\n\n{raw_content}\n\n## Instructions\n\n{}",
+            node.prompt
+        );
+
+        session
+            .commands_tx
+            .send(HarnessInbound::UserMessage(UserMessage {
+                content: refinement_prompt,
+                tool_hints: None,
+            }))
+            .map_err(|e| ProcessError::Execution(format!("Failed to send artifact message: {e}")))?;
+
+        let (raw_text, usage) = collect_harness_response(&session.events_tx, timeout_secs).await?;
+
+        if let Err(e) = harness.close_session(&session.session_id).await {
+            warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
+        }
+
+        let refined = extract_final_output(&raw_text);
+        let tu = usage.map(|u| NodeTokenUsage {
+            input_tokens: u.cumulative_input_tokens,
+            output_tokens: u.cumulative_output_tokens,
+            model: Some(u.model),
+        });
+        (refined, tu)
+    } else {
+        (raw_content, None)
     };
 
     let file_path = dir.join(&filename);
@@ -745,7 +810,7 @@ async fn execute_artifact(
         "Artifact saved"
     );
 
-    Ok(content)
+    Ok((content, token_usage))
 }
 
 // ---------------------------------------------------------------------------
@@ -817,6 +882,41 @@ async fn collect_harness_response(
             }
         }
     }
+}
+
+/// Extract the final meaningful output from a multi-turn agentic response.
+///
+/// During agentic loops the model often emits planning / narration text between
+/// tool calls. This function tries to return only the final result:
+///   1. If the output ends with a fenced code block, return its contents.
+///   2. Otherwise if a `---` separator is present, return the text after the
+///      last separator (the model's final output section).
+///   3. Fall back to the full text when neither heuristic matches.
+fn extract_final_output(raw: &str) -> String {
+    let trimmed = raw.trim();
+
+    if let Some(last_fence_start) = trimmed.rfind("\n```") {
+        let before_close = &trimmed[..last_fence_start];
+        if let Some(open_pos) = before_close.rfind("```") {
+            let inside_start = before_close[open_pos + 3..]
+                .find('\n')
+                .map(|i| open_pos + 3 + i + 1)
+                .unwrap_or(open_pos + 3);
+            let block = before_close[inside_start..].trim();
+            if !block.is_empty() {
+                return block.to_string();
+            }
+        }
+    }
+
+    if let Some(sep_pos) = trimmed.rfind("\n---\n") {
+        let after = trimmed[sep_pos + 5..].trim();
+        if !after.is_empty() {
+            return after.to_string();
+        }
+    }
+
+    trimmed.to_string()
 }
 
 fn parse_condition_result(output: &str) -> bool {
