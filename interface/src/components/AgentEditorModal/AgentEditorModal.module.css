@@ -148,3 +148,32 @@
   font-size: var(--text-2xs);
   color: var(--color-text-muted);
 }
+
+.readinessCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.readinessTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.readinessInfo {
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary, #3b82f6) 22%, var(--color-border));
+}
+
+.readinessSuccess {
+  background: color-mix(in srgb, var(--color-success, #22c55e) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #22c55e) 28%, var(--color-border));
+}
+
+.readinessWarning {
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning, #f59e0b) 30%, var(--color-border));
+}

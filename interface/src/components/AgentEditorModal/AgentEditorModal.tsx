@@ -1,6 +1,6 @@
 import { Modal, Input, Textarea, Button, Spinner, Text } from "@cypher-asi/zui";
 import { ImagePlus, X, Monitor, Cloud } from "lucide-react";
-import type { Agent } from "../../types";
+import type { Agent, OrgIntegration } from "../../types";
 import { useAgentEditorForm } from "./useAgentEditorForm";
 import { ImageCropModal } from "../ImageCropModal";
 import styles from "./AgentEditorModal.module.css";
@@ -10,6 +10,51 @@ interface AgentEditorModalProps {
   agent?: Agent;
   onClose: () => void;
   onSaved: (agent: Agent) => void;
+}
+
+type ReadinessTone = "info" | "success" | "warning";
+
+function describeAuthReadiness(
+  adapterType: string,
+  authSource: string,
+  selectedIntegration?: OrgIntegration,
+): { tone: ReadinessTone; title: string; message: string } {
+  if (authSource === "org_integration") {
+    if (!selectedIntegration) {
+      return {
+        tone: "warning",
+        title: "Needs a team integration",
+        message: "Choose a matching team integration before saving. Keys stay at the org integration layer and are resolved only at runtime.",
+      };
+    }
+    if (!selectedIntegration.has_secret) {
+      return {
+        tone: "warning",
+        title: "Integration missing a key",
+        message: "This team integration does not have a stored API key yet. Add one in Team Settings before using it for runtime auth.",
+      };
+    }
+    return {
+      tone: "success",
+      title: "Team integration ready",
+      message: `This runtime will use ${selectedIntegration.name}. Keys stay at the org integration layer and are resolved only at runtime.`,
+    };
+  }
+
+  if (authSource === "local_cli_auth") {
+    const runtimeName = adapterType === "claude_code" ? "Claude Code" : "Codex";
+    return {
+      tone: "info",
+      title: "Uses a local login",
+      message: `${runtimeName} uses the CLI login available to aura-os-server on this machine. Save the agent, then use Check Runtime to verify the CLI is installed and logged in.`,
+    };
+  }
+
+  return {
+    tone: "success",
+    title: "Uses Aura billing",
+    message: "Aura Billing is managed by Aura. Save the agent, then use Check Runtime to verify the live runtime path.",
+  };
 }
 
 export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEditorModalProps) {
@@ -34,6 +79,12 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
     return false;
   });
   const showsIntegrationPicker = authSource === "org_integration";
+  const selectedIntegration = integrationChoices.find((integration) => integration.integration_id === integrationId);
+  const authReadiness = describeAuthReadiness(adapterType, authSource, selectedIntegration);
+  const readinessClassName =
+    authReadiness.tone === "success" ? styles.readinessSuccess
+    : authReadiness.tone === "warning" ? styles.readinessWarning
+    : styles.readinessInfo;
 
   return (
     <>
@@ -159,6 +210,11 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
             {adapterType !== "aura_harness" && (
               <Text variant="muted" size="sm">Claude Code and Codex currently run on this machine.</Text>
             )}
+            {adapterType === "aura_harness" && environment === "swarm_microvm" && (
+              <Text variant="muted" size="sm">
+                Isolated Cloud Runtime is the stronger boundary for sensitive workloads. The local path is the fully validated path today.
+              </Text>
+            )}
           </div>
 
           <div className={styles.fieldGroup}>
@@ -213,6 +269,14 @@ export function AgentEditorModal({ isOpen, agent, onClose, onSaved }: AgentEdito
                 This agent will inject a shared team integration into the runtime for API-key-backed execution.
               </Text>
             )}
+          </div>
+
+          <div className={`${styles.readinessCard} ${readinessClassName}`}>
+            <Text size="xs" weight="medium" className={styles.readinessTitle}>
+              Authentication readiness
+            </Text>
+            <Text size="sm">{authReadiness.title}</Text>
+            <Text size="xs" variant="muted">{authReadiness.message}</Text>
           </div>
 
           {showsIntegrationPicker && (

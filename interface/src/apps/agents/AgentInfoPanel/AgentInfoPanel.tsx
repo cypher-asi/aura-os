@@ -15,6 +15,7 @@ import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { useShallow } from "zustand/react/shallow";
 import { useAuth } from "../../../stores/auth-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { useOrgStore } from "../../../stores/org-store";
 import { formatTokens } from "../../../utils/format";
 import { SkillsTab } from "./SkillsTab";
 import { MemoryTab } from "./MemoryTab";
@@ -62,9 +63,56 @@ function formatRunsOnLabel(environment?: string | null, machineType?: string | n
   }
 }
 
+function describeRuntimeReadiness(
+  agent: import("../../../types").Agent,
+  integration?: { name: string; has_secret: boolean } | null,
+): { tone: "info" | "success" | "warning"; title: string; message: string } {
+  if (agent.auth_source === "org_integration") {
+    if (!integration) {
+      return {
+        tone: "warning",
+        title: "Team integration missing",
+        message: "This agent expects a team integration, but none is currently attached. Attach one before running the agent.",
+      };
+    }
+    if (!integration.has_secret) {
+      return {
+        tone: "warning",
+        title: "Integration missing a key",
+        message: `${integration.name} is attached, but it does not have a stored key yet. Add one in Integrations before running this agent.`,
+      };
+    }
+    return {
+      tone: "success",
+      title: "Team integration ready",
+      message: `${integration.name} has a stored key. Keys stay at the org integration layer and are resolved only at runtime.`,
+    };
+  }
+
+  if (agent.auth_source === "local_cli_auth") {
+    const runtimeName = agent.adapter_type === "claude_code" ? "Claude Code" : "Codex";
+    return {
+      tone: "info",
+      title: "Uses a local login",
+      message: `${runtimeName} uses the CLI login available to aura-os-server on this machine. Check Runtime verifies that the CLI is installed and logged in.`,
+    };
+  }
+
+  return {
+    tone: "success",
+    title: "Uses Aura billing",
+    message: "Aura Billing is managed by Aura. Check Runtime verifies the live runtime path for this agent.",
+  };
+}
+
 export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const { selectedAgent, setSelectedAgent } = useSelectedAgent();
   const { user } = useAuth();
+  const { integrations } = useOrgStore(
+    useShallow((s) => ({
+      integrations: s.integrations,
+    })),
+  );
   const navigate = useNavigate();
   const {
     activeTab,
@@ -98,10 +146,12 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   const [iconFailed, setIconFailed] = useState(false);
   const [runtimeTesting, setRuntimeTesting] = useState(false);
   const [runtimeTestMessage, setRuntimeTestMessage] = useState<string | null>(null);
+  const [runtimeTestDetails, setRuntimeTestDetails] = useState<string | null>(null);
   const [runtimeTestStatus, setRuntimeTestStatus] = useState<"success" | "error" | null>(null);
   const [projectBindings, setProjectBindings] = useState<
     { project_agent_id: string; project_id: string; project_name: string }[]
   >([]);
+  const runtimeResultRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIconFailed(false);
@@ -111,6 +161,13 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         .catch(() => setProjectBindings([]));
     }
   }, [selectedAgent?.agent_id]);
+
+  useEffect(() => {
+    if (!runtimeTestMessage || !runtimeResultRef.current) return;
+    requestAnimationFrame(() => {
+      runtimeResultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, [runtimeTestMessage]);
 
   const openDeleteConfirm = useCallback(() => {
     setDeleteError(null);
@@ -147,13 +204,23 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     if (!selectedAgent) return;
     setRuntimeTesting(true);
     setRuntimeTestMessage(null);
+    setRuntimeTestDetails(null);
     setRuntimeTestStatus(null);
     try {
       const result = await api.agents.testRuntime(selectedAgent.agent_id);
       setRuntimeTestMessage(result.message || "Runtime test passed.");
+      const details = [
+        `${formatAdapterLabel(result.adapter_type)} on ${formatRunsOnLabel(result.environment)}`,
+        `Authentication: ${formatAuthSourceLabel(result.auth_source)}`,
+        result.integration_name ? `Integration: ${result.integration_name}` : null,
+        result.provider ? `Provider: ${result.provider}` : null,
+        result.model ? `Model: ${result.model}` : null,
+      ].filter(Boolean).join(" • ");
+      setRuntimeTestDetails(details || null);
       setRuntimeTestStatus("success");
     } catch (err) {
       setRuntimeTestMessage(err instanceof Error ? err.message : "Runtime test failed.");
+      setRuntimeTestDetails(null);
       setRuntimeTestStatus("error");
     } finally {
       setRuntimeTesting(false);
@@ -167,6 +234,10 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
   }
 
   const a = selectedAgent;
+  const selectedIntegration = a.integration_id
+    ? integrations.find((integration) => integration.integration_id === a.integration_id) ?? null
+    : null;
+  const runtimeReadiness = describeRuntimeReadiness(a, selectedIntegration);
   const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
   const isMobileStandalone = variant === "mobileStandalone";
@@ -184,8 +255,11 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
             onIconError={() => setIconFailed(true)}
             runtimeTesting={runtimeTesting}
             runtimeTestMessage={runtimeTestMessage}
+            runtimeTestDetails={runtimeTestDetails}
             runtimeTestStatus={runtimeTestStatus}
             onRuntimeTest={handleRuntimeTest}
+            runtimeResultRef={runtimeResultRef}
+            runtimeReadiness={runtimeReadiness}
           />
         )}
 
@@ -313,8 +387,11 @@ function ProfileTab({
   onIconError,
   runtimeTesting,
   runtimeTestMessage,
+  runtimeTestDetails,
   runtimeTestStatus,
   onRuntimeTest,
+  runtimeResultRef,
+  runtimeReadiness,
 }: {
   agent: import("../../../types").Agent;
   imageUrl: string | undefined;
@@ -322,8 +399,11 @@ function ProfileTab({
   onIconError: () => void;
   runtimeTesting: boolean;
   runtimeTestMessage: string | null;
+  runtimeTestDetails: string | null;
   runtimeTestStatus: "success" | "error" | null;
   onRuntimeTest: () => void;
+  runtimeResultRef: React.RefObject<HTMLDivElement | null>;
+  runtimeReadiness: { tone: "info" | "success" | "warning"; title: string; message: string };
 }) {
   const [installations, setInstallations] = useState<HarnessSkillInstallation[]>([]);
 
@@ -424,6 +504,18 @@ function ProfileTab({
         <Text size="sm">
           {formatAdapterLabel(a.adapter_type)} • Runs On: {formatRunsOnLabel(a.environment, a.machine_type)} • Authentication: {formatAuthSourceLabel(a.auth_source)}
         </Text>
+        <div
+          className={`${styles.runtimeReadiness} ${
+            runtimeReadiness.tone === "success" ? styles.runtimeReadinessSuccess
+            : runtimeReadiness.tone === "warning" ? styles.runtimeReadinessWarning
+            : styles.runtimeReadinessInfo
+          }`}
+        >
+          <Text size="xs" weight="medium" className={styles.runtimeReadinessTitle}>
+            {runtimeReadiness.title}
+          </Text>
+          <Text size="xs" variant="muted">{runtimeReadiness.message}</Text>
+        </div>
         <div className={styles.nameAction} style={{ marginTop: 8 }}>
           <Button variant="secondary" size="sm" onClick={onRuntimeTest} disabled={runtimeTesting}>
             {runtimeTesting ? "Checking..." : "Check Runtime"}
@@ -431,12 +523,21 @@ function ProfileTab({
         </div>
         {runtimeTestMessage && (
           <div
+            ref={runtimeResultRef}
             className={`${styles.runtimeTestResult} ${
               runtimeTestStatus === "error" ? styles.runtimeTestError : styles.runtimeTestSuccess
             }`}
             aria-live="polite"
           >
+            <Text size="xs" weight="medium" className={styles.runtimeTestTitle}>
+              {runtimeTestStatus === "error" ? "Runtime check failed" : "Runtime ready"}
+            </Text>
             <Text size="xs" variant="muted">{runtimeTestMessage}</Text>
+            {runtimeTestDetails && (
+              <Text size="xs" variant="muted" className={styles.runtimeTestMeta}>
+                {runtimeTestDetails}
+              </Text>
+            )}
           </div>
         )}
       </div>

@@ -19,6 +19,10 @@ vi.mock("../../hooks/use-scroll-anchor", () => ({
 
 vi.mock("../../hooks/stream/hooks", () => ({
   useIsStreaming: () => false,
+  useStreamingText: () => "",
+  useThinkingText: () => "",
+  useProgressText: () => "",
+  useActiveToolCalls: () => [],
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({

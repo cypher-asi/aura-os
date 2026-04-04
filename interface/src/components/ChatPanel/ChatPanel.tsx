@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, AlertCircle } from "lucide-react";
+import { MessageSquare, AlertCircle, Loader2 } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
 import { useIsStreaming } from "../../hooks/stream/hooks";
+import { useActiveToolCalls, useProgressText, useStreamingText, useThinkingText } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
@@ -20,6 +21,19 @@ import {
   persistModel,
 } from "../../constants/models";
 import styles from "../ChatView/ChatView.module.css";
+
+function runtimeLabel(adapterType?: string): string {
+  switch (adapterType) {
+    case "claude_code":
+      return "Claude Code";
+    case "codex":
+      return "Codex";
+    case "aura_harness":
+      return "Aura";
+    default:
+      return "the runtime";
+  }
+}
 
 export interface ChatPanelProps {
   streamKey: string;
@@ -90,7 +104,17 @@ export function ChatPanel({
   );
 
   const isStreaming = useIsStreaming(streamKey);
+  const streamingText = useStreamingText(streamKey);
+  const thinkingText = useThinkingText(streamKey);
+  const progressText = useProgressText(streamKey);
+  const activeToolCalls = useActiveToolCalls(streamKey);
   const queue = useMessageQueue(streamKey);
+  const showBufferedRuntimeWait = isStreaming
+    && adapterType !== "aura_harness"
+    && !streamingText
+    && !thinkingText
+    && !progressText
+    && activeToolCalls.length === 0;
 
   useEffect(() => {
     if (isMobileLayout) return;
@@ -270,6 +294,15 @@ export function ChatPanel({
               onMoveUp={handleQueueMoveUp}
               onRemove={handleQueueRemove}
             />
+          </div>
+        )}
+
+        {showBufferedRuntimeWait && (
+          <div className={styles.runtimeWaitBanner} aria-live="polite">
+            <Loader2 size={14} className={styles.runtimeWaitIcon} />
+            <Text size="xs" variant="muted">
+              Waiting for {runtimeLabel(adapterType)} to respond. Local runtimes can take a few seconds before text appears.
+            </Text>
           </div>
         )}
 
