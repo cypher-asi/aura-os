@@ -184,7 +184,7 @@ fn org_routes() -> Router<AppState> {
             put(orgs::set_billing).get(orgs::get_billing),
         )
         .route(
-            "/api/orgs/:org_id/integrations",
+            "/api/orgs/:org_id/integration-config",
             get(orgs::get_integrations).put(orgs::set_integrations),
         )
 }

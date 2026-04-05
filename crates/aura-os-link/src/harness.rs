@@ -1,24 +1,7 @@
 use async_trait::async_trait;
 use tokio::sync::{broadcast, mpsc};
 
-use aura_protocol::{ConversationMessage, InboundMessage, OutboundMessage};
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SessionProviderConfig {
-    pub provider: String,
-    #[serde(default)]
-    pub routing_mode: Option<String>,
-    #[serde(default)]
-    pub api_key: Option<String>,
-    #[serde(default)]
-    pub base_url: Option<String>,
-    #[serde(default)]
-    pub default_model: Option<String>,
-    #[serde(default)]
-    pub fallback_model: Option<String>,
-    #[serde(default)]
-    pub prompt_caching_enabled: Option<bool>,
-}
+use aura_protocol::{ConversationMessage, InboundMessage, OutboundMessage, SessionProviderConfig};
 
 pub struct SessionConfig {
     pub system_prompt: Option<String>,
