@@ -41,7 +41,13 @@ export function ProcessSidekickContent() {
 
   const processes = useProcessStore((s) => s.processes);
   const runs = useProcessStore((s) => (processId ? s.runs[processId] ?? EMPTY_RUNS : EMPTY_RUNS));
+  const storeNodes = useProcessStore((s) => (processId ? s.nodes[processId] : undefined));
   const process = processes.find((p) => p.process_id === processId);
+
+  const liveNode =
+    selectedNode && storeNodes
+      ? storeNodes.find((n) => n.node_id === selectedNode.node_id) ?? selectedNode
+      : selectedNode;
 
   if (!processId) {
     return (
@@ -51,20 +57,20 @@ export function ProcessSidekickContent() {
     );
   }
 
-  if (selectedNode) {
+  if (selectedNode && liveNode) {
     return (
       <div className={styles.sidekickBody}>
         <div className={styles.sidekickContent}>
           <div className={styles.tabContent}>
-            {activeNodeTab === "info" && <NodeInfoTab node={selectedNode} />}
-            {activeNodeTab === "config" && <NodeConfigTab node={selectedNode} />}
-            {activeNodeTab === "connections" && <NodeConnectionsTab node={selectedNode} />}
-            {activeNodeTab === "output" && <NodeOutputTab node={selectedNode} />}
+            {activeNodeTab === "info" && <NodeInfoTab node={liveNode} />}
+            {activeNodeTab === "config" && <NodeConfigTab node={liveNode} />}
+            {activeNodeTab === "connections" && <NodeConnectionsTab node={liveNode} />}
+            {activeNodeTab === "output" && <NodeOutputTab node={liveNode} />}
           </div>
         </div>
         <NodeEditorModal
           isOpen={nodeEditRequested}
-          node={selectedNode}
+          node={liveNode}
           onClose={clearNodeEditRequested}
         />
       </div>
