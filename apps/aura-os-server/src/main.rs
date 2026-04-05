@@ -30,6 +30,7 @@ fn find_interface_dir() -> Option<PathBuf> {
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
+    aura_os_server::ensure_user_bins_on_path();
 
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {

@@ -600,6 +600,7 @@ fn main() {
     }
 
     dotenvy::dotenv().ok();
+    aura_os_server::ensure_user_bins_on_path();
     init_logging();
 
     let (db_path, webview_data_dir, interface_dir) = init_data_dirs();
