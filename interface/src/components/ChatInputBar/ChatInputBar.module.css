@@ -199,6 +199,22 @@
   font-size: 11px;
 }
 
+.commandsTrigger {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.1s ease;
+}
+
+.commandsTrigger:hover {
+  color: var(--color-text);
+}
+
 .attachButton {
   display: flex;
   align-items: center;

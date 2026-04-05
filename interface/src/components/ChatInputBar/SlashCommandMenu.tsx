@@ -36,19 +36,23 @@ export const SlashCommandMenu = memo(function SlashCommandMenu({
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
+          e.stopImmediatePropagation();
           setActiveIndex((i) => (i + 1) % filtered.length);
           break;
         case "ArrowUp":
           e.preventDefault();
+          e.stopImmediatePropagation();
           setActiveIndex((i) => (i - 1 + filtered.length) % filtered.length);
           break;
         case "Enter":
         case "Tab":
           e.preventDefault();
+          e.stopImmediatePropagation();
           onSelect(filtered[activeIndex]);
           break;
         case "Escape":
           e.preventDefault();
+          e.stopImmediatePropagation();
           onClose();
           break;
       }

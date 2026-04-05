@@ -241,7 +241,20 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         {machineType && <><AgentEnvironment machineType={machineType} agentId={templateAgentId ?? agentId} /><span className={styles.infoText} style={{ marginRight: 2 }}>·</span></>}
         <OrbitStatusIndicator project={selectedProject} />
         {selectedProject && <span className={styles.infoText} style={{ marginRight: 2 }}>·</span>}
-        <span className={styles.infoText}>{generationMode === "image" ? "/image mode" : generationMode === "3d" ? "/3d mode" : "/ for commands"}</span>
+        <button
+          type="button"
+          className={styles.commandsTrigger}
+          onClick={() => {
+            if (generationMode !== "chat") return;
+            onInputChange(input.endsWith(" ") || input.length === 0 ? input + "/" : input + " /");
+            slashStartRef.current = (input.endsWith(" ") || input.length === 0 ? input : input + " ").length;
+            setSlashQuery("");
+            setSlashMenuOpen(true);
+            textareaRef.current?.focus();
+          }}
+        >
+          {generationMode === "image" ? "/image mode" : generationMode === "3d" ? "/3d mode" : "/ for commands"}
+        </button>
         <div className={styles.projectMenuWrap} ref={projectMenuRef}>
           <button
             type="button"
