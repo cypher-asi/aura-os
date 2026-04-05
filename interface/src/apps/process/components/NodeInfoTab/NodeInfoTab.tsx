@@ -1,9 +1,11 @@
 import { useEffect } from "react";
+import { Pin } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../../types";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";
+import { PinnedOutputField } from "../PinnedOutput";
 import styles from "../../../../components/Preview/Preview.module.css";
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
@@ -42,6 +44,31 @@ export function NodeInfoTab({ node }: NodeInfoTabProps) {
           <span className={styles.fieldLabel}>Type</span>
           <Text size="sm">{NODE_TYPE_LABELS[node.node_type]}</Text>
         </div>
+
+        {!!cfg?.pinned_output && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel}>Status</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                padding: "2px 8px",
+                background: "rgba(245,158,11,0.15)",
+                color: "#f59e0b",
+                fontWeight: 600,
+              }}
+            >
+              <Pin size={10} />
+              Pinned
+            </span>
+          </div>
+        )}
+
+        {!!cfg?.pinned_output && (
+          <PinnedOutputField text={cfg.pinned_output as string} />
+        )}
 
         {(node.node_type === "action" || node.node_type === "ignition") && (
           <div className={styles.taskField}>
