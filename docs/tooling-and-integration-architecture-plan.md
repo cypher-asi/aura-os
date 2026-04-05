@@ -340,6 +340,13 @@ Adapters should do:
 - decide which tool to call
 - execute via the tool interface already supplied by Aura OS
 
+For external project-attached adapters, there is one more practical rule:
+- Aura may maintain multiple internal tool source kinds
+- but adapters like `Codex` and `Claude Code` currently receive the active tool set through a single session-scoped MCP bridge
+- this means Aura-native tools, app-provider tools, and dynamic MCP-backed tools are flattened into one MCP-exposed surface for those adapters
+- internally the source distinction still matters for policy, registration, and dispatch
+- externally the adapter just sees one MCP tool interface
+
 ### V1 UI Model
 
 The UI should make these concepts visible:

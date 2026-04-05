@@ -212,6 +212,15 @@ Important details:
 - workspace/file operations still belong to the runtime layer
 - control-plane actions stay in Aura OS
 
+One important transport detail:
+- inside Aura OS, tools can come from multiple source kinds:
+  - Aura-native tools
+  - first-class app-provider tools
+  - dynamic MCP-backed tools
+- but for external project-attached adapters like `Codex` and `Claude Code`, Aura packages the active tool surface through one session-scoped MCP bridge
+- so those adapters do not need separate logic for each internal tool source
+- from the adapter's perspective, they are all just MCP tools exposed by Aura for that session
+
 ## Guardrails Against Drift
 
 We do not want a world where:
