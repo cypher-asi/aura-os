@@ -1,7 +1,13 @@
 import { useCallback, useMemo } from "react";
 import { create } from "zustand";
-import type { FeedEvent, FeedComment } from "./feed-store";
-import { networkEventToFeedEvent, networkCommentToFeedComment } from "./feed-store";
+import type { FeedEvent } from "./feed-store";
+import { networkEventToFeedEvent } from "./feed-store";
+import type { FeedComment } from "./shared/event-comments-slice";
+import type { EventCommentsSlice } from "./shared/event-comments-slice";
+import {
+  createEventCommentsSlice,
+  setupCommentLoadingSubscription,
+} from "./shared/event-comments-slice";
 import { useAuthStore } from "./auth-store";
 import { useOrgStore } from "./org-store";
 import { api } from "../api/client";
@@ -24,7 +30,7 @@ export interface ProfileProject {
   repo: string;
 }
 
-interface ProfileState {
+interface ProfileState extends EventCommentsSlice {
   profile: UserProfileData;
   projects: ProfileProject[];
   projectsStatus: "idle" | "loading" | "ready" | "error";
@@ -32,13 +38,9 @@ interface ProfileState {
   eventsStatus: "idle" | "loading" | "ready" | "error";
   totalTokenUsage: number;
   selectedProject: string | null;
-  selectedEventId: string | null;
-  comments: FeedComment[];
 
   updateProfile: (data: Partial<UserProfileData>) => void;
   setSelectedProject: (id: string | null) => void;
-  selectEvent: (id: string | null) => void;
-  addComment: (eventId: string, text: string) => void;
   init: () => void;
 }
 
@@ -114,8 +116,6 @@ export function getProfileCommentsForEvent(comments: FeedComment[], eventId: str
 }
 
 let _initialized = false;
-let _nextCommentId = 1;
-const _loadedCommentIds = new Set<string>();
 
 type ProfileSetter = (
   partial: ProfileState | Partial<ProfileState> | ((state: ProfileState) => ProfileState | Partial<ProfileState>),
@@ -183,7 +183,18 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
   const user = useAuthStore.getState().user;
   const zid = user?.primary_zid || "";
 
+  const eventComments = createEventCommentsSlice<ProfileState>(set, {
+    idPrefix: "p-cmt",
+    getAuthorInfo: () => {
+      const u = useAuthStore.getState().user;
+      const { profile } = get();
+      return { name: u?.display_name || "You", avatarUrl: profile.avatarUrl };
+    },
+  });
+
   return {
+    ...eventComments,
+
     profile: {
       name: user?.display_name || "",
       bio: "",
@@ -201,8 +212,6 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
     eventsStatus: "idle",
     totalTokenUsage: 0,
     selectedProject: null,
-    selectedEventId: null,
-    comments: [],
 
     updateProfile: (data) => {
       set((s) => ({ profile: { ...s.profile, ...data } }));
@@ -220,30 +229,6 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
 
     setSelectedProject: (id) => {
       set({ selectedProject: id, selectedEventId: null });
-    },
-
-    selectEvent: (id) => set({ selectedEventId: id }),
-
-    addComment: (eventId, text) => {
-      const user = useAuthStore.getState().user;
-      const { profile } = get();
-      const authorName = user?.display_name || "You";
-      const makeLocal = (): FeedComment => ({
-        id: `p-cmt-${_nextCommentId++}`,
-        eventId,
-        author: { name: authorName, type: "user", avatarUrl: profile.avatarUrl },
-        text,
-        timestamp: new Date().toISOString(),
-      });
-
-      api.feed
-        .addComment(eventId, text)
-        .then((net) => {
-          set((s) => ({ comments: [...s.comments, networkCommentToFeedComment(net)] }));
-        })
-        .catch(() => {
-          set((s) => ({ comments: [...s.comments, makeLocal()] }));
-        });
     },
 
     init: () => {
@@ -265,27 +250,7 @@ export const useProfileStore = create<ProfileState>()((set, get) => {
   };
 });
 
-/** Load comments for the selected event (idempotent per eventId). */
-useProfileStore.subscribe((state, prev) => {
-  const eventId = state.selectedEventId;
-  if (!eventId || eventId === prev.selectedEventId) return;
-  if (_loadedCommentIds.has(eventId)) return;
-  _loadedCommentIds.add(eventId);
-
-  api.feed
-    .getComments(eventId)
-    .then((netComments) => {
-      const mapped = netComments.map(networkCommentToFeedComment);
-      if (mapped.length > 0) {
-        useProfileStore.setState((s) => {
-          const existingIds = new Set(s.comments.map((c) => c.id));
-          const fresh = mapped.filter((c) => !existingIds.has(c.id));
-          return fresh.length > 0 ? { comments: [...s.comments, ...fresh] } : {};
-        });
-      }
-    })
-    .catch(() => {});
-});
+setupCommentLoadingSubscription(useProfileStore.subscribe, useProfileStore.setState);
 
 let _prevProfileOrgId: string | null = null;
 useOrgStore.subscribe((state) => {

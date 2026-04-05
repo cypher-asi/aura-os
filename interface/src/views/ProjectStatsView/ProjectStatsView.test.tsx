@@ -4,7 +4,7 @@ const mockUseProjectContext = vi.fn();
 const mockUseAuraCapabilities = vi.fn();
 
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => mockUseProjectContext(),
+  useProjectActions: () => mockUseProjectContext(),
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({

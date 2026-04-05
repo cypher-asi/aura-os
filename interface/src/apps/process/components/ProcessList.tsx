@@ -5,7 +5,7 @@ import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem, DropPosition } from "@cypher-asi/zui";
 import { Cpu, FolderOpen, Pencil, Trash2, FolderPlus } from "lucide-react";
 import { useProcessStore, LAST_PROCESS_ID_KEY } from "../stores/process-store";
-import { useSidebarSearch } from "../../../context/SidebarSearchContext";
+import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 import { processApi } from "../../../api/process";
 import { InlineRenameInput } from "../../../components/InlineRenameInput";
 import type { InlineRenameTarget } from "../../../components/InlineRenameInput";

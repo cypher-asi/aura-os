@@ -17,7 +17,7 @@ import {
   LAST_AGENT_ID_KEY,
 } from "../stores";
 import { useChatHistoryStore, agentHistoryKey } from "../../../stores/chat-history-store";
-import { useSidebarSearch } from "../../../context/SidebarSearchContext";
+import { useSidebarSearch } from "../../../hooks/use-sidebar-search";
 
 import type { Agent } from "../../../types";
 import styles from "./AgentList.module.css";

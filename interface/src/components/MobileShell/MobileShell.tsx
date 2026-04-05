@@ -10,7 +10,7 @@ import {
 import { PanelSearch } from "../PanelSearch";
 import { UpdateBanner } from "../UpdateBanner";
 import { MobileBottomNav, type MobileNavId } from "../MobileBottomNav";
-import { useSidebarSearch } from "../../context/SidebarSearchContext";
+import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 import { useMobileDrawerEffects } from "../../hooks/use-mobile-drawers";
 import { getRecentProjects, useProjectsListStore } from "../../stores/projects-list-store";
 import { useMobileDrawerStore, selectDrawerOpen, selectOverlayDrawerOpen } from "../../stores/mobile-drawer-store";

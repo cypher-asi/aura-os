@@ -13,7 +13,7 @@ import { PanelSearch } from "../PanelSearch";
 import { TaskOutputPanel } from "../TaskOutputPanel";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
-import { useSidebarSearch } from "../../context/SidebarSearchContext";
+import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";

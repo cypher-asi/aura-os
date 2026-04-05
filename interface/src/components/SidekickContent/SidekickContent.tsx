@@ -10,7 +10,7 @@ import { StatusBadge } from "../StatusBadge";
 import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { SpecList } from "../../views/SpecList";
 import { TaskList } from "../../views/TaskList";
 import { StatsDashboard } from "../../views/StatsDashboard";
@@ -133,7 +133,7 @@ export function SidekickContent() {
       previewItem: s.previewItem,
     })),
   );
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const [searchQuery, setSearchQuery] = useState("");
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();

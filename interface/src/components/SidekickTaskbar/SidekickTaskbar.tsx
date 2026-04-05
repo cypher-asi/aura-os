@@ -4,7 +4,7 @@ import type { MenuItem } from "@cypher-asi/zui";
 import { Archive, Info, File, Check, ScrollText, BarChart3, Monitor, FolderClosed } from "lucide-react";
 import { useSidekickStore, type SidekickTab } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import { SidekickTabBar, type TabItem } from "../SidekickTabBar";
@@ -27,7 +27,7 @@ export function SidekickTaskbar() {
       toggleInfo: s.toggleInfo,
     })),
   );
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { features } = useAuraCapabilities();
   const { projectId, agentInstanceId } = useParams<{ projectId: string; agentInstanceId: string }>();
   const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId, agentInstanceId });

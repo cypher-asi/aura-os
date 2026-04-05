@@ -24,9 +24,12 @@ export const useProjectActionStore = create<ProjectActionState>()((set) => ({
   unregister: () => set((s) => (s.actions === null ? s : { actions: null })),
 }));
 
-export function useProjectContext(): ProjectActions | null {
+export function useProjectActions(): ProjectActions | null {
   return useProjectActionStore((s) => s.actions);
 }
+
+/** @deprecated Use {@link useProjectActions} instead. */
+export const useProjectContext = useProjectActions;
 
 export function useProjectRegister() {
   const register = useProjectActionStore((s) => s.register);

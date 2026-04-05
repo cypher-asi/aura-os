@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { api } from "../../api/client";
 import type { Spec, Task, TaskStatus } from "../../types";
 import { EventType } from "../../types/aura-events";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useEventStore } from "../../stores/event-store";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
@@ -17,7 +17,7 @@ interface TaskListData {
 }
 
 export function useTaskListData(): TaskListData {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const subscribe = useEventStore((s) => s.subscribe);
   const storeSpecs = useSidekickStore((s) => s.specs);

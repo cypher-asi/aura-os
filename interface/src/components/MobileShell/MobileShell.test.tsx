@@ -69,7 +69,7 @@ vi.mock("../../stores/ui-modal-store", () => ({
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => null,
+  useProjectActions: () => null,
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({
@@ -83,7 +83,7 @@ vi.mock("../../hooks/use-mobile-drawers", () => ({
   useMobileDrawerEffects: vi.fn(),
 }));
 
-vi.mock("../../context/SidebarSearchContext", () => ({
+vi.mock("../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => ({ query: "", setQuery: vi.fn() }),
 }));
 

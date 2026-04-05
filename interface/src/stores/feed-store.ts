@@ -3,10 +3,23 @@ import { create } from "zustand";
 import { useAuthStore } from "./auth-store";
 import { useEventStore } from "./event-store";
 import { useFollowStore } from "./follow-store";
+import {
+  createEventCommentsSlice,
+  setupCommentLoadingSubscription,
+} from "./shared/event-comments-slice";
+import type { EventCommentsSlice } from "./shared/event-comments-slice";
+export {
+  type FeedAuthor,
+  type FeedComment,
+  networkCommentToFeedComment,
+} from "./shared/event-comments-slice";
+import type { FeedAuthor, FeedComment } from "./shared/event-comments-slice";
 import { api } from "../api/client";
 import type { FeedEventDto } from "../api/social";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
+export type { FeedFilter } from "../types/filters";
+import type { FeedFilter } from "../types/filters";
 
 function isUuid(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -84,13 +97,6 @@ export interface FeedCommit {
   message: string;
 }
 
-export interface FeedAuthor {
-  name: string;
-  avatarUrl?: string;
-  type: "user" | "agent";
-  status?: string;
-}
-
 export interface FeedEvent {
   id: string;
   postType: PostType;
@@ -107,31 +113,11 @@ export interface FeedEvent {
   profileId: string;
 }
 
-export interface FeedComment {
-  id: string;
-  eventId: string;
-  author: FeedAuthor;
-  text: string;
-  timestamp: string;
-}
-
-export type FeedFilter = "my-agents" | "organization" | "following" | "leaderboard" | "everything";
-
 export interface FeedSelectedProfile {
   name: string;
   type: "user" | "agent";
   avatarUrl?: string;
   profileId?: string;
-}
-
-interface NetworkComment {
-  id: string;
-  activity_event_id: string;
-  profile_id: string;
-  content: string;
-  created_at: string | null;
-  author_name?: string | null;
-  author_avatar?: string | null;
 }
 
 export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
@@ -173,20 +159,6 @@ export function networkEventToFeedEvent(net: FeedEventDto): FeedEvent {
   };
 }
 
-export function networkCommentToFeedComment(net: NetworkComment): FeedComment {
-  return {
-    id: net.id,
-    eventId: net.activity_event_id,
-    author: {
-      name: net.author_name || net.profile_id,
-      type: "user",
-      avatarUrl: net.author_avatar || undefined,
-    },
-    text: net.content,
-    timestamp: net.created_at || new Date().toISOString(),
-  };
-}
-
 function applyFilter(
   events: FeedEvent[],
   filter: FeedFilter,
@@ -219,26 +191,20 @@ function commitActivityFromEvents(events: FeedEvent[]): Record<string, number> {
 
 const CURRENT_USER = "real-n3o";
 
-interface FeedState {
+interface FeedState extends EventCommentsSlice {
   liveEvents: FeedEvent[] | null;
   userAvatarUrl: string | undefined;
   filter: FeedFilter;
-  selectedEventId: string | null;
   selectedProfile: FeedSelectedProfile | null;
-  comments: FeedComment[];
 
   setFilter: (f: FeedFilter) => void;
-  selectEvent: (id: string | null) => void;
   selectProfile: (profile: FeedSelectedProfile | null) => void;
-  addComment: (eventId: string, text: string) => void;
   createPost: (title: string, summary?: string) => Promise<void>;
   init: () => void;
 }
 
 let _initialized = false;
-let _nextCommentId = 1;
 const _seenIds = new Set<string>();
-const _loadedCommentIds = new Set<string>();
 const _eventUnsubs: (() => void)[] = [];
 
 type FeedSetter = (
@@ -297,123 +263,94 @@ function handleNetworkEvent(event: AuraEvent, set: FeedSetter): void {
   }
 }
 
-export const useFeedStore = create<FeedState>()((set, get) => ({
-  liveEvents: null,
-  userAvatarUrl: undefined,
-  filter: "everything",
-  selectedEventId: null,
-  selectedProfile: null,
-  comments: [],
+export const useFeedStore = create<FeedState>()((set, get) => {
+  const eventComments = createEventCommentsSlice<FeedState>(set, {
+    idPrefix: "cmt",
+    getAuthorInfo: () => {
+      const user = useAuthStore.getState().user;
+      const { userAvatarUrl } = get();
+      const avatarUrl =
+        userAvatarUrl ||
+        (user?.profile_image && user.profile_image.startsWith("http")
+          ? user.profile_image
+          : undefined);
+      return { name: user?.display_name || CURRENT_USER, avatarUrl };
+    },
+  });
 
-  setFilter: (f) => set({ filter: f }),
+  return {
+    ...eventComments,
 
-  selectEvent: (id) => {
-    set({ selectedEventId: id });
-    if (id) set({ selectedProfile: null });
-  },
+    liveEvents: null,
+    userAvatarUrl: undefined,
+    filter: "everything",
+    selectedProfile: null,
 
-  selectProfile: (profile) => {
-    set({ selectedProfile: profile });
-    if (profile) set({ selectedEventId: null });
-  },
+    setFilter: (f) => set({ filter: f }),
 
-  addComment: (eventId, text) => {
-    const user = useAuthStore.getState().user;
-    const { userAvatarUrl } = get();
-    const currentUserAvatar =
-      userAvatarUrl ||
-      (user?.profile_image && user.profile_image.startsWith("http") ? user.profile_image : undefined);
-    const authorName = user?.display_name || CURRENT_USER;
-    const makeLocal = (): FeedComment => ({
-      id: `cmt-${_nextCommentId++}`,
-      eventId,
-      author: { name: authorName, type: "user", avatarUrl: currentUserAvatar },
-      text,
-      timestamp: new Date().toISOString(),
-    });
+    selectEvent: (id) => {
+      eventComments.selectEvent(id);
+      if (id) set({ selectedProfile: null });
+    },
 
-    api.feed
-      .addComment(eventId, text)
-      .then((net) => {
-        set((s) => ({ comments: [...s.comments, networkCommentToFeedComment(net)] }));
-      })
-      .catch(() => {
-        set((s) => ({ comments: [...s.comments, makeLocal()] }));
-      });
-  },
+    selectProfile: (profile) => {
+      set({ selectedProfile: profile });
+      if (profile) set({ selectedEventId: null });
+    },
 
-  createPost: async (title, summary) => {
-    const post = await api.feed.createPost({ title, summary, post_type: "post" });
-    const feedEvent = networkEventToFeedEvent(post);
-    _seenIds.add(feedEvent.id);
-    set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
-  },
+    createPost: async (title, summary) => {
+      const post = await api.feed.createPost({ title, summary, post_type: "post" });
+      const feedEvent = networkEventToFeedEvent(post);
+      _seenIds.add(feedEvent.id);
+      set((s) => ({ liveEvents: [feedEvent, ...(s.liveEvents ?? [])] }));
+    },
 
-  init: () => {
-    if (_initialized) return;
-    _initialized = true;
+    init: () => {
+      if (_initialized) return;
+      _initialized = true;
 
-    api.feed
-      .list()
-      .then((netEvents) => {
-        const mapped = netEvents.map(networkEventToFeedEvent);
-        for (const e of mapped) _seenIds.add(e.id);
-        set({ liveEvents: mapped });
+      api.feed
+        .list()
+        .then((netEvents) => {
+          const mapped = netEvents.map(networkEventToFeedEvent);
+          for (const e of mapped) _seenIds.add(e.id);
+          set({ liveEvents: mapped });
 
-        const unknownIds = [
-          ...new Set(
-            mapped
-              .filter((e) => e.author.name === "Unknown" && e.profileId)
-              .map((e) => e.profileId),
-          ),
-        ];
-        if (unknownIds.length > 0) {
-          Promise.all(unknownIds.map(resolveProfile)).then(() => {
-            set((s) => ({
-              liveEvents: (s.liveEvents ?? []).map((e) => {
-                if (e.author.name !== "Unknown" || !e.profileId) return e;
-                const p = _profileCache.get(e.profileId);
-                if (!p) return e;
-                return { ...e, author: { ...e.author, name: p.name, avatarUrl: p.avatarUrl ?? e.author.avatarUrl, type: p.type } };
-              }),
-            }));
-          });
-        }
-      })
-      .catch(() => set({ liveEvents: [] }));
+          const unknownIds = [
+            ...new Set(
+              mapped
+                .filter((e) => e.author.name === "Unknown" && e.profileId)
+                .map((e) => e.profileId),
+            ),
+          ];
+          if (unknownIds.length > 0) {
+            Promise.all(unknownIds.map(resolveProfile)).then(() => {
+              set((s) => ({
+                liveEvents: (s.liveEvents ?? []).map((e) => {
+                  if (e.author.name !== "Unknown" || !e.profileId) return e;
+                  const p = _profileCache.get(e.profileId);
+                  if (!p) return e;
+                  return { ...e, author: { ...e.author, name: p.name, avatarUrl: p.avatarUrl ?? e.author.avatarUrl, type: p.type } };
+                }),
+              }));
+            });
+          }
+        })
+        .catch(() => set({ liveEvents: [] }));
 
-    api.users
-      .me()
-      .then((u) => { if (u.avatar_url) set({ userAvatarUrl: u.avatar_url }); })
-      .catch(() => {});
+      api.users
+        .me()
+        .then((u) => { if (u.avatar_url) set({ userAvatarUrl: u.avatar_url }); })
+        .catch(() => {});
 
-    const { subscribe } = useEventStore.getState();
-    _eventUnsubs.push(subscribe(EventType.GitPushed, (e) => handleGitPushed(e, set)));
-    _eventUnsubs.push(subscribe(EventType.NetworkEvent, (e) => handleNetworkEvent(e, set)));
-  },
-}));
-
-/** Load comments for the selected event (idempotent per eventId). */
-useFeedStore.subscribe((state, prev) => {
-  const eventId = state.selectedEventId;
-  if (!eventId || eventId === prev.selectedEventId) return;
-  if (_loadedCommentIds.has(eventId)) return;
-  _loadedCommentIds.add(eventId);
-
-  api.feed
-    .getComments(eventId)
-    .then((netComments) => {
-      const mapped = netComments.map(networkCommentToFeedComment);
-      if (mapped.length > 0) {
-        useFeedStore.setState((s) => {
-          const existingIds = new Set(s.comments.map((c) => c.id));
-          const fresh = mapped.filter((c) => !existingIds.has(c.id));
-          return fresh.length > 0 ? { comments: [...s.comments, ...fresh] } : {};
-        });
-      }
-    })
-    .catch(() => {});
+      const { subscribe } = useEventStore.getState();
+      _eventUnsubs.push(subscribe(EventType.GitPushed, (e) => handleGitPushed(e, set)));
+      _eventUnsubs.push(subscribe(EventType.NetworkEvent, (e) => handleNetworkEvent(e, set)));
+    },
+  };
 });
+
+setupCommentLoadingSubscription(useFeedStore.subscribe, useFeedStore.setState);
 
 /* ── derived selectors ── */
 

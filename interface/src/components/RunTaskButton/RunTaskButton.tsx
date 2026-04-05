@@ -3,13 +3,13 @@ import { useParams } from "react-router-dom";
 import { Button } from "@cypher-asi/zui";
 import { Loader2, Play } from "lucide-react";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import styles from "../Preview/Preview.module.css";
 
 export function RunTaskButton({ task }: { task: import("../../types").Task }) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const loopActive = useLoopActive(projectId);

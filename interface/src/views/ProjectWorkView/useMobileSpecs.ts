@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { Spec } from "../../types";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { compareSpecs } from "../../utils/collections";
 
 function sortSpecs(items: Spec[]): Spec[] {
@@ -13,7 +13,7 @@ interface MobileSpecsData {
 }
 
 export function useMobileSpecs(projectId: string): MobileSpecsData {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const [specs, setSpecs] = useState<Spec[]>(() => sortSpecs(ctx?.initialSpecs ?? []));
 
   useEffect(() => {

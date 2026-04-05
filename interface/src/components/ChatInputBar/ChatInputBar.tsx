@@ -2,13 +2,14 @@ import { useRef, useState, useImperativeHandle, forwardRef, memo, useCallback, u
 import { ArrowUp, Plus, X, FileText, ChevronDown, FolderOpen } from "lucide-react";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
-import type { ModelOption, GenerationMode } from "../../constants/models";
-import { AVAILABLE_MODELS, modelLabel, getModelsForMode, getDefaultModelForMode } from "../../constants/models";
+import type { GenerationMode } from "../../constants/models";
+import { availableModelsForAdapter, modelLabel, getModelsForMode, getDefaultModelForMode } from "../../constants/models";
 import { isGenerationCommand } from "../../constants/commands";
 import { AgentEnvironment } from "../AgentEnvironment";
 import { OrbitStatusIndicator } from "../OrbitStatusIndicator/OrbitStatusIndicator";
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { CommandChips } from "./CommandChips";
+import { useChatUI } from "../../stores/chat-ui-store";
 import type { SlashCommand } from "../../constants/commands";
 import type { Project } from "../../types";
 import styles from "../ChatView/ChatView.module.css";
@@ -33,11 +34,8 @@ interface Props {
   onSend: (content: string, action?: string, attachments?: AttachmentItem[], generationMode?: GenerationMode) => void;
   onStop: () => void;
   streamKey: string;
-  selectedModel?: string;
-  availableModels?: ModelOption[];
   adapterType?: string;
   defaultModel?: string | null;
-  onModelChange?: (model: string) => void;
   agentName?: string;
   machineType?: "local" | "remote";
   templateAgentId?: string;
@@ -69,12 +67,18 @@ function AttachmentPreviews({ attachments, onRemove }: { attachments: Attachment
 
 export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function ChatInputBar({
   input, onInputChange, onSend, onStop, streamKey,
-  selectedModel, availableModels = AVAILABLE_MODELS, adapterType, defaultModel, onModelChange, machineType, templateAgentId, agentId,
+  adapterType, defaultModel, machineType, templateAgentId, agentId,
   attachments = [], onAttachmentsChange, onRemoveAttachment,
   selectedCommands = [], onCommandsChange,
   projects = [], selectedProjectId, onProjectChange,
 }, ref) {
   const isStreaming = useIsStreaming(streamKey);
+  const chatUI = useChatUI(streamKey);
+  const selectedModel = chatUI.selectedModel;
+  const availableModels = availableModelsForAdapter(adapterType);
+  const onModelChange = useCallback((model: string) => {
+    chatUI.setSelectedModel(streamKey, model, adapterType);
+  }, [chatUI.setSelectedModel, streamKey, adapterType]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
@@ -162,7 +166,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
       next = [...selectedCommands.filter((c) => !isGenerationCommand(c.id)), cmd];
       const mode = cmd.id === "generate_image" ? "image" : "3d";
       const defaultForMode = getDefaultModelForMode(mode);
-      onModelChange?.(defaultForMode.id);
+      onModelChange(defaultForMode.id);
     } else {
       next = [...selectedCommands, cmd];
     }
@@ -178,7 +182,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     setSlashQuery("");
     slashStartRef.current = null;
     textareaRef.current?.focus();
-  }, [selectedCommands, onCommandsChange, onModelChange, input, onInputChange]);
+  }, [selectedCommands, onCommandsChange, input, onInputChange, onModelChange]);
 
   const handleCommandRemove = useCallback((id: string) => {
     onCommandsChange?.(selectedCommands.filter((c) => c.id !== id));
@@ -279,7 +283,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
                   key={m.id}
                   type="button"
                   className={`${styles.modelMenuItem} ${m.id === selectedModel ? styles.modelMenuItemActive : ""}`}
-                  onClick={() => { onModelChange?.(m.id); setModelMenuOpen(false); }}
+                  onClick={() => { onModelChange(m.id); setModelMenuOpen(false); }}
                 >
                   {m.label}
                 </button>

@@ -38,7 +38,7 @@ vi.mock("../stores/sidekick-store", () => ({
 }));
 
 vi.mock("../stores/project-action-store", () => ({
-  useProjectContext: () => ({
+  useProjectActions: () => ({
     setProject: vi.fn(),
   }),
 }));

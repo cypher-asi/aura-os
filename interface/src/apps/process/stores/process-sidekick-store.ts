@@ -1,26 +1,26 @@
 import { create } from "zustand";
 import type { ProcessNode, ProcessRun } from "../../../types";
+import { createSidekickSlice, type SidekickSliceState } from "../../../stores/shared/sidekick-slice";
 
 export type ProcessSidekickTab = "process" | "runs" | "events" | "stats" | "log";
 export type NodeSidekickTab = "info" | "config" | "connections" | "output";
 
 export type NodeRunStatus = "running" | "completed" | "failed" | "skipped";
 
-interface ProcessSidekickState {
-  activeTab: ProcessSidekickTab;
+interface ProcessSidekickState extends SidekickSliceState<ProcessSidekickTab, ProcessRun> {
   activeNodeTab: NodeSidekickTab;
+  /** Kept for backward compatibility; mirrors previewItem from the slice. */
   previewRun: ProcessRun | null;
   selectedNode: ProcessNode | null;
   showEditor: boolean;
   showDeleteConfirm: boolean;
   /** When true, NodeConfigTab should enter edit mode */
   nodeEditRequested: boolean;
-  /** Live execution status per node (nodeId → status) during a run */
+  /** Live execution status per node (nodeId -> status) during a run */
   nodeStatuses: Record<string, NodeRunStatus>;
   /** Currently executing node for the active run (from WS events) */
   liveRunNodeId: string | null;
 
-  setActiveTab: (tab: ProcessSidekickTab) => void;
   setActiveNodeTab: (tab: NodeSidekickTab) => void;
   viewRun: (run: ProcessRun) => void;
   closePreview: () => void;
@@ -37,20 +37,21 @@ interface ProcessSidekickState {
 }
 
 export const useProcessSidekickStore = create<ProcessSidekickState>()((set, get) => ({
-  activeTab: "process",
-  activeNodeTab: "info",
+  ...createSidekickSlice<ProcessSidekickTab, ProcessRun>("process", set, get),
+  // Override: process store does not clear preview on tab switch
+  setActiveTab: (tab: ProcessSidekickTab) => set({ activeTab: tab }),
+  activeNodeTab: "info" as NodeSidekickTab,
   previewRun: null,
   selectedNode: null,
   showEditor: false,
   showDeleteConfirm: false,
   nodeEditRequested: false,
-  nodeStatuses: {},
+  nodeStatuses: {} as Record<string, NodeRunStatus>,
   liveRunNodeId: null,
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
   setActiveNodeTab: (tab) => set({ activeNodeTab: tab }),
-  viewRun: (run) => set({ previewRun: run, selectedNode: null }),
-  closePreview: () => set({ previewRun: null }),
+  viewRun: (run) => set({ previewItem: run, previewRun: run, selectedNode: null, previewHistory: [], canGoBack: false }),
+  closePreview: () => set({ previewItem: null, previewRun: null, previewHistory: [], canGoBack: false }),
   selectNode: (node) => set({ selectedNode: node, activeNodeTab: "info" }),
   closeNodeInspector: () => set({ selectedNode: null, activeNodeTab: "info" }),
   requestEdit: () => {

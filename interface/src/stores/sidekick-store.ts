@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { AgentInstance, Spec, Task, Session } from "../types";
 import type { LogEntry } from "../hooks/use-log-stream";
 import { compareSpecs } from "../utils/collections";
+import { createSidekickSlice, type SidekickSliceState } from "./shared/sidekick-slice";
 
 export type SidekickTab = "specs" | "tasks" | "stats" | "sessions" | "log" | "files";
 
@@ -15,23 +16,17 @@ export type PreviewItem =
 
 type AgentInstanceUpdateListener = (instance: AgentInstance) => void;
 
-interface SidekickState {
-  activeTab: SidekickTab;
-  previewItem: PreviewItem | null;
-  previewHistory: PreviewItem[];
+interface SidekickState extends SidekickSliceState<SidekickTab, PreviewItem> {
   infoContent: ReactNode;
   showInfo: boolean;
   specs: Spec[];
   tasks: Task[];
   deletedSpecIds: string[];
   streamingAgentInstanceId: string | null;
-  canGoBack: boolean;
 
-  setActiveTab: (tab: SidekickTab) => void;
   viewSpec: (spec: Spec) => void;
   viewTask: (task: Task) => void;
   viewSession: (session: Session) => void;
-  pushPreview: (item: PreviewItem) => void;
   goBackPreview: () => void;
   closePreview: () => void;
   toggleInfo: (title: string, content: ReactNode) => void;
@@ -80,16 +75,13 @@ function patchSpecInHistory(
 const titleListeners = new Set<AgentInstanceUpdateListener>();
 
 export const useSidekickStore = create<SidekickState>()((set, get) => ({
-  activeTab: "specs",
-  previewItem: null,
-  previewHistory: [],
+  ...createSidekickSlice<SidekickTab, PreviewItem>("specs", set, get),
   infoContent: null,
   showInfo: false,
   specs: [],
   tasks: [],
   deletedSpecIds: [],
   streamingAgentInstanceId: null,
-  canGoBack: false,
 
   setActiveTab: (tab) => {
     set({ activeTab: tab, showInfo: false, previewItem: null, previewHistory: [], canGoBack: false });
@@ -107,14 +99,6 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     set({ previewItem: { kind: "session", session }, previewHistory: [], canGoBack: false });
   },
 
-  pushPreview: (item) => {
-    const { previewItem, previewHistory } = get();
-    const newHistory = previewItem
-      ? [...previewHistory, previewItem]
-      : previewHistory;
-    set({ previewHistory: newHistory, previewItem: item, canGoBack: newHistory.length > 0 });
-  },
-
   goBackPreview: () => {
     const { previewHistory, tasks } = get();
     if (previewHistory.length === 0) return;
@@ -130,9 +114,7 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     set({ previewItem: previousItem, previewHistory: history, canGoBack: history.length > 0 });
   },
 
-  closePreview: () => {
-    set({ previewItem: null, previewHistory: [], canGoBack: false });
-  },
+  closePreview: () => get().clearPreviews(),
 
   toggleInfo: (_title, content) => {
     const { showInfo } = get();
@@ -241,4 +223,3 @@ export const useSidekickStore = create<SidekickState>()((set, get) => ({
     set({ previewItem: { kind: "specs_overview", specs } });
   },
 }));
-

@@ -5,7 +5,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Button, Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { X, ArrowLeft, FileText } from "lucide-react";
 import { useSidekickStore } from "../../stores/sidekick-store";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { TaskPreview } from "../TaskPreview";
 import { RunTaskButton } from "../RunTaskButton";
 import { SessionPreview } from "../SessionPreview";
@@ -17,7 +17,7 @@ import styles from "./Preview.module.css";
 
 function SpecsOverviewPreview({ specs }: { specs: Spec[] }) {
   const pushPreview = useSidekickStore((s) => s.pushPreview);
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const project = ctx?.project;
 
   const summaryText = project?.specs_summary ?? null;
@@ -121,7 +121,7 @@ export function PreviewHeader() {
   const canGoBack = useSidekickStore((s) => s.canGoBack);
   const goBackPreview = useSidekickStore((s) => s.goBackPreview);
   const displayItem = useDisplayItem();
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
 
   if (!displayItem) return null;
 

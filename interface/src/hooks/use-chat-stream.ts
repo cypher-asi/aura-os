@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import { useSidekickStore } from "../stores/sidekick-store";
-import { useProjectContext } from "../stores/project-action-store";
+import { useProjectActions } from "../stores/project-action-store";
 import type { StreamEventHandler } from "../api/streams";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
@@ -250,7 +250,7 @@ interface DispatchDeps {
   coreKey: string;
   setProgressText: (t: string) => void;
   sidekickRef: React.MutableRefObject<ReturnType<typeof useSidekickStore.getState>>;
-  projectCtxRef: React.MutableRefObject<ReturnType<typeof useProjectContext>>;
+  projectCtxRef: React.MutableRefObject<ReturnType<typeof useProjectActions>>;
   pendingSpecIdsRef: React.MutableRefObject<string[]>;
   pendingTaskIdsRef: React.MutableRefObject<string[]>;
 }
@@ -433,7 +433,7 @@ function buildStreamHandler(deps: DispatchDeps): StreamEventHandler {
 
 export function useChatStream({ projectId, agentInstanceId }: UseChatStreamOptions) {
   const sidekickRef = useRef(useSidekickStore.getState());
-  const projectCtx = useProjectContext();
+  const projectCtx = useProjectActions();
   const projectCtxRef = useRef(projectCtx);
 
   useEffect(() => useSidekickStore.subscribe((s) => { sidekickRef.current = s; }), []);

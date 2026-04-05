@@ -10,7 +10,7 @@ import {
 import { useTerminalPanelStore } from "../../stores/terminal-panel-store";
 import { useShallow } from "zustand/react/shallow";
 import { useEventStore } from "../../stores/event-store";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAutomationStatus } from "../AutomationBar/useAutomationStatus";
 import { EventType } from "../../types/aura-events";
 import { TerminalPanelBody } from "../TerminalPanelBody";
@@ -20,7 +20,7 @@ import styles from "./TaskOutputPanel.module.css";
 
 function useActiveTaskTracking() {
   const subscribe = useEventStore((s) => s.subscribe);
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { addTask, completeTask, failTask, markAllCompleted } = useTaskOutputPanelStore.getState();
 
@@ -222,7 +222,7 @@ export function TaskOutputPanel() {
   const contentRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const { agentInstanceId } = useParams<{ agentInstanceId?: string }>();
   const projectTasks = useTasksForProject(projectId, agentInstanceId);

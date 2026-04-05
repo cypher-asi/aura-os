@@ -55,7 +55,7 @@ const mockProjectContext = {
   },
 };
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => mockProjectContext,
+  useProjectActions: () => mockProjectContext,
 }));
 
 vi.mock("../TaskPreview", () => ({

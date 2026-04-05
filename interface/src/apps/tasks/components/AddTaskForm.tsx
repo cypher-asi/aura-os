@@ -3,7 +3,7 @@ import { Modal, Button, Toggle, Spinner } from "@cypher-asi/zui";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { tasksApi } from "../../../api/tasks";
 import { useKanbanStore } from "../stores/kanban-store";
-import { useProjectContext } from "../../../stores/project-action-store";
+import { useProjectActions } from "../../../stores/project-action-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
 import { Select } from "../../../components/Select";
 import styles from "./AddTaskForm.module.css";
@@ -36,7 +36,7 @@ export function AddTaskForm({
   const [submitting, setSubmitting] = useState(false);
   const [createMore, setCreateMore] = useState(false);
   const addTask = useKanbanStore((s) => s.addTask);
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const specs = ctx?.initialSpecs ?? [];
   const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId]) ?? [];
 

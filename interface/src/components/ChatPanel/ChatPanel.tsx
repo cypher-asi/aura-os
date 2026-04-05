@@ -15,12 +15,8 @@ import type { SlashCommand } from "../../constants/commands";
 import { isGenerationCommand } from "../../constants/commands";
 import type { Project } from "../../types";
 import type { GenerationMode } from "../../constants/models";
-import {
-  availableModelsForAdapter,
-  defaultModelForAdapter,
-  loadPersistedModel,
-  persistModel,
-} from "../../constants/models";
+import { availableModelsForAdapter } from "../../constants/models";
+import { useChatUI } from "../../stores/chat-ui-store";
 import styles from "../ChatView/ChatView.module.css";
 
 export interface ChatPanelProps {
@@ -73,7 +69,9 @@ export function ChatPanel({
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const availableModels = availableModelsForAdapter(adapterType);
-  const [selectedModel, setSelectedModel] = useState(() => loadPersistedModel(adapterType, defaultModel));
+  const chatUI = useChatUI(streamKey);
+  useEffect(() => { chatUI.init(streamKey, adapterType, defaultModel); }, [streamKey, adapterType, defaultModel, chatUI.init]);
+  const selectedModel = chatUI.selectedModel;
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
@@ -135,19 +133,9 @@ export function ChatPanel({
     requestAnimationFrame(() => inputBarRef.current?.focus());
   }, [isMobileLayout, scrollResetKey]);
 
-  const handleModelChange = useCallback((modelId: string) => {
-    setSelectedModel(modelId);
-    persistModel(modelId, adapterType);
-  }, [adapterType]);
-
   useEffect(() => {
-    setSelectedModel((current) => {
-      if (availableModels.some((model) => model.id === current)) {
-        return current;
-      }
-      return defaultModelForAdapter(adapterType, defaultModel);
-    });
-  }, [adapterType, defaultModel, availableModels]);
+    chatUI.syncAvailableModels(streamKey, adapterType, defaultModel);
+  }, [adapterType, defaultModel, availableModels, chatUI.syncAvailableModels, streamKey]);
 
   const handleRemoveAttachment = useCallback(
     (id: string) => setAttachments((prev) => prev.filter((a) => a.id !== id)),
@@ -315,11 +303,8 @@ export function ChatPanel({
           onSend={handleSend}
           onStop={onStop}
           streamKey={streamKey}
-          selectedModel={selectedModel}
-          availableModels={availableModels}
           adapterType={adapterType}
           defaultModel={defaultModel}
-          onModelChange={handleModelChange}
           agentName={agentName}
           machineType={machineType}
           templateAgentId={templateAgentId}

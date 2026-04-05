@@ -53,7 +53,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   }),
 }));
 
-vi.mock("../../context/SidebarSearchContext", () => ({
+vi.mock("../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => ({
     query: "",
     setQuery: vi.fn(),

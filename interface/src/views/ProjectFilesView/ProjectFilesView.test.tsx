@@ -14,7 +14,7 @@ vi.mock("@cypher-asi/zui", () => ({
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => mockUseProjectContext(),
+  useProjectActions: () => mockUseProjectContext(),
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({

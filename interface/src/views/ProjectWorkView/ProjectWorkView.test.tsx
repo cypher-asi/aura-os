@@ -23,7 +23,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
 }));
 
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => mockUseProjectContext(),
+  useProjectActions: () => mockUseProjectContext(),
 }));
 
 vi.mock("../../stores/event-store", () => ({

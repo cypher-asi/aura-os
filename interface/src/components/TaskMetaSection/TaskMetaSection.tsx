@@ -6,8 +6,9 @@ import { RotateCcw } from "lucide-react";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { Avatar } from "../Avatar";
 import { useAvatarState } from "../../hooks/use-avatar-state";
+import { useProjectActions } from "../../stores/project-action-store";
 import { toBullets, formatTokens, formatRelativeTime } from "../../utils/format";
-import type { Task, AgentInstance, Spec } from "../../types";
+import type { Task, AgentInstance } from "../../types";
 import styles from "../Preview/Preview.module.css";
 
 function extractErrorMessage(raw: string): string {
@@ -53,8 +54,6 @@ export interface TaskMetaSectionProps {
   retrying: boolean;
   onRetry: () => void;
   onViewSession: () => void;
-  specs?: Spec[];
-  allTasks?: Task[];
 }
 
 export function TaskMetaSection({
@@ -69,9 +68,10 @@ export function TaskMetaSection({
   retrying,
   onRetry,
   onViewSession,
-  specs,
-  allTasks,
 }: TaskMetaSectionProps) {
+  const ctx = useProjectActions();
+  const specs = ctx?.initialSpecs;
+  const allTasks = ctx?.initialTasks;
   const specTitle = specs?.find((s) => s.spec_id === task.spec_id)?.title;
   const parentTitle = task.parent_task_id
     ? allTasks?.find((t) => t.task_id === task.parent_task_id)?.title

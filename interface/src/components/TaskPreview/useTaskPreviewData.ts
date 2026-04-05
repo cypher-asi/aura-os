@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useTaskOutput, useEventStore } from "../../stores/event-store";
 import { useTaskStatus } from "../../hooks/use-task-status";
 import { useTaskAgentInstances } from "../../hooks/use-task-agent-instances";
@@ -28,7 +28,7 @@ function useElapsedTime(active: boolean): number {
 
 export function useTaskPreviewData(task: import("../../types").Task) {
   const taskOutput = useTaskOutput(task.task_id);
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const pushPreview = useSidekickStore((s) => s.pushPreview);
   const { agentInstanceId: routeAgentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
@@ -93,7 +93,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
 }
 
 export function useRunTaskData(task: import("../../types").Task) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const { liveStatus } = useTaskStatus(task.task_id);
