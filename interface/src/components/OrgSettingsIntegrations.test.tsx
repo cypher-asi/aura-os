@@ -143,4 +143,37 @@ describe("OrgSettingsIntegrations", () => {
       api_key: "ghp_test",
     });
   });
+
+  it("keeps saved integrations collapsed until edit is requested", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <OrgSettingsIntegrations
+        integrations={[{
+          integration_id: "int-openai",
+          org_id: "org-1",
+          name: "UI Test OpenAI",
+          provider: "openai",
+          kind: "workspace_connection",
+          default_model: null,
+          has_secret: false,
+          secret_last4: null,
+          provider_config: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }]}
+        busyId={null}
+        onCreate={vi.fn().mockResolvedValue(null)}
+        onUpdate={vi.fn().mockResolvedValue(null)}
+        onDelete={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.queryByLabelText(/Integration name for UI Test OpenAI/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByLabelText(/Integration name for UI Test OpenAI/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
 });
