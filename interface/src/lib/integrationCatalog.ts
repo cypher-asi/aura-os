@@ -254,14 +254,14 @@ export function integrationSections(): Array<{
   return [
     {
       id: "workspace_connection",
-      title: "Workspace Connections",
-      description: "Shared model-provider access that adapters can use at runtime.",
+      title: "Model Connections",
+      description: "Shared model providers for agent runtimes.",
       providers: INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_connection"),
     },
     {
       id: "workspace_integration",
-      title: "Workspace Integrations",
-      description: "External systems that can contribute tools and workflows into Aura OS.",
+      title: "App Integrations",
+      description: "Connected work apps that can supply tools and workflows.",
       providers: INTEGRATION_CATALOG.filter((provider) => provider.kind === "workspace_integration"),
     },
     {

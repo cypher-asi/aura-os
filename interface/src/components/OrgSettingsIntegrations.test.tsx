@@ -29,6 +29,8 @@ describe("OrgSettingsIntegrations", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
+
     expect(screen.getByLabelText("New preferred model")).toBeInTheDocument();
     expect(screen.getByLabelText("New Anthropic API Key")).toBeInTheDocument();
 
@@ -52,6 +54,7 @@ describe("OrgSettingsIntegrations", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
     await user.click(screen.getByRole("button", { name: "GitHub" }));
     await user.type(screen.getByLabelText("New integration name"), "GitHub Ops");
     await user.type(screen.getByLabelText("New GitHub Token"), "ghp_test_123");
@@ -80,17 +83,18 @@ describe("OrgSettingsIntegrations", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
     await user.click(screen.getByRole("button", { name: "Slack" }));
 
     expect(
       screen.getByText(/Use a bot token with only the channels and posting scopes your workspace needs./i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Workspace integration for external tools and workflows./i),
+      screen.getByText(/Messaging, channel access, and workspace coordination workflows./i),
     ).toBeInTheDocument();
   });
 
-  it("shows runtime-auth classification for anthropic", () => {
+  it("shows the lighter top-level structure by default", () => {
     render(
       <OrgSettingsIntegrations
         integrations={[]}
@@ -101,9 +105,10 @@ describe("OrgSettingsIntegrations", () => {
       />,
     );
 
-    expect(
-      screen.getByText(/Workspace connection for model\/runtime access./i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Integrations")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Integration" })).toBeInTheDocument();
+    expect(screen.getByText("Model Connections")).toBeInTheDocument();
+    expect(screen.getByText("App Integrations")).toBeInTheDocument();
   });
 
   it("submits custom mcp servers with provider config", async () => {
@@ -120,6 +125,7 @@ describe("OrgSettingsIntegrations", () => {
       />,
     );
 
+    await user.click(screen.getByRole("button", { name: "Add Integration" }));
     await user.click(screen.getByRole("button", { name: "Custom MCP Server" }));
     await user.type(screen.getByLabelText("New integration name"), "GitHub MCP");
     await user.type(screen.getByLabelText("New Transport"), "stdio");
