@@ -1,5 +1,5 @@
 import { Brain, CheckSquare, BarChart3 } from "lucide-react";
-import styles from "../AppShell/AppShell.module.css";
+import styles from "../MobileShell/MobileShell.module.css";
 
 export type MobileNavId = "agent" | "tasks" | "stats";
 

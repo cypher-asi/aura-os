@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import type { ProjectId, Task } from "../../types";
 import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useLoopActive } from "../../hooks/use-loop-active";
 import { titleSortKey } from "../../utils/collections";
 

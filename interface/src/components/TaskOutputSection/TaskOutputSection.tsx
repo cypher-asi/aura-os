@@ -13,8 +13,8 @@ import {
   useTimeline,
   useProgressText,
 } from "../../hooks/stream/hooks";
-import type { TaskOutputEntry } from "../../stores/event-store";
-import { useTaskOutput } from "../../stores/event-store";
+import type { TaskOutputEntry } from "../../stores/event-store/index";
+import { useTaskOutput } from "../../stores/event-store/index";
 import type { DisplaySessionEvent, ToolCallEntry } from "../../types/stream";
 import type { Task } from "../../types";
 import styles from "../Preview/Preview.module.css";

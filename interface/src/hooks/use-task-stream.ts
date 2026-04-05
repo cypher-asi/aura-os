@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useEventStore, getTaskOutput } from "../stores/event-store";
+import { useEventStore, getTaskOutput } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 import {
   useStreamCore,

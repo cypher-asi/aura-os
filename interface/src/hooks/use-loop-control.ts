@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../api/client";
-import { useEventStore } from "../stores/event-store";
+import { useEventStore } from "../stores/event-store/index";
 import { EventType, type AuraEvent } from "../types/aura-events";
 
 interface LoopControlResult {

@@ -36,8 +36,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
             .json_data(&json!({ "mode": mode, "ts": data }))
             .unwrap_or_else(|_| Event::default().data("{}")),
         "progress" => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!({}));
+            let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_progress")
                 .json_data(&json!({
@@ -47,8 +46,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
                 .unwrap_or_else(|_| Event::default().data("{}"))
         }
         "partial-image" => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!({}));
+            let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_partial_image")
                 .json_data(&json!({
@@ -57,8 +55,7 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
                 .unwrap_or_else(|_| Event::default().data("{}"))
         }
         "completed" => {
-            let mut parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!({}));
+            let mut parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             if let Some(obj) = parsed.as_object_mut() {
                 obj.insert("mode".to_string(), json!(mode));
             }
@@ -68,30 +65,36 @@ fn translate_router_event(event_type: &str, data: &str, mode: &str) -> Event {
                 .unwrap_or_else(|_| Event::default().data("{}"))
         }
         "submitted" => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!({}));
+            let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_progress")
                 .json_data(&json!({
                     "percent": 5,
-                    "message": format!("Task submitted: {}", parsed.get("taskId").and_then(|v| v.as_str()).unwrap_or("")),
+                    "message": format!(
+                        "Task submitted: {}",
+                        parsed.get("taskId").and_then(|v| v.as_str()).unwrap_or("")
+                    ),
                 }))
                 .unwrap_or_else(|_| Event::default().data("{}"))
         }
         "error" => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!({}));
+            let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!({}));
             Event::default()
                 .event("generation_error")
                 .json_data(&json!({
-                    "code": parsed.get("code").and_then(|v| v.as_str()).unwrap_or("GENERATION_FAILED"),
-                    "message": parsed.get("message").and_then(|v| v.as_str()).unwrap_or("Generation failed"),
+                    "code": parsed
+                        .get("code")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("GENERATION_FAILED"),
+                    "message": parsed
+                        .get("message")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Generation failed"),
                 }))
                 .unwrap_or_else(|_| Event::default().data("{}"))
         }
         _ => {
-            let parsed: serde_json::Value =
-                serde_json::from_str(data).unwrap_or(json!(data));
+            let parsed: serde_json::Value = serde_json::from_str(data).unwrap_or(json!(data));
             Event::default()
                 .event(event_type)
                 .json_data(&parsed)
@@ -197,8 +200,7 @@ async fn proxy_sse_stream(
                             }
                             buffer.clear();
                             if !event_type.is_empty() && !data.is_empty() {
-                                let evt =
-                                    translate_router_event(&event_type, &data, mode_static);
+                                let evt = translate_router_event(&event_type, &data, mode_static);
                                 return Some((Ok(evt), (stream, buffer, false)));
                             }
                         }
@@ -243,11 +245,11 @@ pub(crate) async fn generate_image_stream(
     if let Some(images) = &body.images {
         payload["images"] = json!(images);
     }
-    if let Some(pid) = &body.project_id {
-        payload["projectId"] = json!(pid);
+    if let Some(project_id) = &body.project_id {
+        payload["projectId"] = json!(project_id);
     }
-    if let Some(iter) = body.is_iteration {
-        payload["isIteration"] = json!(iter);
+    if let Some(is_iteration) = body.is_iteration {
+        payload["isIteration"] = json!(is_iteration);
     }
 
     proxy_sse_stream(&url, &jwt, payload, "image").await
@@ -269,8 +271,8 @@ pub(crate) async fn generate_3d_stream(
     if let Some(prompt) = &body.prompt {
         payload["prompt"] = json!(prompt);
     }
-    if let Some(pid) = &body.project_id {
-        payload["projectId"] = json!(pid);
+    if let Some(project_id) = &body.project_id {
+        payload["projectId"] = json!(project_id);
     }
 
     proxy_sse_stream(&url, &jwt, payload, "3d").await

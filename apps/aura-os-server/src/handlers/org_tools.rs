@@ -87,7 +87,7 @@ fn app_tool_manifest_entries() -> &'static [AppToolManifestEntry] {
     ENTRIES.get_or_init(|| {
         serde_json::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../shared/org-integration-tools.json"
+            "/../../infra/shared/org-integration-tools.json"
         )))
         .expect("app tool manifest should parse")
     })

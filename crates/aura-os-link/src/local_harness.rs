@@ -53,15 +53,7 @@ impl HarnessLink for LocalHarness {
             aura_session_id: config.aura_session_id,
             aura_org_id: config.aura_org_id,
             agent_id: config.agent_id,
-            provider_config: config.provider_config.map(|config| aura_protocol::SessionProviderConfig {
-                provider: config.provider,
-                routing_mode: config.routing_mode,
-                api_key: config.api_key,
-                base_url: config.base_url,
-                default_model: config.default_model,
-                fallback_model: config.fallback_model,
-                prompt_caching_enabled: config.prompt_caching_enabled,
-            }),
+            provider_config: config.provider_config,
         })))?;
 
         let mut rx = events_tx.subscribe();

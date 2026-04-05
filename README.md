@@ -95,7 +95,7 @@ Open `http://localhost:5173`. The Vite dev server proxies `/api` and `/ws` to `h
 For all mobile browser testing, use the shared mobile dev runner from the repo root:
 
 ```bash
-./scripts/run-mobile-dev.sh
+./scripts/dev/run-mobile-dev.sh
 ```
 
 What it does:
@@ -123,7 +123,7 @@ ORBIT_BASE_URL=https://your-orbit-host.example.com
 Use the defaults:
 
 ```bash
-./scripts/run-mobile-dev.sh
+./scripts/dev/run-mobile-dev.sh
 ```
 
 Then open:
@@ -145,7 +145,7 @@ To test Aura on your actual phone, your phone and computer must be on the same W
 AURA_SERVER_HOST=0.0.0.0 \
 AURA_FRONTEND_HOST=0.0.0.0 \
 AURA_PUBLIC_HOST=192.168.1.42 \
-./scripts/run-mobile-dev.sh
+./scripts/dev/run-mobile-dev.sh
 ```
 
 3. Open the printed URL on your phone:
@@ -373,8 +373,8 @@ Run from the repo root so `.env` is loaded. The desktop app bundles the server a
 
 For the current release-build plan and workflow map, see:
 
-- [Release Build Strategy](/Users/shahrozkhan/Documents/zero/aura-os/docs/release-build-strategy.md)
-- [Release Workflows](/Users/shahrozkhan/Documents/zero/aura-os/docs/release-workflows.md)
+- [Release Build Strategy](docs/release-build-strategy.md)
+- [Release Workflows](docs/release-workflows.md)
 
 ### Optional services
 
@@ -396,72 +396,81 @@ For the current release-build plan and workflow map, see:
 
 ## Architecture
 
+### Apps (binaries)
+
 | Crate | Description |
 | --- | --- |
 | **aura-os-desktop** | Standalone desktop GUI (tao + wry WebView) |
 | **aura-os-server** | HTTP API server (Axum) serving the interface and API routes |
-| **aura-os-ide** | IDE helper library for the desktop shell |
-| **aura-os-core** | Shared entity types, IDs, and enums |
+| **aura-os-ide** | IDE helper library for opening secondary IDE windows |
+
+### Crates (libraries)
+
+| Crate | Description |
+| --- | --- |
+| **aura-os-core** | Shared entity types, IDs, enums, and settings |
 | **aura-os-store** | RocksDB persistence layer and storage abstractions |
-| **aura-claude** | Claude API client |
-| **aura-os-terminal** | Terminal emulation for agent command execution |
-| **aura-os-projects** | Project CRUD and lifecycle management |
-| **aura-os-specs** | Spec generation, storage, and streaming |
-| **aura-os-tasks** | Task state machine, extraction, and transitions |
-| **aura-os-agents** | Agent and agent instance management |
-| **aura-os-sessions** | Session lifecycle and context rotation |
-| **aura-os-auth** | Authentication and session tokens |
-| **aura-os-orgs** | Organization CRUD, members, and invites |
-| **aura-os-billing** | Credit tiers, balance, and checkout |
-| **aura-os-settings** | API key management and app configuration |
-| **aura-github** | GitHub App integration and repository linking |
-| **aura-engine** | AI orchestration and autonomous dev loop |
-| **aura-chat** | Chat and streaming orchestration |
-| **aura-tools** | AI tool definitions (file operations, commands) |
-| **interface** | React 19 + TypeScript SPA (Vite) |
+| **aura-os-auth** | Authentication against external auth APIs, JWT/session types |
+| **aura-os-network** | Network client for remote org/project sync and Orbit integration |
+| **aura-os-storage** | Storage client for remote execution data (tasks, specs, sessions, logs) |
+| **aura-os-billing** | Billing client, credit tiers, and balance management |
+| **aura-os-orgs** | Organization CRUD, members, and integrations |
+| **aura-os-projects** | Project service merging network and local RocksDB state |
+| **aura-os-agents** | Agent templates, instances, and runtime management |
+| **aura-os-sessions** | Session lifecycle, context usage, and storage integration |
+| **aura-os-tasks** | Task state machine, lifecycle transitions, and locking |
+| **aura-os-link** | Harness abstraction: WebSocket bridge, automaton client, local/swarm harness |
+| **aura-os-terminal** | PTY-based terminal for agent command execution |
+| **aura-os-process** | Process canvas: executor, store, and scheduler for orchestration graphs |
+| **aura-os-super-agent** | LLM super-agent: executor, scheduler, prompt management, and tool registry |
+
+### Interface
+
+| Component | Description |
+| --- | --- |
+| **interface** | React 19 + TypeScript SPA (Vite), with Capacitor for native mobile shells |
 
 ---
 
 ## Project Structure
 
 ```
-aura-app/
-  Cargo.toml                # Rust workspace root
+aura-os/
+  Cargo.toml                  # Rust workspace root
   apps/
-    desktop/                # Native desktop shell (tao + wry)
-    server/                 # Axum HTTP API
-    ide/                    # IDE helper lib
+    aura-os-desktop/           # Native desktop shell (tao + wry)
+    aura-os-server/            # Axum HTTP API
+    aura-os-ide/               # IDE helper lib
   crates/
-    ai/
-      engine/               # Dev loop orchestration
-      chat/                 # Chat / streaming
-      tools/                # AI tool definitions
-    domain/
-      projects/             # Project management
-      specs/                # Spec generation and storage
-      tasks/                # Task state machine
-      agents/               # Agent lifecycle
-      sessions/             # Session and context rotation
-      auth/                 # Authentication
-      orgs/                 # Organizations
-      billing/              # Credits and checkout
-      settings/             # API keys and config
-      github/               # GitHub integration
-    infra/
-      core/                 # Shared types and entity IDs
-      store/                # RocksDB backend
-      claude/               # Claude API client
-      terminal/             # Terminal emulation
-  interface/                 # React + TypeScript SPA
+    aura-os-core/              # Shared types and entity IDs
+    aura-os-store/             # RocksDB backend
+    aura-os-auth/              # Authentication
+    aura-os-network/           # Remote network client + Orbit
+    aura-os-storage/           # Remote storage client
+    aura-os-billing/           # Credits and billing
+    aura-os-orgs/              # Organizations
+    aura-os-projects/          # Project management
+    aura-os-agents/            # Agent lifecycle
+    aura-os-sessions/          # Session and context rotation
+    aura-os-tasks/             # Task state machine
+    aura-os-link/              # Harness / workspace bridge
+    aura-os-terminal/          # Terminal emulation
+    aura-os-process/           # Process orchestration
+    aura-os-super-agent/       # LLM agent and tool registry
+  interface/                   # React + TypeScript SPA
     src/
-      api/                  # API client and SSE streams
-      apps/                 # Feature apps (projects, agents, feed)
-      components/           # Shared UI components
-      context/              # React context providers
-      hooks/                # Custom hooks
-      views/                # Page-level views
-  specs/                    # Implementation spec documents (01–10)
-  requirements.md           # MVP requirements
+      api/                     # API client and SSE streams
+      apps/                    # Feature modules (projects, agents, process, feed)
+      components/              # Shared UI components
+      hooks/                   # Custom hooks
+      stores/                  # Zustand stores
+      views/                   # Page-level views
+  docs/                        # Architecture, deployment, and strategy docs
+  specs/                       # Numbered implementation spec documents
+  evals/                       # Evaluation harness, promptfoo, and baselines
+  scripts/                     # Dev, release, and test automation
+  shared/                      # Cross-cutting data (tool manifests)
+  skills/                      # Bundled SKILL.md catalog by category
 ```
 
 ---

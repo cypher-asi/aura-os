@@ -5,10 +5,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { SkillIcon } from "./SkillIcon";
 import { SecurityBadge } from "./SecurityBadge";
-import { authHeaders } from "../../lib/auth-token";
-import { resolveApiUrl } from "../../lib/host-config";
+import { apiFetch, apiFetchText } from "../../api/core";
 import type { SkillShopCatalogEntry } from "../../types";
-import styles from "./SkillShopModal.module.css";
+import styles from "./SkillShopDetail.module.css";
 import mdStyles from "../Preview/Preview.module.css";
 
 function stripFrontmatter(raw: string): string {
@@ -64,8 +63,7 @@ export function SkillShopDetail({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(resolveApiUrl(`/api/skills/${entry.name}/discover-paths`), { headers: authHeaders() })
-      .then((r) => r.ok ? r.json() : null)
+    apiFetch<{ paths: string[] }>(`/api/skills/${entry.name}/discover-paths`)
       .then((data) => {
         if (cancelled || !data?.paths?.length) return;
         setDiscoveredPaths(data.paths);
@@ -109,13 +107,7 @@ export function SkillShopDetail({
     let cancelled = false;
     setSourceLoading(true);
     setSourceError(false);
-    fetch(resolveApiUrl(`/api/skills/${entry.category}/${entry.name}/content`), {
-        headers: authHeaders(),
-      })
-      .then((r) => {
-        if (!r.ok) throw new Error(r.statusText);
-        return r.text();
-      })
+    apiFetchText(`/api/skills/${entry.category}/${entry.name}/content`)
       .then((text) => {
         if (cancelled) return;
         fetchedUrlRef.current = cacheKey;

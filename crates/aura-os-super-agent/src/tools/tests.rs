@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn shared_project_manifest_tools_exist_in_registry() {
         let manifest: Vec<SharedProjectToolManifestEntry> = serde_json::from_str(include_str!(
-            "../../../../shared/project-control-plane-tools.json"
+            "../../../../infra/shared/project-control-plane-tools.json"
         ))
         .expect("shared project control-plane manifest should parse");
 

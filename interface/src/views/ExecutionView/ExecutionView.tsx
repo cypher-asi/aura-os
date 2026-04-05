@@ -1,12 +1,12 @@
 import { useParams } from "react-router-dom";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useLoopControl } from "../../hooks/use-loop-control";
 import { AgentStatusBar } from "../AgentStatusBar";
 import { TaskFeed } from "../TaskFeed";
 import { LogPanel } from "../LogPanel";
 import { LoopControls } from "../LoopControls";
 import { Badge, Text } from "@cypher-asi/zui";
-import styles from "../aura.module.css";
+import styles from "./ExecutionView.module.css";
 
 export function ExecutionView() {
   const { projectId } = useParams<{ projectId: string }>();

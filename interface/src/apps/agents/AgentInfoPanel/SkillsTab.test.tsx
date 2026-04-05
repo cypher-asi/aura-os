@@ -41,7 +41,7 @@ vi.mock("./CreateSkillModal", () => ({
   CreateSkillModal: () => null,
 }));
 
-vi.mock("./AgentInfoPanel.module.css", () => ({
+vi.mock("./SkillsTab.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 

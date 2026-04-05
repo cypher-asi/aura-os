@@ -87,7 +87,7 @@ jobs:
 
       - name: Summarize iOS validation outputs
         run: |
-          node scripts/mobile-release-summary.mjs \
+          node infra/scripts/release/mobile-release-summary.mjs \
             --platform ios \
             --mode validate \
             --output-dir mobile-release-summary \
@@ -163,7 +163,7 @@ jobs:
 
       - name: Summarize iOS release outputs
         run: |
-          node scripts/mobile-release-summary.mjs \
+          node infra/scripts/release/mobile-release-summary.mjs \
             --platform ios \
             --mode ship \
             --output-dir mobile-release-summary \

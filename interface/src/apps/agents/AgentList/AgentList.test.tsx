@@ -93,7 +93,7 @@ vi.mock("../../../stores/chat-history-store", () => ({
   agentHistoryKey: (agentId: string) => `agent:${agentId}`,
 }));
 
-vi.mock("../../../context/SidebarSearchContext", () => ({
+vi.mock("../../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => mocks.useSidebarSearch(),
 }));
 

@@ -215,49 +215,6 @@
   flex-shrink: 0;
 }
 
-/* ── Skills ── */
-
-.skillsListWrap { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
-.skillsSectionHeader { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-3) var(--space-1); }
-.skillCreateBtn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: none; background: transparent; color: var(--color-text-secondary); opacity: 0.5; cursor: pointer; border-radius: 4px; padding: 0; }
-.skillCreateBtn:hover { opacity: 1; background: var(--color-overlay-medium, rgba(255,255,255,0.08)); color: var(--color-success, #22c55e); }
-.skillsSectionToggle { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-2) var(--space-3) var(--space-1); border: none; background: transparent; cursor: pointer; color: var(--color-text-muted); width: 100%; text-align: left; }
-.skillsSectionToggle:hover { color: var(--color-text-secondary); }
-.skillsEmpty { padding: var(--space-2) var(--space-3); font-size: 12px; color: var(--color-text-muted); font-style: italic; }
-.skillRow { display: flex; align-items: center; border-bottom: 1px solid var(--color-border); }
-.skillRow:hover { background: var(--color-bg-hover); }
-.skillRowContent { display: flex; align-items: center; gap: var(--space-2); flex: 1; min-width: 0; padding: var(--space-2) var(--space-3); border: none; background: transparent; cursor: pointer; color: var(--color-text); text-align: left; font-family: inherit; }
-.skillRowIcon { flex-shrink: 0; opacity: 0.4; }
-.skillRowText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.skillRowName { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skillRowDesc { font-size: 11px; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skillSourceBadge { font-size: 10px !important; flex-shrink: 0; }
-.skillActionAdd, .skillActionRemove { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; background: transparent; cursor: pointer; border-radius: 4px; flex-shrink: 0; margin-right: var(--space-2); padding: 0; }
-.skillActionAdd { color: var(--color-text-secondary); opacity: 0.5; }
-.skillActionAdd:hover:not(:disabled) { opacity: 1; background: var(--color-overlay-medium, rgba(255,255,255,0.08)); color: var(--color-success, #22c55e); }
-.skillActionRemove { color: var(--color-text-secondary); opacity: 0.5; }
-.skillActionRemove:hover:not(:disabled) { opacity: 1; background: var(--color-overlay-medium, rgba(255,255,255,0.08)); color: var(--color-danger, #ef4444); }
-.skillActionAdd:disabled, .skillActionRemove:disabled { opacity: 0.3; cursor: default; }
-.skillHeaderActions { display: flex; gap: 2px; }
-
-.skillsError {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  background: rgba(239, 68, 68, 0.08);
-  color: var(--color-danger, #ef4444);
-}
-
-.skillsEmptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
-  text-align: center;
-}
 
 /* ── Project bindings ── */
 

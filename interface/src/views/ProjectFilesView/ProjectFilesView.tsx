@@ -4,7 +4,7 @@ import { Bot, CheckSquare, BarChart3 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PanelSearch } from "../../components/PanelSearch";
 import { FileExplorer } from "../../components/FileExplorer";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useProjectsListStore } from "../../stores/projects-list-store";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
@@ -13,7 +13,7 @@ import styles from "./ProjectFilesView.module.css";
 
 export function ProjectFilesView() {
   const { isMobileLayout } = useAuraCapabilities();
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const { remoteAgentId, remoteWorkspacePath, workspacePath } = useTerminalTarget({ projectId });

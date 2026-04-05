@@ -5,7 +5,7 @@ import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from 
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import styles from "./MessageBubble.module.css";
-import toolStyles from "../ToolCallBlock.module.css";
+import toolStyles from "../ToolRow/ToolCallBlock.module.css";
 import { ResponseBlock } from "../ResponseBlock";
 import { SegmentedContent } from "../SegmentedContent";
 import { ThinkingRow } from "../ThinkingRow";

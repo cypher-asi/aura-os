@@ -1,5 +1,5 @@
 import { Check, GitCommitHorizontal, Upload, XCircle } from "lucide-react";
-import type { GitStep } from "../../stores/event-store";
+import type { GitStep } from "../../stores/event-store/index";
 import styles from "../Preview/Preview.module.css";
 
 function getGitStepLabel(step: GitStep): string {

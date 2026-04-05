@@ -6,7 +6,7 @@ import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
 import { useClickOutside } from "../../hooks/use-click-outside";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import type { LogEntry } from "../../hooks/use-log-stream";
-import styles from "../../components/Sidekick/Sidekick.module.css";
+import styles from "./SidekickLog.module.css";
 
 const TYPE_CATEGORY: Record<string, string> = {
   Loop: "loop",

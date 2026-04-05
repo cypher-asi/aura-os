@@ -10,7 +10,7 @@ on:
       - apps/aura-os-desktop/**
       - apps/aura-os-server/**
       - interface/**
-      - scripts/desktop-ci-smoke.mjs
+      - infra/scripts/release/desktop-ci-smoke.mjs
       - Cargo.lock
       - Cargo.toml
   push:
@@ -25,7 +25,7 @@ on:
       - apps/aura-os-desktop/**
       - apps/aura-os-server/**
       - interface/**
-      - scripts/desktop-ci-smoke.mjs
+      - infra/scripts/release/desktop-ci-smoke.mjs
       - Cargo.lock
       - Cargo.toml
   workflow_dispatch:
@@ -109,7 +109,7 @@ jobs:
         env:
           AURA_DESKTOP_BINARY: ${{ matrix.binary }}
           AURA_DESKTOP_SMOKE_LOG_DIR: desktop-smoke-logs/${{ matrix.target }}
-        run: node scripts/desktop-ci-smoke.mjs
+        run: node infra/scripts/release/desktop-ci-smoke.mjs
 
       - name: Install cargo-packager
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
@@ -119,7 +119,7 @@ jobs:
         if: env.CARGO_PACKAGER_SIGN_PRIVATE_KEY != ''
         shell: bash
         run: |
-          normalized="$(python scripts/normalize-packager-key.py)"
+          normalized="$(python infra/scripts/release/normalize-packager-key.py)"
           if [ -n "$normalized" ]; then
             echo "CARGO_PACKAGER_SIGN_PRIVATE_KEY=$normalized" >> "$GITHUB_ENV"
           fi

@@ -103,7 +103,7 @@ jobs:
 
       - name: Summarize Android validation outputs
         run: |
-          node scripts/mobile-release-summary.mjs \
+          node infra/scripts/release/mobile-release-summary.mjs \
             --platform android \
             --mode validate \
             --output-dir mobile-release-summary \
@@ -191,7 +191,7 @@ jobs:
 
       - name: Summarize Android release outputs
         run: |
-          node scripts/mobile-release-summary.mjs \
+          node infra/scripts/release/mobile-release-summary.mjs \
             --platform android \
             --mode ship \
             --output-dir mobile-release-summary \

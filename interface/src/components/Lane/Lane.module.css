@@ -38,7 +38,7 @@
   bottom: 0;
   width: 16px;
   cursor: ew-resize;
-  z-index: 10;
+  z-index: 30;
   user-select: none;
 }
 

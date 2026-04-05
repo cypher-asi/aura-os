@@ -35,7 +35,7 @@ This is a validation workflow, not a publishing workflow.
 
 It is intended to run on:
 
-- pull requests that affect desktop/frontend/release files
+- pull requests that affect desktop/interface/release files
 - selected pushes, including ongoing work on the release-build branch
 - manual dispatch when needed
 

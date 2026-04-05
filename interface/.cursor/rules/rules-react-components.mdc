@@ -1,0 +1,58 @@
+---
+description: React component conventions for the aura-os frontend
+globs: ["interface/src/**/*.tsx"]
+alwaysApply: false
+---
+
+# React Component Conventions
+
+## Folder Structure
+
+Every component lives in its own folder:
+
+```
+ComponentName/
+  ComponentName.tsx
+  ComponentName.module.css
+  ComponentName.test.tsx
+  index.ts
+```
+
+- `index.ts` re-exports the component as a named export.
+- CSS Module file is required for any component with styles.
+- Test file colocated in the same folder.
+
+## Styling
+
+- Use CSS Modules (`*.module.css`) for all component styles.
+- No global CSS files. No inline styles except for dynamic computed values.
+- Class composition via the `cx()` helper or template literals.
+
+## State Management
+
+- Use zustand stores over prop drilling. Maximum 5-6 props per component.
+- Use `useShallow` from `zustand/react/shallow` for object/array selectors.
+- Create facade hooks (e.g. `useAuth()`, `useFeed()`) for common store access patterns.
+- No React Context for shared state. Use zustand stores instead.
+- Keep form/modal state local with `useState` or `useReducer`.
+
+## Component Design
+
+- Extract sub-components when JSX exceeds 50 lines of markup.
+- Prefer composition over long conditional rendering chains.
+- Use `memo()` only when profiling shows actual re-render issues.
+- Colocate single-use hooks with their component; shared hooks go in `hooks/`.
+
+## Naming Conventions
+
+- Event handler props: `onX` (e.g. `onClick`, `onSubmit`).
+- Internal event handlers: `handleX` (e.g. `handleClick`, `handleSubmit`).
+- Boolean props: `isX` or `hasX` (e.g. `isLoading`, `hasError`).
+- Hooks: `useX` (e.g. `useAuth`, `useChatStream`).
+
+## Testing
+
+- Every component with business logic has a colocated `.test.tsx` file.
+- Test user-visible behavior, not implementation details.
+- Use `@testing-library/react` with `renderWithProviders` from `test/render.tsx`.
+- Mock API calls via `vi.mock`; mock stores via `test/store-helpers.ts`.

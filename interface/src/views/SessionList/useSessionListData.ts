@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../api/client";
 import type { Session } from "../../types";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 
 interface SessionListData {
   sessions: Session[];
@@ -12,7 +12,7 @@ interface SessionListData {
 }
 
 export function useSessionListData(): SessionListData {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);

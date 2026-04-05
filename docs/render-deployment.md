@@ -1,6 +1,6 @@
 # Render Deployment — aura-os
 
-Single Web Service that builds both frontend and backend. The backend serves the frontend from `frontend/dist` (same as local development).
+Single Web Service that builds both frontend and backend. The backend serves the frontend from `interface/dist` (same as local development).
 
 ## Render Service Setup
 
@@ -9,7 +9,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 | **Type** | Web Service |
 | **Repository** | `cypher-asi/aura-os` |
 | **Branch** | `main` |
-| **Build Command** | `cd frontend && npm ci && npm run build && cd .. && cargo build --release -p aura-os-server` |
+| **Build Command** | `cd interface && npm ci && npm run build && cd .. && cargo build --release -p aura-os-server` |
 | **Start Command** | `./target/release/aura-os-server` |
 | **Plan** | Starter ($7/mo) or higher |
 
@@ -43,7 +43,7 @@ Single Web Service that builds both frontend and backend. The backend serves the
 
 ## Prerequisites
 
-1. **ZUI on npm** — `frontend/package.json` must reference `@cypher-asi/zui` as an npm package (not `file:../../zui`) for Render builds to work. Update once ZUI 0.1.4 is published.
+1. **ZUI on npm** — `interface/package.json` must reference `@cypher-asi/zui` as an npm package (not `file:../../zui`) for Render builds to work. Update once ZUI 0.1.4 is published.
 
 2. **RocksDB** — The `rocksdb` crate compiles a C++ library at build time. Render's native Rust buildpack should handle this, but if cmake/clang is missing, a Dockerfile would be needed.
 

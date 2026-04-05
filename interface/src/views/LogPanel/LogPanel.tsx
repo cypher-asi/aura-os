@@ -3,7 +3,7 @@ import { Panel, Heading, Text } from "@cypher-asi/zui";
 import { useLogStream, EVENT_LABELS } from "../../hooks/use-log-stream";
 import type { LogEntry } from "../../hooks/use-log-stream";
 import type { AuraEvent } from "../../types/aura-events";
-import styles from "../aura.module.css";
+import styles from "./LogPanel.module.css";
 
 const TYPE_CATEGORY: Record<string, string> = {
   Loop: "loop",

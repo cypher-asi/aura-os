@@ -68,6 +68,12 @@ export function formatTokens(n: number): string {
   return n.toLocaleString();
 }
 
+export function formatTokensCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
 export function formatCompact(n: number): string {
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(n >= 10_000_000_000 ? 0 : 1).replace(/\.0$/, "") + "B";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "") + "M";
@@ -87,9 +93,9 @@ export function formatCurrency(n: number): string {
   return "$0.00";
 }
 
-export function formatCost(usd: number): string {
+export function formatCost(usd: number, decimals = 2): string {
   if (usd < 0.01) return `$${usd.toFixed(4)}`;
-  return `$${usd.toFixed(2)}`;
+  return `$${usd.toFixed(decimals)}`;
 }
 
 export function formatDuration(ms: number): string {

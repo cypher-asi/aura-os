@@ -95,7 +95,7 @@ jobs:
         env:
           CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
         run: |
-          normalized="$(python scripts/normalize-packager-key.py)"
+          normalized="$(python infra/scripts/release/normalize-packager-key.py)"
           if [ -n "$normalized" ]; then
             echo "CARGO_PACKAGER_SIGN_PRIVATE_KEY=$normalized" >> "$GITHUB_ENV"
           fi
@@ -150,7 +150,7 @@ jobs:
       - name: Generate artifact summary and checksums
         shell: bash
         run: |
-          node scripts/desktop-release-summary.mjs dist nightly "${{ steps.version.outputs.version }}"
+          node infra/scripts/release/desktop-release-summary.mjs dist nightly "${{ steps.version.outputs.version }}"
           mv dist/release-summary.json "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.json"
           mv dist/release-summary.md "dist/release-summary-${{ matrix.target }}-${{ matrix.arch }}.md"
           mv dist/checksums.txt "dist/checksums-${{ matrix.target }}-${{ matrix.arch }}.txt"
@@ -264,7 +264,7 @@ jobs:
 
       - name: Validate preview manifests
         run: |
-          node scripts/desktop-manifest-validate.mjs \
+          node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir . \
             --channel nightly \
             --output-dir manifest-validation
@@ -352,7 +352,7 @@ jobs:
 
       - name: Validate nightly update manifests
         run: |
-          node scripts/desktop-manifest-validate.mjs \
+          node infra/scripts/release/desktop-manifest-validate.mjs \
             --root-dir . \
             --channel nightly \
             --output-dir manifest-validation

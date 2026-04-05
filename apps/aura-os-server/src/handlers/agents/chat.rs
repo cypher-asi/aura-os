@@ -986,7 +986,7 @@ pub(crate) async fn list_agent_events(
     Ok(Json(messages))
 }
 
-async fn get_or_create_chat_session(
+pub(crate) async fn get_or_create_chat_session(
     state: &AppState,
     key: &str,
     harness_mode: HarnessMode,

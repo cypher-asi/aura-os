@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { api } from "../../api/client";
 import { useSidekickStore } from "../../stores/sidekick-store";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { TaskStatusIcon } from "../TaskStatusIcon";
 import { formatRelativeTime, formatTokens } from "../../utils/format";
 import { StatusBadge } from "../StatusBadge";
@@ -22,7 +22,7 @@ function formatDuration(startedAt: string, endedAt: string | null): string {
 }
 
 export function SessionPreview({ session }: { session: Session }) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const pushPreview = useSidekickStore((s) => s.pushPreview);
   const [tasks, setTasks] = useState<Task[]>([]);

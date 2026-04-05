@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Check, X as XIcon, AlertTriangle } from "lucide-react";
-import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store";
+import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
 import { MessageBubble } from "../MessageBubble";

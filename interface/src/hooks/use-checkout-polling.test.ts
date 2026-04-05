@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useCheckoutPolling } from "./use-checkout-polling";
-import { useEventStore } from "../stores/event-store";
+import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 
 describe("useCheckoutPolling", () => {

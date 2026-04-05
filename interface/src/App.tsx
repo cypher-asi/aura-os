@@ -14,14 +14,14 @@ import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
 import { IdeView } from "./views/IdeView";
 import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
-import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView/ProjectRootRedirectView";
+import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView";
 import { ProjectWorkView } from "./views/ProjectWorkView";
 import { ProjectFilesView } from "./views/ProjectFilesView";
 import { ProjectStatsView } from "./views/ProjectStatsView";
 import { apps } from "./apps/registry";
 import { getLastApp } from "./utils/storage";
 
-import "./stores/event-store";
+import "./stores/event-store/index";
 import "./stores/follow-store";
 import "./stores/profile-status-store";
 

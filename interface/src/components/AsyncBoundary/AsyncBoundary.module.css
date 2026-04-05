@@ -1,0 +1,8 @@
+.spin {
+  animation: async-boundary-spin 1s linear infinite;
+}
+
+@keyframes async-boundary-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

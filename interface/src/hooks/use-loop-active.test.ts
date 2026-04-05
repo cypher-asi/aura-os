@@ -11,7 +11,7 @@ function subscribe(type: string, cb: SubscribeCallback): () => void {
   return () => subscribeMap.get(type)!.delete(cb);
 }
 
-vi.mock("../stores/event-store", () => ({
+vi.mock("../stores/event-store/index", () => ({
   useEventStore: (selector: (s: { subscribe: typeof subscribe }) => unknown) =>
     selector({ subscribe }),
 }));

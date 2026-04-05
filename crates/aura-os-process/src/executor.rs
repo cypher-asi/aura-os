@@ -938,7 +938,7 @@ async fn execute_artifact(
         .get("max_turns")
         .and_then(|v| v.as_u64())
         .map(|v| v as u32)
-        .unwrap_or(1);
+        .unwrap_or(3);
     session_config.max_turns = Some(artifact_max_turns);
 
     let session = harness
@@ -961,7 +961,10 @@ async fn execute_artifact(
         warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
     }
 
-    let content = extract_final_output(&resp.final_text);
+    let mut content = extract_final_output(&resp.final_text);
+    if content.is_empty() {
+        content = extract_final_output(&resp.full_text);
+    }
     if content.is_empty() {
         return Err(ProcessError::Execution(
             "Artifact node produced empty output from harness".into(),
@@ -1224,7 +1227,12 @@ fn build_downstream_output(resp: &HarnessResponse) -> String {
 
     let write_file_content = extract_write_file_content(&resp.content_blocks);
 
-    let mut output = if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN
+    // When degraded and the model produced a substantial error report (per the
+    // TOOL-FAILURE RULE), always prefer it over write_file salvage — the file
+    // content is likely an incidental workaround attempt, not the intended output.
+    let mut output = if degraded && text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN {
+        text.to_string()
+    } else if text.len() >= MIN_SUBSTANTIAL_OUTPUT_LEN
         && text.len() >= write_file_content.as_ref().map_or(0, |s| s.len())
     {
         text.to_string()

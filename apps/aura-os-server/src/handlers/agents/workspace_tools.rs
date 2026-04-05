@@ -81,7 +81,7 @@ pub(crate) fn shared_workspace_tools() -> &'static [WorkspaceToolDefinition] {
         tools.extend(load_manifest(
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../../shared/project-control-plane-tools.json"
+                "/../../infra/shared/project-control-plane-tools.json"
             )),
             "aura native",
             WorkspaceToolSourceKind::AuraNative,
@@ -90,7 +90,7 @@ pub(crate) fn shared_workspace_tools() -> &'static [WorkspaceToolDefinition] {
         tools.extend(load_manifest(
             include_str!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../../shared/org-integration-tools.json"
+                "/../../infra/shared/org-integration-tools.json"
             )),
             "app provider",
             WorkspaceToolSourceKind::AppProvider,

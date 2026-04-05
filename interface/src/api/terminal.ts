@@ -1,5 +1,7 @@
 import { authHeaders, getStoredJwt } from "../lib/auth-token";
 import { resolveApiUrl, resolveWsUrl } from "../lib/host-config";
+import { ApiClientError } from "./core";
+import type { ApiError } from "../types";
 
 export interface TerminalInfo {
   id: string;
@@ -13,6 +15,15 @@ export interface TerminalInfo {
 export interface SpawnTerminalResponse {
   id: string;
   shell: string;
+}
+
+async function throwApiError(res: Response): Promise<never> {
+  const err: ApiError = await res.json().catch(() => ({
+    error: res.statusText,
+    code: "unknown",
+    details: null,
+  }));
+  throw new ApiClientError(res.status, err);
 }
 
 // ---------------------------------------------------------------------------
@@ -29,7 +40,7 @@ export async function spawnTerminal(opts: {
     headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(opts),
   });
-  if (!res.ok) throw new Error(`Spawn terminal failed: ${res.statusText}`);
+  if (!res.ok) await throwApiError(res);
   return res.json();
 }
 
@@ -37,7 +48,7 @@ export async function listTerminals(): Promise<TerminalInfo[]> {
   const res = await fetch(resolveApiUrl("/api/terminal"), {
     headers: authHeaders(),
   });
-  if (!res.ok) throw new Error(`List terminals failed: ${res.statusText}`);
+  if (!res.ok) await throwApiError(res);
   return res.json();
 }
 
@@ -47,7 +58,7 @@ export async function killTerminal(id: string): Promise<void> {
     headers: authHeaders(),
   });
   if (!res.ok && res.status !== 204 && res.status !== 404)
-    throw new Error(`Kill terminal failed: ${res.statusText}`);
+    await throwApiError(res);
 }
 
 function appendWsToken(url: string): string {

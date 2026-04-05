@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { ToolCallEntry } from "../../types/stream";
 
-vi.mock("../ToolCallBlock.module.css", () => ({
+vi.mock("./ToolCallBlock.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 

@@ -2,6 +2,7 @@ import {
   formatTime,
   toBullets,
   formatTokens,
+  formatTokensCompact,
   formatCompact,
   formatCurrency,
   formatCost,
@@ -76,6 +77,25 @@ describe("formatTokens", () => {
   });
 });
 
+describe("formatTokensCompact", () => {
+  it("formats millions with one decimal", () => {
+    expect(formatTokensCompact(1_500_000)).toBe("1.5M");
+    expect(formatTokensCompact(1_000_000)).toBe("1.0M");
+  });
+
+  it("formats thousands (>= 1,000) with lowercase k", () => {
+    expect(formatTokensCompact(1_000)).toBe("1.0k");
+    expect(formatTokensCompact(50_000)).toBe("50.0k");
+    expect(formatTokensCompact(999_999)).toBe("1000.0k");
+  });
+
+  it("returns plain number string below 1,000", () => {
+    expect(formatTokensCompact(999)).toBe("999");
+    expect(formatTokensCompact(0)).toBe("0");
+    expect(formatTokensCompact(1)).toBe("1");
+  });
+});
+
 describe("formatCompact", () => {
   it("formats billions", () => {
     expect(formatCompact(1_500_000_000)).toBe("1.5B");
@@ -133,6 +153,17 @@ describe("formatCost", () => {
 
   it("formats zero", () => {
     expect(formatCost(0)).toBe("$0.0000");
+  });
+
+  it("respects explicit decimals parameter for values >= 0.01", () => {
+    expect(formatCost(1.5, 3)).toBe("$1.500");
+    expect(formatCost(0.5, 0)).toBe("$1");
+    expect(formatCost(25, 1)).toBe("$25.0");
+  });
+
+  it("ignores decimals parameter for values < 0.01 (always 4 decimals)", () => {
+    expect(formatCost(0.005, 2)).toBe("$0.0050");
+    expect(formatCost(0.0001, 0)).toBe("$0.0001");
   });
 });
 

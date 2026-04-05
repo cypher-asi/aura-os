@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Check, Loader2, MinusCircle, SkipForward, Wrench, XCircle } from "lucide-react";
-import type { BuildStep, TestStep } from "../../stores/event-store";
+import type { BuildStep, TestStep } from "../../stores/event-store/index";
 import styles from "../Preview/Preview.module.css";
 
 type VerificationVariant = "build" | "test";

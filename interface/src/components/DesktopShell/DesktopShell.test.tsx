@@ -53,7 +53,7 @@ vi.mock("../../hooks/use-aura-capabilities", () => ({
   }),
 }));
 
-vi.mock("../../context/SidebarSearchContext", () => ({
+vi.mock("../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => ({
     query: "",
     setQuery: vi.fn(),
@@ -116,7 +116,7 @@ vi.mock("../../lib/windowCommand", () => ({
   windowCommand: vi.fn(),
 }));
 
-vi.mock("../AppShell/AppShell.module.css", () => ({
+vi.mock("./DesktopShell.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 

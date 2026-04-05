@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useEventStore } from "../stores/event-store";
+import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 import type { CreditBalance } from "../types";
 

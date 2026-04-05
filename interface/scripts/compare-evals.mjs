@@ -3,7 +3,7 @@ import path from "node:path";
 
 const cwd = process.cwd();
 const summaryPath = path.resolve(cwd, process.argv[2] ?? "test-results/aura-evals-summary.json");
-const baselinePath = path.resolve(cwd, process.argv[3] ?? "../evals/reports/baselines/workflow-summary.json");
+const baselinePath = path.resolve(cwd, process.argv[3] ?? "../infra/evals/reports/baselines/workflow-summary.json");
 const outputPrefix = process.argv[4] ?? "aura-evals-compare";
 
 function scenarioKey(entry) {

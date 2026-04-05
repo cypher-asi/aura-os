@@ -6,7 +6,7 @@ import { useAgentSidekickStore } from "../stores/agent-sidekick-store";
 import { CreateSkillModal } from "./CreateSkillModal";
 import { SkillShopModal } from "../../../components/SkillShopModal";
 import type { Agent, HarnessSkill, HarnessSkillInstallation } from "../../../types";
-import styles from "./AgentInfoPanel.module.css";
+import styles from "./SkillsTab.module.css";
 
 interface SkillsTabProps {
   agent: Agent;

@@ -54,7 +54,7 @@ const mockProjectContext = {
 };
 let projectCtx: typeof mockProjectContext | null = mockProjectContext;
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => projectCtx,
+  useProjectActions: () => projectCtx,
 }));
 
 vi.mock("../../hooks/use-aura-capabilities", () => ({

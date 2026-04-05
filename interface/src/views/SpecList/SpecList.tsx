@@ -3,10 +3,10 @@ import { api } from "../../api/client";
 import type { Spec } from "../../types";
 import type { AuraEvent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useShallow } from "zustand/react/shallow";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useDelayedEmpty } from "../../hooks/use-delayed-empty";
 import { mergeById, compareSpecs } from "../../utils/collections";
 import { filterExplorerNodes } from "../../utils/filterExplorerNodes";
@@ -15,7 +15,7 @@ import { EmptyState } from "../../components/EmptyState";
 import type { ExplorerNode } from "@cypher-asi/zui";
 
 export function SpecList({ searchQuery }: { searchQuery: string }) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const [localSpecs, setLocalSpecs] = useState<Spec[]>(() => ctx?.initialSpecs ?? []);
   const [loading, setLoading] = useState(false);

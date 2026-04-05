@@ -4,7 +4,7 @@ import { api } from "../../api/client";
 import type { Project, Spec, Task } from "../../types";
 import { EventType } from "../../types/aura-events";
 import { useProjectRegister } from "../../stores/project-action-store";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { compareSpecs } from "../../utils/collections";

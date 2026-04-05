@@ -6,8 +6,21 @@ vi.mock("../../hooks/stream/hooks", () => ({
   useIsStreaming: () => mockIsStreaming,
 }));
 
-vi.mock("../ChatView/ChatView.module.css", () => ({
+vi.mock("./ChatInputBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
+}));
+
+let mockSelectedModel: string | null = null;
+const mockSetSelectedModel = vi.fn();
+vi.mock("../../stores/chat-ui-store", () => ({
+  useChatUI: () => ({
+    selectedModel: mockSelectedModel,
+    projectId: null,
+    setSelectedModel: mockSetSelectedModel,
+    setProjectId: vi.fn(),
+    init: vi.fn(),
+    syncAvailableModels: vi.fn(),
+  }),
 }));
 
 import { ChatInputBar } from "../ChatInputBar";
@@ -26,6 +39,8 @@ function makeProps(overrides: Partial<Parameters<typeof ChatInputBar>[0]> = {}) 
 
 beforeEach(() => {
   mockIsStreaming = false;
+  mockSelectedModel = null;
+  mockSetSelectedModel.mockClear();
 });
 
 describe("ChatInputBar", () => {
@@ -106,39 +121,34 @@ describe("ChatInputBar", () => {
     expect(onStop).toHaveBeenCalledOnce();
   });
 
-  it("shows default model label when selectedModel provided", () => {
-    render(<ChatInputBar {...makeProps({ selectedModel: "claude-opus-4-6" })} />);
+  it("shows default model label when selectedModel set in store", () => {
+    mockSelectedModel = "claude-opus-4-6";
+    render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByText("Opus 4.6")).toBeInTheDocument();
   });
 
   it("shows selected model label", () => {
-    render(<ChatInputBar {...makeProps({ selectedModel: "claude-sonnet-4-6" })} />);
+    mockSelectedModel = "claude-sonnet-4-6";
+    render(<ChatInputBar {...makeProps()} />);
     expect(screen.getByText("Sonnet 4.6")).toBeInTheDocument();
   });
 
-  it("opens model dropdown on click and calls onModelChange", async () => {
+  it("opens model dropdown on click and calls setSelectedModel", async () => {
     const user = userEvent.setup();
-    const onModelChange = vi.fn();
-    render(<ChatInputBar {...makeProps({ selectedModel: "claude-opus-4-6", onModelChange })} />);
+    mockSelectedModel = "claude-opus-4-6";
+    render(<ChatInputBar {...makeProps()} />);
 
     await user.click(screen.getByText("Opus 4.6"));
     expect(screen.getByText("Haiku 4.5")).toBeInTheDocument();
 
     await user.click(screen.getByText("Sonnet 4.6"));
-    expect(onModelChange).toHaveBeenCalledWith("claude-sonnet-4-6");
+    expect(mockSetSelectedModel).toHaveBeenCalledWith("test-stream", "claude-sonnet-4-6", undefined);
   });
 
   it("shows a fixed codex model without opening a dropdown", async () => {
     const user = userEvent.setup();
-    render(
-      <ChatInputBar
-        {...makeProps({
-          selectedModel: "codex",
-          adapterType: "codex",
-          availableModels: [{ id: "codex", label: "Codex", tier: "sonnet" }],
-        })}
-      />,
-    );
+    mockSelectedModel = "codex";
+    render(<ChatInputBar {...makeProps({ adapterType: "codex" })} />);
 
     await user.click(screen.getByText("Codex"));
     expect(screen.queryByText("Haiku 4.5")).not.toBeInTheDocument();

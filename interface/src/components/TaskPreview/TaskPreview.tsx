@@ -8,7 +8,6 @@ import { GitStepItem } from "../GitStepItem";
 import { TaskMetaSection } from "../TaskMetaSection";
 import { TaskFilesSection } from "../TaskFilesSection";
 import { TaskOutputSection } from "../TaskOutputSection";
-import { useProjectContext } from "../../stores/project-action-store";
 import { toBullets } from "../../utils/format";
 import { useTaskPreviewData, useRunTaskData } from "./useTaskPreviewData";
 import styles from "../Preview/Preview.module.css";
@@ -37,8 +36,6 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
     retrying, handleRetry, handleViewSession,
     fileOps, notes, showNotes, streamKey,
   } = useTaskPreviewData(task);
-  const ctx = useProjectContext();
-
   return (
     <>
       <TaskMetaSection
@@ -53,8 +50,6 @@ export function TaskPreview({ task }: { task: import("../../types").Task }) {
         retrying={retrying}
         onRetry={handleRetry}
         onViewSession={handleViewSession}
-        specs={ctx?.initialSpecs}
-        allTasks={ctx?.initialTasks}
       />
 
       <TaskFilesSection fileOps={fileOps} />

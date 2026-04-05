@@ -81,7 +81,7 @@ vi.mock("../../apps/projects/useProjectsList", () => ({
   useProjectsList: () => mockProjectsList,
 }));
 
-vi.mock("../../context/SidebarSearchContext", () => ({
+vi.mock("../../hooks/use-sidebar-search", () => ({
   useSidebarSearch: () => ({
     query: "",
     setAction: vi.fn(),

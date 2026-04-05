@@ -13,7 +13,7 @@ import { PanelSearch } from "../PanelSearch";
 import { TaskOutputPanel } from "../TaskOutputPanel";
 import { WindowControls } from "../WindowControls";
 import { useAppStore } from "../../stores/app-store";
-import { useSidebarSearch } from "../../context/SidebarSearchContext";
+import { useSidebarSearch } from "../../hooks/use-sidebar-search";
 
 import { useAppUIStore } from "../../stores/app-ui-store";
 import { useUIModalStore } from "../../stores/ui-modal-store";
@@ -22,7 +22,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { apps } from "../../apps/registry";
 import { windowCommand } from "../../lib/windowCommand";
-import styles from "../AppShell/AppShell.module.css";
+import styles from "./DesktopShell.module.css";
 
 function blurActiveElement() {
   const active = document.activeElement;

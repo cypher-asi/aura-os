@@ -207,7 +207,7 @@ We do not want a world where:
 So the shared project surface now has guardrails:
 
 1. One shared manifest
-- `shared/project-control-plane-tools.json`
+- `infra/shared/project-control-plane-tools.json`
 
 This manifest is the source of truth for:
 - tool names

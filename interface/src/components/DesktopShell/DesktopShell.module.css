@@ -1,0 +1,117 @@
+.desktopShell {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg);
+}
+
+.backgroundLayer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.topbarBlur {
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent) !important;
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+}
+
+.desktopContent {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.desktopSidebar {
+  flex-shrink: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: border-color var(--transition-fast, 0.15s);
+}
+
+:global([data-desktop-mode]) .desktopSidebar {
+  background: transparent;
+  border-right-color: transparent;
+}
+
+.desktopSidebarBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.navRailWrapper {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.panelActive {
+  display: contents;
+}
+
+.panelHidden {
+  display: none;
+}
+
+.sidekickContentWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidekickPanels {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.sidekickPanels::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.laneLeftBorder {
+  box-shadow: -1px 0 0 0 var(--color-border);
+}
+
+.titleLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.topbarAlignRail {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.topbarAlignRail > :first-child > :first-child {
+  width: 42px;
+  justify-content: center;
+  flex-shrink: 0;
+}

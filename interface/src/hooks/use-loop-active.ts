@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ProjectId } from "../types";
 import { api } from "../api/client";
-import { useEventStore } from "../stores/event-store";
+import { useEventStore } from "../stores/event-store/index";
 import { EventType } from "../types/aura-events";
 
 export function useLoopActive(projectId: ProjectId | undefined): boolean {

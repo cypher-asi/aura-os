@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
-import type { BuildStep, TestStep } from "../stores/event-store";
+import type { BuildStep, TestStep } from "../stores/event-store/index";
 import type { Task } from "../types";
 
 const CATCHUP_DELAY_MS = 2000;

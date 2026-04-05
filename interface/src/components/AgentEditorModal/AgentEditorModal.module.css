@@ -4,6 +4,37 @@
   gap: var(--space-3);
 }
 
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border-subtle, var(--color-border));
+}
+
+.sectionBlock:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sectionTitle {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;

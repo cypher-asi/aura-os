@@ -164,7 +164,7 @@ Gate:
 
 Notes:
 
-- This is the lane already started in `frontend/tests/e2e/evals`.
+- This is the lane already started in `interface/tests/e2e/evals`.
 
 ### Layer 2: Deterministic workflow E2E
 
@@ -496,7 +496,7 @@ docs/
   aura-evals.md
   aura-evals-strategy.md
 
-frontend/tests/e2e/evals/
+interface/tests/e2e/evals/
   scenarios/
     core-browser-smoke.json
     workflow-e2e.json

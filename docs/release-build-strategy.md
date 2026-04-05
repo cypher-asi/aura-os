@@ -57,7 +57,7 @@ stack:
 - local-stack orchestration:
   [evals/local-stack/README.md](/Users/shahrozkhan/Documents/zero/aura-os/evals/local-stack/README.md)
 - Playwright evals:
-  [frontend/tests/e2e/evals](/Users/shahrozkhan/Documents/zero/aura-os/frontend/tests/e2e/evals)
+  [interface/tests/e2e/evals](/Users/shahrozkhan/Documents/zero/aura-os/interface/tests/e2e/evals)
 
 For the current operational workflow map, see:
 

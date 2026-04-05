@@ -1,13 +1,32 @@
+# Rust
 /target
+
+# Node
+node_modules/
+
+# Build output
+interface/dist
+
+# IDE / editor
 .cursor
+*.swp
+*.swo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing
 .playwright-cli
 desktop-smoke-logs
-frontend/node_modules
-frontend/dist
-interface/node_modules
-interface/dist
-evals/promptfoo/node_modules
+
+# Evals
 evals/reports/promptfoo-results.json
 evals/local-stack/.runtime
 evals/local-stack/stack.env
+
+# Secrets
 .env

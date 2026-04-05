@@ -4,7 +4,8 @@ import { api } from "../api/client";
 
 export type TimePeriod = "all" | "month" | "week" | "day";
 
-export type LeaderboardFilter = "my-agents" | "organization" | "following" | "everything";
+export type { LeaderboardFilter } from "../types/filters";
+import type { LeaderboardFilter } from "../types/filters";
 
 export interface LeaderboardUser {
   id: string;

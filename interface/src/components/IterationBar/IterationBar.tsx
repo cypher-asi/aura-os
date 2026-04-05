@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { IterationStats, IterationDot } from "../../utils/derive-activity";
-import styles from "../Preview/Preview.module.css";
+import styles from "./IterationBar.module.css";
 
 const MAX_DOTS = 40;
 

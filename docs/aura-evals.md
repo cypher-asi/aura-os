@@ -24,14 +24,14 @@ The external-agent lane has a different purpose again: compare Aura, Claude Code
 
 Scenario definitions live in:
 
-- `frontend/tests/e2e/evals/scenarios/core-browser-smoke.json`
-- `frontend/tests/e2e/evals/scenarios/workflow-e2e.json`
-- `frontend/tests/e2e/evals/scenarios/live-benchmark.json`
+- `interface/tests/e2e/evals/scenarios/core-browser-smoke.json`
+- `interface/tests/e2e/evals/scenarios/workflow-e2e.json`
+- `interface/tests/e2e/evals/scenarios/live-benchmark.json`
 - `evals/promptfoo/tests/`
 
 Fixture projects live under:
 
-- `frontend/tests/e2e/evals/fixtures/`
+- `interface/tests/e2e/evals/fixtures/`
 
 The current benchmark fixtures are:
 
@@ -65,8 +65,8 @@ Each eval attaches a JSON summary and a screenshot to the Playwright test output
 
 After any lane runs, `npm run test:evals:report` consolidates those per-scenario artifacts into:
 
-- `frontend/test-results/aura-evals-summary.json`
-- `frontend/test-results/aura-evals-summary.md`
+- `interface/test-results/aura-evals-summary.json`
+- `interface/test-results/aura-evals-summary.md`
 
 That summary is the first building block for historical baselines and trend comparisons across time, tokens, cost, and failure counts.
 
@@ -78,7 +78,7 @@ npm run test:evals:compare -- test-results/aura-evals-summary.json ../evals/repo
 
 ## Running locally
 
-From `frontend/`:
+From `interface/`:
 
 ```bash
 npm run test:evals:smoke

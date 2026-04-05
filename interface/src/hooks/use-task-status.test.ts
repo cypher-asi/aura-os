@@ -5,7 +5,7 @@ type SubscribeCallback = (event: Record<string, string | undefined>) => void;
 
 const subscribeMap = new Map<string, Set<SubscribeCallback>>();
 
-vi.mock("../stores/event-store", () => ({
+vi.mock("../stores/event-store/index", () => ({
   useEventStore: (selector: (s: { subscribe: unknown }) => unknown) =>
     selector({
       subscribe: (type: string, cb: SubscribeCallback) => {

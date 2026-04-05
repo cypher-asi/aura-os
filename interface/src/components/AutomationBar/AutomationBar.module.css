@@ -1,0 +1,46 @@
+.automationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  height: var(--control-height-sm, 32px);
+  min-height: var(--control-height-sm, 32px);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  box-sizing: border-box;
+}
+
+.automationLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.automationLabelBold {
+  font-weight: 600;
+}
+
+.automationAgentCount {
+  opacity: 0.7;
+}
+
+.automationControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.automationControls button:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+
+.automationSpinner {
+  animation: spinRing 1s linear infinite;
+  color: var(--color-text-muted);
+}

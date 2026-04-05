@@ -1,0 +1,63 @@
+.iterationBar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.iterationDots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.iterationDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--color-text-muted);
+}
+
+.iterationDot[data-cat="read"] {
+  background: #60a5fa;
+}
+
+.iterationDot[data-cat="write"] {
+  background: #34d399;
+}
+
+.iterationDot[data-cat="command"] {
+  background: #fbbf24;
+}
+
+.iterationDot[data-cat="other"] {
+  background: #ffffff;
+}
+
+.iterationDot[data-cat="error"] {
+  background: #ff6b6b;
+}
+
+.iterationDotPulse {
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.4); }
+}
+
+.iterationOverflow {
+  font-size: 9px;
+  color: var(--color-text-muted);
+  margin-left: 2px;
+}
+
+.iterationSummary {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

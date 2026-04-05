@@ -14,7 +14,7 @@ vi.mock("../../api/client", () => ({
 
 const fakeSubscribe = vi.fn((_type: string, _cb: () => void) => vi.fn());
 
-vi.mock("../../stores/event-store", () => {
+vi.mock("../../stores/event-store/index", () => {
   const store = {
     subscribe: (...args: unknown[]) => fakeSubscribe(...args),
   };

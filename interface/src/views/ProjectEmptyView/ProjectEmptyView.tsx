@@ -4,7 +4,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useProjectsList } from "../../apps/projects/useProjectsList";
 import { projectAgentRoute, projectStatsRoute, projectWorkRoute } from "../../utils/mobileNavigation";
 import { AgentSelectorModal } from "../../components/AgentSelectorModal";
@@ -22,7 +22,7 @@ interface ProjectEmptyViewProps {
 export function ProjectEmptyView({ mode = "project" }: ProjectEmptyViewProps) {
   const navigate = useNavigate();
   const { isMobileLayout } = useAuraCapabilities();
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { setAgentsByProject } = useProjectsList();
   const [agentSelectorOpen, setAgentSelectorOpen] = useState(false);
 

@@ -1,5 +1,5 @@
 import type { ToolCallEntry } from "../../types/stream";
-import toolStyles from "../ToolCallBlock.module.css";
+import toolStyles from "./ToolCallBlock.module.css";
 
 export function TaskCreatedIndicator({ entry }: { entry: ToolCallEntry }) {
   const description = (entry.input.description as string) || "";

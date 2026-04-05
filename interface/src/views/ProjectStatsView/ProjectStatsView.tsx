@@ -1,10 +1,10 @@
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { StatsDashboard } from "../StatsDashboard";
 import styles from "./ProjectStatsView.module.css";
 
 export function ProjectStatsView() {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { isMobileLayout } = useAuraCapabilities();
 
   if (!ctx?.project.project_id) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 
 interface ConnectionStatusResult {
   connected: boolean;

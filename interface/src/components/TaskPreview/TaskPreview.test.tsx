@@ -53,7 +53,7 @@ const mockProjectContext = {
   initialTasks: [],
 };
 vi.mock("../../stores/project-action-store", () => ({
-  useProjectContext: () => mockProjectContext,
+  useProjectActions: () => mockProjectContext,
 }));
 
 const eventStoreMock = {
@@ -62,7 +62,7 @@ const eventStoreMock = {
   seedTaskOutput: vi.fn(),
   taskOutputs: {} as Record<string, unknown>,
 };
-vi.mock("../../stores/event-store", () => ({
+vi.mock("../../stores/event-store/index", () => ({
   useEventStore: (sel: (s: typeof eventStoreMock) => unknown) => sel(eventStoreMock),
   useTaskOutput: () => ({ text: "", fileOps: [], buildSteps: [], testSteps: [] }),
 }));

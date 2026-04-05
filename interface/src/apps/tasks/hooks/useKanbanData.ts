@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useKanbanStore, useKanbanLanes } from "../stores/kanban-store";
-import { useEventStore } from "../../../stores/event-store";
+import { useEventStore } from "../../../stores/event-store/index";
 import { EventType } from "../../../types/aura-events";
 
 export function useKanbanData(

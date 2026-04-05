@@ -1,7 +1,7 @@
 import { render, screen, act } from "@testing-library/react";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 
-vi.mock("../../stores/event-store", () => {
+vi.mock("../../stores/event-store/index", () => {
   const store = {
     connected: true,
     lastEventAt: null as number | null,

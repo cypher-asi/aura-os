@@ -1,0 +1,46 @@
+---
+description: TypeScript coding standards for the aura-os frontend
+globs: ["interface/src/**/*.ts", "interface/src/**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Coding Standards
+
+## File and Function Size Limits
+
+- Maximum **500 lines** per file. If a file exceeds this, split into smaller modules.
+- Maximum **50 lines** per function. Extract helper functions, custom hooks, or sub-components.
+
+## Type System
+
+- Prefer `type` over `interface` for object shapes. Use `interface` only when extending or implementing.
+- Never use `any`. Use `unknown` and narrow with type guards.
+- Use `import type` for type-only imports.
+- Prefer discriminated unions over optional properties for state variants.
+- Use `as const` for literal type values.
+- Use exhaustive `switch` with a `never` default for union types.
+
+## Naming and Exports
+
+- Named exports over default exports.
+- PascalCase for components, types, and interfaces.
+- camelCase for functions, hooks, variables, and module files.
+- Barrel re-exports via `index.ts` in every component/module folder.
+
+## Imports
+
+Sort imports in this order, separated by blank lines:
+1. React (`react`, `react-dom`)
+2. Third-party packages (`zustand`, `lucide-react`, `@cypher-asi/zui`, etc.)
+3. Local absolute paths (from `src/`)
+4. Local relative paths (`./`, `../`)
+
+## Variables and Functions
+
+- Prefer `const` arrow functions for components and hooks.
+- Use `const` by default; `let` only when reassignment is needed; never `var`.
+- Pure functions where possible; isolate side effects into hooks or store actions.
+
+## Strict Configuration
+
+The project enforces: `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedSideEffectImports`.

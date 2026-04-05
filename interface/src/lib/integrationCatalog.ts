@@ -185,6 +185,50 @@ export function getIntegrationLabel(provider: string): string {
   return getIntegrationDefinition(provider)?.label ?? provider;
 }
 
+export function getAdapterLabel(adapterType: string): string {
+  switch (adapterType) {
+    case "claude_code":
+      return "Claude Code";
+    case "codex":
+      return "Codex";
+    case "gemini_cli":
+      return "Gemini CLI";
+    case "opencode":
+      return "OpenCode";
+    case "cursor":
+      return "Cursor";
+    case "aura_harness":
+    default:
+      return "Aura";
+  }
+}
+
+export function getLocalAuthLabel(adapterType: string): string {
+  switch (adapterType) {
+    case "claude_code":
+      return "Claude Code CLI";
+    case "codex":
+      return "Codex CLI";
+    case "gemini_cli":
+      return "Gemini CLI";
+    case "opencode":
+      return "OpenCode CLI";
+    case "cursor":
+      return "Cursor CLI";
+    default:
+      return "Local CLI";
+  }
+}
+
+export function getConnectionAuthLabel(adapterType: string): string {
+  const providers = runtimeAuthProvidersForAdapter(adapterType);
+  if (providers.length === 1) {
+    const label = getIntegrationLabel(providers[0]);
+    return label === "Google Gemini" ? "Gemini API" : `${label} API`;
+  }
+  return "Connection API";
+}
+
 export function getSecretLabel(provider: string): string {
   return getIntegrationDefinition(provider)?.secretLabel ?? "Provider Secret";
 }

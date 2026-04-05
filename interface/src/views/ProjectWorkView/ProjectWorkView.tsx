@@ -1,12 +1,12 @@
 import { GroupCollapsible, Panel, Badge, Text } from "@cypher-asi/zui";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useLoopControl } from "../../hooks/use-loop-control";
 import { AgentStatusBar } from "../AgentStatusBar";
 import { LoopControls } from "../LoopControls";
 import { ExecutionView } from "../ExecutionView";
 import { TaskFeed } from "../TaskFeed";
 import { LogPanel } from "../LogPanel";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { TaskStatusIcon } from "../../components/TaskStatusIcon";
@@ -75,7 +75,7 @@ function MobileSpecsList({ projectId }: { projectId: string }) {
 }
 
 function MobileTasksList({ projectId }: { projectId: string }) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const viewTask = useSidekickStore((s) => s.viewTask);
   const { tasks, tasksBySpec, liveTaskIds, loopActive } = useMobileTasks(projectId);
 
@@ -119,7 +119,7 @@ function MobileTasksList({ projectId }: { projectId: string }) {
 }
 
 export function ProjectWorkView() {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { isMobileLayout } = useAuraCapabilities();
   const projectId = ctx?.project.project_id;
 

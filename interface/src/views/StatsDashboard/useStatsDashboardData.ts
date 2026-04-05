@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import type { ProjectStatsData } from "../../api/projects";
 
 interface StatsDashboardData {
@@ -61,7 +61,7 @@ function normalizeProjectStats(stats: Partial<ProjectStatsData>): ProjectStatsDa
 }
 
 export function useStatsDashboardData(): StatsDashboardData {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const projectId = ctx?.project.project_id ?? null;
   const [stats, setStats] = useState<ProjectStatsData | null>(null);
   const [loading, setLoading] = useState(() => Boolean(projectId));

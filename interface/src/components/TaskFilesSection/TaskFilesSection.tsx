@@ -1,7 +1,7 @@
 import { Text, GroupCollapsible, Item } from "@cypher-asi/zui";
 import { FilePlus, FilePen, FileX } from "lucide-react";
 import { api } from "../../api/client";
-import { useProjectContext } from "../../stores/project-action-store";
+import { useProjectActions } from "../../stores/project-action-store";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { useTerminalTarget } from "../../hooks/use-terminal-target";
 import styles from "../Preview/Preview.module.css";
@@ -14,7 +14,7 @@ function FileOpIcon({ op }: { op: string }) {
 }
 
 export function TaskFilesSection({ fileOps }: { fileOps: { op: string; path: string }[] }) {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const { features } = useAuraCapabilities();
   const { workspacePath, remoteAgentId } = useTerminalTarget({ projectId: ctx?.project.project_id });
 

@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Spinner } from "@cypher-asi/zui";
 import { useAuth } from "../../stores/auth-store";
 import { authApi } from "../../api/auth";
-import { ApiClientError } from "../../api/client";
+import { getApiErrorMessage } from "../../utils/api-errors";
 import styles from "./RequireAuth.module.css";
 
 export function RequireAuth() {
@@ -31,19 +31,7 @@ export function RequireAuth() {
       await authApi.redeemAccessCode(accessCode.trim());
       await refreshSession();
     } catch (err) {
-      let msg = "Invalid access code";
-      if (err instanceof ApiClientError) {
-        // Parse nested error from aura-network proxy
-        try {
-          const nested = JSON.parse(err.body.error);
-          msg = nested?.error?.message?.replace(/^Bad request: /, "") ?? msg;
-        } catch {
-          msg = err.body.error;
-        }
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
-      setAccessCodeError(msg);
+      setAccessCodeError(getApiErrorMessage(err));
     } finally {
       setIsRedeemingCode(false);
     }

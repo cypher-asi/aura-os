@@ -1,0 +1,527 @@
+.mobileShell {
+  height: 100%;
+  min-height: 100svh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.mobileShellDimmed {
+  pointer-events: none;
+}
+
+.mobileTopbar {
+  position: relative;
+  min-height: calc(env(safe-area-inset-top) + 56px);
+  padding-top: calc(env(safe-area-inset-top) + 8px);
+  padding-bottom: 10px;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-bg) 98%, black 2%) 0%,
+      color-mix(in srgb, var(--color-bg) 92%, transparent) 65%,
+      transparent 100%
+    );
+}
+
+.mobileTopbarSlot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 44px;
+  flex: 0 0 44px;
+}
+
+.mobileAppSwitcherTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.mobileAppSwitcherTrigger:hover,
+.mobileAppSwitcherTrigger:focus-visible {
+  background: color-mix(in srgb, var(--color-text-secondary) 10%, transparent);
+}
+
+.mobileTopbarTitle {
+  position: absolute;
+  inset-inline: 56px;
+  top: calc(env(safe-area-inset-top) + 6px);
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.mobileTopbarTitleButton,
+.mobileProjectTitleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  max-width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.mobileTopbarTitleButton {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mobileProjectTitleButton {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.mobileTopbarTitleText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(58vw, 220px);
+}
+
+.mobileTopbarActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 44px;
+  flex: 0 0 44px;
+}
+
+.mobileMain {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: calc(68px + env(safe-area-inset-bottom));
+}
+
+.mobileResponsiveControls {
+  flex-shrink: 0;
+  max-height: min(25vh, 176px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 97%, var(--color-bg-elevated) 3%);
+}
+
+.mobileResponsiveControls :global([role="tree"]) {
+  padding: 4px 0;
+}
+
+.mobileResponsiveControls :global([class*="itemContent"]) {
+  min-height: 34px !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+}
+
+.mobileResponsiveControls :global([class*="label"]) {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.mobileMainPanel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobileBottomNav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+
+.mobileNavBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.mobileNavButton {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.mobileNavButton[data-active="true"] {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.mobileNavButton span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.mobileNavDrawer {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 80;
+  padding-top: calc(env(safe-area-inset-top) + 14px);
+  max-width: min(420px, calc(100vw - 16px));
+  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.42);
+  background: var(--color-bg);
+  border-radius: 0 20px 20px 0;
+  overflow: hidden;
+}
+
+.mobileSheetDrawer {
+  position: fixed !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 85;
+  width: 100% !important;
+  max-height: min(78vh, calc(100svh - 20px));
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.42);
+  background: var(--color-bg);
+}
+
+.mobileSideSheet {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 85;
+  width: min(420px, 88vw) !important;
+  padding-top: calc(env(safe-area-inset-top) + 18px);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.42);
+  background: var(--color-bg);
+  border-radius: 20px 0 0 20px;
+}
+
+.mobileDrawerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(1, 4, 10, 0.52);
+  backdrop-filter: blur(6px);
+  appearance: none;
+  cursor: default;
+}
+
+:global([role="dialog"][aria-modal="true"]) {
+  z-index: 120;
+}
+
+.mobileDrawerContent {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  overscroll-behavior: contain;
+}
+
+.mobileDrawerSearch {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mobileDrawerBody {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobileProjectDrawerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3);
+}
+
+.mobileDrawerSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobileDrawerSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.mobileDrawerSectionTitle {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mobileDrawerSectionCount {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.mobileProjectDrawerStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobileProjectDrawerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: calc(var(--radius-lg) + 2px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
+    color-mix(in srgb, var(--color-bg-surface) 95%, transparent);
+}
+
+.mobileProjectDrawerCardActive {
+  border-color: color-mix(in srgb, var(--color-primary) 44%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.mobileProjectDrawerPrimary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.mobileProjectDrawerEyebrow {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mobileProjectDrawerTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.mobileProjectDrawerDescription {
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.mobileProjectDrawerRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  color: inherit;
+  text-align: left;
+}
+
+.mobileProjectDrawerRowActive {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border));
+}
+
+.mobileProjectDrawerRowMain {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.mobileProjectDrawerRowMeta {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.mobileDrawerEmptyState {
+  padding: var(--space-4) var(--space-2);
+}
+
+.mobileAppSwitcherList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.mobileAppSwitcherButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-bg-surface) 96%, transparent);
+  color: inherit;
+  text-align: left;
+}
+
+.mobileAppSwitcherButtonActive {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 16%, transparent);
+}
+
+.mobileAppSwitcherIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  flex-shrink: 0;
+}
+
+.mobileAppSwitcherText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobileAppSwitcherLabel {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.mobileAppSwitcherDescription {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.mobileDrawerFooter {
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  background: var(--color-bg);
+}
+
+.mobileDrawerActions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.mobileDrawerAction {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.mobileContextHeader {
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 680px) {
+  .mobileTopbarTitleButton {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  .mobileProjectTitleButton {
+    font-size: 14px;
+  }
+
+  .mobileTopbarActions {
+    gap: 4px;
+  }
+
+  .mobileNavDrawer {
+    max-width: calc(100vw - 12px);
+    border-radius: 0 18px 18px 0;
+  }
+
+  .mobileSideSheet {
+    width: calc(100vw - 12px) !important;
+    border-radius: 18px 0 0 18px;
+  }
+}

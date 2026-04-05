@@ -1,0 +1,28 @@
+.executionView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+}
+
+.panels {
+  display: flex;
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.panels > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.dangerText {
+  color: var(--color-danger);
+}
+
+@media (max-width: 900px) {
+  .panels {
+    flex-direction: column;
+  }
+}

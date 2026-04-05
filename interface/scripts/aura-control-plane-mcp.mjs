@@ -26,10 +26,10 @@ const integrationSecretsById = (() => {
 })();
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sharedProjectTools = JSON.parse(
-  fs.readFileSync(path.resolve(currentDir, "../../shared/project-control-plane-tools.json"), "utf8"),
+  fs.readFileSync(path.resolve(currentDir, "../../infra/shared/project-control-plane-tools.json"), "utf8"),
 );
 const appProviderTools = JSON.parse(
-  fs.readFileSync(path.resolve(currentDir, "../../shared/org-integration-tools.json"), "utf8"),
+  fs.readFileSync(path.resolve(currentDir, "../../infra/shared/org-integration-tools.json"), "utf8"),
 );
 const allSharedTools = [...sharedProjectTools, ...appProviderTools];
 let orgIntegrationsPromise;

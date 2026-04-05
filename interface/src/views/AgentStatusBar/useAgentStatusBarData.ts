@@ -3,7 +3,7 @@ import type { ProjectId, AgentInstance, Session } from "../../types";
 import type { AuraEvent } from "../../types/aura-events";
 import { EventType } from "../../types/aura-events";
 import { api } from "../../api/client";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import { useClickOutside } from "../../hooks/use-click-outside";
 

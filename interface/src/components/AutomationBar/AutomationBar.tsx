@@ -3,7 +3,7 @@ import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { StatusBadge } from "../StatusBadge";
 import type { ProjectId } from "../../types";
 import { useAutomationStatus } from "./useAutomationStatus";
-import styles from "../Sidekick/Sidekick.module.css";
+import styles from "./AutomationBar.module.css";
 
 interface AutomationBarProps {
   projectId: ProjectId;

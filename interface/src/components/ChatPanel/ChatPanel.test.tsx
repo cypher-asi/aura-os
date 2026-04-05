@@ -65,7 +65,7 @@ vi.mock("../../constants/models", () => ({
   persistModel: vi.fn(),
 }));
 
-vi.mock("../ChatView/ChatView.module.css", () => ({
+vi.mock("./ChatPanel.module.css", () => ({
   default: new Proxy({}, { get: (_target, prop) => String(prop) }),
 }));
 

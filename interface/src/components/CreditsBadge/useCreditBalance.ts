@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useOrgStore } from "../../stores/org-store";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { EventType } from "../../types/aura-events";
 

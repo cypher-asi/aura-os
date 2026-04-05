@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { api } from "../../api/client";
 import type { Task } from "../../types";
 import { EventType } from "../../types/aura-events";
-import { useProjectContext } from "../../stores/project-action-store";
-import { useEventStore } from "../../stores/event-store";
+import { useProjectActions } from "../../stores/project-action-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useLoopActive } from "../../hooks/use-loop-active";
 
 function sortByOrder<T extends { order_index: number }>(items: T[]): T[] {
@@ -18,7 +18,7 @@ interface MobileTasksData {
 }
 
 export function useMobileTasks(projectId: string): MobileTasksData {
-  const ctx = useProjectContext();
+  const ctx = useProjectActions();
   const subscribe = useEventStore((s) => s.subscribe);
   const loopActive = useLoopActive(projectId);
   const [tasks, setTasks] = useState<Task[]>(() => sortByOrder(ctx?.initialTasks ?? []));

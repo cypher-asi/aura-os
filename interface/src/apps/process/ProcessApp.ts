@@ -2,7 +2,7 @@ import { Cpu } from "lucide-react";
 import { ProcessList } from "./components/ProcessList";
 import { ProcessMainPanel } from "./components/ProcessMainPanel";
 import { ProcessSidekickTaskbar } from "./components/ProcessSidekickTaskbar";
-import { ProcessSidekickContent } from "./components/ProcessSidekickContent";
+import { ProcessSidekickContent } from "./components/ProcessSidekickContent/index";
 import { ProcessProvider } from "./components/ProcessProvider";
 import type { AuraApp } from "../types";
 

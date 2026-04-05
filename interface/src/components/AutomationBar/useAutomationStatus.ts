@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, isInsufficientCreditsError, dispatchInsufficientCredits } from "../../api/client";
-import { useEventStore } from "../../stores/event-store";
+import { useEventStore } from "../../stores/event-store/index";
 import { useSidekickStore } from "../../stores/sidekick-store";
 import type { ProjectId } from "../../types";
 import { EventType } from "../../types/aura-events";

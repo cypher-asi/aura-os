@@ -46,7 +46,7 @@ vi.mock("../../api/client", () => ({
 
 const subscribeMock = vi.fn((_type: string, _cb: (...args: unknown[]) => void) => vi.fn());
 
-vi.mock("../../stores/event-store", () => {
+vi.mock("../../stores/event-store/index", () => {
   const store = {
     connected: true,
     subscribe: (...args: unknown[]) => subscribeMock(...args),
@@ -69,7 +69,7 @@ vi.mock("../StatusBadge", () => ({
   StatusBadge: ({ status }: { status: string }) => <span data-testid="status">{status}</span>,
 }));
 
-vi.mock("../Sidekick/Sidekick.module.css", () => ({
+vi.mock("./AutomationBar.module.css", () => ({
   default: new Proxy({}, { get: (_t, prop) => String(prop) }),
 }));
 

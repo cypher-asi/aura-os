@@ -1,0 +1,310 @@
+.logWrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.logHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.logStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.logStatusDot[data-connected="true"] {
+  background: rgb(34, 197, 94);
+}
+
+.logFilterBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+  height: var(--control-height-sm, 32px);
+  min-height: var(--control-height-sm, 32px);
+  box-sizing: border-box;
+}
+
+.logFilterBar::-webkit-scrollbar {
+  display: none;
+}
+
+.logFilterChip {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 5px;
+  border-radius: var(--radius-sm, 3px);
+  line-height: 18px;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  min-width: 42px;
+  text-align: center;
+  background: var(--color-bg-subtle, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-muted);
+  transition: background 0.1s, color 0.1s;
+}
+
+.logFilterChip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.logFilterChipActive_all {
+  composes: logFilterChip;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--color-text);
+}
+
+.logFilterChipActive_loop {
+  composes: logFilterChip;
+  background: rgba(74, 222, 128, 0.15);
+  color: rgb(74, 222, 128);
+}
+
+.logFilterChipActive_task {
+  composes: logFilterChip;
+  background: rgba(52, 211, 153, 0.15);
+  color: rgb(52, 211, 153);
+}
+
+.logFilterChipActive_output {
+  composes: logFilterChip;
+  background: rgba(134, 239, 172, 0.15);
+  color: rgb(134, 239, 172);
+}
+
+.logFilterChipActive_files {
+  composes: logFilterChip;
+  background: rgba(163, 230, 53, 0.15);
+  color: rgb(163, 230, 53);
+}
+
+.logFilterChipActive_session {
+  composes: logFilterChip;
+  background: rgba(45, 212, 191, 0.15);
+  color: rgb(45, 212, 191);
+}
+
+.logFilterChipActive_log {
+  composes: logFilterChip;
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(22, 163, 74);
+}
+
+.logFilterChipActive_spec {
+  composes: logFilterChip;
+  background: rgba(94, 234, 212, 0.15);
+  color: rgb(94, 234, 212);
+}
+
+.logFilterMore {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.logFilterDropdown {
+  z-index: 9999;
+  min-width: 130px;
+  padding: var(--space-1) 0;
+  background: var(--color-bg-solid, #1a1a1a);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.logFilterDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.logFilterDropdownItem:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+}
+
+.logFilterDropdownCheck {
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+}
+
+.logContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  scrollbar-width: none;
+}
+
+.logContent::-webkit-scrollbar {
+  display: none;
+}
+
+.logEmpty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.logEmptyText {
+  text-align: center;
+}
+
+.logLine {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.logRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 2px 0;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 3px);
+}
+
+.logRow:hover {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.logRowSelected {
+  background: var(--color-bg-hover, rgba(255, 255, 255, 0.04));
+}
+
+.logTimestamp {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.logBadge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 5px;
+  border-radius: var(--radius-sm, 3px);
+  line-height: 18px;
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+  background: var(--color-bg-subtle, rgba(255, 255, 255, 0.06));
+  color: var(--color-text-muted);
+}
+
+.logBadge_loop {
+  composes: logBadge;
+  background: rgba(74, 222, 128, 0.15);
+  color: rgb(74, 222, 128);
+}
+
+.logBadge_task {
+  composes: logBadge;
+  background: rgba(52, 211, 153, 0.15);
+  color: rgb(52, 211, 153);
+}
+
+.logBadge_output {
+  composes: logBadge;
+  background: rgba(134, 239, 172, 0.15);
+  color: rgb(134, 239, 172);
+}
+
+.logBadge_files {
+  composes: logBadge;
+  background: rgba(163, 230, 53, 0.15);
+  color: rgb(163, 230, 53);
+}
+
+.logBadge_session {
+  composes: logBadge;
+  background: rgba(45, 212, 191, 0.15);
+  color: rgb(45, 212, 191);
+}
+
+.logBadge_log {
+  composes: logBadge;
+  background: rgba(22, 163, 74, 0.15);
+  color: rgb(22, 163, 74);
+}
+
+.logBadge_spec {
+  composes: logBadge;
+  background: rgba(94, 234, 212, 0.15);
+  color: rgb(94, 234, 212);
+}
+
+.logSummary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logDetail {
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-1) 0;
+  background: var(--color-bg-subtle, rgba(255, 255, 255, 0.03));
+  border-radius: var(--radius-sm, 3px);
+  border-left: 2px solid var(--color-border);
+}
+
+.logDetailRow {
+  display: flex;
+  gap: var(--space-2);
+  padding: 1px 0;
+  line-height: 1.5;
+}
+
+.logDetailKey {
+  flex-shrink: 0;
+  min-width: 90px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.logDetailValue {
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.logEvent {
+  color: var(--color-accent);
+}

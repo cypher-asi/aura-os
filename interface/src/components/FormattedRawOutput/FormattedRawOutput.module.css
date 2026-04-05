@@ -1,0 +1,110 @@
+.rawOutput {
+  overflow-x: hidden;
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.15));
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.formattedRawOutput {
+  overflow-x: hidden;
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.15));
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rawProse {
+  color: var(--color-text-muted);
+  padding: 2px 0;
+  word-break: break-word;
+}
+
+.rawProse p {
+  margin: 0 0 4px;
+}
+
+.rawProse p:last-child {
+  margin-bottom: 0;
+}
+
+.rawProse code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.12);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.rawProse pre {
+  margin: 4px 0;
+  padding: var(--space-2);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  overflow-x: auto;
+  font-size: 11px;
+}
+
+.toolMarkerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.toolMarkerIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+
+.toolMarkerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolMarkerLabel code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+.toolMarkerStatus {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.toolMarkerOk {
+  color: var(--status-done, #34d399);
+}
+
+.toolMarkerError {
+  color: var(--status-failed, #ff6b6b);
+}

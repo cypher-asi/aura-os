@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { FileText, Search, Terminal, Trash2, FolderOpen, CheckCircle2, XCircle, Wrench } from "lucide-react";
 import { agenticToolLabel } from "../../utils/derive-activity";
-import styles from "../Preview/Preview.module.css";
+import styles from "./FormattedRawOutput.module.css";
 
 type Segment =
   | { kind: "text"; content: string }
