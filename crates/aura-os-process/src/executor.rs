@@ -23,8 +23,7 @@ use aura_os_store::RocksStore;
 use crate::error::ProcessError;
 use crate::process_store::ProcessStore;
 
-const DEFAULT_MAX_TURNS: u32 = 25;
-const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 300; // 5 minutes
+const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 600; // 10 minutes
 
 #[derive(Debug, Clone, Default)]
 struct NodeTokenUsage {
@@ -744,8 +743,7 @@ fn build_session_config(
         .config
         .get("max_turns")
         .and_then(|v| v.as_u64())
-        .map(|n| n as u32)
-        .or(Some(DEFAULT_MAX_TURNS));
+        .map(|n| n as u32);
 
     SessionConfig {
         system_prompt,

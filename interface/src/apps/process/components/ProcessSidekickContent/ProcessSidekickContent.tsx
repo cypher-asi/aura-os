@@ -76,7 +76,7 @@ export function ProcessSidekickContent() {
       <div className={styles.sidekickBody}>
         <PreviewOverlay title="Run Detail" onClose={closePreview} fullLane>
           <div style={{ margin: "calc(-1 * var(--space-3, 12px)) 0" }}>
-            <RunPreviewBody run={previewRun} />
+            <RunPreviewBody key={previewRun.run_id} run={previewRun} />
           </div>
         </PreviewOverlay>
       </div>
