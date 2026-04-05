@@ -31,8 +31,28 @@ export const memoryApi = {
     apiFetch<void>(`/api/harness/agents/${agentId}/memory/events/${eventId}`, { method: "DELETE" }),
 
   // Procedures
-  listProcedures: (agentId: string) =>
-    apiFetch<MemoryProcedure[]>(`/api/harness/agents/${agentId}/memory/procedures`),
+  listProcedures: (agentId: string, params?: { skill?: string; min_relevance?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.skill) query.set("skill", params.skill);
+    if (params?.min_relevance != null) query.set("min_relevance", String(params.min_relevance));
+    const qs = query.toString();
+    return apiFetch<MemoryProcedure[]>(`/api/harness/agents/${agentId}/memory/procedures${qs ? `?${qs}` : ""}`);
+  },
+  createProcedure: (agentId: string, data: {
+    name: string; trigger: string; steps: string[];
+    context_constraints?: any; skill_name?: string; skill_relevance?: number;
+  }) =>
+    apiFetch<MemoryProcedure>(`/api/harness/agents/${agentId}/memory/procedures`, {
+      method: "POST", body: JSON.stringify(data),
+    }),
+  updateProcedure: (agentId: string, procId: string, data: {
+    name?: string; trigger?: string; steps?: string[];
+    context_constraints?: any; skill_name?: string | null;
+    skill_relevance?: number | null; success_rate?: number;
+  }) =>
+    apiFetch<MemoryProcedure>(`/api/harness/agents/${agentId}/memory/procedures/${procId}`, {
+      method: "PUT", body: JSON.stringify(data),
+    }),
   deleteProcedure: (agentId: string, procId: string) =>
     apiFetch<void>(`/api/harness/agents/${agentId}/memory/procedures/${procId}`, { method: "DELETE" }),
 

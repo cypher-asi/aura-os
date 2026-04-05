@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { TimelineItem, ToolCallEntry } from "../../types/stream";
-import { stripEmojis, normalizeMidSentenceBreaks } from "../../utils/text-normalize";
+import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from "../../utils/text-normalize";
 import { ThinkingRow } from "../ThinkingRow";
 import { ToolCallBlock } from "../ToolRow";
 import { SegmentedContent } from "../SegmentedContent";
@@ -55,7 +55,7 @@ export function ActivityTimeline({
           );
         }
 
-        const normalized = normalizeMidSentenceBreaks(stripEmojis(item.content));
+        const normalized = flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(item.content)));
         return (
           <div key={item.id}>
             <SegmentedContent content={normalized} isStreaming={isStreaming} />

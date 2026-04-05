@@ -1,10 +1,12 @@
 import { useRef, useCallback, useEffect } from "react";
 import { api } from "../api/client";
 import type { ChatAttachment, StreamEventHandler } from "../api/streams";
+import { generateImageStream, generate3dStream } from "../api/streams";
+import type { GenerationMode } from "../constants/models";
+import { buildContentBlocks, buildAttachmentLabel } from "./attachment-helpers";
 import type { Spec, Task } from "../types";
 import type { AuraEvent } from "../types/aura-events";
 import { EventType } from "../types/aura-events";
-import { useChatHistoryStore, agentHistoryKey } from "../stores/chat-history-store";
 import {
   useStreamCore,
   resetStreamBuffers,
@@ -38,6 +40,7 @@ interface UseAgentChatStreamResult {
     attachments?: ChatAttachment[],
     commands?: string[],
     projectId?: string,
+    generationMode?: GenerationMode,
   ) => Promise<void>;
   stopStreaming: () => void;
   resetEvents: (msgs: DisplaySessionEvent[], options?: { allowWhileStreaming?: boolean }) => void;
@@ -61,6 +64,7 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       attachments?: ChatAttachment[],
       commands?: string[],
       projectId?: string,
+      generationMode?: GenerationMode,
     ) => {
       if (!agentId || getIsStreaming(core.key)) return;
       const trimmed = content.trim();
@@ -70,7 +74,8 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       const userMsg: DisplaySessionEvent = {
         id: `temp-${Date.now()}`,
         role: "user",
-        content: trimmed || "",
+        content: trimmed || buildAttachmentLabel(attachments),
+        contentBlocks: buildContentBlocks(trimmed, attachments),
       };
 
       core.setEvents((prev) => [...prev, userMsg]);
@@ -132,6 +137,27 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
             case EventType.SessionReady:
             case EventType.TokenUsage:
               break;
+            case EventType.GenerationStart:
+              core.setProgressText(event.content.mode === "image" ? "Generating image..." : "Generating 3D model...");
+              break;
+            case EventType.GenerationProgress:
+              core.setProgressText(event.content.message || `${event.content.percent}%`);
+              break;
+            case EventType.GenerationPartialImage:
+              break;
+            case EventType.GenerationCompleted: {
+              const gc = event.content;
+              const toolName = gc.mode === "3d" ? "generate_3d_model" : "generate_image";
+              const toolId = `gen-${Date.now()}`;
+              handleToolCall(refs, setters, { id: toolId, name: toolName, input: {} });
+              handleToolResult(refs, setters, { id: toolId, name: toolName, result: JSON.stringify(gc), is_error: false });
+              resetStreamBuffers(refs, setters);
+              core.setIsStreaming(false);
+              break;
+            }
+            case EventType.GenerationError:
+              handleStreamError(refs, setters, event.content.message);
+              break;
             case EventType.Error:
               handleStreamError(refs, setters, event.content.message);
               break;
@@ -145,17 +171,26 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
       };
 
       try {
-        await api.agents.sendEventStream(
-          agentId,
-          userMsg.content,
-          action,
-          selectedModel,
-          attachments,
-          handler,
-          controller.signal,
-          commands,
-          projectId,
-        );
+        if (generationMode === "image") {
+          await generateImageStream(trimmed, selectedModel, attachments, handler, controller.signal, projectId);
+        } else if (generationMode === "3d") {
+          const imgUrl = attachments?.find((a) => a.type === "image")
+            ? `data:${attachments[0].media_type};base64,${attachments[0].data}`
+            : trimmed;
+          await generate3dStream(imgUrl, trimmed, handler, controller.signal, projectId);
+        } else {
+          await api.agents.sendEventStream(
+            agentId,
+            userMsg.content,
+            action,
+            selectedModel,
+            attachments,
+            handler,
+            controller.signal,
+            commands,
+            projectId,
+          );
+        }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         handleStreamError(refs, setters, err instanceof Error ? err.message : String(err));
@@ -164,9 +199,6 @@ export function useAgentChatStream({ agentId, onTaskSaved, onSpecSaved }: UseAge
           core.setIsStreaming(false);
           controller.abort();
           abortRef.current = null;
-        }
-        if (agentId) {
-          useChatHistoryStore.getState().invalidateHistory(agentHistoryKey(agentId));
         }
       }
     },

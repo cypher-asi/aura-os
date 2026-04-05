@@ -226,6 +226,15 @@
 .specMarkdown {
   padding: 0 var(--space-3, 12px);
 }
+.markdown a {
+  color: var(--color-accent, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s;
+}
+.markdown a:hover {
+  opacity: 0.8;
+}
 .markdown strong { color: var(--color-text, #fff); }
 .markdown h1 { font-size: 18px; margin: 16px 0 8px; font-weight: 600; color: var(--color-text, #fff); }
 .markdown h2 { font-size: 15px; margin: 14px 0 6px; font-weight: 600; color: var(--color-text, #fff); }

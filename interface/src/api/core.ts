@@ -56,3 +56,19 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   }
   return res.json();
 }
+
+export async function apiFetchText(path: string, options?: RequestInit): Promise<string> {
+  const res = await fetch(resolveApiUrl(path), {
+    headers: { ...authHeaders() },
+    ...options,
+  });
+  if (!res.ok) {
+    const err: ApiError = await res.json().catch(() => ({
+      error: res.statusText,
+      code: "unknown",
+      details: null,
+    }));
+    throw new ApiClientError(res.status, err);
+  }
+  return res.text();
+}

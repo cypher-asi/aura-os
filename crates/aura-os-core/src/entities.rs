@@ -7,9 +7,9 @@ use crate::enums::{
     SessionStatus, TaskStatus,
 };
 use crate::ids::{
-    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
-    ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId,
-    ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessArtifactId,
+    ProcessEventId, ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId,
+    ProcessRunId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -697,6 +697,12 @@ pub struct ProcessRun {
     pub started_at: DateTime<Utc>,
     #[serde(default)]
     pub completed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub total_input_tokens: Option<u64>,
+    #[serde(default)]
+    pub total_output_tokens: Option<u64>,
+    #[serde(default)]
+    pub cost_usd: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -713,4 +719,61 @@ pub struct ProcessEvent {
     pub started_at: DateTime<Utc>,
     #[serde(default)]
     pub completed_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub input_tokens: Option<u64>,
+    #[serde(default)]
+    pub output_tokens: Option<u64>,
+    #[serde(default)]
+    pub model: Option<String>,
+    /// Structured content blocks from the harness conversation (text, tool_use,
+    /// tool_result, thinking).  Present for action/condition/artifact nodes that
+    /// invoke the LLM; `None` for ignition/delay/merge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_blocks: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessArtifact {
+    pub artifact_id: ProcessArtifactId,
+    pub process_id: ProcessId,
+    pub run_id: ProcessRunId,
+    pub node_id: ProcessNodeId,
+    pub artifact_type: ArtifactType,
+    pub name: String,
+    /// Relative path under data_dir
+    pub file_path: String,
+    pub size_bytes: u64,
+    #[serde(default)]
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+// ---------------------------------------------------------------------------
+// Integration config (per-org)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct ObsidianConfig {
+    #[serde(default)]
+    pub vault_path: Option<String>,
+    #[serde(default)]
+    pub default_output_folder: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct WebSearchConfig {
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub api_key_set: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IntegrationConfig {
+    pub org_id: OrgId,
+    #[serde(default)]
+    pub obsidian: Option<ObsidianConfig>,
+    #[serde(default)]
+    pub web_search: Option<WebSearchConfig>,
+    pub updated_at: DateTime<Utc>,
 }

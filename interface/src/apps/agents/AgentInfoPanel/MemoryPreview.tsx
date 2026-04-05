@@ -93,6 +93,15 @@ export function ProcedurePreview({ procedure }: { procedure: MemoryProcedure }) 
         <span className={previewStyles.fieldLabel}>Name</span>
         <Text size="sm">{procedure.name}</Text>
       </div>
+      {procedure.skill_name && (
+        <div className={previewStyles.taskField}>
+          <span className={previewStyles.fieldLabel}>Skill</span>
+          <Text size="sm">
+            {procedure.skill_name}
+            {procedure.skill_relevance != null && ` (${Math.round(procedure.skill_relevance * 100)}% relevance)`}
+          </Text>
+        </div>
+      )}
       <div className={previewStyles.taskField}>
         <span className={previewStyles.fieldLabel}>Trigger</span>
         <Text size="sm" variant="secondary">{procedure.trigger}</Text>

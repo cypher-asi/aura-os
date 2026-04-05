@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 
-const { mockGetSnapshot, MockApiClientError } = vi.hoisted(() => {
+const { mockGetSnapshot, MockApiClientError, mockUseIsStreaming } = vi.hoisted(() => {
   class _MockApiClientError extends Error {
     status: number;
     body: { error: string; code: string; details: null };
@@ -12,7 +12,11 @@ const { mockGetSnapshot, MockApiClientError } = vi.hoisted(() => {
       this.body = { error: message, code: "unknown", details: null };
     }
   }
-  return { mockGetSnapshot: vi.fn(), MockApiClientError: _MockApiClientError };
+  return {
+    mockGetSnapshot: vi.fn(),
+    MockApiClientError: _MockApiClientError,
+    mockUseIsStreaming: vi.fn(() => false),
+  };
 });
 
 vi.mock("../../../api/client", () => ({
@@ -22,6 +26,10 @@ vi.mock("../../../api/client", () => ({
     },
   },
   ApiClientError: MockApiClientError,
+}));
+
+vi.mock("../../../hooks/stream/hooks", () => ({
+  useIsStreaming: (...args: any[]) => mockUseIsStreaming(...args),
 }));
 
 vi.mock("../stores/agent-sidekick-store", () => ({
@@ -48,7 +56,7 @@ const mockSnapshot = {
     { event_id: "e1", event_type: "task_run", summary: "Did stuff", timestamp: "2024-01-15T10:00:00Z" },
   ],
   procedures: [
-    { procedure_id: "p1", name: "deploy-flow", steps: ["build", "push"], success_rate: 0.8 },
+    { procedure_id: "p1", name: "deploy-flow", steps: ["build", "push"], success_rate: 0.8, skill_name: "deploy", skill_relevance: 0.95 },
   ],
 };
 
@@ -113,6 +121,15 @@ describe("MemoryTab", () => {
     });
   });
 
+  it("shows skill name in procedure detail", async () => {
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText("deploy-flow")).toBeDefined();
+      expect(screen.getByText(/2 steps/)).toBeDefined();
+    });
+  });
+
   it("filter buttons change visible items", async () => {
     mockGetSnapshot.mockResolvedValue(mockSnapshot);
     render(<MemoryTab agent={baseAgent} />);
@@ -124,5 +141,35 @@ describe("MemoryTab", () => {
     fireEvent.click(factsBtn);
     expect(screen.getByText("lang")).toBeDefined();
     expect(screen.queryByText("deploy-flow")).toBeNull();
+  });
+
+  it("soft-refreshes after streaming stops", async () => {
+    mockUseIsStreaming.mockReturnValue(true);
+    mockGetSnapshot.mockResolvedValue(mockSnapshot);
+    const { rerender } = render(<MemoryTab agent={baseAgent} />);
+    await waitFor(() => {
+      expect(screen.getByText("lang")).toBeDefined();
+    });
+
+    const initialCallCount = mockGetSnapshot.mock.calls.length;
+
+    const updatedSnapshot = {
+      ...mockSnapshot,
+      facts: [
+        ...mockSnapshot.facts,
+        { fact_id: "f2", key: "new_fact", value: "hello", confidence: 0.9, source: "extracted" },
+      ],
+    };
+    mockGetSnapshot.mockResolvedValue(updatedSnapshot);
+    mockUseIsStreaming.mockReturnValue(false);
+    rerender(<MemoryTab agent={baseAgent} />);
+
+    await waitFor(() => {
+      expect(mockGetSnapshot.mock.calls.length).toBeGreaterThan(initialCallCount);
+    }, { timeout: 3000 });
+
+    await waitFor(() => {
+      expect(screen.getByText("new_fact")).toBeDefined();
+    });
   });
 });

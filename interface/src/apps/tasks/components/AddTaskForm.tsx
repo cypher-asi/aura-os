@@ -1,11 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Modal, Button, Toggle, Spinner } from "@cypher-asi/zui";
 import { useModalInitialFocus } from "../../../hooks/use-modal-initial-focus";
 import { tasksApi } from "../../../api/tasks";
 import { useKanbanStore } from "../stores/kanban-store";
 import { useProjectContext } from "../../../stores/project-action-store";
 import { useProjectsListStore } from "../../../stores/projects-list-store";
+import { Select } from "../../../components/Select";
 import styles from "./AddTaskForm.module.css";
+
+const STATUS_OPTIONS = [
+  { value: "backlog", label: "Backlog" },
+  { value: "to_do", label: "To Do" },
+];
 
 interface AddTaskFormProps {
   isOpen: boolean;
@@ -33,6 +39,14 @@ export function AddTaskForm({
   const ctx = useProjectContext();
   const specs = ctx?.initialSpecs ?? [];
   const projectAgents = useProjectsListStore((s) => s.agentsByProject[projectId]) ?? [];
+
+  const assigneeOptions = useMemo(
+    () => [
+      { value: "", label: "Unassigned" },
+      ...projectAgents.map((a) => ({ value: a.agent_instance_id, label: a.name })),
+    ],
+    [projectAgents],
+  );
 
   const { inputRef, initialFocusRef } = useModalInitialFocus<HTMLInputElement>();
 
@@ -96,29 +110,22 @@ export function AddTaskForm({
       footer={
         <div className={styles.footer}>
           <div className={styles.footerLeft}>
-            <select
+            <Select
               className={styles.statusPill}
               value={status}
-              onChange={(e) => onStatusChange(e.target.value as "backlog" | "to_do")}
+              onChange={(v) => onStatusChange(v as "backlog" | "to_do")}
               disabled={submitting}
-            >
-              <option value="backlog">Backlog</option>
-              <option value="to_do">To Do</option>
-            </select>
+              options={STATUS_OPTIONS}
+            />
             {projectAgents.length > 0 && (
-              <select
+              <Select
                 className={styles.assigneePill}
                 value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
+                onChange={setAssignee}
                 disabled={submitting}
-              >
-                <option value="">Unassigned</option>
-                {projectAgents.map((a) => (
-                  <option key={a.agent_instance_id} value={a.agent_instance_id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="Unassigned"
+                options={assigneeOptions}
+              />
             )}
           </div>
           <div className={styles.footerRight}>

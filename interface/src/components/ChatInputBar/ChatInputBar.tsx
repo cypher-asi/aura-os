@@ -2,8 +2,9 @@ import { useRef, useState, useImperativeHandle, forwardRef, memo, useCallback, u
 import { ArrowUp, Plus, X, FileText, ChevronDown, FolderOpen } from "lucide-react";
 import { useIsStreaming } from "../../hooks/stream/hooks";
 import { useFileAttachments } from "./useFileAttachments";
-import type { ModelOption } from "../../constants/models";
-import { AVAILABLE_MODELS, modelLabel } from "../../constants/models";
+import type { ModelOption, GenerationMode } from "../../constants/models";
+import { AVAILABLE_MODELS, modelLabel, getModelsForMode, getDefaultModelForMode } from "../../constants/models";
+import { isGenerationCommand } from "../../constants/commands";
 import { AgentEnvironment } from "../AgentEnvironment";
 import { OrbitStatusIndicator } from "../OrbitStatusIndicator/OrbitStatusIndicator";
 import { SlashCommandMenu } from "./SlashCommandMenu";
@@ -29,7 +30,7 @@ export interface AttachmentItem {
 interface Props {
   input: string;
   onInputChange: (value: string) => void;
-  onSend: (content: string, action?: string, attachments?: AttachmentItem[]) => void;
+  onSend: (content: string, action?: string, attachments?: AttachmentItem[], generationMode?: GenerationMode) => void;
   onStop: () => void;
   streamKey: string;
   selectedModel?: string;
@@ -93,6 +94,24 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   const handleDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); }, []);
   const handleDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false); addFiles(e.dataTransfer.files); }, [addFiles]);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      const dt = new DataTransfer();
+      imageFiles.forEach((f) => dt.items.add(f));
+      addFiles(dt.files);
+    }
+  }, [addFiles]);
+
   const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -128,10 +147,26 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
   const selectedProject = projects.find((p) => p.project_id === selectedProjectId);
   const selectedProjectName = selectedProject?.name;
 
+  const generationMode: GenerationMode = selectedCommands.some((c) => c.id === "generate_image")
+    ? "image"
+    : selectedCommands.some((c) => c.id === "generate_3d")
+      ? "3d"
+      : "chat";
+  const modelsForMode = getModelsForMode(generationMode);
+
   const excludeIds = new Set(selectedCommands.map((c) => c.id));
 
   const handleCommandSelect = useCallback((cmd: SlashCommand) => {
-    onCommandsChange?.([...selectedCommands, cmd]);
+    let next: SlashCommand[];
+    if (isGenerationCommand(cmd.id)) {
+      next = [...selectedCommands.filter((c) => !isGenerationCommand(c.id)), cmd];
+      const mode = cmd.id === "generate_image" ? "image" : "3d";
+      const defaultForMode = getDefaultModelForMode(mode);
+      onModelChange?.(defaultForMode.id);
+    } else {
+      next = [...selectedCommands, cmd];
+    }
+    onCommandsChange?.(next);
     if (slashStartRef.current !== null) {
       const before = input.slice(0, slashStartRef.current);
       const afterSlash = input.slice(slashStartRef.current);
@@ -143,7 +178,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     setSlashQuery("");
     slashStartRef.current = null;
     textareaRef.current?.focus();
-  }, [selectedCommands, onCommandsChange, input, onInputChange]);
+  }, [selectedCommands, onCommandsChange, onModelChange, input, onInputChange]);
 
   const handleCommandRemove = useCallback((id: string) => {
     onCommandsChange?.(selectedCommands.filter((c) => c.id !== id));
@@ -171,7 +206,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
     if (slashMenuOpen && ["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(e.key)) {
       return;
     }
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(input); }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(input, undefined, undefined, generationMode !== "chat" ? generationMode : undefined); }
   };
 
   return (
@@ -190,11 +225,11 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         <CommandChips commands={selectedCommands} onRemove={handleCommandRemove} />
         <div className={styles.inputRow}>
           <button type="button" className={styles.attachButton} onClick={() => fileInputRef.current?.click()} disabled={!canAddMore} aria-label="Attach file"><Plus size={16} strokeWidth={1} /></button>
-          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => handleInputChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Add a follow-up" rows={1} />
+          <textarea ref={textareaRef} className={styles.textarea} value={input} onChange={(e) => handleInputChange(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste} placeholder="Add a follow-up" rows={1} />
           {isStreaming ? (
             <button type="button" className={`${styles.sendButton} ${styles.stopButton}`} onClick={onStop} aria-label="Stop"><span className={styles.stopIcon} /></button>
           ) : (
-            <button type="button" className={styles.sendButton} onClick={() => onSend(input)} disabled={!input.trim() && attachments.length === 0 && selectedCommands.length === 0} aria-label="Send"><ArrowUp size={16} /></button>
+            <button type="button" className={styles.sendButton} onClick={() => onSend(input, undefined, undefined, generationMode !== "chat" ? generationMode : undefined)} disabled={!input.trim() && attachments.length === 0 && selectedCommands.length === 0} aria-label="Send"><ArrowUp size={16} /></button>
           )}
         </div>
       </div>
@@ -202,7 +237,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
         {machineType && <><AgentEnvironment machineType={machineType} agentId={templateAgentId ?? agentId} /><span className={styles.infoText} style={{ marginRight: 2 }}>·</span></>}
         <OrbitStatusIndicator project={selectedProject} />
         {selectedProject && <span className={styles.infoText} style={{ marginRight: 2 }}>·</span>}
-        <span className={styles.infoText}>/ for commands</span>
+        <span className={styles.infoText}>{generationMode === "image" ? "/image mode" : generationMode === "3d" ? "/3d mode" : "/ for commands"}</span>
         <div className={styles.projectMenuWrap} ref={projectMenuRef}>
           <button
             type="button"
@@ -239,7 +274,7 @@ export const ChatInputBar = memo(forwardRef<ChatInputBarHandle, Props>(function 
           </button>
           {modelMenuOpen && availableModels.length > 1 && (
             <div className={styles.modelMenu}>
-              {availableModels.map((m) => (
+              {modelsForMode.map((m) => (
                 <button
                   key={m.id}
                   type="button"

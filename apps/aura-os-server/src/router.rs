@@ -11,10 +11,9 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers::{
-    agents, auth, billing, cron, dev_loop, feed, files, follows, harness_proxy, leaderboard, log,
-    orgs, process, project_stats, projects, remote_files, remote_terminal, specs, super_agent,
-    swarm, system, tasks, terminal, users, ws,
-    org_tools,
+    agents, auth, billing, cron, dev_loop, feed, files, follows, generation, harness_proxy,
+    leaderboard, log, org_tools, orgs, process, project_stats, projects, remote_files,
+    remote_terminal, specs, super_agent, swarm, system, tasks, terminal, users, ws,
 };
 use crate::state::AppState;
 
@@ -82,6 +81,7 @@ pub fn create_router_with_interface(state: AppState, interface_dir: Option<PathB
         .merge(super_agent_routes())
         .merge(cron_routes())
         .merge(process_routes())
+        .merge(generation_routes())
         .merge(harness_proxy_routes())
         .layer(middleware::from_fn_with_state(
             state.clone(),
@@ -186,6 +186,10 @@ fn org_routes() -> Router<AppState> {
         .route(
             "/api/orgs/:org_id/billing",
             put(orgs::set_billing).get(orgs::get_billing),
+        )
+        .route(
+            "/api/orgs/:org_id/integration-config",
+            get(orgs::get_integrations).put(orgs::set_integrations),
         )
 }
 
@@ -505,8 +509,28 @@ fn process_routes() -> Router<AppState> {
         .route("/api/processes/:id/runs", get(process::list_runs))
         .route("/api/processes/:id/runs/:run_id", get(process::get_run))
         .route(
+            "/api/processes/:id/runs/:run_id/cancel",
+            post(process::cancel_run),
+        )
+        .route(
             "/api/processes/:id/runs/:run_id/events",
             get(process::list_run_events),
+        )
+        .route(
+            "/api/processes/:id/runs/:run_id/artifacts",
+            get(process::list_run_artifacts),
+        )
+        .route(
+            "/api/process-artifacts/:id",
+            get(process::get_artifact),
+        )
+        .route(
+            "/api/process-artifacts/:id/content",
+            get(process::get_artifact_content),
+        )
+        .route(
+            "/api/process-artifacts/:id/path",
+            get(process::get_artifact_path),
         )
         .route(
             "/api/process-folders",
@@ -515,6 +539,18 @@ fn process_routes() -> Router<AppState> {
         .route(
             "/api/process-folders/:id",
             put(process::update_folder).delete(process::delete_folder),
+        )
+}
+
+fn generation_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/generate/image/stream",
+            post(generation::generate_image_stream),
+        )
+        .route(
+            "/api/generate/3d/stream",
+            post(generation::generate_3d_stream),
         )
 }
 
@@ -548,6 +584,10 @@ fn harness_proxy_routes() -> Router<AppState> {
         .route(
             "/api/harness/agents/:agent_id/memory/procedures",
             get(harness_proxy::list_procedures).post(harness_proxy::create_procedure),
+        )
+        .route(
+            "/api/harness/agents/:agent_id/memory/procedures/by-skill/:skill_name",
+            get(harness_proxy::list_procedures_by_skill),
         )
         .route(
             "/api/harness/agents/:agent_id/memory/procedures/:proc_id",
@@ -590,6 +630,16 @@ fn harness_proxy_routes() -> Router<AppState> {
         .route(
             "/api/harness/agents/:agent_id/skills/:name",
             delete(harness_proxy::uninstall_agent_skill),
+        )
+        // Skill path discovery
+        .route(
+            "/api/skills/:name/discover-paths",
+            get(harness_proxy::discover_skill_paths),
+        )
+        // Local skill content
+        .route(
+            "/api/skills/:category/:name/content",
+            get(harness_proxy::get_skill_content),
         )
 }
 

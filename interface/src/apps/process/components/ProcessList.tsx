@@ -4,9 +4,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { ExplorerNode, MenuItem, DropPosition } from "@cypher-asi/zui";
 import { Cpu, FolderOpen, Pencil, Trash2, FolderPlus } from "lucide-react";
-import { useProcessStore } from "../stores/process-store";
+import { useProcessStore, LAST_PROCESS_ID_KEY } from "../stores/process-store";
 import { useSidebarSearch } from "../../../context/SidebarSearchContext";
 import { processApi } from "../../../api/process";
+import { InlineRenameInput } from "../../../components/InlineRenameInput";
+import type { InlineRenameTarget } from "../../../components/InlineRenameInput";
 import { ProcessForm } from "./ProcessForm";
 import { ProcessFolderForm } from "./ProcessFolderForm";
 
@@ -88,6 +90,8 @@ export function ProcessList() {
   const [processFormFolderId, setProcessFormFolderId] = useState<string | null>(null);
   const [addMenuAnchor, setAddMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
+  const [renameTarget, setRenameTarget] = useState<(InlineRenameTarget & { kind: "folder" | "process" }) | null>(null);
+  const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
   const ctxMenuRef = useRef<HTMLDivElement>(null);
 
   // Close context menu on outside click
@@ -209,9 +213,17 @@ export function ProcessList() {
   }, [folders, processesByFolder]);
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
-  const defaultExpandedIds = useMemo(() => folders.map((f) => f.folder_id), [folders]);
-  const explorerKey = useMemo(() => folders.map((f) => f.folder_id).join(), [folders]);
-  const defaultSelectedIds = useMemo(() => (processId ? [processId] : []), [processId]);
+  const defaultExpandedIds = useMemo(
+    () => explorerData.filter((n) => n.children && n.children.length > 0).map((n) => n.id),
+    [explorerData],
+  );
+  const lastStoredId = useMemo(() => localStorage.getItem(LAST_PROCESS_ID_KEY), []);
+  const activeId = pendingSelectId ?? processId ?? lastStoredId;
+  const explorerKey = useMemo(
+    () => folders.map((f) => f.folder_id).join() + ":" + processes.length + ":" + (pendingSelectId ?? ""),
+    [folders, processes.length, pendingSelectId],
+  );
+  const defaultSelectedIds = useMemo(() => (activeId ? [activeId] : []), [activeId]);
 
   const handleSelect = useCallback((ids: Iterable<string>) => {
     const id = getLastSelectedId(ids);
@@ -270,13 +282,7 @@ export function ProcessList() {
     if (id === "rename-folder" && ctxMenu.folderId) {
       const folder = folderMap.get(ctxMenu.folderId);
       if (!folder) return;
-      const newName = window.prompt("Rename folder", folder.name);
-      if (newName && newName.trim() && newName.trim() !== folder.name) {
-        try {
-          const updated = await processApi.updateFolder(folder.folder_id, { name: newName.trim() });
-          updateFolder(updated);
-        } catch { /* ignore */ }
-      }
+      setRenameTarget({ id: folder.folder_id, name: folder.name, kind: "folder" });
     }
 
     if (id === "delete-folder" && ctxMenu.folderId) {
@@ -293,13 +299,7 @@ export function ProcessList() {
     if (id === "rename-process" && ctxMenu.processId) {
       const proc = processMap.get(ctxMenu.processId);
       if (!proc) return;
-      const newName = window.prompt("Rename process", proc.name);
-      if (newName && newName.trim() && newName.trim() !== proc.name) {
-        try {
-          const updated = await processApi.updateProcess(proc.process_id, { name: newName.trim() });
-          updateProcess(updated);
-        } catch { /* ignore */ }
-      }
+      setRenameTarget({ id: proc.process_id, name: proc.name, kind: "process" });
     }
 
     if (id === "delete-process" && ctxMenu.processId) {
@@ -309,13 +309,40 @@ export function ProcessList() {
         try {
           await processApi.deleteProcess(proc.process_id);
           removeProcess(proc.process_id);
+          if (localStorage.getItem(LAST_PROCESS_ID_KEY) === proc.process_id) {
+            localStorage.removeItem(LAST_PROCESS_ID_KEY);
+          }
           if (processId === proc.process_id) navigate("/process");
         } catch { /* ignore */ }
       }
     }
 
     setCtxMenu(null);
-  }, [ctxMenu, folderMap, processMap, updateFolder, removeFolder, updateProcess, removeProcess, navigate, processId]);
+  }, [ctxMenu, folderMap, processMap, updateProcess, removeFolder, removeProcess, navigate, processId]);
+
+  const handleRenameCommit = useCallback(async (newName: string) => {
+    if (!renameTarget) return;
+    try {
+      if (renameTarget.kind === "folder") {
+        const updated = await processApi.updateFolder(renameTarget.id, { name: newName });
+        updateFolder(updated);
+      } else {
+        const updated = await processApi.updateProcess(renameTarget.id, { name: newName });
+        updateProcess(updated);
+      }
+    } catch { /* ignore */ }
+    setRenameTarget(null);
+  }, [renameTarget, updateFolder, updateProcess]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== "F2") return;
+    const focused = (e.target as HTMLElement).closest("button[id]");
+    if (!focused) return;
+    const folder = folderMap.get(focused.id);
+    if (folder) { e.preventDefault(); setRenameTarget({ id: folder.folder_id, name: folder.name, kind: "folder" }); return; }
+    const proc = processMap.get(focused.id);
+    if (proc) { e.preventDefault(); setRenameTarget({ id: proc.process_id, name: proc.name, kind: "process" }); }
+  }, [folderMap, processMap]);
 
   // Empty state
   if (!loading && processes.length === 0 && folders.length === 0) {
@@ -326,7 +353,7 @@ export function ProcessList() {
           title="No processes yet"
           description="Create a process to build automated workflows."
         />
-        {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} />}
+        {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} onCreated={setPendingSelectId} />}
         {showFolderForm && <ProcessFolderForm onClose={() => setShowFolderForm(false)} />}
         {addMenuAnchor && createPortal(
           <div ref={addMenuRef} style={{ position: "fixed", left: addMenuAnchor.x, top: addMenuAnchor.y, zIndex: 9999 }}>
@@ -340,7 +367,7 @@ export function ProcessList() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.explorerWrap} onContextMenu={handleContextMenu}>
+      <div className={styles.explorerWrap} onContextMenu={handleContextMenu} onKeyDown={handleKeyDown}>
         <Explorer
           key={explorerKey}
           data={filteredExplorerData}
@@ -375,7 +402,15 @@ export function ProcessList() {
         document.body,
       )}
 
-      {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} />}
+      {renameTarget && (
+        <InlineRenameInput
+          target={renameTarget}
+          onSave={handleRenameCommit}
+          onCancel={() => setRenameTarget(null)}
+        />
+      )}
+
+      {showProcessForm && <ProcessForm onClose={() => setShowProcessForm(false)} folderId={processFormFolderId} onCreated={setPendingSelectId} />}
       {showFolderForm && <ProcessFolderForm onClose={() => setShowFolderForm(false)} />}
     </div>
   );

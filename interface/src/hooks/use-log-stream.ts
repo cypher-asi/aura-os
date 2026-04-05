@@ -68,6 +68,11 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.GitPushed]: "Git",
   [EventType.GitPushFailed]: "Git",
   [EventType.CreditBalanceUpdated]: "Billing",
+  [EventType.ProcessRunStarted]: "Process",
+  [EventType.ProcessRunCompleted]: "Process",
+  [EventType.ProcessRunFailed]: "Process",
+  [EventType.ProcessNodeExecuted]: "Process",
+  [EventType.ProcessNodeOutputDelta]: "Process",
   [EventType.LogLine]: "Log",
   [EventType.NetworkEvent]: "Network",
   [EventType.Error]: "Error",
@@ -76,6 +81,11 @@ const EVENT_LABELS: Record<EventType, string> = {
   [EventType.AssistantMessageEnd]: "Message",
   [EventType.TextDelta]: "Message",
   [EventType.ToolUseStart]: "Tool",
+  [EventType.GenerationStart]: "Generation",
+  [EventType.GenerationProgress]: "Generation",
+  [EventType.GenerationPartialImage]: "Generation",
+  [EventType.GenerationCompleted]: "Generation",
+  [EventType.GenerationError]: "Generation",
 };
 
 function fmtDuration(ms: number): string {

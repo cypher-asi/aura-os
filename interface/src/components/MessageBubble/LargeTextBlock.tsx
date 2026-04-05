@@ -11,6 +11,12 @@ const LINE_THRESHOLD = 15;
 const MD_REMARK = [remarkGfm];
 const MD_REHYPE = [rehypeHighlight];
 
+function ExternalLink(props: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return <a {...props} target="_blank" rel="noopener noreferrer" />;
+}
+
+const MD_COMPONENTS = { a: ExternalLink };
+
 const HEADING_RE = /^#{1,3}\s+(.+)/m;
 
 export function isLargeText(text: string): boolean {
@@ -45,7 +51,7 @@ export function LargeTextBlock({ text }: { text: string }) {
       <div
         className={`${styles.contentArea} ${expanded ? styles.expanded : styles.collapsed}`}
       >
-        <ReactMarkdown remarkPlugins={MD_REMARK} rehypePlugins={MD_REHYPE}>
+        <ReactMarkdown remarkPlugins={MD_REMARK} rehypePlugins={MD_REHYPE} components={MD_COMPONENTS}>
           {text}
         </ReactMarkdown>
         {!expanded && <div className={styles.fade} />}

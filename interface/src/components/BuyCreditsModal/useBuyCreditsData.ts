@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useOrgStore } from "../../stores/org-store";
 import { useBillingStore } from "../../stores/billing-store";
 import { useCheckoutPolling } from "../../hooks/use-checkout-polling";
@@ -54,7 +54,20 @@ export function useBuyCreditsData(isOpen: boolean): BuyCreditsData {
       resetPolling();
       window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
     }
+    if (pollingStatus === "timeout") {
+      window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
+    }
   }, [pollingStatus, settledBalance, resetPolling]);
+
+  // Refetch balance via HTTP whenever the modal closes so the taskbar
+  // picks up any credits purchased even if the WS event was missed.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) {
+      window.dispatchEvent(new Event(CREDITS_UPDATED_EVENT));
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const handlePurchase = useCallback(async (amountUsd: number) => {
     if (!orgId) return;

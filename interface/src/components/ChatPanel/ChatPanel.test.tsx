@@ -13,12 +13,15 @@ vi.mock("../../hooks/use-scroll-anchor", () => ({
     handleScroll: vi.fn(),
     scrollToBottom: vi.fn(),
     scrollToBottomIfPinned: vi.fn(),
+    scrollToTop: vi.fn(),
+    holdPosition: vi.fn(),
     isReady: true,
   }),
 }));
 
 vi.mock("../../hooks/stream/hooks", () => ({
   useIsStreaming: () => false,
+  useStreamEvents: () => [],
   useStreamingText: () => "",
   useThinkingText: () => "",
   useProgressText: () => "",

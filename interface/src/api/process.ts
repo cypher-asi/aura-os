@@ -1,4 +1,4 @@
-import { apiFetch } from "./core";
+import { apiFetch, apiFetchText } from "./core";
 import type {
   Process,
   ProcessFolder,
@@ -6,6 +6,7 @@ import type {
   ProcessNodeConnection,
   ProcessRun,
   ProcessEvent,
+  ProcessArtifact,
 } from "../types";
 import type { ProcessNodeType } from "../types/enums";
 
@@ -88,8 +89,20 @@ export const processApi = {
     apiFetch<ProcessRun[]>(`/api/processes/${processId}/runs`),
   getRun: (processId: string, runId: string) =>
     apiFetch<ProcessRun>(`/api/processes/${processId}/runs/${runId}`),
+  cancelRun: (processId: string, runId: string) =>
+    apiFetch<void>(`/api/processes/${processId}/runs/${runId}/cancel`, { method: "POST" }),
   listRunEvents: (processId: string, runId: string) =>
     apiFetch<ProcessEvent[]>(`/api/processes/${processId}/runs/${runId}/events`),
+
+  // Artifacts
+  listRunArtifacts: (processId: string, runId: string) =>
+    apiFetch<ProcessArtifact[]>(`/api/processes/${processId}/runs/${runId}/artifacts`),
+  getArtifact: (artifactId: string) =>
+    apiFetch<ProcessArtifact>(`/api/process-artifacts/${artifactId}`),
+  getArtifactContent: (artifactId: string) =>
+    apiFetchText(`/api/process-artifacts/${artifactId}/content`),
+  getArtifactPath: (artifactId: string) =>
+    apiFetch<{ path: string }>(`/api/process-artifacts/${artifactId}/path`),
 
   // Folders
   listFolders: () => apiFetch<ProcessFolder[]>("/api/process-folders"),

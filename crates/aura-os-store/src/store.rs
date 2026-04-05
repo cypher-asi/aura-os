@@ -22,6 +22,7 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "process_node_connections",
     "process_runs",
     "process_events",
+    "process_artifacts",
 ];
 
 pub(crate) type RocksDB = DBWithThreadMode<MultiThreaded>;

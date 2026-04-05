@@ -87,6 +87,9 @@
   font-size: 12px;
   line-height: 1.65;
   color: #ffffff;
+}
+
+.bubbleAssistantFadeIn {
   animation: bubbleFadeIn 0.3s ease both;
 }
 
@@ -101,9 +104,19 @@
   font-size: 12px;
   line-height: 1.65;
 }
-.markdown h1 { font-size: 18px; margin: 16px 0 8px; font-weight: 600; }
-.markdown h2 { font-size: 15px; margin: 14px 0 6px; font-weight: 600; }
-.markdown h3 { font-size: 13.5px; margin: 10px 0 4px; font-weight: 600; }
+.markdown a {
+  color: var(--color-accent, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s;
+}
+.markdown a:hover {
+  opacity: 0.8;
+}
+.markdown h1 { font-size: 18px; margin: 12px 0 8px; font-weight: 600; }
+.markdown h2 { font-size: 15px; margin: 10px 0 8px; font-weight: 600; }
+.markdown h3 { font-size: 13.5px; margin: 8px 0 8px; font-weight: 600; }
+.markdown :first-child { margin-top: 0; }
 .markdown p { margin-top: 0; margin-bottom: 8px; }
 .markdown p:last-child { margin-bottom: 0; }
 .markdown code {

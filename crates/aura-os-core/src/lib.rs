@@ -17,8 +17,8 @@ pub use enums::{
 };
 pub use helpers::{extract_fenced_json, fuzzy_search_replace, parse_dt};
 pub use ids::{
-    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessEventId,
-    ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId, ProcessRunId, ProfileId,
-    ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
+    AgentId, AgentInstanceId, ArtifactId, CronJobId, CronJobRunId, OrgId, ProcessArtifactId,
+    ProcessEventId, ProcessFolderId, ProcessId, ProcessNodeConnectionId, ProcessNodeId,
+    ProcessRunId, ProfileId, ProjectId, SessionEventId, SessionId, SpecId, TaskId, UserId,
 };
 pub use settings::{SettingsEntry, SettingsValue};

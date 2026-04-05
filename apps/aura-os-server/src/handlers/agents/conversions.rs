@@ -169,13 +169,16 @@ pub fn events_to_session_history(
                     .and_then(|c| c.get("text"))
                     .and_then(|v| v.as_str())
                     .unwrap_or_default();
+                let content_blocks: Option<Vec<ChatContentBlock>> = content
+                    .and_then(|c| c.get("content_blocks"))
+                    .and_then(|v| serde_json::from_value(v.clone()).ok());
                 messages.push(SessionEvent {
                     event_id: SessionEventId::new(),
                     agent_instance_id,
                     project_id: pid,
                     role: ChatRole::User,
                     content: text.to_string(),
-                    content_blocks: None,
+                    content_blocks,
                     thinking: None,
                     thinking_duration_ms: None,
                     created_at: parse_dt(&event.created_at),

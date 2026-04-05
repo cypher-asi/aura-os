@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { MessageSquare, AlertCircle } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
-import { useIsStreaming } from "../../hooks/stream/hooks";
+import { useIsStreaming, useStreamEvents } from "../../hooks/stream/hooks";
 import { useAuraCapabilities } from "../../hooks/use-aura-capabilities";
 import { ChatMessageList } from "../ChatMessageList";
 import { ChatInputBar } from "../ChatInputBar";
@@ -12,7 +12,9 @@ import { useMessageQueueStore, useMessageQueue } from "../../stores/message-queu
 import type { QueuedMessage } from "../../stores/message-queue-store";
 import type { ChatAttachment } from "../../api/streams";
 import type { SlashCommand } from "../../constants/commands";
+import { isGenerationCommand } from "../../constants/commands";
 import type { Project } from "../../types";
+import type { GenerationMode } from "../../constants/models";
 import {
   availableModelsForAdapter,
   defaultModelForAdapter,
@@ -30,6 +32,7 @@ export interface ChatPanelProps {
     attachments?: ChatAttachment[],
     commands?: string[],
     projectId?: string,
+    generationMode?: GenerationMode,
   ) => void;
   onStop: () => void;
   agentName?: string;
@@ -59,7 +62,7 @@ export function ChatPanel({
   defaultModel,
   templateAgentId,
   agentId,
-  isLoading,
+  isLoading: _isLoading,
   historyResolved = true,
   errorMessage,
   emptyMessage,
@@ -74,6 +77,8 @@ export function ChatPanel({
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [commands, setCommands] = useState<SlashCommand[]>([]);
   const messageAreaRef = useRef<HTMLDivElement>(null);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<ChatInputBarHandle>(null);
   const { isMobileLayout } = useAuraCapabilities();
   const attachmentsRef = useRef(attachments);
@@ -81,16 +86,49 @@ export function ChatPanel({
     attachmentsRef.current = attachments;
   }, [attachments]);
 
-  const { handleScroll, scrollToBottom, scrollToBottomIfPinned, isReady } = useScrollAnchor(
+  const { handleScroll, scrollToBottom: _scrollToBottom, scrollToBottomIfPinned, scrollToTop, holdPosition, isReady } = useScrollAnchor(
     messageAreaRef,
+    scrollSentinelRef,
     {
       resetKey: scrollResetKey,
       contentReady: historyResolved,
     },
   );
 
+  const scrollToBottom = useCallback(() => {
+    if (spacerRef.current) spacerRef.current.style.minHeight = "0";
+    _scrollToBottom();
+  }, [_scrollToBottom]);
+
   const isStreaming = useIsStreaming(streamKey);
   const queue = useMessageQueue(streamKey);
+  const messages = useStreamEvents(streamKey);
+  const prevMessageCountRef = useRef(messages.length);
+  const pendingScrollToTopRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      messages.length > prevMessageCountRef.current &&
+      pendingScrollToTopRef.current
+    ) {
+      pendingScrollToTopRef.current = false;
+      const lastIndex = messages.length - 1;
+      const el = messageAreaRef.current?.querySelector<HTMLElement>(
+        `[data-index="${lastIndex}"]`,
+      );
+      if (el) {
+        const container = messageAreaRef.current;
+        if (container && spacerRef.current) {
+          spacerRef.current.style.minHeight = `${container.clientHeight}px`;
+        }
+        scrollToTop(el);
+        holdPosition();
+      } else {
+        scrollToBottom();
+      }
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages.length, scrollToTop, scrollToBottom, holdPosition]);
 
   useEffect(() => {
     if (isMobileLayout) return;
@@ -129,10 +167,11 @@ export function ChatPanel({
   }, []);
 
   const handleSend = useCallback(
-    (content: string, action?: string, atts?: AttachmentItem[]) => {
+    (content: string, action?: string, atts?: AttachmentItem[], genMode?: GenerationMode) => {
       setInput("");
       const apiAttachments = buildApiAttachments(atts);
-      const commandIds = commands.length > 0 ? commands.map((c) => c.id) : undefined;
+      const commandIds = commands.length > 0 ? commands.map((c) => c.id).filter((id) => !isGenerationCommand(id)) : undefined;
+      const effectiveGenMode = genMode ?? (commands.some((c) => c.id === "generate_image") ? "image" as GenerationMode : commands.some((c) => c.id === "generate_3d") ? "3d" as GenerationMode : undefined);
       const runtimeModel = adapterType === "codex" ? null : selectedModel;
       setAttachments([]);
       setCommands([]);
@@ -144,10 +183,11 @@ export function ChatPanel({
           attachments: apiAttachments,
           commands: commandIds,
         });
+        scrollToBottom();
       } else {
-        onSend(content, action ?? null, runtimeModel, apiAttachments, commandIds, selectedProjectId);
+        pendingScrollToTopRef.current = true;
+        onSend(content, action ?? null, runtimeModel, apiAttachments, commandIds, selectedProjectId, effectiveGenMode);
       }
-      scrollToBottom();
     },
     [adapterType, buildApiAttachments, commands, isStreaming, onSend, scrollToBottom, selectedModel, selectedProjectId, streamKey],
   );
@@ -215,13 +255,6 @@ export function ChatPanel({
         <Text variant="muted" size="sm">{errorMessage}</Text>
       </div>
     );
-  } else if (isLoading) {
-    emptyState = (
-      <div className={styles.emptyState}>
-        <MessageSquare size={40} />
-        <Text variant="muted" size="sm">Loading conversation...</Text>
-      </div>
-    );
   } else if (historyResolved) {
     emptyState = (
       <div className={styles.emptyState}>
@@ -259,6 +292,8 @@ export function ChatPanel({
               scrollRef={messageAreaRef}
               emptyState={emptyState}
             />
+            <div ref={scrollSentinelRef} className={styles.scrollSentinel} />
+            <div ref={spacerRef} style={{ flexShrink: 0 }} />
           </div>
         </div>
 

@@ -122,12 +122,41 @@ export function summarizeInput(name: string, input: Record<string, unknown>): st
   }
 }
 
+const BASE64_RE = /^[A-Za-z0-9+/]+=*$/;
+
+function tryDecodeBase64(value: string): string {
+  if (!value || value.length < 4 || !BASE64_RE.test(value)) return value;
+  try {
+    const decoded = atob(value);
+    if (/[\x00-\x08\x0E-\x1F]/.test(decoded)) return value;
+    return decoded;
+  } catch {
+    return value;
+  }
+}
+
+function decodeBase64Fields(obj: unknown): unknown {
+  if (typeof obj === "string") return tryDecodeBase64(obj);
+  if (Array.isArray(obj)) return obj.map(decodeBase64Fields);
+  if (obj && typeof obj === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      result[k] = (k === "stdout" || k === "stderr" || k === "data")
+        ? (typeof v === "string" ? tryDecodeBase64(v) : v)
+        : v;
+    }
+    return result;
+  }
+  return obj;
+}
+
 export function formatResult(result: string): string {
   try {
     const parsed = JSON.parse(result);
-    return JSON.stringify(parsed, null, 2);
+    const decoded = decodeBase64Fields(parsed);
+    return JSON.stringify(decoded, null, 2);
   } catch {
-    return result;
+    return tryDecodeBase64(result);
   }
 }
 

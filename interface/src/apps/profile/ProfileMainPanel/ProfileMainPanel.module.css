@@ -155,7 +155,3 @@
     transform: rotate(360deg);
   }
 }
-
-.borderLeft {
-  border-left: 1px solid var(--color-border);
-}

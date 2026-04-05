@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { FileText } from "lucide-react";
 import type { ArtifactRef, DisplaySessionEvent } from "../../types/stream";
-import { stripEmojis, normalizeMidSentenceBreaks } from "../../utils/text-normalize";
+import { stripEmojis, normalizeMidSentenceBreaks, flattenListIndentation } from "../../utils/text-normalize";
 import { langFromPath } from "../../ide/lang";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import styles from "./MessageBubble.module.css";
@@ -15,6 +15,7 @@ import { LargeTextBlock, isLargeText } from "./LargeTextBlock";
 
 interface Props {
   message: DisplaySessionEvent;
+  fadeIn?: boolean;
 }
 
 function ArtifactRefsList({ refs }: { refs: ArtifactRef[] }) {
@@ -68,7 +69,7 @@ function FileAttachmentBlock({ text }: { text: string }) {
   );
 }
 
-export const MessageBubble = memo(function MessageBubble({ message }: Props) {
+export const MessageBubble = memo(function MessageBubble({ message, fadeIn }: Props) {
   const hasContent = message.content && message.content.trim().length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasArtifactRefs = message.artifactRefs && message.artifactRefs.length > 0;
@@ -76,7 +77,7 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
   const hasThinking = message.thinkingText && message.thinkingText.length > 0;
 
   const normalizedContent = useMemo(
-    () => (hasContent ? normalizeMidSentenceBreaks(stripEmojis(message.content)) : ""),
+    () => (hasContent ? flattenListIndentation(normalizeMidSentenceBreaks(stripEmojis(message.content))) : ""),
     [hasContent, message.content],
   );
 
@@ -121,7 +122,9 @@ export const MessageBubble = memo(function MessageBubble({ message }: Props) {
     >
       <div
         className={`${styles.bubble} ${
-          message.role === "user" ? styles.bubbleUser : styles.bubbleAssistant
+          message.role === "user"
+            ? styles.bubbleUser
+            : `${styles.bubbleAssistant}${fadeIn ? ` ${styles.bubbleAssistantFadeIn}` : ""}`
         }`}
       >
         {message.role === "user" ? (

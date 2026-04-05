@@ -11,6 +11,7 @@ import { ExecutionView } from "./views/ExecutionView";
 import { LoginView } from "./views/LoginView";
 import { InviteAcceptView } from "./views/InviteAcceptView";
 import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
+import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
 import { IdeView } from "./views/IdeView";
 import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
 import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView/ProjectRootRedirectView";
@@ -65,7 +66,7 @@ export default function App() {
             <Route path="tasks/:projectId" element={null} />
             <Route path="tasks/:projectId/agents/:agentInstanceId" element={null} />
 
-            <Route path="process" element={null} />
+            <Route path="process" element={<ProcessIndexRedirect />} />
             <Route path="process/:processId" element={null} />
 
             <Route path="feed" element={null} />

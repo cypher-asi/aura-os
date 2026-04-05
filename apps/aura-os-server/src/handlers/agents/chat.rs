@@ -9,7 +9,7 @@ use axum::Json;
 use futures_util::future::join_all;
 use futures_util::stream;
 use futures_util::StreamExt as FuturesStreamExt;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub(crate) type SseStream =
     Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
@@ -20,11 +20,12 @@ use aura_os_core::{
     SessionEvent,
 };
 use aura_os_link::{
-    ConversationMessage, HarnessInbound, HarnessOutbound, SessionConfig, SessionUsage, UserMessage,
+    ConversationMessage, HarnessInbound, HarnessOutbound, MessageAttachment, SessionConfig,
+    SessionUsage, UserMessage,
 };
 use aura_os_storage::StorageClient;
 
-use crate::dto::SendChatRequest;
+use crate::dto::{ChatAttachmentDto, SendChatRequest};
 use crate::error::{map_storage_error, ApiError, ApiResult};
 use crate::handlers::billing::require_credits_for_auth_source;
 use crate::handlers::{projects, projects_helpers::resolve_agent_instance_workspace_path};
@@ -55,18 +56,27 @@ async fn resolve_chat_session(
     project_agent_id: &str,
     project_id: &str,
 ) -> Option<String> {
-    if let Ok(sessions) = storage.list_sessions(project_agent_id, jwt).await {
-        for session in sessions.iter().rev() {
-            match storage.list_events(&session.id, jwt, Some(1), None).await {
-                Ok(_) => return Some(session.id.clone()),
-                Err(e) => {
-                    tracing::debug!(
-                        session_id = %session.id,
-                        error = %e,
-                        "Skipping stale session during resolution"
-                    );
+    match storage.list_sessions(project_agent_id, jwt).await {
+        Ok(sessions) => {
+            for session in sessions.iter().rev() {
+                match storage.list_events(&session.id, jwt, Some(1), None).await {
+                    Ok(_) => return Some(session.id.clone()),
+                    Err(e) => {
+                        tracing::debug!(
+                            session_id = %session.id,
+                            error = %e,
+                            "Skipping stale session during resolution"
+                        );
+                    }
                 }
             }
+        }
+        Err(e) => {
+            warn!(
+                %project_agent_id,
+                error = %e,
+                "Failed to list sessions for chat resolution"
+            );
         }
     }
     let req = aura_os_storage::CreateSessionRequest {
@@ -80,16 +90,49 @@ async fn resolve_chat_session(
     match storage.create_session(project_agent_id, jwt, &req).await {
         Ok(session) => Some(session.id),
         Err(e) => {
-            warn!(error = %e, "Failed to create chat session in storage");
+            error!(error = %e, %project_agent_id, "Failed to create chat session in storage");
             None
         }
     }
 }
 
-pub(crate) fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
+pub(crate) fn persist_user_message(
+    ctx: &ChatPersistCtx,
+    content: &str,
+    attachments: &Option<Vec<ChatAttachmentDto>>,
+) {
     let ctx = ctx.clone();
     let content = content.to_string();
+
+    let content_blocks: Option<serde_json::Value> = attachments.as_ref().and_then(|atts| {
+        let image_blocks: Vec<serde_json::Value> = atts
+            .iter()
+            .filter(|a| a.type_ == "image")
+            .map(|a| {
+                serde_json::json!({
+                    "type": "image",
+                    "media_type": a.media_type,
+                    "data": a.data,
+                })
+            })
+            .collect();
+        if image_blocks.is_empty() {
+            None
+        } else {
+            let mut blocks = Vec::new();
+            if !content.is_empty() {
+                blocks.push(serde_json::json!({ "type": "text", "text": content }));
+            }
+            blocks.extend(image_blocks);
+            Some(serde_json::Value::Array(blocks))
+        }
+    });
+
     tokio::spawn(async move {
+        let mut payload = serde_json::json!({ "text": content });
+        if let Some(blocks) = content_blocks {
+            payload["content_blocks"] = blocks;
+        }
         let req = aura_os_storage::CreateSessionEventRequest {
             session_id: Some(ctx.session_id.clone()),
             user_id: None,
@@ -98,14 +141,19 @@ pub(crate) fn persist_user_message(ctx: &ChatPersistCtx, content: &str) {
             project_id: Some(ctx.project_id.clone()),
             org_id: None,
             event_type: "user_message".to_string(),
-            content: Some(serde_json::json!({ "text": content })),
+            content: Some(payload),
         };
         if let Err(e) = ctx
             .storage
             .create_event(&ctx.session_id, &ctx.jwt, &req)
             .await
         {
-            warn!(error = %e, "Failed to persist user message event");
+            error!(
+                error = %e,
+                session_id = %ctx.session_id,
+                project_agent_id = %ctx.project_agent_id,
+                "Failed to persist user message event"
+            );
         }
     });
 }
@@ -143,7 +191,12 @@ pub(crate) fn spawn_chat_persist_task(
                     .create_event(&ctx.session_id, &ctx.jwt, &req)
                     .await
                 {
-                    warn!(error = %e, "Failed to persist chat event");
+                    error!(
+                        error = %e,
+                        session_id = %ctx.session_id,
+                        project_agent_id = %ctx.project_agent_id,
+                        "Failed to persist chat event"
+                    );
                 }
             }
         };
@@ -215,6 +268,25 @@ pub(crate) fn spawn_chat_persist_task(
                             )
                             .await;
                         }
+                        HarnessOutbound::ToolCallSnapshot(ref snap) => {
+                            if let Some(block) = content_blocks.iter_mut().rev().find(|b| {
+                                b.get("type").and_then(|t| t.as_str()) == Some("tool_use")
+                                    && b.get("id").and_then(|i| i.as_str()) == Some(&snap.id)
+                            }) {
+                                block["input"] = snap.input.clone();
+                            }
+                            persist(
+                                "tool_call_snapshot",
+                                serde_json::json!({
+                                    "message_id": &message_id,
+                                    "id": &snap.id,
+                                    "name": &snap.name,
+                                    "input": &snap.input,
+                                    "seq": seq,
+                                }),
+                            )
+                            .await;
+                        }
                         HarnessOutbound::ToolResult(ref result) => {
                             content_blocks.push(serde_json::json!({
                                 "type": "tool_result",
@@ -272,8 +344,9 @@ pub(crate) fn spawn_chat_persist_task(
                 }
                 Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                    warn!(
+                    error!(
                         session_id = %ctx.session_id,
+                        project_agent_id = %ctx.project_agent_id,
                         skipped = n,
                         "Chat persistence receiver lagged; aborting this turn persistence to avoid partial replay"
                     );
@@ -431,11 +504,10 @@ fn harness_broadcast_to_sse(
     })
 }
 
-fn has_live_session(state: &AppState, key: &str) -> bool {
-    if let Ok(reg) = state.chat_sessions.try_lock() {
-        if let Some(s) = reg.get(key) {
-            return s.is_alive();
-        }
+async fn has_live_session(state: &AppState, key: &str) -> bool {
+    let reg = state.chat_sessions.lock().await;
+    if let Some(s) = reg.get(key) {
+        return s.is_alive();
     }
     false
 }
@@ -478,7 +550,33 @@ fn session_events_to_super_agent_history(events: &[SessionEvent]) -> Vec<serde_j
                     }));
                     pending_tool_results = Vec::new();
                 }
-                if !evt.content.is_empty() {
+                if let Some(ref blocks) = evt.content_blocks {
+                    let api_blocks: Vec<serde_json::Value> = blocks
+                        .iter()
+                        .filter_map(|b| match b {
+                            ChatContentBlock::Text { text } => {
+                                Some(serde_json::json!({ "type": "text", "text": text }))
+                            }
+                            ChatContentBlock::Image { media_type, data } => {
+                                Some(serde_json::json!({
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": media_type,
+                                        "data": data,
+                                    }
+                                }))
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    if !api_blocks.is_empty() {
+                        messages.push(serde_json::json!({
+                            "role": "user",
+                            "content": api_blocks,
+                        }));
+                    }
+                } else if !evt.content.is_empty() {
                     messages.push(serde_json::json!({
                         "role": "user",
                         "content": evt.content,
@@ -587,8 +685,14 @@ async fn find_matching_project_agents(
                 let filtered: Vec<_> = agents
                     .into_iter()
                     .filter(|a| a.agent_id.as_deref() == Some(agent_id_str))
+                    .map(|mut a| {
+                        if a.project_id.as_ref().map_or(true, |p| p.is_empty()) {
+                            a.project_id = Some(pid.clone());
+                        }
+                        a
+                    })
                     .collect();
-                if total > 0 || filtered.len() > 0 {
+                if total > 0 || !filtered.is_empty() {
                     info!(
                         project_id = %pid, total_agents = total, matched = filtered.len(),
                         %agent_id_str, "agent matching: project agents listed"
@@ -637,7 +741,10 @@ async fn auto_create_project_agent(
         .create_project_agent(&project_id_str, jwt, &req)
         .await
     {
-        Ok(pa) => {
+        Ok(mut pa) => {
+            if pa.project_id.as_ref().map_or(true, |p| p.is_empty()) {
+                pa.project_id = Some(project_id_str.clone());
+            }
             info!(
                 %agent_id,
                 project_agent_id = %pa.id,
@@ -658,29 +765,47 @@ async fn collect_session_events(
     jwt: &str,
     sessions: &[aura_os_storage::StorageSession],
 ) -> EventCollectOutcome {
-    let evt_futs: Vec<_> = sessions
-        .iter()
-        .map(|s| storage.list_events(&s.id, jwt, None, None))
-        .collect();
-    let evt_results: Vec<Result<Vec<aura_os_storage::StorageSessionEvent>, _>> =
-        join_all(evt_futs).await;
+    const PAGE_SIZE: u32 = 500;
+
     let mut messages = Vec::new();
     let mut failed_sessions = 0usize;
     let mut first_error: Option<aura_os_storage::StorageError> = None;
-    for (result, session) in evt_results.into_iter().zip(sessions.iter()) {
-        match result {
-            Ok(events) => {
-                let pai = session.project_agent_id.as_deref().unwrap_or_default();
-                let pid = session.project_id.as_deref().unwrap_or_default();
-                messages.extend(events_to_session_history(&events, pai, pid));
-            }
-            Err(e) => {
-                failed_sessions += 1;
-                tracing::debug!(session_id = %session.id, error = %e, "Failed to list session events");
-                if first_error.is_none() {
-                    first_error = Some(e);
+
+    for session in sessions {
+        let mut all_events: Vec<aura_os_storage::StorageSessionEvent> = Vec::new();
+        let mut offset: u32 = 0;
+        let mut failed = false;
+
+        loop {
+            match storage.list_events(&session.id, jwt, Some(PAGE_SIZE), Some(offset)).await {
+                Ok(page) => {
+                    let page_len = page.len() as u32;
+                    all_events.extend(page);
+                    if page_len < PAGE_SIZE {
+                        break;
+                    }
+                    offset += page_len;
+                }
+                Err(e) => {
+                    if all_events.is_empty() {
+                        failed = true;
+                        failed_sessions += 1;
+                        warn!(session_id = %session.id, error = %e, "Failed to list session events");
+                        if first_error.is_none() {
+                            first_error = Some(e);
+                        }
+                    } else {
+                        warn!(session_id = %session.id, %offset, error = %e, "Pagination error listing session events, using partial results");
+                    }
+                    break;
                 }
             }
+        }
+
+        if !failed {
+            let pai = session.project_agent_id.as_deref().unwrap_or_default();
+            let pid = session.project_id.as_deref().unwrap_or_default();
+            messages.extend(events_to_session_history(&all_events, pai, pid));
         }
     }
     EventCollectOutcome {
@@ -855,7 +980,9 @@ pub(crate) async fn list_agent_events(
     Path(agent_id): Path<AgentId>,
 ) -> ApiResult<Json<Vec<SessionEvent>>> {
     let _ = state.require_storage_client()?;
-    let messages = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
+    let messages = aggregate_agent_events_from_storage_result(&state, &agent_id, &jwt)
+        .await
+        .map_err(map_storage_error)?;
     Ok(Json(messages))
 }
 
@@ -915,6 +1042,25 @@ async fn get_or_create_chat_session(
     Ok((true, rx, commands_tx))
 }
 
+fn dto_attachments_to_protocol(atts: &Option<Vec<ChatAttachmentDto>>) -> Option<Vec<MessageAttachment>> {
+    atts.as_ref().and_then(|v| {
+        if v.is_empty() {
+            None
+        } else {
+            Some(
+                v.iter()
+                    .map(|a| MessageAttachment {
+                        r#type: a.type_.clone(),
+                        media_type: a.media_type.clone(),
+                        data: a.data.clone(),
+                        name: a.name.clone(),
+                    })
+                    .collect(),
+            )
+        }
+    })
+}
+
 async fn open_harness_chat_stream(
     state: &AppState,
     session_key: &str,
@@ -924,7 +1070,10 @@ async fn open_harness_chat_stream(
     requested_model: Option<String>,
     persist_ctx: Option<ChatPersistCtx>,
     _commands: Option<Vec<String>>,
+    attachments: Option<Vec<ChatAttachmentDto>>,
 ) -> ApiResult<SseResponse> {
+    let persist_unavailable = persist_ctx.is_none();
+
     let (is_new, rx, commands_tx) = get_or_create_chat_session(
         state,
         session_key,
@@ -943,13 +1092,14 @@ async fn open_harness_chat_stream(
     };
 
     if let Some(ref ctx) = persist_ctx {
-        persist_user_message(ctx, &user_content);
+        persist_user_message(ctx, &user_content, &attachments);
     }
 
     commands_tx
         .send(HarnessInbound::UserMessage(UserMessage {
             content: user_content,
             tool_hints: None,
+            attachments: dto_attachments_to_protocol(&attachments),
         }))
         .map_err(|e| ApiError::internal(format!("sending user message: {e}")))?;
 
@@ -957,15 +1107,25 @@ async fn open_harness_chat_stream(
         spawn_chat_persist_task(prx, ctx);
     }
 
-    let prefix: Vec<Result<Event, Infallible>> = if is_new {
+    let mut prefix: Vec<Result<Event, Infallible>> = Vec::new();
+    if is_new {
         let progress_event = Event::default()
             .event("progress")
             .json_data(&serde_json::json!({"type":"progress","stage":"connecting"}))
             .unwrap();
-        vec![Ok(progress_event)]
-    } else {
-        vec![]
-    };
+        prefix.push(Ok(progress_event));
+    }
+    if persist_unavailable {
+        let warning_event = Event::default()
+            .event("error")
+            .json_data(&serde_json::json!({
+                "type": "error",
+                "message": "Chat history could not be saved — storage is unavailable",
+                "recoverable": true,
+            }))
+            .unwrap();
+        prefix.push(Ok(warning_event));
+    }
 
     let broadcast_stream = harness_broadcast_to_sse(rx);
 
@@ -1029,6 +1189,7 @@ async fn handle_super_agent_stream(
 
     let user_content = body.content;
     let requested_model = body.model;
+    let attachments = body.attachments;
 
     let domains = aura_os_super_agent::tier::classify_intent(&user_content);
     let domain_tools = sas.tool_registry.tools_for_domains(&domains);
@@ -1067,7 +1228,7 @@ async fn handle_super_agent_stream(
     let persist_rx = persist_ctx.as_ref().map(|_| tx.subscribe());
 
     if let Some(ref pctx) = persist_ctx {
-        persist_user_message(pctx, &user_content);
+        persist_user_message(pctx, &user_content, &attachments);
     }
 
     let stream_handle = aura_os_super_agent::stream::SuperAgentStream::new(
@@ -1083,10 +1244,27 @@ async fn handle_super_agent_stream(
     );
 
     let content_for_run = user_content.clone();
+    let image_blocks_for_run: Option<Vec<serde_json::Value>> = attachments.as_ref().and_then(|atts| {
+        let blocks: Vec<serde_json::Value> = atts
+            .iter()
+            .filter(|a| a.type_ == "image")
+            .map(|a| {
+                serde_json::json!({
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": a.media_type,
+                        "data": a.data,
+                    }
+                })
+            })
+            .collect();
+        if blocks.is_empty() { None } else { Some(blocks) }
+    });
     let messages_cache = state.super_agent_messages.clone();
     let cache_key = session_key.clone();
     tokio::spawn(async move {
-        let messages = stream_handle.run(content_for_run).await;
+        let messages = stream_handle.run(content_for_run, image_blocks_for_run).await;
         messages_cache.lock().await.insert(cache_key, messages);
     });
 
@@ -1131,13 +1309,13 @@ pub(crate) async fn send_agent_event_stream(
 
     let persist_ctx = setup_agent_chat_persistence(&state, &agent_id, &agent.name, &jwt).await;
     if persist_ctx.is_none() {
-        warn!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
+        error!(%agent_id, "agent chat: persistence context unavailable — chat will NOT be saved");
     } else {
         info!(%agent_id, "agent chat: persistence context ready");
     }
 
     let session_key = format!("agent:{agent_id}");
-    let conversation_messages = if !has_live_session(&state, &session_key) {
+    let conversation_messages = if !has_live_session(&state, &session_key).await {
         let stored = aggregate_agent_events_from_storage(&state, &agent_id, &jwt).await;
         if stored.is_empty() {
             None
@@ -1171,6 +1349,7 @@ pub(crate) async fn send_agent_event_stream(
         body.model,
         persist_ctx,
         body.commands,
+        body.attachments,
     )
     .await
 }
@@ -1217,7 +1396,7 @@ pub(crate) async fn send_event_stream(
         setup_project_chat_persistence(&state, &project_id, &agent_instance_id, &jwt).await;
 
     let session_key = format!("instance:{agent_instance_id}");
-    let conversation_messages = if !has_live_session(&state, &session_key) {
+    let conversation_messages = if !has_live_session(&state, &session_key).await {
         let stored = load_project_session_history(&state, &agent_instance_id, &jwt)
             .await
             .map_err(map_storage_error)?;
@@ -1285,6 +1464,7 @@ pub(crate) async fn send_event_stream(
         body.model,
         persist_ctx,
         body.commands,
+        body.attachments,
     )
     .await
 }

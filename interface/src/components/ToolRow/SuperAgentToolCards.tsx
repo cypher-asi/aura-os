@@ -1,5 +1,5 @@
 import { Text, Badge } from "@cypher-asi/zui";
-import { FolderOpen, Bot, TrendingUp, Coins, Image } from "lucide-react";
+import { FolderOpen, Bot, TrendingUp, Coins, Image, Box } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import styles from "./SuperAgentToolCards.module.css";
 
@@ -90,18 +90,45 @@ export function CreditBalanceCard({ entry }: ToolCardProps) {
 export function GenerateImageCard({ entry }: ToolCardProps) {
   const data = parseResult(entry.result);
   if (!data) return null;
-  const imageUrl = data.url || data.image_url;
+  const imageUrl = data.imageUrl || data.url || data.image_url;
+  const originalUrl = data.originalUrl || data.original_url;
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
         <Image size={14} />
         <Text size="sm" weight="medium">Generated Image</Text>
+        {data.meta?.model && <Badge variant="running">{data.meta.model}</Badge>}
       </div>
       {imageUrl && (
-        <img src={imageUrl} alt="Generated" className={styles.generatedImage} />
+        <a href={originalUrl || imageUrl} target="_blank" rel="noopener noreferrer">
+          <img src={imageUrl} alt="Generated" className={styles.generatedImage} />
+        </a>
       )}
-      {data.prompt && (
-        <Text size="xs" variant="muted">Prompt: {data.prompt}</Text>
+      {(data.prompt || data.meta?.prompt) && (
+        <Text size="xs" variant="muted">Prompt: {data.prompt || data.meta?.prompt}</Text>
+      )}
+    </div>
+  );
+}
+
+export function Generate3dCard({ entry }: ToolCardProps) {
+  const data = parseResult(entry.result);
+  if (!data) return null;
+  const glbUrl = data.glbUrl || data.glb_url;
+  return (
+    <div className={styles.card}>
+      <div className={styles.cardHeader}>
+        <Box size={14} />
+        <Text size="sm" weight="medium">Generated 3D Model</Text>
+        {data.polyCount != null && <Badge variant="running">{data.polyCount.toLocaleString()} polys</Badge>}
+      </div>
+      {glbUrl && (
+        <a href={glbUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: "var(--color-accent)" }}>
+          Download GLB
+        </a>
+      )}
+      {data.status && data.status !== "success" && (
+        <Text size="xs" variant="muted">Status: {data.status}</Text>
       )}
     </div>
   );
@@ -114,6 +141,7 @@ const SUPER_AGENT_CARD_MAP: Record<string, React.ComponentType<ToolCardProps>> =
   get_progress_report: ProgressReportCard,
   get_credit_balance: CreditBalanceCard,
   generate_image: GenerateImageCard,
+  generate_3d_model: Generate3dCard,
 };
 
 export function getSuperAgentCardRenderer(toolName: string): React.ComponentType<ToolCardProps> | null {

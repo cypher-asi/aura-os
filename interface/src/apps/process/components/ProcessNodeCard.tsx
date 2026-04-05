@@ -1,9 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
-  Zap, Play, GitBranch, FileOutput, Timer, Merge,
+  Zap, Play, GitBranch, FileOutput, Timer, Merge, Pin,
 } from "lucide-react";
 import type { ProcessNodeType } from "../../../types/enums";
+import { useAgentStore } from "../../agents/stores";
+import { Avatar } from "../../../components/Avatar";
 
 const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
   ignition: <Zap size={14} />,
@@ -27,6 +29,9 @@ interface ProcessNodeData {
   label: string;
   nodeType: ProcessNodeType;
   prompt?: string;
+  agentId?: string;
+  isPinned?: boolean;
+  runStatus?: "running" | "completed" | "failed" | "skipped";
   isRenaming?: boolean;
   onRenameSubmit?: (newLabel: string) => void;
   [key: string]: unknown;
@@ -73,14 +78,31 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
   const isIgnition = nodeType === "ignition";
   const isCondition = nodeType === "condition";
   const isMerge = nodeType === "merge";
+  const agent = useAgentStore((s) =>
+    data.agentId ? s.agents.find((a) => a.agent_id === data.agentId) : undefined,
+  );
+
+  const statusColor = data.runStatus === "running" ? "#3b82f6"
+    : data.runStatus === "completed" ? "#10b981"
+    : data.runStatus === "failed" ? "#ef4444"
+    : data.runStatus === "skipped" ? "#6b7280"
+    : undefined;
+
+  const borderColor = statusColor ?? (selected ? color : "var(--color-border)");
+  const shadow = statusColor
+    ? `0 0 0 1px ${statusColor}40, 0 0 8px ${statusColor}30`
+    : selected ? `0 0 0 1px ${color}40` : "0 2px 8px rgba(0,0,0,0.2)";
 
   return (
     <div
       style={{
         background: "var(--color-bg, #0d0d1a)",
-        border: `1px solid ${selected ? color : "var(--color-border)"}`,
+        border: `1px solid ${borderColor}`,
         borderRadius: 0,
-        padding: "0 12px",
+        paddingTop: 0,
+        paddingBottom: 0,
+        paddingLeft: 12,
+        paddingRight: 12,
         height: "var(--control-height-sm, 32px)",
         display: "flex",
         flexDirection: "column",
@@ -88,7 +110,7 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
         minWidth: 140,
         maxWidth: 240,
         cursor: "grab",
-        boxShadow: selected ? `0 0 0 1px ${color}40` : "0 2px 8px rgba(0,0,0,0.2)",
+        boxShadow: shadow,
         transition: "border-color 0.15s, box-shadow 0.15s",
       }}
     >
@@ -116,7 +138,8 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
         <div
           style={{
             width: 20, height: 20,
-            background: "transparent", color,
+            background: `${color}20`, color,
+            borderRadius: 4,
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
           }}
@@ -137,6 +160,12 @@ function ProcessNodeCardInner({ data, selected }: NodeProps & { data: ProcessNod
             </div>
           )}
         </div>
+        {data.isPinned && (
+          <Pin size={12} style={{ color: "#f59e0b", flexShrink: 0 }} />
+        )}
+        {agent && (
+          <Avatar avatarUrl={agent.icon ?? undefined} name={agent.name} type="agent" size={20} />
+        )}
       </div>
 
       <Handle

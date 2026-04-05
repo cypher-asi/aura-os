@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Circle, CreditCard, PanelRight, StarOff, X } from "lucide-react";
+import { Circle, CreditCard, StarOff, X } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { useCreditBalance } from "../CreditsBadge/useCreditBalance";
@@ -85,8 +85,6 @@ export function BottomTaskbar() {
   const navigate = useNavigate();
   const favoriteAgents = useFavoriteAgents();
   const toggleFavorite = useAgentStore((s) => s.toggleFavorite);
-  const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
-  const toggleSidekick = useAppUIStore((s) => s.toggleSidekick);
   const previousPath = useAppUIStore((s) => s.previousPath);
   const registerAgents = useProfileStatusStore((s) => s.registerAgents);
   const registerRemote = useProfileStatusStore((s) => s.registerRemoteAgents);
@@ -206,17 +204,6 @@ export function BottomTaskbar() {
           <span className={styles.creditsLabel}>{display}</span>
           <CreditCard size={14} />
         </button>
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          icon={<PanelRight size={14} />}
-          title="Toggle sidekick"
-          aria-label="Toggle sidekick"
-          selected={!sidekickCollapsed}
-          onClick={toggleSidekick}
-          className={styles.sidekickToggle}
-        />
         <span className={styles.wifiIcon}><ConnectionDot /></span>
         <span className={styles.clock}>{time}</span>
       </div>

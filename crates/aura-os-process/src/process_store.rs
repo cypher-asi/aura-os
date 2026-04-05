@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use aura_os_core::{
-    Process, ProcessEvent, ProcessFolder, ProcessFolderId, ProcessId, ProcessNode,
-    ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId, ProcessRun, ProcessRunId,
+    Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
+    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
+    ProcessRun, ProcessRunId,
 };
 use aura_os_store::RocksStore;
 
@@ -14,6 +15,7 @@ const CF_PROCESS_NODES: &str = "process_nodes";
 const CF_PROCESS_NODE_CONNECTIONS: &str = "process_node_connections";
 const CF_PROCESS_RUNS: &str = "process_runs";
 const CF_PROCESS_EVENTS: &str = "process_events";
+const CF_PROCESS_ARTIFACTS: &str = "process_artifacts";
 
 pub fn column_families() -> Vec<&'static str> {
     vec![
@@ -23,6 +25,7 @@ pub fn column_families() -> Vec<&'static str> {
         CF_PROCESS_NODE_CONNECTIONS,
         CF_PROCESS_RUNS,
         CF_PROCESS_EVENTS,
+        CF_PROCESS_ARTIFACTS,
     ]
 }
 
@@ -266,5 +269,65 @@ impl ProcessStore {
             .collect();
         filtered.sort_by(|a, b| a.started_at.cmp(&b.started_at));
         Ok(filtered)
+    }
+
+    pub fn delete_event(&self, event_id: &aura_os_core::ProcessEventId) -> Result<(), ProcessError> {
+        let all: Vec<ProcessEvent> = self
+            .store
+            .scan_cf_all(CF_PROCESS_EVENTS)
+            .map_err(|e| ProcessError::Store(e.to_string()))?;
+        if let Some(evt) = all.iter().find(|e| e.event_id == *event_id) {
+            let key = format!("{}:{}:{}", evt.process_id, evt.run_id, evt.event_id);
+            self.store
+                .write_batch(vec![aura_os_store::BatchOp::Delete {
+                    cf: CF_PROCESS_EVENTS.to_string(),
+                    key,
+                }])
+                .map_err(|e| ProcessError::Store(e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    // -- Artifacts -----------------------------------------------------------
+
+    pub fn save_artifact(&self, artifact: &ProcessArtifact) -> Result<(), ProcessError> {
+        let key = format!("{}:{}:{}", artifact.process_id, artifact.run_id, artifact.artifact_id);
+        let value =
+            serde_json::to_vec(artifact).map_err(|e| ProcessError::Store(e.to_string()))?;
+        self.store
+            .put_cf_bytes(CF_PROCESS_ARTIFACTS, key.as_bytes(), &value)
+            .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    pub fn get_artifact(
+        &self,
+        artifact_id: &ProcessArtifactId,
+    ) -> Result<Option<ProcessArtifact>, ProcessError> {
+        let all: Vec<ProcessArtifact> = self
+            .store
+            .scan_cf_all(CF_PROCESS_ARTIFACTS)
+            .map_err(|e| ProcessError::Store(e.to_string()))?;
+        Ok(all.into_iter().find(|a| a.artifact_id == *artifact_id))
+    }
+
+    pub fn list_artifacts_for_run(
+        &self,
+        process_id: &ProcessId,
+        run_id: &ProcessRunId,
+    ) -> Result<Vec<ProcessArtifact>, ProcessError> {
+        let prefix = format!("{process_id}:{run_id}");
+        self.store
+            .scan_cf_prefix(CF_PROCESS_ARTIFACTS, &prefix)
+            .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    pub fn list_artifacts_for_process(
+        &self,
+        process_id: &ProcessId,
+    ) -> Result<Vec<ProcessArtifact>, ProcessError> {
+        let prefix = process_id.to_string();
+        self.store
+            .scan_cf_prefix(CF_PROCESS_ARTIFACTS, &prefix)
+            .map_err(|e| ProcessError::Store(e.to_string()))
     }
 }

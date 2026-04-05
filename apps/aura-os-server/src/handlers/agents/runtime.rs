@@ -211,7 +211,7 @@ pub(crate) async fn send_external_agent_event_stream(
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
     if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_user_message(ctx, &body.content);
+        super::chat::persist_user_message(ctx, &body.content, &None);
     }
 
     let outcome = run_external_adapter_prompt(
@@ -277,7 +277,7 @@ async fn send_external_project_agent_event_stream(
     let model = effective_model(agent, integration.as_ref(), body.model.clone());
     let persist_ctx = setup_agent_chat_persistence(state, &agent.agent_id, &agent.name, jwt).await;
     if let Some(ref ctx) = persist_ctx {
-        super::chat::persist_user_message(ctx, &body.content);
+        super::chat::persist_user_message(ctx, &body.content, &None);
     }
 
     let prompt = build_external_prompt(state, agent, &body.content, Some(project_id.as_str()));
@@ -553,6 +553,7 @@ async fn run_harness_test(
         .send(HarnessInbound::UserMessage(UserMessage {
             content: "Reply with exactly `hello from aura` and stop.".to_string(),
             tool_hints: None,
+            attachments: None,
         }))
         .map_err(|e| ApiError::bad_gateway(format!("sending harness message failed: {e}")))?;
 

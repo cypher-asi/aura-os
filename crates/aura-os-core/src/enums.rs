@@ -160,6 +160,7 @@ pub enum ProcessRunStatus {
     Running,
     Completed,
     Failed,
+    Cancelled,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

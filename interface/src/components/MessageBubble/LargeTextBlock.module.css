@@ -81,6 +81,15 @@
   display: block;
   white-space: pre;
 }
+.contentArea a {
+  color: var(--color-accent, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.15s;
+}
+.contentArea a:hover {
+  opacity: 0.8;
+}
 .contentArea hr {
   border: none;
   height: 12px;

@@ -129,12 +129,45 @@ pub(crate) struct UpdateAgentInstanceRequest {
 
 // -- Chat DTOs --
 
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct ChatAttachmentDto {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub media_type: String,
+    pub data: String,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct SendChatRequest {
     pub content: String,
     pub action: Option<String>,
     pub model: Option<String>,
     pub commands: Option<Vec<String>>,
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub attachments: Option<Vec<ChatAttachmentDto>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct GenerateImageRequest {
+    pub prompt: String,
+    pub model: Option<String>,
+    pub size: Option<String>,
+    #[serde(default)]
+    pub images: Option<Vec<String>>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
+    #[serde(rename = "isIteration")]
+    pub is_iteration: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct Generate3dRequest {
+    pub image_url: String,
+    pub prompt: Option<String>,
+    #[serde(rename = "projectId")]
     pub project_id: Option<String>,
 }
 

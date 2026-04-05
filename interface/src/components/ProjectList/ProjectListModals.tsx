@@ -14,7 +14,7 @@ export function ProjectListModals({ actions }: Props) {
     <>
       {actions.renameTarget && (
         <InlineRenameInput
-          target={actions.renameTarget}
+          target={{ id: actions.renameTarget.project_id, name: actions.renameTarget.name }}
           onSave={actions.handleRename}
           onCancel={() => actions.setRenameTarget(null)}
         />

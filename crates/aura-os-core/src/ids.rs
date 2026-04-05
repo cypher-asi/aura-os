@@ -75,3 +75,4 @@ define_id!(ProcessNodeId);
 define_id!(ProcessNodeConnectionId);
 define_id!(ProcessRunId);
 define_id!(ProcessEventId);
+define_id!(ProcessArtifactId);

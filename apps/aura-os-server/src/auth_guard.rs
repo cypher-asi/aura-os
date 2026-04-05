@@ -338,6 +338,8 @@ mod tests {
             .unwrap(),
         );
         let (event_broadcast, _) = tokio::sync::broadcast::channel(16);
+        let local_harness: Arc<dyn aura_os_link::HarnessLink> =
+            Arc::new(aura_os_link::LocalHarness::new("http://localhost:8080".to_string()));
         let super_agent_service = Arc::new(aura_os_super_agent::SuperAgentService::new(
             "http://localhost:9998".to_string(),
             Arc::new(aura_os_projects::ProjectService::new(store.clone())),
@@ -358,6 +360,8 @@ mod tests {
             None,
             store.clone(),
             event_broadcast.clone(),
+            local_harness,
+            std::env::temp_dir(),
         ));
 
         AppState {

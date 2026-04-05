@@ -504,6 +504,20 @@ export interface ProcessRun {
   error: string | null;
   started_at: string;
   completed_at: string | null;
+  total_input_tokens?: number;
+  total_output_tokens?: number;
+  cost_usd?: number;
+}
+
+export interface ProcessEventContentBlock {
+  type: "text" | "tool_use" | "tool_result" | "thinking";
+  text?: string;
+  thinking?: string;
+  name?: string;
+  id?: string;
+  tool_use_id?: string;
+  result?: string;
+  is_error?: boolean;
 }
 
 export interface ProcessEvent {
@@ -516,6 +530,23 @@ export interface ProcessEvent {
   output: string;
   started_at: string;
   completed_at: string | null;
+  input_tokens?: number;
+  output_tokens?: number;
+  model?: string;
+  content_blocks?: ProcessEventContentBlock[];
+}
+
+export interface ProcessArtifact {
+  artifact_id: string;
+  process_id: string;
+  run_id: string;
+  node_id: string;
+  artifact_type: ArtifactType;
+  name: string;
+  file_path: string;
+  size_bytes: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -560,6 +591,8 @@ export interface MemoryProcedure {
   last_used: string;
   created_at: string;
   updated_at: string;
+  skill_name?: string;
+  skill_relevance?: number;
 }
 
 export interface MemorySnapshot {
@@ -621,15 +654,18 @@ export type SkillCategory =
   | "automation"
   | "utilities";
 
+export type SkillOS = "any" | "windows" | "mac" | "linux";
+
 export interface SkillShopCatalogEntry {
   name: string;
   description: string;
-  emoji: string;
   category: SkillCategory;
+  os: SkillOS;
   tags: string[];
   security_rating: "safe" | "caution" | "warning";
   security_notes: string;
   source_url: string;
-  requires?: { bins?: string[]; env?: string[]; config?: string[] };
+  requires?: { bins?: string[]; env?: string[]; config?: string[]; anyBins?: string[] };
   install_methods?: { kind: string; formula?: string; package?: string }[];
+  permissions?: { paths?: string[]; commands?: string[]; tools?: string[] };
 }

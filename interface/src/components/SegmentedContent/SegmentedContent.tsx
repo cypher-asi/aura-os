@@ -121,9 +121,19 @@ function InlineAutoBuildMarker({ seg }: { seg: Extract<ContentSegment, { kind: "
 const MD_PLUGINS_REMARK = [remarkGfm];
 const MD_PLUGINS_REHYPE = [rehypeHighlight];
 
+function ExternalLink(props: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return <a {...props} target="_blank" rel="noopener noreferrer" />;
+}
+
+const MD_COMPONENTS = { a: ExternalLink };
+
 function MarkdownBlock({ content }: { content: string }) {
   return (
-    <ReactMarkdown remarkPlugins={MD_PLUGINS_REMARK} rehypePlugins={MD_PLUGINS_REHYPE}>
+    <ReactMarkdown
+      remarkPlugins={MD_PLUGINS_REMARK}
+      rehypePlugins={MD_PLUGINS_REHYPE}
+      components={MD_COMPONENTS}
+    >
       {content}
     </ReactMarkdown>
   );

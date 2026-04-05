@@ -145,10 +145,24 @@ impl SuperAgentStream {
     /// Returns the accumulated conversation messages (full Claude API format
     /// with tool_use / tool_result blocks) so the caller can cache them for
     /// subsequent turns.
-    pub async fn run(mut self, user_message: String) -> Vec<Value> {
+    ///
+    /// `image_blocks` is an optional list of pre-formatted Anthropic image
+    /// content blocks (each `{ "type": "image", "source": { ... } }`).
+    pub async fn run(mut self, user_message: String, image_blocks: Option<Vec<Value>>) -> Vec<Value> {
+        let user_content = match image_blocks {
+            Some(images) if !images.is_empty() => {
+                let mut blocks: Vec<Value> = Vec::new();
+                if !user_message.is_empty() {
+                    blocks.push(json!({ "type": "text", "text": user_message }));
+                }
+                blocks.extend(images);
+                Value::Array(blocks)
+            }
+            _ => Value::String(user_message),
+        };
         self.messages.push(json!({
             "role": "user",
-            "content": user_message,
+            "content": user_content,
         }));
 
         let msg_id = uuid::Uuid::new_v4().to_string();

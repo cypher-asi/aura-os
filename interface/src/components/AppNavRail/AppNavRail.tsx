@@ -4,6 +4,7 @@ import { CircleUserRound } from "lucide-react";
 import { useAppStore } from "../../stores/app-store";
 import { getLastSelectedAgentId } from "../../apps/agents/stores";
 import { getLastProject, getLastAgent } from "../../utils/storage";
+import { LAST_PROCESS_ID_KEY } from "../../apps/process/stores/process-store";
 import styles from "./AppNavRail.module.css";
 
 function resolveAppPath(app: { id: string; basePath: string }): string {
@@ -22,6 +23,10 @@ function resolveAppPath(app: { id: string; basePath: string }): string {
   if (app.id === "tasks") {
     const projectId = getLastProject();
     if (projectId) return `/tasks/${projectId}`;
+  }
+  if (app.id === "process") {
+    const lastId = localStorage.getItem(LAST_PROCESS_ID_KEY);
+    if (lastId) return `/process/${lastId}`;
   }
   return app.basePath;
 }

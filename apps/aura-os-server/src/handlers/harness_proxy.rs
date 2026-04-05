@@ -177,6 +177,24 @@ pub(crate) async fn delete_procedure(
     proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
 }
 
+pub(crate) async fn list_procedures_by_skill(
+    State(_state): State<AppState>,
+    Path((agent_id, skill_name)): Path<(AgentId, String)>,
+    RawQuery(query): RawQuery,
+) -> Result<Response, StatusCode> {
+    let mut qs = format!("skill={skill_name}");
+    if let Some(q) = query {
+        qs = format!("{qs}&{q}");
+    }
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/procedures"),
+        Some(qs),
+        None,
+    )
+    .await
+}
+
 // ---------------------------------------------------------------------------
 // Memory – Aggregate
 // ---------------------------------------------------------------------------
@@ -358,8 +376,17 @@ pub(crate) async fn install_agent_skill(
 
     let clean_body = serde_json::from_str::<serde_json::Value>(&body)
         .ok()
-        .and_then(|v| v.get("name")?.as_str().map(String::from))
-        .map(|name| format!(r#"{{"name":"{}"}}"#, name));
+        .map(|v| {
+            let name = v.get("name").and_then(|n| n.as_str()).unwrap_or_default();
+            let approved_paths = v.get("approved_paths").cloned().unwrap_or(serde_json::json!([]));
+            let approved_commands = v.get("approved_commands").cloned().unwrap_or(serde_json::json!([]));
+            serde_json::json!({
+                "name": name,
+                "approved_paths": approved_paths,
+                "approved_commands": approved_commands,
+            })
+            .to_string()
+        });
 
     let send_body = clean_body.unwrap_or(body);
     proxy_to_harness(Method::POST, &path, None, Some(send_body)).await
@@ -376,10 +403,18 @@ pub(crate) async fn uninstall_agent_skill(
 // Install skill from shop (fetch SKILL.md from URL)
 // ---------------------------------------------------------------------------
 
+fn skills_base_dir() -> std::path::PathBuf {
+    std::env::var("SKILLS_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("skills"))
+}
+
 #[derive(Deserialize)]
 pub(crate) struct InstallFromShopBody {
     pub name: String,
-    pub source_url: String,
+    pub category: Option<String>,
+    #[serde(default)]
+    pub source_url: Option<String>,
 }
 
 pub(crate) async fn install_from_shop(
@@ -396,14 +431,21 @@ pub(crate) async fn install_from_shop(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let content = reqwest::Client::new()
-        .get(&body.source_url)
-        .send()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?
-        .text()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let content = if let Some(ref category) = body.category {
+        let local_path = skills_base_dir().join(category).join(&name).join("SKILL.md");
+        std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?
+    } else if let Some(ref source_url) = body.source_url {
+        reqwest::Client::new()
+            .get(source_url)
+            .send()
+            .await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?
+            .text()
+            .await
+            .map_err(|_| StatusCode::BAD_GATEWAY)?
+    } else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
 
     let home = dirs::home_dir().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
     let skill_dir = home.join(".aura").join("skills").join(&name);
@@ -412,32 +454,26 @@ pub(crate) async fn install_from_shop(
     let skill_path = skill_dir.join("SKILL.md");
     std::fs::write(&skill_path, &content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Register the skill with the harness. Try POST first (explicit
-    // registration), then fall back to a GET poke for lazy-indexing harnesses.
+    let description = extract_frontmatter_field(&content, "description")
+        .unwrap_or_else(|| format!("{name} skill"));
+    let body_text = strip_frontmatter(&content);
+
     let base = harness_base_url();
     let client = reqwest::Client::new();
-    let post_ok = client
+    let _ = client
         .post(format!("{base}/api/skills"))
         .header("Content-Type", "application/json")
         .body(
             serde_json::json!({
                 "name": name,
-                "path": skill_path.to_string_lossy().to_string(),
-                "content": content,
+                "description": description,
+                "body": body_text,
+                "user_invocable": true,
             })
             .to_string(),
         )
         .send()
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-
-    if !post_ok {
-        let _ = client
-            .get(format!("{base}/api/skills/{name}"))
-            .send()
-            .await;
-    }
+        .await;
 
     let resp_json = serde_json::json!({
         "name": name,
@@ -451,4 +487,111 @@ pub(crate) async fn install_from_shop(
         resp_json.to_string(),
     )
         .into_response())
+}
+
+pub(crate) async fn discover_skill_paths(
+    Path(name): Path<String>,
+) -> Result<Response, StatusCode> {
+    let paths = match name.as_str() {
+        "obsidian" => discover_obsidian_vaults(),
+        _ => vec![],
+    };
+
+    let resp = serde_json::json!({ "paths": paths });
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        resp.to_string(),
+    )
+        .into_response())
+}
+
+fn discover_obsidian_vaults() -> Vec<String> {
+    let appdata = match std::env::var("APPDATA") {
+        Ok(v) => std::path::PathBuf::from(v),
+        Err(_) => {
+            if let Some(home) = dirs::home_dir() {
+                home.join("Library/Application Support")
+            } else {
+                return vec![];
+            }
+        }
+    };
+
+    let obsidian_config_dir = appdata.join("obsidian");
+    let config_path = obsidian_config_dir.join("obsidian.json");
+    let content = match std::fs::read_to_string(&config_path) {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&content) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+
+    let Some(vaults) = parsed.get("vaults").and_then(|v| v.as_object()) else {
+        return vec![];
+    };
+
+    let mut paths: Vec<String> = vec![obsidian_config_dir.to_string_lossy().to_string()];
+    for v in vaults.values() {
+        let open = v.get("open").and_then(|o| o.as_bool()).unwrap_or(false);
+        if let (true, Some(path)) = (open, v.get("path").and_then(|p| p.as_str())) {
+            paths.push(path.to_string());
+        }
+    }
+    paths
+}
+
+pub(crate) async fn get_skill_content(
+    Path((category, name)): Path<(String, String)>,
+) -> Result<Response, StatusCode> {
+    let safe = |s: &str| {
+        !s.is_empty()
+            && !s.contains("..")
+            && s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    };
+    if !safe(&category) || !safe(&name) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let local_path = skills_base_dir().join(&category).join(&name).join("SKILL.md");
+    let content = std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?;
+
+    Ok((
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/markdown; charset=utf-8")],
+        content,
+    )
+        .into_response())
+}
+
+fn extract_frontmatter_field(content: &str, key: &str) -> Option<String> {
+    let trimmed = content.trim();
+    if !trimmed.starts_with("---") {
+        return None;
+    }
+    let end = trimmed[3..].find("\n---")?;
+    let yaml = &trimmed[3..3 + end];
+    let prefix = format!("{key}:");
+    for line in yaml.lines() {
+        let line = line.trim();
+        if let Some(val) = line.strip_prefix(&prefix) {
+            return Some(val.trim().trim_matches('"').to_string());
+        }
+    }
+    None
+}
+
+fn strip_frontmatter(content: &str) -> String {
+    let trimmed = content.trim();
+    if !trimmed.starts_with("---") {
+        return content.to_string();
+    }
+    match trimmed[3..].find("\n---") {
+        Some(end) => trimmed[3 + end + 4..].trim_start().to_string(),
+        None => content.to_string(),
+    }
 }

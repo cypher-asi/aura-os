@@ -97,7 +97,7 @@ export function ProfileMainPanel() {
   );
 
   return (
-    <Lane flex className={styles.borderLeft}>
+    <Lane flex>
       <div className={styles.container}>
         <div className={styles.scrollArea}>
           {isMobileLayout ? (

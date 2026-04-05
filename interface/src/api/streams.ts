@@ -158,6 +158,58 @@ export function sendAgentEventStream(
   );
 }
 
+/* ── Generation streams (image / 3D) ─────────────────────────────── */
+
+export function generateImageStream(
+  prompt: string,
+  model?: string | null,
+  attachments?: ChatAttachment[],
+  handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
+  signal?: AbortSignal,
+  projectId?: string,
+) {
+  const body: Record<string, unknown> = { prompt };
+  if (model) body.model = model;
+  if (projectId) body.projectId = projectId;
+  if (attachments && attachments.length > 0) {
+    body.images = attachments
+      .filter((a) => a.type === "image")
+      .map((a) => `data:${a.media_type};base64,${a.data}`);
+  }
+  return streamSSE<string>(
+    `${BASE_URL}/api/generate/image/stream`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    createChatStreamHandler(handler),
+    signal,
+  );
+}
+
+export function generate3dStream(
+  imageUrl: string,
+  prompt?: string | null,
+  handler: StreamEventHandler = { onEvent: () => {}, onError: () => {} },
+  signal?: AbortSignal,
+  projectId?: string,
+) {
+  const body: Record<string, unknown> = { image_url: imageUrl };
+  if (prompt) body.prompt = prompt;
+  if (projectId) body.projectId = projectId;
+  return streamSSE<string>(
+    `${BASE_URL}/api/generate/3d/stream`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    createChatStreamHandler(handler),
+    signal,
+  );
+}
+
 export function sendEventStream(
   projectId: ProjectId,
   agentInstanceId: string,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal, Button } from "@cypher-asi/zui";
 import { processApi } from "../../../api/process";
 import { useProcessStore } from "../stores/process-store";
@@ -12,6 +12,11 @@ export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addFolder = useProcessStore((s) => s.addFolder);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -49,6 +54,7 @@ export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Name</label>
           <input
+            ref={inputRef}
             style={{
               padding: "8px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
               background: "var(--color-bg-input)", color: "var(--color-text)", fontSize: 13,
@@ -57,7 +63,6 @@ export function ProcessFolderForm({ onClose }: ProcessFolderFormProps) {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) handleSubmit(); }}
             placeholder="My Folder"
-            autoFocus
           />
         </div>
         {error && <div style={{ fontSize: 12, color: "var(--color-error)" }}>{error}</div>}

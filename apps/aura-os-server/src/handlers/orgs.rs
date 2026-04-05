@@ -496,3 +496,55 @@ pub(crate) async fn get_billing(
         .map_err(map_org_err)?;
     Ok(Json(billing))
 }
+
+// ---------------------------------------------------------------------------
+// Integration config
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+pub(crate) struct UpdateIntegrationRequest {
+    pub obsidian: Option<aura_os_core::ObsidianConfig>,
+    pub web_search: Option<aura_os_core::WebSearchConfig>,
+}
+
+pub(crate) async fn get_integrations(
+    State(state): State<AppState>,
+    Path(org_id): Path<OrgId>,
+) -> ApiResult<Json<Option<aura_os_core::IntegrationConfig>>> {
+    let config = state
+        .org_service
+        .get_integration_config(&org_id)
+        .map_err(map_org_err)?;
+    Ok(Json(config))
+}
+
+pub(crate) async fn set_integrations(
+    State(state): State<AppState>,
+    Path(org_id): Path<OrgId>,
+    Json(req): Json<UpdateIntegrationRequest>,
+) -> ApiResult<Json<aura_os_core::IntegrationConfig>> {
+    let existing = state
+        .org_service
+        .get_integration_config(&org_id)
+        .map_err(map_org_err)?
+        .unwrap_or(aura_os_core::IntegrationConfig {
+            org_id,
+            obsidian: None,
+            web_search: None,
+            updated_at: chrono::Utc::now(),
+        });
+
+    let config = aura_os_core::IntegrationConfig {
+        org_id,
+        obsidian: req.obsidian.or(existing.obsidian),
+        web_search: req.web_search.or(existing.web_search),
+        updated_at: chrono::Utc::now(),
+    };
+
+    let config = state
+        .org_service
+        .set_integration_config(&org_id, config)
+        .map_err(map_org_err)?;
+
+    Ok(Json(config))
+}

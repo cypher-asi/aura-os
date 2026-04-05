@@ -60,7 +60,7 @@ export function SkillPreview({ skill: initial, installation }: SkillPreviewProps
         )}
         <div className={previewStyles.taskField}>
           <span className={previewStyles.fieldLabel}>Source</span>
-          <Badge variant="stopped">{skill.source}</Badge>
+          <Text size="sm" variant="secondary">{skill.source}</Text>
         </div>
         {skill.frontmatter?.["allowed-tools"] && (
           <div className={previewStyles.taskField}>
@@ -86,32 +86,34 @@ export function SkillPreview({ skill: initial, installation }: SkillPreviewProps
       {hasPermissions && (
         <div className={previewStyles.taskMeta}>
           <span className={previewStyles.fieldLabel}>Granted Permissions</span>
-          {permPaths.length > 0 && (
-            <div className={previewStyles.taskField}>
-              <span className={previewStyles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <FolderOpen size={12} /> Paths
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {permPaths.map((p) => (
-                  <Text key={p} size="sm" variant="secondary" style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                    {p}
-                  </Text>
-                ))}
+          <div style={{ paddingLeft: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+            {permPaths.length > 0 && (
+              <div className={previewStyles.taskField}>
+                <span className={previewStyles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <FolderOpen size={12} /> Paths
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {permPaths.map((p) => (
+                    <Text key={p} size="sm" variant="secondary" style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                      {p}
+                    </Text>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {permCommands.length > 0 && (
-            <div className={previewStyles.taskField}>
-              <span className={previewStyles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Terminal size={12} /> Commands
-              </span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {permCommands.map((c) => (
-                  <Badge key={c} variant="stopped">{c}</Badge>
-                ))}
+            )}
+            {permCommands.length > 0 && (
+              <div className={previewStyles.taskField}>
+                <span className={previewStyles.fieldLabel} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Terminal size={12} /> Commands
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {permCommands.map((c) => (
+                    <Text key={c} size="sm" variant="secondary" style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{c}</Text>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
       {loading && (

@@ -196,11 +196,7 @@ export function SidekickContent() {
       />
     )
     : (
-      <div className={styles.emptyState}>
-        <Text variant="muted" size="sm">
-          {filesEmptyMessage}
-        </Text>
-      </div>
+      <EmptyState>{filesEmptyMessage}</EmptyState>
     );
 
   const tabContent: Record<string, React.ReactNode> = {

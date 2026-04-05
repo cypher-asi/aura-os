@@ -2,6 +2,8 @@ import { create } from "zustand";
 import type { Process, ProcessFolder, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent } from "../../../types";
 import { processApi } from "../../../api/process";
 
+export const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
+
 interface ProcessState {
   processes: Process[];
   folders: ProcessFolder[];
@@ -33,7 +35,7 @@ interface ProcessState {
 export const useProcessStore = create<ProcessState>()((set) => ({
   processes: [],
   folders: [],
-  loading: false,
+  loading: true,
   nodes: {},
   connections: {},
   runs: {},

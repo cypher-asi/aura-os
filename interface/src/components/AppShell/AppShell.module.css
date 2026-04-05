@@ -635,10 +635,11 @@
 
 .topbarAlignRail {
   padding-left: 0;
+  padding-right: 0;
 }
 
 .topbarAlignRail > :first-child > :first-child {
-  width: var(--control-height-sm);
+  width: 42px;
   justify-content: center;
   flex-shrink: 0;
 }

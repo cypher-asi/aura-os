@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Modal, Button } from "@cypher-asi/zui";
 import { processApi } from "../../../api/process";
@@ -7,15 +7,21 @@ import { useProcessStore } from "../stores/process-store";
 interface ProcessFormProps {
   onClose: () => void;
   folderId?: string | null;
+  onCreated?: (processId: string) => void;
 }
 
-export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
+export function ProcessForm({ onClose, folderId, onCreated }: ProcessFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addProcess = useProcessStore((s) => s.addProcess);
   const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
@@ -28,6 +34,7 @@ export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
         folder_id: folderId ?? undefined,
       });
       addProcess(process);
+      onCreated?.(process.process_id);
       navigate(`/process/${process.process_id}`);
       onClose();
     } catch {
@@ -58,6 +65,7 @@ export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Name</label>
           <input
+            ref={inputRef}
             style={{
               padding: "8px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
               background: "var(--color-bg-input)", color: "var(--color-text)", fontSize: 13,
@@ -66,7 +74,6 @@ export function ProcessForm({ onClose, folderId }: ProcessFormProps) {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) handleSubmit(); }}
             placeholder="My Process"
-            autoFocus
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

@@ -5,6 +5,7 @@ const USER_SCROLL_ESCAPE_PX = 80;
 const STABLE_FRAMES_REQUIRED = 3;
 const SETTLE_TIMEOUT_MS = 2000;
 const MAX_WAIT_FRAMES = 10;
+const INPUT_OVERLAY_PX = 140;
 
 /**
  * Sets `el.scrollTop` and guards the next scroll event so it isn't
@@ -23,37 +24,68 @@ function guardedScroll(
   });
 }
 
+function guardedScrollIntoView(
+  target: HTMLElement,
+  options: ScrollIntoViewOptions,
+  guardRef: React.MutableRefObject<boolean>,
+) {
+  guardRef.current = true;
+  target.scrollIntoView(options);
+  requestAnimationFrame(() => {
+    guardRef.current = false;
+  });
+}
+
 /**
- * Manages scroll-to-bottom for a chat message container backed by a
- * virtualised list with dynamic row heights.
+ * Returns true when the sentinel (content-end marker) is below the
+ * visible area of the scroll container, accounting for the input overlay.
+ */
+function isSentinelBelowViewport(
+  sentinel: HTMLElement,
+  container: HTMLElement,
+): boolean {
+  const sRect = sentinel.getBoundingClientRect();
+  const cRect = container.getBoundingClientRect();
+  return sRect.top > cRect.bottom - INPUT_OVERLAY_PX;
+}
+
+/**
+ * Manages scroll behaviour for a chat message container backed by a
+ * virtualised list with dynamic row heights. Uses a sentinel element
+ * placed at the end of real content (before any spacer) as the
+ * canonical "bottom of content" reference.
  *
  * Operates in two phases:
  *
  *   **Settling** – entered on mount / `resetKey` change. Content is
  *   hidden (`isReady = false`). A tight RAF loop polls `scrollHeight`
  *   until the virtualiser finishes its measure-render cascade, then
- *   scrolls to the bottom and reveals.
+ *   scrolls the sentinel to the bottom of the viewport and reveals.
  *
  *   **Active** – content is visible. MutationObserver and
- *   ResizeObservers keep the view pinned to the bottom while new
- *   content streams in, unless the user scrolls up.
+ *   ResizeObservers keep the sentinel pinned to the viewport bottom
+ *   while new content streams in, unless the user scrolls up or the
+ *   view is in "hold" mode (user message at top).
  */
 export function useScrollAnchor(
   ref: React.RefObject<HTMLElement | null>,
+  sentinelRef: React.RefObject<HTMLElement | null>,
   options: {
     resetKey?: unknown;
-    /** Whether history has resolved (ready or error). */
     contentReady: boolean;
   },
 ): {
   handleScroll: () => void;
   scrollToBottom: () => void;
   scrollToBottomIfPinned: () => void;
+  scrollToTop: (target: HTMLElement) => void;
+  holdPosition: () => void;
   isReady: boolean;
 } {
   const { resetKey, contentReady } = options;
 
   const pinnedRef = useRef(true);
+  const holdScrollRef = useRef(false);
   const phaseRef = useRef<"settling" | "active">("settling");
   const guardRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
@@ -65,13 +97,22 @@ export function useScrollAnchor(
   const contentReadyRef = useRef(contentReady);
   useLayoutEffect(() => { contentReadyRef.current = contentReady; }, [contentReady]);
 
-  // ── Settling phase ──────────────────────────────────────────────────
-  // Polls scrollHeight via RAF until the virtualiser's measurement
-  // cascade has stabilised, then scrolls to bottom and reveals.
+  /** Scroll sentinel to the bottom of the visible area (above input overlay). */
+  const scrollSentinelToEnd = useCallback(() => {
+    const sentinel = sentinelRef.current;
+    if (sentinel) {
+      guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
+    } else {
+      const el = ref.current;
+      if (el) guardedScroll(el, el.scrollHeight, guardRef);
+    }
+  }, [ref, sentinelRef]);
 
+  // ── Settling phase ──────────────────────────────────────────────────
   useEffect(() => {
     phaseRef.current = "settling";
     pinnedRef.current = true;
+    holdScrollRef.current = false;
     setIsReady(false);
     isReadyRef.current = false;
 
@@ -88,7 +129,7 @@ export function useScrollAnchor(
 
     const reveal = () => {
       if (isReadyRef.current) return;
-      guardedScroll(el, el.scrollHeight, guardRef);
+      scrollSentinelToEnd();
       prevScrollHeightRef.current = el.scrollHeight;
       phaseRef.current = "active";
       setIsReady(true);
@@ -108,7 +149,7 @@ export function useScrollAnchor(
         heightChanged = true;
         stableFrames = 0;
         prevHeight = h;
-        el.scrollTop = el.scrollHeight;
+        scrollSentinelToEnd();
       } else if (heightChanged) {
         stableFrames++;
       } else {
@@ -136,32 +177,17 @@ export function useScrollAnchor(
       cancelAnimationFrame(raf);
       clearTimeout(timeout);
     };
-  }, [ref, resetKey]);
+  }, [ref, resetKey, scrollSentinelToEnd]);
 
-  // Post-reveal correction: removing opacity:0 can trigger virtualiser
-  // recalculations that change scrollHeight. useLayoutEffect runs after
-  // React commits but before the browser paints, so the correction is
-  // invisible to the user.
+  // Post-reveal correction
   useLayoutEffect(() => {
     if (!isReady || !pinnedRef.current) return;
+    scrollSentinelToEnd();
     const el = ref.current;
-    if (el) {
-      guardedScroll(el, el.scrollHeight, guardRef);
-      prevScrollHeightRef.current = el.scrollHeight;
-    }
-  }, [isReady, ref]);
+    if (el) prevScrollHeightRef.current = el.scrollHeight;
+  }, [isReady, ref, scrollSentinelToEnd]);
 
   // ── Active phase: auto-scroll on content changes ────────────────────
-  // MutationObserver catches DOM additions / streaming text. Child
-  // ResizeObserver catches virtualiser measurement corrections (inline
-  // style changes that don't alter DOM structure). Container
-  // ResizeObserver handles width changes (lane resize).
-  //
-  // Scrolls are applied synchronously inside observer callbacks so the
-  // correction lands before the browser paints, eliminating the visible
-  // one-frame snap that a RAF-deferred approach would produce during
-  // large height jumps (e.g. a thinking block appearing).
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -174,8 +200,25 @@ export function useScrollAnchor(
       if (phaseRef.current !== "active") return;
       const newSH = el.scrollHeight;
       if (newSH === prevScrollHeightRef.current) return;
+
+      if (holdScrollRef.current) {
+        const sentinel = sentinelRef.current;
+        if (sentinel && isSentinelBelowViewport(sentinel, el)) {
+          holdScrollRef.current = false;
+          pinnedRef.current = true;
+          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
+        }
+        syncHeight();
+        return;
+      }
+
       if (pinnedRef.current) {
-        guardedScroll(el, el.scrollHeight, guardRef);
+        const sentinel = sentinelRef.current;
+        if (sentinel) {
+          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
+        } else {
+          guardedScroll(el, el.scrollHeight, guardRef);
+        }
         syncHeight();
         return;
       }
@@ -200,7 +243,12 @@ export function useScrollAnchor(
       const newSH = el.scrollHeight;
 
       if (pinnedRef.current) {
-        guardedScroll(el, newSH, guardRef);
+        const sentinel = sentinelRef.current;
+        if (sentinel) {
+          guardedScrollIntoView(sentinel, { block: "end", behavior: "instant" }, guardRef);
+        } else {
+          guardedScroll(el, newSH, guardRef);
+        }
       } else if (oldSH > 0 && newSH !== oldSH) {
         guardedScroll(
           el,
@@ -224,7 +272,7 @@ export function useScrollAnchor(
       contentObs.disconnect();
       containerObs.disconnect();
     };
-  }, [ref, resetKey]);
+  }, [ref, sentinelRef, resetKey]);
 
   // ── Scroll handler ──────────────────────────────────────────────────
 
@@ -233,12 +281,12 @@ export function useScrollAnchor(
     const el = ref.current;
     if (!el) return;
 
-    const atBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
+    const sentinel = sentinelRef.current;
     const delta = el.scrollTop - lastScrollTopRef.current;
 
     if (phaseRef.current === "settling") {
-      // During settling, only a strong intentional scroll up escapes.
+      const atBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
       if (!atBottom && delta <= -USER_SCROLL_ESCAPE_PX) {
         phaseRef.current = "active";
         pinnedRef.current = false;
@@ -251,27 +299,47 @@ export function useScrollAnchor(
       return;
     }
 
-    pinnedRef.current = atBottom;
-    lastScrollTopRef.current = el.scrollTop;
-  }, [ref]);
+    if (holdScrollRef.current) {
+      holdScrollRef.current = false;
+    }
 
-  // ── Imperative scroll-to-bottom ─────────────────────────────────────
+    // "At bottom" means sentinel is within the visible area
+    if (sentinel) {
+      pinnedRef.current = !isSentinelBelowViewport(sentinel, el);
+    } else {
+      pinnedRef.current =
+        el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
+    }
+    lastScrollTopRef.current = el.scrollTop;
+  }, [ref, sentinelRef]);
+
+  // ── Imperative methods ─────────────────────────────────────────────
 
   const scrollToBottom = useCallback(() => {
     pinnedRef.current = true;
-    const el = ref.current;
-    if (el) {
-      guardedScroll(el, el.scrollHeight, guardRef);
-    }
-  }, [ref]);
+    holdScrollRef.current = false;
+    scrollSentinelToEnd();
+  }, [scrollSentinelToEnd]);
 
   const scrollToBottomIfPinned = useCallback(() => {
     if (!pinnedRef.current) return;
-    const el = ref.current;
-    if (el) {
-      guardedScroll(el, el.scrollHeight, guardRef);
-    }
-  }, [ref]);
+    scrollSentinelToEnd();
+  }, [scrollSentinelToEnd]);
 
-  return { handleScroll, scrollToBottom, scrollToBottomIfPinned, isReady };
+  /** Scroll a target element to the top of the viewport. */
+  const scrollToTop = useCallback((target: HTMLElement) => {
+    guardedScrollIntoView(target, { block: "start", behavior: "instant" }, guardRef);
+  }, []);
+
+  /**
+   * Freeze the current scroll position. Auto-scroll is suppressed until
+   * the sentinel falls below the viewport, at which point normal pinned
+   * auto-scroll resumes automatically.
+   */
+  const holdPosition = useCallback(() => {
+    holdScrollRef.current = true;
+    pinnedRef.current = false;
+  }, []);
+
+  return { handleScroll, scrollToBottom, scrollToBottomIfPinned, scrollToTop, holdPosition, isReady };
 }

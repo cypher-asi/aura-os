@@ -138,17 +138,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.sidekickToggle {
-  width: 28px;
-  height: 28px;
-  flex-shrink: 0;
-  color: var(--color-text-secondary) !important;
-}
-
-.sidekickToggle:hover {
-  color: #ffffff !important;
-}
-
 .wifiIcon {
   display: inline-flex;
   align-items: center;

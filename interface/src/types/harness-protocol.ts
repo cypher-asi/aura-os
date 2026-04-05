@@ -50,9 +50,17 @@ export interface SessionInit {
   agent_id?: string | null;
 }
 
+export interface MessageAttachment {
+  type: "image" | "text";
+  media_type: string;
+  data: string;
+  name?: string;
+}
+
 export interface UserMessage {
   content: string;
   tool_hints?: string[] | null;
+  attachments?: MessageAttachment[] | null;
 }
 
 export interface ApprovalResponse {

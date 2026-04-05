@@ -109,7 +109,9 @@ export const useChatHistoryStore = create<ChatHistoryState>()((set, get) => ({
   },
 
   prefetchHistory: (key, fetchFn): void => {
-    get().fetchHistory(key, fetchFn).catch(() => {});
+    get().fetchHistory(key, fetchFn).catch((err) => {
+      console.warn("[chat-history] prefetch failed for", key, err);
+    });
   },
 
   invalidateHistory: (key): void => {

@@ -301,6 +301,8 @@ pub fn build_test_app_from_store(
         None,
         store.clone(),
         event_broadcast.clone(),
+        local_harness.clone(),
+        data_dir.clone(),
     ));
 
     let state = AppState {

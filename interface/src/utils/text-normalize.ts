@@ -81,3 +81,17 @@ export function normalizeMidSentenceBreaks(text: string): string {
     .map((seg) => (seg.isCode ? seg.content : normalizeProseBreaks(seg.content)))
     .join("");
 }
+
+/**
+ * Strip leading whitespace before list markers so the markdown parser
+ * doesn't create unintended nested lists from inconsistent LLM indentation.
+ */
+export function flattenListIndentation(text: string): string {
+  return splitByCodeFences(text)
+    .map((seg) =>
+      seg.isCode
+        ? seg.content
+        : seg.content.replace(/^[ \t]+([-*+]|\d+[.)]) /gm, "$1 "),
+    )
+    .join("");
+}

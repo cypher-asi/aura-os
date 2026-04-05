@@ -2,6 +2,7 @@ import {
   splitByCodeFences,
   stripEmojis,
   normalizeMidSentenceBreaks,
+  flattenListIndentation,
 } from "./text-normalize";
 
 describe("splitByCodeFences", () => {
@@ -133,5 +134,36 @@ describe("normalizeMidSentenceBreaks", () => {
     const text = "What?\n\nYes!";
     const result = normalizeMidSentenceBreaks(text);
     expect(result).toBe(text);
+  });
+});
+
+describe("flattenListIndentation", () => {
+  it("strips leading whitespace from indented list items", () => {
+    const text = "- item one\n- item two\n   - item three";
+    expect(flattenListIndentation(text)).toBe("- item one\n- item two\n- item three");
+  });
+
+  it("handles mixed marker styles", () => {
+    const text = "* a\n  * b\n  + c\n    1. d";
+    expect(flattenListIndentation(text)).toBe("* a\n* b\n+ c\n1. d");
+  });
+
+  it("leaves non-list indented lines alone", () => {
+    const text = "- item\n    continued text";
+    expect(flattenListIndentation(text)).toBe("- item\n    continued text");
+  });
+
+  it("does not modify code blocks", () => {
+    const text = "```\n   - indented\n```";
+    expect(flattenListIndentation(text)).toBe(text);
+  });
+
+  it("handles empty string", () => {
+    expect(flattenListIndentation("")).toBe("");
+  });
+
+  it("handles tabs before markers", () => {
+    const text = "- first\n\t- second";
+    expect(flattenListIndentation(text)).toBe("- first\n- second");
   });
 });

@@ -51,17 +51,19 @@ export function useChatHistorySync({
   const resetEventsRef = useRef(resetEvents);
   useEffect(() => { resetEventsRef.current = resetEvents; }, [resetEvents]);
 
-  // Invalidate stale cache when streaming stops so the next navigation
-  // gets fresh data even if the user leaves before the finally-block runs.
+  // When streaming stops, silently refresh the cache so that the next
+  // navigation sees fresh data.  We call fetchHistory with `force: true`
+  // instead of invalidateHistory so that the entry keeps its current
+  // status/events — this avoids a loading-state flash (blink) in the UI.
   const prevIsStreamingRef = useRef(false);
   useEffect(() => {
     if (prevIsStreamingRef.current && !isStreaming) {
-      if (historyKey) {
-        useChatHistoryStore.getState().invalidateHistory(historyKey);
+      if (historyKey && fetchFn) {
+        useChatHistoryStore.getState().fetchHistory(historyKey, fetchFn, { force: true });
       }
     }
     prevIsStreamingRef.current = isStreaming;
-  }, [isStreaming, historyKey]);
+  }, [isStreaming, historyKey, fetchFn]);
 
   // Fetch history when the entity changes.
   useEffect(() => {
@@ -77,16 +79,19 @@ export function useChatHistorySync({
   }, [historyKey, fetchFn, invalidateBeforeFetch, onSwitch, onClear]);
 
   // Sync fetched history into the stream store for rendering.
-  // Guard: when history was invalidated (fetchedAt === 0) and the stream
-  // store already holds events, skip the sync — the stream store's events
-  // are more current. The background re-fetch will trigger a proper sync.
+  // Guards:
+  // 1. When history was invalidated (fetchedAt === 0) and the stream store
+  //    already holds events, skip — the stream store is more current.
+  // 2. When the stream store already has >= as many events as the history,
+  //    skip — avoids a full re-render blink after streaming ends and the
+  //    background re-fetch returns equivalent data.
   useEffect(() => {
     if (historyStatus !== "ready" || !historyKey) return;
     const histEntry = useChatHistoryStore.getState().entries[historyKey];
-    if (histEntry && histEntry.fetchedAt === 0) {
-      const sEntry = getStreamEntry(streamKey);
-      if (sEntry && sEntry.events.length > 0) return;
-    }
+    const sEntry = getStreamEntry(streamKey);
+    const streamCount = sEntry?.events.length ?? 0;
+    if (histEntry && histEntry.fetchedAt === 0 && streamCount > 0) return;
+    if (streamCount > 0 && streamCount >= historyMessages.length) return;
     resetEventsRef.current(historyMessages, { allowWhileStreaming: true });
   }, [historyMessages, historyStatus, historyKey, streamKey]);
 

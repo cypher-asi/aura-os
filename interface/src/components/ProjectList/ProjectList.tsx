@@ -1,9 +1,8 @@
 import { useEffect, useCallback, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ButtonPlus, Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
-import type { ExplorerNode, MenuItem } from "@cypher-asi/zui";
-import { Bot, FolderGit2, Gauge, Loader2, Pencil, Settings, Trash2 } from "lucide-react";
+import { ButtonPlus, Explorer, PageEmptyState } from "@cypher-asi/zui";
+import type { ExplorerNode } from "@cypher-asi/zui";
+import { FolderGit2, Gauge, Loader2 } from "lucide-react";
 import { Avatar } from "../Avatar";
 import { useProfileStatusStore } from "../../stores/profile-status-store";
 import { useAppUIStore } from "../../stores/app-ui-store";
@@ -18,43 +17,14 @@ import {
 import { getLastAgent } from "../../utils/storage";
 import { useProjectListData } from "./useProjectListData";
 import { ProjectListModals } from "./ProjectListModals";
+import { ExplorerContextMenu } from "./ExplorerContextMenu";
+import { useExplorerMenus } from "./useExplorerMenus";
+import { filterTree, getLastSelectedId, resolveStatus } from "./project-list-shared";
 
 import styles from "./ProjectList.module.css";
 
-function filterTree(nodes: ExplorerNode[], q: string): ExplorerNode[] {
-  if (!q) return nodes;
-  const lower = q.toLowerCase();
-  return nodes.reduce<ExplorerNode[]>((acc, node) => {
-    const labelMatch = node.label.toLowerCase().includes(lower);
-    const filteredChildren = node.children ? filterTree(node.children, q) : [];
-    if (labelMatch) acc.push(node);
-    else if (filteredChildren.length > 0) acc.push({ ...node, children: filteredChildren });
-    return acc;
-  }, []);
-}
-
-const projectMenuItems: MenuItem[] = [
-  { id: "add-agent", label: "Add Agent", icon: <Bot size={14} /> },
-  { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
-  { id: "settings", label: "Settings", icon: <Settings size={14} /> },
-  { type: "separator" },
-  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
-];
-
-const agentMenuItems: MenuItem[] = [
-  { id: "delete-agent", label: "Delete", icon: <Trash2 size={14} /> },
-];
-
 function executionNodeId(projectId: string) {
   return `execution:${projectId}`;
-}
-
-function getLastSelectedId(ids: Iterable<string>): string | null {
-  let selectedId: string | null = null;
-  for (const id of ids) {
-    selectedId = id;
-  }
-  return selectedId;
 }
 
 function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
@@ -113,23 +83,6 @@ function useProjectListEffects(data: ReturnType<typeof useProjectListData>) {
       }
     }
   }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId]);
-}
-
-const STATUS_MAP: Record<string, string> = {
-  running: "running",
-  working: "running",
-  idle: "idle",
-  provisioning: "provisioning",
-  hibernating: "hibernating",
-  stopping: "stopping",
-  stopped: "stopped",
-  error: "error",
-  blocked: "error",
-};
-
-function resolveStatus(raw: string | undefined): string | undefined {
-  if (!raw) return undefined;
-  return STATUS_MAP[raw.toLowerCase()] ?? raw;
 }
 
 function buildExplorerNode(
@@ -227,7 +180,12 @@ export function ProjectList() {
   );
 
   const filteredExplorerData = useMemo(() => filterTree(explorerData, searchQuery), [explorerData, searchQuery]);
-  const defaultExpandedIds = useMemo(() => projects.map((p) => p.project_id), [projects]);
+  const defaultExpandedIds = useMemo(
+    () => explorerData
+      .filter((n) => n.children && n.children.length > 0 && !n.children[0]?.id?.startsWith("_load_"))
+      .map((n) => n.id),
+    [explorerData],
+  );
   const defaultSelectedIds = useMemo(() => {
     if (agentInstanceId) return [agentInstanceId];
     if (isMobileLayout && projectId && (location.pathname.endsWith("/execution") || location.pathname.endsWith("/work") || location.pathname.endsWith("/stats"))) {
@@ -281,23 +239,7 @@ export function ProjectList() {
     if (expanded && projectMap.has(nodeId) && !(nodeId in agentsByProject)) void refreshProjectAgents(nodeId);
   }, [agentInstanceId, agentsByProject, isMobileLayout, location.pathname, navigate, projectId, projectMap, refreshProjectAgents, closePreview]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== "F2") return;
-    const focused = (e.target as HTMLElement).closest("button[id]");
-    if (!focused) return;
-    const proj = projectMap.get(focused.id);
-    if (proj) { e.preventDefault(); actions.setRenameTarget(proj); }
-  }, [projectMap, actions]);
-
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    const target = (e.target as HTMLElement).closest("button[id]");
-    if (!target) return;
-    const nodeId = target.id;
-    const proj = projectMap.get(nodeId);
-    if (proj) { e.preventDefault(); actions.setCtxMenu({ x: e.clientX, y: e.clientY, project: proj }); return; }
-    const meta = agentMeta.get(nodeId);
-    if (meta) { e.preventDefault(); actions.setCtxMenu({ x: e.clientX, y: e.clientY, agent: meta.agent }); }
-  }, [projectMap, agentMeta, actions]);
+  const { handleContextMenu, handleKeyDown } = useExplorerMenus(projectMap, agentMeta, actions);
 
   if (!loadingProjects && projects.length === 0) {
     return (
@@ -313,13 +255,7 @@ export function ProjectList() {
         <Explorer data={filteredExplorerData} enableDragDrop={false} enableMultiSelect={false} defaultExpandedIds={defaultExpandedIds} defaultSelectedIds={defaultSelectedIds} onSelect={handleSelect} onExpand={handleExpand} />
       </div>
 
-      {actions.ctxMenu && createPortal(
-        <div ref={actions.ctxMenuRef} className={styles.contextMenuOverlay} style={{ left: actions.ctxMenu.x, top: actions.ctxMenu.y }}>
-          <Menu items={actions.ctxMenu.project ? projectMenuItems : agentMenuItems} onChange={actions.handleMenuAction} background="solid" border="solid" rounded="md" width={180} isOpen />
-        </div>,
-        document.body,
-      )}
-
+      <ExplorerContextMenu actions={actions} />
       <ProjectListModals actions={actions} />
     </div>
   );
