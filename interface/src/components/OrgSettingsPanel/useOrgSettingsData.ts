@@ -90,7 +90,14 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   const handleRemoveMember = async (userId: string) => { if (orgId) { try { await api.orgs.removeMember(orgId, userId); refreshMembers(); } catch (err) { console.error("Failed to remove member", err); } } };
   const handleRoleChange = async (userId: string, role: OrgRole) => { if (orgId) { try { await api.orgs.updateMemberRole(orgId, userId, role); refreshMembers(); refreshOrgs(); } catch (err) { console.error("Failed to change role", err); } } };
   const handleSaveBilling = async () => { if (orgId) { setSaving(true); try { await api.orgs.setBilling(orgId, billingEmail || null, billing?.plan ?? "free"); loadBilling(); } catch (err) { console.error("Failed to save billing", err); } finally { setSaving(false); } } };
-  const createIntegration = useCallback(async (data: { name: string; provider: string; default_model?: string | null; api_key?: string | null }) => {
+  const createIntegration = useCallback(async (data: {
+    name: string;
+    provider: string;
+    kind?: "workspace_connection" | "workspace_integration" | "mcp_server";
+    default_model?: string | null;
+    provider_config?: Record<string, unknown> | null;
+    api_key?: string | null;
+  }) => {
     if (!orgId) return null;
     setIntegrationBusyId("new");
     try {
@@ -103,7 +110,14 @@ export function useOrgSettingsData(isOpen: boolean, initialSection?: Section) {
   }, [orgId, refreshIntegrations]);
   const updateIntegration = useCallback(async (
     integrationId: string,
-    data: { name?: string; provider?: string; default_model?: string | null; api_key?: string | null },
+    data: {
+      name?: string;
+      provider?: string;
+      kind?: "workspace_connection" | "workspace_integration" | "mcp_server";
+      default_model?: string | null;
+      provider_config?: Record<string, unknown> | null;
+      api_key?: string | null;
+    },
   ) => {
     if (!orgId) return null;
     setIntegrationBusyId(integrationId);

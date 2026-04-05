@@ -55,12 +55,14 @@ describe("OrgSettingsIntegrations", () => {
     await user.click(screen.getByRole("button", { name: "GitHub" }));
     await user.type(screen.getByLabelText("New integration name"), "GitHub Ops");
     await user.type(screen.getByLabelText("New GitHub Token"), "ghp_test_123");
-    await user.click(screen.getByRole("button", { name: "Add Integration" }));
+    await user.click(screen.getByRole("button", { name: "Add" }));
 
     expect(onCreate).toHaveBeenCalledWith({
       name: "GitHub Ops",
       provider: "github",
+      kind: "workspace_integration",
       default_model: null,
+      provider_config: null,
       api_key: "ghp_test_123",
     });
   });
@@ -81,10 +83,10 @@ describe("OrgSettingsIntegrations", () => {
     await user.click(screen.getByRole("button", { name: "Slack" }));
 
     expect(
-      screen.getByText(/Slack bot tokens usually start with xoxb-/i),
+      screen.getByText(/Use a bot token with only the channels and posting scopes your workspace needs./i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Org integration only; this should be exposed through Aura OS tools, not as an adapter./i),
+      screen.getByText(/Workspace integration for external tools and workflows./i),
     ).toBeInTheDocument();
   });
 
@@ -100,7 +102,7 @@ describe("OrgSettingsIntegrations", () => {
     );
 
     expect(
-      screen.getByText(/Org integration that can back runtime auth today./i),
+      screen.getByText(/Workspace connection for model\/runtime access./i),
     ).toBeInTheDocument();
   });
 });

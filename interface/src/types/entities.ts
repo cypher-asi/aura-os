@@ -237,7 +237,9 @@ export interface OrgIntegration {
   org_id: string;
   name: string;
   provider: string;
+  kind: "workspace_connection" | "workspace_integration" | "mcp_server";
   default_model?: string | null;
+  provider_config?: Record<string, unknown> | null;
   has_secret: boolean;
   secret_last4?: string | null;
   created_at: string;

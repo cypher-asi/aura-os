@@ -60,7 +60,14 @@ export const orgsApi = {
     apiFetch<OrgIntegration[]>(`/api/orgs/${orgId}/integrations`),
   createIntegration: (
     orgId: string,
-    data: { name: string; provider: string; default_model?: string | null; api_key?: string | null },
+    data: {
+      name: string;
+      provider: string;
+      kind?: "workspace_connection" | "workspace_integration" | "mcp_server";
+      default_model?: string | null;
+      provider_config?: Record<string, unknown> | null;
+      api_key?: string | null;
+    },
   ) =>
     apiFetch<OrgIntegration>(`/api/orgs/${orgId}/integrations`, {
       method: "POST",
@@ -69,7 +76,14 @@ export const orgsApi = {
   updateIntegration: (
     orgId: string,
     integrationId: string,
-    data: { name?: string; provider?: string; default_model?: string | null; api_key?: string | null },
+    data: {
+      name?: string;
+      provider?: string;
+      kind?: "workspace_connection" | "workspace_integration" | "mcp_server";
+      default_model?: string | null;
+      provider_config?: Record<string, unknown> | null;
+      api_key?: string | null;
+    },
   ) =>
     apiFetch<OrgIntegration>(`/api/orgs/${orgId}/integrations/${integrationId}`, {
       method: "PUT",

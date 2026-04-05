@@ -1,15 +1,13 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use std::process::Stdio;
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use axum::extract::{Path, State};
 use axum::http::HeaderValue;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
-use serde::Deserialize;
 use serde_json::Value;
 use tokio::fs;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -32,6 +30,7 @@ use crate::error::{ApiError, ApiResult};
 use crate::handlers::agents::chat::{
     setup_agent_chat_persistence, spawn_chat_persist_task, SseResponse, SseStream,
 };
+use crate::handlers::agents::workspace_tools::{active_workspace_tools, workspace_tool};
 use crate::handlers::projects_helpers::resolve_project_workspace_path_for_machine;
 use crate::handlers::sse::harness_event_to_sse;
 use crate::state::{AppState, AuthJwt};
@@ -55,99 +54,8 @@ struct ExternalProjectMcpConfig {
     env: HashMap<String, String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SharedProjectTool {
-    name: String,
-    provider: Option<String>,
-    description: String,
-    prompt_signature: String,
-    input_schema: Value,
-    saved_event: Option<String>,
-    saved_payload_key: Option<String>,
-}
-
-fn load_shared_tools(manifest_path: &str, label: &str) -> Vec<SharedProjectTool> {
-    let tools: Vec<SharedProjectTool> =
-        serde_json::from_str(manifest_path).expect("shared control-plane tool manifest must parse");
-    for tool in &tools {
-        assert!(
-            tool.input_schema.is_object(),
-            "{label} control-plane tool `{}` must declare an object input schema",
-            tool.name
-        );
-    }
-    tools
-}
-
-fn shared_project_tools() -> &'static [SharedProjectTool] {
-    static TOOLS: OnceLock<Vec<SharedProjectTool>> = OnceLock::new();
-    TOOLS.get_or_init(|| {
-        load_shared_tools(
-            include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../shared/project-control-plane-tools.json"
-            )),
-            "shared project",
-        )
-    })
-}
-
-fn shared_org_tools() -> &'static [SharedProjectTool] {
-    static TOOLS: OnceLock<Vec<SharedProjectTool>> = OnceLock::new();
-    TOOLS.get_or_init(|| {
-        load_shared_tools(
-            include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../shared/org-integration-tools.json"
-            )),
-            "shared org",
-        )
-    })
-}
-
-fn shared_external_tool(name: &str) -> Option<&'static SharedProjectTool> {
-    shared_project_tools().iter().find(|tool| tool.name == name)
-        .or_else(|| shared_org_tools().iter().find(|tool| tool.name == name))
-}
-
 fn is_external_tool_name(name: &str) -> bool {
-    shared_external_tool(name).is_some()
-}
-
-fn available_org_tool_providers(state: &AppState, agent: &Agent) -> HashSet<String> {
-    let Some(org_id) = agent.org_id else {
-        return HashSet::new();
-    };
-
-    state
-        .org_service
-        .list_integrations(&org_id)
-        .map(|integrations| {
-            integrations
-                .into_iter()
-                .filter(|integration| integration.has_secret)
-                .map(|integration| integration.provider)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn available_external_tools<'a>(
-    state: &'a AppState,
-    agent: &'a Agent,
-) -> Vec<&'static SharedProjectTool> {
-    let available_providers = available_org_tool_providers(state, agent);
-    let mut tools = shared_project_tools().iter().collect::<Vec<_>>();
-    if agent.org_id.is_some() {
-        tools.extend(shared_org_tools().iter().filter(|tool| {
-            tool.provider
-                .as_deref()
-                .map(|provider| available_providers.contains(provider))
-                .unwrap_or(true)
-        }));
-    }
-    tools
+    workspace_tool(name).is_some()
 }
 
 pub(crate) async fn test_agent_runtime(
@@ -401,7 +309,7 @@ fn opencode_default_model(provider: &str) -> Option<&'static str> {
 }
 
 fn external_project_tool_infos(state: &AppState, agent: &Agent) -> Vec<ToolInfo> {
-    available_external_tools(state, agent)
+    active_workspace_tools(state, agent)
         .into_iter()
         .map(|tool| ToolInfo {
             name: tool.name.clone(),
@@ -1450,7 +1358,7 @@ fn emit_saved_artifact_events(
     if is_error {
         return;
     }
-    let Some(tool) = shared_external_tool(tool_name) else {
+    let Some(tool) = workspace_tool(tool_name) else {
         return;
     };
     let Some(saved_event) = tool.saved_event.as_deref() else {
@@ -2092,7 +2000,7 @@ fn build_external_prompt(
     }
     if supports_external_project_tools(&agent.adapter_type) && project_id.is_some() {
         prompt.push_str("Aura control-plane tools:\n");
-        for tool in available_external_tools(state, agent) {
+        for tool in active_workspace_tools(state, agent) {
             prompt.push_str("- ");
             prompt.push_str(&tool.prompt_signature);
             prompt.push_str(": ");
@@ -2118,8 +2026,8 @@ mod tests {
     use super::{
         claude_tool_results, claude_tool_use_starts, codex_tool_result, codex_tool_use_start,
         codex_turn_usage, parse_gemini_output, parse_opencode_output, parse_cursor_output,
-        shared_org_tools, shared_project_tools,
     };
+    use crate::handlers::agents::workspace_tools::{shared_workspace_tools, WorkspaceToolSourceKind};
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
 
@@ -2276,10 +2184,7 @@ mod tests {
 
     #[test]
     fn shared_project_tool_manifest_has_unique_names_and_signatures() {
-        let tools = shared_project_tools()
-            .iter()
-            .chain(shared_org_tools().iter())
-            .collect::<Vec<_>>();
+        let tools = shared_workspace_tools().iter().collect::<Vec<_>>();
         assert!(!tools.is_empty());
 
         let mut names = HashSet::new();
@@ -2292,5 +2197,13 @@ mod tests {
             );
             assert!(tool.input_schema.is_object(), "input schema must be an object");
         }
+    }
+
+    #[test]
+    fn workspace_tool_registry_tracks_source_kinds() {
+        let tools = shared_workspace_tools();
+        assert!(tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative));
+        assert!(tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::Plugin));
+        assert!(!tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp));
     }
 }

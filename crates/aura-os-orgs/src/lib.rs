@@ -132,7 +132,9 @@ impl OrgService {
         integration_id: Option<&str>,
         name: String,
         provider: String,
+        kind: OrgIntegrationKind,
         default_model: Option<String>,
+        provider_config: Option<serde_json::Value>,
         secret: Option<String>,
     ) -> Result<OrgIntegration, OrgError> {
         let integration_id = integration_id
@@ -176,7 +178,9 @@ impl OrgService {
             org_id: *org_id,
             name,
             provider,
+            kind,
             default_model,
+            provider_config,
             has_secret,
             secret_last4,
             created_at: existing.as_ref().map(|it| it.created_at).unwrap_or(now),

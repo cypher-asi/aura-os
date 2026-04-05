@@ -250,8 +250,12 @@ pub(crate) struct UpdateOrgRequest {
 pub(crate) struct CreateOrgIntegrationRequest {
     pub name: String,
     pub provider: String,
+    #[serde(default = "default_org_integration_kind")]
+    pub kind: aura_os_core::OrgIntegrationKind,
     #[serde(default)]
     pub default_model: Option<String>,
+    #[serde(default)]
+    pub provider_config: Option<serde_json::Value>,
     #[serde(default)]
     pub api_key: Option<String>,
 }
@@ -261,9 +265,17 @@ pub(crate) struct UpdateOrgIntegrationRequest {
     pub name: Option<String>,
     pub provider: Option<String>,
     #[serde(default)]
+    pub kind: Option<aura_os_core::OrgIntegrationKind>,
+    #[serde(default)]
     pub default_model: Option<Option<String>>,
     #[serde(default)]
+    pub provider_config: Option<Option<serde_json::Value>>,
+    #[serde(default)]
     pub api_key: Option<Option<String>>,
+}
+
+fn default_org_integration_kind() -> aura_os_core::OrgIntegrationKind {
+    aura_os_core::OrgIntegrationKind::WorkspaceConnection
 }
 
 #[derive(Debug, Deserialize)]

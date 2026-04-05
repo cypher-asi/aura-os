@@ -113,6 +113,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
         Some(serde_json::json!({
             "name": "GitHub Ops",
             "provider": "github",
+            "kind": "workspace_integration",
             "default_model": null,
             "api_key": "ghp_test_123"
         })),
@@ -123,6 +124,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
     let integration_id = created["integration_id"].as_str().unwrap().to_string();
     assert_eq!(created["name"], "GitHub Ops");
     assert_eq!(created["provider"], "github");
+    assert_eq!(created["kind"], "workspace_integration");
     assert_eq!(created["default_model"], serde_json::Value::Null);
     assert_eq!(created["has_secret"], true);
 
@@ -139,6 +141,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
         Some(serde_json::json!({
             "name": "OpenAI Shared",
             "provider": "openai",
+            "kind": "workspace_connection",
             "default_model": "gpt-5.1",
             "api_key": "sk-test"
         })),
@@ -148,6 +151,7 @@ async fn org_integrations_support_tool_and_model_provider_strings() {
     let updated = response_json(resp).await;
     assert_eq!(updated["name"], "OpenAI Shared");
     assert_eq!(updated["provider"], "openai");
+    assert_eq!(updated["kind"], "workspace_connection");
     assert_eq!(updated["default_model"], "gpt-5.1");
     assert_eq!(updated["has_secret"], true);
 
@@ -302,6 +306,7 @@ async fn org_tool_actions_use_saved_integrations() {
             Some(serde_json::json!({
                 "name": name,
                 "provider": provider,
+                "kind": "workspace_integration",
                 "api_key": api_key
             })),
         );

@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 
 use crate::enums::{
     AgentStatus, ArtifactType, ChatRole, CronJobRunStatus, CronJobTrigger, HarnessMode,
@@ -154,6 +155,10 @@ fn default_auth_source() -> String {
     "aura_managed".to_string()
 }
 
+fn default_org_integration_kind() -> OrgIntegrationKind {
+    OrgIntegrationKind::WorkspaceConnection
+}
+
 pub fn effective_auth_source(
     adapter_type: &str,
     auth_source: Option<&str>,
@@ -168,13 +173,25 @@ pub fn effective_auth_source(
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrgIntegrationKind {
+    WorkspaceConnection,
+    WorkspaceIntegration,
+    McpServer,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OrgIntegration {
     pub integration_id: String,
     pub org_id: OrgId,
     pub name: String,
     pub provider: String,
+    #[serde(default = "default_org_integration_kind")]
+    pub kind: OrgIntegrationKind,
     #[serde(default)]
     pub default_model: Option<String>,
+    #[serde(default)]
+    pub provider_config: Option<JsonValue>,
     #[serde(default)]
     pub has_secret: bool,
     #[serde(default)]

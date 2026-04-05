@@ -234,7 +234,9 @@ pub(crate) async fn create_integration(
             None,
             req.name,
             req.provider,
+            req.kind,
             req.default_model,
+            req.provider_config,
             req.api_key,
         )
         .map_err(map_org_err)?;
@@ -259,9 +261,14 @@ pub(crate) async fn update_integration(
             Some(&integration_id),
             req.name.unwrap_or(existing.name),
             req.provider.unwrap_or(existing.provider),
+            req.kind.unwrap_or(existing.kind),
             match req.default_model {
                 Some(value) => value,
                 None => existing.default_model,
+            },
+            match req.provider_config {
+                Some(value) => value,
+                None => existing.provider_config,
             },
             match req.api_key {
                 Some(value) => value,

@@ -3,7 +3,7 @@ use axum::Json;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde_json::{json, Value};
 
-use aura_os_core::{OrgId, OrgIntegration};
+use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 
 use crate::error::{ApiError, ApiResult};
 use crate::state::{AppState, AuthJwt};
@@ -362,6 +362,12 @@ fn resolve_org_integration(
                 integration.name, integration.provider
             )));
         }
+        if integration.kind != OrgIntegrationKind::WorkspaceIntegration {
+            return Err(ApiError::bad_request(format!(
+                "integration `{}` is not a workspace integration",
+                integration.name
+            )));
+        }
         integration
     } else {
         state
@@ -369,7 +375,11 @@ fn resolve_org_integration(
             .list_integrations(org_id)
             .map_err(|e| ApiError::internal(format!("listing org integrations: {e}")))?
             .into_iter()
-            .find(|integration| integration.provider == provider && integration.has_secret)
+            .find(|integration| {
+                integration.provider == provider
+                    && integration.has_secret
+                    && integration.kind == OrgIntegrationKind::WorkspaceIntegration
+            })
             .ok_or_else(|| {
                 ApiError::bad_request(format!(
                     "no saved `{provider}` org integration with a key is available"

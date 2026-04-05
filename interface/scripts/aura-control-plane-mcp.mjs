@@ -15,10 +15,10 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sharedProjectTools = JSON.parse(
   fs.readFileSync(path.resolve(currentDir, "../../shared/project-control-plane-tools.json"), "utf8"),
 );
-const sharedOrgTools = JSON.parse(
+const builtinPluginTools = JSON.parse(
   fs.readFileSync(path.resolve(currentDir, "../../shared/org-integration-tools.json"), "utf8"),
 );
-const allSharedTools = [...sharedProjectTools, ...sharedOrgTools];
+const allSharedTools = [...sharedProjectTools, ...builtinPluginTools];
 let orgIntegrationsPromise;
 
 function requiredEnv(name) {
@@ -63,21 +63,21 @@ async function getOrgIntegrations() {
   return Array.isArray(integrations) ? integrations : [];
 }
 
-async function availableOrgTools() {
+async function availableBuiltinPluginTools() {
   if (!orgId) {
     return [];
   }
   const integrations = await getOrgIntegrations();
   const availableProviders = new Set(
     integrations
-      .filter((integration) => integration?.has_secret)
+      .filter((integration) => integration?.has_secret && integration?.kind === "workspace_integration")
       .map((integration) => integration.provider)
       .filter((provider) => typeof provider === "string" && provider),
   );
-  return sharedOrgTools.filter((tool) => !tool.provider || availableProviders.has(tool.provider));
+  return builtinPluginTools.filter((tool) => !tool.provider || availableProviders.has(tool.provider));
 }
 
-async function callOrgTool(toolName, args = {}) {
+async function callBuiltinPluginTool(toolName, args = {}) {
   if (!orgId) {
     throw new Error(`${toolName} requires AURA_MCP_ORG_ID to be set by the Aura OS server`);
   }
@@ -441,35 +441,35 @@ async function listOrgIntegrations(args) {
 }
 
 async function githubListRepos(args) {
-  return callOrgTool("github_list_repos", args);
+  return callBuiltinPluginTool("github_list_repos", args);
 }
 
 async function githubCreateIssue(args) {
-  return callOrgTool("github_create_issue", args);
+  return callBuiltinPluginTool("github_create_issue", args);
 }
 
 async function linearListTeams(args) {
-  return callOrgTool("linear_list_teams", args);
+  return callBuiltinPluginTool("linear_list_teams", args);
 }
 
 async function linearCreateIssue(args) {
-  return callOrgTool("linear_create_issue", args);
+  return callBuiltinPluginTool("linear_create_issue", args);
 }
 
 async function slackListChannels(args) {
-  return callOrgTool("slack_list_channels", args);
+  return callBuiltinPluginTool("slack_list_channels", args);
 }
 
 async function slackPostMessage(args) {
-  return callOrgTool("slack_post_message", args);
+  return callBuiltinPluginTool("slack_post_message", args);
 }
 
 async function notionSearchPages(args) {
-  return callOrgTool("notion_search_pages", args);
+  return callBuiltinPluginTool("notion_search_pages", args);
 }
 
 async function notionCreatePage(args) {
-  return callOrgTool("notion_create_page", args);
+  return callBuiltinPluginTool("notion_create_page", args);
 }
 
 const toolHandlers = {
@@ -545,7 +545,7 @@ const server = new Server(
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...sharedProjectTools, ...(await availableOrgTools())].map((tool) => ({
+  tools: [...sharedProjectTools, ...(await availableBuiltinPluginTools())].map((tool) => ({
     name: tool.name,
     description: tool.description,
     inputSchema: tool.inputSchema,
