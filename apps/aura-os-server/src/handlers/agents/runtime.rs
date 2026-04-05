@@ -2237,7 +2237,9 @@ mod tests {
     fn workspace_tool_registry_tracks_source_kinds() {
         let tools = shared_workspace_tools();
         assert!(tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative));
-        assert!(tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::Plugin));
+        assert!(tools
+            .iter()
+            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AppProvider));
         assert!(!tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp));
     }
 }

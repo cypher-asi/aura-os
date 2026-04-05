@@ -2,6 +2,10 @@ use axum::extract::{Path, State};
 use axum::Json;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde_json::{json, Value};
+#[cfg(test)]
+use serde::Deserialize;
+#[cfg(test)]
+use std::sync::OnceLock;
 
 use aura_os_core::{OrgId, OrgIntegration, OrgIntegrationKind};
 
@@ -15,26 +19,126 @@ struct ResolvedOrgIntegration {
     secret: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AppProviderKind {
+    Github,
+    Linear,
+    Slack,
+    Notion,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AppProviderContract {
+    kind: AppProviderKind,
+    tool_names: &'static [&'static str],
+}
+
+#[cfg(test)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AppToolManifestEntry {
+    name: String,
+    provider: Option<String>,
+    prompt_signature: String,
+}
+
+fn app_provider_contracts() -> &'static [AppProviderContract] {
+    &[
+        AppProviderContract {
+            kind: AppProviderKind::Github,
+            tool_names: &["github_list_repos", "github_create_issue"],
+        },
+        AppProviderContract {
+            kind: AppProviderKind::Linear,
+            tool_names: &["linear_list_teams", "linear_create_issue"],
+        },
+        AppProviderContract {
+            kind: AppProviderKind::Slack,
+            tool_names: &["slack_list_channels", "slack_post_message"],
+        },
+        AppProviderContract {
+            kind: AppProviderKind::Notion,
+            tool_names: &["notion_search_pages", "notion_create_page"],
+        },
+    ]
+}
+
+impl AppProviderKind {
+    #[cfg(test)]
+    fn provider_id(self) -> &'static str {
+        match self {
+            AppProviderKind::Github => "github",
+            AppProviderKind::Linear => "linear",
+            AppProviderKind::Slack => "slack",
+            AppProviderKind::Notion => "notion",
+        }
+    }
+}
+
+fn app_provider_contract_by_tool(tool_name: &str) -> Option<&'static AppProviderContract> {
+    app_provider_contracts()
+        .iter()
+        .find(|contract| contract.tool_names.iter().any(|name| *name == tool_name))
+}
+
+#[cfg(test)]
+fn app_tool_manifest_entries() -> &'static [AppToolManifestEntry] {
+    static ENTRIES: OnceLock<Vec<AppToolManifestEntry>> = OnceLock::new();
+    ENTRIES.get_or_init(|| {
+        serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../shared/org-integration-tools.json"
+        )))
+        .expect("app tool manifest should parse")
+    })
+}
+
 pub(crate) async fn call_tool(
     State(state): State<AppState>,
     AuthJwt(_jwt): AuthJwt,
     Path((org_id, tool_name)): Path<(OrgId, String)>,
     Json(args): Json<Value>,
 ) -> ApiResult<Json<Value>> {
-    let result = match tool_name.as_str() {
-        "list_org_integrations" => list_org_integrations(&state, &org_id, &args).await?,
-        "github_list_repos" => github_list_repos(&state, &org_id, &args).await?,
-        "github_create_issue" => github_create_issue(&state, &org_id, &args).await?,
-        "linear_list_teams" => linear_list_teams(&state, &org_id, &args).await?,
-        "linear_create_issue" => linear_create_issue(&state, &org_id, &args).await?,
-        "slack_list_channels" => slack_list_channels(&state, &org_id, &args).await?,
-        "slack_post_message" => slack_post_message(&state, &org_id, &args).await?,
-        "notion_search_pages" => notion_search_pages(&state, &org_id, &args).await?,
-        "notion_create_page" => notion_create_page(&state, &org_id, &args).await?,
-        other => return Err(ApiError::not_found(format!("unknown org tool `{other}`"))),
+    let result = if tool_name == "list_org_integrations" {
+        list_org_integrations(&state, &org_id, &args).await?
+    } else {
+        let contract = app_provider_contract_by_tool(&tool_name)
+            .ok_or_else(|| ApiError::not_found(format!("unknown org tool `{tool_name}`")))?;
+        dispatch_app_provider_tool(contract.kind, &state, &org_id, &tool_name, &args).await?
     };
 
     Ok(Json(result))
+}
+
+async fn dispatch_app_provider_tool(
+    kind: AppProviderKind,
+    state: &AppState,
+    org_id: &OrgId,
+    tool_name: &str,
+    args: &Value,
+) -> ApiResult<Value> {
+    match kind {
+        AppProviderKind::Github => match tool_name {
+            "github_list_repos" => github_list_repos(state, org_id, args).await,
+            "github_create_issue" => github_create_issue(state, org_id, args).await,
+            other => Err(ApiError::not_found(format!("unknown github app tool `{other}`"))),
+        },
+        AppProviderKind::Linear => match tool_name {
+            "linear_list_teams" => linear_list_teams(state, org_id, args).await,
+            "linear_create_issue" => linear_create_issue(state, org_id, args).await,
+            other => Err(ApiError::not_found(format!("unknown linear app tool `{other}`"))),
+        },
+        AppProviderKind::Slack => match tool_name {
+            "slack_list_channels" => slack_list_channels(state, org_id, args).await,
+            "slack_post_message" => slack_post_message(state, org_id, args).await,
+            other => Err(ApiError::not_found(format!("unknown slack app tool `{other}`"))),
+        },
+        AppProviderKind::Notion => match tool_name {
+            "notion_search_pages" => notion_search_pages(state, org_id, args).await,
+            "notion_create_page" => notion_create_page(state, org_id, args).await,
+            other => Err(ApiError::not_found(format!("unknown notion app tool `{other}`"))),
+        },
+    }
 }
 
 async fn list_org_integrations(
@@ -580,4 +684,62 @@ fn notion_page_title(page: &Value) -> String {
             })
         })
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{app_provider_contract_by_tool, app_provider_contracts, app_tool_manifest_entries};
+    use std::collections::{HashMap, HashSet};
+
+    #[test]
+    fn shared_app_tool_manifest_matches_provider_registry() {
+        let manifest_entries = app_tool_manifest_entries();
+        assert!(manifest_entries
+            .iter()
+            .all(|entry| !entry.prompt_signature.trim().is_empty()));
+        let manifest_by_provider = manifest_entries.iter().fold(
+            HashMap::<&str, HashSet<&str>>::new(),
+            |mut acc, entry| {
+                if let Some(provider) = entry.provider.as_deref() {
+                    acc.entry(provider).or_default().insert(entry.name.as_str());
+                }
+                acc
+            },
+        );
+
+        for contract in app_provider_contracts() {
+            let expected = contract.tool_names.iter().copied().collect::<HashSet<_>>();
+            let actual = manifest_by_provider
+                .get(contract.kind.provider_id())
+                .cloned()
+                .unwrap_or_default();
+            assert_eq!(
+                actual, expected,
+                "shared app manifest drifted from the {} provider contract",
+                contract.kind.provider_id()
+            );
+        }
+
+        let registered_tools = app_provider_contracts()
+            .iter()
+            .flat_map(|contract| contract.tool_names.iter().copied())
+            .collect::<HashSet<_>>();
+        let manifest_tools = manifest_entries
+            .iter()
+            .filter_map(|entry| entry.provider.as_deref().map(|_| entry.name.as_str()))
+            .collect::<HashSet<_>>();
+        assert_eq!(manifest_tools, registered_tools);
+    }
+
+    #[test]
+    fn app_tool_lookup_uses_registered_provider_contracts() {
+        let github = app_provider_contract_by_tool("github_create_issue").expect("github tool");
+        assert_eq!(github.kind.provider_id(), "github");
+
+        let linear = app_provider_contract_by_tool("linear_list_teams").expect("linear tool");
+        assert_eq!(linear.kind.provider_id(), "linear");
+
+        assert!(app_provider_contract_by_tool("list_org_integrations").is_none());
+        assert!(app_provider_contract_by_tool("missing_tool").is_none());
+    }
 }

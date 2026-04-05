@@ -34,14 +34,14 @@ Today, Aura OS already has:
 - workspace-level provider records
 - workspace-level external integration records
 - Aura-native project tools for specs, tasks, project state, and loop control
+- first-class app tools for GitHub, Linear, Slack, and Notion through a shared manifest and server-side app provider layer
 - MCP-based control-plane bridging for supported runtimes
 
 What is still incomplete is the unification layer.
 
 Right now, the main gaps are:
-- the product vocabulary is not fully settled in the UI
-- external integrations are not yet consistently framed as tool sources
-- the system does not yet have one unified internal tool registry
+- the system still has a split between static registered tools and dynamic MCP tools
+- app providers and MCP servers still need to converge into one internal registry shape
 - active-tool selection still needs to become a first-class concept
 
 This document is the plan for cleaning that up without discarding the good parts we already built.
@@ -229,6 +229,26 @@ Why:
 - it lets one external capability surface work across multiple adapters
 - it keeps Aura OS focused on control-plane concerns
 
+### App-Provider Tools
+
+These are first-class app integrations that register curated tools into Aura's shared tool surface.
+
+Examples:
+- `GitHub`
+- `Linear`
+- `Slack`
+- `Notion`
+
+This is the path for external systems we want to support as first-class product capabilities.
+
+The contract should be:
+- each app provider declares which tools it contributes
+- those tools are represented in the shared tool manifest
+- Aura OS dispatches them through a provider registry rather than ad hoc branching
+- agents and Aura OS see the same registered tool metadata
+
+This is closer to the Paperclip-style provider/plugin contract than to a pile of one-off handlers.
+
 ### Future Plugin-Backed Tools
 
 Later, Aura OS may support host-native plugin-contributed tools.
@@ -276,8 +296,8 @@ The useful lesson for Aura OS is:
 - but MCP is still a valid and practical first-class source of tools
 
 So our phased direction should be:
-- V1: Aura-native tools + MCP-backed external tools
-- V2: unified tool registry that can register both
+- V1: Aura-native tools + first-class app-provider tools + MCP-backed external tools
+- V2: unified tool registry that can register all three
 - V3: optional plugin host if we need first-class host-native extensions
 
 ## V1
@@ -290,14 +310,16 @@ Ship a clean, understandable system that works now without overbuilding.
 
 In V1:
 - Aura-native tools remain the source of truth for Aura domain actions
-- external workspace capabilities are exposed primarily through MCP
+- first-class app providers can register curated app tools into the shared surface
+- MCP remains the dynamic external tool path
 - adapters consume the same active tool surface
 - Aura OS can also invoke the same tool surface where needed
 
 ### V1 Tool Sources
 
-V1 should support two sources only:
+V1 should support three sources:
 - `aura_native`
+- `app_provider`
 - `mcp`
 
 That is enough to build a coherent system without introducing plugin-host complexity yet.
@@ -306,6 +328,7 @@ That is enough to build a coherent system without introducing plugin-host comple
 
 Aura OS should do:
 - register Aura-native tools
+- register app-provider tools from first-class app contracts
 - discover MCP tools from connected sources
 - normalize tool metadata
 - decide which tools are active for a workspace, project, or agent
@@ -368,7 +391,9 @@ Apps like:
 - `GitHub`
 - `Notion`
 
-should contribute tools through MCP rather than through many bespoke Aura-native wrappers.
+can contribute tools in two ways:
+- as first-class app-provider tools when Aura wants a curated, stable product surface
+- as MCP-backed tools when the app already exposes a useful tool server or when we want dynamic capability import
 
 #### 4. Shared tool visibility
 
@@ -425,6 +450,7 @@ In V2, Aura OS should have a unified internal tool registry that:
 
 The registry should support at least:
 - `aura_native`
+- `app_provider`
 - `mcp`
 
 And be designed so we can later add:
@@ -563,14 +589,21 @@ The next implementation steps should follow this order:
 - `aura_native`
 - `mcp`
 
-3. build the active-tool filtering model
+3. formalize the first-class app provider contract
+- GitHub
+- Linear
+- Slack
+- Notion
+- shared manifest parity
+
+4. build the active-tool filtering model
 - registered tools vs active tools
 
-4. keep Aura-native ownership for Aura domain tools
+5. keep Aura-native ownership for Aura domain tools
 
-5. expose external workspace capabilities through MCP first
+6. expose external workspace capabilities through MCP first where dynamic discovery is the better fit
 
-6. design the V2 unified registry once V1 is working well
+7. design the V2 unified registry once V1 is working well
 
 ## Non-Goals For V1
 
@@ -588,7 +621,8 @@ The correct near-term system is:
 - Apps connect external systems
 - Workspace Tools are the action surface
 - Aura-native tools own Aura's domain
-- MCP-backed tools are the preferred external integration path
+- first-class app-provider tools give us a curated product surface for key apps
+- MCP-backed tools give us the dynamic external integration path
 - only a filtered active subset should be exposed per session
 
 The correct long-term system is:

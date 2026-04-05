@@ -12,7 +12,7 @@ use crate::state::AppState;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum WorkspaceToolSourceKind {
     AuraNative,
-    Plugin,
+    AppProvider,
     Mcp,
 }
 
@@ -92,9 +92,9 @@ pub(crate) fn shared_workspace_tools() -> &'static [WorkspaceToolDefinition] {
                 env!("CARGO_MANIFEST_DIR"),
                 "/../../shared/org-integration-tools.json"
             )),
-            "builtin plugin",
-            WorkspaceToolSourceKind::Plugin,
-            "builtin_workspace_integrations",
+            "app provider",
+            WorkspaceToolSourceKind::AppProvider,
+            "builtin_app_providers",
         ));
         tools
     })
