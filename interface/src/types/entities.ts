@@ -507,6 +507,7 @@ export interface ProcessRun {
   total_input_tokens?: number;
   total_output_tokens?: number;
   cost_usd?: number;
+  output?: string | null;
 }
 
 export interface ProcessEventContentBlock {

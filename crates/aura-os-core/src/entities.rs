@@ -703,6 +703,10 @@ pub struct ProcessRun {
     pub total_output_tokens: Option<u64>,
     #[serde(default)]
     pub cost_usd: Option<f64>,
+    /// Canonical output of the run: the downstream_output of the terminal
+    /// (leaf) node(s). Present only after a successful completion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

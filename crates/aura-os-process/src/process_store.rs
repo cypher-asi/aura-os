@@ -288,6 +288,11 @@ impl ProcessStore {
         Ok(())
     }
 
+    /// Overwrite an existing event in-place (same key derivation as save_event).
+    pub fn update_event(&self, event: &ProcessEvent) -> Result<(), ProcessError> {
+        self.save_event(event)
+    }
+
     // -- Artifacts -----------------------------------------------------------
 
     pub fn save_artifact(&self, artifact: &ProcessArtifact) -> Result<(), ProcessError> {

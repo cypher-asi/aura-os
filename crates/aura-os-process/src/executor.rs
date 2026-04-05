@@ -33,9 +33,25 @@ struct NodeTokenUsage {
 }
 
 struct NodeResult {
-    output: String,
+    /// Canonical output passed to downstream nodes via `node_outputs`.
+    downstream_output: String,
+    /// Human-readable summary for the persisted ProcessEvent. When `None` the
+    /// `downstream_output` is used as the event display text.
+    display_output: Option<String>,
     token_usage: Option<NodeTokenUsage>,
     content_blocks: Option<Vec<serde_json::Value>>,
+}
+
+/// Shared output-extraction pipeline applied to every LLM-backed node.
+/// Strips `<thinking>` tags and trims whitespace. When `extract_code_block`
+/// is true (artifact nodes), also unwraps a trailing fenced code block.
+fn canonicalize_output(raw: &str, extract_code_block: bool) -> String {
+    let cleaned = strip_thinking_tags(raw.trim());
+    if extract_code_block {
+        extract_final_output(&cleaned)
+    } else {
+        cleaned
+    }
 }
 
 struct DeltaForwarder<'a> {
@@ -103,29 +119,33 @@ fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
 
 const PROCESS_EXECUTION_PREAMBLE: &str = "\
 You are executing a step in an automated workflow process. \
-CRITICAL: Your final text response is the ONLY data passed to downstream nodes. \
-Tool outputs and file writes do NOT flow downstream — only your text does. \
-After using tools, you MUST repeat all collected data in your final text response. \
 Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
 Never describe your process — just output the finished product as text.\n\n\
-NEVER use write_file to produce your final output. Data inside write_file tool \
-inputs is invisible to downstream nodes. Always emit your result as plain text in \
-your assistant message. If your output is large (JSON, reports, etc.), output it \
-directly as text — do NOT try to save it to a file.\n\n\
 TOOL-FAILURE RULE: If the majority of your tool calls fail or return errors, \
 STOP immediately and output a structured error report listing each failed tool call, \
 the error, and what data is missing. Do NOT fabricate results, echo back your search \
 queries, or produce placeholder output. Downstream nodes depend on real data — passing \
 garbage forward is worse than reporting an honest failure.";
 
-fn output_file_addendum(output_file: &str) -> String {
-    format!(
-        "\n\nOUTPUT FILE: Write your results to `{output_file}` in the working directory. \
-         You may write incrementally as you collect data. This file is automatically \
-         read after your session ends and passed to downstream nodes. You do NOT need \
-         to repeat its contents in your text response. Write each result to disk as \
-         you go so partial progress survives timeouts."
-    )
+const PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE: &str = "\
+You are executing a step in an automated workflow process. \
+Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
+Never describe your process — just output the finished product as text.\n\n\
+OUTPUT FILE: A designated output file is available in your working directory. \
+Write your results there incrementally as you collect data. This file is \
+automatically read after your session ends and becomes the canonical output \
+passed to downstream nodes. You do NOT need to repeat its contents in your \
+text response. Write each result to disk as you go so partial progress \
+survives timeouts. If you cannot write the file, emit your result as plain \
+text in your assistant message instead — that is used as a fallback.\n\n\
+TOOL-FAILURE RULE: If the majority of your tool calls fail or return errors, \
+STOP immediately and output a structured error report listing each failed tool call, \
+the error, and what data is missing. Do NOT fabricate results, echo back your search \
+queries, or produce placeholder output. Downstream nodes depend on real data — passing \
+garbage forward is worse than reporting an honest failure.";
+
+fn action_preamble(output_file: &str) -> String {
+    format!("{PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE}\n\nYour output file is: `{output_file}`")
 }
 
 pub struct ProcessExecutor {
@@ -225,6 +245,7 @@ impl ProcessExecutor {
             total_input_tokens: None,
             total_output_tokens: None,
             cost_usd: None,
+            output: None,
         };
         self.store.save_run(&run)?;
 
@@ -401,7 +422,8 @@ async fn execute_run(
 
         // Nodes with upstream dependencies but no valid completed parent → skip
         if !incoming.is_empty() && !has_valid_upstream {
-            record_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", None, None, None, None);
+            let now = Utc::now();
+            record_terminal_event(store, broadcast, run, node, ProcessEventStatus::Skipped, "", "", now, now);
             continue;
         }
 
@@ -430,26 +452,25 @@ async fn execute_run(
 
         // ── persist + broadcast running status ───────────────────────────
         let node_started_at = Utc::now();
-        let running_event_id = record_event(
-            store, broadcast, run, node,
-            ProcessEventStatus::Running,
-            &upstream_context, "",
-            Some(node_started_at), None,
-            None, None,
+        let mut running_event = start_event(
+            store, broadcast, run, node, &upstream_context, node_started_at,
         );
 
         // ── check for pinned output (skip execution) ──────────────────
         if let Some(pinned) = node.config.get("pinned_output").and_then(|v| v.as_str()) {
-            if let Some(ref rid) = running_event_id {
-                let _ = store.delete_event(rid);
+            if let Some(ref mut evt) = running_event {
+                complete_event(
+                    store, broadcast, run, node, evt,
+                    ProcessEventStatus::Completed, pinned, Utc::now(),
+                    None, None,
+                );
+            } else {
+                record_terminal_event(
+                    store, broadcast, run, node,
+                    ProcessEventStatus::Completed, &upstream_context, pinned,
+                    node_started_at, Utc::now(),
+                );
             }
-            record_event(
-                store, broadcast, run, node,
-                ProcessEventStatus::Completed,
-                &upstream_context, pinned,
-                Some(node_started_at), Some(Utc::now()),
-                None, None,
-            );
             node_outputs.insert(node_id, pinned.to_string());
 
             let _ = broadcast.send(serde_json::json!({
@@ -471,32 +492,37 @@ async fn execute_run(
             node_id,
         };
         let result: Result<NodeResult, ProcessError> = match node.node_type {
-            ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult { output: s, token_usage: None, content_blocks: None }),
+            ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult {
+                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
+            }),
             ProcessNodeType::Action => {
                 execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
             }
             ProcessNodeType::Condition => {
                 execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
             }
-            ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult { output: s, token_usage: None, content_blocks: None }),
+            ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
+                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
+            }),
             ProcessNodeType::Artifact => {
                 execute_artifact(
-                    node,
-                    &upstream_context,
-                    &run.process_id,
-                    &run.run_id,
-                    data_dir,
-                    store,
-                    harness,
-                    jwt.as_deref(),
-                    agent_service,
-                    org_service,
-                    Some(&fwd),
-                    Some(&workspace_path),
-                )
-                .await
+                    node, &upstream_context, &run.process_id, &run.run_id,
+                    data_dir, store, harness, jwt.as_deref(),
+                    agent_service, org_service, Some(&fwd), Some(&workspace_path),
+                ).await
             }
-            ProcessNodeType::Merge => Ok(NodeResult { output: upstream_context.clone(), token_usage: None, content_blocks: None }),
+            ProcessNodeType::Merge => {
+                let display = format!(
+                    "Merged {} upstream output(s) ({} bytes)",
+                    incoming.len(), upstream_context.len(),
+                );
+                Ok(NodeResult {
+                    downstream_output: upstream_context.clone(),
+                    display_output: Some(display),
+                    token_usage: None,
+                    content_blocks: None,
+                })
+            }
         };
 
         let node_completed_at = Utc::now();
@@ -504,7 +530,7 @@ async fn execute_run(
         match result {
             Ok(node_result) => {
                 if node.node_type == ProcessNodeType::Condition {
-                    condition_results.insert(node_id, parse_condition_result(&node_result.output));
+                    condition_results.insert(node_id, parse_condition_result(&node_result.downstream_output));
                 }
 
                 if let Some(ref usage) = node_result.token_usage {
@@ -512,55 +538,28 @@ async fn execute_run(
                     run_output_tokens += usage.output_tokens;
                 }
 
-                let event_output = match node.node_type {
-                    ProcessNodeType::Merge => {
-                        format!("Merged {} upstream output(s) ({} bytes)", incoming.len(), node_result.output.len())
-                    }
-                    ProcessNodeType::Artifact => {
-                        let name = node.config.get("artifact_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or(&node.label);
-                        format!("Artifact saved: {} ({} bytes)", name, node_result.output.len())
-                    }
-                    _ => node_result.output.clone(),
-                };
+                let event_output = node_result.display_output.as_deref()
+                    .unwrap_or(&node_result.downstream_output);
 
-                if let Some(ref rid) = running_event_id {
-                    let _ = store.delete_event(rid);
+                if let Some(ref mut evt) = running_event {
+                    complete_event(
+                        store, broadcast, run, node, evt,
+                        ProcessEventStatus::Completed, event_output, node_completed_at,
+                        node_result.token_usage.as_ref(),
+                        node_result.content_blocks.as_deref(),
+                    );
                 }
-                record_event(
-                    store,
-                    broadcast,
-                    run,
-                    node,
-                    ProcessEventStatus::Completed,
-                    &upstream_context,
-                    &event_output,
-                    Some(node_started_at),
-                    Some(node_completed_at),
-                    node_result.token_usage.as_ref(),
-                    node_result.content_blocks.as_deref(),
-                );
-                node_outputs.insert(node_id, node_result.output);
+                node_outputs.insert(node_id, node_result.downstream_output);
             }
             Err(e) => {
                 let err_msg = e.to_string();
-                if let Some(ref rid) = running_event_id {
-                    let _ = store.delete_event(rid);
+                if let Some(ref mut evt) = running_event {
+                    complete_event(
+                        store, broadcast, run, node, evt,
+                        ProcessEventStatus::Failed, &err_msg, node_completed_at,
+                        None, None,
+                    );
                 }
-                record_event(
-                    store,
-                    broadcast,
-                    run,
-                    node,
-                    ProcessEventStatus::Failed,
-                    &upstream_context,
-                    &err_msg,
-                    Some(node_started_at),
-                    Some(node_completed_at),
-                    None,
-                    None,
-                );
 
                 current_run.status = ProcessRunStatus::Failed;
                 current_run.error = Some(err_msg);
@@ -585,11 +584,32 @@ async fn execute_run(
         }
     }
 
+    // Determine canonical run output from terminal (leaf) nodes — those with
+    // no outgoing edges in the graph.
+    let nodes_with_outgoing: std::collections::HashSet<ProcessNodeId> = connections
+        .iter()
+        .map(|c| c.source_node_id)
+        .collect();
+    let terminal_outputs: Vec<&str> = sorted
+        .iter()
+        .filter(|id| !nodes_with_outgoing.contains(id))
+        .filter_map(|id| node_outputs.get(id).map(|s| s.as_str()))
+        .collect();
+
+    let run_output = if terminal_outputs.len() == 1 {
+        Some(terminal_outputs[0].to_string())
+    } else if terminal_outputs.len() > 1 {
+        Some(terminal_outputs.join("\n\n---\n\n"))
+    } else {
+        None
+    };
+
     current_run.status = ProcessRunStatus::Completed;
     current_run.completed_at = Some(Utc::now());
     current_run.total_input_tokens = Some(run_input_tokens);
     current_run.total_output_tokens = Some(run_output_tokens);
     current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
+    current_run.output = run_output;
     store.save_run(&current_run)?;
 
     let _ = broadcast.send(serde_json::json!({
@@ -769,6 +789,56 @@ fn build_session_config(
 }
 
 // ---------------------------------------------------------------------------
+// Shared harness session helper
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+async fn run_harness_session(
+    node: &ProcessNode,
+    prompt: String,
+    system_prompt_override: Option<String>,
+    harness: &dyn HarnessLink,
+    token: Option<&str>,
+    agent_service: &AgentService,
+    org_service: &OrgService,
+    forwarder: Option<&DeltaForwarder<'_>>,
+    project_path: Option<&str>,
+    timeout_secs: u64,
+) -> Result<(HarnessResponse, Option<NodeTokenUsage>), ProcessError> {
+    let config = build_session_config(
+        node, token, agent_service, org_service, system_prompt_override, project_path,
+    );
+
+    let session = harness
+        .open_session(config)
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Failed to open harness session: {e}")))?;
+
+    session
+        .commands_tx
+        .send(HarnessInbound::UserMessage(UserMessage {
+            content: prompt,
+            tool_hints: None,
+            attachments: None,
+        }))
+        .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
+
+    let resp = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
+
+    if let Err(e) = harness.close_session(&session.session_id).await {
+        warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
+    }
+
+    let token_usage = resp.usage.as_ref().map(|u| NodeTokenUsage {
+        input_tokens: u.cumulative_input_tokens,
+        output_tokens: u.cumulative_output_tokens,
+        model: Some(u.model.clone()),
+    });
+
+    Ok((resp, token_usage))
+}
+
+// ---------------------------------------------------------------------------
 // Per-node execution
 // ---------------------------------------------------------------------------
 
@@ -812,17 +882,6 @@ async fn execute_action(
         .map(|s| s.to_string())
         .unwrap_or_else(|| "output.txt".to_string());
 
-    let mut config = build_session_config(node, token, agent_service, org_service, None, project_path);
-
-    if let Some(ref mut sp) = config.system_prompt {
-        sp.push_str(&output_file_addendum(&output_file));
-    }
-
-    let session = harness
-        .open_session(config)
-        .await
-        .map_err(|e| ProcessError::Execution(format!("Failed to open harness session: {e}")))?;
-
     let full_prompt = if upstream_context.is_empty() {
         node.prompt.clone()
     } else {
@@ -832,22 +891,13 @@ async fn execute_action(
         )
     };
 
-    session
-        .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: full_prompt,
-            tool_hints: None,
-            attachments: None,
-        }))
-        .map_err(|e| ProcessError::Execution(format!("Failed to send message: {e}")))?;
+    let (resp, token_usage) = run_harness_session(
+        node, full_prompt,
+        Some(action_preamble(&output_file)),
+        harness, token, agent_service, org_service, forwarder, project_path,
+        timeout_secs,
+    ).await?;
 
-    let resp = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
-
-    if let Err(e) = harness.close_session(&session.session_id).await {
-        warn!(session_id = %session.session_id, error = %e, "Failed to close harness session");
-    }
-
-    // --- determine downstream output ---
     let file_content = {
         let path = Path::new(project_path.unwrap_or(".")).join(&output_file);
         match tokio::fs::read_to_string(&path).await {
@@ -860,12 +910,12 @@ async fn execute_action(
         }
     };
 
-    let final_text = strip_thinking_tags(resp.final_text.trim());
+    let text_output = canonicalize_output(&resp.final_text, false);
 
     let output = if let Some(fc) = file_content {
         fc
-    } else if !final_text.is_empty() {
-        final_text
+    } else if !text_output.is_empty() {
+        text_output
     } else {
         return Err(ProcessError::Execution(
             "Action node produced no output: the designated output file is \
@@ -875,14 +925,9 @@ async fn execute_action(
         ));
     };
 
-    let token_usage = resp.usage.map(|u| NodeTokenUsage {
-        input_tokens: u.cumulative_input_tokens,
-        output_tokens: u.cumulative_output_tokens,
-        model: Some(u.model),
-    });
-
     Ok(NodeResult {
-        output,
+        downstream_output: output,
+        display_output: None,
         token_usage,
         content_blocks: Some(resp.content_blocks),
     })
@@ -915,36 +960,17 @@ async fn execute_condition(
          Respond with ONLY the word \"true\" or \"false\". Do not use tools."
             .to_string(),
     );
-    let config = build_session_config(node, token, agent_service, org_service, condition_system, project_path);
 
-    let session = harness
-        .open_session(config)
-        .await
-        .map_err(|e| ProcessError::Execution(format!("Failed to open condition session: {e}")))?;
-
-    session
-        .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: evaluation_prompt,
-            tool_hints: None,
-            attachments: None,
-        }))
-        .map_err(|e| ProcessError::Execution(format!("Failed to send condition message: {e}")))?;
-
-    let resp = collect_harness_response(&session.events_tx, 60, forwarder).await?;
-
-    if let Err(e) = harness.close_session(&session.session_id).await {
-        warn!(session_id = %session.session_id, error = %e, "Failed to close condition session");
-    }
-
-    let token_usage = resp.usage.map(|u| NodeTokenUsage {
-        input_tokens: u.cumulative_input_tokens,
-        output_tokens: u.cumulative_output_tokens,
-        model: Some(u.model),
-    });
+    let (resp, token_usage) = run_harness_session(
+        node, evaluation_prompt,
+        condition_system,
+        harness, token, agent_service, org_service, forwarder, project_path,
+        60,
+    ).await?;
 
     Ok(NodeResult {
-        output: resp.final_text,
+        downstream_output: canonicalize_output(&resp.final_text, false),
+        display_output: None,
         token_usage,
         content_blocks: Some(resp.content_blocks),
     })
@@ -1089,53 +1115,19 @@ async fn execute_artifact(
         .and_then(|v| v.as_u64())
         .unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
 
-    let mut session_config = build_session_config(
-        node,
-        token,
-        agent_service,
-        org_service,
+    let (resp, token_usage) = run_harness_session(
+        node, user_message,
         Some(preamble.to_string()),
-        project_path,
-    );
-    let artifact_max_turns = cfg
-        .get("max_turns")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u32)
-        .unwrap_or(3);
-    session_config.max_turns = Some(artifact_max_turns);
+        harness, token, agent_service, org_service, forwarder, project_path,
+        timeout_secs,
+    ).await?;
 
-    let session = harness
-        .open_session(session_config)
-        .await
-        .map_err(|e| ProcessError::Execution(format!("Failed to open artifact harness session: {e}")))?;
-
-    session
-        .commands_tx
-        .send(HarnessInbound::UserMessage(UserMessage {
-            content: user_message,
-            tool_hints: None,
-            attachments: None,
-        }))
-        .map_err(|e| ProcessError::Execution(format!("Failed to send artifact message: {e}")))?;
-
-    let resp = collect_harness_response(&session.events_tx, timeout_secs, forwarder).await?;
-
-    if let Err(e) = harness.close_session(&session.session_id).await {
-        warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
-    }
-
-    let content = extract_final_output(&strip_thinking_tags(&resp.final_text));
+    let content = canonicalize_output(&resp.final_text, true);
     if content.is_empty() {
         return Err(ProcessError::Execution(
             "Artifact node produced empty output from harness".into(),
         ));
     }
-    let token_usage = resp.usage.map(|u| NodeTokenUsage {
-        input_tokens: u.cumulative_input_tokens,
-        output_tokens: u.cumulative_output_tokens,
-        model: Some(u.model),
-    });
-    let blocks = Some(resp.content_blocks);
 
     let file_path = dir.join(&filename);
     tokio::fs::write(&file_path, content.as_bytes())
@@ -1164,10 +1156,13 @@ async fn execute_artifact(
         "Artifact saved"
     );
 
+    let display = format!("Artifact saved: {} ({} bytes)", artifact_name, content.len());
+
     Ok(NodeResult {
-        output: content,
+        downstream_output: content,
+        display_output: Some(display),
         token_usage,
-        content_blocks: blocks,
+        content_blocks: Some(resp.content_blocks),
     })
 }
 
@@ -1178,9 +1173,6 @@ async fn execute_artifact(
 struct HarnessResponse {
     /// Text from the model's final turn only (after the last tool result).
     final_text: String,
-    /// All text concatenated across every turn (fallback).
-    #[allow(dead_code)]
-    full_text: String,
     /// Structured content blocks mirroring the agents-app conversation format.
     content_blocks: Vec<serde_json::Value>,
     usage: Option<SessionUsage>,
@@ -1197,7 +1189,7 @@ async fn collect_harness_response(
     forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<HarnessResponse, ProcessError> {
     let mut rx = events_tx.subscribe();
-    let mut full_text = String::new();
+    let mut all_text = String::new();
     let mut last_turn_text = String::new();
     let mut text_segment = String::new();
     let mut thinking_buf = String::new();
@@ -1215,7 +1207,7 @@ async fn collect_harness_response(
                     if let Some(fwd) = forwarder {
                         fwd.forward_text(&delta.text);
                     }
-                    full_text.push_str(&delta.text);
+                    all_text.push_str(&delta.text);
                     text_segment.push_str(&delta.text);
                     if !in_tool_call {
                         last_turn_text.push_str(&delta.text);
@@ -1288,13 +1280,13 @@ async fn collect_harness_response(
                     )));
                 }
                 Err(broadcast::error::RecvError::Closed) => {
-                    if full_text.is_empty() {
+                    if all_text.is_empty() {
                         return Err(ProcessError::Execution(
                             "Harness connection closed before producing any output".into(),
                         ));
                     }
                     warn!(
-                        bytes = full_text.len(),
+                        bytes = all_text.len(),
                         "Harness connection closed before AssistantMessageEnd; returning partial output"
                     );
                     break;
@@ -1313,13 +1305,13 @@ async fn collect_harness_response(
         Ok(Ok(())) => {}
         Ok(Err(e)) => return Err(e),
         Err(_) => {
-            if full_text.is_empty() {
+            if all_text.is_empty() {
                 return Err(ProcessError::Execution(format!(
                     "Harness timed out after {timeout_secs}s without producing output"
                 )));
             }
             warn!(
-                bytes = full_text.len(),
+                bytes = all_text.len(),
                 timeout_secs,
                 "Harness timed out; returning partial output"
             );
@@ -1340,12 +1332,11 @@ async fn collect_harness_response(
     let final_text = if had_tool_calls && !last_turn_text.trim().is_empty() {
         last_turn_text
     } else {
-        full_text.clone()
+        all_text
     };
 
     Ok(HarnessResponse {
         final_text,
-        full_text,
         content_blocks,
         usage,
     })
@@ -1391,7 +1382,7 @@ fn extract_final_output(raw: &str) -> String {
 
 fn parse_condition_result(output: &str) -> bool {
     let normalized = output.trim().to_lowercase();
-    normalized.contains("true") && !normalized.contains("false")
+    normalized == "true"
 }
 
 async fn resolve_artifact_ref(
@@ -1429,35 +1420,30 @@ async fn resolve_artifact_ref(
     tokio::fs::read_to_string(&file_path).await.ok()
 }
 
-fn record_event(
+/// Create a new "running" event and persist + broadcast it. Returns the event
+/// so callers can later complete it via `complete_event`.
+fn start_event(
     store: &ProcessStore,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
-    status: ProcessEventStatus,
     input: &str,
-    output: &str,
-    started_at: Option<DateTime<Utc>>,
-    completed_at: Option<DateTime<Utc>>,
-    token_usage: Option<&NodeTokenUsage>,
-    content_blocks: Option<&[serde_json::Value]>,
-) -> Option<ProcessEventId> {
-    let now = Utc::now();
-    let event_id = ProcessEventId::new();
+    started_at: DateTime<Utc>,
+) -> Option<ProcessEvent> {
     let event = ProcessEvent {
-        event_id,
+        event_id: ProcessEventId::new(),
         run_id: run.run_id,
         node_id: node.node_id,
         process_id: run.process_id,
-        status,
+        status: ProcessEventStatus::Running,
         input_snapshot: input.to_string(),
-        output: output.to_string(),
-        started_at: started_at.unwrap_or(now),
-        completed_at: if status == ProcessEventStatus::Running { None } else { Some(completed_at.unwrap_or(now)) },
-        input_tokens: token_usage.map(|u| u.input_tokens),
-        output_tokens: token_usage.map(|u| u.output_tokens),
-        model: token_usage.and_then(|u| u.model.clone()),
-        content_blocks: content_blocks.map(|b| b.to_vec()),
+        output: String::new(),
+        started_at,
+        completed_at: None,
+        input_tokens: None,
+        output_tokens: None,
+        model: None,
+        content_blocks: None,
     };
 
     if let Err(e) = store.save_event(&event) {
@@ -1465,6 +1451,81 @@ fn record_event(
         return None;
     }
 
+    broadcast_node_status(broadcast, run, node, ProcessEventStatus::Running, None);
+    Some(event)
+}
+
+/// Update an existing event to a terminal status (completed / failed / skipped)
+/// and persist + broadcast the change.
+fn complete_event(
+    store: &ProcessStore,
+    broadcast: &broadcast::Sender<serde_json::Value>,
+    run: &ProcessRun,
+    node: &ProcessNode,
+    event: &mut ProcessEvent,
+    status: ProcessEventStatus,
+    output: &str,
+    completed_at: DateTime<Utc>,
+    token_usage: Option<&NodeTokenUsage>,
+    content_blocks: Option<&[serde_json::Value]>,
+) {
+    event.status = status;
+    event.output = output.to_string();
+    event.completed_at = Some(completed_at);
+    event.input_tokens = token_usage.map(|u| u.input_tokens);
+    event.output_tokens = token_usage.map(|u| u.output_tokens);
+    event.model = token_usage.and_then(|u| u.model.clone());
+    event.content_blocks = content_blocks.map(|b| b.to_vec());
+
+    if let Err(e) = store.update_event(event) {
+        warn!(event_id = %event.event_id, error = %e, "Failed to update process event");
+    }
+
+    broadcast_node_status(broadcast, run, node, status, token_usage);
+}
+
+/// Shortcut for events that need no running phase (skipped nodes, pinned output).
+fn record_terminal_event(
+    store: &ProcessStore,
+    broadcast: &broadcast::Sender<serde_json::Value>,
+    run: &ProcessRun,
+    node: &ProcessNode,
+    status: ProcessEventStatus,
+    input: &str,
+    output: &str,
+    started_at: DateTime<Utc>,
+    completed_at: DateTime<Utc>,
+) {
+    let event = ProcessEvent {
+        event_id: ProcessEventId::new(),
+        run_id: run.run_id,
+        node_id: node.node_id,
+        process_id: run.process_id,
+        status,
+        input_snapshot: input.to_string(),
+        output: output.to_string(),
+        started_at,
+        completed_at: Some(completed_at),
+        input_tokens: None,
+        output_tokens: None,
+        model: None,
+        content_blocks: None,
+    };
+
+    if let Err(e) = store.save_event(&event) {
+        warn!(event_id = %event.event_id, error = %e, "Failed to save process event");
+    }
+
+    broadcast_node_status(broadcast, run, node, status, None);
+}
+
+fn broadcast_node_status(
+    broadcast: &broadcast::Sender<serde_json::Value>,
+    run: &ProcessRun,
+    node: &ProcessNode,
+    status: ProcessEventStatus,
+    token_usage: Option<&NodeTokenUsage>,
+) {
     let mut payload = serde_json::json!({
         "type": "process_node_executed",
         "process_id": run.process_id.to_string(),
@@ -1481,5 +1542,4 @@ fn record_event(
         }
     }
     let _ = broadcast.send(payload);
-    Some(event_id)
 }
