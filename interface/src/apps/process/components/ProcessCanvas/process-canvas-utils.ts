@@ -28,6 +28,7 @@ export const ADD_NODE_TYPES: { type: ProcessNodeType; label: string }[] = [
   { type: "action", label: "Action" },
   { type: "condition", label: "Condition" },
   { type: "artifact", label: "Artifact" },
+  { type: "prompt", label: "Prompt" },
   { type: "delay", label: "Delay" },
   { type: "merge", label: "Merge" },
 ];

@@ -51,6 +51,7 @@ const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   artifact: "Artifact",
   delay: "Delay",
   merge: "Merge",
+  prompt: "Prompt",
 };
 
 interface NodeConfigTabProps {
@@ -90,7 +91,7 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             </div>
           )}
 
-          {(node.node_type === "action" || node.node_type === "ignition") && (
+          {(node.node_type === "action" || node.node_type === "ignition" || node.node_type === "prompt") && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Agent</span>
               <Text variant="secondary" size="sm">{agentName}</Text>

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -142,7 +142,12 @@ each failed tool call, the error, and what data is missing. Do NOT fabricate \
 results or produce placeholder output.";
 
 fn action_preamble(output_file: &str) -> String {
-    format!("{PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE}\n\nYour output file is: `{output_file}`")
+    let now = Utc::now();
+    format!(
+        "{PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE}\n\n\
+         Current UTC date/time: {now}\n\
+         Your output file is: `{output_file}`"
+    )
 }
 
 pub struct ProcessExecutor {
@@ -343,6 +348,45 @@ fn topological_sort(
 }
 
 // ---------------------------------------------------------------------------
+// Reachability from Ignition nodes
+// ---------------------------------------------------------------------------
+
+fn reachable_from_ignition(
+    nodes: &[ProcessNode],
+    connections: &[aura_os_core::ProcessNodeConnection],
+) -> HashSet<ProcessNodeId> {
+    let mut adjacency: HashMap<ProcessNodeId, Vec<ProcessNodeId>> = HashMap::new();
+    for conn in connections {
+        adjacency
+            .entry(conn.source_node_id)
+            .or_default()
+            .push(conn.target_node_id);
+    }
+
+    let mut visited = HashSet::new();
+    let mut queue: VecDeque<ProcessNodeId> = nodes
+        .iter()
+        .filter(|n| n.node_type == ProcessNodeType::Ignition)
+        .map(|n| n.node_id)
+        .collect();
+
+    while let Some(id) = queue.pop_front() {
+        if !visited.insert(id) {
+            continue;
+        }
+        if let Some(neighbors) = adjacency.get(&id) {
+            for &neighbor in neighbors {
+                if !visited.contains(&neighbor) {
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+    }
+
+    visited
+}
+
+// ---------------------------------------------------------------------------
 // Run execution
 // ---------------------------------------------------------------------------
 
@@ -365,6 +409,11 @@ async fn execute_run(
     let connections = store.list_connections(&run.process_id)?;
 
     let sorted = topological_sort(&nodes, &connections)?;
+    let reachable = reachable_from_ignition(&nodes, &connections);
+    let sorted: Vec<ProcessNodeId> = sorted
+        .into_iter()
+        .filter(|id| reachable.contains(id))
+        .collect();
     let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
         nodes.iter().map(|n| (n.node_id, n)).collect();
 
@@ -493,7 +542,7 @@ async fn execute_run(
                 downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
             }),
             ProcessNodeType::Action => {
-                execute_action(node, &upstream_context, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
+                execute_action(node, &upstream_context, &run.process_id, &run.run_id, store, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
             }
             ProcessNodeType::Condition => {
                 execute_condition(node, &upstream_context, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
@@ -503,6 +552,13 @@ async fn execute_run(
             }),
             ProcessNodeType::Artifact => {
                 execute_artifact(
+                    node, &upstream_context, &run.process_id, &run.run_id,
+                    data_dir, store, harness, jwt.as_deref(),
+                    agent_service, org_service, Some(&fwd), Some(&workspace_path),
+                ).await
+            }
+            ProcessNodeType::Prompt => {
+                execute_prompt(
                     node, &upstream_context, &run.process_id, &run.run_id,
                     data_dir, store, harness, jwt.as_deref(),
                     agent_service, org_service, Some(&fwd), Some(&workspace_path),
@@ -734,10 +790,11 @@ fn build_session_config(
             Some(aid) => match agent_service.get_agent_local(aid) {
                 Ok(agent) => {
                     let prompt = system_prompt_override.unwrap_or_else(|| {
+                        let now = Utc::now();
                         if agent.system_prompt.is_empty() {
-                            PROCESS_EXECUTION_PREAMBLE.to_string()
+                            format!("{PROCESS_EXECUTION_PREAMBLE}\n\nCurrent UTC date/time: {now}")
                         } else {
-                            format!("{}\n\n{}", PROCESS_EXECUTION_PREAMBLE, agent.system_prompt)
+                            format!("{PROCESS_EXECUTION_PREAMBLE}\n\nCurrent UTC date/time: {now}\n\n{}", agent.system_prompt)
                         }
                     });
                     let ri = resolve_agent_integration(&agent, org_service);
@@ -745,20 +802,24 @@ fn build_session_config(
                 }
                 Err(e) => {
                     warn!(agent_id = %aid, error = %e, "Could not load agent for process node; using defaults");
+                    let now = Utc::now();
                     (
-                        Some(PROCESS_EXECUTION_PREAMBLE.to_string()),
+                        Some(format!("{PROCESS_EXECUTION_PREAMBLE}\n\nCurrent UTC date/time: {now}")),
                         None,
                         None,
                         None,
                     )
                 }
             },
-            None => (
-                Some(PROCESS_EXECUTION_PREAMBLE.to_string()),
-                None,
-                None,
-                None,
-            ),
+            None => {
+                let now = Utc::now();
+                (
+                    Some(format!("{PROCESS_EXECUTION_PREAMBLE}\n\nCurrent UTC date/time: {now}")),
+                    None,
+                    None,
+                    None,
+                )
+            },
         };
 
     let model = effective_model(node, loaded_agent.as_ref(), resolved_integration.as_ref());
@@ -856,9 +917,13 @@ fn execute_ignition(node: &ProcessNode) -> Result<String, ProcessError> {
     Ok(parts.join("\n\n"))
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn execute_action(
     node: &ProcessNode,
     upstream_context: &str,
+    process_id: &ProcessId,
+    run_id: &ProcessRunId,
+    store: &ProcessStore,
     harness: &dyn HarnessLink,
     token: Option<&str>,
     agent_service: &AgentService,
@@ -908,6 +973,26 @@ async fn execute_action(
     };
 
     if let Some(fc) = file_content {
+        let rel_path = format!(
+            "process-workspaces/{}/{}/{}",
+            process_id, run_id, output_file
+        );
+        let artifact = ProcessArtifact {
+            artifact_id: ProcessArtifactId::new(),
+            process_id: *process_id,
+            run_id: *run_id,
+            node_id: node.node_id,
+            artifact_type: ArtifactType::Document,
+            name: output_file.clone(),
+            file_path: rel_path,
+            size_bytes: fc.len() as u64,
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+        if let Err(e) = store.save_artifact(&artifact) {
+            warn!(node_id = %node.node_id, error = %e, "Failed to save action output as artifact");
+        }
+
         let token_usage = harness_result.ok().and_then(|(_, tu)| tu);
         return Ok(NodeResult {
             downstream_output: fc,
@@ -971,6 +1056,132 @@ async fn execute_action(
          results. Check the prompt, increase max_turns, or increase timeout_seconds.",
         output_file, tool_call_count, resp.all_text.len(), final_text_preview,
     )))
+}
+
+fn sanitize_label_to_filename(label: &str) -> String {
+    let sanitized: String = label
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .collect();
+    let trimmed = sanitized.trim_matches('-').to_lowercase();
+    if trimmed.is_empty() {
+        "prompt-output.md".to_string()
+    } else {
+        format!("{trimmed}.md")
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn execute_prompt(
+    node: &ProcessNode,
+    upstream_context: &str,
+    process_id: &ProcessId,
+    run_id: &ProcessRunId,
+    _data_dir: &Path,
+    store: &ProcessStore,
+    harness: &dyn HarnessLink,
+    token: Option<&str>,
+    agent_service: &AgentService,
+    org_service: &OrgService,
+    forwarder: Option<&DeltaForwarder<'_>>,
+    project_path: Option<&str>,
+) -> Result<NodeResult, ProcessError> {
+    let timeout_secs = node
+        .config
+        .get("timeout_seconds")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+
+    let output_file = node
+        .config
+        .get("output_file")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| sanitize_label_to_filename(&node.label));
+
+    let full_prompt = if upstream_context.is_empty() {
+        node.prompt.clone()
+    } else {
+        format!(
+            "## Context from previous steps\n\n{upstream_context}\n\n## Task\n\n{}",
+            node.prompt
+        )
+    };
+
+    let output_file_path = Path::new(project_path.unwrap_or(".")).join(&output_file);
+
+    let harness_result = run_harness_session(
+        node, full_prompt,
+        Some(action_preamble(&output_file)),
+        harness, token, agent_service, org_service, forwarder, project_path,
+        timeout_secs,
+    ).await;
+
+    let file_content = match tokio::fs::read_to_string(&output_file_path).await {
+        Ok(content) if !content.trim().is_empty() => {
+            info!(path = %output_file_path.display(), bytes = content.len(), "Read prompt output file");
+            Some(content)
+        }
+        _ => None,
+    };
+
+    let (content, token_usage, content_blocks) = if let Some(fc) = file_content {
+        let token_usage = harness_result.ok().and_then(|(_, tu)| tu);
+        (fc, token_usage, None)
+    } else {
+        let (resp, token_usage) = harness_result?;
+        let cleaned = canonicalize_output(&resp.final_text, false);
+        if cleaned.is_empty() {
+            return Err(ProcessError::Execution(
+                "Prompt node produced empty output".into(),
+            ));
+        }
+        (cleaned, token_usage, Some(resp.content_blocks))
+    };
+
+    let artifact_type_str = node
+        .config
+        .get("artifact_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("document");
+    let artifact_type: ArtifactType =
+        serde_json::from_value(serde_json::Value::String(artifact_type_str.to_string()))
+            .unwrap_or(ArtifactType::Document);
+
+    let rel_path = format!(
+        "process-workspaces/{}/{}/{}",
+        process_id, run_id, output_file
+    );
+    let artifact = ProcessArtifact {
+        artifact_id: ProcessArtifactId::new(),
+        process_id: *process_id,
+        run_id: *run_id,
+        node_id: node.node_id,
+        artifact_type,
+        name: output_file.clone(),
+        file_path: rel_path,
+        size_bytes: content.len() as u64,
+        metadata: serde_json::json!({}),
+        created_at: Utc::now(),
+    };
+    if let Err(e) = store.save_artifact(&artifact) {
+        warn!(node_id = %node.node_id, error = %e, "Failed to save prompt artifact");
+    }
+
+    info!(
+        node_id = %node.node_id,
+        artifact_id = %artifact.artifact_id,
+        output_file = %output_file,
+        bytes = content.len(),
+        "Prompt artifact saved"
+    );
+
+    Ok(NodeResult {
+        downstream_output: content,
+        display_output: None,
+        token_usage,
+        content_blocks,
+    })
 }
 
 async fn execute_condition(

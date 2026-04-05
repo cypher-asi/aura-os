@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
-  Zap, Play, GitBranch, FileOutput, Timer, Merge, Pin,
+  Zap, Play, GitBranch, FileOutput, Timer, Merge, Pin, MessageSquare,
 } from "lucide-react";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { useAgentStore } from "../../../agents/stores";
@@ -14,6 +14,7 @@ const NODE_ICONS: Record<ProcessNodeType, React.ReactNode> = {
   artifact: <FileOutput size={14} />,
   delay: <Timer size={14} />,
   merge: <Merge size={14} />,
+  prompt: <MessageSquare size={14} />,
 };
 
 const NODE_COLORS: Record<ProcessNodeType, string> = {
@@ -23,6 +24,7 @@ const NODE_COLORS: Record<ProcessNodeType, string> = {
   artifact: "#10b981",
   delay: "#6b7280",
   merge: "#ec4899",
+  prompt: "#0ea5e9",
 };
 
 interface ProcessNodeData {
