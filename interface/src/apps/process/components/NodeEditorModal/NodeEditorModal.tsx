@@ -10,7 +10,8 @@ import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores";
 import { Select } from "../../../../components/Select";
 import { SchedulePicker } from "../../../../components/SchedulePicker";
-import styles from "../../../../components/Preview/Preview.module.css";
+import previewStyles from "../../../../components/Preview/Preview.module.css";
+import modalStyles from "./NodeEditorModal.module.css";
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   ignition: "Ignition",
@@ -30,8 +31,8 @@ interface NodeEditorModalProps {
 
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className={styles.taskField}>
-      <span className={styles.fieldLabel}>{label}</span>
+    <div className={previewStyles.taskField}>
+      <span className={previewStyles.fieldLabel}>{label}</span>
       {children}
     </div>
   );
@@ -258,7 +259,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const hasPrompt = node.node_type !== "merge" && node.node_type !== "delay";
   const isLlmNode = ["action", "condition", "artifact", "prompt"].includes(node.node_type);
 
-  const pinToggle = (
+  const pinToggle = node.node_type !== "ignition" ? (
     <EditField label="Pin Output">
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button
@@ -288,187 +289,190 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         </Text>
       </div>
     </EditField>
+  ) : null;
+
+  const footer = (
+    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center", width: "100%" }}>
+      {node.node_type !== "ignition" && (
+        <Button variant="ghost" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete} style={{ marginRight: "auto" }}>
+          Delete
+        </Button>
+      )}
+      <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>
+        Cancel
+      </Button>
+      <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+        {saving ? "Saving..." : "Save Changes"}
+      </Button>
+    </div>
   );
 
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Edit ${NODE_TYPE_LABELS[node.node_type]} Node`}
-      size={hasPrompt ? "xl" : "md"}
-      footer={
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          {node.node_type !== "ignition" && (
-            <Button variant="ghost" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete} style={{ marginRight: "auto" }}>
-              Delete
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      }
-    >
-      {hasPrompt ? (
-        <div style={{ display: "flex", gap: 20, minHeight: 400 }}>
-          {/* Left column: config fields */}
-          <div style={{ width: 320, flexShrink: 0, overflowY: "auto" }} className={styles.taskMeta}>
-            <EditField label="Label">
-              <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
-            </EditField>
-
-            {node.node_type !== "ignition" && pinToggle}
-
-            {node.node_type === "ignition" && (
-              <EditField label="Schedule">
-                <SchedulePicker value={schedule} onChange={setSchedule} />
-              </EditField>
-            )}
-
-            {(node.node_type === "action" || node.node_type === "ignition" || node.node_type === "artifact" || node.node_type === "prompt") && (
-              <EditField label="Agent">
-                <Select value={agentId} onChange={setAgentId} placeholder="No agent assigned" options={agentOptions} />
-              </EditField>
-            )}
-
-            {node.node_type === "condition" && (
-              <EditField label="Condition Expression">
-                <input style={inputStyle} value={conditionExpr} onChange={(e) => setConditionExpr(e.target.value)} placeholder='e.g. output contains "success"' />
-              </EditField>
-            )}
-
-            {node.node_type === "artifact" && (
-              <>
-                <EditField label="Artifact Name">
-                  <input style={inputStyle} value={artifactName} onChange={(e) => setArtifactName(e.target.value)} placeholder="e.g. Daily Report" />
-                </EditField>
-                <EditField label="Artifact Type">
-                  <Select value={artifactType} onChange={setArtifactType} options={ARTIFACT_TYPE_OPTIONS} />
-                </EditField>
-                <EditField label="Mode">
-                  <Select value={artifactMode} onChange={setArtifactMode} options={ARTIFACT_MODE_OPTIONS} />
-                  <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>
-                    {artifactMode === "prompt"
-                      ? "Apply the prompt directly to upstream input."
-                      : "Transform upstream input into the target JSON structure."}
-                  </Text>
-                </EditField>
-                {artifactMode === "json_schema" && (
-                  <EditField label="Target JSON Shape">
-                    <textarea
-                      style={{ ...inputStyle, minHeight: 200, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
-                      value={artifactData}
-                      onChange={(e) => setArtifactData(e.target.value)}
-                      placeholder={'{\n  "competitors": [\n    { "name": "...", "website": "...", "summary": "..." }\n  ]\n}'}
-                    />
-                    <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>The JSON structure the LLM will transform upstream data into.</Text>
-                  </EditField>
-                )}
-              </>
-            )}
-
-            {(node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") && (
-              <EditField label="Output File">
-                <input style={inputStyle} value={outputFile} onChange={(e) => setOutputFile(e.target.value)} placeholder={node.node_type === "artifact" ? "output.md" : "output.txt"} />
-                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Filename for results in the process workspace.</Text>
-              </EditField>
-            )}
-
-            {node.node_type === "action" && (
-              <EditField label="Vault Path">
-                <input style={inputStyle} value={vaultPath} onChange={(e) => setVaultPath(e.target.value)} placeholder="e.g. Research/" />
-              </EditField>
-            )}
-
-            {node.node_type === "ignition" && (
-              <EditField label="Watchlist (JSON)">
-                <textarea
-                  style={{ ...inputStyle, minHeight: 120, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
-                  value={watchlist}
-                  onChange={(e) => setWatchlist(e.target.value)}
-                  placeholder={'{\n  "sources": [...]\n}'}
-                />
-              </EditField>
-            )}
-
-            {isLlmNode && (
-              <>
-                <button
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 0",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--color-text-muted)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <span style={{ transform: showAdvanced ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>&#9654;</span>
-                  Advanced Settings
-                </button>
-                {showAdvanced && (
-                  <>
-                    <EditField label="Model">
-                      <input style={inputStyle} value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. claude-sonnet-4-20250514" />
-                      <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Override the default model for this node.</Text>
-                    </EditField>
-                    <EditField label="Timeout (seconds)">
-                      <input style={inputStyle} type="number" min={30} value={timeoutSeconds} onChange={(e) => setTimeoutSeconds(e.target.value)} placeholder="600" />
-                    </EditField>
-                    <EditField label="Max Turns">
-                      <input style={inputStyle} type="number" min={1} value={maxTurns} onChange={(e) => setMaxTurns(e.target.value)} placeholder="Auto" />
-                      <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Limit the number of LLM turns in the session.</Text>
-                    </EditField>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Right column: prompt editor */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-            <span className={styles.fieldLabel}>Prompt</span>
-            <textarea
-              style={{
-                ...inputStyle,
-                flex: 1,
-                minHeight: 300,
-                resize: "none",
-              }}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={
-                node.node_type === "ignition" ? "Initial context or instructions for the workflow"
-                : node.node_type === "condition" ? "Condition to evaluate against upstream output"
-                : node.node_type === "prompt" ? "Instructions for the prompt to execute and produce an artifact"
-                : "Instructions for the agent to execute"
-              }
-            />
-          </div>
-        </div>
-      ) : (
-        <div className={styles.taskMeta}>
+  if (!hasPrompt) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${NODE_TYPE_LABELS[node.node_type]} Node`} size="md" footer={footer}>
+        <div className={previewStyles.taskMeta}>
           <EditField label="Label">
             <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
           </EditField>
-
-          {pinToggle}
 
           {node.node_type === "delay" && (
             <EditField label="Delay (seconds)">
               <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
             </EditField>
           )}
+
+          {pinToggle}
         </div>
-      )}
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Edit ${NODE_TYPE_LABELS[node.node_type]} Node`}
+      size="xl"
+      fullHeight
+      noPadding
+      className={modalStyles.wideModal}
+      footer={footer}
+    >
+      <div className={modalStyles.twoColumn}>
+        {/* Left column: config fields */}
+        <div className={modalStyles.leftColumn}>
+          <EditField label="Label">
+            <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
+          </EditField>
+
+          {node.node_type === "ignition" && (
+            <EditField label="Schedule">
+              <SchedulePicker value={schedule} onChange={setSchedule} />
+            </EditField>
+          )}
+
+          {(node.node_type === "action" || node.node_type === "ignition" || node.node_type === "artifact" || node.node_type === "prompt") && (
+            <EditField label="Agent">
+              <Select value={agentId} onChange={setAgentId} placeholder="No agent assigned" options={agentOptions} />
+            </EditField>
+          )}
+
+          {node.node_type === "condition" && (
+            <EditField label="Condition Expression">
+              <input style={inputStyle} value={conditionExpr} onChange={(e) => setConditionExpr(e.target.value)} placeholder='e.g. output contains "success"' />
+            </EditField>
+          )}
+
+          {node.node_type === "artifact" && (
+            <>
+              <EditField label="Artifact Name">
+                <input style={inputStyle} value={artifactName} onChange={(e) => setArtifactName(e.target.value)} placeholder="e.g. Daily Report" />
+              </EditField>
+              <EditField label="Artifact Type">
+                <Select value={artifactType} onChange={setArtifactType} options={ARTIFACT_TYPE_OPTIONS} />
+              </EditField>
+              <EditField label="Mode">
+                <Select value={artifactMode} onChange={setArtifactMode} options={ARTIFACT_MODE_OPTIONS} />
+                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>
+                  {artifactMode === "prompt"
+                    ? "Apply the prompt directly to upstream input."
+                    : "Transform upstream input into the target JSON structure."}
+                </Text>
+              </EditField>
+              {artifactMode === "json_schema" && (
+                <EditField label="Target JSON Shape">
+                  <textarea
+                    style={{ ...inputStyle, minHeight: 200, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
+                    value={artifactData}
+                    onChange={(e) => setArtifactData(e.target.value)}
+                    placeholder={'{\n  "competitors": [\n    { "name": "...", "website": "...", "summary": "..." }\n  ]\n}'}
+                  />
+                  <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>The JSON structure the LLM will transform upstream data into.</Text>
+                </EditField>
+              )}
+            </>
+          )}
+
+          {(node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") && (
+            <EditField label="Output File">
+              <input style={inputStyle} value={outputFile} onChange={(e) => setOutputFile(e.target.value)} placeholder={node.node_type === "artifact" ? "output.md" : "output.txt"} />
+              <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Filename for results in the process workspace.</Text>
+            </EditField>
+          )}
+
+          {node.node_type === "action" && (
+            <EditField label="Vault Path">
+              <input style={inputStyle} value={vaultPath} onChange={(e) => setVaultPath(e.target.value)} placeholder="e.g. Research/" />
+            </EditField>
+          )}
+
+          {node.node_type === "ignition" && (
+            <EditField label="Watchlist (JSON)">
+              <textarea
+                style={{ ...inputStyle, minHeight: 120, resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12 }}
+                value={watchlist}
+                onChange={(e) => setWatchlist(e.target.value)}
+                placeholder={'{\n  "sources": [...]\n}'}
+              />
+            </EditField>
+          )}
+
+          {pinToggle}
+
+          {isLlmNode && (
+            <>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 0",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--color-text-muted)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                <span style={{ transform: showAdvanced ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", display: "inline-block" }}>&#9654;</span>
+                Advanced Settings
+              </button>
+              {showAdvanced && (
+                <>
+                  <EditField label="Model">
+                    <input style={inputStyle} value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. claude-sonnet-4-20250514" />
+                    <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Override the default model for this node.</Text>
+                  </EditField>
+                  <EditField label="Timeout (seconds)">
+                    <input style={inputStyle} type="number" min={30} value={timeoutSeconds} onChange={(e) => setTimeoutSeconds(e.target.value)} placeholder="600" />
+                  </EditField>
+                  <EditField label="Max Turns">
+                    <input style={inputStyle} type="number" min={1} value={maxTurns} onChange={(e) => setMaxTurns(e.target.value)} placeholder="Auto" />
+                    <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Limit the number of LLM turns in the session.</Text>
+                  </EditField>
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Right column: prompt editor — fills edge-to-edge */}
+        <div className={modalStyles.rightColumn}>
+          <textarea
+            className={modalStyles.promptTextarea}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder={
+              node.node_type === "ignition" ? "Initial context or instructions for the workflow..."
+              : node.node_type === "condition" ? "Condition to evaluate against upstream output..."
+              : node.node_type === "prompt" ? "Instructions for the prompt to execute and produce an artifact..."
+              : "Instructions for the agent to execute..."
+            }
+          />
+        </div>
+      </div>
     </Modal>
   );
 }

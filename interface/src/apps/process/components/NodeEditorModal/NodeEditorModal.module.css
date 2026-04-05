@@ -1,0 +1,62 @@
+.wideModal {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: min(85vh, calc(100vh - 48px));
+}
+
+.wideModal > div:first-child {
+  padding: 8px 16px;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+
+.wideModal > div:last-child {
+  padding: 8px 16px;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+
+.twoColumn {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.leftColumn {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.rightColumn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--color-border);
+  min-width: 0;
+}
+
+.promptTextarea {
+  flex: 1;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+  color-scheme: dark;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.promptTextarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}

@@ -104,7 +104,7 @@ export function OrgSelector({
   const iconDropdownPos = (): React.CSSProperties => {
     const rect = iconTriggerRef.current?.getBoundingClientRect();
     if (!rect) return {};
-    return { top: rect.bottom, left: rect.left };
+    return { top: rect.bottom, left: rect.left + 21 };
   };
 
   return (
