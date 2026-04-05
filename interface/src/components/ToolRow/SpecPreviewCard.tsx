@@ -3,7 +3,7 @@ import { FileText } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { useHighlightedHtml } from "../../hooks/use-highlighted-html";
 import fileStyles from "../FilePreviewCard/FilePreviewCard.module.css";
-import toolStyles from "../ToolCallBlock.module.css";
+import toolStyles from "./ToolCallBlock.module.css";
 
 const COLLAPSED_SPEC_LINES = 20;
 

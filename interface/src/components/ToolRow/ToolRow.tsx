@@ -7,7 +7,7 @@ import { FilePreviewCard } from "../FilePreviewCard";
 import { SpecPreviewCard } from "./SpecPreviewCard";
 import { getSuperAgentCardRenderer } from "./SuperAgentToolCards";
 import { TaskCreatedIndicator } from "./TaskCreatedIndicator";
-import toolStyles from "../ToolCallBlock.module.css";
+import toolStyles from "./ToolCallBlock.module.css";
 
 function buildInputDisplay(entry: ToolCallEntry): Record<string, unknown> {
   const explicitInput = entry.input ?? {};

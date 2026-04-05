@@ -1,0 +1,19 @@
+.surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+.marquee {
+  composes: marquee from "../../../marquee.css";
+  position: absolute;
+  z-index: 1;
+}
+
+.contextMenuOverlay {
+  position: fixed;
+  z-index: 9999;
+}

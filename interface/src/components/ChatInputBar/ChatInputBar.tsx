@@ -6,7 +6,7 @@ import type { GenerationMode } from "../../constants/models";
 import { availableModelsForAdapter, modelLabel, getModelsForMode, getDefaultModelForMode } from "../../constants/models";
 import { isGenerationCommand } from "../../constants/commands";
 import { AgentEnvironment } from "../AgentEnvironment";
-import { OrbitStatusIndicator } from "../OrbitStatusIndicator/OrbitStatusIndicator";
+import { OrbitStatusIndicator } from "../OrbitStatusIndicator";
 import { SlashCommandMenu } from "./SlashCommandMenu";
 import { CommandChips } from "./CommandChips";
 import { useChatUI } from "../../stores/chat-ui-store";

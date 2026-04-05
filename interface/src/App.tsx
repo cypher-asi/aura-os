@@ -14,7 +14,7 @@ import { AgentIndexRedirect } from "./apps/agents/AgentIndexRedirect";
 import { ProcessIndexRedirect } from "./apps/process/ProcessIndexRedirect";
 import { IdeView } from "./views/IdeView";
 import { ProjectAgentRedirectView } from "./views/ProjectAgentRedirectView";
-import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView/ProjectRootRedirectView";
+import { ProjectRootRedirectView } from "./views/ProjectRootRedirectView";
 import { ProjectWorkView } from "./views/ProjectWorkView";
 import { ProjectFilesView } from "./views/ProjectFilesView";
 import { ProjectStatsView } from "./views/ProjectStatsView";
