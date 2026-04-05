@@ -98,6 +98,11 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [vaultPath, setVaultPath] = useState(
     node.node_type === "action" ? (cfg?.vault_path as string) ?? "" : "",
   );
+  const [outputFile, setOutputFile] = useState(
+    (node.node_type === "action" || node.node_type === "artifact")
+      ? (cfg?.output_file as string) ?? ""
+      : "",
+  );
   const [watchlist, setWatchlist] = useState(
     node.node_type === "ignition" ? JSON.stringify(cfg?.watchlist ?? {}, null, 2) : "{}",
   );
@@ -133,6 +138,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       }
       if (node.node_type === "delay") setDelaySeconds(String(c?.delay_seconds ?? "60"));
       if (node.node_type === "action") setVaultPath((c?.vault_path as string) ?? "");
+      if (node.node_type === "action" || node.node_type === "artifact") setOutputFile((c?.output_file as string) ?? "");
       if (node.node_type === "ignition") setWatchlist(JSON.stringify(c?.watchlist ?? {}, null, 2));
       setIsPinned(!!c?.pinned_output);
       setPinnedOutput((c?.pinned_output as string) ?? "");
@@ -187,6 +193,11 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       }
       if (node.node_type === "delay") config.delay_seconds = Number(delaySeconds) || 60;
       if (node.node_type === "action" && vaultPath) config.vault_path = vaultPath;
+      if ((node.node_type === "action" || node.node_type === "artifact") && outputFile) {
+        config.output_file = outputFile;
+      } else {
+        delete config.output_file;
+      }
       if (isPinned && pinnedOutput) {
         config.pinned_output = pinnedOutput;
       } else {
@@ -356,6 +367,13 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         {node.node_type === "delay" && (
           <EditField label="Delay (seconds)">
             <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
+          </EditField>
+        )}
+
+        {(node.node_type === "action" || node.node_type === "artifact") && (
+          <EditField label="Output File (optional)">
+            <input style={inputStyle} value={outputFile} onChange={(e) => setOutputFile(e.target.value)} placeholder={node.node_type === "artifact" ? "output.md" : "output.txt"} />
+            <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Filename for incremental results. Defaults to {node.node_type === "artifact" ? "output.md" : "output.txt"} if not set.</Text>
           </EditField>
         )}
 

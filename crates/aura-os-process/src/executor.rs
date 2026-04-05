@@ -809,14 +809,13 @@ async fn execute_action(
         .config
         .get("output_file")
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "output.txt".to_string());
 
     let mut config = build_session_config(node, token, agent_service, org_service, None, project_path);
 
-    if let Some(ref of_name) = output_file {
-        if let Some(ref mut sp) = config.system_prompt {
-            sp.push_str(&output_file_addendum(of_name));
-        }
+    if let Some(ref mut sp) = config.system_prompt {
+        sp.push_str(&output_file_addendum(&output_file));
     }
 
     let session = harness
@@ -849,8 +848,8 @@ async fn execute_action(
     }
 
     // --- determine downstream output ---
-    let file_content = if let Some(ref of_name) = output_file {
-        let path = Path::new(project_path.unwrap_or(".")).join(of_name);
+    let file_content = {
+        let path = Path::new(project_path.unwrap_or(".")).join(&output_file);
         match tokio::fs::read_to_string(&path).await {
             Ok(content) if !content.trim().is_empty() => {
                 info!(path = %path.display(), bytes = content.len(), "Read designated output file");
@@ -859,8 +858,6 @@ async fn execute_action(
             Ok(_) => None,
             Err(_) => None,
         }
-    } else {
-        None
     };
 
     let final_text = strip_thinking_tags(resp.final_text.trim());
@@ -1107,10 +1104,14 @@ async fn execute_artifact(
         .unwrap_or(3);
     session_config.max_turns = Some(artifact_max_turns);
 
-    if let Some(output_file) = cfg.get("output_file").and_then(|v| v.as_str()) {
-        if let Some(ref mut sp) = session_config.system_prompt {
-            sp.push_str(&output_file_addendum(output_file));
-        }
+    let artifact_output_file = cfg
+        .get("output_file")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "output.md".to_string());
+
+    if let Some(ref mut sp) = session_config.system_prompt {
+        sp.push_str(&output_file_addendum(&artifact_output_file));
     }
 
     let session = harness
@@ -1133,8 +1134,8 @@ async fn execute_artifact(
         warn!(session_id = %session.session_id, error = %e, "Failed to close artifact harness session");
     }
 
-    let file_content = if let Some(output_file) = cfg.get("output_file").and_then(|v| v.as_str()) {
-        let path = Path::new(project_path.unwrap_or(".")).join(output_file);
+    let file_content = {
+        let path = Path::new(project_path.unwrap_or(".")).join(&artifact_output_file);
         match tokio::fs::read_to_string(&path).await {
             Ok(c) if !c.trim().is_empty() => {
                 info!(path = %path.display(), bytes = c.len(), "Read artifact output file");
@@ -1142,8 +1143,6 @@ async fn execute_artifact(
             }
             _ => None,
         }
-    } else {
-        None
     };
 
     let content = if let Some(fc) = file_content {
