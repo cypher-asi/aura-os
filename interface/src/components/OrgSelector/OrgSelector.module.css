@@ -131,14 +131,15 @@
 .iconTrigger {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  width: 100%;
   height: var(--control-height-sm, 32px);
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 0 var(--space-2);
+  padding: 0 0 0 21px;
 }
 
 .iconTrigger:hover {

@@ -15,7 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styles from "./ProcessCanvas.module.css";
-import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff } from "lucide-react";
+import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
@@ -35,6 +35,7 @@ import { useCanvasEventHandlers } from "./useCanvasEventHandlers";
 const nodeTypes = { processNode: ProcessNodeCard };
 
 const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
+  prompt: <MessageSquare size={14} />,
   action: <Play size={14} />,
   condition: <GitBranch size={14} />,
   artifact: <FileOutput size={14} />,
