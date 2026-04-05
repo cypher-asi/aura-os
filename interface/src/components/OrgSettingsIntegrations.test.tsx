@@ -30,10 +30,13 @@ describe("OrgSettingsIntegrations", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Add Integration" }));
+    await user.click(screen.getByRole("button", { name: "Anthropic" }));
+    await user.click(screen.getByText("Advanced"));
 
     expect(screen.getByLabelText("New preferred model")).toBeInTheDocument();
     expect(screen.getByLabelText("New Anthropic API Key")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Change" }));
     await user.click(screen.getByRole("button", { name: "GitHub" }));
 
     expect(screen.queryByLabelText("New preferred model")).not.toBeInTheDocument();

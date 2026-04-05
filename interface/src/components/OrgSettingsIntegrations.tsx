@@ -49,8 +49,6 @@ type IntegrationDraft = {
 
 type DraftState = Record<string, IntegrationDraft>;
 
-const DEFAULT_PROVIDER = "anthropic";
-
 function providerSupportsModel(provider: string): boolean {
   return supportsDefaultModel(provider);
 }
@@ -120,7 +118,7 @@ function emptyDraft(provider: string): IntegrationDraft {
 
 export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpdate, onDelete }: Props) {
   const [drafts, setDrafts] = useState<DraftState>({});
-  const [newIntegration, setNewIntegration] = useState<IntegrationDraft>(emptyDraft(DEFAULT_PROVIDER));
+  const [newIntegration, setNewIntegration] = useState<IntegrationDraft | null>(null);
   const [expandedIntegrationId, setExpandedIntegrationId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -140,12 +138,12 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
   }, [drafts, integrations]);
 
   const sections = integrationSections();
-  const newProvider = getIntegrationDefinition(newIntegration.provider);
-  const newSupportsModel = providerSupportsModel(newIntegration.provider);
-  const newSecretLabel = getSecretLabel(newIntegration.provider);
-  const newSecretPlaceholder = getSecretPlaceholder(newIntegration.provider);
-  const newAuthHint = providerAuthHint(newIntegration.provider);
-  const newConfigFields = getIntegrationConfigFields(newIntegration.provider);
+  const newProvider = newIntegration ? getIntegrationDefinition(newIntegration.provider) : undefined;
+  const newSupportsModel = newIntegration ? providerSupportsModel(newIntegration.provider) : false;
+  const newSecretLabel = newIntegration ? getSecretLabel(newIntegration.provider) : "API Key";
+  const newSecretPlaceholder = newIntegration ? getSecretPlaceholder(newIntegration.provider) : "Paste the API key";
+  const newAuthHint = newIntegration ? providerAuthHint(newIntegration.provider) : null;
+  const newConfigFields = newIntegration ? getIntegrationConfigFields(newIntegration.provider) : [];
 
   return (
     <div>
@@ -156,7 +154,10 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
         </div>
         <Button
           variant={isCreating ? "ghost" : "primary"}
-          onClick={() => setIsCreating((current) => !current)}
+          onClick={() => {
+            setIsCreating((current) => !current);
+            setNewIntegration(null);
+          }}
         >
           {isCreating ? "Close" : "Add Integration"}
         </Button>
@@ -166,86 +167,107 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
         <div className={styles.settingsGroup}>
           <div className={styles.settingsGroupLabel}>New Integration</div>
           <div className={`${styles.formRow} ${styles.integrationRow}`}>
-            <div className={styles.integrationFields}>
-              <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
-                <span className={styles.integrationFieldLabel}>Provider</span>
-                <ProviderButtons
-                  value={newIntegration.provider}
-                  onChange={(provider) => setNewIntegration((prev) => ({
-                    ...emptyDraft(provider),
-                    name: prev.name,
-                  }))}
-                  showSectionDescriptions={false}
-                />
-                <Text size="xs" variant="muted">{providerDescription(newIntegration.provider)}</Text>
-              </div>
-              <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
-                <label className={styles.integrationFieldLabel} htmlFor="new-integration-name">Name</label>
-                <Input
-                  id="new-integration-name"
-                  aria-label="New integration name"
-                  value={newIntegration.name}
-                  onChange={(e) => setNewIntegration((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder={`e.g. ${newProvider?.label ?? "Provider"} Production`}
-                />
-              </div>
-              {newSupportsModel && (
-                <div className={styles.integrationFieldGroup}>
-                  <label className={styles.integrationFieldLabel} htmlFor="new-integration-model">Preferred Model</label>
-                  <Input
-                    id="new-integration-model"
-                    aria-label="New preferred model"
-                    value={newIntegration.defaultModel}
-                    onChange={(e) => setNewIntegration((prev) => ({ ...prev, defaultModel: e.target.value }))}
-                    placeholder="Optional preferred model"
+            {!newIntegration ? (
+              <div className={styles.integrationFields}>
+                <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                  <span className={styles.integrationFieldLabel}>Choose Provider</span>
+                  <ProviderButtons
+                    value=""
+                    onChange={(provider) => setNewIntegration(emptyDraft(provider))}
+                    showSectionDescriptions={false}
                   />
                 </div>
-              )}
-              {newConfigFields.map((field) => (
-                <div key={field.key} className={styles.integrationFieldGroup}>
-                  <label className={styles.integrationFieldLabel} htmlFor={`new-config-${field.key}`}>{field.label}</label>
+              </div>
+            ) : (
+              <div className={styles.integrationFields}>
+                <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                  <span className={styles.integrationFieldLabel}>Provider</span>
+                  <div className={styles.integrationSelectionRow}>
+                    <div className={styles.integrationBadgeRow}>
+                      <span className={styles.integrationBadge}>{newProvider?.label ?? newIntegration.provider}</span>
+                      <span className={styles.integrationBadge}>{kindLabel(newIntegration.kind)}</span>
+                    </div>
+                    <Button variant="ghost" onClick={() => setNewIntegration(null)}>
+                      Change
+                    </Button>
+                  </div>
+                  <Text size="xs" variant="muted">{providerDescription(newIntegration.provider)}</Text>
+                </div>
+                <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
+                  <label className={styles.integrationFieldLabel} htmlFor="new-integration-name">Name</label>
                   <Input
-                    id={`new-config-${field.key}`}
-                    aria-label={`New ${field.label}`}
-                    value={newIntegration.providerConfig[field.key] ?? ""}
-                    onChange={(e) => setNewIntegration((prev) => ({
-                      ...prev,
-                      providerConfig: { ...prev.providerConfig, [field.key]: e.target.value },
-                    }))}
-                    placeholder={field.placeholder}
+                    id="new-integration-name"
+                    aria-label="New integration name"
+                    value={newIntegration.name}
+                    onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, name: e.target.value } : prev)}
+                    placeholder={`e.g. ${newProvider?.label ?? "Provider"} Production`}
                   />
                 </div>
-              ))}
-              <div className={`${styles.integrationFieldGroup} ${newSupportsModel || newConfigFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
-                <label className={styles.integrationFieldLabel} htmlFor="new-integration-key">{newSecretLabel}</label>
-                <Input
-                  id="new-integration-key"
-                  aria-label={`New ${newSecretLabel}`}
-                  type="password"
-                  value={newIntegration.apiKey}
-                  onChange={(e) => setNewIntegration((prev) => ({ ...prev, apiKey: e.target.value }))}
-                  placeholder={newSecretPlaceholder}
-                />
-                {newAuthHint && <Text size="xs" variant="muted">{newAuthHint}</Text>}
+                <div className={`${styles.integrationFieldGroup} ${newSupportsModel || newConfigFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
+                  <label className={styles.integrationFieldLabel} htmlFor="new-integration-key">{newSecretLabel}</label>
+                  <Input
+                    id="new-integration-key"
+                    aria-label={`New ${newSecretLabel}`}
+                    type="password"
+                    value={newIntegration.apiKey}
+                    onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, apiKey: e.target.value } : prev)}
+                    placeholder={newSecretPlaceholder}
+                  />
+                  {newAuthHint && <Text size="xs" variant="muted">{newAuthHint}</Text>}
+                </div>
+                {(newSupportsModel || newConfigFields.length > 0) && (
+                  <details className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}>
+                    <summary className={styles.integrationAdvancedSummary}>Advanced</summary>
+                    <div className={styles.integrationAdvancedBody}>
+                      {newSupportsModel && (
+                        <div className={styles.integrationFieldGroup}>
+                          <label className={styles.integrationFieldLabel} htmlFor="new-integration-model">Preferred Model</label>
+                          <Input
+                            id="new-integration-model"
+                            aria-label="New preferred model"
+                            value={newIntegration.defaultModel}
+                            onChange={(e) => setNewIntegration((prev) => prev ? { ...prev, defaultModel: e.target.value } : prev)}
+                            placeholder="Optional preferred model"
+                          />
+                        </div>
+                      )}
+                      {newConfigFields.map((field) => (
+                        <div key={field.key} className={styles.integrationFieldGroup}>
+                          <label className={styles.integrationFieldLabel} htmlFor={`new-config-${field.key}`}>{field.label}</label>
+                          <Input
+                            id={`new-config-${field.key}`}
+                            aria-label={`New ${field.label}`}
+                            value={newIntegration.providerConfig[field.key] ?? ""}
+                            onChange={(e) => setNewIntegration((prev) => prev ? {
+                              ...prev,
+                              providerConfig: { ...prev.providerConfig, [field.key]: e.target.value },
+                            } : prev)}
+                            placeholder={field.placeholder}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <div className={styles.integrationActions}>
+                  <Button variant="ghost" onClick={() => { setIsCreating(false); setNewIntegration(null); }}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={async () => {
+                      if (!newIntegration.name.trim()) return;
+                      await onCreate(normalizeDraftPayload(newIntegration));
+                      setNewIntegration(null);
+                      setIsCreating(false);
+                    }}
+                    disabled={busyId === "new"}
+                  >
+                    {busyId === "new" ? "Saving..." : "Add"}
+                  </Button>
+                </div>
               </div>
-              <div className={styles.integrationActions}>
-                <Button variant="ghost" onClick={() => setIsCreating(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={async () => {
-                    if (!newIntegration.name.trim()) return;
-                    await onCreate(normalizeDraftPayload(newIntegration));
-                    setNewIntegration(emptyDraft(newIntegration.provider));
-                    setIsCreating(false);
-                  }}
-                  disabled={busyId === "new"}
-                >
-                  {busyId === "new" ? "Saving..." : "Add"}
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -267,10 +289,14 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                 const authHint = providerAuthHint(draft.provider);
                 const configFields = getIntegrationConfigFields(draft.provider);
                 const isExpanded = expandedIntegrationId === integration.integration_id;
-                const configSummary = Object.entries(draft.providerConfig)
-                  .filter(([, value]) => value.trim().length > 0)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(" • ");
+                const configCount = Object.values(draft.providerConfig)
+                  .filter((value) => value.trim().length > 0)
+                  .length;
+                const secondaryBadge = draft.defaultModel
+                  ? draft.defaultModel
+                  : configCount > 0
+                    ? `${configCount} config field${configCount === 1 ? "" : "s"}`
+                    : null;
 
                 return (
                   <div key={integration.integration_id} className={`${styles.formRow} ${styles.integrationRow}`}>
@@ -279,15 +305,11 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                         <div className={styles.integrationHeader}>{integration.name}</div>
                         <div className={styles.integrationBadgeRow}>
                           <span className={styles.integrationBadge}>{getIntegrationLabel(integration.provider)}</span>
-                          <span className={styles.integrationBadge}>{kindLabel(integration.kind)}</span>
                           <span className={styles.integrationBadge}>
                             {integration.secret_last4 ? `Key ••••${integration.secret_last4}` : "No key"}
                           </span>
-                          {draft.defaultModel && (
-                            <span className={styles.integrationBadge}>{draft.defaultModel}</span>
-                          )}
-                          {configSummary && (
-                            <span className={styles.integrationBadge}>{configSummary}</span>
+                          {secondaryBadge && (
+                            <span className={styles.integrationBadge}>{secondaryBadge}</span>
                           )}
                         </div>
                       </div>
@@ -320,56 +342,14 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                         </div>
                         <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                           <span className={styles.integrationFieldLabel}>Provider</span>
-                          <ProviderButtons
-                            value={draft.provider}
-                            onChange={(provider) => setDrafts((prev) => ({
-                              ...prev,
-                              [integration.integration_id]: {
-                                ...emptyDraft(provider),
-                                name: draft.name,
-                                apiKey: draft.apiKey,
-                              },
-                            }))}
-                            showSectionDescriptions={false}
-                          />
+                          <div className={styles.integrationSelectionRow}>
+                            <div className={styles.integrationBadgeRow}>
+                              <span className={styles.integrationBadge}>{getIntegrationLabel(draft.provider)}</span>
+                              <span className={styles.integrationBadge}>{kindLabel(integration.kind)}</span>
+                            </div>
+                          </div>
                           <Text size="xs" variant="muted">{providerDescription(draft.provider)}</Text>
                         </div>
-                        {supportsModel && (
-                          <div className={styles.integrationFieldGroup}>
-                            <label className={styles.integrationFieldLabel} htmlFor={`integration-model-${integration.integration_id}`}>Preferred Model</label>
-                            <Input
-                              id={`integration-model-${integration.integration_id}`}
-                              aria-label={`Preferred model for ${integration.name}`}
-                              value={draft.defaultModel}
-                              onChange={(e) => setDrafts((prev) => ({
-                                ...prev,
-                                [integration.integration_id]: { ...draft, defaultModel: e.target.value },
-                              }))}
-                              placeholder="Optional preferred model"
-                            />
-                          </div>
-                        )}
-                        {configFields.map((field) => (
-                          <div key={`${integration.integration_id}-${field.key}`} className={styles.integrationFieldGroup}>
-                            <label className={styles.integrationFieldLabel} htmlFor={`${integration.integration_id}-${field.key}`}>{field.label}</label>
-                            <Input
-                              id={`${integration.integration_id}-${field.key}`}
-                              aria-label={`${field.label} for ${integration.name}`}
-                              value={draft.providerConfig[field.key] ?? ""}
-                              onChange={(e) => setDrafts((prev) => ({
-                                ...prev,
-                                [integration.integration_id]: {
-                                  ...draft,
-                                  providerConfig: {
-                                    ...draft.providerConfig,
-                                    [field.key]: e.target.value,
-                                  },
-                                },
-                              }))}
-                              placeholder={field.placeholder}
-                            />
-                          </div>
-                        ))}
                         <div className={`${styles.integrationFieldGroup} ${supportsModel || configFields.length > 0 ? "" : styles.integrationFieldGroupFull}`}>
                           <label className={styles.integrationFieldLabel} htmlFor={`integration-key-${integration.integration_id}`}>{secretLabel}</label>
                           <Input
@@ -385,6 +365,49 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
                           />
                           {authHint && <Text size="xs" variant="muted">{authHint}</Text>}
                         </div>
+                        {(supportsModel || configFields.length > 0) && (
+                          <details className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull} ${styles.integrationAdvanced}`}>
+                            <summary className={styles.integrationAdvancedSummary}>Advanced</summary>
+                            <div className={styles.integrationAdvancedBody}>
+                              {supportsModel && (
+                                <div className={styles.integrationFieldGroup}>
+                                  <label className={styles.integrationFieldLabel} htmlFor={`integration-model-${integration.integration_id}`}>Preferred Model</label>
+                                  <Input
+                                    id={`integration-model-${integration.integration_id}`}
+                                    aria-label={`Preferred model for ${integration.name}`}
+                                    value={draft.defaultModel}
+                                    onChange={(e) => setDrafts((prev) => ({
+                                      ...prev,
+                                      [integration.integration_id]: { ...draft, defaultModel: e.target.value },
+                                    }))}
+                                    placeholder="Optional preferred model"
+                                  />
+                                </div>
+                              )}
+                              {configFields.map((field) => (
+                                <div key={`${integration.integration_id}-${field.key}`} className={styles.integrationFieldGroup}>
+                                  <label className={styles.integrationFieldLabel} htmlFor={`${integration.integration_id}-${field.key}`}>{field.label}</label>
+                                  <Input
+                                    id={`${integration.integration_id}-${field.key}`}
+                                    aria-label={`${field.label} for ${integration.name}`}
+                                    value={draft.providerConfig[field.key] ?? ""}
+                                    onChange={(e) => setDrafts((prev) => ({
+                                      ...prev,
+                                      [integration.integration_id]: {
+                                        ...draft,
+                                        providerConfig: {
+                                          ...draft.providerConfig,
+                                          [field.key]: e.target.value,
+                                        },
+                                      },
+                                    }))}
+                                    placeholder={field.placeholder}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                         <div className={styles.integrationActions}>
                           <Button
                             variant="ghost"

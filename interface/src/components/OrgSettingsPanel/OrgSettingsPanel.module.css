@@ -242,6 +242,13 @@
   gap: var(--space-2);
 }
 
+.integrationSelectionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .integrationBadge {
   display: inline-flex;
   align-items: center;
@@ -358,6 +365,29 @@
   border-top: 1px solid var(--color-border);
 }
 
+.integrationAdvanced {
+  gap: var(--space-2);
+}
+
+.integrationAdvancedSummary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  list-style: none;
+}
+
+.integrationAdvancedSummary::-webkit-details-marker {
+  display: none;
+}
+
+.integrationAdvancedBody {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
 .providerButtonRow {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -461,6 +491,10 @@
     grid-template-columns: 1fr;
   }
 
+  .integrationAdvancedBody {
+    grid-template-columns: 1fr;
+  }
+
   .integrationSummary {
     flex-direction: column;
   }
@@ -472,6 +506,11 @@
 
   .sectionHeaderRow {
     flex-direction: column;
+  }
+
+  .integrationSelectionRow {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
