@@ -2,8 +2,8 @@
 
 This document is the working reference for how Aura OS should model:
 - adapters
-- workspace connections
-- workspace integrations
+- connections
+- apps
 - workspace tools
 - MCP-backed capabilities
 
@@ -12,14 +12,14 @@ The goal is to give us one stable mental model before we continue implementation
 
 ## Goal
 
-Support multiple agent runtimes and multiple external systems without fragmenting the product.
+Support multiple agent adapters and multiple external systems without fragmenting the product.
 
 The desired outcome is:
 - Aura OS stays the control plane
 - adapters stay the execution brains
 - external systems plug into one shared tool surface
 - agents and Aura OS can use the same registered tools
-- we do not create one-off capability paths for each runtime
+- we do not create one-off capability paths for each adapter
 
 We want the platform to feel coherent:
 - one way to attach a model provider
@@ -31,11 +31,11 @@ We want the platform to feel coherent:
 
 Today, Aura OS already has:
 - multiple adapters
-- workspace-level provider records
-- workspace-level external integration records
+- workspace-level connection records
+- workspace-level app records
 - Aura-native project tools for specs, tasks, project state, and loop control
 - first-class app tools for GitHub, Linear, Slack, and Notion through a shared manifest and server-side app provider layer
-- MCP-based control-plane bridging for supported runtimes
+- MCP-based control-plane bridging for supported adapters
 
 What is still incomplete is the unification layer.
 
