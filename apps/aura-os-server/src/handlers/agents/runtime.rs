@@ -1228,6 +1228,9 @@ async fn build_external_project_mcp_config(
     env.insert("AURA_MCP_PROJECT_ID".to_string(), project_id.to_string());
     env.insert("AURA_MCP_JWT".to_string(), jwt.to_string());
     env.insert("AURA_MCP_AGENT_INSTANCE_ID".to_string(), agent_instance_id);
+    if let Some(workspace_path) = resolve_runtime_cwd(state, Some(project_id)) {
+        env.insert("AURA_MCP_PROJECT_WORKSPACE".to_string(), workspace_path);
+    }
     if let Some(org_id) = agent.org_id {
         env.insert("AURA_MCP_ORG_ID".to_string(), org_id.to_string());
     }

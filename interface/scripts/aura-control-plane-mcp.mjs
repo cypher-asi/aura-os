@@ -81,6 +81,25 @@ function configObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function expandTemplateString(value) {
+  return String(value).replace(/\$\{([A-Z0-9_]+)\}/g, (match, name) => process.env[name] ?? match);
+}
+
+function expandConfigTemplates(value) {
+  if (typeof value === "string") {
+    return expandTemplateString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => expandConfigTemplates(entry));
+  }
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, expandConfigTemplates(entry)]),
+    );
+  }
+  return value;
+}
+
 function slugify(value) {
   return String(value)
     .toLowerCase()
@@ -129,7 +148,7 @@ async function listSavedMcpServers() {
 }
 
 async function connectDynamicMcpServer(integration) {
-  const config = configObject(integration.provider_config);
+  const config = configObject(expandConfigTemplates(integration.provider_config));
   const transport = transportKind(config);
   if (!transport) {
     throw new Error(`Unsupported MCP transport for ${integration.name}`);
@@ -151,7 +170,7 @@ async function connectDynamicMcpServer(integration) {
       requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
     });
   } else {
-    const env = {};
+    const env = configObject(config.env);
     const secret = integrationSecretsById[integration.integration_id];
     if (typeof secret === "string" && secret.trim() && typeof config.secretEnvVar === "string" && config.secretEnvVar.trim()) {
       env[config.secretEnvVar.trim()] = secret.trim();

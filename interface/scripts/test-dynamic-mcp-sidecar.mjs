@@ -11,6 +11,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const sidecarPath = path.resolve(currentDir, "./aura-control-plane-mcp.mjs");
 const fakeServerPath = path.resolve(currentDir, "./lib/fake-workspace-mcp-server.mjs");
+const workspacePath = path.resolve(currentDir, "../");
 
 function jsonResponse(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -30,7 +31,8 @@ async function startMockApi() {
           provider_config: {
             transport: "stdio",
             command: process.execPath,
-            args: [fakeServerPath],
+            args: [fakeServerPath, "${AURA_MCP_PROJECT_WORKSPACE}"],
+            cwd: "${AURA_MCP_PROJECT_WORKSPACE}",
             secretEnvVar: "TEST_MCP_SECRET",
           },
         },
@@ -66,6 +68,7 @@ async function main() {
         AURA_MCP_PROJECT_ID: "proj-1",
         AURA_MCP_JWT: "test-jwt",
         AURA_MCP_ORG_ID: "org-1",
+        AURA_MCP_PROJECT_WORKSPACE: workspacePath,
         AURA_MCP_INTEGRATION_SECRETS_JSON: JSON.stringify({
           "mcp-1": "secret-123",
         }),
@@ -90,6 +93,20 @@ async function main() {
     const parsed = JSON.parse(text);
     assert.equal(parsed.message, "hello");
     assert.equal(parsed.secret, "secret-123");
+
+    const contextTool = listResult.tools.find((tool) => tool.name === "mcp_github_mcp__echo_context");
+    assert(contextTool, "expected context MCP tool to be registered through the sidecar");
+
+    const contextResult = await client.callTool({
+      name: contextTool.name,
+      arguments: {},
+    });
+    assert.ok(!contextResult.isError, "context MCP tool call should succeed");
+    const contextText = contextResult.content?.find((item) => item.type === "text")?.text;
+    assert(contextText, "context tool should return a text payload");
+    const context = JSON.parse(contextText);
+    assert.equal(context.cwd, workspacePath);
+    assert.deepEqual(context.argv, [workspacePath]);
   } finally {
     await Promise.allSettled([client.close(), new Promise((resolve) => server.close(resolve))]);
   }

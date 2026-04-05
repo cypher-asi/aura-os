@@ -30,10 +30,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         additionalProperties: false,
       },
     },
+    {
+      name: "echo_context",
+      description: "Returns the worker cwd and argv context for smoke testing template expansion.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+      },
+    },
   ],
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === "echo_context") {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            cwd: process.cwd(),
+            argv: process.argv.slice(2),
+          }),
+        },
+      ],
+    };
+  }
+
   if (request.params.name !== "echo_secret") {
     return {
       isError: true,
