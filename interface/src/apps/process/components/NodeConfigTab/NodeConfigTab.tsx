@@ -7,12 +7,15 @@ import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { useAgentStore } from "../../../agents/stores";
 import styles from "../../../../components/Preview/Preview.module.css";
 
-const TRUNCATE_LIMIT = 400;
+const MAX_LINES = 5;
 
 function TruncatedText({ text, mono }: { text: string; mono?: boolean }) {
   const [expanded, setExpanded] = useState(false);
-  const needsTruncation = text.length > TRUNCATE_LIMIT;
-  const display = !expanded && needsTruncation ? text.slice(0, TRUNCATE_LIMIT) + "\u2026" : text;
+  const lines = text.split("\n");
+  const needsTruncation = lines.length > MAX_LINES;
+  const display = !expanded && needsTruncation
+    ? lines.slice(0, MAX_LINES).join("\n")
+    : text;
 
   return (
     <div>
@@ -23,6 +26,7 @@ function TruncatedText({ text, mono }: { text: string; mono?: boolean }) {
         style={mono ? { fontFamily: "var(--font-mono)", fontSize: 12 } : undefined}
       >
         {display}
+        {!expanded && needsTruncation && "\u2026"}
       </Text>
       {needsTruncation && (
         <button

@@ -221,12 +221,18 @@ function NodeEventDetails({
             isStreaming={false}
           />
         </div>
-      ) : nodeEvent.output ? (
+      ) : (
         <div className={styles.taskField}>
           <span className={styles.fieldLabel}>Output</span>
-          <div style={monoBox}>{nodeEvent.output}</div>
+          {nodeEvent.output ? (
+            <div style={monoBox}>{nodeEvent.output}</div>
+          ) : (
+            <div style={{ ...monoBox, color: "var(--color-text-muted)" }}>
+              No output
+            </div>
+          )}
         </div>
-      ) : null}
+      )}
 
       {nodeEvent.input_snapshot && (
         <div className={styles.taskField}>

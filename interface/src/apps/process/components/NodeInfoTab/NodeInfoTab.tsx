@@ -1,12 +1,59 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Pin } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
-import type { ProcessNode } from "../../../../types";
+import type { ProcessNode, ProcessEvent } from "../../../../types";
 import type { ProcessNodeType } from "../../../../types/enums";
+import { processApi } from "../../../../api/process";
+import { useProcessStore } from "../../stores/process-store";
 import { useAgentStore } from "../../../agents/stores";
 import { Avatar } from "../../../../components/Avatar";
 import { PinnedOutputField } from "../PinnedOutput";
+import { monoBox } from "../NodeOutputTab/node-output-utils";
 import styles from "../../../../components/Preview/Preview.module.css";
+
+const MAX_LINES = 5;
+
+function TruncatedLines({ text, mono }: { text: string; mono?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const lines = text.split("\n");
+  const needsTruncation = lines.length > MAX_LINES;
+  const display = !expanded && needsTruncation
+    ? lines.slice(0, MAX_LINES).join("\n")
+    : text;
+
+  return (
+    <div>
+      <Text
+        variant="secondary"
+        size="sm"
+        className={styles.preWrapText}
+        style={mono ? { fontFamily: "var(--font-mono)", fontSize: 12 } : undefined}
+      >
+        {display}
+        {!expanded && needsTruncation && "\u2026"}
+      </Text>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            marginTop: 4,
+            fontSize: 11,
+            color: "var(--color-text-link, #3b82f6)",
+            cursor: "pointer",
+          }}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const EMPTY_RUNS: never[] = [];
 
 const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   ignition: "Ignition",
@@ -25,10 +72,25 @@ interface NodeInfoTabProps {
 }
 
 export function NodeInfoTab({ node }: NodeInfoTabProps) {
+  const { processId } = useParams<{ processId: string }>();
   const agents = useAgentStore((s) => s.agents);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
+  const runs = useProcessStore((s) => (processId ? s.runs[processId] : undefined)) ?? EMPTY_RUNS;
+  const latestRun = runs[0];
+
+  const [nodeEvent, setNodeEvent] = useState<ProcessEvent | null>(null);
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
+
+  const loadEvent = useCallback(async () => {
+    if (!processId || !latestRun) { setNodeEvent(null); return; }
+    try {
+      const evts = await processApi.listRunEvents(processId, latestRun.run_id);
+      setNodeEvent(evts.find((e) => e.node_id === node.node_id) ?? null);
+    } catch { setNodeEvent(null); }
+  }, [processId, latestRun?.run_id, node.node_id]);
+
+  useEffect(() => { loadEvent(); }, [loadEvent]);
 
   const agent = node.agent_id
     ? agents.find((a) => a.agent_id === node.agent_id) ?? null
@@ -90,9 +152,20 @@ export function NodeInfoTab({ node }: NodeInfoTabProps) {
         {node.node_type !== "merge" && node.node_type !== "delay" && node.prompt && (
           <div className={styles.taskField}>
             <span className={styles.fieldLabel}>Prompt</span>
-            <Text variant="secondary" size="sm" className={styles.preWrapText}>{node.prompt}</Text>
+            <TruncatedLines text={node.prompt} />
           </div>
         )}
+
+        <div className={styles.taskField}>
+          <span className={styles.fieldLabel}>Output</span>
+          {nodeEvent?.output ? (
+            <div style={monoBox}>{nodeEvent.output}</div>
+          ) : (
+            <div style={{ ...monoBox, color: "var(--color-text-muted)" }}>
+              No output yet
+            </div>
+          )}
+        </div>
 
         {node.node_type === "ignition" && (
           <div className={styles.taskField}>
