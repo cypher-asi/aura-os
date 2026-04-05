@@ -94,13 +94,20 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
           delete newConfig.pinned_output;
           await processApi.updateNode(processId, nodeId, { config: newConfig });
         } else {
-          const latestRun = runs[0];
-          if (!latestRun) return;
-          const events = await processApi.listRunEvents(processId, latestRun.run_id);
-          const nodeEvent = events.find((e) => e.node_id === nodeId && e.status === "completed");
-          if (!nodeEvent?.output) return;
+          let pinnedOutput: string | undefined;
+          for (const run of runs) {
+            const events = await processApi.listRunEvents(processId, run.run_id);
+            const nodeEvent = events.find(
+              (e) => e.node_id === nodeId && e.status === "completed" && !!e.output,
+            );
+            if (nodeEvent) {
+              pinnedOutput = nodeEvent.output;
+              break;
+            }
+          }
+          if (!pinnedOutput) return;
           await processApi.updateNode(processId, nodeId, {
-            config: { ...node.config, pinned_output: nodeEvent.output },
+            config: { ...node.config, pinned_output: pinnedOutput },
           });
         }
         fetchNodes(processId);

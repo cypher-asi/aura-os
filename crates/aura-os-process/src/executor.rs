@@ -128,21 +128,18 @@ queries, or produce placeholder output. Downstream nodes depend on real data —
 garbage forward is worse than reporting an honest failure.";
 
 const PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE: &str = "\
-You are executing a step in an automated workflow process. \
-Output ONLY the final result. No planning, no narration, no \"let me try\" preamble. \
-Never describe your process — just output the finished product as text.\n\n\
-OUTPUT FILE: A designated output file is available in your working directory. \
-Write your results there incrementally as you collect data. This file is \
-automatically read after your session ends and becomes the canonical output \
-passed to downstream nodes. You do NOT need to repeat its contents in your \
-text response. Write each result to disk as you go so partial progress \
-survives timeouts. If you cannot write the file, emit your result as plain \
-text in your assistant message instead — that is used as a fallback.\n\n\
+You are executing a step in an automated workflow process.\n\n\
+OUTPUT FILE REQUIREMENT: You MUST write your final results to the designated \
+output file. This file is the ONLY output passed to downstream nodes. If the \
+file is empty when your session ends, the node FAILS and the workflow stops.\n\n\
+WRITE INCREMENTALLY: Write to the output file after each batch of results you \
+collect, not just at the end. This way partial progress survives if you run out \
+of time. If write_file fails, retry with a simpler approach or write smaller \
+chunks. Never end your session without having written to the output file.\n\n\
 TOOL-FAILURE RULE: If the majority of your tool calls fail or return errors, \
-STOP immediately and output a structured error report listing each failed tool call, \
-the error, and what data is missing. Do NOT fabricate results, echo back your search \
-queries, or produce placeholder output. Downstream nodes depend on real data — passing \
-garbage forward is worse than reporting an honest failure.";
+STOP immediately and write a structured error report TO THE OUTPUT FILE listing \
+each failed tool call, the error, and what data is missing. Do NOT fabricate \
+results or produce placeholder output.";
 
 fn action_preamble(output_file: &str) -> String {
     format!("{PROCESS_EXECUTION_PREAMBLE_WITH_OUTPUT_FILE}\n\nYour output file is: `{output_file}`")
@@ -891,46 +888,89 @@ async fn execute_action(
         )
     };
 
-    let (resp, token_usage) = run_harness_session(
+    let output_file_path = Path::new(project_path.unwrap_or(".")).join(&output_file);
+
+    let harness_result = run_harness_session(
         node, full_prompt,
         Some(action_preamble(&output_file)),
         harness, token, agent_service, org_service, forwarder, project_path,
         timeout_secs,
-    ).await?;
+    ).await;
 
-    let file_content = {
-        let path = Path::new(project_path.unwrap_or(".")).join(&output_file);
-        match tokio::fs::read_to_string(&path).await {
-            Ok(content) if !content.trim().is_empty() => {
-                info!(path = %path.display(), bytes = content.len(), "Read designated output file");
-                Some(content)
-            }
-            Ok(_) => None,
-            Err(_) => None,
+    // Always check the output file first — agent may have written it before
+    // a timeout or error. This is the canonical output path.
+    let file_content = match tokio::fs::read_to_string(&output_file_path).await {
+        Ok(content) if !content.trim().is_empty() => {
+            info!(path = %output_file_path.display(), bytes = content.len(), "Read designated output file");
+            Some(content)
         }
+        _ => None,
     };
 
-    let text_output = canonicalize_output(&resp.final_text, false);
+    if let Some(fc) = file_content {
+        let token_usage = harness_result.ok().and_then(|(_, tu)| tu);
+        return Ok(NodeResult {
+            downstream_output: fc,
+            display_output: None,
+            token_usage,
+            content_blocks: None,
+        });
+    }
 
-    let output = if let Some(fc) = file_content {
-        fc
-    } else if !text_output.is_empty() {
-        text_output
-    } else {
-        return Err(ProcessError::Execution(
-            "Action node produced no output: the designated output file is \
-             missing/empty and the model's final text response is empty. \
-             Check the node's prompt and tool access."
-                .into(),
-        ));
-    };
+    // Output file missing — propagate harness errors now.
+    let (resp, token_usage) = harness_result?;
 
-    Ok(NodeResult {
-        downstream_output: output,
-        display_output: None,
-        token_usage,
-        content_blocks: Some(resp.content_blocks),
-    })
+    // Recovery chain: try to salvage substantial work the agent produced
+    // but failed to write to the file.
+
+    // 1. Check all_text — the full conversation may contain the real output
+    //    (e.g. agent produced 25KB of JSON but never wrote it to the file).
+    let all_text_clean = canonicalize_output(&resp.all_text, false);
+    if all_text_clean.len() > 500 {
+        warn!(
+            node_id = %node.node_id,
+            output_file = %output_file,
+            all_text_bytes = all_text_clean.len(),
+            "Output file missing; recovered substantial text from conversation"
+        );
+        return Ok(NodeResult {
+            downstream_output: all_text_clean,
+            display_output: None,
+            token_usage,
+            content_blocks: Some(resp.content_blocks),
+        });
+    }
+
+    // 2. Check content_blocks for write_file attempts that failed
+    if let Some(recovered) = synthesize_output_from_blocks(&resp.content_blocks) {
+        warn!(
+            node_id = %node.node_id,
+            output_file = %output_file,
+            recovered_bytes = recovered.len(),
+            "Output file missing; recovered content from write_file tool calls"
+        );
+        return Ok(NodeResult {
+            downstream_output: recovered,
+            display_output: None,
+            token_usage,
+            content_blocks: Some(resp.content_blocks),
+        });
+    }
+
+    // 3. Nothing recoverable — hard fail with diagnostics
+    let tool_call_count = resp.content_blocks.iter()
+        .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("tool_use"))
+        .count();
+    let final_text_preview: String = resp.final_text.chars().take(200).collect();
+
+    Err(ProcessError::Execution(format!(
+        "Action node output file '{}' is missing/empty and no substantial output \
+         could be recovered. The agent made {} tool calls and produced {} bytes of \
+         total text, but the final response was just: '{}'. \
+         This usually means the agent got stuck or ran out of turns before writing \
+         results. Check the prompt, increase max_turns, or increase timeout_seconds.",
+        output_file, tool_call_count, resp.all_text.len(), final_text_preview,
+    )))
 }
 
 async fn execute_condition(
@@ -1173,6 +1213,9 @@ async fn execute_artifact(
 struct HarnessResponse {
     /// Text from the model's final turn only (after the last tool result).
     final_text: String,
+    /// Full accumulated text across all turns (for recovery when final_text is
+    /// just narration but the agent actually produced substantial output).
+    all_text: String,
     /// Structured content blocks mirroring the agents-app conversation format.
     content_blocks: Vec<serde_json::Value>,
     usage: Option<SessionUsage>,
@@ -1280,16 +1323,14 @@ async fn collect_harness_response(
                     )));
                 }
                 Err(broadcast::error::RecvError::Closed) => {
-                    if all_text.is_empty() {
-                        return Err(ProcessError::Execution(
-                            "Harness connection closed before producing any output".into(),
-                        ));
-                    }
-                    warn!(
-                        bytes = all_text.len(),
-                        "Harness connection closed before AssistantMessageEnd; returning partial output"
-                    );
-                    break;
+                    let tool_count = content_blocks.iter()
+                        .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("tool_use"))
+                        .count();
+                    return Err(ProcessError::Execution(format!(
+                        "Harness connection closed unexpectedly after {} bytes of text \
+                         and {} tool calls. The harness process may have crashed.",
+                        all_text.len(), tool_count,
+                    )));
                 }
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     warn!(skipped = n, "Harness event receiver lagged");
@@ -1305,16 +1346,15 @@ async fn collect_harness_response(
         Ok(Ok(())) => {}
         Ok(Err(e)) => return Err(e),
         Err(_) => {
-            if all_text.is_empty() {
-                return Err(ProcessError::Execution(format!(
-                    "Harness timed out after {timeout_secs}s without producing output"
-                )));
-            }
-            warn!(
-                bytes = all_text.len(),
-                timeout_secs,
-                "Harness timed out; returning partial output"
-            );
+            let tool_count = content_blocks.iter()
+                .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("tool_use"))
+                .count();
+            return Err(ProcessError::Execution(format!(
+                "Harness timed out after {timeout_secs}s. Collected {} bytes of text \
+                 and {} tool calls but session did not complete. Increase \
+                 timeout_seconds in node config or simplify the task.",
+                all_text.len(), tool_count,
+            )));
         }
     };
 
@@ -1332,11 +1372,12 @@ async fn collect_harness_response(
     let final_text = if had_tool_calls && !last_turn_text.trim().is_empty() {
         last_turn_text
     } else {
-        all_text
+        all_text.clone()
     };
 
     Ok(HarnessResponse {
         final_text,
+        all_text,
         content_blocks,
         usage,
     })
@@ -1378,6 +1419,39 @@ fn extract_final_output(raw: &str) -> String {
     }
 
     trimmed.to_string()
+}
+
+/// Attempt to recover output from content blocks when the output file is
+/// missing and the conversation text is too short. Looks for `write_file`
+/// tool calls and returns the largest content payload, since the agent may
+/// have tried to write the file but the tool call failed.
+fn synthesize_output_from_blocks(blocks: &[serde_json::Value]) -> Option<String> {
+    let mut best: Option<String> = None;
+    for block in blocks {
+        let is_write = block.get("type").and_then(|t| t.as_str()) == Some("tool_use")
+            && block
+                .get("name")
+                .and_then(|n| n.as_str())
+                .map(|n| n == "write_file" || n == "write")
+                .unwrap_or(false);
+        if !is_write {
+            continue;
+        }
+        let content = block
+            .get("input")
+            .and_then(|inp| {
+                inp.get("content")
+                    .or_else(|| inp.get("contents"))
+                    .or_else(|| inp.get("text"))
+            })
+            .and_then(|v| v.as_str());
+        if let Some(c) = content {
+            if c.len() > best.as_ref().map_or(0, |b| b.len()) {
+                best = Some(c.to_string());
+            }
+        }
+    }
+    best.filter(|b| b.len() > 200)
 }
 
 fn parse_condition_result(output: &str) -> bool {
