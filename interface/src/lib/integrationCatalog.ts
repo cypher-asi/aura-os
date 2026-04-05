@@ -226,7 +226,25 @@ export function getConnectionAuthLabel(adapterType: string): string {
     const label = getIntegrationLabel(providers[0]);
     return label === "Google Gemini" ? "Gemini API" : `${label} API`;
   }
-  return "Connection API";
+  return "Workspace Connection";
+}
+
+function formatProviderAuthLabel(provider: string): string {
+  const label = getIntegrationLabel(provider);
+  return label === "Google Gemini" ? "Gemini" : label;
+}
+
+export function getConnectionAuthHint(adapterType: string): string {
+  const providers = runtimeAuthProvidersForAdapter(adapterType);
+  if (providers.length === 0) {
+    return "Use a compatible workspace connection from Connections.";
+  }
+  if (providers.length === 1) {
+    return `Uses a shared ${formatProviderAuthLabel(providers[0])} connection from Connections.`;
+  }
+
+  const labels = providers.map(formatProviderAuthLabel);
+  return `Choose a shared connection from Connections. Supported providers: ${labels.join(", ")}.`;
 }
 
 export function getSecretLabel(provider: string): string {

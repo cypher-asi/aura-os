@@ -6,6 +6,7 @@ import {
   filterRuntimeCompatibleIntegrations,
   getAdapterLabel,
   getConnectionAuthLabel,
+  getConnectionAuthHint,
   getIntegrationLabel,
   getLocalAuthLabel,
 } from "../../lib/integrationCatalog";
@@ -346,15 +347,15 @@ function RuntimeFields({
     <>
       <div className={styles.fieldGroup}>
         <label className={styles.label}>Runtime</label>
-        <div className={styles.machineTypeToggle}>
+        <div className={styles.runtimeGrid}>
           {(MODEL_RUNTIME_ADAPTERS as readonly string[]).map((t) => (
             <button
               key={t}
               type="button"
-              className={`${styles.machineTypeOption} ${adapterType === t ? styles.machineTypeActive : ""}`}
+              className={`${styles.runtimeOption} ${adapterType === t ? styles.runtimeOptionActive : ""}`}
               onClick={() => setAdapterType(t)}
             >
-              {getAdapterLabel(t)}
+              <span className={styles.choiceTitle}>{getAdapterLabel(t)}</span>
             </button>
           ))}
         </div>
@@ -362,23 +363,33 @@ function RuntimeFields({
 
       <div className={styles.fieldGroup}>
         <label className={styles.label}>Runs On</label>
-        <div className={styles.machineTypeToggle}>
+        <div className={styles.choiceGrid}>
           <button
             type="button"
-            className={`${styles.machineTypeOption} ${environment === "local_host" ? styles.machineTypeActive : ""}`}
+            className={`${styles.choiceCard} ${environment === "local_host" ? styles.choiceCardActive : ""}`}
             onClick={() => setEnvironment("local_host")}
           >
-            <Monitor size={14} />
-            This Machine
+            <span className={styles.choiceTitle}>
+              <Monitor size={14} />
+              This Machine
+            </span>
+            <span className={styles.choiceBody}>
+              Run on the local host where Aura OS and your local tools are available.
+            </span>
           </button>
           {adapterType === "aura_harness" ? (
             <button
               type="button"
-              className={`${styles.machineTypeOption} ${environment === "swarm_microvm" ? styles.machineTypeActive : ""}`}
+              className={`${styles.choiceCard} ${environment === "swarm_microvm" ? styles.choiceCardActive : ""}`}
               onClick={() => setEnvironment("swarm_microvm")}
             >
-              <Cloud size={14} />
-              Isolated Cloud Runtime
+              <span className={styles.choiceTitle}>
+                <Cloud size={14} />
+                Isolated Cloud Runtime
+              </span>
+              <span className={styles.choiceBody}>
+                Use a stronger isolation boundary for Aura-managed execution.
+              </span>
             </button>
           ) : null}
         </div>
@@ -408,62 +419,57 @@ function AuthFields({
   authSource: string;
   setAuthSource: (v: string) => void;
 }) {
+  const connectionLabel = getConnectionAuthLabel(adapterType);
+  const connectionHint = getConnectionAuthHint(adapterType);
+
   return (
     <div className={styles.fieldGroup}>
       <label className={styles.label}>Credential Source</label>
-      <div className={styles.machineTypeToggle}>
+      <div className={styles.choiceGrid}>
         {adapterType === "aura_harness" ? (
           <>
             <button
               type="button"
-              className={`${styles.machineTypeOption} ${authSource === "aura_managed" ? styles.machineTypeActive : ""}`}
+              className={`${styles.choiceCard} ${authSource === "aura_managed" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("aura_managed")}
             >
-              Managed by Aura
+              <span className={styles.choiceTitle}>Managed by Aura</span>
+              <span className={styles.choiceBody}>
+                Aura provides the credentials and billing for this runtime path.
+              </span>
             </button>
             <button
               type="button"
-              className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
+              className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >
-              {getConnectionAuthLabel(adapterType)}
+              <span className={styles.choiceTitle}>{connectionLabel}</span>
+              <span className={styles.choiceBody}>{connectionHint}</span>
             </button>
           </>
         ) : (
           <>
             <button
               type="button"
-              className={`${styles.machineTypeOption} ${authSource === "local_cli_auth" ? styles.machineTypeActive : ""}`}
+              className={`${styles.choiceCard} ${authSource === "local_cli_auth" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("local_cli_auth")}
             >
-              {getLocalAuthLabel(adapterType)}
+              <span className={styles.choiceTitle}>{getLocalAuthLabel(adapterType)}</span>
+              <span className={styles.choiceBody}>
+                Use the local CLI login or shell auth already available on this machine.
+              </span>
             </button>
             <button
               type="button"
-              className={`${styles.machineTypeOption} ${authSource === "org_integration" ? styles.machineTypeActive : ""}`}
+              className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >
-              {getConnectionAuthLabel(adapterType)}
+              <span className={styles.choiceTitle}>{connectionLabel}</span>
+              <span className={styles.choiceBody}>{connectionHint}</span>
             </button>
           </>
         )}
       </div>
-      {adapterType === "aura_harness" ? (
-        <Text variant="muted" size="sm">
-          Aura can run with Aura-managed credentials or use a shared Anthropic connection
-          for API-key-backed execution.
-        </Text>
-      ) : authSource === "local_cli_auth" ? (
-        <Text variant="muted" size="sm">
-          This agent will use the CLI login or shell auth already available on
-          this machine. No workspace connection is required.
-        </Text>
-      ) : (
-        <Text variant="muted" size="sm">
-          This agent will inject a shared workspace connection into the runtime
-          for API-key-backed execution.
-        </Text>
-      )}
     </div>
   );
 }
@@ -485,7 +491,7 @@ function IntegrationPicker({
           <button
             key={integration.integration_id}
             type="button"
-            className={`${styles.integrationOption} ${integrationId === integration.integration_id ? styles.machineTypeActive : ""}`}
+            className={`${styles.integrationOption} ${integrationId === integration.integration_id ? styles.integrationOptionActive : ""}`}
             onClick={() =>
               setIntegrationId(
                 integration.integration_id === integrationId
@@ -494,15 +500,15 @@ function IntegrationPicker({
               )
             }
           >
-            <span>{integration.name}</span>
-            <span className={styles.integrationMeta}>
+            <span className={styles.choiceTitle}>{integration.name}</span>
+            <span className={styles.choiceBody}>
               {getIntegrationLabel(integration.provider)}
               {integration.default_model
-                ? ` \u2022 ${integration.default_model}`
+                ? ` • ${integration.default_model}`
                 : ""}
-              {integration.has_secret
-                ? " \u2022 key saved"
-                : " \u2022 no key saved"}
+            </span>
+            <span className={styles.integrationMeta}>
+              {integration.has_secret ? "Key saved" : "No key saved yet"}
             </span>
           </button>
         ))}

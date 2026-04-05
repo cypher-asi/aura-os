@@ -171,10 +171,13 @@ export function OrgSettingsIntegrations({ integrations, busyId, onCreate, onUpda
               <div className={styles.integrationFields}>
                 <div className={`${styles.integrationFieldGroup} ${styles.integrationFieldGroupFull}`}>
                   <span className={styles.integrationFieldLabel}>Choose Provider</span>
+                  <Text size="sm" variant="muted" className={styles.integrationHint}>
+                    Pick what you want to connect first. Connections add shared model access, Apps add workspace tools, and MCP Servers attach external tool sources.
+                  </Text>
                   <ProviderButtons
                     value=""
                     onChange={(provider) => setNewIntegration(emptyDraft(provider))}
-                    showSectionDescriptions={false}
+                    showSectionDescriptions
                   />
                 </div>
               </div>
@@ -457,19 +460,28 @@ function ProviderButtons({
       {sections.map((section) => (
         <div key={section.id} className={styles.integrationProviderSection}>
           <div className={styles.integrationProviderSectionHeader}>
-            <span>{section.title}</span>
+            <span className={styles.providerSectionTitle}>{section.title}</span>
             {showSectionDescriptions && <Text size="xs" variant="muted">{section.description}</Text>}
           </div>
-          <div className={styles.machineTypeToggle}>
+          <div className={styles.providerCardGrid}>
             {section.providers.map((provider) => (
               <button
                 key={provider.id}
                 type="button"
-                className={`${styles.machineTypeOption} ${value === provider.id ? styles.machineTypeActive : ""}`}
+                aria-label={provider.label}
+                className={`${styles.providerCard} ${value === provider.id ? styles.providerCardActive : ""}`}
                 onClick={() => onChange(provider.id)}
                 title={provider.description}
               >
-                {provider.label}
+                <span className={styles.providerCardTitle}>{provider.label}</span>
+                <span className={styles.providerCardMeta}>
+                  {provider.kind === "workspace_connection"
+                    ? "Shared model access"
+                    : provider.kind === "workspace_integration"
+                      ? "Workspace app tools"
+                      : "External MCP tools"}
+                </span>
+                <span className={styles.providerCardBody}>{provider.description}</span>
               </button>
             ))}
           </div>
