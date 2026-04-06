@@ -28,6 +28,9 @@ const {
     nodes: {
       "process-1": [{ node_id: "node-1", label: "Draft reply" }],
     },
+    connections: {
+      "process-1": [],
+    },
     fetchRuns: mockFetchRuns,
     setEvents: mockSetEvents,
     events: {},
@@ -123,6 +126,7 @@ vi.mock("./process-sidekick-utils", () => ({
   injectKeyframes: vi.fn(),
   useElapsedTime: () => "00:05",
   formatDuration: () => "5s",
+  countRunnableProcessNodes: () => 1,
   EMPTY_NODES: [],
 }));
 

@@ -13,6 +13,7 @@ import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { PinnedOutputField, PinOutputButton } from "../PinnedOutput";
 import { monoBox, prettyPrintIfJson } from "./node-output-utils";
 import { ProcessEventOutput } from "../ProcessEventOutput";
+import { ArtifactCard } from "../ProcessSidekickContent/ArtifactCard";
 import styles from "../../../../components/Preview/Preview.module.css";
 
 interface NodeOutputTabProps {
@@ -120,6 +121,8 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
           </Text>
         )}
 
+        {!loading && artifacts.length > 0 && <ArtifactList artifacts={artifacts} />}
+
         {!loading && nodeEvent && (
           <NodeEventDetails
             nodeEvent={nodeEvent}
@@ -141,8 +144,6 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
             No output for this node in the latest run
           </Text>
         )}
-
-        {artifacts.length > 0 && <ArtifactList artifacts={artifacts} />}
       </div>
     </div>
   );
@@ -230,66 +231,7 @@ function ArtifactList({
     <div className={styles.taskField}>
       <span className={styles.fieldLabel}>Artifacts</span>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {artifacts.map((a) => (
-          <div
-            key={a.artifact_id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "6px 8px",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-sm)",
-              fontSize: 12,
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 600 }}>{a.name}</div>
-              <div
-                style={{
-                  color: "var(--color-text-muted)",
-                  fontSize: 11,
-                }}
-              >
-                {a.artifact_type} &middot;{" "}
-                {(a.size_bytes / 1024).toFixed(1)} KB
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const content = await processApi.getArtifactContent(
-                    a.artifact_id,
-                  );
-                  const blob = new Blob(
-                    [content as unknown as string],
-                    { type: "text/markdown" },
-                  );
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement("a");
-                  link.href = url;
-                  link.download = `${a.name}.md`;
-                  link.click();
-                  URL.revokeObjectURL(url);
-                } catch {
-                  /* ignore */
-                }
-              }}
-              style={{
-                background: "transparent",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius-sm)",
-                padding: "4px 8px",
-                cursor: "pointer",
-                fontSize: 11,
-                color: "var(--color-text)",
-              }}
-            >
-              Download
-            </button>
-          </div>
-        ))}
+        {artifacts.map((a) => <ArtifactCard key={a.artifact_id} artifact={a} />)}
       </div>
     </div>
   );
