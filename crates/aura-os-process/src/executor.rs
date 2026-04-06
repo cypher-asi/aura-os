@@ -1308,7 +1308,7 @@ async fn execute_action_via_automaton(
     let rid_str = run_id.to_string();
     let nid_str = node.node_id.to_string();
 
-    if node.node_type == ProcessNodeType::Condition || node.node_type == ProcessNodeType::Prompt {
+    if node.node_type == ProcessNodeType::Condition {
         return execute_single_automaton(
             node, task_id, project_id, process_id, run_id,
             automaton_client, store, broadcast, project_path,
@@ -1633,11 +1633,6 @@ async fn execute_action_via_automaton(
         warn!(node_id = %node.node_id, error = %e, "Failed to save merged artifact");
     }
 
-    let display = format!(
-        "Executed {} sub-tasks in parallel ({} failures), {} total bytes",
-        sub_tasks.len(), failures.len(), merged_output.len()
-    );
-
     let token_usage = if total_input_tokens > 0 || total_output_tokens > 0 {
         Some(NodeTokenUsage {
             input_tokens: total_input_tokens,
@@ -1650,7 +1645,7 @@ async fn execute_action_via_automaton(
 
     Ok(NodeResult {
         downstream_output: merged_output,
-        display_output: Some(display),
+        display_output: None,
         token_usage,
         content_blocks: None,
     })
