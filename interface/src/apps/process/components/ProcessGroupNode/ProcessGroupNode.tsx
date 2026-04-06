@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { NodeResizer, type NodeProps } from "@xyflow/react";
+import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import { Layers } from "lucide-react";
 
 interface ProcessGroupNodeData {
@@ -69,12 +69,19 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
         position: "relative",
       }}
     >
-      <NodeResizer
+      <NodeResizeControl
+        position="bottom-right"
+        variant="handle"
         minWidth={220}
         minHeight={150}
-        isVisible={selected}
-        lineStyle={{ borderColor: "#38bdf8" }}
-        handleStyle={{ width: 8, height: 8, borderRadius: 0, background: "#38bdf8" }}
+        style={{
+          background: "transparent",
+          border: "none",
+          width: 16,
+          height: 16,
+          right: 0,
+          bottom: 0,
+        }}
         onResizeEnd={(_, params) => {
           data.onResizeStop?.(
             id,
@@ -82,7 +89,27 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
             typeof params.height === "number" ? params.height : undefined,
           );
         }}
-      />
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          style={{
+            position: "absolute",
+            right: 0,
+            bottom: 0,
+            opacity: 0.45,
+            cursor: "nwse-resize",
+            transition: "opacity 0.15s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.45"; }}
+        >
+          <line x1="14" y1="4" x2="4" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
+          <line x1="14" y1="8" x2="8" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
+          <line x1="14" y1="12" x2="12" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
+        </svg>
+      </NodeResizeControl>
       <div
         className="nodrag"
         style={{

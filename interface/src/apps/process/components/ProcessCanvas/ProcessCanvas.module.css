@@ -70,7 +70,7 @@
   background: transparent !important;
 }
 
-:global(.react-flow__node.selected .react-flow__resize-control) {
+:global(.react-flow__node.selected:not(.react-flow__node-groupNode) .react-flow__resize-control) {
   display: none !important;
 }
 
