@@ -542,6 +542,15 @@ export interface ProcessEvent {
   content_blocks?: ProcessEventContentBlock[];
 }
 
+export interface ProcessRunTranscriptEvent {
+  transcript_id: string;
+  process_id: string;
+  run_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface ProcessArtifact {
   artifact_id: string;
   process_id: string;

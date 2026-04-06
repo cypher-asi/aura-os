@@ -10,7 +10,7 @@ import { StreamingBubble } from "../../../../components/StreamingBubble";
 import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";
 import { useStreamEvents, useStreamingText, useThinkingText, useThinkingDurationMs, useActiveToolCalls, useTimeline, useIsStreaming } from "../../../../hooks/stream/hooks";
-import type { ProcessArtifact, ProcessEvent, ProcessRun } from "../../../../types";
+import type { ProcessArtifact, ProcessEvent, ProcessRun, ProcessRunTranscriptEvent } from "../../../../types";
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
 import { LiveRunBanner } from "./LiveRunBanner";
@@ -28,6 +28,7 @@ function useRunPolling(initialRun: ProcessRun) {
   const cachedEvents = useProcessStore((s) => s.events[run.run_id]);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
   const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
+  const [transcript, setTranscript] = useState<ProcessRunTranscriptEvent[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -35,12 +36,18 @@ function useRunPolling(initialRun: ProcessRun) {
 
   const loadData = useCallback(async () => {
     try {
-      const [artList, evtList] = await Promise.all([
+      const [artList, evtList, transcriptList] = await Promise.all([
         processApi.listRunArtifacts(run.process_id, run.run_id),
         processApi.listRunEvents(run.process_id, run.run_id),
+        processApi.listRunTranscript(run.process_id, run.run_id),
       ]);
       setArtifacts(artList);
       setEvents(evtList);
+      setTranscript(
+        [...(transcriptList ?? [])].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        ),
+      );
       setStoreEvents(run.run_id, evtList);
     } catch { /* ignore */ }
   }, [run.process_id, run.run_id, setStoreEvents]);
@@ -67,7 +74,7 @@ function useRunPolling(initialRun: ProcessRun) {
     };
   }, [isActive, loadData, refreshRun]);
 
-  return { run, isActive, nodes, artifacts, events, loadData, refreshRun };
+  return { run, isActive, nodes, artifacts, events, transcript, loadData, refreshRun };
 }
 
 function useRunNodeTracking(
@@ -166,21 +173,67 @@ function buildFullRunOutput(
   return parts.join("\n").trim();
 }
 
+function buildTranscriptOutput(transcript: ProcessRunTranscriptEvent[]): string {
+  const parts: string[] = [];
+  for (const entry of transcript) {
+    const payload = (entry.payload ?? {}) as Record<string, unknown>;
+    const type = String(payload.type ?? entry.event_type ?? "event");
+    const nodeId = typeof payload.node_id === "string" ? payload.node_id : null;
+    const nodePrefix = nodeId ? ` [${nodeId}]` : "";
+    parts.push(`## ${type}${nodePrefix}`);
+
+    if (type === "text_delta" && typeof payload.text === "string") {
+      parts.push(payload.text);
+    } else if (type === "thinking_delta") {
+      const thinking =
+        (typeof payload.text === "string" ? payload.text : undefined) ??
+        (typeof payload.thinking === "string" ? payload.thinking : "");
+      if (thinking) parts.push(`<thinking>\n${thinking}\n</thinking>`);
+    } else if ((type === "tool_use_start" || type === "tool_call_snapshot") && typeof payload.name === "string") {
+      parts.push(`[tool_call: ${payload.name}]`);
+    } else if (type === "tool_result") {
+      const name = typeof payload.name === "string" ? payload.name : "tool";
+      const result = typeof payload.result === "string" ? payload.result : "";
+      const errTag = payload.is_error ? " (error)" : "";
+      parts.push(`[tool_result: ${name}${errTag}]`);
+      if (result) parts.push(result);
+    } else if (type === "process_node_executed") {
+      const status = typeof payload.status === "string" ? payload.status : "";
+      if (status) parts.push(`status: ${status}`);
+    } else {
+      parts.push(JSON.stringify(payload, null, 2) ?? "{}");
+    }
+
+    parts.push("");
+  }
+  return parts.join("\n").trim();
+}
+
 // ---------------------------------------------------------------------------
 // CopyAllOutputButton
 // ---------------------------------------------------------------------------
 
-function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes: { node_id: string; label: string }[] }) {
+function CopyAllOutputButton({
+  events,
+  nodes,
+  transcript,
+}: {
+  events: ProcessEvent[];
+  nodes: { node_id: string; label: string }[];
+  transcript: ProcessRunTranscriptEvent[];
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    const text = buildFullRunOutput(events, nodes);
+    const text = transcript.length > 0
+      ? buildTranscriptOutput(transcript)
+      : buildFullRunOutput(events, nodes);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
-  }, [events, nodes]);
+  }, [events, nodes, transcript]);
 
   return (
     <button
@@ -258,7 +311,7 @@ function ActiveDurationCell({ startedAt }: { startedAt: string }) {
 // ---------------------------------------------------------------------------
 
 function RunDetailGrid({
-  run, isActive, sortedEvents, nodes, totalTokensFromEvents, models,
+  run, isActive, sortedEvents, nodes, totalTokensFromEvents, models, transcript,
 }: {
   run: ProcessRun;
   isActive: boolean;
@@ -266,12 +319,13 @@ function RunDetailGrid({
   nodes: { node_id: string; label: string }[];
   totalTokensFromEvents: { input: number; output: number; total: number };
   models: string[];
+  transcript: ProcessRunTranscriptEvent[];
 }) {
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontWeight: 600 }}>Run Detail</div>
-        <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
+        <CopyAllOutputButton events={sortedEvents} nodes={nodes} transcript={transcript} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
         <span style={{ color: "var(--color-text-muted)" }}>Status</span>
@@ -359,7 +413,7 @@ function RunTokensSection({
 
 export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   injectKeyframes();
-  const { run, isActive, nodes, artifacts, events, loadData, refreshRun } = useRunPolling(initialRun);
+  const { run, isActive, nodes, artifacts, events, transcript, loadData, refreshRun } = useRunPolling(initialRun);
   const runningNodeIds = useRunNodeTracking(run.run_id, loadData, refreshRun);
 
   const sortedEvents = useMemo(() => {
@@ -399,6 +453,11 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     ? nodes.find((n) => n.node_id === liveRunNodeId)?.label ?? "Node"
     : null;
 
+  const fullRunOutput = useMemo(() => {
+    if (transcript.length > 0) return buildTranscriptOutput(transcript);
+    return buildFullRunOutput(sortedEvents, nodes);
+  }, [transcript, sortedEvents, nodes]);
+
   return (
     <div style={{ fontSize: 13 }}>
       {isActive && <LiveRunBanner run={run} events={events} totalNodes={nodes.length} />}
@@ -410,6 +469,7 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
           nodes={nodes}
           totalTokensFromEvents={totalTokensFromEvents}
           models={models}
+          transcript={transcript}
         />
 
         {sortedEvents.length > 0 && (
@@ -419,6 +479,25 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
               {sortedEvents.map((evt) => (
                 <EventTimelineItem key={evt.event_id} event={evt} nodes={nodes} isLive={isActive} />
               ))}
+            </div>
+          </div>
+        )}
+        {fullRunOutput && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Full Run</div>
+            <div
+              style={{
+                background: "var(--color-bg-input)",
+                padding: 8,
+                borderRadius: "var(--radius-sm)",
+                whiteSpace: "pre-wrap",
+                maxHeight: 360,
+                overflowY: "auto",
+                fontFamily: "var(--font-mono)",
+                fontSize: 12,
+              }}
+            >
+              {fullRunOutput}
             </div>
           </div>
         )}

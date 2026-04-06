@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use aura_os_core::{
     Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
-    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessRun, ProcessRunId,
+    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId, ProcessRun,
+    ProcessRunId, ProcessRunTranscriptEvent,
 };
 use aura_os_store::RocksStore;
 
@@ -15,6 +15,7 @@ const CF_PROCESS_NODES: &str = "process_nodes";
 const CF_PROCESS_NODE_CONNECTIONS: &str = "process_node_connections";
 const CF_PROCESS_RUNS: &str = "process_runs";
 const CF_PROCESS_EVENTS: &str = "process_events";
+const CF_PROCESS_RUN_TRANSCRIPTS: &str = "process_run_transcripts";
 const CF_PROCESS_ARTIFACTS: &str = "process_artifacts";
 
 pub fn column_families() -> Vec<&'static str> {
@@ -25,10 +26,12 @@ pub fn column_families() -> Vec<&'static str> {
         CF_PROCESS_NODE_CONNECTIONS,
         CF_PROCESS_RUNS,
         CF_PROCESS_EVENTS,
+        CF_PROCESS_RUN_TRANSCRIPTS,
         CF_PROCESS_ARTIFACTS,
     ]
 }
 
+#[derive(Clone)]
 pub struct ProcessStore {
     store: Arc<RocksStore>,
 }
@@ -291,6 +294,39 @@ impl ProcessStore {
     /// Overwrite an existing event in-place (same key derivation as save_event).
     pub fn update_event(&self, event: &ProcessEvent) -> Result<(), ProcessError> {
         self.save_event(event)
+    }
+
+    // -- Run transcript events -----------------------------------------------
+
+    pub fn save_run_transcript_event(
+        &self,
+        event: &ProcessRunTranscriptEvent,
+    ) -> Result<(), ProcessError> {
+        let key = format!(
+            "{}:{}:{}:{}",
+            event.process_id, event.run_id, event.created_at, event.transcript_id
+        );
+        let value = serde_json::to_vec(event).map_err(|e| ProcessError::Store(e.to_string()))?;
+        self.store
+            .put_cf_bytes(CF_PROCESS_RUN_TRANSCRIPTS, key.as_bytes(), &value)
+            .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    pub fn list_run_transcript(
+        &self,
+        process_id: &ProcessId,
+        run_id: &ProcessRunId,
+    ) -> Result<Vec<ProcessRunTranscriptEvent>, ProcessError> {
+        let all: Vec<ProcessRunTranscriptEvent> = self
+            .store
+            .scan_cf_all(CF_PROCESS_RUN_TRANSCRIPTS)
+            .map_err(|e| ProcessError::Store(e.to_string()))?;
+        let mut filtered: Vec<ProcessRunTranscriptEvent> = all
+            .into_iter()
+            .filter(|e| e.process_id == *process_id && e.run_id == *run_id)
+            .collect();
+        filtered.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        Ok(filtered)
     }
 
     // -- Artifacts -----------------------------------------------------------

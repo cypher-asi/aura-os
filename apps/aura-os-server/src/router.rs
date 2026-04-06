@@ -517,6 +517,10 @@ fn process_routes() -> Router<AppState> {
             get(process::list_run_events),
         )
         .route(
+            "/api/processes/:id/runs/:run_id/transcript",
+            get(process::list_run_transcript),
+        )
+        .route(
             "/api/processes/:id/runs/:run_id/artifacts",
             get(process::list_run_artifacts),
         )

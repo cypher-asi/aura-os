@@ -6,6 +6,7 @@ import type {
   ProcessNodeConnection,
   ProcessRun,
   ProcessEvent,
+  ProcessRunTranscriptEvent,
   ProcessArtifact,
 } from "../types";
 import type { ProcessNodeType } from "../types/enums";
@@ -95,6 +96,8 @@ export const processApi = {
     apiFetch<void>(`/api/processes/${processId}/runs/${runId}/cancel`, { method: "POST" }),
   listRunEvents: (processId: string, runId: string) =>
     apiFetch<ProcessEvent[]>(`/api/processes/${processId}/runs/${runId}/events`),
+  listRunTranscript: (processId: string, runId: string) =>
+    apiFetch<ProcessRunTranscriptEvent[]>(`/api/processes/${processId}/runs/${runId}/transcript`),
 
   // Artifacts
   listRunArtifacts: (processId: string, runId: string) =>

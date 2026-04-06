@@ -13,7 +13,8 @@ use aura_os_agents::AgentService;
 use aura_os_core::{
     Agent, ArtifactType, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessEventId,
     ProcessEventStatus, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId,
-    ProcessRunStatus, ProcessRunTrigger, ProcessId, ProjectId, TaskStatus,
+    ProcessRunStatus, ProcessRunTranscriptEvent, ProcessRunTrigger, ProcessId, ProjectId,
+    TaskStatus,
 };
 use aura_os_link::{
     AutomatonClient, AutomatonStartParams, RunCompletion, start_and_connect,
@@ -94,6 +95,8 @@ struct NodeResult {
     /// `downstream_output` is used as the event display text.
     display_output: Option<String>,
     token_usage: Option<NodeTokenUsage>,
+    /// Sum of task-level costs reported by harness for this node execution.
+    cost_usd: Option<f64>,
     content_blocks: Option<Vec<serde_json::Value>>,
 }
 
@@ -105,7 +108,40 @@ struct SubTaskPlan {
 
 /// Forward a raw automaton event to the app broadcast, stamping it with
 /// process-specific identifiers.  Only forwards streamable event types.
+fn emit_process_event(
+    store: &ProcessStore,
+    tx: &broadcast::Sender<serde_json::Value>,
+    payload: serde_json::Value,
+) {
+    if let (Some(process_id), Some(run_id), Some(event_type)) = (
+        payload.get("process_id").and_then(|v| v.as_str()),
+        payload.get("run_id").and_then(|v| v.as_str()),
+        payload.get("type").and_then(|v| v.as_str()),
+    ) {
+        if let (Ok(process_id), Ok(run_id)) = (process_id.parse(), run_id.parse()) {
+            let transcript_event = ProcessRunTranscriptEvent {
+                transcript_id: ProcessEventId::new().to_string(),
+                process_id,
+                run_id,
+                event_type: event_type.to_string(),
+                payload: payload.clone(),
+                created_at: Utc::now(),
+            };
+            if let Err(e) = store.save_run_transcript_event(&transcript_event) {
+                warn!(
+                    process_id = %transcript_event.process_id,
+                    run_id = %transcript_event.run_id,
+                    error = %e,
+                    "Failed to persist process run transcript event"
+                );
+            }
+        }
+    }
+    let _ = tx.send(payload);
+}
+
 fn forward_process_event(
+    store: &ProcessStore,
     tx: &broadcast::Sender<serde_json::Value>,
     project_id: &str,
     task_id: &str,
@@ -137,11 +173,12 @@ fn forward_process_event(
             v["type"] = "tool_use_start".into();
         }
     }
-    let _ = tx.send(v);
+    emit_process_event(store, tx, v);
 }
 
 /// Send a progress text message to the app broadcast with process context.
 fn send_process_text(
+    store: &ProcessStore,
     tx: &broadcast::Sender<serde_json::Value>,
     project_id: &str,
     task_id: &str,
@@ -150,7 +187,7 @@ fn send_process_text(
     node_id: &str,
     text: &str,
 ) {
-    let _ = tx.send(serde_json::json!({
+    emit_process_event(store, tx, serde_json::json!({
         "type": "text_delta",
         "text": text,
         "project_id": project_id,
@@ -159,12 +196,6 @@ fn send_process_text(
         "run_id": run_id,
         "node_id": node_id,
     }));
-}
-
-fn estimate_cost_usd(input_tokens: u64, output_tokens: u64) -> f64 {
-    let input_cost = (input_tokens as f64) * 3.0 / 1_000_000.0;
-    let output_cost = (output_tokens as f64) * 15.0 / 1_000_000.0;
-    input_cost + output_cost
 }
 
 #[derive(Clone)]
@@ -229,7 +260,7 @@ impl ProcessExecutor {
         run.completed_at = Some(Utc::now());
         self.store.save_run(&run)?;
 
-        let _ = self.event_broadcast.send(serde_json::json!({
+        emit_process_event(&self.store, &self.event_broadcast, serde_json::json!({
             "type": "process_run_completed",
             "process_id": process_id.to_string(),
             "run_id": run_id.to_string(),
@@ -278,7 +309,7 @@ impl ProcessExecutor {
         };
         self.store.save_run(&run)?;
 
-        let _ = self.event_broadcast.send(serde_json::json!({
+        emit_process_event(&self.store, &self.event_broadcast, serde_json::json!({
             "type": "process_run_started",
             "process_id": process.process_id.to_string(),
             "run_id": run.run_id.to_string(),
@@ -351,7 +382,7 @@ impl ProcessExecutor {
         };
         self.store.save_run(&run)?;
 
-        let _ = self.event_broadcast.send(serde_json::json!({
+        emit_process_event(&self.store, &self.event_broadcast, serde_json::json!({
             "type": "process_run_started",
             "process_id": process.process_id.to_string(),
             "run_id": run.run_id.to_string(),
@@ -626,7 +657,7 @@ fn execute_run<'a>(
             }
             node_outputs.insert(node_id, pinned.to_string());
 
-            let _ = broadcast.send(serde_json::json!({
+            emit_process_event(store, broadcast, serde_json::json!({
                 "type": "process_run_progress",
                 "process_id": run.process_id.to_string(),
                 "run_id": run.run_id.to_string(),
@@ -690,6 +721,12 @@ fn execute_run<'a>(
                     content_blocks: None,
                 })
             }
+            ProcessNodeType::Group => Ok(NodeResult {
+                downstream_output: upstream_context.clone(),
+                display_output: Some("Group node skipped (visual only)".to_string()),
+                token_usage: None,
+                content_blocks: None,
+            }),
         };
 
         let node_completed_at = Utc::now();
@@ -753,7 +790,7 @@ fn execute_run<'a>(
                 current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
                 store.save_run(&current_run)?;
 
-                let _ = broadcast.send(serde_json::json!({
+                emit_process_event(store, broadcast, serde_json::json!({
                     "type": "process_run_failed",
                     "process_id": run.process_id.to_string(),
                     "run_id": run.run_id.to_string(),
@@ -796,7 +833,7 @@ fn execute_run<'a>(
     current_run.output = run_output;
     store.save_run(&current_run)?;
 
-    let _ = broadcast.send(serde_json::json!({
+    emit_process_event(store, broadcast, serde_json::json!({
         "type": "process_run_completed",
         "process_id": run.process_id.to_string(),
         "run_id": run.run_id.to_string(),
@@ -1077,7 +1114,7 @@ async fn execute_action_via_automaton(
 
     if sub_tasks.len() <= 1 {
         if let Some(tx) = broadcast {
-            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, "Single task — executing directly.\n\n");
+            send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, "Single task — executing directly.\n\n");
         }
         return execute_single_automaton(
             node, task_id, project_id, process_id, run_id,
@@ -1093,7 +1130,7 @@ async fn execute_action_via_automaton(
     );
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
+        send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
     }
 
     let max_concurrency = node
@@ -1107,6 +1144,7 @@ async fn execute_action_via_automaton(
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
     let mut handles = Vec::with_capacity(sub_tasks.len());
+    let transcript_store = store.clone();
 
     for (idx, sub_task) in sub_tasks.iter().enumerate() {
         let created_task = storage_client
@@ -1136,7 +1174,7 @@ async fn execute_action_via_automaton(
         );
 
         if let Some(tx) = broadcast {
-            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
+            send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
                 &format!("  Creating task {}/{}... {}\n", idx + 1, sub_tasks.len(), sub_task.title));
         }
 
@@ -1152,6 +1190,7 @@ async fn execute_action_via_automaton(
         let sub_node_id = node.node_id;
         let sub_title = sub_task.title.clone();
         let broadcast_tx = broadcast.cloned();
+        let sub_store = transcript_store.clone();
         let model = {
             let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
                 agent_service.get_agent_local(aid).ok()
@@ -1198,7 +1237,7 @@ async fn execute_action_via_automaton(
                     if let Some(ref tx) = broadcast_tx {
                         if matches!(evt_type, "text_delta" | "thinking_delta"
                             | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
-                            forward_process_event(tx, &fwd_proj, &fwd_tid, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
+                            forward_process_event(&sub_store, tx, &fwd_proj, &fwd_tid, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
                         }
                     }
                 },
@@ -1236,7 +1275,7 @@ async fn execute_action_via_automaton(
     }
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
+        send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
             &format!("\nExecuting {} sub-tasks (max {} concurrent)...\n\n", sub_tasks.len(), max_concurrency));
     }
 
@@ -1256,7 +1295,7 @@ async fn execute_action_via_automaton(
                     last_model = model;
                 }
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
+                    send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
                         &format!("\n--- Sub-task {}/{} completed: {} ({} bytes) ---\n", idx + 1, sub_tasks.len(), task_title, output.len()));
                 }
                 merged_parts.push(output);
@@ -1265,7 +1304,7 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) failed: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
                 merged_parts.push(format!("(sub-task #{} failed: {})", idx, e));
             }
@@ -1273,7 +1312,7 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) panicked: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
                 merged_parts.push(format!("(sub-task #{} panicked: {})", idx, e));
             }
@@ -1418,7 +1457,7 @@ async fn execute_single_automaton(
             if let Some(ref tx) = tx {
                 if matches!(evt_type, "text_delta" | "thinking_delta"
                     | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
-                    forward_process_event(tx, &proj, &tid, &pid, &rid, &nid, evt, None);
+                    forward_process_event(store, tx, &proj, &tid, &pid, &rid, &nid, evt, None);
                 }
             }
         },
@@ -1882,7 +1921,7 @@ fn mark_run_failed_if_active(
     failed_run.completed_at = Some(Utc::now());
     let _ = store.save_run(&failed_run);
 
-    let _ = broadcast.send(serde_json::json!({
+    emit_process_event(store, broadcast, serde_json::json!({
         "type": "process_run_failed",
         "process_id": run.process_id.to_string(),
         "run_id": run.run_id.to_string(),
@@ -1921,7 +1960,7 @@ fn start_event(
         return None;
     }
 
-    broadcast_node_status(broadcast, run, node, ProcessEventStatus::Running, None);
+    broadcast_node_status(store, broadcast, run, node, ProcessEventStatus::Running, None);
     Some(event)
 }
 
@@ -1951,7 +1990,7 @@ fn complete_event(
         warn!(event_id = %event.event_id, error = %e, "Failed to update process event");
     }
 
-    broadcast_node_status(broadcast, run, node, status, token_usage);
+    broadcast_node_status(store, broadcast, run, node, status, token_usage);
 }
 
 /// Shortcut for events that need no running phase (skipped nodes, pinned output).
@@ -1986,10 +2025,11 @@ fn record_terminal_event(
         warn!(event_id = %event.event_id, error = %e, "Failed to save process event");
     }
 
-    broadcast_node_status(broadcast, run, node, status, None);
+    broadcast_node_status(store, broadcast, run, node, status, None);
 }
 
 fn broadcast_node_status(
+    store: &ProcessStore,
     broadcast: &broadcast::Sender<serde_json::Value>,
     run: &ProcessRun,
     node: &ProcessNode,
@@ -2011,5 +2051,5 @@ fn broadcast_node_status(
             payload["model"] = serde_json::json!(model);
         }
     }
-    let _ = broadcast.send(payload);
+    emit_process_event(store, broadcast, payload);
 }

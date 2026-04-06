@@ -22,6 +22,7 @@ pub(crate) const CF_NAMES: &[&str] = &[
     "process_node_connections",
     "process_runs",
     "process_events",
+    "process_run_transcripts",
     "process_artifacts",
 ];
 

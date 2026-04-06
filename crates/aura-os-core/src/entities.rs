@@ -760,6 +760,16 @@ pub struct ProcessEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProcessRunTranscriptEvent {
+    pub transcript_id: String,
+    pub process_id: ProcessId,
+    pub run_id: ProcessRunId,
+    pub event_type: String,
+    pub payload: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProcessArtifact {
     pub artifact_id: ProcessArtifactId,
     pub process_id: ProcessId,

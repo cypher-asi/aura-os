@@ -6,7 +6,8 @@ use tracing::info;
 use aura_os_core::{
     Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
     ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTrigger, ProjectId,
+    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTranscriptEvent, ProcessRunTrigger,
+    ProjectId,
 };
 use chrono::Utc;
 
@@ -582,6 +583,28 @@ pub(crate) async fn list_run_events(
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     Ok(Json(events))
+}
+
+pub(crate) async fn list_run_transcript(
+    State(state): State<AppState>,
+    AuthJwt(_jwt): AuthJwt,
+    AuthSession(_session): AuthSession,
+    Path((id, run_id_str)): Path<(String, String)>,
+) -> ApiResult<Json<Vec<ProcessRunTranscriptEvent>>> {
+    let process_id: ProcessId = id
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid process ID"))?;
+    let run_id: ProcessRunId = run_id_str
+        .parse()
+        .map_err(|_| ApiError::bad_request("invalid run ID"))?;
+
+    let transcript = state
+        .super_agent_service
+        .process_store
+        .list_run_transcript(&process_id, &run_id)
+        .map_err(|e| ApiError::internal(e.to_string()))?;
+
+    Ok(Json(transcript))
 }
 
 // ---------------------------------------------------------------------------
