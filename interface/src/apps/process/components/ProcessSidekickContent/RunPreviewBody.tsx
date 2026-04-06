@@ -56,7 +56,12 @@ function useRunPolling(initialRun: ProcessRun) {
   const refreshRun = useCallback(async () => {
     try {
       const updated = await processApi.getRun(run.process_id, run.run_id);
-      setRun(updated);
+      setRun((prev) => ({
+        ...updated,
+        total_input_tokens: updated.total_input_tokens ?? prev.total_input_tokens,
+        total_output_tokens: updated.total_output_tokens ?? prev.total_output_tokens,
+        cost_usd: updated.cost_usd ?? prev.cost_usd,
+      }));
       if (updated.status !== "running" && updated.status !== "pending") {
         fetchRuns(run.process_id);
       }

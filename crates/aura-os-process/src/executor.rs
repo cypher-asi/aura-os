@@ -291,6 +291,9 @@ impl ProcessExecutor {
             "process_id": process_id.to_string(),
             "run_id": run_id.to_string(),
             "status": "cancelled",
+            "total_input_tokens": run.total_input_tokens,
+            "total_output_tokens": run.total_output_tokens,
+            "cost_usd": run.cost_usd,
         }));
 
         info!(process_id = %process_id, run_id = %run_id, "Process run cancelled");
@@ -461,20 +464,31 @@ fn topological_sort(
     nodes: &[ProcessNode],
     connections: &[aura_os_core::ProcessNodeConnection],
 ) -> Result<Vec<ProcessNodeId>, ProcessError> {
+    // Group nodes are purely visual — strip them and any connection that
+    // touches them so they have zero impact on execution topology.
+    let group_ids: HashSet<ProcessNodeId> = nodes
+        .iter()
+        .filter(|n| n.node_type == ProcessNodeType::Group)
+        .map(|n| n.node_id)
+        .collect();
+
+    let exec_nodes: Vec<_> = nodes.iter().filter(|n| !group_ids.contains(&n.node_id)).collect();
+    let exec_node_ids: HashSet<ProcessNodeId> = exec_nodes.iter().map(|n| n.node_id).collect();
+
     let mut in_degree: HashMap<ProcessNodeId, usize> = HashMap::new();
     let mut adjacency: HashMap<ProcessNodeId, Vec<ProcessNodeId>> = HashMap::new();
 
-    for node in nodes {
+    for node in &exec_nodes {
         in_degree.entry(node.node_id).or_insert(0);
         adjacency.entry(node.node_id).or_default();
     }
 
     for conn in connections {
+        if !exec_node_ids.contains(&conn.source_node_id) || !exec_node_ids.contains(&conn.target_node_id) {
+            continue;
+        }
         *in_degree.entry(conn.target_node_id).or_insert(0) += 1;
-        adjacency
-            .entry(conn.source_node_id)
-            .or_default()
-            .push(conn.target_node_id);
+        adjacency.entry(conn.source_node_id).or_default().push(conn.target_node_id);
     }
 
     let mut queue: VecDeque<ProcessNodeId> = in_degree
@@ -499,7 +513,8 @@ fn topological_sort(
         }
     }
 
-    if sorted.len() != nodes.len() {
+    let expected = exec_nodes.len();
+    if sorted.len() != expected {
         return Err(ProcessError::InvalidGraph(
             "Graph contains a cycle".into(),
         ));
@@ -516,8 +531,17 @@ fn reachable_from_ignition(
     nodes: &[ProcessNode],
     connections: &[aura_os_core::ProcessNodeConnection],
 ) -> HashSet<ProcessNodeId> {
+    let group_ids: HashSet<ProcessNodeId> = nodes
+        .iter()
+        .filter(|n| n.node_type == ProcessNodeType::Group)
+        .map(|n| n.node_id)
+        .collect();
+
     let mut adjacency: HashMap<ProcessNodeId, Vec<ProcessNodeId>> = HashMap::new();
     for conn in connections {
+        if group_ids.contains(&conn.source_node_id) || group_ids.contains(&conn.target_node_id) {
+            continue;
+        }
         adjacency
             .entry(conn.source_node_id)
             .or_default()
@@ -614,6 +638,10 @@ fn execute_run<'a>(
         let node = *nodes_by_id
             .get(&node_id)
             .ok_or_else(|| ProcessError::NodeNotFound(node_id.to_string()))?;
+
+        if node.node_type == ProcessNodeType::Group {
+            continue;
+        }
 
         // ── gather upstream context ────────────────────────────────────
         let incoming: Vec<_> = connections
@@ -748,12 +776,7 @@ fn execute_run<'a>(
                     content_blocks: None,
                 })
             }
-            ProcessNodeType::Group => Ok(NodeResult {
-                downstream_output: upstream_context.clone(),
-                display_output: Some("Group node skipped (visual only)".to_string()),
-                token_usage: None,
-                content_blocks: None,
-            }),
+            ProcessNodeType::Group => unreachable!("Group nodes are filtered before execution"),
         };
 
         let node_completed_at = Utc::now();
@@ -773,6 +796,11 @@ fn execute_run<'a>(
                         usage.output_tokens,
                     );
                 }
+
+                current_run.total_input_tokens = Some(run_input_tokens);
+                current_run.total_output_tokens = Some(run_output_tokens);
+                current_run.cost_usd = Some(run_cost_usd);
+                store.save_run(&current_run)?;
 
                 let event_output = node_result.display_output.as_deref()
                     .unwrap_or(&node_result.downstream_output);
@@ -1967,6 +1995,9 @@ fn mark_run_failed_if_active(
         "process_id": run.process_id.to_string(),
         "run_id": run.run_id.to_string(),
         "error": error,
+        "total_input_tokens": failed_run.total_input_tokens,
+        "total_output_tokens": failed_run.total_output_tokens,
+        "cost_usd": failed_run.cost_usd,
     }));
 }
 
