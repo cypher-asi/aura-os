@@ -1561,7 +1561,6 @@ async fn execute_action_via_automaton(
                 if let Some(tx) = broadcast {
                     send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
-                merged_parts.push(format!("(sub-task #{} failed: {})", idx, e));
             }
             Err(e) => {
                 let msg = format!("Sub-task #{} ({}) panicked: {}", idx, task_title, e);
@@ -1569,7 +1568,6 @@ async fn execute_action_via_automaton(
                 if let Some(tx) = broadcast {
                     send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
-                merged_parts.push(format!("(sub-task #{} panicked: {})", idx, e));
             }
         }
     }
@@ -1911,6 +1909,35 @@ async fn execute_subprocess(
     })
 }
 
+/// Try to recover a JSON array from mixed upstream text (e.g. sub-task
+/// outputs joined by `---` separators with possible error lines).
+fn extract_json_array_from_mixed(text: &str) -> Option<Vec<serde_json::Value>> {
+    // Split on the standard sub-task separator and parse each section independently.
+    let sections: Vec<&str> = text.split("\n\n---\n\n").collect();
+    if sections.len() > 1 {
+        let mut all_items = Vec::new();
+        for section in &sections {
+            if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(section.trim()) {
+                all_items.extend(arr);
+            }
+        }
+        if !all_items.is_empty() {
+            return Some(all_items);
+        }
+    }
+
+    // Scan for the first valid `[…]` JSON array anywhere in the text.
+    for (start, ch) in text.char_indices() {
+        if ch == '[' {
+            if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&text[start..]) {
+                return Some(arr);
+            }
+        }
+    }
+
+    None
+}
+
 async fn execute_foreach(
     node: &ProcessNode,
     upstream_context: &str,
@@ -1957,10 +1984,16 @@ async fn execute_foreach(
 
     let items: Vec<String> = match iterator_mode {
         "json_array" => {
-            let parsed: Vec<serde_json::Value> = serde_json::from_str(upstream_context.trim())
-                .map_err(|e| ProcessError::Execution(format!(
-                    "ForEach: failed to parse upstream as JSON array: {e}"
-                )))?;
+            let trimmed = upstream_context.trim();
+            let parsed: Vec<serde_json::Value> =
+                serde_json::from_str(trimmed)
+                    .or_else(|_| {
+                        extract_json_array_from_mixed(trimmed)
+                            .ok_or_else(|| serde_json::from_str::<serde_json::Value>("!").unwrap_err())
+                    })
+                    .map_err(|_| ProcessError::Execution(
+                        "ForEach: upstream does not contain a valid JSON array".into(),
+                    ))?;
             parsed.iter().map(|v| {
                 if let Some(s) = v.as_str() { s.to_string() }
                 else { serde_json::to_string(v).unwrap_or_default() }
