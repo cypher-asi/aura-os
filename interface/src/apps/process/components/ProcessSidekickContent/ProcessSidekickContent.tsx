@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useProcessStore } from "../../stores/process-store";
@@ -42,7 +43,15 @@ export function ProcessSidekickContent() {
   const processes = useProcessStore((s) => s.processes);
   const runs = useProcessStore((s) => (processId ? s.runs[processId] ?? EMPTY_RUNS : EMPTY_RUNS));
   const storeNodes = useProcessStore((s) => (processId ? s.nodes[processId] : undefined));
+  const lastViewedRunId = useProcessStore((s) => (processId ? s.lastViewedRunId[processId] : undefined));
   const process = processes.find((p) => p.process_id === processId);
+
+  useEffect(() => {
+    if (previewRun || selectedNode || !processId || runs.length === 0) return;
+    const targetRunId = lastViewedRunId ?? runs[0]?.run_id;
+    const targetRun = runs.find((r) => r.run_id === targetRunId);
+    if (targetRun) viewRun(targetRun);
+  }, [processId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const liveNode =
     selectedNode && storeNodes
@@ -94,7 +103,10 @@ export function ProcessSidekickContent() {
       <div className={styles.sidekickContent}>
         <div className={styles.tabContent}>
           {activeTab === "process" && <ProcessInfoTab />}
-          {activeTab === "runs" && <RunList runs={runs} onSelect={viewRun} />}
+          {activeTab === "runs" && <RunList runs={runs} onSelect={(run) => {
+            viewRun(run);
+            if (processId) useProcessStore.getState().setLastViewedRunId(processId, run.run_id);
+          }} />}
           {activeTab === "events" && <EventsTimeline processId={processId} />}
           {activeTab === "stats" && <StatsView runs={runs} />}
           {activeTab === "log" && <EmptyState>Activity log coming soon</EmptyState>}

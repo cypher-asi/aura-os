@@ -28,12 +28,15 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
     useProcessStore((s) => (processId ? s.runs[processId] : undefined)) ??
     EMPTY_RUNS;
   const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);
-  const [events, setEvents] = useState<ProcessEvent[]>([]);
-  const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
-  const [loading, setLoading] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const setStoreEvents = useProcessStore((s) => s.setEvents);
 
   const latestRun = runs[0];
+  const cachedEvents = useProcessStore((s) => latestRun ? s.events[latestRun.run_id] : undefined);
+  const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
+  const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
+  const [loading, setLoading] = useState(!cachedEvents?.length);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const isRunActive =
     latestRun &&
     (latestRun.status === "running" || latestRun.status === "pending");
@@ -46,10 +49,11 @@ export function NodeOutputTab({ node }: NodeOutputTabProps) {
         latestRun.run_id,
       );
       setEvents(evts);
+      setStoreEvents(latestRun.run_id, evts);
     } catch {
       /* ignore */
     }
-  }, [processId, latestRun?.run_id]);
+  }, [processId, latestRun?.run_id, setStoreEvents]);
 
   const loadArtifacts = useCallback(async () => {
     if (!processId || !latestRun) return;

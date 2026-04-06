@@ -42,7 +42,7 @@ function TruncatedLines({ text, mono }: { text: string; mono?: boolean }) {
             padding: 0,
             marginTop: 4,
             fontSize: 11,
-            color: "var(--color-text-link, #3b82f6)",
+            color: "var(--color-text)",
             cursor: "pointer",
           }}
         >
@@ -76,9 +76,15 @@ export function NodeInfoTab({ node }: NodeInfoTabProps) {
   const agents = useAgentStore((s) => s.agents);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const runs = useProcessStore((s) => (processId ? s.runs[processId] : undefined)) ?? EMPTY_RUNS;
+  const setStoreEvents = useProcessStore((s) => s.setEvents);
   const latestRun = runs[0];
 
-  const [nodeEvent, setNodeEvent] = useState<ProcessEvent | null>(null);
+  const cachedEvent = useProcessStore((s) => {
+    if (!latestRun) return null;
+    const evts = s.events[latestRun.run_id];
+    return evts?.find((e) => e.node_id === node.node_id) ?? null;
+  });
+  const [nodeEvent, setNodeEvent] = useState<ProcessEvent | null>(cachedEvent);
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
 
@@ -86,9 +92,10 @@ export function NodeInfoTab({ node }: NodeInfoTabProps) {
     if (!processId || !latestRun) { setNodeEvent(null); return; }
     try {
       const evts = await processApi.listRunEvents(processId, latestRun.run_id);
+      setStoreEvents(latestRun.run_id, evts);
       setNodeEvent(evts.find((e) => e.node_id === node.node_id) ?? null);
     } catch { setNodeEvent(null); }
-  }, [processId, latestRun?.run_id, node.node_id]);
+  }, [processId, latestRun?.run_id, node.node_id, setStoreEvents]);
 
   useEffect(() => { loadEvent(); }, [loadEvent]);
 

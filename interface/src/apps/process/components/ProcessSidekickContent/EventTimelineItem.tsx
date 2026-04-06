@@ -255,11 +255,13 @@ function NodeElapsedBadge({ startedAt }: { startedAt: string }) {
 export function EventsTimeline({ processId }: { processId: string }) {
   const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
   const nodes = useProcessStore((s) => s.nodes[processId]) ?? EMPTY_NODES;
-  const [events, setEvents] = useState<ProcessEvent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const setStoreEvents = useProcessStore((s) => s.setEvents);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const latestRun = runs[0];
+  const cachedEvents = useProcessStore((s) => latestRun ? s.events[latestRun.run_id] : undefined);
+  const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
+  const [loading, setLoading] = useState(!cachedEvents?.length);
   const isRunActive = latestRun && (latestRun.status === "running" || latestRun.status === "pending");
 
   const loadEvents = useCallback(async () => {
@@ -267,8 +269,9 @@ export function EventsTimeline({ processId }: { processId: string }) {
     try {
       const evts = await processApi.listRunEvents(processId, latestRun.run_id);
       setEvents(evts);
+      setStoreEvents(latestRun.run_id, evts);
     } catch { /* ignore */ }
-  }, [processId, latestRun?.run_id]);
+  }, [processId, latestRun?.run_id, setStoreEvents]);
 
   useEffect(() => {
     setLoading(true);

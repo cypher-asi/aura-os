@@ -24,8 +24,10 @@ function useRunPolling(initialRun: ProcessRun) {
   const [run, setRun] = useState(initialRun);
   const nodes = useProcessStore((s) => s.nodes[run.process_id]) ?? EMPTY_NODES;
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
+  const setStoreEvents = useProcessStore((s) => s.setEvents);
+  const cachedEvents = useProcessStore((s) => s.events[run.run_id]);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
-  const [events, setEvents] = useState<ProcessEvent[]>([]);
+  const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -39,8 +41,9 @@ function useRunPolling(initialRun: ProcessRun) {
       ]);
       setArtifacts(artList);
       setEvents(evtList);
+      setStoreEvents(run.run_id, evtList);
     } catch { /* ignore */ }
-  }, [run.process_id, run.run_id]);
+  }, [run.process_id, run.run_id, setStoreEvents]);
 
   const refreshRun = useCallback(async () => {
     try {

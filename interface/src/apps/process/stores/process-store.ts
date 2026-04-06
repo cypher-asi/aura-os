@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent } from "../../../types";
+import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEvent, ProcessFolder } from "../../../types";
 import { processApi } from "../../../api/process";
 
 export const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
@@ -11,16 +11,23 @@ interface ProcessState {
   connections: Record<string, ProcessNodeConnection[]>;
   runs: Record<string, ProcessRun[]>;
   events: Record<string, ProcessEvent[]>;
+  folders: ProcessFolder[];
+  /** Tracks the last-viewed run per process so it can be restored on return. */
+  lastViewedRunId: Record<string, string>;
 
   fetchProcesses: () => Promise<void>;
   fetchNodes: (processId: string) => Promise<void>;
   fetchConnections: (processId: string) => Promise<void>;
   fetchRuns: (processId: string) => Promise<void>;
   fetchEvents: (processId: string, runId: string) => Promise<void>;
+  setEvents: (runId: string, events: ProcessEvent[]) => void;
+  setLastViewedRunId: (processId: string, runId: string) => void;
 
   addProcess: (process: Process) => void;
   updateProcess: (process: Process) => void;
   removeProcess: (processId: string) => void;
+
+  addFolder: (folder: ProcessFolder) => void;
 
   setNodes: (processId: string, nodes: ProcessNode[]) => void;
   setConnections: (processId: string, connections: ProcessNodeConnection[]) => void;
@@ -33,6 +40,8 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   connections: {},
   runs: {},
   events: {},
+  folders: [],
+  lastViewedRunId: {},
 
   fetchProcesses: async () => {
     set({ loading: true });
@@ -71,7 +80,12 @@ export const useProcessStore = create<ProcessState>()((set) => ({
       set((s) => ({ events: { ...s.events, [runId]: events } }));
     } catch { /* ignore */ }
   },
+  setEvents: (runId, events) =>
+    set((s) => ({ events: { ...s.events, [runId]: events } })),
+  setLastViewedRunId: (processId, runId) =>
+    set((s) => ({ lastViewedRunId: { ...s.lastViewedRunId, [processId]: runId } })),
 
+  addFolder: (folder) => set((s) => ({ folders: [folder, ...s.folders] })),
   addProcess: (process) => set((s) => ({ processes: [process, ...s.processes] })),
   updateProcess: (process) => set((s) => ({
     processes: s.processes.map((p) => p.process_id === process.process_id ? process : p),
