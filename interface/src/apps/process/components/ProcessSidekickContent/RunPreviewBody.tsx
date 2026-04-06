@@ -24,9 +24,9 @@ import { injectKeyframes, useElapsedTime, formatDuration, EMPTY_NODES } from "./
 function mergeUsageField(
   prev: number | null | undefined,
   next: number | null | undefined,
-): number | null | undefined {
-  if (next == null) return prev;
-  if (prev == null) return next;
+): number | undefined {
+  if (next == null) return prev ?? undefined;
+  if (prev == null) return next ?? undefined;
   return Math.max(prev, next);
 }
 
@@ -335,9 +335,13 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
       }
       case "tool_result": {
         const name = typeof p.name === "string" ? p.name : "tool";
+        const toolUseId = typeof p.tool_use_id === "string" ? p.tool_use_id : undefined;
+        const resultId = typeof p.id === "string" ? p.id : undefined;
         const resultText = typeof p.result === "string" ? p.result : "";
         const isError = typeof p.is_error === "boolean" ? p.is_error : false;
-        const target = [...tools].reverse().find((tc) => tc.pending && tc.name === name)
+        const resolveId = toolUseId || resultId;
+        const target = (resolveId ? tools.find((tc) => tc.id === resolveId) : undefined)
+          ?? [...tools].reverse().find((tc) => tc.pending && tc.name === name)
           ?? [...tools].reverse().find((tc) => tc.pending);
         if (target) {
           target.result = resultText;
@@ -361,6 +365,12 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
       }
       default:
         break;
+    }
+  }
+  for (const tc of tools) {
+    if (tc.pending) {
+      tc.pending = false;
+      tc.started = false;
     }
   }
   if (textBuf) {
