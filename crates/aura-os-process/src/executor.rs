@@ -1308,7 +1308,7 @@ async fn execute_action_via_automaton(
     let rid_str = run_id.to_string();
     let nid_str = node.node_id.to_string();
 
-    if node.node_type == ProcessNodeType::Condition {
+    if node.node_type == ProcessNodeType::Condition || node.node_type == ProcessNodeType::Prompt {
         return execute_single_automaton(
             node, task_id, project_id, process_id, run_id,
             automaton_client, store, broadcast, project_path,
