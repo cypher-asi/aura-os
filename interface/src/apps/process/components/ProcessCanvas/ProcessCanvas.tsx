@@ -15,8 +15,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styles from "./ProcessCanvas.module.css";
-import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers, Unplug } from "lucide-react";
-import { Button, Menu, ModalConfirm } from "@cypher-asi/zui";
+import {
+  Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil,
+  Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers, Unplug,
+  Copy, Scissors, CopyPlus, ClipboardPaste,
+} from "lucide-react";
+import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { useProcessStore } from "../../stores/process-store";
@@ -55,18 +59,33 @@ const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
 
 const groupCtxMenuItems: MenuItem[] = [
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
+  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
+  { id: "cut", label: "Cut", icon: <Scissors size={14} /> },
+  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} /> },
   { type: "separator" },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
 const nodeCtxMenuItems = (isIgnition: boolean, isPinned: boolean, hasRuns: boolean, hasConnections: boolean): MenuItem[] => [
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
+  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
+  { id: "cut", label: "Cut", icon: <Scissors size={14} />, disabled: isIgnition },
+  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} />, disabled: isIgnition },
+  { type: "separator" as const },
   isPinned
     ? { id: "unpin", label: "Unpin Output", icon: <PinOff size={14} /> }
     : { id: "pin", label: "Pin Output", icon: <Pin size={14} />, disabled: !hasRuns },
   { id: "disconnect", label: "Disconnect", icon: <Unplug size={14} />, disabled: !hasConnections },
   { type: "separator" as const },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} />, disabled: isIgnition },
+];
+
+const selectionCtxMenuItems: MenuItem[] = [
+  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
+  { id: "cut", label: "Cut", icon: <Scissors size={14} /> },
+  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} /> },
+  { type: "separator" },
+  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
 export function ProcessCanvas(props: ProcessCanvasProps) {
@@ -113,24 +132,30 @@ function ProcessCanvasInner({
     onEdgeContextMenu,
     onSelectionContextMenu,
     handleAddNode,
-    requestDeleteNodes,
-    pendingDeleteNodeIds,
-    confirmDeleteNodes,
-    cancelDeleteNodes,
+    deleteNodes,
     togglePinNode,
     deleteConnection,
     disconnectNode,
+    copyNodes,
+    pasteNodes,
+    duplicateNodes,
+    hasClipboard,
+    setCtxMenu,
     setNodeCtxMenu,
     setEdgeCtxMenu,
+    setSelectionCtxMenu,
     ctxMenu,
     nodeCtxMenu,
     edgeCtxMenu,
+    selectionCtxMenu,
     ctxMenuRef,
     nodeCtxMenuRef,
     edgeCtxMenuRef,
+    selectionCtxMenuRef,
   } = useCanvasEventHandlers({
     processId,
     processNodes,
+    processConnections,
     runs,
     nodes,
     setNodes,
@@ -235,14 +260,28 @@ function ProcessCanvasInner({
         </div>
       )}
 
+      {/* Pane context menu (add node + paste) */}
       {ctxMenu && createPortal(
         <div
           ref={ctxMenuRef}
           style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y, zIndex: 9999 }}
         >
           <Menu
-            items={nodeMenuItems}
+            items={[
+              ...(hasClipboard
+                ? [
+                  { id: "paste" as const, label: "Paste", icon: <ClipboardPaste size={14} /> },
+                  { type: "separator" as const },
+                ]
+                : []),
+              ...nodeMenuItems,
+            ]}
             onChange={(id) => {
+              if (id === "paste") {
+                if (ctxMenu) pasteNodes({ x: ctxMenu.x, y: ctxMenu.y });
+                setCtxMenu(null);
+                return;
+              }
               const item = ADD_NODE_TYPES.find((t) => t.type === id);
               if (item) handleAddNode(item.type as ProcessNodeType, item.label);
             }}
@@ -256,6 +295,7 @@ function ProcessCanvasInner({
         document.body,
       )}
 
+      {/* Single-node context menu */}
       {nodeCtxMenu && createPortal(
         <div
           ref={nodeCtxMenuRef}
@@ -279,9 +319,12 @@ function ProcessCanvasInner({
               const targetId = nodeCtxMenu.nodeId;
               setNodeCtxMenu(null);
               if (id === "rename") setRenamingNodeId(targetId);
+              if (id === "copy") copyNodes([targetId]);
+              if (id === "cut") { copyNodes([targetId]); deleteNodes([targetId]); }
+              if (id === "duplicate") duplicateNodes([targetId]);
               if (id === "pin" || id === "unpin") togglePinNode(targetId);
               if (id === "disconnect") disconnectNode(targetId);
-              if (id === "delete") requestDeleteNodes([targetId]);
+              if (id === "delete") deleteNodes([targetId]);
             }}
             background="solid"
             border="solid"
@@ -293,6 +336,7 @@ function ProcessCanvasInner({
         document.body,
       )}
 
+      {/* Edge context menu */}
       {edgeCtxMenu && createPortal(
         <div
           ref={edgeCtxMenuRef}
@@ -314,19 +358,31 @@ function ProcessCanvasInner({
         document.body,
       )}
 
-      <ModalConfirm
-        isOpen={pendingDeleteNodeIds !== null && pendingDeleteNodeIds.length > 0}
-        onClose={cancelDeleteNodes}
-        onConfirm={confirmDeleteNodes}
-        title={pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1 ? "Delete Nodes" : "Delete Node"}
-        message={
-          pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1
-            ? `Are you sure you want to delete these ${pendingDeleteNodeIds.length} nodes? This action cannot be undone.`
-            : "Are you sure you want to delete this node? This action cannot be undone."
-        }
-        confirmLabel="Delete"
-        danger
-      />
+      {/* Multi-selection context menu */}
+      {selectionCtxMenu && createPortal(
+        <div
+          ref={selectionCtxMenuRef}
+          style={{ position: "fixed", left: selectionCtxMenu.x, top: selectionCtxMenu.y, zIndex: 9999 }}
+        >
+          <Menu
+            items={selectionCtxMenuItems}
+            onChange={(id) => {
+              const nodeIds = selectionCtxMenu.nodeIds;
+              setSelectionCtxMenu(null);
+              if (id === "copy") copyNodes(nodeIds);
+              if (id === "cut") { copyNodes(nodeIds); deleteNodes(nodeIds); }
+              if (id === "duplicate") duplicateNodes(nodeIds);
+              if (id === "delete") deleteNodes(nodeIds);
+            }}
+            background="solid"
+            border="solid"
+            rounded="md"
+            width={160}
+            isOpen
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
