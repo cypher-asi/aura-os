@@ -309,6 +309,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const hasPrompt = node.node_type !== "merge" && node.node_type !== "delay";
   const isLlmNode = ["action", "condition", "artifact", "prompt"].includes(node.node_type);
 
+  const pinButtonLabel = pinLoading ? "Loading..." : isPinned ? "Unpin" : "Pin";
   const pinToggle = node.node_type !== "ignition" ? (
     <EditField label="Pin Output">
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -318,19 +319,49 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
             padding: "6px 12px",
             fontSize: 12,
             fontWeight: 600,
-            border: isPinned ? "1px solid #f59e0b40" : "1px solid var(--color-border)",
+            border: "1px solid",
+            borderColor: isPinned ? "#f59e0b40" : "var(--color-border)",
             borderRadius: "var(--radius-sm)",
             background: isPinned ? "rgba(245,158,11,0.1)" : "var(--color-bg-input)",
             color: isPinned ? "#f59e0b" : "var(--color-text-muted)",
             cursor: pinLoading ? "wait" : "pointer",
+            transition: "background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease",
+            boxSizing: "border-box",
+            position: "relative",
           }}
         >
-          {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
-          {pinLoading ? "Loading..." : isPinned ? "Unpin" : "Pin"}
+          <span
+            aria-hidden
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              visibility: "hidden",
+              pointerEvents: "none",
+            }}
+          >
+            <PinOff size={13} />
+            Loading...
+          </span>
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              opacity: pinLoading ? 0.9 : 1,
+              transform: pinLoading ? "translateY(-0.5px)" : "translateY(0)",
+              transition: "opacity 0.16s ease, transform 0.16s ease",
+            }}
+          >
+            {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+            {pinButtonLabel}
+          </span>
         </button>
         <Text variant="secondary" size="xs">
           {isPinned
