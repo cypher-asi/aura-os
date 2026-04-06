@@ -76,7 +76,7 @@ use aura_os_link::{
 use crate::tools::{SuperAgentContext, ToolRegistry};
 use types::*;
 
-const MAX_TOOL_TURNS: usize = 25;
+const DEFAULT_MAX_TOOL_TURNS: usize = 25;
 const DEFAULT_MODEL: &str = "claude-sonnet-4-5-20250514";
 
 #[derive(Serialize)]
@@ -109,6 +109,7 @@ pub struct SuperAgentStream {
     registry: Arc<ToolRegistry>,
     tx: broadcast::Sender<HarnessOutbound>,
     model: String,
+    max_turns: usize,
 }
 
 impl SuperAgentStream {
@@ -133,7 +134,15 @@ impl SuperAgentStream {
             registry,
             tx,
             model: model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
+            max_turns: DEFAULT_MAX_TOOL_TURNS,
         }
+    }
+
+    pub fn with_max_turns(mut self, max_turns: Option<u32>) -> Self {
+        if let Some(n) = max_turns {
+            self.max_turns = n as usize;
+        }
+        self
     }
 
     fn emit(&self, evt: HarnessOutbound) {
@@ -175,7 +184,7 @@ impl SuperAgentStream {
         let mut cumulative_input: u64 = 0;
         let mut cumulative_output: u64 = 0;
 
-        for _turn in 0..MAX_TOOL_TURNS {
+        for _turn in 0..self.max_turns {
             let req = MessagesRequest {
                 model: self.model.clone(),
                 max_tokens: 8192,
@@ -256,7 +265,7 @@ impl SuperAgentStream {
             // stop_reason == tool_use: continue the loop
         }
 
-        warn!("Super Agent hit max tool turns ({MAX_TOOL_TURNS})");
+        warn!("Super Agent hit max tool turns ({})", self.max_turns);
         self.emit(HarnessOutbound::AssistantMessageEnd(AssistantMessageEnd {
             message_id: msg_id,
             stop_reason: "max_turns".into(),

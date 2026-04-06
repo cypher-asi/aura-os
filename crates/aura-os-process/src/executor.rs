@@ -13,14 +13,16 @@ use aura_os_agents::AgentService;
 use aura_os_core::{
     Agent, ArtifactType, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessEventId,
     ProcessEventStatus, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId,
-    ProcessRunStatus, ProcessRunTrigger, ProcessId,
+    ProcessRunStatus, ProcessRunTrigger, ProcessId, ProjectId, TaskStatus,
 };
 use aura_os_link::{
-    HarnessInbound, HarnessLink, HarnessOutbound, SessionConfig, SessionProviderConfig,
-    SessionUsage, UserMessage,
+    AutomatonClient, AutomatonStartParams, HarnessInbound, HarnessLink, HarnessOutbound,
+    SessionConfig, SessionProviderConfig, SessionUsage, UserMessage,
 };
 use aura_os_orgs::OrgService;
+use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
+use aura_os_tasks::TaskService;
 
 use crate::error::ProcessError;
 use crate::process_store::ProcessStore;
@@ -207,9 +209,13 @@ pub struct ProcessExecutor {
     rocks_store: Arc<RocksStore>,
     agent_service: Arc<AgentService>,
     org_service: Arc<OrgService>,
+    automaton_client: Arc<AutomatonClient>,
+    storage_client: Option<Arc<StorageClient>>,
+    task_service: Arc<TaskService>,
 }
 
 impl ProcessExecutor {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         store: Arc<ProcessStore>,
         event_broadcast: broadcast::Sender<serde_json::Value>,
@@ -218,6 +224,9 @@ impl ProcessExecutor {
         rocks_store: Arc<RocksStore>,
         agent_service: Arc<AgentService>,
         org_service: Arc<OrgService>,
+        automaton_client: Arc<AutomatonClient>,
+        storage_client: Option<Arc<StorageClient>>,
+        task_service: Arc<TaskService>,
     ) -> Self {
         Self {
             store,
@@ -227,6 +236,9 @@ impl ProcessExecutor {
             rocks_store,
             agent_service,
             org_service,
+            automaton_client,
+            storage_client,
+            task_service,
         }
     }
 
@@ -545,6 +557,31 @@ fn execute_run<'a>(
         .map_err(|e| ProcessError::Execution(format!("Failed to create process workspace: {e}")))?;
     let workspace_path = workspace_dir.to_string_lossy().to_string();
 
+    // ── create spec + tasks when process is linked to a project ────────
+    let process = store.get_process(&run.process_id)?
+        .ok_or_else(|| ProcessError::NotFound(run.process_id.to_string()))?;
+    let mut node_task_ids: HashMap<ProcessNodeId, String> = HashMap::new();
+    let spec_id_for_run: Option<String> = if let Some(ref project_id) = process.project_id {
+        if let Some(ref sc) = executor.storage_client {
+            match create_spec_and_tasks(
+                sc, jwt.as_deref(), project_id, &process, &nodes, &sorted, &reachable,
+            ).await {
+                Ok((sid, task_map)) => {
+                    node_task_ids = task_map;
+                    Some(sid)
+                }
+                Err(e) => {
+                    warn!(error = %e, "Failed to create spec/tasks for process run; falling back to harness path");
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     // node_id → output text (only present for completed nodes)
     let mut node_outputs: HashMap<ProcessNodeId, String> = HashMap::new();
     // condition node_id → whether it evaluated true
@@ -670,10 +707,25 @@ fn execute_run<'a>(
             }
         }
 
+        let use_automaton = node_task_ids.contains_key(&node_id)
+            && process.project_id.is_some()
+            && matches!(node.node_type, ProcessNodeType::Action | ProcessNodeType::Prompt | ProcessNodeType::Artifact);
+
         let result: Result<NodeResult, ProcessError> = match node.node_type {
             ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult {
                 downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
             }),
+            ProcessNodeType::Action if use_automaton => {
+                let task_id = &node_task_ids[&node_id];
+                let project_id = process.project_id.as_ref().unwrap();
+                let timeout_secs = node.config.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+                execute_action_via_automaton(
+                    node, task_id, project_id, &run.process_id, &run.run_id,
+                    &executor.automaton_client, store, Some(&fwd), &workspace_path,
+                    timeout_secs, jwt.as_deref(), &executor.task_service,
+                    agent_service, org_service,
+                ).await
+            }
             ProcessNodeType::Action => {
                 execute_action(node, &upstream_context, &run.process_id, &run.run_id, store, harness, jwt.as_deref(), agent_service, org_service, Some(&fwd), Some(&workspace_path)).await
             }
@@ -683,11 +735,33 @@ fn execute_run<'a>(
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
                 downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
             }),
+            ProcessNodeType::Artifact if use_automaton => {
+                let task_id = &node_task_ids[&node_id];
+                let project_id = process.project_id.as_ref().unwrap();
+                let timeout_secs = node.config.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+                execute_action_via_automaton(
+                    node, task_id, project_id, &run.process_id, &run.run_id,
+                    &executor.automaton_client, store, Some(&fwd), &workspace_path,
+                    timeout_secs, jwt.as_deref(), &executor.task_service,
+                    agent_service, org_service,
+                ).await
+            }
             ProcessNodeType::Artifact => {
                 execute_artifact(
                     node, &upstream_context, &run.process_id, &run.run_id,
                     data_dir, store, harness, jwt.as_deref(),
                     agent_service, org_service, Some(&fwd), Some(&workspace_path),
+                ).await
+            }
+            ProcessNodeType::Prompt if use_automaton => {
+                let task_id = &node_task_ids[&node_id];
+                let project_id = process.project_id.as_ref().unwrap();
+                let timeout_secs = node.config.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
+                execute_action_via_automaton(
+                    node, task_id, project_id, &run.process_id, &run.run_id,
+                    &executor.automaton_client, store, Some(&fwd), &workspace_path,
+                    timeout_secs, jwt.as_deref(), &executor.task_service,
+                    agent_service, org_service,
                 ).await
             }
             ProcessNodeType::Prompt => {
@@ -741,6 +815,19 @@ fn execute_run<'a>(
                         node_result.content_blocks.as_deref(),
                     );
                 }
+
+                if let Some(tid) = node_task_ids.get(&node_id) {
+                    if let Some(ref pid) = process.project_id {
+                        let tid_parsed = tid.parse().ok();
+                        let sid = spec_id_for_run.as_ref().and_then(|s| s.parse().ok());
+                        if let (Some(task_id), Some(spec_id)) = (tid_parsed, sid) {
+                            if let Err(e) = executor.task_service.transition_task(pid, &spec_id, &task_id, TaskStatus::Done).await {
+                                warn!(task_id = %tid, error = %e, "Failed to transition task to Done");
+                            }
+                        }
+                    }
+                }
+
                 node_outputs.insert(node_id, node_result.downstream_output);
             }
             Err(e) => {
@@ -751,6 +838,18 @@ fn execute_run<'a>(
                         ProcessEventStatus::Failed, &err_msg, node_completed_at,
                         None, None,
                     );
+                }
+
+                if let Some(tid) = node_task_ids.get(&node_id) {
+                    if let Some(ref pid) = process.project_id {
+                        let tid_parsed = tid.parse().ok();
+                        let sid = spec_id_for_run.as_ref().and_then(|s| s.parse().ok());
+                        if let (Some(task_id), Some(spec_id)) = (tid_parsed, sid) {
+                            if let Err(te) = executor.task_service.transition_task(pid, &spec_id, &task_id, TaskStatus::Failed).await {
+                                warn!(task_id = %tid, error = %te, "Failed to transition task to Failed");
+                            }
+                        }
+                    }
                 }
 
                 current_run.status = ProcessRunStatus::Failed;
@@ -971,7 +1070,8 @@ fn build_session_config(
         .config
         .get("max_turns")
         .and_then(|v| v.as_u64())
-        .map(|n| n as u32);
+        .map(|n| n as u32)
+        .or(Some(100));
 
     SessionConfig {
         system_prompt,
@@ -1034,6 +1134,291 @@ async fn run_harness_session(
     });
 
     Ok((resp, token_usage))
+}
+
+// ---------------------------------------------------------------------------
+// Spec/Task creation for project-linked processes
+// ---------------------------------------------------------------------------
+
+async fn create_spec_and_tasks(
+    storage: &StorageClient,
+    jwt: Option<&str>,
+    project_id: &ProjectId,
+    process: &aura_os_core::Process,
+    nodes: &[ProcessNode],
+    sorted: &[ProcessNodeId],
+    reachable: &HashSet<ProcessNodeId>,
+) -> Result<(String, HashMap<ProcessNodeId, String>), ProcessError> {
+    let jwt = jwt.ok_or_else(|| ProcessError::Execution("No JWT available for task creation".into()))?;
+    let pid = project_id.to_string();
+
+    let spec = storage
+        .create_spec(
+            &pid,
+            jwt,
+            &aura_os_storage::CreateSpecRequest {
+                title: format!("Process: {}", process.name),
+                org_id: None,
+                order_index: None,
+                markdown_contents: Some(process.description.clone()),
+            },
+        )
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Failed to create spec: {e}")))?;
+
+    let nodes_by_id: HashMap<ProcessNodeId, &ProcessNode> =
+        nodes.iter().map(|n| (n.node_id, n)).collect();
+
+    let mut task_map: HashMap<ProcessNodeId, String> = HashMap::new();
+
+    for (idx, &nid) in sorted.iter().enumerate() {
+        if !reachable.contains(&nid) {
+            continue;
+        }
+        let Some(node) = nodes_by_id.get(&nid) else { continue };
+        let eligible = matches!(
+            node.node_type,
+            ProcessNodeType::Action | ProcessNodeType::Prompt | ProcessNodeType::Artifact
+        );
+        if !eligible {
+            continue;
+        }
+
+        let task = storage
+            .create_task(
+                &pid,
+                jwt,
+                &aura_os_storage::CreateTaskRequest {
+                    spec_id: spec.id.clone(),
+                    title: node.label.clone(),
+                    org_id: None,
+                    description: Some(node.prompt.clone()),
+                    status: Some("ready".to_string()),
+                    order_index: Some(idx as i32),
+                    dependency_ids: None,
+                    assigned_project_agent_id: None,
+                },
+            )
+            .await
+            .map_err(|e| ProcessError::Execution(format!("Failed to create task for node {}: {e}", node.label)))?;
+
+        task_map.insert(nid, task.id.clone());
+        info!(node_id = %nid, task_id = %task.id, "Created task for process node");
+    }
+
+    Ok((spec.id, task_map))
+}
+
+// ---------------------------------------------------------------------------
+// Automaton-based execution for Action nodes
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
+async fn execute_action_via_automaton(
+    node: &ProcessNode,
+    task_id: &str,
+    project_id: &ProjectId,
+    process_id: &ProcessId,
+    run_id: &ProcessRunId,
+    automaton_client: &AutomatonClient,
+    store: &ProcessStore,
+    forwarder: Option<&DeltaForwarder<'_>>,
+    project_path: &str,
+    timeout_secs: u64,
+    token: Option<&str>,
+    _task_service: &TaskService,
+    agent_service: &AgentService,
+    org_service: &OrgService,
+) -> Result<NodeResult, ProcessError> {
+    let model = {
+        let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
+            agent_service.get_agent_local(aid).ok()
+        });
+        let ri = loaded_agent.as_ref().and_then(|a| resolve_agent_integration(a, org_service));
+        effective_model(node, loaded_agent.as_ref(), ri.as_ref())
+    };
+
+    let start_result = automaton_client
+        .start(AutomatonStartParams {
+            project_id: project_id.to_string(),
+            auth_token: token.map(|s| s.to_string()),
+            model,
+            workspace_root: Some(project_path.to_string()),
+            task_id: Some(task_id.to_string()),
+            git_repo_url: None,
+            git_branch: None,
+        })
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Failed to start automaton: {e}")))?;
+
+    info!(
+        automaton_id = %start_result.automaton_id,
+        task_id = %task_id,
+        node_id = %node.node_id,
+        "Automaton started for process node"
+    );
+
+    let event_tx = automaton_client
+        .connect_event_stream(
+            &start_result.automaton_id,
+            Some(&start_result.event_stream_url),
+        )
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Failed to connect automaton event stream: {e}")))?;
+
+    let mut rx = event_tx.subscribe();
+    let mut output_text = String::new();
+    let mut total_input_tokens: u64 = 0;
+    let mut total_output_tokens: u64 = 0;
+    let mut last_model: Option<String> = None;
+    let mut content_blocks: Vec<serde_json::Value> = Vec::new();
+    let mut automaton_failed = false;
+    let mut error_message: Option<String> = None;
+    let deadline = Duration::from_secs(timeout_secs);
+
+    let collect = async {
+        loop {
+            match rx.recv().await {
+                Ok(evt) => {
+                    let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                    match evt_type {
+                        "text_delta" => {
+                            if let Some(text) = evt.get("text").and_then(|t| t.as_str()) {
+                                output_text.push_str(text);
+                                if let Some(fwd) = forwarder {
+                                    fwd.forward_text(text);
+                                }
+                            }
+                        }
+                        "thinking_delta" => {
+                            if let Some(thinking) = evt.get("thinking").and_then(|t| t.as_str()) {
+                                if let Some(fwd) = forwarder {
+                                    fwd.forward_thinking(thinking);
+                                }
+                            }
+                        }
+                        "tool_use_start" => {
+                            let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                            let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                            content_blocks.push(serde_json::json!({
+                                "type": "tool_use", "id": id, "name": name,
+                            }));
+                            if let Some(fwd) = forwarder {
+                                fwd.forward_tool_start(id, name);
+                            }
+                        }
+                        "tool_result" => {
+                            let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                            let result = evt.get("result").and_then(|v| v.as_str()).unwrap_or("");
+                            let is_error = evt.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
+                            content_blocks.push(serde_json::json!({
+                                "type": "tool_result", "name": name, "result": result, "is_error": is_error,
+                            }));
+                            if let Some(fwd) = forwarder {
+                                fwd.forward_tool_result(name, result, is_error);
+                            }
+                        }
+                        "usage" | "session_usage" => {
+                            if let Some(inp) = evt.get("input_tokens").and_then(|v| v.as_u64()) {
+                                total_input_tokens = inp;
+                            }
+                            if let Some(out) = evt.get("output_tokens").and_then(|v| v.as_u64()) {
+                                total_output_tokens = out;
+                            }
+                            if let Some(m) = evt.get("model").and_then(|v| v.as_str()) {
+                                last_model = Some(m.to_string());
+                            }
+                        }
+                        "task_completed" | "done" => {
+                            break;
+                        }
+                        "task_failed" | "error" => {
+                            automaton_failed = true;
+                            error_message = evt.get("message")
+                                .or_else(|| evt.get("error"))
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            break;
+                        }
+                        _ => {}
+                    }
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    warn!(skipped = n, "Automaton event receiver lagged");
+                    continue;
+                }
+            }
+        }
+    };
+
+    match tokio::time::timeout(deadline, collect).await {
+        Ok(()) => {}
+        Err(_) => {
+            return Err(ProcessError::Execution(format!(
+                "Automaton timed out after {timeout_secs}s for node {}", node.node_id
+            )));
+        }
+    }
+
+    if automaton_failed {
+        let msg = error_message.unwrap_or_else(|| "Automaton execution failed".to_string());
+        return Err(ProcessError::Execution(msg));
+    }
+
+    // Read output file if applicable
+    let output_file = node
+        .config
+        .get("output_file")
+        .and_then(|v| v.as_str())
+        .unwrap_or("output.txt");
+    let output_file_path = Path::new(project_path).join(output_file);
+    let file_content = match tokio::fs::read_to_string(&output_file_path).await {
+        Ok(content) if !content.trim().is_empty() => Some(content),
+        _ => None,
+    };
+
+    let downstream = file_content.unwrap_or(output_text);
+    if downstream.trim().is_empty() {
+        return Err(ProcessError::Execution(format!(
+            "Automaton produced no output for node {}", node.node_id
+        )));
+    }
+
+    // Persist artifact
+    let rel_path = format!("process-workspaces/{}/{}/{}", process_id, run_id, output_file);
+    let artifact = ProcessArtifact {
+        artifact_id: ProcessArtifactId::new(),
+        process_id: *process_id,
+        run_id: *run_id,
+        node_id: node.node_id,
+        artifact_type: ArtifactType::Document,
+        name: output_file.to_string(),
+        file_path: rel_path,
+        size_bytes: downstream.len() as u64,
+        metadata: serde_json::json!({}),
+        created_at: Utc::now(),
+    };
+    if let Err(e) = store.save_artifact(&artifact) {
+        warn!(node_id = %node.node_id, error = %e, "Failed to save automaton artifact");
+    }
+
+    let token_usage = if total_input_tokens > 0 || total_output_tokens > 0 {
+        Some(NodeTokenUsage {
+            input_tokens: total_input_tokens,
+            output_tokens: total_output_tokens,
+            model: last_model,
+        })
+    } else {
+        None
+    };
+
+    Ok(NodeResult {
+        downstream_output: downstream,
+        display_output: None,
+        token_usage,
+        content_blocks: if content_blocks.is_empty() { None } else { Some(content_blocks) },
+    })
 }
 
 // ---------------------------------------------------------------------------

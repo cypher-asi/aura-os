@@ -99,6 +99,9 @@ impl SuperAgentService {
             store.clone(),
             agent_service.clone(),
             org_service.clone(),
+            automaton_client.clone(),
+            storage_client.clone(),
+            task_service.clone(),
         ));
 
         let mut tool_registry = ToolRegistry::with_tier1_tools();

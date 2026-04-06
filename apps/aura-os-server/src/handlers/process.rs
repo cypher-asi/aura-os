@@ -21,6 +21,7 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 pub(crate) struct CreateProcessRequest {
     pub name: String,
     pub description: Option<String>,
+    pub project_id: Option<String>,
     pub folder_id: Option<String>,
     pub schedule: Option<String>,
     #[serde(default)]
@@ -31,6 +32,7 @@ pub(crate) struct CreateProcessRequest {
 pub(crate) struct UpdateProcessRequest {
     pub name: Option<String>,
     pub description: Option<String>,
+    pub project_id: Option<Option<String>>,
     pub folder_id: Option<Option<String>>,
     pub schedule: Option<String>,
     pub tags: Option<Vec<String>>,
@@ -105,6 +107,7 @@ pub(crate) async fn create_process(
         process_id: ProcessId::new(),
         org_id: "default".parse().unwrap_or_default(),
         user_id,
+        project_id: req.project_id.and_then(|id| id.parse().ok()),
         name: req.name,
         description: req.description.unwrap_or_default(),
         enabled: true,
@@ -200,6 +203,9 @@ pub(crate) async fn update_process(
 
     if let Some(name) = req.name { process.name = name; }
     if let Some(desc) = req.description { process.description = desc; }
+    if let Some(pid) = req.project_id {
+        process.project_id = pid.and_then(|id| id.parse().ok());
+    }
     if let Some(fid) = req.folder_id {
         process.folder_id = fid.and_then(|id| id.parse().ok());
     }

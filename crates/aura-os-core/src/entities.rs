@@ -634,6 +634,8 @@ pub struct Process {
     pub process_id: ProcessId,
     pub org_id: OrgId,
     pub user_id: String,
+    #[serde(default)]
+    pub project_id: Option<ProjectId>,
     pub name: String,
     #[serde(default)]
     pub description: String,
