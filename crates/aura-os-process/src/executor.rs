@@ -927,6 +927,7 @@ async fn plan_sub_tasks(
     token: Option<&str>,
     agent_service: &AgentService,
     org_service: &OrgService,
+    forwarder: Option<&DeltaForwarder<'_>>,
 ) -> Result<Vec<SubTaskPlan>, ProcessError> {
     let model = {
         let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
@@ -986,6 +987,31 @@ async fn plan_sub_tasks(
                         "text_delta" => {
                             if let Some(text) = evt.get("text").and_then(|t| t.as_str()) {
                                 output_text.push_str(text);
+                                if let Some(fwd) = forwarder {
+                                    fwd.forward_text(text);
+                                }
+                            }
+                        }
+                        "thinking_delta" => {
+                            if let Some(thinking) = evt.get("thinking").and_then(|t| t.as_str()) {
+                                if let Some(fwd) = forwarder {
+                                    fwd.forward_thinking(thinking);
+                                }
+                            }
+                        }
+                        "tool_use_start" => {
+                            if let Some(fwd) = forwarder {
+                                let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                                let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                                fwd.forward_tool_start(id, name);
+                            }
+                        }
+                        "tool_result" => {
+                            if let Some(fwd) = forwarder {
+                                let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                                let result = evt.get("result").and_then(|v| v.as_str()).unwrap_or("");
+                                let is_error = evt.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
+                                fwd.forward_tool_result(name, result, is_error);
                             }
                         }
                         "task_completed" | "done" | "task_failed" | "error" => break,
@@ -1057,13 +1083,9 @@ async fn execute_action_via_automaton(
         ).await;
     }
 
-    if let Some(fwd) = forwarder {
-        fwd.forward_text("Planning sub-tasks...\n");
-    }
-
     let sub_tasks = plan_sub_tasks(
         node, upstream_context, automaton_client, project_id,
-        project_path, token, agent_service, org_service,
+        project_path, token, agent_service, org_service, forwarder,
     ).await?;
 
     if sub_tasks.len() <= 1 {
@@ -1084,12 +1106,7 @@ async fn execute_action_via_automaton(
     );
 
     if let Some(fwd) = forwarder {
-        let titles: Vec<&str> = sub_tasks.iter().map(|t| t.title.as_str()).collect();
-        fwd.forward_text(&format!(
-            "Planned {} parallel sub-tasks:\n{}\n\nExecuting...\n\n",
-            sub_tasks.len(),
-            titles.iter().enumerate().map(|(i, t)| format!("  {}. {}", i + 1, t)).collect::<Vec<_>>().join("\n")
-        ));
+        fwd.forward_text(&format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
     }
 
     let max_concurrency = node
@@ -1130,6 +1147,10 @@ async fn execute_action_via_automaton(
             title = %sub_task.title,
             "Created sub-task"
         );
+
+        if let Some(fwd) = forwarder {
+            fwd.forward_text(&format!("  Creating task {}/{}... {}\n", idx + 1, sub_tasks.len(), sub_task.title));
+        }
 
         let sem = semaphore.clone();
         let ac = automaton_client.clone();
@@ -1291,6 +1312,10 @@ async fn execute_action_via_automaton(
 
             Ok((final_output, input_tokens, output_tokens, model_name))
         }));
+    }
+
+    if let Some(fwd) = forwarder {
+        fwd.forward_text(&format!("\nExecuting {} sub-tasks (max {} concurrent)...\n\n", sub_tasks.len(), max_concurrency));
     }
 
     let mut merged_parts: Vec<String> = Vec::with_capacity(handles.len());
