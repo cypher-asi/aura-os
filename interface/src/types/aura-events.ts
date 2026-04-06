@@ -111,6 +111,7 @@ export enum EventType {
 
   // Process execution
   ProcessRunStarted     = "process_run_started",
+  ProcessRunProgress    = "process_run_progress",
   ProcessRunCompleted   = "process_run_completed",
   ProcessRunFailed      = "process_run_failed",
   ProcessNodeExecuted   = "process_node_executed",
@@ -430,6 +431,13 @@ export type AuraEvent = AuraEventBase & (
   | { type: EventType.ProcessRunStarted; content: {
       process_id: string;
       run_id: string;
+    } }
+  | { type: EventType.ProcessRunProgress; content: {
+      process_id: string;
+      run_id: string;
+      total_input_tokens?: number;
+      total_output_tokens?: number;
+      cost_usd?: number;
     } }
   | { type: EventType.ProcessRunCompleted; content: {
       process_id: string;
