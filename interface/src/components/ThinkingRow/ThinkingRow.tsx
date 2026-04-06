@@ -16,6 +16,8 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
   useEffect(() => {
     if (isStreaming) {
       setExpanded(true);
+    } else {
+      setExpanded(false);
     }
   }, [isStreaming]);
 
@@ -30,7 +32,7 @@ export function ThinkingRow({ text, isStreaming, durationMs }: ThinkingRowProps)
       expanded={expanded}
       onExpandedChange={setExpanded}
       animate={!isStreaming}
-      className={styles.thinkingBlock}
+      className={`${styles.thinkingBlock}${isStreaming ? ` ${styles.thinkingBlockStreaming}` : ""}`}
       header={
         <span className={`${styles.thinkingLabel} ${isStreaming ? styles.thinkingLabelShimmer : ""}`}>
           {durationLabel}

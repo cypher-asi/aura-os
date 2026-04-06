@@ -1,14 +1,23 @@
 /* Thinking block — content-specific styles (structure in ResponseBlock) */
 .thinkingBlock {
   margin-bottom: 0;
+  opacity: 0.6;
+}
+
+/* Restore full opacity while actively streaming */
+.thinkingBlockStreaming {
+  opacity: 1;
 }
 
 .thinkingLabel {
-  font-weight: 500;
-  color: var(--color-text-muted, #aaa);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--color-text-muted, #555);
 }
 
 .thinkingLabelShimmer {
+  font-weight: 500;
+  font-size: 12px;
   background: linear-gradient(
     90deg,
     var(--color-text-muted, #aaa) 0%,
@@ -33,5 +42,6 @@
   color: var(--color-text-secondary);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: none;
+  max-height: 200px;
+  overflow-y: auto;
 }
