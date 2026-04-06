@@ -206,6 +206,17 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault();
+
+      if (node.type === "groupNode") {
+        const isLabel = (event.target as HTMLElement).closest("[data-group-label]");
+        if (!isLabel) {
+          setNodeCtxMenu(null);
+          setEdgeCtxMenu(null);
+          setCtxMenu({ x: event.clientX, y: event.clientY });
+          return;
+        }
+      }
+
       setCtxMenu(null);
       setEdgeCtxMenu(null);
       setNodeCtxMenu({ x: event.clientX, y: event.clientY, nodeId: node.id });

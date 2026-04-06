@@ -78,6 +78,7 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
         }}
       />
       <div
+        data-group-label
         className="nodrag"
         style={{
           display: "flex",

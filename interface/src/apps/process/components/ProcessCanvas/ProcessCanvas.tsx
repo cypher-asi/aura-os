@@ -53,6 +53,12 @@ const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
   icon: NODE_MENU_ICONS[item.type],
 }));
 
+const groupCtxMenuItems: MenuItem[] = [
+  { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
+  { type: "separator" },
+  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
+];
+
 const nodeCtxMenuItems = (isIgnition: boolean, isPinned: boolean, hasRuns: boolean, hasConnections: boolean): MenuItem[] => [
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
   isPinned
@@ -255,6 +261,7 @@ function ProcessCanvasInner({
           <Menu
             items={(() => {
               const node = processNodes.find((n) => n.node_id === nodeCtxMenu.nodeId);
+              if (node?.node_type === "group") return groupCtxMenuItems;
               const hasConnections = edges.some(
                 (e) => e.source === nodeCtxMenu.nodeId || e.target === nodeCtxMenu.nodeId,
               );
