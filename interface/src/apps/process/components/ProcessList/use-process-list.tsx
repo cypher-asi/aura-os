@@ -7,6 +7,8 @@ import { useProcessStore, LAST_PROCESS_ID_KEY } from "../../stores/process-store
 import { useProjectsListStore } from "../../../../stores/projects-list-store";
 import { useSidebarSearch } from "../../../../hooks/use-sidebar-search";
 import { processApi } from "../../../../api/process";
+import { api } from "../../../../api/client";
+import type { Project } from "../../../../types";
 import type { InlineRenameTarget } from "../../../../components/InlineRenameInput";
 
 import styles from "../../../../components/ProjectList/ProjectList.module.css";
@@ -46,12 +48,13 @@ type CtxMenuState = {
 };
 
 export type RenameTargetExt = InlineRenameTarget & {
-  kind: "process";
+  kind: "process" | "project";
 };
 
 export function useProcessListState() {
   const processes = useProcessStore((s) => s.processes);
   const projects = useProjectsListStore((s) => s.projects);
+  const refreshProjects = useProjectsListStore((s) => s.refreshProjects);
   const loading = useProcessStore((s) => s.loading);
   const loadingProjects = useProjectsListStore((s) => s.loadingProjects);
   const updateProcess = useProcessStore((s) => s.updateProcess);
@@ -70,6 +73,12 @@ export function useProcessListState() {
   } | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenuState | null>(null);
   const [renameTarget, setRenameTarget] = useState<RenameTargetExt | null>(
+    null,
+  );
+  const [deleteProjectTarget, setDeleteProjectTarget] =
+    useState<Project | null>(null);
+  const [deleteProjectLoading, setDeleteProjectLoading] = useState(false);
+  const [deleteProjectError, setDeleteProjectError] = useState<string | null>(
     null,
   );
   const [pendingSelectId, setPendingSelectId] = useState<string | null>(null);
@@ -310,6 +319,21 @@ export function useProcessListState() {
         setShowProcessForm(true);
       }
 
+      if (id === "rename-project" && ctxMenu.projectId) {
+        const proj = projectMap.get(ctxMenu.projectId);
+        if (!proj) return;
+        setRenameTarget({
+          id: proj.project_id,
+          name: proj.name,
+          kind: "project",
+        });
+      }
+
+      if (id === "delete-project" && ctxMenu.projectId) {
+        const proj = projectMap.get(ctxMenu.projectId);
+        if (proj) setDeleteProjectTarget(proj);
+      }
+
       if (id === "rename-process" && ctxMenu.processId) {
         const proc = processMap.get(ctxMenu.processId);
         if (!proc) return;
@@ -343,6 +367,7 @@ export function useProcessListState() {
     },
     [
       ctxMenu,
+      projectMap,
       processMap,
       removeProcess,
       navigate,
@@ -354,16 +379,21 @@ export function useProcessListState() {
     async (newName: string) => {
       if (!renameTarget) return;
       try {
-        const updated = await processApi.updateProcess(renameTarget.id, {
-          name: newName,
-        });
-        updateProcess(updated);
+        if (renameTarget.kind === "project") {
+          await api.updateProject(renameTarget.id, { name: newName });
+          await refreshProjects();
+        } else {
+          const updated = await processApi.updateProcess(renameTarget.id, {
+            name: newName,
+          });
+          updateProcess(updated);
+        }
       } catch {
         /* ignore */
       }
       setRenameTarget(null);
     },
-    [renameTarget, updateProcess],
+    [renameTarget, updateProcess, refreshProjects],
   );
 
   const handleKeyDown = useCallback(
@@ -371,6 +401,16 @@ export function useProcessListState() {
       if (e.key !== "F2") return;
       const focused = (e.target as HTMLElement).closest("button[id]");
       if (!focused) return;
+      const proj = projectMap.get(focused.id);
+      if (proj) {
+        e.preventDefault();
+        setRenameTarget({
+          id: proj.project_id,
+          name: proj.name,
+          kind: "project",
+        });
+        return;
+      }
       const proc = processMap.get(focused.id);
       if (proc) {
         e.preventDefault();
@@ -381,8 +421,25 @@ export function useProcessListState() {
         });
       }
     },
-    [processMap],
+    [projectMap, processMap],
   );
+
+  const handleDeleteProject = useCallback(async () => {
+    if (!deleteProjectTarget) return;
+    setDeleteProjectLoading(true);
+    setDeleteProjectError(null);
+    try {
+      await api.deleteProject(deleteProjectTarget.project_id);
+      setDeleteProjectTarget(null);
+      await refreshProjects();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete project.";
+      setDeleteProjectError(message);
+    } finally {
+      setDeleteProjectLoading(false);
+    }
+  }, [deleteProjectTarget, refreshProjects]);
 
   return {
     processes,
@@ -397,6 +454,11 @@ export function useProcessListState() {
     addMenuRef,
     renameTarget,
     setRenameTarget,
+    deleteProjectTarget,
+    setDeleteProjectTarget,
+    deleteProjectLoading,
+    deleteProjectError,
+    setDeleteProjectError,
     pendingSelectId,
     setPendingSelectId,
     filteredExplorerData,
@@ -408,6 +470,7 @@ export function useProcessListState() {
     handleContextMenu,
     handleCtxMenuAction,
     handleRenameCommit,
+    handleDeleteProject,
     handleKeyDown,
     handleAddMenuAction,
   };

@@ -3,6 +3,7 @@ import { Explorer, Menu, PageEmptyState } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import { Cpu, FolderOpen, Pencil, Trash2 } from "lucide-react";
 import { InlineRenameInput } from "../../../../components/InlineRenameInput";
+import { DeleteProjectModal } from "../../../../components/DeleteProjectModal";
 import { ProcessForm } from "../ProcessForm";
 import { useProcessListState } from "./use-process-list";
 
@@ -14,6 +15,9 @@ import styles from "../../../../components/ProjectList/ProjectList.module.css";
 
 const projectMenuItems: MenuItem[] = [
   { id: "add-process", label: "Add Process", icon: <Cpu size={14} /> },
+  { id: "rename-project", label: "Rename", icon: <Pencil size={14} /> },
+  { type: "separator" },
+  { id: "delete-project", label: "Delete", icon: <Trash2 size={14} /> },
 ];
 
 const processMenuItems: MenuItem[] = [
@@ -147,6 +151,17 @@ export function ProcessList() {
           onCancel={() => s.setRenameTarget(null)}
         />
       )}
+
+      <DeleteProjectModal
+        target={s.deleteProjectTarget}
+        loading={s.deleteProjectLoading}
+        error={s.deleteProjectError}
+        onClose={() => {
+          s.setDeleteProjectTarget(null);
+          s.setDeleteProjectError(null);
+        }}
+        onDelete={s.handleDeleteProject}
+      />
 
       {s.showProcessForm && (
         <ProcessForm
