@@ -4,20 +4,14 @@
 }
 
 .root input {
-  background: transparent !important;
-  border: none !important;
-  border-bottom: 1px solid var(--color-border) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  font-family: inherit !important;
-  font-size: 13px !important;
-  line-height: 1 !important;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .root input::placeholder {
-  color: var(--color-text-muted) !important;
-  line-height: 1 !important;
+  color: var(--color-text-muted);
+  line-height: 1;
 }
 
 .icon {

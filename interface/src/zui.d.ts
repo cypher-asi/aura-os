@@ -71,8 +71,10 @@ declare module "@cypher-asi/zui" {
 
   // Input
   export type InputSize = "sm" | "md";
+  export type InputVariant = "default" | "bare" | "underline";
   export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
     size?: InputSize;
+    variant?: InputVariant;
     mono?: boolean;
     validationMessage?: string;
   }

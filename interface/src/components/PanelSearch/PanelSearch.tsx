@@ -16,6 +16,7 @@ export function PanelSearch({ placeholder = "", value, onChange, action }: Panel
       <Search size={14} className={styles.icon} />
       <Input
         size="sm"
+        variant="underline"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
