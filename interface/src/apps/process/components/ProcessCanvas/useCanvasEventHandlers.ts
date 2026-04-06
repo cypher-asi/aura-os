@@ -248,6 +248,21 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     [processId, setEdges, fetchConnections],
   );
 
+  const disconnectNode = useCallback(
+    async (nodeId: string) => {
+      const incident = edges.filter((e) => e.source === nodeId || e.target === nodeId);
+      if (incident.length === 0) return;
+      setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId));
+      try {
+        await Promise.all(incident.map((e) => processApi.deleteConnection(processId, e.id)));
+      } catch (e) {
+        console.error("Failed to disconnect node:", e);
+      }
+      fetchConnections(processId);
+    },
+    [processId, edges, setEdges, fetchConnections],
+  );
+
   const onNodeClick = useCallback(
     (event: React.MouseEvent, flowNode: Node) => {
       if (event.ctrlKey || event.metaKey) return;
@@ -411,6 +426,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     deleteNodes,
     togglePinNode,
     deleteConnection,
+    disconnectNode,
     setNodeCtxMenu,
     setEdgeCtxMenu,
     ctxMenu,

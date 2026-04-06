@@ -15,7 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styles from "./ProcessCanvas.module.css";
-import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers } from "lucide-react";
+import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers, Unplug } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
@@ -53,11 +53,12 @@ const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
   icon: NODE_MENU_ICONS[item.type],
 }));
 
-const nodeCtxMenuItems = (isIgnition: boolean, isPinned: boolean, hasRuns: boolean): MenuItem[] => [
+const nodeCtxMenuItems = (isIgnition: boolean, isPinned: boolean, hasRuns: boolean, hasConnections: boolean): MenuItem[] => [
   { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
   isPinned
     ? { id: "unpin", label: "Unpin Output", icon: <PinOff size={14} /> }
     : { id: "pin", label: "Pin Output", icon: <Pin size={14} />, disabled: !hasRuns },
+  { id: "disconnect", label: "Disconnect", icon: <Unplug size={14} />, disabled: !hasConnections },
   { type: "separator" as const },
   { id: "delete", label: "Delete", icon: <Trash2 size={14} />, disabled: isIgnition },
 ];
@@ -109,6 +110,7 @@ function ProcessCanvasInner({
     deleteNodes,
     togglePinNode,
     deleteConnection,
+    disconnectNode,
     setNodeCtxMenu,
     setEdgeCtxMenu,
     ctxMenu,
@@ -253,10 +255,14 @@ function ProcessCanvasInner({
           <Menu
             items={(() => {
               const node = processNodes.find((n) => n.node_id === nodeCtxMenu.nodeId);
+              const hasConnections = edges.some(
+                (e) => e.source === nodeCtxMenu.nodeId || e.target === nodeCtxMenu.nodeId,
+              );
               return nodeCtxMenuItems(
                 node?.node_type === "ignition",
                 !!node?.config?.pinned_output,
                 runs.length > 0,
+                hasConnections,
               );
             })()}
             onChange={(id) => {
@@ -264,6 +270,7 @@ function ProcessCanvasInner({
               setNodeCtxMenu(null);
               if (id === "rename") setRenamingNodeId(targetId);
               if (id === "pin" || id === "unpin") togglePinNode(targetId);
+              if (id === "disconnect") disconnectNode(targetId);
               if (id === "delete") deleteNodes([targetId]);
             }}
             background="solid"
