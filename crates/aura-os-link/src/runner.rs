@@ -183,14 +183,20 @@ where
                             "is_error": is_error,
                         }));
                     }
-                    "usage" | "session_usage" => {
-                        if let Some(inp) = evt.get("input_tokens").and_then(|v| v.as_u64()) {
-                            out.input_tokens = inp;
+                    "assistant_message_end" | "token_usage"
+                    | "usage" | "session_usage" => {
+                        let usage = evt.get("usage").unwrap_or(&evt);
+                        if let Some(cum_in) = usage.get("cumulative_input_tokens").and_then(|v| v.as_u64()) {
+                            out.input_tokens = cum_in;
+                        } else if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                            out.input_tokens += inp;
                         }
-                        if let Some(outp) = evt.get("output_tokens").and_then(|v| v.as_u64()) {
-                            out.output_tokens = outp;
+                        if let Some(cum_out) = usage.get("cumulative_output_tokens").and_then(|v| v.as_u64()) {
+                            out.output_tokens = cum_out;
+                        } else if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                            out.output_tokens += outp;
                         }
-                        if let Some(m) = evt.get("model").and_then(|v| v.as_str()) {
+                        if let Some(m) = usage.get("model").and_then(|v| v.as_str()) {
                             out.model = Some(m.to_string());
                         }
                     }
