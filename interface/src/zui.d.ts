@@ -216,7 +216,7 @@ declare module "@cypher-asi/zui" {
     onChange?: (id: string) => void;
     className?: string;
     tabClassName?: string;
-    size?: "sm" | "md";
+    size?: "xs" | "sm" | "md";
   }
   export function Tabs(props: TabsProps): JSX.Element;
 
