@@ -7,7 +7,6 @@ import { processApi } from "../../../../api/process";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import {
   snap,
-  GROUP_CONFIG_ID_KEY,
   GROUP_CONFIG_WIDTH_KEY,
   GROUP_CONFIG_HEIGHT_KEY,
   GROUP_DEFAULT_WIDTH,
@@ -26,25 +25,6 @@ export interface UseCanvasEventHandlersParams {
   screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
   fetchNodes: (processId: string) => void;
   fetchConnections: (processId: string) => void;
-}
-
-interface Position2D {
-  x: number;
-  y: number;
-}
-
-function getAbsolutePosition(target: Node, nodeMap: Map<string, Node>): Position2D {
-  let x = target.position.x;
-  let y = target.position.y;
-  let parentId = target.parentId;
-  while (parentId) {
-    const parent = nodeMap.get(parentId);
-    if (!parent) break;
-    x += parent.position.x;
-    y += parent.position.y;
-    parentId = parent.parentId;
-  }
-  return { x, y };
 }
 
 export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
@@ -310,127 +290,41 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
 
   const onNodeDragStop = useCallback(
     async (_: unknown, node: Node) => {
-      const processNode = processNodes.find((n) => n.node_id === node.id);
-      if (!processNode) return;
-
-      const mergedNodes = nodes.map((n) => (n.id === node.id ? { ...n, ...node } : n));
-      const nodeMap = new Map(mergedNodes.map((n) => [n.id, n]));
-      const draggedFlowNode = nodeMap.get(node.id) ?? node;
-      const draggedAbs = getAbsolutePosition(draggedFlowNode, nodeMap);
-      const draggedWidth = draggedFlowNode.width ?? 140;
-      const draggedHeight = draggedFlowNode.height ?? 32;
-
-      let targetGroupId: string | undefined;
-      if (processNode.node_type !== "group") {
-        const candidates = mergedNodes
-          .filter((n) => n.id !== node.id)
-          .filter((n) => processNodes.find((pn) => pn.node_id === n.id)?.node_type === "group")
-          .map((groupNode) => {
-            const abs = getAbsolutePosition(groupNode, nodeMap);
-            const groupData = processNodes.find((pn) => pn.node_id === groupNode.id);
-            const cfg = (groupData?.config as Record<string, unknown>) ?? {};
-            const configuredWidth = Number(cfg[GROUP_CONFIG_WIDTH_KEY]) || GROUP_DEFAULT_WIDTH;
-            const configuredHeight = Number(cfg[GROUP_CONFIG_HEIGHT_KEY]) || GROUP_DEFAULT_HEIGHT;
-            const width = groupNode.width ?? configuredWidth;
-            const height = groupNode.height ?? configuredHeight;
-            const centerX = draggedAbs.x + draggedWidth / 2;
-            const centerY = draggedAbs.y + draggedHeight / 2;
-            const containsCenter = centerX >= abs.x && centerX <= abs.x + width && centerY >= abs.y && centerY <= abs.y + height;
-            return { id: groupNode.id, abs, width, height, containsCenter, area: width * height };
-          })
-          .filter((item) => item.containsCenter)
-          .sort((a, b) => a.area - b.area);
-        targetGroupId = candidates[0]?.id;
-      }
-
-      const existingGroupIdRaw = (processNode.config as Record<string, unknown>)?.[GROUP_CONFIG_ID_KEY];
-      const existingGroupId = typeof existingGroupIdRaw === "string" ? existingGroupIdRaw : undefined;
-      const nextGroupId = processNode.node_type === "group" ? undefined : targetGroupId;
-      const groupChanged = existingGroupId !== nextGroupId;
-
-      let nextPosition = { x: snap(draggedFlowNode.position.x), y: snap(draggedFlowNode.position.y) };
-      if (groupChanged && nextGroupId) {
-        const groupFlowNode = nodeMap.get(nextGroupId);
-        if (groupFlowNode) {
-          const groupAbs = getAbsolutePosition(groupFlowNode, nodeMap);
-          const relX = snap(draggedAbs.x - groupAbs.x);
-          const relY = snap(draggedAbs.y - groupAbs.y);
-          nextPosition = { x: relX, y: relY };
-        }
-      } else if (groupChanged && !nextGroupId) {
-        nextPosition = { x: snap(draggedAbs.x), y: snap(draggedAbs.y) };
-      }
-
-      const nextConfig: Record<string, unknown> = {
-        ...((processNode.config as Record<string, unknown>) ?? {}),
-      };
-      if (nextGroupId) nextConfig[GROUP_CONFIG_ID_KEY] = nextGroupId;
-      else delete nextConfig[GROUP_CONFIG_ID_KEY];
+      const selectedNodes = nodes.filter((n) => n.selected);
+      const nodesToPersist = selectedNodes.length > 0
+        ? selectedNodes
+        : [node];
+      const uniqueById = new Map(nodesToPersist.map((n) => [n.id, n]));
+      if (!uniqueById.has(node.id)) uniqueById.set(node.id, node);
 
       try {
-        await processApi.updateNode(processId, node.id, {
-          position_x: nextPosition.x,
-          position_y: nextPosition.y,
-          ...(processNode.node_type !== "group" ? { config: nextConfig } : {}),
-        });
-        if (processNode.node_type !== "group") {
-          setNodes((prev) => {
-            const latestMap = new Map(prev.map((n) => [n.id, n]));
-            const active = latestMap.get(node.id);
-            const latestAbs = active ? getAbsolutePosition(active, latestMap) : draggedAbs;
-            let localPosition = { ...nextPosition };
-            if (nextGroupId) {
-              const target = latestMap.get(nextGroupId);
-              if (target) {
-                const targetAbs = getAbsolutePosition(target, latestMap);
-                localPosition = {
-                  x: snap(latestAbs.x - targetAbs.x),
-                  y: snap(latestAbs.y - targetAbs.y),
-                };
-              }
-            } else {
-              localPosition = { x: snap(latestAbs.x), y: snap(latestAbs.y) };
-            }
-            return prev.map((n) => {
-              if (n.id !== node.id) return n;
-              if (nextGroupId) {
-                return {
-                  ...n,
-                  parentId: nextGroupId,
-                  extent: "parent" as const,
-                  position: localPosition,
-                };
-              }
-              return {
-                ...n,
-                parentId: undefined,
-                extent: undefined,
-                position: localPosition,
-              };
-            });
-          });
-        }
+        await Promise.all(
+          Array.from(uniqueById.values()).map((movedNode) => processApi.updateNode(processId, movedNode.id, {
+            position_x: snap(movedNode.position.x),
+            position_y: snap(movedNode.position.y),
+          })),
+        );
         fetchNodes(processId);
       } catch (e) {
         console.error("Failed to save node position:", e);
       }
     },
-    [processId, processNodes, nodes, setNodes, fetchNodes],
+    [processId, nodes, fetchNodes],
   );
 
-  const onNodeResizeStop = useCallback(
-    async (_: unknown, node: Node) => {
-      const processNode = processNodes.find((n) => n.node_id === node.id);
+  const onGroupResizeStop = useCallback(
+    async (nodeId: string, width?: number, height?: number) => {
+      const processNode = processNodes.find((n) => n.node_id === nodeId);
       if (!processNode || processNode.node_type !== "group") return;
-      const width = Math.max(220, snap(node.width ?? GROUP_DEFAULT_WIDTH));
-      const height = Math.max(150, snap(node.height ?? GROUP_DEFAULT_HEIGHT));
+      const nextWidth = Math.max(220, snap(width ?? GROUP_DEFAULT_WIDTH));
+      const nextHeight = Math.max(150, snap(height ?? GROUP_DEFAULT_HEIGHT));
       const nextConfig: Record<string, unknown> = {
         ...((processNode.config as Record<string, unknown>) ?? {}),
-        [GROUP_CONFIG_WIDTH_KEY]: width,
-        [GROUP_CONFIG_HEIGHT_KEY]: height,
+        [GROUP_CONFIG_WIDTH_KEY]: nextWidth,
+        [GROUP_CONFIG_HEIGHT_KEY]: nextHeight,
       };
       try {
-        await processApi.updateNode(processId, node.id, { config: nextConfig });
+        await processApi.updateNode(processId, nodeId, { config: nextConfig });
         fetchNodes(processId);
       } catch (e) {
         console.error("Failed to save group size:", e);
@@ -498,7 +392,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     wrapperRef,
     onConnect,
     onNodeDragStop,
-    onNodeResizeStop,
+    onGroupResizeStop,
     onNodeClick,
     onNodeDoubleClick,
     onSelectionChange,

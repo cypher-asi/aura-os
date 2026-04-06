@@ -6,6 +6,7 @@ interface ProcessGroupNodeData {
   label: string;
   isRenaming?: boolean;
   onRenameSubmit?: (newLabel: string) => void;
+  onResizeStop?: (nodeId: string, width?: number, height?: number) => void;
 }
 
 function RenameInput({ value, onSubmit }: { value: string; onSubmit: (v: string) => void }) {
@@ -55,7 +56,7 @@ function RenameInput({ value, onSubmit }: { value: string; onSubmit: (v: string)
   );
 }
 
-function ProcessGroupNodeInner({ data, selected }: NodeProps & { data: ProcessGroupNodeData }) {
+function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: ProcessGroupNodeData }) {
   return (
     <div
       style={{
@@ -74,6 +75,13 @@ function ProcessGroupNodeInner({ data, selected }: NodeProps & { data: ProcessGr
         isVisible={selected}
         lineStyle={{ borderColor: "#38bdf8" }}
         handleStyle={{ width: 8, height: 8, borderRadius: 0, background: "#38bdf8" }}
+        onResizeEnd={(_, params) => {
+          data.onResizeStop?.(
+            id,
+            typeof params.width === "number" ? params.width : undefined,
+            typeof params.height === "number" ? params.height : undefined,
+          );
+        }}
       />
       <div
         className="nodrag"

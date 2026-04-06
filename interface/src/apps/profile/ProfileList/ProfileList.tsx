@@ -2,7 +2,7 @@ import { useMemo, useCallback } from "react";
 import { Explorer } from "@cypher-asi/zui";
 import type { ExplorerNode } from "@cypher-asi/zui";
 import { useProfile } from "../../../stores/profile-store";
-import { ALL_PROFILE_PROJECTS_ID, getProfileSelectorItems } from "../profileSelectors";
+import { ALL_PROFILE_PROJECTS_ID, getProfileSelectorItems } from "../ProfileSelectors";
 import styles from "./ProfileList.module.css";
 
 export function ProfileList() {

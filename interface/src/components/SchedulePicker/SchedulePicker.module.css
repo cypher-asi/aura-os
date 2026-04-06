@@ -150,9 +150,9 @@
 }
 
 .pillActive {
-  background: var(--color-accent, #60a5fa);
-  border-color: var(--color-accent, #60a5fa);
-  color: #fff;
+  background: var(--color-bg-input);
+  border-color: #fff;
+  color: var(--color-text);
 }
 
 /* ── Fields area ── */
@@ -244,13 +244,15 @@
 }
 
 .dayToggleActive {
-  background: var(--color-accent, #60a5fa);
-  border-color: var(--color-accent, #60a5fa);
-  color: #fff;
+  background: var(--color-bg-input);
+  border-color: #fff;
+  color: var(--color-text);
 }
 
 .dayToggleActive:hover {
-  opacity: 0.9;
+  background: var(--color-bg-input);
+  border-color: #fff;
+  color: var(--color-text);
 }
 
 /* ── Cron preview ── */

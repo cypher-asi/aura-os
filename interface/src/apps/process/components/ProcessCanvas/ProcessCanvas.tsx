@@ -96,7 +96,7 @@ function ProcessCanvasInner({
     wrapperRef,
     onConnect,
     onNodeDragStop,
-    onNodeResizeStop,
+    onGroupResizeStop,
     onNodeClick,
     onNodeDoubleClick,
     onSelectionChange,
@@ -132,15 +132,16 @@ function ProcessCanvasInner({
 
   useEffect(() => {
     setNodes((currentNodes) => {
-      const incoming = toFlowNodes(processNodes, renameState, nodeStatuses);
-      if (currentNodes.length === 0) return incoming;
+      const incomingWithResize = toFlowNodes(processNodes, renameState, nodeStatuses, onGroupResizeStop);
+      if (currentNodes.length === 0) return incomingWithResize;
       const currentById = new Map(currentNodes.map((n) => [n.id, n]));
-      return incoming.map((n) => {
+      return incomingWithResize.map((n) => {
         const existing = currentById.get(n.id);
         return existing
           ? {
             ...existing,
             type: n.type,
+            position: n.position,
             parentId: n.parentId,
             extent: n.extent,
             style: n.style,
@@ -149,7 +150,7 @@ function ProcessCanvasInner({
           : n;
       });
     });
-  }, [processNodes, setNodes, renamingNodeId, nodeStatuses]);
+  }, [processNodes, setNodes, renamingNodeId, nodeStatuses, onGroupResizeStop]);
 
   useEffect(() => {
     setEdges(toFlowEdges(processConnections, processNodes));
@@ -164,7 +165,6 @@ function ProcessCanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
-        onNodeResizeStop={onNodeResizeStop}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onSelectionChange={onSelectionChange}

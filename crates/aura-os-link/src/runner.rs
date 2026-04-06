@@ -16,6 +16,7 @@ pub struct CollectedOutput {
     pub output_text: String,
     pub input_tokens: u64,
     pub output_tokens: u64,
+    pub cost_usd: Option<f64>,
     pub model: Option<String>,
     pub content_blocks: Vec<serde_json::Value>,
 }
@@ -195,6 +196,12 @@ where
                         }
                     }
                     "task_completed" | "done" => {
+                        if let Some(cost) = evt
+                            .get("cost_usd")
+                            .and_then(|v| v.as_f64().or_else(|| v.as_str().and_then(|s| s.parse().ok())))
+                        {
+                            out.cost_usd = Some(cost);
+                        }
                         flush_pending_text(&mut out, &mut pending_text);
                         return RunCompletion::Done(out);
                     }

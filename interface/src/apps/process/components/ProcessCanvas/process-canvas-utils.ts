@@ -18,6 +18,8 @@ export interface RenameState {
   onRenameSubmit: (newLabel: string) => void;
 }
 
+export type GroupResizeStopHandler = (nodeId: string, width?: number, height?: number) => void;
+
 export const GRID = 20;
 export const GROUP_CONFIG_ID_KEY = "group_id";
 export const GROUP_CONFIG_WIDTH_KEY = "group_width";
@@ -65,14 +67,10 @@ export function toFlowNodes(
   nodes: ProcessNode[],
   renaming?: RenameState,
   nodeStatuses?: Record<string, NodeRunStatus>,
+  onGroupResizeStop?: GroupResizeStopHandler,
 ): Node[] {
-  const groupIds = new Set(nodes.filter((n) => n.node_type === "group").map((n) => n.node_id));
   return nodes.map((n) => {
     const config = n.config ?? {};
-    const rawGroupId = config[GROUP_CONFIG_ID_KEY];
-    const parentGroupId = n.node_type !== "group" && typeof rawGroupId === "string" && groupIds.has(rawGroupId)
-      ? rawGroupId
-      : undefined;
 
     const baseNode: Node = {
       id: n.node_id,
@@ -96,15 +94,11 @@ export function toFlowNodes(
       const height = Number(config[GROUP_CONFIG_HEIGHT_KEY]) || GROUP_DEFAULT_HEIGHT;
       return {
         ...baseNode,
+        data: {
+          ...baseNode.data,
+          onResizeStop: onGroupResizeStop,
+        },
         style: { width, height, zIndex: -1 },
-      };
-    }
-
-    if (parentGroupId) {
-      return {
-        ...baseNode,
-        parentId: parentGroupId,
-        extent: "parent",
       };
     }
 
