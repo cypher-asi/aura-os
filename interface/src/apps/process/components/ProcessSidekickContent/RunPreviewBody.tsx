@@ -11,11 +11,12 @@ import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";
 import { useStreamEvents, useStreamingText, useThinkingText, useThinkingDurationMs, useActiveToolCalls, useTimeline, useIsStreaming } from "../../../../hooks/stream/hooks";
 import type { ProcessArtifact, ProcessEvent, ProcessRun, ProcessRunTranscriptEvent } from "../../../../types";
-import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../../../types/stream";
+import type { DisplaySessionEvent, TimelineItem, ToolCallEntry } from "../../../../types/stream";
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
 import { LiveRunBanner } from "./LiveRunBanner";
 import { injectKeyframes, useElapsedTime, formatDuration, EMPTY_NODES } from "./process-sidekick-utils";
+import { buildProcessSidekickCopyText, groupTranscriptByNode, nodeTranscriptToEvents } from "./process-output-utils";
 
 // ---------------------------------------------------------------------------
 // useRunPreviewData -- encapsulates all data-fetching / polling / SSE logic
@@ -186,199 +187,8 @@ function useRunNodeTracking(
 }
 
 // ---------------------------------------------------------------------------
-// buildFullRunOutput
-// ---------------------------------------------------------------------------
-
-function buildFullRunOutput(
-  events: ProcessEvent[],
-  nodes: { node_id: string; label: string }[],
-): string {
-  const parts: string[] = [];
-  for (const evt of events) {
-    if (evt.status === "running" || evt.status === "pending") continue;
-    const label = nodes.find((n) => n.node_id === evt.node_id)?.label ?? evt.node_id;
-    parts.push(`## ${label} [${evt.status}]`);
-
-    if (evt.content_blocks && evt.content_blocks.length > 0) {
-      for (const block of evt.content_blocks) {
-        const b = block as unknown as Record<string, unknown>;
-        if (b.type === "text" && b.text) parts.push(b.text as string);
-        else if (b.type === "thinking" && b.thinking) parts.push(`<thinking>\n${b.thinking as string}\n</thinking>`);
-        else if (b.type === "tool_use") parts.push(`[tool_call: ${b.name as string}]`);
-        else if (b.type === "tool_result") {
-          const errTag = b.is_error ? " (error)" : "";
-          parts.push(`[tool_result: ${b.name as string}${errTag}]\n${(b.result as string) ?? ""}`);
-        }
-      }
-    } else if (evt.output) {
-      parts.push(evt.output);
-    }
-
-    if (evt.input_snapshot) {
-      parts.push(`\n--- Input ---\n${evt.input_snapshot}`);
-    }
-    parts.push("");
-  }
-  return parts.join("\n").trim();
-}
-
-// ---------------------------------------------------------------------------
 // transcriptToDisplayEvents -- replay persisted transcript into MessageBubble shape
 // ---------------------------------------------------------------------------
-
-interface TranscriptNodeGroup {
-  nodeId: string;
-  label: string;
-  entries: ProcessRunTranscriptEvent[];
-}
-
-function groupTranscriptByNode(
-  transcript: ProcessRunTranscriptEvent[],
-  nodes: { node_id: string; label: string }[],
-): TranscriptNodeGroup[] {
-  const groups: TranscriptNodeGroup[] = [];
-  let current: TranscriptNodeGroup | null = null;
-
-  for (const entry of transcript) {
-    const p = (entry.payload ?? {}) as Record<string, unknown>;
-    const nodeId = typeof p.node_id === "string" ? p.node_id : "";
-    if (!nodeId) continue;
-
-    if (!current || current.nodeId !== nodeId) {
-      current = {
-        nodeId,
-        label: nodes.find((n) => n.node_id === nodeId)?.label ?? nodeId,
-        entries: [],
-      };
-      groups.push(current);
-    }
-    current.entries.push(entry);
-  }
-  return groups;
-}
-
-function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySessionEvent[] {
-  const result: DisplaySessionEvent[] = [];
-  let textBuf = "";
-  let thinkingBuf = "";
-  let tools: ToolCallEntry[] = [];
-  let timeline: TimelineItem[] = [];
-  let eventIdx = 0;
-  let itemIdx = 0;
-
-  const flush = () => {
-    if (!textBuf && !thinkingBuf && tools.length === 0) return;
-    result.push({
-      id: `transcript-${eventIdx++}`,
-      role: "assistant",
-      content: textBuf,
-      toolCalls: tools.length > 0 ? [...tools] : undefined,
-      thinkingText: thinkingBuf || undefined,
-      timeline: timeline.length > 0 ? [...timeline] : undefined,
-    });
-    textBuf = "";
-    thinkingBuf = "";
-    tools = [];
-    timeline = [];
-    itemIdx = 0;
-  };
-
-  let hasThinkingItem = false;
-
-  for (const entry of entries) {
-    const p = (entry.payload ?? {}) as Record<string, unknown>;
-    const type = String(p.type ?? entry.event_type ?? "");
-
-    switch (type) {
-      case "text_delta": {
-        const text = typeof p.text === "string" ? p.text : "";
-        if (text) textBuf += text;
-        break;
-      }
-      case "thinking_delta": {
-        const t = (typeof p.text === "string" ? p.text : undefined)
-          ?? (typeof p.thinking === "string" ? p.thinking : "");
-        if (t) {
-          thinkingBuf += t;
-          if (!hasThinkingItem) {
-            timeline.push({ kind: "thinking", id: `tl-think-${itemIdx++}` });
-            hasThinkingItem = true;
-          }
-        }
-        break;
-      }
-      case "tool_use_start": {
-        if (textBuf) {
-          timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
-          textBuf = "";
-        }
-        const id = typeof p.id === "string" ? p.id : crypto.randomUUID();
-        const name = typeof p.name === "string" ? p.name : "tool";
-        tools.push({ id, name, input: {}, pending: true, started: true });
-        timeline.push({ kind: "tool", toolCallId: id, id: `tl-tool-${itemIdx++}` });
-        break;
-      }
-      case "tool_call_snapshot": {
-        const id = typeof p.id === "string" ? p.id : "";
-        const name = typeof p.name === "string" ? p.name : "tool";
-        const input = (typeof p.input === "object" && p.input !== null ? p.input : {}) as Record<string, unknown>;
-        const existing = tools.find((tc) => tc.id === id);
-        if (existing) {
-          existing.name = name;
-          existing.input = { ...existing.input, ...input };
-        } else {
-          const newId = id || crypto.randomUUID();
-          tools.push({ id: newId, name, input, pending: true, started: true });
-          timeline.push({ kind: "tool", toolCallId: newId, id: `tl-tool-${itemIdx++}` });
-        }
-        break;
-      }
-      case "tool_result": {
-        const name = typeof p.name === "string" ? p.name : "tool";
-        const toolUseId = typeof p.tool_use_id === "string" ? p.tool_use_id : undefined;
-        const resultId = typeof p.id === "string" ? p.id : undefined;
-        const resultText = typeof p.result === "string" ? p.result : "";
-        const isError = typeof p.is_error === "boolean" ? p.is_error : false;
-        const resolveId = toolUseId || resultId;
-        const target = (resolveId ? tools.find((tc) => tc.id === resolveId) : undefined)
-          ?? [...tools].reverse().find((tc) => tc.pending && tc.name === name)
-          ?? [...tools].reverse().find((tc) => tc.pending);
-        if (target) {
-          target.result = resultText;
-          target.isError = isError;
-          target.pending = false;
-          target.started = false;
-        }
-        break;
-      }
-      case "process_node_executed": {
-        const status = typeof p.status === "string" ? p.status.toLowerCase() : "";
-        if (status && !status.includes("running")) {
-          if (textBuf) {
-            timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
-            textBuf = "";
-          }
-          flush();
-          hasThinkingItem = false;
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  for (const tc of tools) {
-    if (tc.pending) {
-      tc.pending = false;
-      tc.started = false;
-    }
-  }
-  if (textBuf) {
-    timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
-  }
-  flush();
-  return result;
-}
 
 function TranscriptReplayOutput({
   transcript,
@@ -419,17 +229,44 @@ function TranscriptReplayOutput({
 // CopyAllOutputButton
 // ---------------------------------------------------------------------------
 
-function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes: { node_id: string; label: string }[] }) {
+function CopyAllOutputButton({
+  events,
+  nodes,
+  transcript,
+  isActive,
+  liveNodeLabel,
+  liveState,
+}: {
+  events: ProcessEvent[];
+  nodes: { node_id: string; label: string }[];
+  transcript: ProcessRunTranscriptEvent[];
+  isActive: boolean;
+  liveNodeLabel?: string | null;
+  liveState?: {
+    events: DisplaySessionEvent[];
+    streamingText: string;
+    thinkingText: string;
+    activeToolCalls: ToolCallEntry[];
+    timeline: TimelineItem[];
+  } | null;
+}) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    const text = buildFullRunOutput(events, nodes);
+    const text = buildProcessSidekickCopyText({
+      events,
+      nodes,
+      transcript,
+      isActive,
+      liveNodeLabel,
+      liveState,
+    });
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
-  }, [events, nodes]);
+  }, [events, isActive, liveNodeLabel, liveState, nodes, transcript]);
 
   return (
     <button
@@ -453,16 +290,23 @@ function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes:
 // ProcessNodeLiveOutput
 // ---------------------------------------------------------------------------
 
-function ProcessNodeLiveOutput({ runId, nodeId, isActive }: { runId: string; nodeId: string; isActive: boolean }) {
-  const { streamKey } = useProcessNodeStream(runId, nodeId, isActive);
-  const events = useStreamEvents(streamKey);
-  const isStreaming = useIsStreaming(streamKey);
-  const streamingText = useStreamingText(streamKey);
-  const thinkingText = useThinkingText(streamKey);
-  const thinkingDurationMs = useThinkingDurationMs(streamKey);
-  const activeToolCalls = useActiveToolCalls(streamKey);
-  const timeline = useTimeline(streamKey);
-
+function ProcessNodeLiveOutput({
+  events,
+  isStreaming,
+  streamingText,
+  thinkingText,
+  thinkingDurationMs,
+  activeToolCalls,
+  timeline,
+}: {
+  events: DisplaySessionEvent[];
+  isStreaming: boolean;
+  streamingText: string;
+  thinkingText: string;
+  thinkingDurationMs: number | null;
+  activeToolCalls: ToolCallEntry[];
+  timeline: TimelineItem[];
+}) {
   const hasLive = isStreaming || streamingText || thinkingText || activeToolCalls.length > 0 || timeline.length > 0;
   const hasContent = hasLive || events.length > 0;
 
@@ -507,12 +351,29 @@ function ActiveDurationCell({ startedAt }: { startedAt: string }) {
 // ---------------------------------------------------------------------------
 
 function RunDetailGrid({
-  run, isActive, sortedEvents, nodes, totalTokensFromEvents, models,
+  run,
+  isActive,
+  sortedEvents,
+  nodes,
+  transcript,
+  liveNodeLabel,
+  liveState,
+  totalTokensFromEvents,
+  models,
 }: {
   run: ProcessRun;
   isActive: boolean;
   sortedEvents: ProcessEvent[];
   nodes: { node_id: string; label: string }[];
+  transcript: ProcessRunTranscriptEvent[];
+  liveNodeLabel?: string | null;
+  liveState?: {
+    events: DisplaySessionEvent[];
+    streamingText: string;
+    thinkingText: string;
+    activeToolCalls: ToolCallEntry[];
+    timeline: TimelineItem[];
+  } | null;
   totalTokensFromEvents: { input: number; output: number; total: number };
   models: string[];
 }) {
@@ -520,7 +381,14 @@ function RunDetailGrid({
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontWeight: 600 }}>Run Detail</div>
-        <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
+        <CopyAllOutputButton
+          events={sortedEvents}
+          nodes={nodes}
+          transcript={transcript}
+          isActive={isActive}
+          liveNodeLabel={liveNodeLabel}
+          liveState={liveState}
+        />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
         <span style={{ color: "var(--color-text-muted)" }}>Status</span>
@@ -642,6 +510,27 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   const liveNodeLabel = liveRunNodeId
     ? nodes.find((n) => n.node_id === liveRunNodeId)?.label ?? "Node"
     : null;
+  const { streamKey: liveStreamKey } = useProcessNodeStream(
+    run.run_id,
+    liveRunNodeId ?? undefined,
+    isActive && !!liveRunNodeId,
+  );
+  const liveStreamEvents = useStreamEvents(liveStreamKey);
+  const liveIsStreaming = useIsStreaming(liveStreamKey);
+  const liveStreamingText = useStreamingText(liveStreamKey);
+  const liveThinkingText = useThinkingText(liveStreamKey);
+  const liveThinkingDurationMs = useThinkingDurationMs(liveStreamKey);
+  const liveActiveToolCalls = useActiveToolCalls(liveStreamKey);
+  const liveTimeline = useTimeline(liveStreamKey);
+  const liveCopyState = liveRunNodeId
+    ? {
+        events: liveStreamEvents,
+        streamingText: liveStreamingText,
+        thinkingText: liveThinkingText,
+        activeToolCalls: liveActiveToolCalls,
+        timeline: liveTimeline,
+      }
+    : null;
 
   return (
     <div style={{ fontSize: 13 }}>
@@ -652,6 +541,9 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
           isActive={isActive}
           sortedEvents={sortedEvents}
           nodes={nodes}
+          transcript={transcript}
+          liveNodeLabel={liveNodeLabel}
+          liveState={liveCopyState}
           totalTokensFromEvents={totalTokensFromEvents}
           models={models}
         />
@@ -669,7 +561,15 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
         {isActive && liveRunNodeId && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Output &mdash; {liveNodeLabel}</div>
-            <ProcessNodeLiveOutput runId={run.run_id} nodeId={liveRunNodeId} isActive />
+            <ProcessNodeLiveOutput
+              events={liveStreamEvents}
+              isStreaming={liveIsStreaming}
+              streamingText={liveStreamingText}
+              thinkingText={liveThinkingText}
+              thinkingDurationMs={liveThinkingDurationMs}
+              activeToolCalls={liveActiveToolCalls}
+              timeline={liveTimeline}
+            />
           </div>
         )}
         {!isActive && transcript.length > 0 && (

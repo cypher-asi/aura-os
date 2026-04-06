@@ -1,14 +1,12 @@
 import { useMemo, useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import type { ProcessEvent } from "../../../../types";
-import type { DisplaySessionEvent } from "../../../../types/stream";
 import { MessageBubble } from "../../../../components/MessageBubble";
 import {
-  contentBlocksToTimeline,
-  formatOutputContent,
   prettyPrintIfJson,
   monoBox,
 } from "../NodeOutputTab/node-output-utils";
+import { buildProcessEventDisplay } from "./process-event-display";
 
 interface Props {
   event: ProcessEvent;
@@ -16,7 +14,7 @@ interface Props {
 
 export function ProcessEventOutput({ event }: Props) {
   const { message, separateOutput } = useMemo(
-    () => buildEventDisplay(event),
+    () => buildProcessEventDisplay(event),
     [event],
   );
 
@@ -77,109 +75,3 @@ function FormattedOutput({ text }: { text: string }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Display-model builder
-// ---------------------------------------------------------------------------
-
-function looksLikeStructuredData(text: string): boolean {
-  const t = text.trim();
-  return t.startsWith("{") || t.startsWith("[");
-}
-
-function collectBlockRawText(
-  blocks: ProcessEvent["content_blocks"],
-): string {
-  if (!blocks) return "";
-  return blocks
-    .filter((b) => b.type === "text" && b.text)
-    .map((b) => b.text!)
-    .join("");
-}
-
-/**
- * Build the display model: a conversation message (from content_blocks) and/or
- * a separate structured-data output (from event.output when it contains
- * distinct downstream data such as a file the agent wrote).
- */
-function buildEventDisplay(event: ProcessEvent): {
-  message: DisplaySessionEvent | null;
-  separateOutput: string | null;
-} {
-  const hasBlocks =
-    !!event.content_blocks && event.content_blocks.length > 0;
-  const rawOutput = event.output?.trim() ?? "";
-
-  if (!hasBlocks && !rawOutput) {
-    return { message: null, separateOutput: null };
-  }
-
-  // -- No content blocks: render output directly --
-  if (!hasBlocks) {
-    if (looksLikeStructuredData(rawOutput)) {
-      return { message: null, separateOutput: rawOutput };
-    }
-    const formatted = formatOutputContent(rawOutput);
-    return {
-      message: {
-        id: event.event_id,
-        role: "assistant",
-        content: formatted,
-        timeline: [
-          { kind: "text" as const, content: formatted, id: "node-output" },
-        ],
-      },
-      separateOutput: null,
-    };
-  }
-
-  // -- Has content blocks: build conversation timeline --
-  const { timeline, toolCalls, thinkingText } = contentBlocksToTimeline(
-    event.content_blocks!,
-  );
-  const blockRawText = collectBlockRawText(event.content_blocks);
-
-  // If the only meaningful content is a single JSON blob (no tools / thinking),
-  // render it in the dedicated FormattedOutput instead of the markdown pipeline.
-  if (
-    !thinkingText &&
-    toolCalls.length === 0 &&
-    timeline.length <= 1 &&
-    looksLikeStructuredData(blockRawText)
-  ) {
-    return { message: null, separateOutput: blockRawText };
-  }
-
-  // Determine whether event.output is distinct downstream data
-  let separateOutput: string | null = null;
-  if (rawOutput && rawOutput.length >= 20) {
-    const outputMatchesBlocks =
-      blockRawText.includes(rawOutput) ||
-      rawOutput.includes(blockRawText.trim());
-
-    if (!outputMatchesBlocks) {
-      if (looksLikeStructuredData(rawOutput)) {
-        separateOutput = rawOutput;
-      } else {
-        timeline.push({
-          kind: "text",
-          content: formatOutputContent(rawOutput),
-          id: "node-output",
-        });
-      }
-    }
-  }
-
-  const hasTimeline = timeline.length > 0 || !!thinkingText;
-  const message: DisplaySessionEvent | null = hasTimeline
-    ? {
-        id: event.event_id,
-        role: "assistant",
-        content: "",
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        thinkingText: thinkingText || undefined,
-        timeline: timeline.length > 0 ? timeline : undefined,
-      }
-    : null;
-
-  return { message, separateOutput };
-}

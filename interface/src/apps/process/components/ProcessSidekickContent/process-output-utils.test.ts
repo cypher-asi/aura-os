@@ -1,0 +1,126 @@
+import type {
+  ProcessEvent,
+  ProcessRunTranscriptEvent,
+} from "../../../../types";
+import type { DisplaySessionEvent } from "../../../../types/stream";
+import { buildProcessSidekickCopyText } from "./process-output-utils";
+
+function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
+  return {
+    event_id: "evt-1",
+    run_id: "run-1",
+    node_id: "node-1",
+    process_id: "proc-1",
+    status: "completed",
+    input_snapshot: "",
+    output: "",
+    started_at: "2026-04-06T20:00:00.000Z",
+    completed_at: "2026-04-06T20:00:05.000Z",
+    ...overrides,
+  };
+}
+
+function makeTranscriptEntry(
+  eventType: string,
+  payload: Record<string, unknown>,
+): ProcessRunTranscriptEvent {
+  return {
+    transcript_id: `${eventType}-${Math.random()}`,
+    process_id: "proc-1",
+    run_id: "run-1",
+    event_type: eventType,
+    payload,
+    created_at: "2026-04-06T20:00:00.000Z",
+  };
+}
+
+describe("buildProcessSidekickCopyText", () => {
+  const nodes = [{ node_id: "node-1", label: "Draft reply" }];
+
+  it("includes distinct structured output when content blocks are also present", () => {
+    const text = buildProcessSidekickCopyText({
+      events: [
+        makeEvent({
+          content_blocks: [{ type: "text", text: "Draft answer" }],
+          output: '{"saved_path":"tmp/output.md"}',
+          input_snapshot: '{"prompt":"hello"}',
+        }),
+      ],
+      nodes,
+      transcript: [],
+      isActive: false,
+    });
+
+    expect(text).toContain("Draft answer");
+    expect(text).toContain('"saved_path": "tmp/output.md"');
+    expect(text).toContain('{"prompt":"hello"}');
+  });
+
+  it("includes transcript replay content after the run completes", () => {
+    const transcript = [
+      makeTranscriptEntry("text_delta", {
+        node_id: "node-1",
+        type: "text_delta",
+        text: "Hello from transcript",
+      }),
+      makeTranscriptEntry("tool_use_start", {
+        node_id: "node-1",
+        type: "tool_use_start",
+        id: "tool-1",
+        name: "search_docs",
+      }),
+      makeTranscriptEntry("tool_result", {
+        node_id: "node-1",
+        type: "tool_result",
+        tool_use_id: "tool-1",
+        name: "search_docs",
+        result: "Found the matching doc",
+      }),
+      makeTranscriptEntry("process_node_executed", {
+        node_id: "node-1",
+        type: "process_node_executed",
+        status: "completed",
+      }),
+    ];
+
+    const text = buildProcessSidekickCopyText({
+      events: [],
+      nodes,
+      transcript,
+      isActive: false,
+    });
+
+    expect(text).toContain("# Run Output");
+    expect(text).toContain("Hello from transcript");
+    expect(text).toContain("[tool_call: search_docs]");
+    expect(text).toContain("Found the matching doc");
+  });
+
+  it("includes current live stream content while the run is active", () => {
+    const priorMessage: DisplaySessionEvent = {
+      id: "msg-1",
+      role: "assistant",
+      content: "",
+      timeline: [{ kind: "text", id: "text-1", content: "Prior streamed chunk" }],
+    };
+
+    const text = buildProcessSidekickCopyText({
+      events: [],
+      nodes,
+      transcript: [],
+      isActive: true,
+      liveNodeLabel: "Draft reply",
+      liveState: {
+        events: [priorMessage],
+        streamingText: "Current live chunk",
+        thinkingText: "",
+        activeToolCalls: [],
+        timeline: [],
+      },
+    });
+
+    expect(text).toContain("# Live Output: Draft reply");
+    expect(text).toContain("Prior streamed chunk");
+    expect(text).toContain("Current live chunk");
+  });
+});
