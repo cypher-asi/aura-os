@@ -29,6 +29,8 @@ interface AgentEditorFormResult {
   setEnvironment: (v: string) => void;
   authSource: string;
   setAuthSource: (v: string) => void;
+  showAdvancedRuntime: boolean;
+  setShowAdvancedRuntime: (v: boolean) => void;
   integrationId: string;
   setIntegrationId: (v: string) => void;
   defaultModel: string;
@@ -59,6 +61,27 @@ function defaultAuthSource(adapterType: string, integrationId?: string | null): 
   return "local_cli_auth";
 }
 
+function defaultEnvironmentForLayout(isMobileLayout: boolean): string {
+  return isMobileLayout ? "swarm_microvm" : "local_host";
+}
+
+function isDefaultCreateRuntime(
+  adapterType: string,
+  environment: string,
+  authSource: string,
+  integrationId: string,
+  defaultModel: string,
+  isMobileLayout: boolean,
+): boolean {
+  return (
+    adapterType === "aura_harness" &&
+    environment === defaultEnvironmentForLayout(isMobileLayout) &&
+    authSource === "aura_managed" &&
+    !integrationId.trim() &&
+    !defaultModel.trim()
+  );
+}
+
 export function useAgentEditorForm(
   isOpen: boolean,
   agent: Agent | undefined,
@@ -72,8 +95,9 @@ export function useAgentEditorForm(
   const [systemPrompt, setSystemPrompt] = useState("");
   const [icon, setIcon] = useState("");
   const [adapterType, setAdapterType] = useState("aura_harness");
-  const [environment, setEnvironment] = useState("swarm_microvm");
+  const [environment, setEnvironment] = useState(defaultEnvironmentForLayout(isMobileLayout));
   const [authSource, setAuthSource] = useState("aura_managed");
+  const [showAdvancedRuntime, setShowAdvancedRuntime] = useState(false);
   const [integrationId, setIntegrationId] = useState("");
   const [defaultModel, setDefaultModel] = useState("");
   const [saving, setSaving] = useState(false);
@@ -103,16 +127,51 @@ export function useAgentEditorForm(
       setAuthSource(agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id));
       setIntegrationId(agent.integration_id ?? "");
       setDefaultModel(agent.default_model ?? "");
+      setShowAdvancedRuntime(
+        !isDefaultCreateRuntime(
+          agent.adapter_type ?? "aura_harness",
+          agent.environment ?? (agent.machine_type === "remote" ? "swarm_microvm" : "local_host"),
+          agent.auth_source ?? defaultAuthSource(agent.adapter_type ?? "aura_harness", agent.integration_id),
+          agent.integration_id ?? "",
+          agent.default_model ?? "",
+          isMobileLayout,
+        ),
+      );
     } else {
       setName(""); setRole(""); setPersonality(""); setSystemPrompt(""); setIcon("");
       setAdapterType("aura_harness");
       setEnvironment(isMobileLayout ? "swarm_microvm" : "local_host");
       setAuthSource("aura_managed");
+      setShowAdvancedRuntime(false);
       setIntegrationId("");
       setDefaultModel("");
     }
     setError(""); setNameError("");
   }, [isOpen, agent, isMobileLayout]);
+
+  useEffect(() => {
+    if (
+      !showAdvancedRuntime &&
+      !isDefaultCreateRuntime(
+        adapterType,
+        environment,
+        authSource,
+        integrationId,
+        defaultModel,
+        isMobileLayout,
+      )
+    ) {
+      setShowAdvancedRuntime(true);
+    }
+  }, [
+    adapterType,
+    authSource,
+    defaultModel,
+    environment,
+    integrationId,
+    isMobileLayout,
+    showAdvancedRuntime,
+  ]);
 
   useEffect(() => {
     const allowedAuthSources = adapterType === "aura_harness"
@@ -235,7 +294,7 @@ export function useAgentEditorForm(
     name, setName, role, setRole, isSuperAgent, personality, setPersonality,
     systemPrompt, setSystemPrompt, icon, setIcon,
     adapterType, setAdapterType, environment, setEnvironment,
-    authSource, setAuthSource,
+    authSource, setAuthSource, showAdvancedRuntime, setShowAdvancedRuntime,
     integrationId, setIntegrationId, defaultModel, setDefaultModel,
     availableIntegrations: integrations,
     saving, error, nameError, setNameError,

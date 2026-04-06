@@ -35,6 +35,13 @@
   gap: var(--space-3);
 }
 
+.runtimeSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -139,6 +146,50 @@
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
+}
+
+.setupSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+}
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-subtle, var(--color-border));
+}
+
+.summaryRow:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.inlineAction {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inlineAction:hover {
+  text-decoration: underline;
 }
 
 .runtimeOption {

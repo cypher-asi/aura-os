@@ -73,6 +73,8 @@ export function AgentEditorModal({
           setEnvironment={form.setEnvironment}
           authSource={form.authSource}
           setAuthSource={form.setAuthSource}
+          showAdvancedRuntime={form.showAdvancedRuntime}
+          setShowAdvancedRuntime={form.setShowAdvancedRuntime}
           integrationId={form.integrationId}
           setIntegrationId={form.setIntegrationId}
           defaultModel={form.defaultModel}

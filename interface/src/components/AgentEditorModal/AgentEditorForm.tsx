@@ -76,6 +76,8 @@ export interface AgentEditorFormProps {
   setEnvironment: (v: string) => void;
   authSource: string;
   setAuthSource: (v: string) => void;
+  showAdvancedRuntime: boolean;
+  setShowAdvancedRuntime: (v: boolean) => void;
   integrationId: string;
   setIntegrationId: (v: string) => void;
   defaultModel: string;
@@ -108,6 +110,8 @@ export function AgentEditorForm({
   setEnvironment,
   authSource,
   setAuthSource,
+  showAdvancedRuntime,
+  setShowAdvancedRuntime,
   integrationId,
   setIntegrationId,
   defaultModel,
@@ -141,10 +145,15 @@ export function AgentEditorForm({
       : authReadiness.tone === "warning"
         ? styles.readinessWarning
         : styles.readinessInfo;
+  const isDefaultAuraPath =
+    adapterType === "aura_harness" &&
+    authSource === "aura_managed" &&
+    !integrationId &&
+    !defaultModel.trim();
 
   return (
     <div className={styles.form}>
-      <FormSection title="Basics" description="Who this agent is and how it should present itself.">
+      <FormSection title="Basics">
         <div className={styles.avatarRow}>
           <button
             type="button"
@@ -211,66 +220,115 @@ export function AgentEditorForm({
         </div>
       </FormSection>
 
-      <FormSection title="Runtime" description="Choose the runtime and where it executes.">
-        <RuntimeFields
-          adapterType={adapterType}
-          setAdapterType={setAdapterType}
-          environment={environment}
-          setEnvironment={setEnvironment}
-        />
-
-        <Text variant="muted" size="sm">
-          Changing the runtime updates the supported execution target,
-          credential sources, and matching connections for this agent.
-        </Text>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Default Model</label>
-          <Input
-            value={defaultModel}
-            onChange={(e) => setDefaultModel(e.target.value)}
-            placeholder="Optional override (otherwise uses the runtime or connection default)"
-          />
-        </div>
-      </FormSection>
-
-      <FormSection title="Credentials" description="Pick how this runtime authenticates.">
-        <AuthFields
-          adapterType={adapterType}
-          authSource={authSource}
-          setAuthSource={setAuthSource}
-        />
-
-        {showsIntegrationPicker && (
-          <IntegrationPicker
-            integrationChoices={integrationChoices}
-            integrationId={integrationId}
-            setIntegrationId={setIntegrationId}
-          />
-        )}
-
-        {!showsIntegrationPicker &&
-          adapterType !== "aura_harness" &&
-          availableIntegrations.length === 0 && (
+      <FormSection title="Setup">
+        {!showAdvancedRuntime ? (
+          <div className={styles.setupSummary}>
             <div className={styles.fieldGroup}>
-              <Text variant="muted" size="sm">
-                Connections are optional for local CLI runtimes. You can keep using local login.
+              <label className={styles.label}>Runs On</label>
+              <RunsOnFields
+                adapterType={adapterType}
+                environment={environment}
+                setEnvironment={setEnvironment}
+                compact
+              />
+            </div>
+
+            <div className={styles.summaryList}>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Agent Type</Text>
+                <Text size="sm">Aura</Text>
+              </div>
+              <div className={styles.summaryRow}>
+                <Text size="xs" variant="muted">Credentials</Text>
+                <Text size="sm">
+                  {authSource === "aura_managed"
+                    ? "Managed by Aura"
+                    : authSource === "local_cli_auth"
+                      ? getLocalAuthLabel(adapterType)
+                      : getConnectionAuthLabel(adapterType)}
+                </Text>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.inlineAction}
+              onClick={() => setShowAdvancedRuntime(true)}
+            >
+              Change runtime or credentials
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className={styles.runtimeSectionHeader}>
+              <Text size="sm" weight="medium">
+                Advanced Setup
+              </Text>
+              {isDefaultAuraPath ? (
+                <button
+                  type="button"
+                  className={styles.inlineAction}
+                  onClick={() => setShowAdvancedRuntime(false)}
+                >
+                  Hide advanced options
+                </button>
+              ) : null}
+            </div>
+
+            <RuntimeFields
+              adapterType={adapterType}
+              setAdapterType={setAdapterType}
+              environment={environment}
+              setEnvironment={setEnvironment}
+            />
+
+            <AuthFields
+              adapterType={adapterType}
+              authSource={authSource}
+              setAuthSource={setAuthSource}
+            />
+
+            {showsIntegrationPicker && (
+              <IntegrationPicker
+                integrationChoices={integrationChoices}
+                integrationId={integrationId}
+                setIntegrationId={setIntegrationId}
+              />
+            )}
+
+            {!showsIntegrationPicker &&
+              adapterType !== "aura_harness" &&
+              availableIntegrations.length === 0 && (
+                <div className={styles.fieldGroup}>
+                  <Text variant="muted" size="sm">
+                    Connections are optional for local CLI runtimes. You can keep using local login.
+                  </Text>
+                </div>
+              )}
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label}>Default Model</label>
+              <Input
+                value={defaultModel}
+                onChange={(e) => setDefaultModel(e.target.value)}
+                placeholder="Optional override (otherwise uses the runtime or connection default)"
+              />
+            </div>
+
+            <div className={`${styles.readinessCard} ${readinessClassName}`}>
+              <Text size="xs" weight="medium" className={styles.readinessTitle}>
+                Ready to use
+              </Text>
+              <Text size="sm">{authReadiness.title}</Text>
+              <Text size="xs" variant="muted">
+                {authReadiness.message}
               </Text>
             </div>
-          )}
-
-        <div className={`${styles.readinessCard} ${readinessClassName}`}>
-          <Text size="xs" weight="medium" className={styles.readinessTitle}>
-            Runtime readiness
-          </Text>
-          <Text size="sm">{authReadiness.title}</Text>
-          <Text size="xs" variant="muted">
-            {authReadiness.message}
-          </Text>
-        </div>
+          </>
+        )}
       </FormSection>
 
-      <FormSection title="Instructions" description="Guide how the agent behaves once it starts working.">
+      <FormSection title="Instructions">
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Personality</label>
           <Textarea
@@ -346,7 +404,7 @@ function RuntimeFields({
   return (
     <>
       <div className={styles.fieldGroup}>
-        <label className={styles.label}>Runtime</label>
+        <label className={styles.label}>Agent Type</label>
         <div className={styles.runtimeGrid}>
           {(MODEL_RUNTIME_ADAPTERS as readonly string[]).map((t) => (
             <button
@@ -361,52 +419,77 @@ function RuntimeFields({
         </div>
       </div>
 
-      <div className={styles.fieldGroup}>
-        <label className={styles.label}>Runs On</label>
-        <div className={styles.choiceGrid}>
+      <RunsOnFields
+        adapterType={adapterType}
+        environment={environment}
+        setEnvironment={setEnvironment}
+      />
+    </>
+  );
+}
+
+function RunsOnFields({
+  adapterType,
+  environment,
+  setEnvironment,
+  compact = false,
+}: {
+  adapterType: string;
+  environment: string;
+  setEnvironment: (v: string) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={styles.fieldGroup}>
+      {!compact ? <label className={styles.label}>Runs On</label> : null}
+      <div className={styles.choiceGrid}>
+        <button
+          type="button"
+          className={`${styles.choiceCard} ${environment === "local_host" ? styles.choiceCardActive : ""}`}
+          onClick={() => setEnvironment("local_host")}
+        >
+          <span className={styles.choiceTitle}>
+            <Monitor size={14} />
+            This Machine
+          </span>
+          <span className={styles.choiceBody}>
+            {compact
+              ? "Local"
+              : "Run on the local host where Aura OS and your local tools are available."}
+          </span>
+        </button>
+        {adapterType === "aura_harness" ? (
           <button
             type="button"
-            className={`${styles.choiceCard} ${environment === "local_host" ? styles.choiceCardActive : ""}`}
-            onClick={() => setEnvironment("local_host")}
+            className={`${styles.choiceCard} ${environment === "swarm_microvm" ? styles.choiceCardActive : ""}`}
+            onClick={() => setEnvironment("swarm_microvm")}
           >
             <span className={styles.choiceTitle}>
-              <Monitor size={14} />
-              This Machine
+              <Cloud size={14} />
+              Cloud
             </span>
             <span className={styles.choiceBody}>
-              Run on the local host where Aura OS and your local tools are available.
+              {compact
+                ? "Isolated"
+                : "Use a stronger isolation boundary for Aura-managed execution."}
             </span>
           </button>
-          {adapterType === "aura_harness" ? (
-            <button
-              type="button"
-              className={`${styles.choiceCard} ${environment === "swarm_microvm" ? styles.choiceCardActive : ""}`}
-              onClick={() => setEnvironment("swarm_microvm")}
-            >
-              <span className={styles.choiceTitle}>
-                <Cloud size={14} />
-                Isolated Cloud Runtime
-              </span>
-              <span className={styles.choiceBody}>
-                Use a stronger isolation boundary for Aura-managed execution.
-              </span>
-            </button>
-          ) : null}
-        </div>
-        {adapterType !== "aura_harness" && (
+        ) : null}
+      </div>
+      {!compact && adapterType !== "aura_harness" && (
+        <Text variant="muted" size="sm">
+          CLI-based runtimes currently run on this machine.
+        </Text>
+      )}
+      {!compact &&
+        adapterType === "aura_harness" &&
+        environment === "swarm_microvm" && (
           <Text variant="muted" size="sm">
-            CLI-based runtimes currently run on this machine.
+            Isolated Cloud Runtime is the stronger boundary for sensitive
+            workloads. The local path is the fully validated path today.
           </Text>
         )}
-        {adapterType === "aura_harness" &&
-          environment === "swarm_microvm" && (
-            <Text variant="muted" size="sm">
-              Isolated Cloud Runtime is the stronger boundary for sensitive
-              workloads. The local path is the fully validated path today.
-            </Text>
-          )}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -424,7 +507,7 @@ function AuthFields({
 
   return (
     <div className={styles.fieldGroup}>
-      <label className={styles.label}>Credential Source</label>
+      <label className={styles.label}>Credentials</label>
       <div className={styles.choiceGrid}>
         {adapterType === "aura_harness" ? (
           <>
@@ -433,7 +516,9 @@ function AuthFields({
               className={`${styles.choiceCard} ${authSource === "aura_managed" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("aura_managed")}
             >
-              <span className={styles.choiceTitle}>Managed by Aura</span>
+              <span className={styles.choiceTitle}>
+                Managed by Aura
+              </span>
               <span className={styles.choiceBody}>
                 Aura provides the credentials and billing for this runtime path.
               </span>
@@ -443,7 +528,9 @@ function AuthFields({
               className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >
-              <span className={styles.choiceTitle}>{connectionLabel}</span>
+              <span className={styles.choiceTitle}>
+                {connectionLabel}
+              </span>
               <span className={styles.choiceBody}>{connectionHint}</span>
             </button>
           </>
@@ -454,7 +541,9 @@ function AuthFields({
               className={`${styles.choiceCard} ${authSource === "local_cli_auth" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("local_cli_auth")}
             >
-              <span className={styles.choiceTitle}>{getLocalAuthLabel(adapterType)}</span>
+              <span className={styles.choiceTitle}>
+                {getLocalAuthLabel(adapterType)}
+              </span>
               <span className={styles.choiceBody}>
                 Use the local CLI login or shell auth already available on this machine.
               </span>
@@ -464,7 +553,9 @@ function AuthFields({
               className={`${styles.choiceCard} ${authSource === "org_integration" ? styles.choiceCardActive : ""}`}
               onClick={() => setAuthSource("org_integration")}
             >
-              <span className={styles.choiceTitle}>{connectionLabel}</span>
+              <span className={styles.choiceTitle}>
+                {connectionLabel}
+              </span>
               <span className={styles.choiceBody}>{connectionHint}</span>
             </button>
           </>
@@ -473,6 +564,7 @@ function AuthFields({
     </div>
   );
 }
+
 
 function IntegrationPicker({
   integrationChoices,

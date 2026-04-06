@@ -76,6 +76,7 @@ describe("useAgentEditorForm", () => {
     expect(result.current.adapterType).toBe("aura_harness");
     expect(result.current.environment).toBe("local_host");
     expect(result.current.authSource).toBe("aura_managed");
+    expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
   it("defaults new mobile agents to swarm microvm", () => {
@@ -87,6 +88,7 @@ describe("useAgentEditorForm", () => {
 
     expect(result.current.environment).toBe("swarm_microvm");
     expect(result.current.authSource).toBe("aura_managed");
+    expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
   it("preserves an existing agent environment while editing on mobile", () => {
@@ -106,6 +108,26 @@ describe("useAgentEditorForm", () => {
 
     expect(result.current.adapterType).toBe("claude_code");
     expect(result.current.authSource).toBe("local_cli_auth");
+    expect(result.current.showAdvancedRuntime).toBe(true);
+  });
+
+  it("keeps editing a default Aura agent collapsed by default", () => {
+    const { result } = renderHook(() =>
+      useAgentEditorForm(
+        true,
+        makeAgent({
+          adapter_type: "aura_harness",
+          environment: "local_host",
+          auth_source: "aura_managed",
+          integration_id: null,
+          default_model: null,
+        }),
+        vi.fn(),
+        vi.fn(),
+      ),
+    );
+
+    expect(result.current.showAdvancedRuntime).toBe(false);
   });
 
   it("falls back to a matching org integration when org-backed auth is selected", async () => {
