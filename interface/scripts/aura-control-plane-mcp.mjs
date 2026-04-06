@@ -656,6 +656,54 @@ async function notionCreatePage(args) {
   return callAppProviderTool("notion_create_page", args);
 }
 
+async function braveSearchWeb(args) {
+  return callAppProviderTool("brave_search_web", args);
+}
+
+async function braveSearchNews(args) {
+  return callAppProviderTool("brave_search_news", args);
+}
+
+async function freepikListIcons(args) {
+  return callAppProviderTool("freepik_list_icons", args);
+}
+
+async function freepikImprovePrompt(args) {
+  return callAppProviderTool("freepik_improve_prompt", args);
+}
+
+async function bufferListProfiles(args) {
+  return callAppProviderTool("buffer_list_profiles", args);
+}
+
+async function bufferCreateUpdate(args) {
+  return callAppProviderTool("buffer_create_update", args);
+}
+
+async function apifyListActors(args) {
+  return callAppProviderTool("apify_list_actors", args);
+}
+
+async function apifyRunActor(args) {
+  return callAppProviderTool("apify_run_actor", args);
+}
+
+async function metricoolListBrands(args) {
+  return callAppProviderTool("metricool_list_brands", args);
+}
+
+async function metricoolListPosts(args) {
+  return callAppProviderTool("metricool_list_posts", args);
+}
+
+async function mailchimpListAudiences(args) {
+  return callAppProviderTool("mailchimp_list_audiences", args);
+}
+
+async function mailchimpListCampaigns(args) {
+  return callAppProviderTool("mailchimp_list_campaigns", args);
+}
+
 const toolHandlers = {
   list_specs: listSpecs,
   get_spec: getSpec,
@@ -686,6 +734,18 @@ const toolHandlers = {
   slack_post_message: slackPostMessage,
   notion_search_pages: notionSearchPages,
   notion_create_page: notionCreatePage,
+  brave_search_web: braveSearchWeb,
+  brave_search_news: braveSearchNews,
+  freepik_list_icons: freepikListIcons,
+  freepik_improve_prompt: freepikImprovePrompt,
+  buffer_list_profiles: bufferListProfiles,
+  buffer_create_update: bufferCreateUpdate,
+  apify_list_actors: apifyListActors,
+  apify_run_actor: apifyRunActor,
+  metricool_list_brands: metricoolListBrands,
+  metricool_list_posts: metricoolListPosts,
+  mailchimp_list_audiences: mailchimpListAudiences,
+  mailchimp_list_campaigns: mailchimpListCampaigns,
 };
 
 function validateSharedTools() {
