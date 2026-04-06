@@ -24,6 +24,7 @@ const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   prompt: "Prompt",
   sub_process: "SubProcess",
   for_each: "ForEach",
+  group: "Group",
 };
 
 interface NodeEditorModalProps {
@@ -306,11 +307,11 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     }
   }, [processId, node, fetchNodes, closeNodeInspector, onClose]);
 
-  const hasPrompt = node.node_type !== "merge" && node.node_type !== "delay";
+  const hasPrompt = node.node_type !== "merge" && node.node_type !== "delay" && node.node_type !== "group";
   const isLlmNode = ["action", "condition", "artifact", "prompt"].includes(node.node_type);
 
-  const pinButtonLabel = pinLoading ? "Loading..." : isPinned ? "Unpin" : "Pin";
-  const pinToggle = node.node_type !== "ignition" ? (
+  const pinButtonLabel = isPinned ? "Unpin" : "Pin";
+  const pinToggle = node.node_type !== "ignition" && node.node_type !== "group" ? (
     <EditField label="Pin Output">
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <button
@@ -327,7 +328,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
             borderRadius: "var(--radius-sm)",
             background: isPinned ? "rgba(245,158,11,0.1)" : "var(--color-bg-input)",
             color: isPinned ? "#f59e0b" : "var(--color-text-muted)",
-            cursor: pinLoading ? "wait" : "pointer",
+            cursor: "pointer",
             transition: "background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease",
             boxSizing: "border-box",
             position: "relative",
@@ -344,7 +345,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
             }}
           >
             <PinOff size={13} />
-            Loading...
+            Unpin
           </span>
           <span
             style={{
@@ -354,9 +355,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              opacity: pinLoading ? 0.9 : 1,
-              transform: pinLoading ? "translateY(-0.5px)" : "translateY(0)",
-              transition: "opacity 0.16s ease, transform 0.16s ease",
             }}
           >
             {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
@@ -401,7 +399,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
               <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
             </EditField>
           )}
-
           {pinToggle}
         </div>
       </Modal>

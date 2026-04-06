@@ -19,6 +19,11 @@ export interface RenameState {
 }
 
 export const GRID = 20;
+export const GROUP_CONFIG_ID_KEY = "group_id";
+export const GROUP_CONFIG_WIDTH_KEY = "group_width";
+export const GROUP_CONFIG_HEIGHT_KEY = "group_height";
+export const GROUP_DEFAULT_WIDTH = 420;
+export const GROUP_DEFAULT_HEIGHT = 280;
 
 export const snap = (v: number): number => Math.round(v / GRID) * GRID;
 
@@ -33,6 +38,7 @@ export const ADD_NODE_TYPES: { type: ProcessNodeType; label: string }[] = [
   { type: "for_each", label: "ForEach" },
   { type: "delay", label: "Delay" },
   { type: "merge", label: "Merge" },
+  { type: "group", label: "Group" },
 ];
 
 export function normalizeHandleId(
@@ -60,22 +66,50 @@ export function toFlowNodes(
   renaming?: RenameState,
   nodeStatuses?: Record<string, NodeRunStatus>,
 ): Node[] {
-  return nodes.map((n) => ({
-    id: n.node_id,
-    type: "processNode",
-    position: { x: snap(n.position_x), y: snap(n.position_y) },
-    data: {
-      label: n.label,
-      nodeType: n.node_type,
-      prompt: n.prompt,
-      agentId: n.agent_id,
-      isPinned: !!n.config?.pinned_output,
-      runStatus: nodeStatuses?.[n.node_id],
-      ...(renaming && renaming.nodeId === n.node_id
-        ? { isRenaming: true, onRenameSubmit: renaming.onRenameSubmit }
-        : {}),
-    },
-  }));
+  const groupIds = new Set(nodes.filter((n) => n.node_type === "group").map((n) => n.node_id));
+  return nodes.map((n) => {
+    const config = n.config ?? {};
+    const rawGroupId = config[GROUP_CONFIG_ID_KEY];
+    const parentGroupId = n.node_type !== "group" && typeof rawGroupId === "string" && groupIds.has(rawGroupId)
+      ? rawGroupId
+      : undefined;
+
+    const baseNode: Node = {
+      id: n.node_id,
+      type: n.node_type === "group" ? "groupNode" : "processNode",
+      position: { x: snap(n.position_x), y: snap(n.position_y) },
+      data: {
+        label: n.label,
+        nodeType: n.node_type,
+        prompt: n.prompt,
+        agentId: n.agent_id,
+        isPinned: !!n.config?.pinned_output,
+        runStatus: nodeStatuses?.[n.node_id],
+        ...(renaming && renaming.nodeId === n.node_id
+          ? { isRenaming: true, onRenameSubmit: renaming.onRenameSubmit }
+          : {}),
+      },
+    };
+
+    if (n.node_type === "group") {
+      const width = Number(config[GROUP_CONFIG_WIDTH_KEY]) || GROUP_DEFAULT_WIDTH;
+      const height = Number(config[GROUP_CONFIG_HEIGHT_KEY]) || GROUP_DEFAULT_HEIGHT;
+      return {
+        ...baseNode,
+        style: { width, height, zIndex: -1 },
+      };
+    }
+
+    if (parentGroupId) {
+      return {
+        ...baseNode,
+        parentId: parentGroupId,
+        extent: "parent",
+      };
+    }
+
+    return baseNode;
+  });
 }
 
 export function toFlowEdges(connections: ProcessNodeConnection[], nodes: ProcessNode[]): Edge[] {

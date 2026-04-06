@@ -155,6 +155,7 @@ pub enum ProcessNodeType {
     Prompt,
     SubProcess,
     ForEach,
+    Group,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

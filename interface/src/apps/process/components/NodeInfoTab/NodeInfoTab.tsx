@@ -65,6 +65,7 @@ const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   prompt: "Prompt",
   sub_process: "SubProcess",
   for_each: "ForEach",
+  group: "Group",
 };
 
 interface NodeInfoTabProps {
@@ -156,23 +157,25 @@ export function NodeInfoTab({ node }: NodeInfoTabProps) {
           </div>
         )}
 
-        {node.node_type !== "merge" && node.node_type !== "delay" && node.prompt && (
+        {node.node_type !== "merge" && node.node_type !== "delay" && node.node_type !== "group" && node.prompt && (
           <div className={styles.taskField}>
             <span className={styles.fieldLabel}>Prompt</span>
             <TruncatedLines text={node.prompt} />
           </div>
         )}
 
-        <div className={styles.taskField}>
-          <span className={styles.fieldLabel}>Output</span>
-          {nodeEvent ? (
-            <ProcessEventOutput event={nodeEvent} />
-          ) : (
-            <Text variant="secondary" size="sm">
-              No output yet
-            </Text>
-          )}
-        </div>
+        {node.node_type !== "group" && (
+          <div className={styles.taskField}>
+            <span className={styles.fieldLabel}>Output</span>
+            {nodeEvent ? (
+              <ProcessEventOutput event={nodeEvent} />
+            ) : (
+              <Text variant="secondary" size="sm">
+                No output yet
+              </Text>
+            )}
+          </div>
+        )}
 
         {node.node_type === "ignition" && (
           <div className={styles.taskField}>

@@ -58,6 +58,7 @@ const NODE_TYPE_LABELS: Record<ProcessNodeType, string> = {
   prompt: "Prompt",
   sub_process: "SubProcess",
   for_each: "ForEach",
+  group: "Group",
 };
 
 interface NodeConfigTabProps {
@@ -104,7 +105,7 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             </div>
           )}
 
-          {node.node_type !== "merge" && node.node_type !== "delay" && node.prompt && (
+          {node.node_type !== "merge" && node.node_type !== "delay" && node.node_type !== "group" && node.prompt && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Prompt</span>
               <TruncatedText text={node.prompt} />

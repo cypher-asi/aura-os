@@ -579,9 +579,10 @@ fn execute_run<'a>(
     let mut node_outputs: HashMap<ProcessNodeId, String> = HashMap::new();
     // condition node_id → whether it evaluated true
     let mut condition_results: HashMap<ProcessNodeId, bool> = HashMap::new();
-    // aggregate token usage across the run
+    // aggregate usage across the run
     let mut run_input_tokens: u64 = 0;
     let mut run_output_tokens: u64 = 0;
+    let mut run_cost_usd: f64 = 0.0;
 
     for &node_id in &sorted {
         let node = *nodes_by_id
@@ -663,7 +664,7 @@ fn execute_run<'a>(
                 "run_id": run.run_id.to_string(),
                 "total_input_tokens": run_input_tokens,
                 "total_output_tokens": run_output_tokens,
-                "cost_usd": estimate_cost_usd(run_input_tokens, run_output_tokens),
+                "cost_usd": run_cost_usd,
             }));
             continue;
         }
@@ -686,7 +687,7 @@ fn execute_run<'a>(
 
         let result: Result<NodeResult, ProcessError> = match node.node_type {
             ProcessNodeType::Ignition => execute_ignition(node).map(|s| NodeResult {
-                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
+                downstream_output: s, display_output: None, token_usage: None, cost_usd: None, content_blocks: None,
             }),
             ProcessNodeType::Action | ProcessNodeType::Prompt | ProcessNodeType::Artifact | ProcessNodeType::Condition => {
                 let task_id = node_task_ids.get(&node_id)
@@ -701,7 +702,7 @@ fn execute_run<'a>(
                 ).await
             }
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
-                downstream_output: s, display_output: None, token_usage: None, content_blocks: None,
+                downstream_output: s, display_output: None, token_usage: None, cost_usd: None, content_blocks: None,
             }),
             ProcessNodeType::SubProcess => {
                 execute_subprocess(node, &upstream_context, executor, &run.run_id).await
@@ -718,6 +719,7 @@ fn execute_run<'a>(
                     downstream_output: upstream_context.clone(),
                     display_output: Some(display),
                     token_usage: None,
+                    cost_usd: None,
                     content_blocks: None,
                 })
             }
@@ -725,6 +727,7 @@ fn execute_run<'a>(
                 downstream_output: upstream_context.clone(),
                 display_output: Some("Group node skipped (visual only)".to_string()),
                 token_usage: None,
+                cost_usd: None,
                 content_blocks: None,
             }),
         };
@@ -740,6 +743,9 @@ fn execute_run<'a>(
                 if let Some(ref usage) = node_result.token_usage {
                     run_input_tokens += usage.input_tokens;
                     run_output_tokens += usage.output_tokens;
+                }
+                if let Some(cost_usd) = node_result.cost_usd {
+                    run_cost_usd += cost_usd;
                 }
 
                 let event_output = node_result.display_output.as_deref()
@@ -787,7 +793,7 @@ fn execute_run<'a>(
                 current_run.completed_at = Some(Utc::now());
                 current_run.total_input_tokens = Some(run_input_tokens);
                 current_run.total_output_tokens = Some(run_output_tokens);
-                current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
+                current_run.cost_usd = Some(run_cost_usd);
                 store.save_run(&current_run)?;
 
                 emit_process_event(store, broadcast, serde_json::json!({
@@ -797,7 +803,7 @@ fn execute_run<'a>(
                     "error": current_run.error,
                     "total_input_tokens": run_input_tokens,
                     "total_output_tokens": run_output_tokens,
-                    "cost_usd": current_run.cost_usd,
+                    "cost_usd": run_cost_usd,
                 }));
 
                 return Err(e);
@@ -829,7 +835,7 @@ fn execute_run<'a>(
     current_run.completed_at = Some(Utc::now());
     current_run.total_input_tokens = Some(run_input_tokens);
     current_run.total_output_tokens = Some(run_output_tokens);
-    current_run.cost_usd = Some(estimate_cost_usd(run_input_tokens, run_output_tokens));
+    current_run.cost_usd = Some(run_cost_usd);
     current_run.output = run_output;
     store.save_run(&current_run)?;
 
@@ -839,7 +845,7 @@ fn execute_run<'a>(
         "run_id": run.run_id.to_string(),
         "total_input_tokens": run_input_tokens,
         "total_output_tokens": run_output_tokens,
-        "cost_usd": current_run.cost_usd,
+        "cost_usd": run_cost_usd,
     }));
 
     Ok(())
@@ -1260,7 +1266,7 @@ async fn execute_action_via_automaton(
                     let final_output = file_content
                         .or(workspace_content)
                         .unwrap_or(out.output_text);
-                    Ok((final_output, out.input_tokens, out.output_tokens, out.model))
+                    Ok((final_output, out.input_tokens, out.output_tokens, out.model, out.cost_usd))
                 }
                 RunCompletion::Failed { message, .. } => {
                     Err(ProcessError::Execution(message))
@@ -1282,17 +1288,23 @@ async fn execute_action_via_automaton(
     let mut merged_parts: Vec<String> = Vec::with_capacity(handles.len());
     let mut total_input_tokens: u64 = 0;
     let mut total_output_tokens: u64 = 0;
+    let mut total_cost_usd: f64 = 0.0;
+    let mut saw_task_cost = false;
     let mut last_model: Option<String> = None;
     let mut failures: Vec<String> = Vec::new();
 
     for (idx, handle) in handles.into_iter().enumerate() {
         let task_title = sub_tasks.get(idx).map(|t| t.title.as_str()).unwrap_or("?");
         match handle.await {
-            Ok(Ok((output, inp, out, model))) => {
+            Ok(Ok((output, inp, out, model, cost_usd))) => {
                 total_input_tokens += inp;
                 total_output_tokens += out;
                 if model.is_some() {
                     last_model = model;
+                }
+                if let Some(cost_usd) = cost_usd {
+                    total_cost_usd += cost_usd;
+                    saw_task_cost = true;
                 }
                 if let Some(tx) = broadcast {
                     send_process_text(store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
@@ -1376,6 +1388,7 @@ async fn execute_action_via_automaton(
         downstream_output: merged_output,
         display_output: Some(display),
         token_usage,
+        cost_usd: if saw_task_cost { Some(total_cost_usd) } else { None },
         content_blocks: None,
     })
 }
@@ -1529,6 +1542,7 @@ async fn execute_single_automaton(
         downstream_output: downstream,
         display_output: None,
         token_usage,
+        cost_usd: out.cost_usd,
         content_blocks: if out.content_blocks.is_empty() { None } else { Some(out.content_blocks) },
     })
 }
@@ -1628,6 +1642,7 @@ async fn execute_subprocess(
         downstream_output: output,
         display_output: Some(display),
         token_usage,
+        cost_usd: child_run.cost_usd,
         content_blocks: None,
     })
 }
@@ -1712,6 +1727,7 @@ async fn execute_foreach(
             downstream_output: "[]".to_string(),
             display_output: Some("ForEach: no items to iterate".to_string()),
             token_usage: None,
+            cost_usd: None,
             content_blocks: None,
         });
     }
@@ -1784,6 +1800,8 @@ async fn execute_foreach(
     let mut outputs = Vec::new();
     let mut total_input = 0u64;
     let mut total_output = 0u64;
+    let mut total_cost_usd = 0.0f64;
+    let mut saw_task_cost = false;
     let mut failures = 0;
 
     for (idx, result) in child_results.into_iter().enumerate() {
@@ -1791,6 +1809,10 @@ async fn execute_foreach(
             Ok(run) => {
                 total_input += run.total_input_tokens.unwrap_or(0);
                 total_output += run.total_output_tokens.unwrap_or(0);
+                if let Some(cost_usd) = run.cost_usd {
+                    total_cost_usd += cost_usd;
+                    saw_task_cost = true;
+                }
                 outputs.push(run.output.unwrap_or_else(|| format!("(no output for item #{})", idx)));
             }
             Err(e) => {
@@ -1835,6 +1857,7 @@ async fn execute_foreach(
         downstream_output: downstream,
         display_output: Some(display),
         token_usage,
+        cost_usd: if saw_task_cost { Some(total_cost_usd) } else { None },
         content_blocks: None,
     })
 }

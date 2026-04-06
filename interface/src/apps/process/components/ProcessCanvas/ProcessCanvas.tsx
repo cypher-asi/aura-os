@@ -15,13 +15,14 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styles from "./ProcessCanvas.module.css";
-import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat } from "lucide-react";
+import { Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil, Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers } from "lucide-react";
 import { Button, Menu } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { ProcessNodeCard } from "../ProcessNodeCard";
+import { ProcessGroupNode } from "../ProcessGroupNode";
 import {
   type ProcessCanvasProps,
   GRID,
@@ -32,7 +33,7 @@ import {
 } from "./process-canvas-utils";
 import { useCanvasEventHandlers } from "./useCanvasEventHandlers";
 
-const nodeTypes = { processNode: ProcessNodeCard };
+const nodeTypes = { processNode: ProcessNodeCard, groupNode: ProcessGroupNode };
 
 const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
   prompt: <MessageSquare size={14} />,
@@ -43,6 +44,7 @@ const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
   merge: <Merge size={14} />,
   sub_process: <Workflow size={14} />,
   for_each: <Repeat size={14} />,
+  group: <Layers size={14} />,
 };
 
 const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
@@ -94,6 +96,7 @@ function ProcessCanvasInner({
     wrapperRef,
     onConnect,
     onNodeDragStop,
+    onNodeResizeStop,
     onNodeClick,
     onNodeDoubleClick,
     onSelectionChange,
@@ -134,7 +137,16 @@ function ProcessCanvasInner({
       const currentById = new Map(currentNodes.map((n) => [n.id, n]));
       return incoming.map((n) => {
         const existing = currentById.get(n.id);
-        return existing ? { ...existing, data: n.data } : n;
+        return existing
+          ? {
+            ...existing,
+            type: n.type,
+            parentId: n.parentId,
+            extent: n.extent,
+            style: n.style,
+            data: n.data,
+          }
+          : n;
       });
     });
   }, [processNodes, setNodes, renamingNodeId, nodeStatuses]);
@@ -152,6 +164,7 @@ function ProcessCanvasInner({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
+        onNodeResizeStop={onNodeResizeStop}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onSelectionChange={onSelectionChange}
