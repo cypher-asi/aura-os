@@ -158,6 +158,31 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     [processId, processNodes, processConnections, setNodes, setEdges, fetchNodes, fetchConnections, closeNodeInspector, pushCommand],
   );
 
+  /* ── Delete confirmation gate ───────────────────────────── */
+
+  const [pendingDeleteNodeIds, setPendingDeleteNodeIds] = useState<string[] | null>(null);
+
+  const requestDeleteNodes = useCallback(
+    (nodeIds: string[]) => {
+      const deletable = nodeIds.filter((id) => {
+        const n = processNodes.find((pn) => pn.node_id === id);
+        return n && n.node_type !== "ignition";
+      });
+      if (deletable.length === 0) return;
+      setPendingDeleteNodeIds(deletable);
+    },
+    [processNodes],
+  );
+
+  const confirmDeleteNodes = useCallback(() => {
+    if (pendingDeleteNodeIds) deleteNodes(pendingDeleteNodeIds);
+    setPendingDeleteNodeIds(null);
+  }, [pendingDeleteNodeIds, deleteNodes]);
+
+  const cancelDeleteNodes = useCallback(() => {
+    setPendingDeleteNodeIds(null);
+  }, []);
+
   /* ── Pin / unpin ────────────────────────────────────────── */
 
   const togglePinNode = useCallback(
@@ -620,7 +645,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
 
       if (e.key === "Delete" || e.key === "Backspace") {
         const selected = nodes.filter((n) => n.selected).map((n) => n.id);
-        if (selected.length > 0) deleteNodes(selected);
+        if (selected.length > 0) requestDeleteNodes(selected);
         return;
       }
 
@@ -666,7 +691,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
       el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("mouseup", onMouseUp);
     };
-  }, [nodes, deleteNodes, copySelection, pasteNodes, undo, redo]);
+  }, [nodes, requestDeleteNodes, copySelection, pasteNodes, undo, redo]);
 
   return {
     renameState,
@@ -686,6 +711,10 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     onSelectionContextMenu,
     handleAddNode,
     deleteNodes,
+    requestDeleteNodes,
+    pendingDeleteNodeIds,
+    confirmDeleteNodes,
+    cancelDeleteNodes,
     togglePinNode,
     deleteConnection,
     disconnectNode,

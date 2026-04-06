@@ -20,7 +20,7 @@ import {
   Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers, Unplug,
   Copy, Scissors, CopyPlus, ClipboardPaste,
 } from "lucide-react";
-import { Button, Menu } from "@cypher-asi/zui";
+import { Button, Menu, ModalConfirm } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { useProcessStore } from "../../stores/process-store";
@@ -133,6 +133,10 @@ function ProcessCanvasInner({
     onSelectionContextMenu,
     handleAddNode,
     deleteNodes,
+    requestDeleteNodes,
+    pendingDeleteNodeIds,
+    confirmDeleteNodes,
+    cancelDeleteNodes,
     togglePinNode,
     deleteConnection,
     disconnectNode,
@@ -324,7 +328,7 @@ function ProcessCanvasInner({
               if (id === "duplicate") duplicateNodes([targetId]);
               if (id === "pin" || id === "unpin") togglePinNode(targetId);
               if (id === "disconnect") disconnectNode(targetId);
-              if (id === "delete") deleteNodes([targetId]);
+              if (id === "delete") requestDeleteNodes([targetId]);
             }}
             background="solid"
             border="solid"
@@ -372,7 +376,7 @@ function ProcessCanvasInner({
               if (id === "copy") copyNodes(nodeIds);
               if (id === "cut") { copyNodes(nodeIds); deleteNodes(nodeIds); }
               if (id === "duplicate") duplicateNodes(nodeIds);
-              if (id === "delete") deleteNodes(nodeIds);
+              if (id === "delete") requestDeleteNodes(nodeIds);
             }}
             background="solid"
             border="solid"
@@ -383,6 +387,20 @@ function ProcessCanvasInner({
         </div>,
         document.body,
       )}
+
+      <ModalConfirm
+        isOpen={pendingDeleteNodeIds !== null && pendingDeleteNodeIds.length > 0}
+        onClose={cancelDeleteNodes}
+        onConfirm={confirmDeleteNodes}
+        title={pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1 ? "Delete Nodes" : "Delete Node"}
+        message={
+          pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1
+            ? `Are you sure you want to delete these ${pendingDeleteNodeIds.length} nodes? This action cannot be undone.`
+            : "Are you sure you want to delete this node? This action cannot be undone."
+        }
+        confirmLabel="Delete"
+        danger
+      />
     </div>
   );
 }
