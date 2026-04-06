@@ -101,6 +101,8 @@ impl SuperAgentService {
             automaton_client.clone(),
             storage_client.clone(),
             task_service.clone(),
+            router_url.clone(),
+            reqwest::Client::new(),
         ));
 
         let mut tool_registry = ToolRegistry::with_tier1_tools();

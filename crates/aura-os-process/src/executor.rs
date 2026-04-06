@@ -235,6 +235,8 @@ pub struct ProcessExecutor {
     automaton_client: Arc<AutomatonClient>,
     storage_client: Option<Arc<StorageClient>>,
     task_service: Arc<TaskService>,
+    router_url: String,
+    http_client: reqwest::Client,
 }
 
 impl ProcessExecutor {
@@ -249,6 +251,8 @@ impl ProcessExecutor {
         automaton_client: Arc<AutomatonClient>,
         storage_client: Option<Arc<StorageClient>>,
         task_service: Arc<TaskService>,
+        router_url: String,
+        http_client: reqwest::Client,
     ) -> Self {
         Self {
             store,
@@ -260,6 +264,8 @@ impl ProcessExecutor {
             automaton_client,
             storage_client,
             task_service,
+            router_url,
+            http_client,
         }
     }
 
@@ -753,6 +759,7 @@ fn execute_run<'a>(
                     Some(broadcast), &workspace_path,
                     timeout_secs, jwt.as_deref(), &executor.task_service,
                     agent_service, org_service, &upstream_context,
+                    &executor.http_client, &executor.router_url,
                 ).await
             }
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
@@ -1146,6 +1153,99 @@ fn plan_sub_tasks(
     }]
 }
 
+// ---------------------------------------------------------------------------
+// LLM-based sub-task planning (direct router call)
+// ---------------------------------------------------------------------------
+
+const PLANNING_MODEL: &str = "claude-haiku-4-5";
+const PLANNING_MAX_TOKENS: u32 = 4096;
+const PLANNING_CONTEXT_CHAR_LIMIT: usize = 12_000;
+
+const PLANNING_SYSTEM_PROMPT: &str = "\
+You are a task planner. Given a task description and context, decompose the work \
+into independent sub-tasks that can be executed in parallel by separate AI agents. \
+Each sub-task must be self-contained with enough context to execute independently.\n\n\
+Rules:\n\
+- If the work is genuinely a single atomic task, return a single-element array.\n\
+- Keep each sub-task focused enough that it can be completed within a single short session.\n\
+- Each description must include all context the executor needs (don't reference other sub-tasks).\n\n\
+Respond ONLY with a JSON array, no markdown fences:\n\
+[{\"title\": \"short title\", \"description\": \"full instructions for this sub-task\"}]";
+
+async fn plan_sub_tasks_via_llm(
+    http: &reqwest::Client,
+    router_url: &str,
+    token: &str,
+    node: &ProcessNode,
+    upstream_context: &str,
+) -> Result<Vec<SubTaskPlan>, String> {
+    let mut context = upstream_context.to_string();
+    if context.len() > PLANNING_CONTEXT_CHAR_LIMIT {
+        context.truncate(PLANNING_CONTEXT_CHAR_LIMIT);
+        context.push_str("\n[truncated]");
+    }
+
+    let user_message = format!(
+        "Task: {}\n\nPrompt:\n{}\n\nUpstream context:\n{}",
+        node.label, node.prompt, context,
+    );
+
+    let req_body = serde_json::json!({
+        "model": PLANNING_MODEL,
+        "max_tokens": PLANNING_MAX_TOKENS,
+        "system": PLANNING_SYSTEM_PROMPT,
+        "messages": [{"role": "user", "content": user_message}],
+    });
+
+    let resp = http
+        .post(format!("{router_url}/v1/messages"))
+        .bearer_auth(token)
+        .json(&req_body)
+        .send()
+        .await
+        .map_err(|e| format!("LLM planning request failed: {e}"))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status().as_u16();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("LLM planning returned {status}: {body}"));
+    }
+
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("parsing LLM planning response: {e}"))?;
+
+    let text = body
+        .get("content")
+        .and_then(|c| c.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|block| block.get("text"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("[]");
+
+    // Strip markdown fences if the model wraps its response
+    let cleaned = text.trim();
+    let json_str = if cleaned.starts_with("```") {
+        cleaned
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+    } else {
+        cleaned
+    };
+
+    let plans: Vec<SubTaskPlan> = serde_json::from_str(json_str)
+        .map_err(|e| format!("failed to parse planning JSON: {e}"))?;
+
+    if plans.is_empty() {
+        return Err("LLM returned empty plan".into());
+    }
+
+    Ok(plans)
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn execute_action_via_automaton(
     node: &ProcessNode,
@@ -1165,6 +1265,8 @@ async fn execute_action_via_automaton(
     agent_service: &AgentService,
     org_service: &OrgService,
     upstream_context: &str,
+    http_client: &reqwest::Client,
+    router_url: &str,
 ) -> Result<NodeResult, ProcessError> {
     let proj_str = project_id.to_string();
     let pid_str = process_id.to_string();
@@ -1179,7 +1281,42 @@ async fn execute_action_via_automaton(
         ).await;
     }
 
-    let sub_tasks = plan_sub_tasks(node, upstream_context);
+    let plan_mode = node.config.get("plan_mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("auto");
+
+    let mut sub_tasks = plan_sub_tasks(node, upstream_context);
+
+    if sub_tasks.len() <= 1 && plan_mode != "off" {
+        if let Some(jwt) = token {
+            info!(node_id = %node.node_id, "Heuristic split found 1 task; attempting LLM-based planning");
+            match plan_sub_tasks_via_llm(
+                http_client, router_url, jwt, node, upstream_context,
+            ).await {
+                Ok(llm_tasks) if llm_tasks.len() > 1 => {
+                    info!(
+                        node_id = %node.node_id,
+                        sub_task_count = llm_tasks.len(),
+                        "LLM planning decomposed into {} sub-tasks",
+                        llm_tasks.len()
+                    );
+                    if let Some(tx) = broadcast {
+                        send_process_text(
+                            store, tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
+                            &format!("Planned {} sub-tasks via LLM decomposition.\n\n", llm_tasks.len()),
+                        );
+                    }
+                    sub_tasks = llm_tasks;
+                }
+                Ok(_) => {
+                    info!(node_id = %node.node_id, "LLM planning confirmed single task");
+                }
+                Err(e) => {
+                    warn!(node_id = %node.node_id, error = %e, "LLM planning failed; falling back to single execution");
+                }
+            }
+        }
+    }
 
     if sub_tasks.len() <= 1 {
         if let Some(tx) = broadcast {

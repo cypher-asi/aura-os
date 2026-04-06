@@ -440,6 +440,7 @@ dependencies = [
  "aura-os-tasks",
  "chrono",
  "cron",
+ "reqwest 0.11.27",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
