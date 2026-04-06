@@ -34,7 +34,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 1px 0;
+  padding: 3px 0;
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -145,7 +145,7 @@
 }
 
 .toolBody {
-  padding: 4px 0 8px 0;
+  padding: 6px 0 10px 0;
 }
 
 .section {

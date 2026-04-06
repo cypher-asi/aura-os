@@ -1,7 +1,7 @@
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 /* Extra spacing between different item kinds */
@@ -16,5 +16,5 @@
 .toolGroup {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
