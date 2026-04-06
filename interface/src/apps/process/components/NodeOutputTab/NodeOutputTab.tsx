@@ -11,7 +11,7 @@ import { processApi } from "../../../../api/process";
 import { useProcessStore } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { PinnedOutputField, PinOutputButton } from "../PinnedOutput";
-import { monoBox } from "./node-output-utils";
+import { monoBox, prettyPrintIfJson } from "./node-output-utils";
 import { ProcessEventOutput } from "../ProcessEventOutput";
 import styles from "../../../../components/Preview/Preview.module.css";
 
@@ -213,7 +213,7 @@ function NodeEventDetails({
               color: "var(--color-text-muted)",
             }}
           >
-            {nodeEvent.input_snapshot}
+            {prettyPrintIfJson(nodeEvent.input_snapshot)}
           </div>
         </div>
       )}
