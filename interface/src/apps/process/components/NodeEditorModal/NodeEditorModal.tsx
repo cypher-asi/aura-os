@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Trash2, Pin, PinOff } from "lucide-react";
-import { Modal, Button, Text } from "@cypher-asi/zui";
+import { Modal, ModalConfirm, Button, Text } from "@cypher-asi/zui";
 import type { ProcessNode } from "../../../../types";
 import type { ProcessNodeType } from "../../../../types/enums";
 import { processApi } from "../../../../api/process";
@@ -138,6 +138,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [pinLoading, setPinLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [processes, setProcesses] = useState<Array<{ process_id: string; name: string }>>([]);
   useEffect(() => {
@@ -373,7 +374,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const footer = (
     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center", width: "100%" }}>
       {node.node_type !== "ignition" && (
-        <Button variant="ghost" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete} style={{ marginRight: "auto" }}>
+        <Button variant="ghost" size="sm" icon={<Trash2 size={14} />} onClick={() => setShowDeleteConfirm(true)} style={{ marginRight: "auto" }}>
           Delete
         </Button>
       )}
@@ -386,26 +387,42 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     </div>
   );
 
+  const deleteConfirmModal = (
+    <ModalConfirm
+      isOpen={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
+      title="Delete Node"
+      message="Are you sure you want to delete this node? This action cannot be undone."
+      confirmLabel="Delete"
+      danger
+    />
+  );
+
   if (!hasPrompt) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${NODE_TYPE_LABELS[node.node_type]} Node`} size="md" footer={footer}>
-        <div className={previewStyles.taskMeta}>
-          <EditField label="Label">
-            <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
-          </EditField>
-
-          {node.node_type === "delay" && (
-            <EditField label="Delay (seconds)">
-              <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
+      <>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${NODE_TYPE_LABELS[node.node_type]} Node`} size="md" footer={footer}>
+          <div className={previewStyles.taskMeta}>
+            <EditField label="Label">
+              <input style={inputStyle} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Node label" />
             </EditField>
-          )}
-          {pinToggle}
-        </div>
-      </Modal>
+
+            {node.node_type === "delay" && (
+              <EditField label="Delay (seconds)">
+                <input style={inputStyle} type="number" min={1} value={delaySeconds} onChange={(e) => setDelaySeconds(e.target.value)} />
+              </EditField>
+            )}
+            {pinToggle}
+          </div>
+        </Modal>
+        {deleteConfirmModal}
+      </>
     );
   }
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -586,5 +603,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         </div>
       </div>
     </Modal>
+    {deleteConfirmModal}
+    </>
   );
 }

@@ -68,7 +68,9 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     ? { nodeId: renamingNodeId, onRenameSubmit: (label: string) => handleRenameSubmit(renamingNodeId, label) }
     : undefined;
 
-  const deleteNodes = useCallback(
+  const [pendingDeleteNodeIds, setPendingDeleteNodeIds] = useState<string[] | null>(null);
+
+  const executeDeleteNodes = useCallback(
     async (nodeIds: string[]) => {
       const deletable = nodeIds.filter((id) => {
         const n = processNodes.find((pn) => pn.node_id === id);
@@ -88,6 +90,27 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     },
     [processId, processNodes, setNodes, setEdges, fetchNodes, fetchConnections, closeNodeInspector],
   );
+
+  const requestDeleteNodes = useCallback(
+    (nodeIds: string[]) => {
+      const deletable = nodeIds.filter((id) => {
+        const n = processNodes.find((pn) => pn.node_id === id);
+        return n && n.node_type !== "ignition";
+      });
+      if (deletable.length === 0) return;
+      setPendingDeleteNodeIds(deletable);
+    },
+    [processNodes],
+  );
+
+  const confirmDeleteNodes = useCallback(() => {
+    if (pendingDeleteNodeIds) executeDeleteNodes(pendingDeleteNodeIds);
+    setPendingDeleteNodeIds(null);
+  }, [pendingDeleteNodeIds, executeDeleteNodes]);
+
+  const cancelDeleteNodes = useCallback(() => {
+    setPendingDeleteNodeIds(null);
+  }, []);
 
   const togglePinNode = useCallback(
     async (nodeId: string) => {
@@ -392,7 +415,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
         const selected = nodes.filter((n) => n.selected).map((n) => n.id);
-        if (selected.length > 0) deleteNodes(selected);
+        if (selected.length > 0) requestDeleteNodes(selected);
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -415,7 +438,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
       el.removeEventListener("mousedown", onMouseDown);
       el.removeEventListener("mouseup", onMouseUp);
     };
-  }, [nodes, deleteNodes]);
+  }, [nodes, requestDeleteNodes]);
 
   return {
     renameState,
@@ -434,7 +457,10 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     onEdgeContextMenu,
     onSelectionContextMenu,
     handleAddNode,
-    deleteNodes,
+    requestDeleteNodes,
+    pendingDeleteNodeIds,
+    confirmDeleteNodes,
+    cancelDeleteNodes,
     togglePinNode,
     deleteConnection,
     disconnectNode,
