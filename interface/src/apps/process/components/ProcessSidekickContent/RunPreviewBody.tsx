@@ -11,6 +11,7 @@ import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";
 import { useStreamEvents, useStreamingText, useThinkingText, useThinkingDurationMs, useActiveToolCalls, useTimeline, useIsStreaming } from "../../../../hooks/stream/hooks";
 import type { ProcessArtifact, ProcessEvent, ProcessRun, ProcessRunTranscriptEvent } from "../../../../types";
+import type { DisplaySessionEvent, ToolCallEntry } from "../../../../types/stream";
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
 import { LiveRunBanner } from "./LiveRunBanner";
@@ -63,6 +64,40 @@ function useRunPolling(initialRun: ProcessRun) {
   }, [run.process_id, run.run_id, fetchRuns]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    const applyRunUsage = (content: {
+      process_id: string;
+      run_id: string;
+      total_input_tokens?: number;
+      total_output_tokens?: number;
+      cost_usd?: number;
+    }) => {
+      if (content.process_id !== run.process_id || content.run_id !== run.run_id) return;
+      setRun((prev) => ({
+        ...prev,
+        total_input_tokens: content.total_input_tokens ?? prev.total_input_tokens,
+        total_output_tokens: content.total_output_tokens ?? prev.total_output_tokens,
+        cost_usd: content.cost_usd ?? prev.cost_usd,
+      }));
+    };
+
+    const unsubProgress = useEventStore.getState().subscribe(EventType.ProcessRunProgress, (event) => {
+      applyRunUsage(event.content);
+    });
+    const unsubCompleted = useEventStore.getState().subscribe(EventType.ProcessRunCompleted, (event) => {
+      applyRunUsage(event.content);
+    });
+    const unsubFailed = useEventStore.getState().subscribe(EventType.ProcessRunFailed, (event) => {
+      applyRunUsage(event.content);
+    });
+
+    return () => {
+      unsubProgress();
+      unsubCompleted();
+      unsubFailed();
+    };
+  }, [run.process_id, run.run_id]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -173,67 +208,176 @@ function buildFullRunOutput(
   return parts.join("\n").trim();
 }
 
-function buildTranscriptOutput(transcript: ProcessRunTranscriptEvent[]): string {
-  const parts: string[] = [];
+// ---------------------------------------------------------------------------
+// transcriptToDisplayEvents -- replay persisted transcript into MessageBubble shape
+// ---------------------------------------------------------------------------
+
+interface TranscriptNodeGroup {
+  nodeId: string;
+  label: string;
+  entries: ProcessRunTranscriptEvent[];
+}
+
+function groupTranscriptByNode(
+  transcript: ProcessRunTranscriptEvent[],
+  nodes: { node_id: string; label: string }[],
+): TranscriptNodeGroup[] {
+  const groups: TranscriptNodeGroup[] = [];
+  let current: TranscriptNodeGroup | null = null;
+
   for (const entry of transcript) {
-    const payload = (entry.payload ?? {}) as Record<string, unknown>;
-    const type = String(payload.type ?? entry.event_type ?? "event");
-    const nodeId = typeof payload.node_id === "string" ? payload.node_id : null;
-    const nodePrefix = nodeId ? ` [${nodeId}]` : "";
-    parts.push(`## ${type}${nodePrefix}`);
+    const p = (entry.payload ?? {}) as Record<string, unknown>;
+    const nodeId = typeof p.node_id === "string" ? p.node_id : "";
+    if (!nodeId) continue;
 
-    if (type === "text_delta" && typeof payload.text === "string") {
-      parts.push(payload.text);
-    } else if (type === "thinking_delta") {
-      const thinking =
-        (typeof payload.text === "string" ? payload.text : undefined) ??
-        (typeof payload.thinking === "string" ? payload.thinking : "");
-      if (thinking) parts.push(`<thinking>\n${thinking}\n</thinking>`);
-    } else if ((type === "tool_use_start" || type === "tool_call_snapshot") && typeof payload.name === "string") {
-      parts.push(`[tool_call: ${payload.name}]`);
-    } else if (type === "tool_result") {
-      const name = typeof payload.name === "string" ? payload.name : "tool";
-      const result = typeof payload.result === "string" ? payload.result : "";
-      const errTag = payload.is_error ? " (error)" : "";
-      parts.push(`[tool_result: ${name}${errTag}]`);
-      if (result) parts.push(result);
-    } else if (type === "process_node_executed") {
-      const status = typeof payload.status === "string" ? payload.status : "";
-      if (status) parts.push(`status: ${status}`);
-    } else {
-      parts.push(JSON.stringify(payload, null, 2) ?? "{}");
+    if (!current || current.nodeId !== nodeId) {
+      current = {
+        nodeId,
+        label: nodes.find((n) => n.node_id === nodeId)?.label ?? nodeId,
+        entries: [],
+      };
+      groups.push(current);
     }
-
-    parts.push("");
+    current.entries.push(entry);
   }
-  return parts.join("\n").trim();
+  return groups;
+}
+
+function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySessionEvent[] {
+  const result: DisplaySessionEvent[] = [];
+  let textBuf = "";
+  let thinkingBuf = "";
+  let tools: ToolCallEntry[] = [];
+  let eventIdx = 0;
+
+  const flush = () => {
+    if (!textBuf && !thinkingBuf && tools.length === 0) return;
+    result.push({
+      id: `transcript-${eventIdx++}`,
+      role: "assistant",
+      content: textBuf,
+      toolCalls: tools.length > 0 ? [...tools] : undefined,
+      thinkingText: thinkingBuf || undefined,
+    });
+    textBuf = "";
+    thinkingBuf = "";
+    tools = [];
+  };
+
+  for (const entry of entries) {
+    const p = (entry.payload ?? {}) as Record<string, unknown>;
+    const type = String(p.type ?? entry.event_type ?? "");
+
+    switch (type) {
+      case "text_delta": {
+        const text = typeof p.text === "string" ? p.text : "";
+        if (text) textBuf += text;
+        break;
+      }
+      case "thinking_delta": {
+        const t = (typeof p.text === "string" ? p.text : undefined)
+          ?? (typeof p.thinking === "string" ? p.thinking : "");
+        if (t) thinkingBuf += t;
+        break;
+      }
+      case "tool_use_start": {
+        const id = typeof p.id === "string" ? p.id : crypto.randomUUID();
+        const name = typeof p.name === "string" ? p.name : "tool";
+        tools.push({ id, name, input: {}, pending: true, started: true });
+        break;
+      }
+      case "tool_call_snapshot": {
+        const id = typeof p.id === "string" ? p.id : "";
+        const name = typeof p.name === "string" ? p.name : "tool";
+        const input = (typeof p.input === "object" && p.input !== null ? p.input : {}) as Record<string, unknown>;
+        const existing = tools.find((tc) => tc.id === id);
+        if (existing) {
+          existing.name = name;
+          existing.input = { ...existing.input, ...input };
+        } else {
+          tools.push({ id: id || crypto.randomUUID(), name, input, pending: true, started: true });
+        }
+        break;
+      }
+      case "tool_result": {
+        const name = typeof p.name === "string" ? p.name : "tool";
+        const resultText = typeof p.result === "string" ? p.result : "";
+        const isError = typeof p.is_error === "boolean" ? p.is_error : false;
+        const target = [...tools].reverse().find((tc) => tc.pending && tc.name === name)
+          ?? [...tools].reverse().find((tc) => tc.pending);
+        if (target) {
+          target.result = resultText;
+          target.isError = isError;
+          target.pending = false;
+          target.started = false;
+        }
+        break;
+      }
+      case "process_node_executed": {
+        const status = typeof p.status === "string" ? p.status.toLowerCase() : "";
+        if (status && !status.includes("running")) {
+          flush();
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  flush();
+  return result;
+}
+
+function TranscriptReplayOutput({
+  transcript,
+  nodes,
+}: {
+  transcript: ProcessRunTranscriptEvent[];
+  nodes: { node_id: string; label: string }[];
+}) {
+  const groups = useMemo(() => groupTranscriptByNode(transcript, nodes), [transcript, nodes]);
+
+  const displayGroups = useMemo(
+    () => groups.map((g) => ({ ...g, events: nodeTranscriptToEvents(g.entries) })),
+    [groups],
+  );
+
+  const nonEmpty = displayGroups.filter((g) => g.events.length > 0);
+  if (nonEmpty.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {nonEmpty.map((group) => (
+        <div key={group.nodeId}>
+          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
+            {group.label}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {group.events.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
 // CopyAllOutputButton
 // ---------------------------------------------------------------------------
 
-function CopyAllOutputButton({
-  events,
-  nodes,
-  transcript,
-}: {
-  events: ProcessEvent[];
-  nodes: { node_id: string; label: string }[];
-  transcript: ProcessRunTranscriptEvent[];
-}) {
+function CopyAllOutputButton({ events, nodes }: { events: ProcessEvent[]; nodes: { node_id: string; label: string }[] }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    const text = transcript.length > 0
-      ? buildTranscriptOutput(transcript)
-      : buildFullRunOutput(events, nodes);
+    const text = buildFullRunOutput(events, nodes);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch { /* ignore */ }
-  }, [events, nodes, transcript]);
+  }, [events, nodes]);
 
   return (
     <button
@@ -311,7 +455,7 @@ function ActiveDurationCell({ startedAt }: { startedAt: string }) {
 // ---------------------------------------------------------------------------
 
 function RunDetailGrid({
-  run, isActive, sortedEvents, nodes, totalTokensFromEvents, models, transcript,
+  run, isActive, sortedEvents, nodes, totalTokensFromEvents, models,
 }: {
   run: ProcessRun;
   isActive: boolean;
@@ -319,13 +463,12 @@ function RunDetailGrid({
   nodes: { node_id: string; label: string }[];
   totalTokensFromEvents: { input: number; output: number; total: number };
   models: string[];
-  transcript: ProcessRunTranscriptEvent[];
 }) {
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ fontWeight: 600 }}>Run Detail</div>
-        <CopyAllOutputButton events={sortedEvents} nodes={nodes} transcript={transcript} />
+        <CopyAllOutputButton events={sortedEvents} nodes={nodes} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 12px" }}>
         <span style={{ color: "var(--color-text-muted)" }}>Status</span>
@@ -342,6 +485,10 @@ function RunDetailGrid({
         <span style={{ color: "var(--color-text-muted)" }}>Started</span><span>{new Date(run.started_at).toLocaleString()}</span>
         <span style={{ color: "var(--color-text-muted)" }}>Duration</span>
         <span>{run.completed_at ? formatDuration(run.started_at, run.completed_at) : isActive ? <ActiveDurationCell startedAt={run.started_at} /> : "\u2014"}</span>
+        <span style={{ color: "var(--color-text-muted)" }}>Cost</span>
+        <span style={{ fontFamily: "var(--font-mono)" }}>
+          {run.cost_usd != null ? formatCost(run.cost_usd, 3) : "\u2014"}
+        </span>
       </div>
 
       <RunTokensSection
@@ -376,15 +523,6 @@ function RunTokensSection({
           <span style={{ color: "var(--color-text-muted)", marginLeft: 6 }}>
             (in: {formatTokens(run.total_input_tokens ?? totalTokensFromEvents.input)}, out: {formatTokens(run.total_output_tokens ?? totalTokensFromEvents.output)})
           </span>
-        </span>
-        <span style={{ color: "var(--color-text-muted)" }}>Cost</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
-          {run.cost_usd != null
-            ? formatCost(run.cost_usd, 3)
-            : totalTokensFromEvents.total > 0
-              ? `~${formatCost(totalTokensFromEvents.input * 3 / 1_000_000 + totalTokensFromEvents.output * 15 / 1_000_000, 3)}`
-              : "\u2014"
-          }
         </span>
         {models.length > 0 && (
           <>
@@ -453,11 +591,6 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
     ? nodes.find((n) => n.node_id === liveRunNodeId)?.label ?? "Node"
     : null;
 
-  const fullRunOutput = useMemo(() => {
-    if (transcript.length > 0) return buildTranscriptOutput(transcript);
-    return buildFullRunOutput(sortedEvents, nodes);
-  }, [transcript, sortedEvents, nodes]);
-
   return (
     <div style={{ fontSize: 13 }}>
       {isActive && <LiveRunBanner run={run} events={events} totalNodes={nodes.length} />}
@@ -469,7 +602,6 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
           nodes={nodes}
           totalTokensFromEvents={totalTokensFromEvents}
           models={models}
-          transcript={transcript}
         />
 
         {sortedEvents.length > 0 && (
@@ -482,29 +614,16 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
             </div>
           </div>
         )}
-        {fullRunOutput && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Full Run</div>
-            <div
-              style={{
-                background: "var(--color-bg-input)",
-                padding: 8,
-                borderRadius: "var(--radius-sm)",
-                whiteSpace: "pre-wrap",
-                maxHeight: 360,
-                overflowY: "auto",
-                fontFamily: "var(--font-mono)",
-                fontSize: 12,
-              }}
-            >
-              {fullRunOutput}
-            </div>
-          </div>
-        )}
         {isActive && liveRunNodeId && (
           <div style={{ marginTop: 16 }}>
             <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Output &mdash; {liveNodeLabel}</div>
             <ProcessNodeLiveOutput runId={run.run_id} nodeId={liveRunNodeId} isActive />
+          </div>
+        )}
+        {!isActive && transcript.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 8 }}>Run Output</div>
+            <TranscriptReplayOutput transcript={transcript} nodes={nodes} />
           </div>
         )}
         {run.error && (
