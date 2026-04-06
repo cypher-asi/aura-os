@@ -599,7 +599,7 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   return (
     <div style={{ fontSize: 13 }}>
       {isActive && <LiveRunBanner run={run} events={events} totalNodes={nodes.length} />}
-      <div style={{ padding: 12 }}>
+      <div style={{ padding: isActive ? 12 : "20px 12px 12px" }}>
         <RunDetailGrid
           run={run}
           isActive={isActive}

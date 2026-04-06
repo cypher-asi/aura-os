@@ -7,6 +7,7 @@ import { EmptyState } from "../../../../components/EmptyState";
 import type { ProcessEvent } from "../../../../types";
 import { useElapsedTime, formatDuration, EMPTY_RUNS, EMPTY_NODES } from "./process-sidekick-utils";
 import { ProcessEventOutput } from "../ProcessEventOutput";
+import { prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";
 
 const EVENT_STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   completed: { bg: "rgba(16,185,129,0.15)", fg: "#10b981" },
@@ -28,7 +29,7 @@ export interface EventTimelineItemProps {
 
 export function EventTimelineItem({ event, nodes, isLive }: EventTimelineItemProps) {
   const isRunning = event.status === "running";
-  const [expanded, setExpanded] = useState(!isRunning);
+  const [expanded, setExpanded] = useState(true);
 
   const nodeLabel = nodes.find((n) => n.node_id === event.node_id)?.label ?? event.node_id.slice(0, 8);
   const colors = EVENT_STATUS_COLORS[event.status] ?? EVENT_STATUS_COLORS.pending;
@@ -39,7 +40,7 @@ export function EventTimelineItem({ event, nodes, isLive }: EventTimelineItemPro
   return (
     <div
       style={{
-        border: `1px solid ${isRunning ? "rgba(59,130,246,0.3)" : "var(--color-border)"}`,
+        border: "1px solid var(--color-border)",
         borderRadius: "var(--radius-sm)",
         fontSize: 12,
         overflow: "hidden",
@@ -164,7 +165,7 @@ function EventTimelineItemBody({ isRunning, event, inputSnapshot }: BodyProps) {
             maxHeight: 150, overflow: "auto", lineHeight: 1.4,
             color: "var(--color-text-muted)",
           }}>
-            {inputSnapshot}
+            {prettyPrintIfJson(inputSnapshot)}
           </div>
         </div>
       )}
