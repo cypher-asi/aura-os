@@ -63,6 +63,7 @@ export interface StreamRefs {
   raf: MutableRefObject<number | null>;
   thinkingRaf: MutableRefObject<number | null>;
   timeline: MutableRefObject<TimelineItem[]>;
+  snapshottedToolCallIds: MutableRefObject<Set<string>>;
 }
 
 export interface StreamSetters {

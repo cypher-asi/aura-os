@@ -34,6 +34,7 @@ function makeRefs(): StreamRefs {
     raf: { current: null },
     thinkingRaf: { current: null },
     timeline: { current: [] },
+    snapshottedToolCallIds: { current: new Set() },
   };
 }
 
@@ -424,6 +425,7 @@ describe("stream/handlers", () => {
 
     it("clears thinking state", () => {
       const refs = makeRefs();
+      refs.streamBuffer.current = "content";
       refs.thinkingBuffer.current = "thinking";
       refs.thinkingStart.current = Date.now();
       const setters = makeSetters();
@@ -453,8 +455,11 @@ describe("stream/handlers", () => {
 
       finalizeStream(refs, setters, abortRef, false);
 
-      const msgCalls = setters.calls.setEvents;
-      expect(msgCalls).toBeUndefined();
+      const msgCalls = setters.calls.setEvents as Array<(prev: unknown[]) => unknown[]> | undefined;
+      if (msgCalls) {
+        const result = msgCalls[msgCalls.length - 1]([]);
+        expect(result).toEqual([]);
+      }
     });
   });
 });

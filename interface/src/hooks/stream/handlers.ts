@@ -53,11 +53,68 @@ export function resetStreamBuffers(refs: StreamRefs, setters: StreamSetters): vo
   refs.timeline.current = [];
   setters.setTimeline([]);
   setters.setProgressText("");
+  refs.snapshottedToolCallIds.current = new Set();
 }
 
 let _tlId = 0;
 function nextTimelineId(): string {
   return `tl-${++_tlId}`;
+}
+
+/**
+ * Retroactively resolve a tool call in already-saved events.
+ * handleAssistantTurnBoundary snapshots tool calls before results arrive,
+ * so we propagate the resolution back into those saved events.
+ */
+function resolveToolCallInEvents(
+  setters: StreamSetters,
+  toolCallId: string,
+  result: string,
+  isError: boolean,
+): void {
+  setters.setEvents((prev) => {
+    let changed = false;
+    const next = prev.map((evt) => {
+      if (!evt.toolCalls) return evt;
+      const idx = evt.toolCalls.findIndex((tc) => tc.id === toolCallId && tc.pending);
+      if (idx === -1) return evt;
+      changed = true;
+      return {
+        ...evt,
+        toolCalls: evt.toolCalls.map((tc, i) =>
+          i === idx
+            ? { ...tc, result, isError, pending: false, started: false }
+            : tc,
+        ),
+      };
+    });
+    return changed ? next : prev;
+  });
+}
+
+/**
+ * Fail all pending tool calls in already-saved events.
+ */
+function failPendingToolCallsInEvents(
+  setters: StreamSetters,
+  reason: string,
+): void {
+  setters.setEvents((prev) => {
+    let changed = false;
+    const next = prev.map((evt) => {
+      if (!evt.toolCalls?.some((tc) => tc.pending)) return evt;
+      changed = true;
+      return {
+        ...evt,
+        toolCalls: evt.toolCalls.map((tc) =>
+          tc.pending
+            ? { ...tc, pending: false, started: false, isError: true, result: reason }
+            : tc,
+        ),
+      };
+    });
+    return changed ? next : prev;
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -231,8 +288,6 @@ export function handleToolResult(
   if (info.id) {
     targetIndex = refs.toolCalls.current.findIndex((tc) => tc.id === info.id);
   } else {
-    // Harness protocol may omit tool-use ids on tool_result; in that case,
-    // resolve the most recent pending call with the same tool name.
     for (let i = refs.toolCalls.current.length - 1; i >= 0; i--) {
       const tc = refs.toolCalls.current[i];
       if (tc.pending && tc.name === info.name) {
@@ -242,7 +297,9 @@ export function handleToolResult(
     }
   }
 
+  let resolvedId: string | undefined;
   if (targetIndex !== -1) {
+    resolvedId = refs.toolCalls.current[targetIndex].id;
     refs.toolCalls.current = refs.toolCalls.current.map((tc, idx) =>
       idx === targetIndex
         ? { ...tc, result: info.result, isError: info.is_error, pending: false, started: false }
@@ -250,6 +307,11 @@ export function handleToolResult(
     );
   }
   setters.setActiveToolCalls([...refs.toolCalls.current]);
+
+  if (resolvedId) {
+    resolveToolCallInEvents(setters, resolvedId, info.result, info.is_error);
+  }
+
   refs.needsSeparator.current = true;
 }
 
@@ -302,6 +364,9 @@ export function handleEventSaved(
  * Saves the current text buffer as a message but does NOT abort the SSE
  * connection or clear tool calls — tool_result events and subsequent agent
  * loop iterations arrive AFTER assistant_message_end.
+ *
+ * Only includes tool calls not already snapshotted by a prior boundary
+ * to avoid duplicating tool entries across multiple saved events.
  */
 export function handleAssistantTurnBoundary(
   refs: StreamRefs,
@@ -310,16 +375,30 @@ export function handleAssistantTurnBoundary(
   const hasBuffer = !!refs.streamBuffer.current;
   if (hasBuffer) {
     const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
+
+    const newToolCalls = refs.toolCalls.current.filter(
+      (tc) => !refs.snapshottedToolCallIds.current.has(tc.id),
+    );
+    const newToolCallIds = new Set(newToolCalls.map((tc) => tc.id));
+
+    const newTimeline = refs.timeline.current.filter(
+      (item) => item.kind !== "tool" || newToolCallIds.has(item.toolCallId),
+    );
+
+    for (const tc of newToolCalls) {
+      refs.snapshottedToolCallIds.current.add(tc.id);
+    }
+
     setters.setEvents((prev) => [
       ...prev,
       {
         id: `stream-${Date.now()}`,
         role: "assistant",
         content: refs.streamBuffer.current,
-        toolCalls: snapshotToolCalls(refs),
+        toolCalls: newToolCalls.length > 0 ? [...newToolCalls] : undefined,
         thinkingText: savedThinking,
         thinkingDurationMs: savedThinkingDuration,
-        timeline: snapshotTimeline(refs),
+        timeline: newTimeline.length > 0 ? [...newTimeline] : undefined,
       },
     ]);
     setters.setStreamingText("");
@@ -334,14 +413,18 @@ export function handleAssistantTurnBoundary(
   setters.setTimeline([]);
 }
 
-function failPendingToolCalls(refs: StreamRefs, reason: string): void {
+function failPendingToolCalls(refs: StreamRefs, setters: StreamSetters, reason: string): void {
   const hasPending = refs.toolCalls.current.some((tc) => tc.pending);
-  if (!hasPending) return;
+  if (!hasPending) {
+    failPendingToolCallsInEvents(setters, reason);
+    return;
+  }
   refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
     tc.pending
       ? { ...tc, pending: false, started: false, isError: true, result: reason }
       : tc,
   );
+  failPendingToolCallsInEvents(setters, reason);
 }
 
 export function handleStreamError(
@@ -353,7 +436,7 @@ export function handleStreamError(
   if (isInsufficientCreditsError(message)) {
     dispatchInsufficientCredits();
   }
-  failPendingToolCalls(refs, `Stream error: ${message}`);
+  failPendingToolCalls(refs, setters, `Stream error: ${message}`);
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
@@ -381,7 +464,7 @@ export function finalizeStream(
   abortRef: MutableRefObject<AbortController | null>,
   closureIsStreaming: boolean,
 ): void {
-  failPendingToolCalls(refs, "Connection lost before result was received");
+  failPendingToolCalls(refs, setters, "Connection lost before result was received");
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const hasBuffer = !!refs.streamBuffer.current;
