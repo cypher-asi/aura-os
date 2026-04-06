@@ -603,15 +603,6 @@ fn execute_run<'a>(
             }
         }
 
-        // ── inject vault_path into context if configured ───────────────
-        if let Some(vault_path) = node.config.get("vault_path").and_then(|v| v.as_str()) {
-            if !vault_path.is_empty() {
-                upstream_context.push_str(&format!(
-                    "\n\n## Obsidian Vault\n\nWrite output to: {vault_path}"
-                ));
-            }
-        }
-
         // ── persist + broadcast running status ───────────────────────────
         let node_started_at = Utc::now();
         let mut running_event = start_event(

@@ -161,13 +161,6 @@ export function NodeConfigTab({ node }: NodeConfigTabProps) {
             </div>
           )}
 
-          {node.node_type === "action" && (cfg?.vault_path as string) && (
-            <div className={styles.taskField}>
-              <span className={styles.fieldLabel}>Vault Path</span>
-              <Text variant="secondary" size="sm">{cfg.vault_path as string}</Text>
-            </div>
-          )}
-
           {node.node_type === "ignition" && cfg?.watchlist != null && (
             <div className={styles.taskField}>
               <span className={styles.fieldLabel}>Watchlist</span>

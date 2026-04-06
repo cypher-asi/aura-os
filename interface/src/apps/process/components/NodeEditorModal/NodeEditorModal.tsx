@@ -117,9 +117,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [collectMode, setCollectMode] = useState(
     node.node_type === "for_each" ? (cfg?.collect_mode as string) ?? "json_array" : "json_array",
   );
-  const [vaultPath, setVaultPath] = useState(
-    node.node_type === "action" ? (cfg?.vault_path as string) ?? "" : "",
-  );
   const [outputFile, setOutputFile] = useState(
     (node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt")
       ? (cfg?.output_file as string) ?? ""
@@ -193,7 +190,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         setItemVariableName((c?.item_variable_name as string) ?? "item");
         setCollectMode((c?.collect_mode as string) ?? "json_array");
       }
-      if (node.node_type === "action") setVaultPath((c?.vault_path as string) ?? "");
       if (node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") setOutputFile((c?.output_file as string) ?? "");
       if (node.node_type === "ignition") setWatchlist(JSON.stringify(c?.watchlist ?? {}, null, 2));
       setModel((c?.model as string) ?? "");
@@ -260,7 +256,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
         if (itemVariableName) config.item_variable_name = itemVariableName;
         config.collect_mode = collectMode;
       }
-      if (node.node_type === "action" && vaultPath) config.vault_path = vaultPath;
       if ((node.node_type === "action" || node.node_type === "artifact" || node.node_type === "prompt") && outputFile) {
         config.output_file = outputFile;
       } else {
@@ -297,7 +292,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, iteratorMode, itemVariableName, collectMode, vaultPath, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, iteratorMode, itemVariableName, collectMode, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -492,12 +487,6 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
             <EditField label="Output File">
               <input style={inputStyle} value={outputFile} onChange={(e) => setOutputFile(e.target.value)} placeholder={node.node_type === "artifact" ? "output.md" : "output.txt"} />
               <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Filename for results in the process workspace.</Text>
-            </EditField>
-          )}
-
-          {node.node_type === "action" && (
-            <EditField label="Vault Path">
-              <input style={inputStyle} value={vaultPath} onChange={(e) => setVaultPath(e.target.value)} placeholder="e.g. Research/" />
             </EditField>
           )}
 
