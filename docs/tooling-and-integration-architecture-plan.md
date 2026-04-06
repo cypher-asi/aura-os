@@ -1,5 +1,7 @@
 # Tooling And Integration Architecture Plan
 
+Canonical architecture note: see [Capabilities And Credentials Architecture](./capabilities-and-credentials-architecture.md).
+
 This document is the working reference for how Aura OS should model:
 - adapters
 - connections
