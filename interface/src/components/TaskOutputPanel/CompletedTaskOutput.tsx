@@ -3,7 +3,7 @@ import { Check, X as XIcon, AlertTriangle } from "lucide-react";
 import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
-import { MessageBubble } from "../MessageBubble";
+import { LLMOutput } from "../LLMOutput";
 import styles from "./TaskOutputPanel.module.css";
 
 interface CompletedTaskOutputProps {
@@ -98,9 +98,7 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
       </div>
       {taskOutput.text ? (
         <div className={styles.taskBody}>
-          <MessageBubble
-            message={{ id: `completed-${taskId}`, role: "assistant", content: taskOutput.text }}
-          />
+          <LLMOutput content={taskOutput.text} />
         </div>
       ) : null}
     </div>

@@ -8,7 +8,7 @@ import {
   useTimeline,
   useProgressText,
 } from "../../hooks/stream/hooks";
-import { StreamingBubble } from "../StreamingBubble";
+import { LLMStreamOutput } from "../LLMOutput";
 import { CookingIndicator } from "../CookingIndicator";
 import styles from "./TaskOutputPanel.module.css";
 
@@ -37,7 +37,7 @@ export function ActiveTaskStream({ taskId, title }: ActiveTaskStreamProps) {
       </div>
       <div className={styles.taskBody}>
         {hasContent ? (
-          <StreamingBubble
+          <LLMStreamOutput
             isStreaming={isStreaming}
             text={streamingText}
             toolCalls={activeToolCalls}
