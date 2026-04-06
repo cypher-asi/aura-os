@@ -76,10 +76,11 @@
 
 :global(.react-flow__node-groupNode .react-flow__resize-control.line) {
   border-color: transparent !important;
+  border-width: 6px !important;
 }
 
 :global(.react-flow__node-groupNode.selected .react-flow__resize-control.line) {
-  border-color: rgba(14, 165, 233, 0.4) !important;
+  border-color: rgba(14, 165, 233, 0.25) !important;
 }
 
 :global(.react-flow__minimap) {

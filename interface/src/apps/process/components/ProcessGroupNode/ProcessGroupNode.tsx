@@ -71,8 +71,8 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
       <NodeResizer
         minWidth={220}
         minHeight={150}
-        handleStyle={{ width: 8, height: 8, borderRadius: 0, background: "transparent", border: "none" }}
-        lineStyle={{ borderColor: "transparent" }}
+        handleStyle={{ width: 20, height: 20, borderRadius: 0, background: "transparent", border: "none" }}
+        lineStyle={{ borderWidth: 6, borderColor: "transparent" }}
         onResizeEnd={(_, params) => {
           data.onResizeStop?.(id, params.x, params.y, params.width, params.height);
         }}
