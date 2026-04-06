@@ -6,7 +6,7 @@ use tracing::info;
 use aura_os_core::{
     Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
     ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTrigger,
+    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTrigger, ProjectId,
 };
 use chrono::Utc;
 
@@ -21,7 +21,7 @@ use crate::state::{AppState, AuthJwt, AuthSession};
 pub(crate) struct CreateProcessRequest {
     pub name: String,
     pub description: Option<String>,
-    pub project_id: Option<String>,
+    pub project_id: String,
     pub folder_id: Option<String>,
     pub schedule: Option<String>,
     #[serde(default)]
@@ -102,12 +102,15 @@ pub(crate) async fn create_process(
         .map(|id| id.to_string())
         .unwrap_or_else(|| session.user_id.clone());
 
+    let project_id: ProjectId = req.project_id.parse()
+        .map_err(|_| ApiError::bad_request("invalid project_id"))?;
+
     let now = Utc::now();
     let process = Process {
         process_id: ProcessId::new(),
         org_id: "default".parse().unwrap_or_default(),
         user_id,
-        project_id: req.project_id.and_then(|id| id.parse().ok()),
+        project_id: Some(project_id),
         name: req.name,
         description: req.description.unwrap_or_default(),
         enabled: true,

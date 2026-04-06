@@ -25,18 +25,21 @@ export function ProcessForm({ onClose, folderId, onCreated }: ProcessFormProps) 
 
   useEffect(() => {
     requestAnimationFrame(() => inputRef.current?.focus());
-    projectsApi.listProjects().then(setProjects).catch(() => {});
+    projectsApi.listProjects().then((ps) => {
+      setProjects(ps);
+      if (ps.length > 0 && !projectId) setProjectId(ps[0].project_id);
+    }).catch(() => {});
   }, []);
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !projectId) return;
     setLoading(true);
     setError(null);
     try {
       const process = await processApi.createProcess({
         name: name.trim(),
         description: description.trim() || undefined,
-        project_id: projectId || undefined,
+        project_id: projectId,
         folder_id: folderId ?? undefined,
       });
       addProcess(process);
@@ -70,7 +73,7 @@ export function ProcessForm({ onClose, folderId, onCreated }: ProcessFormProps) 
           <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
-          <Button variant="primary" size="sm" onClick={handleSubmit} disabled={loading || !name.trim()}>
+          <Button variant="primary" size="sm" onClick={handleSubmit} disabled={loading || !name.trim() || !projectId}>
             {loading ? "Creating..." : "Create"}
           </Button>
         </div>
@@ -104,19 +107,20 @@ export function ProcessForm({ onClose, folderId, onCreated }: ProcessFormProps) 
             placeholder="Optional description"
           />
         </div>
-        {projects.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>
-              Project <span style={{ fontWeight: 400, color: "var(--color-text-faint)" }}>(optional)</span>
-            </label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Project</label>
+          {projects.length > 0 ? (
             <select style={selectStyle} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">None</option>
               {projects.map((p) => (
                 <option key={p.project_id} value={p.project_id}>{p.name}</option>
               ))}
             </select>
-          </div>
-        )}
+          ) : (
+            <div style={{ fontSize: 12, color: "var(--color-text-faint)", padding: "8px 0" }}>
+              Loading projects...
+            </div>
+          )}
+        </div>
         {error && <div style={{ fontSize: 12, color: "var(--color-error)" }}>{error}</div>}
       </div>
     </Modal>

@@ -36,6 +36,7 @@ impl SuperAgentTool for CreateProcessTool {
             "properties": {
                 "name": { "type": "string", "description": "Name of the process" },
                 "description": { "type": "string", "description": "Description of what the process does" },
+                "project_id": { "type": "string", "description": "Project ID to associate this process with. If omitted, uses the first available project." },
                 "schedule": { "type": "string", "description": "Optional cron expression for scheduled triggering" }
             },
             "required": ["name"]
@@ -52,11 +53,20 @@ impl SuperAgentTool for CreateProcessTool {
         let description = input.get("description").and_then(|v| v.as_str()).unwrap_or("");
         let schedule = input.get("schedule").and_then(|v| v.as_str()).map(String::from);
 
+        let project_id = input.get("project_id")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse().ok())
+            .or_else(|| {
+                ctx.project_service.list_projects().ok()
+                    .and_then(|ps| ps.first().map(|p| p.project_id))
+            });
+
         let now = Utc::now();
         let process = Process {
             process_id: ProcessId::new(),
             org_id: ctx.org_id.parse().unwrap_or_default(),
             user_id: ctx.user_id.clone(),
+            project_id,
             name: name.to_string(),
             description: description.to_string(),
             enabled: true,
