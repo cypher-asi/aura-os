@@ -53,13 +53,23 @@ export function ProcessForm({ onClose, projectId: initialProjectId, onCreated }:
     }
   };
 
-  const selectStyle: React.CSSProperties = {
+  const inputStyle: React.CSSProperties = {
     padding: "8px 10px",
     borderRadius: "var(--radius-sm)",
     border: "1px solid var(--color-border)",
     background: "var(--color-bg-input)",
     color: "var(--color-text)",
     fontSize: 13,
+    fontFamily: "inherit",
+    width: "100%",
+    boxSizing: "border-box",
+    outline: "none",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 13,
+    fontWeight: 400,
+    color: "var(--color-text-muted, #9ca3af)",
   };
 
   return (
@@ -81,13 +91,10 @@ export function ProcessForm({ onClose, projectId: initialProjectId, onCreated }:
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 0" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Name</label>
+          <label style={labelStyle}>Name</label>
           <input
             ref={inputRef}
-            style={{
-              padding: "8px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-              background: "var(--color-bg-input)", color: "var(--color-text)", fontSize: 13,
-            }}
+            style={inputStyle}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) handleSubmit(); }}
@@ -95,22 +102,18 @@ export function ProcessForm({ onClose, projectId: initialProjectId, onCreated }:
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Description</label>
+          <label style={labelStyle}>Description</label>
           <textarea
-            style={{
-              padding: "8px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)",
-              background: "var(--color-bg-input)", color: "var(--color-text)", fontSize: 13, resize: "vertical",
-              minHeight: 60,
-            }}
+            style={{ ...inputStyle, resize: "vertical", minHeight: 60 }}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional description"
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Project</label>
+          <label style={labelStyle}>Project</label>
           {projects.length > 0 ? (
-            <select style={selectStyle} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
+            <select style={inputStyle} value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
               {projects.map((p) => (
                 <option key={p.project_id} value={p.project_id}>{p.name}</option>
               ))}

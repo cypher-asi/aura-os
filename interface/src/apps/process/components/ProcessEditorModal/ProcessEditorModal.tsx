@@ -19,8 +19,16 @@ const inputStyle: React.CSSProperties = {
   background: "var(--color-bg-input)",
   color: "var(--color-text)",
   fontSize: 13,
+  fontFamily: "inherit",
   width: "100%",
   boxSizing: "border-box",
+  outline: "none",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 13,
+  fontWeight: 400,
+  color: "var(--color-text-muted, #9ca3af)",
 };
 
 export function ProcessEditorModal({ isOpen, process, onClose }: ProcessEditorModalProps) {
@@ -91,7 +99,7 @@ export function ProcessEditorModal({ isOpen, process, onClose }: ProcessEditorMo
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "4px 0" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Name</label>
+          <label style={labelStyle}>Name</label>
           <input
             ref={inputRef}
             style={inputStyle}
@@ -102,7 +110,7 @@ export function ProcessEditorModal({ isOpen, process, onClose }: ProcessEditorMo
           />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Description</label>
+          <label style={labelStyle}>Description</label>
           <textarea
             style={{ ...inputStyle, resize: "vertical", minHeight: 60 }}
             value={description}
@@ -112,7 +120,7 @@ export function ProcessEditorModal({ isOpen, process, onClose }: ProcessEditorMo
         </div>
         {projects.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>
+            <label style={labelStyle}>
               Project <span style={{ fontWeight: 400, color: "var(--color-text-faint)" }}>(optional)</span>
             </label>
             <select style={inputStyle} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -124,11 +132,11 @@ export function ProcessEditorModal({ isOpen, process, onClose }: ProcessEditorMo
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Schedule</label>
+          <label style={labelStyle}>Schedule</label>
           <SchedulePicker value={schedule} onChange={setSchedule} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-muted)" }}>Tags</label>
+          <label style={labelStyle}>Tags</label>
           <input
             style={inputStyle}
             value={tags}
