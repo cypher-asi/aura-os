@@ -11,20 +11,34 @@ interface FilePreviewCardProps {
   entry: ToolCallEntry;
 }
 
-function DiffView({ oldText, newText }: { oldText: string; newText: string }) {
+function DiffView({ oldText, newText, language }: { oldText: string; newText: string; language?: string }) {
   const oldLines = oldText.split("\n");
   const newLines = newText.split("\n");
+  const oldHighlighted = useHighlightedHtml(oldText, language);
+  const newHighlighted = useHighlightedHtml(newText, language);
+  const oldHtmlLines = oldHighlighted.split("\n");
+  const newHtmlLines = newHighlighted.split("\n");
 
   return (
     <div className={styles.diffArea}>
-      {oldLines.map((line, i) => (
+      {oldLines.map((_line, i) => (
         <div key={`old-${i}`} className={`${styles.diffLine} ${styles.diffRemoved}`}>
-          - {line}
+          <span className={styles.lineNum}>{i + 1}</span>
+          <span className={styles.diffPrefix}>-</span>
+          <span
+            className={styles.diffContent}
+            dangerouslySetInnerHTML={{ __html: oldHtmlLines[i] ?? "" }}
+          />
         </div>
       ))}
-      {newLines.map((line, i) => (
+      {newLines.map((_line, i) => (
         <div key={`new-${i}`} className={`${styles.diffLine} ${styles.diffAdded}`}>
-          + {line}
+          <span className={styles.lineNum}>{i + 1}</span>
+          <span className={styles.diffPrefix}>+</span>
+          <span
+            className={styles.diffContent}
+            dangerouslySetInnerHTML={{ __html: newHtmlLines[i] ?? "" }}
+          />
         </div>
       ))}
     </div>
@@ -40,16 +54,23 @@ function CodeView({ content, language }: { content: string; language?: string })
     : content;
 
   const highlightedHtml = useHighlightedHtml(displayContent, language);
+  const htmlLines = highlightedHtml.split("\n");
+  const displayLines = displayContent.split("\n");
 
   return (
     <>
       <div className={`${styles.codeArea} ${!expanded && needsCollapse ? styles.collapsed : ""}`}>
-        <pre>
-          <code
-            className={language ? `hljs language-${language}` : "hljs"}
-            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-          />
-        </pre>
+        <div className={styles.codeLines}>
+          {displayLines.map((_line, i) => (
+            <div key={i} className={styles.codeLine}>
+              <span className={styles.lineNum}>{i + 1}</span>
+              <span
+                className={styles.codeContent}
+                dangerouslySetInnerHTML={{ __html: htmlLines[i] ?? "" }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
       {needsCollapse && (
         <button
@@ -87,6 +108,7 @@ export function FilePreviewCard({ entry }: FilePreviewCardProps) {
         <DiffView
           oldText={(entry.input.old_text as string) || ""}
           newText={(entry.input.new_text as string) || ""}
+          language={lang}
         />
       ) : isWrite ? (
         <CodeView content={(entry.input.content as string) || ""} language={lang} />

@@ -49,6 +49,26 @@
   position: relative;
 }
 
+.codeLines {
+  padding: 6px 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.codeLine {
+  display: flex;
+  padding: 0 10px 0 0;
+}
+
+.codeContent {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--color-text-secondary);
+}
+
 .codeArea pre {
   margin: 0;
   padding: 8px 10px;
@@ -86,9 +106,22 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* Line numbers (shared by diff and code views) */
+.lineNum {
+  display: inline-block;
+  width: 32px;
+  text-align: right;
+  padding-right: 8px;
+  color: rgba(255, 255, 255, 0.15);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
 /* Diff view */
 .diffArea {
-  padding: 6px 10px;
+  padding: 4px 0;
   font-family: var(--font-mono, monospace);
   font-size: 12px;
   line-height: 1.5;
@@ -97,18 +130,34 @@
 }
 
 .diffLine {
+  display: flex;
+  padding: 0 10px 0 0;
+}
+
+.diffPrefix {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: center;
+  user-select: none;
+}
+
+.diffContent {
+  flex: 1;
+  min-width: 0;
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 .diffRemoved {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.08);
+  color: #e5534b;
+  background: rgba(229, 83, 75, 0.10);
+  border-left: 3px solid rgba(229, 83, 75, 0.4);
 }
 
 .diffAdded {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.08);
+  color: #57ab5a;
+  background: rgba(87, 171, 90, 0.10);
+  border-left: 3px solid rgba(87, 171, 90, 0.4);
 }
 
 /* Pending overlay */
