@@ -49,6 +49,7 @@ declare module "@cypher-asi/zui" {
     icon?: ReactNode;
     selected?: boolean;
     selectedBgColor?: string;
+    dimUnselected?: boolean;
     contentStates?: ReactNode[];
     as?: "button" | "span";
   };

@@ -11,24 +11,19 @@
 }
 
 .startButton {
-  background: #01f4cb !important;
-  color: var(--color-bg, #0b0b0d) !important;
-  border-color: transparent !important;
-  opacity: 1 !important;
+  color: var(--color-bg, #0b0b0d);
 }
 
 .startButton:hover:not(:disabled) {
-  background: color-mix(in srgb, #01f4cb 88%, white 12%) !important;
+  background: color-mix(in srgb, #01f4cb 88%, white 12%);
 }
 
 .secondaryButton {
-  color: var(--color-text-primary, #f5f5f5) !important;
-  border-color: var(--color-border, rgba(255,255,255,0.12)) !important;
-  background: color-mix(in srgb, var(--color-bg-surface, #151515) 92%, white 8%) !important;
-  opacity: 1 !important;
+  color: var(--color-text-primary, #f5f5f5);
+  border-color: var(--color-border, rgba(255,255,255,0.12));
+  background: color-mix(in srgb, var(--color-bg-surface, #151515) 92%, white 8%);
 }
 
 .stopButton {
   min-width: 0;
-  opacity: 1 !important;
 }
