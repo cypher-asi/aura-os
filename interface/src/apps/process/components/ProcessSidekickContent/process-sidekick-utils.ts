@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ProcessRun, ProcessNode } from "../../../../types";
+import type { ProcessRun, ProcessNode, ProcessNodeConnection } from "../../../../types";
 
 export const EMPTY_RUNS: ProcessRun[] = [];
 export const EMPTY_NODES: ProcessNode[] = [];
@@ -54,4 +54,51 @@ export function formatDuration(startedAt: string, completedAt: string | null): s
   if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
   if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
+}
+
+export function countRunnableProcessNodes(
+  nodes: ProcessNode[],
+  connections: ProcessNodeConnection[],
+): number {
+  if (nodes.length === 0) return 0;
+
+  const groupIds = new Set(
+    nodes
+      .filter((node) => node.node_type === "group")
+      .map((node) => node.node_id),
+  );
+
+  const adjacency = new Map<string, string[]>();
+  for (const connection of connections) {
+    if (groupIds.has(connection.source_node_id) || groupIds.has(connection.target_node_id)) {
+      continue;
+    }
+
+    const downstream = adjacency.get(connection.source_node_id);
+    if (downstream) {
+      downstream.push(connection.target_node_id);
+    } else {
+      adjacency.set(connection.source_node_id, [connection.target_node_id]);
+    }
+  }
+
+  const visited = new Set<string>();
+  const queue = nodes
+    .filter((node) => node.node_type === "ignition")
+    .map((node) => node.node_id);
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift();
+    if (!nodeId || visited.has(nodeId)) continue;
+
+    visited.add(nodeId);
+    const nextNodeIds = adjacency.get(nodeId) ?? [];
+    for (const nextNodeId of nextNodeIds) {
+      if (!visited.has(nextNodeId)) {
+        queue.push(nextNodeId);
+      }
+    }
+  }
+
+  return visited.size;
 }

@@ -15,7 +15,13 @@ import type { DisplaySessionEvent, TimelineItem, ToolCallEntry } from "../../../
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
 import { LiveRunBanner } from "./LiveRunBanner";
-import { injectKeyframes, useElapsedTime, formatDuration, EMPTY_NODES } from "./process-sidekick-utils";
+import {
+  injectKeyframes,
+  useElapsedTime,
+  formatDuration,
+  EMPTY_NODES,
+  countRunnableProcessNodes,
+} from "./process-sidekick-utils";
 import { buildProcessSidekickCopyText, groupTranscriptByNode, nodeTranscriptToEvents } from "./process-output-utils";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +40,7 @@ function mergeUsageField(
 function useRunPolling(initialRun: ProcessRun) {
   const [run, setRun] = useState(initialRun);
   const nodes = useProcessStore((s) => s.nodes[run.process_id]) ?? EMPTY_NODES;
+  const connections = useProcessStore((s) => s.connections[run.process_id]) ?? [];
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
   const setStoreEvents = useProcessStore((s) => s.setEvents);
   const connected = useEventStore((s) => s.connected);
@@ -140,7 +147,7 @@ function useRunPolling(initialRun: ProcessRun) {
     prevConnectedRef.current = connected;
   }, [connected, loadData, refreshRun]);
 
-  return { run, isActive, nodes, artifacts, events, transcript, loadData, refreshRun };
+  return { run, isActive, nodes, connections, artifacts, events, transcript, loadData, refreshRun };
 }
 
 function useRunNodeTracking(
@@ -487,8 +494,22 @@ function RunTokensSection({
 
 export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
   injectKeyframes();
-  const { run, isActive, nodes, artifacts, events, transcript, loadData, refreshRun } = useRunPolling(initialRun);
+  const {
+    run,
+    isActive,
+    nodes,
+    connections,
+    artifacts,
+    events,
+    transcript,
+    loadData,
+    refreshRun,
+  } = useRunPolling(initialRun);
   const runningNodeIds = useRunNodeTracking(run.run_id, loadData, refreshRun);
+  const runnableNodeCount = useMemo(
+    () => countRunnableProcessNodes(nodes, connections),
+    [nodes, connections],
+  );
 
   const sortedEvents = useMemo(() => {
     const sorted = [...events].sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime());
@@ -550,7 +571,7 @@ export function RunPreviewBody({ run: initialRun }: { run: ProcessRun }) {
 
   return (
     <div style={{ fontSize: 13 }}>
-      {isActive && <LiveRunBanner run={run} events={events} totalNodes={nodes.length} />}
+      {isActive && <LiveRunBanner run={run} events={events} totalNodes={runnableNodeCount} />}
       <div style={{ padding: isActive ? 12 : "20px 12px 12px" }}>
         <RunDetailGrid
           run={run}
