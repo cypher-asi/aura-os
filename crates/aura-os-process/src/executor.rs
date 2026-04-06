@@ -127,6 +127,31 @@ fn estimate_cost_usd(model: Option<&str>, input_tokens: u64, output_tokens: u64)
         + output_tokens as f64 * output_rate / 1_000_000.0
 }
 
+fn merge_usage_totals(
+    usage: &serde_json::Value,
+    prev_input: u64,
+    prev_output: u64,
+) -> (u64, u64, Option<String>) {
+    let next_input = usage
+        .get("cumulative_input_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| {
+            prev_input + usage.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0)
+        });
+    let next_output = usage
+        .get("cumulative_output_tokens")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| {
+            prev_output + usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0)
+        });
+    let model = usage
+        .get("model")
+        .and_then(|v| v.as_str())
+        .map(ToString::to_string);
+
+    (next_input, next_output, model)
+}
+
 #[derive(Debug, Clone, serde::Deserialize)]
 struct SubTaskPlan {
     title: String,
@@ -1476,15 +1501,13 @@ async fn execute_action_via_automaton(
                         }
                         if matches!(evt_type, "token_usage" | "assistant_message_end") {
                             let usage = evt.get("usage").unwrap_or(evt);
-                            if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
-                                task_node_in.fetch_add(inp, Ordering::Relaxed);
-                            }
-                            if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
-                                task_node_out.fetch_add(outp, Ordering::Relaxed);
-                            }
-                            let total_in = task_node_in.load(Ordering::Relaxed);
-                            let total_out = task_node_out.load(Ordering::Relaxed);
-                            let cost = estimate_cost_usd(None, total_in, total_out);
+                            let prev_in = task_node_in.load(Ordering::Relaxed);
+                            let prev_out = task_node_out.load(Ordering::Relaxed);
+                            let (total_in, total_out, usage_model) =
+                                merge_usage_totals(usage, prev_in, prev_out);
+                            task_node_in.store(total_in, Ordering::Relaxed);
+                            task_node_out.store(total_out, Ordering::Relaxed);
+                            let cost = estimate_cost_usd(usage_model.as_deref(), total_in, total_out);
                             emit_process_event(&sub_store, tx, serde_json::json!({
                                 "type": "process_run_progress",
                                 "process_id": &fwd_pid,
@@ -1720,13 +1743,10 @@ async fn execute_single_automaton(
                 }
                 if matches!(evt_type, "token_usage" | "assistant_message_end") {
                     let usage = evt.get("usage").unwrap_or(evt);
-                    if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
-                        node_in += inp;
-                    }
-                    if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
-                        node_out += outp;
-                    }
-                    let cost = estimate_cost_usd(None, node_in, node_out);
+                    let (next_in, next_out, usage_model) = merge_usage_totals(usage, node_in, node_out);
+                    node_in = next_in;
+                    node_out = next_out;
+                    let cost = estimate_cost_usd(usage_model.as_deref(), node_in, node_out);
                     emit_process_event(store, tx, serde_json::json!({
                         "type": "process_run_progress",
                         "process_id": &pid,

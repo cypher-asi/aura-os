@@ -21,6 +21,15 @@ import { injectKeyframes, useElapsedTime, formatDuration, EMPTY_NODES } from "./
 // useRunPreviewData -- encapsulates all data-fetching / polling / SSE logic
 // ---------------------------------------------------------------------------
 
+function mergeUsageField(
+  prev: number | null | undefined,
+  next: number | null | undefined,
+): number | null | undefined {
+  if (next == null) return prev;
+  if (prev == null) return next;
+  return Math.max(prev, next);
+}
+
 function useRunPolling(initialRun: ProcessRun) {
   const [run, setRun] = useState(initialRun);
   const nodes = useProcessStore((s) => s.nodes[run.process_id]) ?? EMPTY_NODES;
@@ -58,9 +67,9 @@ function useRunPolling(initialRun: ProcessRun) {
       const updated = await processApi.getRun(run.process_id, run.run_id);
       setRun((prev) => ({
         ...updated,
-        total_input_tokens: updated.total_input_tokens ?? prev.total_input_tokens,
-        total_output_tokens: updated.total_output_tokens ?? prev.total_output_tokens,
-        cost_usd: updated.cost_usd ?? prev.cost_usd,
+        total_input_tokens: mergeUsageField(prev.total_input_tokens, updated.total_input_tokens),
+        total_output_tokens: mergeUsageField(prev.total_output_tokens, updated.total_output_tokens),
+        cost_usd: mergeUsageField(prev.cost_usd, updated.cost_usd),
       }));
       if (updated.status !== "running" && updated.status !== "pending") {
         fetchRuns(run.process_id);
@@ -81,9 +90,9 @@ function useRunPolling(initialRun: ProcessRun) {
       if (content.process_id !== run.process_id || content.run_id !== run.run_id) return;
       setRun((prev) => ({
         ...prev,
-        total_input_tokens: content.total_input_tokens ?? prev.total_input_tokens,
-        total_output_tokens: content.total_output_tokens ?? prev.total_output_tokens,
-        cost_usd: content.cost_usd ?? prev.cost_usd,
+        total_input_tokens: mergeUsageField(prev.total_input_tokens, content.total_input_tokens),
+        total_output_tokens: mergeUsageField(prev.total_output_tokens, content.total_output_tokens),
+        cost_usd: mergeUsageField(prev.cost_usd, content.cost_usd),
       }));
     };
 
