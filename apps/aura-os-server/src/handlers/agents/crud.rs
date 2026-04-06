@@ -409,6 +409,11 @@ pub(crate) async fn list_agents(
             .map(|na| {
                 let mut agent = agent_from_network(na);
                 let _ = state.agent_service.apply_runtime_config(&mut agent);
+                if agent.icon.is_none() {
+                    if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
+                        agent.icon = shadow.icon;
+                    }
+                }
                 let _ = state.agent_service.save_agent_shadow(&agent);
                 agent
             })
@@ -435,6 +440,11 @@ pub(crate) async fn get_agent(
             .map_err(map_network_error)?;
         let mut agent = agent_from_network(&net_agent);
         let _ = state.agent_service.apply_runtime_config(&mut agent);
+        if agent.icon.is_none() {
+            if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
+                agent.icon = shadow.icon;
+            }
+        }
         let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(agent));
     }
@@ -486,6 +496,10 @@ pub(crate) async fn update_agent(
         },
         Some(merged_machine_type.clone()),
     )?;
+    let submitted_icon = match &body.icon {
+        Some(Some(url)) => Some(url.clone()),
+        _ => None,
+    };
     let net_req = aura_os_network::UpdateAgentRequest {
         name: body.name,
         role: body.role,
@@ -518,6 +532,15 @@ pub(crate) async fn update_agent(
         .agent_service
         .apply_runtime_config(&mut agent)
         .map_err(|e| ApiError::internal(format!("applying agent runtime config: {e}")))?;
+    if agent.icon.is_none() {
+        agent.icon = submitted_icon.or_else(|| {
+            state
+                .agent_service
+                .get_agent_local(&agent.agent_id)
+                .ok()
+                .and_then(|s| s.icon)
+        });
+    }
     let _ = state.agent_service.save_agent_shadow(&agent);
     Ok(Json(agent))
 }

@@ -41,17 +41,17 @@ function ProfileHeader({
 }: Pick<ProfileTabProps, "agent" | "imageUrl" | "isOwnAgent" | "onIconError">) {
   return (
     <>
-      {imageUrl && (
-        <img src={imageUrl} alt="" className={styles.hidden} onError={onIconError} />
-      )}
-
-      <div className={styles.profileImageBlock}>
-        {imageUrl ? (
+      {imageUrl ? (
+        <div className={styles.profileImageBlock}>
           <img src={imageUrl} alt={agent.name} className={styles.profileImage} onError={onIconError} />
-        ) : (
-          <Bot size={48} />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className={styles.profileAvatarBlock}>
+          <span className={styles.profileInitial}>
+            {agent.name.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      )}
 
       <div className={styles.nameBlock}>
         <div className={styles.nameText}>

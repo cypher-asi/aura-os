@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
-import { useNavigate, useOutlet } from "react-router-dom";
+import { useOutlet } from "react-router-dom";
 import { Topbar, Button } from "@cypher-asi/zui";
 import { PanelRight, Server } from "lucide-react";
 import { Lane } from "../Lane";
@@ -88,7 +88,8 @@ function SidekickLane() {
       <div className={styles.sidekickContentWrapper}>
         <div className={styles.sidekickPanels}>
           {apps.map((app) => {
-            if (!app.SidekickPanel || !visitedAppIds.has(app.id)) return null;
+            if (!app.SidekickPanel) return null;
+            if (!visitedAppIds.has(app.id) && app.id !== activeApp.id) return null;
             return (
               <div
                 key={app.id}
@@ -111,7 +112,6 @@ export function DesktopShell() {
   const visitedAppIds = useAppUIStore((s) => s.visitedAppIds);
   const sidekickCollapsed = useAppUIStore((s) => s.sidekickCollapsed);
   const toggleSidekick = useAppUIStore((s) => s.toggleSidekick);
-  const navigate = useNavigate();
   const { hostSettingsOpen, openHostSettings, closeHostSettings } = useUIModalStore(
     useShallow((s) => ({
       hostSettingsOpen: s.hostSettingsOpen,

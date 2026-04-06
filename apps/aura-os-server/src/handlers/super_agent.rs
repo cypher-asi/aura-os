@@ -3,10 +3,10 @@ use axum::Json;
 use serde::Serialize;
 use tracing::info;
 
-use aura_os_core::{Agent, AgentId, ProfileId, SuperAgentOrchestration};
-use chrono::{DateTime, Utc};
+use aura_os_core::{Agent, SuperAgentOrchestration};
 
 use crate::error::{map_network_error, ApiError, ApiResult};
+use crate::handlers::agents::conversions_pub::agent_from_network;
 use crate::state::{AppState, AuthJwt, AuthSession};
 
 #[derive(Serialize)]
@@ -44,7 +44,7 @@ pub(crate) async fn setup_super_agent(
             .map(|p| p.contains("Default Org") || !p.contains(&org_name))
             .unwrap_or(true);
 
-        if needs_update {
+        let source = if needs_update {
             let update_req = aura_os_network::UpdateAgentRequest {
                 name: None,
                 role: None,
@@ -56,16 +56,21 @@ pub(crate) async fn setup_super_agent(
                 machine_type: None,
                 vm_id: None,
             };
-            if let Ok(updated) = network.update_agent(&net_agent.id, &jwt, &update_req).await {
-                let agent = agent_from_net(&updated);
-                return Ok(Json(SetupResponse {
-                    agent,
-                    created: false,
-                }));
+            network
+                .update_agent(&net_agent.id, &jwt, &update_req)
+                .await
+                .ok()
+        } else {
+            None
+        };
+        let mut agent = agent_from_network(source.as_ref().unwrap_or(net_agent));
+        let _ = state.agent_service.apply_runtime_config(&mut agent);
+        if agent.icon.is_none() {
+            if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
+                agent.icon = shadow.icon;
             }
         }
-
-        let agent = agent_from_net(net_agent);
+        let _ = state.agent_service.save_agent_shadow(&agent);
         return Ok(Json(SetupResponse {
             agent,
             created: false,
@@ -94,7 +99,9 @@ pub(crate) async fn setup_super_agent(
         .await
         .map_err(map_network_error)?;
 
-    let agent = agent_from_net(&net_agent);
+    let mut agent = agent_from_network(&net_agent);
+    let _ = state.agent_service.apply_runtime_config(&mut agent);
+    let _ = state.agent_service.save_agent_shadow(&agent);
 
     let default_skills = [
         "orchestration",
@@ -148,58 +155,3 @@ pub(crate) async fn list_pending_events(
     Ok(Json(events))
 }
 
-fn agent_from_net(net: &aura_os_network::NetworkAgent) -> Agent {
-    let agent_id = net.id.parse::<AgentId>().unwrap_or_else(|_| AgentId::new());
-    let profile_id: Option<ProfileId> = net.profile_id_typed();
-    let epoch = DateTime::<Utc>::from(std::time::UNIX_EPOCH);
-    let created_at = net
-        .created_at
-        .as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or(epoch);
-    let updated_at = net
-        .updated_at
-        .as_deref()
-        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or(created_at);
-
-    let is_super = net.role.as_deref() == Some("super_agent");
-
-    Agent {
-        agent_id,
-        org_id: net.org_id.clone().and_then(|id| id.parse().ok()),
-        user_id: net.user_id.clone(),
-        name: net.name.clone(),
-        role: net.role.clone().unwrap_or_default(),
-        personality: net.personality.clone().unwrap_or_default(),
-        system_prompt: net.system_prompt.clone().unwrap_or_default(),
-        skills: net.skills.clone().unwrap_or_default(),
-        icon: net.icon.clone(),
-        machine_type: net
-            .machine_type
-            .clone()
-            .unwrap_or_else(|| "local".to_string()),
-        adapter_type: "aura_harness".to_string(),
-        environment: if net.machine_type.as_deref() == Some("remote") {
-            "swarm_microvm".to_string()
-        } else {
-            "local_host".to_string()
-        },
-        auth_source: "aura_managed".to_string(),
-        integration_id: None,
-        default_model: None,
-        vm_id: net.vm_id.clone(),
-        network_agent_id: net.id.parse().ok(),
-        profile_id,
-        tags: if is_super {
-            vec!["super_agent".to_string()]
-        } else {
-            Vec::new()
-        },
-        is_pinned: is_super,
-        created_at,
-        updated_at,
-    }
-}

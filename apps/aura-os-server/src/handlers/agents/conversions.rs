@@ -111,6 +111,11 @@ pub(crate) async fn resolve_network_agents(state: &AppState, jwt: &str) -> HashM
                 .map(|na| {
                     let mut agent = agent_from_network(na);
                     let _ = state.agent_service.apply_runtime_config(&mut agent);
+                    if agent.icon.is_none() {
+                        if let Ok(shadow) = state.agent_service.get_agent_local(&agent.agent_id) {
+                            agent.icon = shadow.icon;
+                        }
+                    }
                     (na.id.clone(), agent)
                 })
                 .collect();
