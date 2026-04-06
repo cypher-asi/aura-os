@@ -11,7 +11,7 @@ import { MessageBubble } from "../../../../components/MessageBubble";
 import { useProcessNodeStream } from "../../../../hooks/use-process-node-stream";
 import { useStreamEvents, useStreamingText, useThinkingText, useThinkingDurationMs, useActiveToolCalls, useTimeline, useIsStreaming } from "../../../../hooks/stream/hooks";
 import type { ProcessArtifact, ProcessEvent, ProcessRun, ProcessRunTranscriptEvent } from "../../../../types";
-import type { DisplaySessionEvent, ToolCallEntry } from "../../../../types/stream";
+import type { DisplaySessionEvent, ToolCallEntry, TimelineItem } from "../../../../types/stream";
 import { EventTimelineItem } from "./EventTimelineItem";
 import { ArtifactCard } from "./ArtifactCard";
 import { LiveRunBanner } from "./LiveRunBanner";
@@ -253,7 +253,9 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
   let textBuf = "";
   let thinkingBuf = "";
   let tools: ToolCallEntry[] = [];
+  let timeline: TimelineItem[] = [];
   let eventIdx = 0;
+  let itemIdx = 0;
 
   const flush = () => {
     if (!textBuf && !thinkingBuf && tools.length === 0) return;
@@ -263,11 +265,16 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
       content: textBuf,
       toolCalls: tools.length > 0 ? [...tools] : undefined,
       thinkingText: thinkingBuf || undefined,
+      timeline: timeline.length > 0 ? [...timeline] : undefined,
     });
     textBuf = "";
     thinkingBuf = "";
     tools = [];
+    timeline = [];
+    itemIdx = 0;
   };
+
+  let hasThinkingItem = false;
 
   for (const entry of entries) {
     const p = (entry.payload ?? {}) as Record<string, unknown>;
@@ -282,13 +289,24 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
       case "thinking_delta": {
         const t = (typeof p.text === "string" ? p.text : undefined)
           ?? (typeof p.thinking === "string" ? p.thinking : "");
-        if (t) thinkingBuf += t;
+        if (t) {
+          thinkingBuf += t;
+          if (!hasThinkingItem) {
+            timeline.push({ kind: "thinking", id: `tl-think-${itemIdx++}` });
+            hasThinkingItem = true;
+          }
+        }
         break;
       }
       case "tool_use_start": {
+        if (textBuf) {
+          timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
+          textBuf = "";
+        }
         const id = typeof p.id === "string" ? p.id : crypto.randomUUID();
         const name = typeof p.name === "string" ? p.name : "tool";
         tools.push({ id, name, input: {}, pending: true, started: true });
+        timeline.push({ kind: "tool", toolCallId: id, id: `tl-tool-${itemIdx++}` });
         break;
       }
       case "tool_call_snapshot": {
@@ -300,7 +318,9 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
           existing.name = name;
           existing.input = { ...existing.input, ...input };
         } else {
-          tools.push({ id: id || crypto.randomUUID(), name, input, pending: true, started: true });
+          const newId = id || crypto.randomUUID();
+          tools.push({ id: newId, name, input, pending: true, started: true });
+          timeline.push({ kind: "tool", toolCallId: newId, id: `tl-tool-${itemIdx++}` });
         }
         break;
       }
@@ -321,13 +341,21 @@ function nodeTranscriptToEvents(entries: ProcessRunTranscriptEvent[]): DisplaySe
       case "process_node_executed": {
         const status = typeof p.status === "string" ? p.status.toLowerCase() : "";
         if (status && !status.includes("running")) {
+          if (textBuf) {
+            timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
+            textBuf = "";
+          }
           flush();
+          hasThinkingItem = false;
         }
         break;
       }
       default:
         break;
     }
+  }
+  if (textBuf) {
+    timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });
   }
   flush();
   return result;

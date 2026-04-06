@@ -3,6 +3,7 @@ import { Check, X as XIcon, AlertTriangle } from "lucide-react";
 import { useTaskOutput, useEventStore, getCachedTaskOutputText } from "../../stores/event-store/index";
 import { api } from "../../api/client";
 import { useTaskOutputPanelStore, type PanelTaskStatus } from "../../stores/task-output-panel-store";
+import { useStreamEvents } from "../../hooks/stream/hooks";
 import { MessageBubble } from "../MessageBubble";
 import styles from "./TaskOutputPanel.module.css";
 
@@ -70,6 +71,7 @@ function useHydrateCompletedOutput(projectId: string, taskId: string) {
 export function CompletedTaskOutput({ taskId, projectId, title, status }: CompletedTaskOutputProps) {
   const taskOutput = useTaskOutput(taskId);
   const dismissTask = useTaskOutputPanelStore((s) => s.dismissTask);
+  const streamEvents = useStreamEvents(`task:${taskId}`);
 
   useHydrateCompletedOutput(projectId, taskId);
 
@@ -79,6 +81,8 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
 
   const dotClass = status === "failed" ? styles.taskDotFailed : styles.taskDotCompleted;
   const statusLabel = status === "failed" ? "Failed" : "Done";
+
+  const hasStreamEvents = streamEvents.length > 0;
 
   return (
     <div className={styles.taskSection}>
@@ -96,7 +100,13 @@ export function CompletedTaskOutput({ taskId, projectId, title, status }: Comple
           <XIcon size={10} />
         </button>
       </div>
-      {taskOutput.text ? (
+      {hasStreamEvents ? (
+        <div className={styles.taskBody}>
+          {streamEvents.map((evt) => (
+            <MessageBubble key={evt.id} message={evt} />
+          ))}
+        </div>
+      ) : taskOutput.text ? (
         <div className={styles.taskBody}>
           <MessageBubble
             message={{ id: `completed-${taskId}`, role: "assistant", content: taskOutput.text }}

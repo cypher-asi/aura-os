@@ -1,11 +1,13 @@
-import { useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Pin, PinOff, ChevronDown, ChevronUp } from "lucide-react";
 import type { ProcessNode } from "../../../../types";
 import { processApi } from "../../../../api/process";
 import { useProcessStore } from "../../stores/process-store";
-import { monoBox } from "../NodeOutputTab/node-output-utils";
+import { formatOutputContent } from "../NodeOutputTab/node-output-utils";
+import { SegmentedContent } from "../../../../components/SegmentedContent";
 import styles from "../../../../components/Preview/Preview.module.css";
+import mdStyles from "../../../../components/MessageBubble/MessageBubble.module.css";
 
 const PIN_TRUNCATE = 400;
 
@@ -14,6 +16,8 @@ export function PinnedOutputField({ text }: { text: string }) {
   const needsTruncation = text.length > PIN_TRUNCATE;
   const display =
     !expanded && needsTruncation ? text.slice(0, PIN_TRUNCATE) + "\u2026" : text;
+
+  const formatted = useMemo(() => formatOutputContent(display), [display]);
 
   return (
     <div className={styles.taskField}>
@@ -35,12 +39,14 @@ export function PinnedOutputField({ text }: { text: string }) {
       </span>
       <div
         style={{
-          ...monoBox,
           maxHeight: expanded ? "none" : 200,
+          overflow: "auto",
           borderLeft: "2px solid #f59e0b40",
+          padding: "4px 8px",
         }}
+        className={mdStyles.markdown}
       >
-        {display}
+        <SegmentedContent content={formatted} />
       </div>
       {needsTruncation && (
         <button
