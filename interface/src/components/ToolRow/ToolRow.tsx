@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS, COMMAND_OPS } from "../../constants/tools";
 import { summarizeInput, formatResult } from "../../utils/format";
@@ -150,9 +150,7 @@ export function ToolCallBlock({
         onClick={() => setExpanded(!expanded)}
         type="button"
       >
-        <span className={toolStyles.taskCheck}>
-          {!entry.pending && !entry.isError && <Check size={10} strokeWidth={2.5} />}
-        </span>
+        <span className={toolStyles.statusDot} />
         <span className={toolStyles.toolName}>{label}</span>
         {entry.isError && entry.result ? (
           <span className={toolStyles.headerErrorText}>
