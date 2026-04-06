@@ -187,6 +187,7 @@ function ProcessCanvasInner({
         panOnDrag={[1]}
         panActivationKeyCode="Shift"
         selectionKeyCode={null}
+        multiSelectionKeyCode="Control"
         style={{ background: "var(--color-bg, #0d0d1a)" }}
       >
         <Background variant={BackgroundVariant.Dots} gap={GRID} size={1} color="#444" />

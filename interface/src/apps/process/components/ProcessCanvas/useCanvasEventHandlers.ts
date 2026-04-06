@@ -249,7 +249,8 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
   );
 
   const onNodeClick = useCallback(
-    (_: unknown, flowNode: Node) => {
+    (event: React.MouseEvent, flowNode: Node) => {
+      if (event.ctrlKey || event.metaKey) return;
       const processNode = processNodes.find((n) => n.node_id === flowNode.id);
       if (processNode) selectNode(processNode);
     },
@@ -257,7 +258,8 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
   );
 
   const onNodeDoubleClick = useCallback(
-    (_: unknown, flowNode: Node) => {
+    (event: React.MouseEvent, flowNode: Node) => {
+      if (event.ctrlKey || event.metaKey) return;
       const processNode = processNodes.find((n) => n.node_id === flowNode.id);
       if (processNode) {
         selectNode(processNode);
