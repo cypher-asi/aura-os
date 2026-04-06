@@ -23,9 +23,9 @@ pub struct CollectedOutput {
 /// How the automaton event stream terminated.
 #[derive(Debug)]
 pub enum RunCompletion {
-    /// Terminal success event (`task_completed` or `done`).
+    /// Stream ended successfully (via `done` after optional `task_completed`).
     Done(CollectedOutput),
-    /// Terminal failure event (`task_failed` or `error`).
+    /// Task or stream-level failure (`task_failed` or `error`).
     Failed {
         message: String,
         output: CollectedOutput,
@@ -137,6 +137,7 @@ where
 {
     let mut out = CollectedOutput::default();
     let mut pending_text = String::new();
+    let mut failed_message: Option<String> = None;
     let deadline = tokio::time::Instant::now() + timeout;
     let flush_pending_text =
         |out: &mut CollectedOutput, pending_text: &mut String| {
@@ -150,6 +151,14 @@ where
             }));
         };
 
+    let finish = |out: CollectedOutput, failed_message: Option<String>| -> RunCompletion {
+        if let Some(msg) = failed_message {
+            RunCompletion::Failed { message: msg, output: out }
+        } else {
+            RunCompletion::Done(out)
+        }
+    };
+
     loop {
         match tokio::time::timeout_at(deadline, rx.recv()).await {
             Ok(Ok(evt)) => {
@@ -157,12 +166,15 @@ where
                 on_event(&evt, evt_type);
                 match evt_type {
                     "text_delta" => {
-                        if let Some(text) = evt.get("text").and_then(|t| t.as_str()) {
+                        let text = evt.get("text")
+                            .or_else(|| evt.get("delta"))
+                            .and_then(|t| t.as_str());
+                        if let Some(text) = text {
                             out.output_text.push_str(text);
                             pending_text.push_str(text);
                         }
                     }
-                    "tool_use_start" => {
+                    "tool_use_start" | "tool_call_started" => {
                         flush_pending_text(&mut out, &mut pending_text);
                         let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -200,11 +212,25 @@ where
                             out.model = Some(m.to_string());
                         }
                     }
-                    "task_completed" | "done" => {
+                    "task_completed" => {
                         flush_pending_text(&mut out, &mut pending_text);
-                        return RunCompletion::Done(out);
                     }
-                    "task_failed" | "error" => {
+                    "task_failed" => {
+                        flush_pending_text(&mut out, &mut pending_text);
+                        let msg = evt
+                            .get("reason")
+                            .or_else(|| evt.get("message"))
+                            .or_else(|| evt.get("error"))
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| "Automaton execution failed".into());
+                        failed_message = Some(msg);
+                    }
+                    "done" => {
+                        flush_pending_text(&mut out, &mut pending_text);
+                        return finish(out, failed_message);
+                    }
+                    "error" => {
                         flush_pending_text(&mut out, &mut pending_text);
                         let msg = evt
                             .get("message")
@@ -222,7 +248,7 @@ where
             }
             Ok(Err(broadcast::error::RecvError::Closed)) => {
                 flush_pending_text(&mut out, &mut pending_text);
-                return RunCompletion::StreamClosed(out);
+                return finish(out, failed_message);
             }
             Ok(Err(broadcast::error::RecvError::Lagged(_))) => continue,
             Err(_) => {
