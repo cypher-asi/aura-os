@@ -165,6 +165,36 @@ function decodeBase64Fields(obj: unknown): unknown {
   return obj;
 }
 
+function firstMeaningfulLine(text: string, max = 80): string {
+  const line = text.split("\n").find((l) => l.trim().length > 0) || text;
+  return line.length > max ? line.slice(0, max - 3) + "..." : line;
+}
+
+/**
+ * Extract a short, human-readable error summary from a tool result string.
+ * Handles the common `{"tool":"...","ok":false,"stderr":"..."}` JSON pattern
+ * by decoding base64 stderr and returning the first meaningful line.
+ */
+export function summarizeError(result: string): string {
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed && typeof parsed === "object") {
+      const stderr = parsed.stderr ?? "";
+      const error = parsed.error ?? parsed.message ?? "";
+      const raw = (typeof stderr === "string" && stderr.length > 0) ? stderr
+        : (typeof error === "string" && error.length > 0) ? error
+        : "";
+      if (raw) return firstMeaningfulLine(tryDecodeBase64(raw));
+      const stdout = parsed.stdout ?? "";
+      if (typeof stdout === "string" && stdout.length > 0) {
+        return firstMeaningfulLine(tryDecodeBase64(stdout));
+      }
+      if (parsed.tool) return `${parsed.tool} failed`;
+    }
+  } catch { /* not JSON */ }
+  return firstMeaningfulLine(tryDecodeBase64(result));
+}
+
 export function formatResult(result: string): string {
   try {
     const parsed = JSON.parse(result);
