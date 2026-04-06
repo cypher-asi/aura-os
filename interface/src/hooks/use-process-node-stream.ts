@@ -51,7 +51,9 @@ export function useProcessNodeStream(
           setters.setIsStreaming(true);
           isStreamingRef.current = true;
         } else {
-          finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+          finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+            reason: status.includes("failed") ? "failed" : "completed",
+          });
           isStreamingRef.current = false;
         }
       }),
@@ -103,14 +105,19 @@ export function useProcessNodeStream(
       subscribe(EventType.ProcessRunCompleted, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
         if (c.run_id !== runId) return;
-        finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+        finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+          reason: "completed",
+        });
         isStreamingRef.current = false;
       }),
 
       subscribe(EventType.ProcessRunFailed, (e) => {
         const c = e.content as unknown as Record<string, unknown>;
         if (c.run_id !== runId) return;
-        finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+        finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+          reason: "failed",
+          message: (c.error as string | undefined) ?? undefined,
+        });
         isStreamingRef.current = false;
       }),
     ];

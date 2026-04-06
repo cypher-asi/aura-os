@@ -34,7 +34,7 @@ export function useTaskPreviewData(task: import("../../types").Task) {
   const projectId = ctx?.project.project_id;
   const [retrying, setRetrying] = useState(false);
 
-  const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id);
+  const { liveStatus, liveSessionId, failReason, setLiveStatus, setFailReason } = useTaskStatus(task.task_id, task.status);
   const { agentInstance, completedByAgent } = useTaskAgentInstances(projectId, task);
 
   const effectiveStatus = liveStatus ?? task.status;
@@ -96,7 +96,7 @@ export function useRunTaskData(task: import("../../types").Task) {
   const ctx = useProjectActions();
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
-  const { liveStatus } = useTaskStatus(task.task_id);
+  const { liveStatus } = useTaskStatus(task.task_id, task.status);
   const [running, setRunning] = useState(false);
 
   useEffect(() => { if (liveStatus) setRunning(false); }, [liveStatus]);

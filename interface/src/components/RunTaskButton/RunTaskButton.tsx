@@ -13,7 +13,7 @@ export function RunTaskButton({ task }: { task: import("../../types").Task }) {
   const { agentInstanceId } = useParams<{ agentInstanceId: string }>();
   const projectId = ctx?.project.project_id;
   const loopActive = useLoopActive(projectId);
-  const { liveStatus } = useTaskStatus(task.task_id);
+  const { liveStatus } = useTaskStatus(task.task_id, task.status);
   const [running, setRunning] = useState(false);
 
   useEffect(() => {

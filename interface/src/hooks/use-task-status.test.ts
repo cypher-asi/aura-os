@@ -1,7 +1,10 @@
 import { renderHook, act } from "@testing-library/react";
 import { useTaskStatus } from "./use-task-status";
 
-type SubscribeCallback = (event: Record<string, string | undefined>) => void;
+type SubscribeCallback = (event: {
+  content: Record<string, string | undefined>;
+  session_id?: string;
+}) => void;
 
 const subscribeMap = new Map<string, Set<SubscribeCallback>>();
 
@@ -34,7 +37,7 @@ describe("useTaskStatus", () => {
 
     act(() => {
       subscribeMap.get("task_started")!.forEach((cb) =>
-        cb({ task_id: "task-1", session_id: "sess-1" }),
+        cb({ content: { task_id: "task-1" }, session_id: "sess-1" }),
       );
     });
 
@@ -47,7 +50,7 @@ describe("useTaskStatus", () => {
 
     act(() => {
       subscribeMap.get("task_completed")!.forEach((cb) =>
-        cb({ task_id: "task-1" }),
+        cb({ content: { task_id: "task-1" } }),
       );
     });
 
@@ -59,7 +62,7 @@ describe("useTaskStatus", () => {
 
     act(() => {
       subscribeMap.get("task_failed")!.forEach((cb) =>
-        cb({ task_id: "task-1", reason: "timeout" }),
+        cb({ content: { task_id: "task-1", reason: "timeout" } }),
       );
     });
 
@@ -72,7 +75,7 @@ describe("useTaskStatus", () => {
 
     act(() => {
       subscribeMap.get("task_started")!.forEach((cb) =>
-        cb({ task_id: "task-other" }),
+        cb({ content: { task_id: "task-other" } }),
       );
     });
 
@@ -87,7 +90,7 @@ describe("useTaskStatus", () => {
 
     act(() => {
       subscribeMap.get("task_started")!.forEach((cb) =>
-        cb({ task_id: "task-1", session_id: "sess-1" }),
+        cb({ content: { task_id: "task-1" }, session_id: "sess-1" }),
       );
     });
 
@@ -112,5 +115,24 @@ describe("useTaskStatus", () => {
       result.current.setFailReason("manual");
     });
     expect(result.current.failReason).toBe("manual");
+  });
+
+  it("reconciles an in-progress live status to a terminal canonical status", () => {
+    const { result, rerender } = renderHook(
+      ({ canonicalStatus }: { canonicalStatus?: string }) => useTaskStatus("task-1", canonicalStatus),
+      { initialProps: { canonicalStatus: "in_progress" } },
+    );
+
+    act(() => {
+      subscribeMap.get("task_started")!.forEach((cb) =>
+        cb({ content: { task_id: "task-1" }, session_id: "sess-1" }),
+      );
+    });
+
+    expect(result.current.liveStatus).toBe("in_progress");
+
+    rerender({ canonicalStatus: "done" });
+
+    expect(result.current.liveStatus).toBe("done");
   });
 });

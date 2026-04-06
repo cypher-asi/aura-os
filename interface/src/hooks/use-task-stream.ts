@@ -156,7 +156,9 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
             useEventStore.getState().seedTaskOutput(taskId, mergedText, undefined, undefined, e.project_id);
           }
         }
-        finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+        finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+          reason: "completed",
+        });
         isStreamingRef.current = false;
       }),
 
@@ -172,7 +174,10 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
             useEventStore.getState().seedTaskOutput(taskId, mergedText, undefined, undefined, e.project_id);
           }
         }
-        finalizeStream(refs, setters, abortRef, isStreamingRef.current);
+        finalizeStream(refs, setters, abortRef, isStreamingRef.current, {
+          reason: "failed",
+          message: e.content.reason ?? undefined,
+        });
         isStreamingRef.current = false;
       }),
     ];

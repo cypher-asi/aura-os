@@ -116,6 +116,7 @@ describe("useProcessNodeStream", () => {
     );
 
     expect(finalizeStream).toHaveBeenCalled();
+    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({ reason: "completed" });
   });
 
   it("ignores ProcessNodeExecuted for different run/node", () => {
@@ -196,16 +197,21 @@ describe("useProcessNodeStream", () => {
     );
 
     expect(finalizeStream).toHaveBeenCalled();
+    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({ reason: "completed" });
   });
 
   it("finalizes on ProcessRunFailed", () => {
     renderHook(() => useProcessNodeStream("run-1", "node-1"));
 
     subscribeMap.get("process_run_failed")?.forEach((cb) =>
-      cb({ content: { run_id: "run-1" } }),
+      cb({ content: { run_id: "run-1", error: "stream dropped" } }),
     );
 
     expect(finalizeStream).toHaveBeenCalled();
+    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({
+      reason: "failed",
+      message: "stream dropped",
+    });
   });
 
   it("ignores ProcessRunCompleted for different runId", () => {

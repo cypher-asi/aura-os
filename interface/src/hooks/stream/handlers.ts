@@ -16,6 +16,18 @@ import type {
   StreamSetters,
 } from "../../types/stream";
 
+export type FinalizeStreamReason = "completed" | "failed" | "disconnected";
+
+interface PendingToolResolution {
+  isError: boolean;
+  result?: string;
+}
+
+interface FinalizeStreamOptions {
+  reason?: FinalizeStreamReason;
+  message?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Pure helpers                                                       */
 /* ------------------------------------------------------------------ */
@@ -95,9 +107,9 @@ function resolveToolCallInEvents(
 /**
  * Fail all pending tool calls in already-saved events.
  */
-function failPendingToolCallsInEvents(
+function resolvePendingToolCallsInEvents(
   setters: StreamSetters,
-  reason: string,
+  resolution: PendingToolResolution,
 ): void {
   setters.setEvents((prev) => {
     let changed = false;
@@ -108,7 +120,13 @@ function failPendingToolCallsInEvents(
         ...evt,
         toolCalls: evt.toolCalls.map((tc) =>
           tc.pending
-            ? { ...tc, pending: false, started: false, isError: true, result: reason }
+            ? {
+                ...tc,
+                pending: false,
+                started: false,
+                isError: resolution.isError,
+                ...(resolution.result !== undefined ? { result: resolution.result } : {}),
+              }
             : tc,
         ),
       };
@@ -413,18 +431,52 @@ export function handleAssistantTurnBoundary(
   setters.setTimeline([]);
 }
 
-function failPendingToolCalls(refs: StreamRefs, setters: StreamSetters, reason: string): void {
+function resolvePendingToolCalls(
+  refs: StreamRefs,
+  setters: StreamSetters,
+  resolution: PendingToolResolution,
+): void {
   const hasPending = refs.toolCalls.current.some((tc) => tc.pending);
   if (!hasPending) {
-    failPendingToolCallsInEvents(setters, reason);
+    resolvePendingToolCallsInEvents(setters, resolution);
     return;
   }
   refs.toolCalls.current = refs.toolCalls.current.map((tc) =>
     tc.pending
-      ? { ...tc, pending: false, started: false, isError: true, result: reason }
+      ? {
+          ...tc,
+          pending: false,
+          started: false,
+          isError: resolution.isError,
+          ...(resolution.result !== undefined ? { result: resolution.result } : {}),
+        }
       : tc,
   );
-  failPendingToolCallsInEvents(setters, reason);
+  resolvePendingToolCallsInEvents(setters, resolution);
+}
+
+function getPendingToolResolution(
+  reason: FinalizeStreamReason,
+  message?: string,
+): PendingToolResolution {
+  switch (reason) {
+    case "completed":
+      return {
+        isError: false,
+        result: message ?? "Completed before an explicit tool result was received",
+      };
+    case "failed":
+      return {
+        isError: true,
+        result: message ?? "Run failed before an explicit tool result was received",
+      };
+    case "disconnected":
+    default:
+      return {
+        isError: true,
+        result: message ?? "Connection lost before result was received",
+      };
+  }
 }
 
 export function handleStreamError(
@@ -436,7 +488,10 @@ export function handleStreamError(
   if (isInsufficientCreditsError(message)) {
     dispatchInsufficientCredits();
   }
-  failPendingToolCalls(refs, setters, `Stream error: ${message}`);
+  resolvePendingToolCalls(refs, setters, {
+    isError: true,
+    result: `Stream error: ${message}`,
+  });
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const { savedThinking, savedThinkingDuration } = snapshotThinking(refs);
@@ -463,8 +518,13 @@ export function finalizeStream(
   setters: StreamSetters,
   abortRef: MutableRefObject<AbortController | null>,
   closureIsStreaming: boolean,
+  options?: FinalizeStreamOptions,
 ): void {
-  failPendingToolCalls(refs, setters, "Connection lost before result was received");
+  resolvePendingToolCalls(
+    refs,
+    setters,
+    getPendingToolResolution(options?.reason ?? "disconnected", options?.message),
+  );
   setters.setActiveToolCalls([...refs.toolCalls.current]);
 
   const hasBuffer = !!refs.streamBuffer.current;

@@ -20,6 +20,7 @@ export function useTaskListData(): TaskListData {
   const ctx = useProjectActions();
   const projectId = ctx?.project.project_id;
   const subscribe = useEventStore((s) => s.subscribe);
+  const connected = useEventStore((s) => s.connected);
   const storeSpecs = useSidekickStore((s) => s.specs);
   const storeTasks = useSidekickStore((s) => s.tasks);
   const loopActive = useLoopActive(projectId);
@@ -57,6 +58,7 @@ export function useTaskListData(): TaskListData {
 
   const streamingId = useSidekickStore((s) => s.streamingAgentInstanceId);
   const prevStreamIdRef = useRef<string | null>(null);
+  const prevConnectedRef = useRef(connected);
 
   useEffect(() => {
     const wasStreaming = prevStreamIdRef.current != null;
@@ -65,6 +67,13 @@ export function useTaskListData(): TaskListData {
       refetchTasks();
     }
   }, [streamingId, refetchTasks]);
+
+  useEffect(() => {
+    if (connected && !prevConnectedRef.current) {
+      refetchTasks();
+    }
+    prevConnectedRef.current = connected;
+  }, [connected, refetchTasks]);
 
   useEffect(() => {
     const unsubs = [

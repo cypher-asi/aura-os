@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ToolCallEntry } from "../../types/stream";
 
 vi.mock("./ToolCallBlock.module.css", () => ({
@@ -101,6 +101,43 @@ describe("ToolCallBlock", () => {
 
       expect(screen.getByText("New spec")).toBeInTheDocument();
       expect(screen.queryByText("Generating…")).not.toBeInTheDocument();
+    });
+
+    it("collapses the detail view when a running action completes", async () => {
+      const entry = makeEntry({
+        name: "create_spec",
+        started: true,
+        pending: true,
+        input: {
+          title: "In progress spec",
+          markdown_contents: "# Draft",
+        },
+      });
+      const { rerender } = render(
+        <ToolCallBlock
+          entry={entry}
+          defaultExpanded={entry.pending}
+        />,
+      );
+
+      expect(screen.getByText("Spec")).toBeInTheDocument();
+
+      const completedEntry = {
+        ...entry,
+        started: false,
+        pending: false,
+      };
+
+      rerender(
+        <ToolCallBlock
+          entry={completedEntry}
+          defaultExpanded={completedEntry.pending}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.queryByText("Spec")).not.toBeInTheDocument();
+      });
     });
   });
 

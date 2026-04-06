@@ -36,12 +36,14 @@ function useRunPolling(initialRun: ProcessRun) {
   const nodes = useProcessStore((s) => s.nodes[run.process_id]) ?? EMPTY_NODES;
   const fetchRuns = useProcessStore((s) => s.fetchRuns);
   const setStoreEvents = useProcessStore((s) => s.setEvents);
+  const connected = useEventStore((s) => s.connected);
   const cachedEvents = useProcessStore((s) => s.events[run.run_id]);
   const [artifacts, setArtifacts] = useState<ProcessArtifact[]>([]);
   const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
   const [transcript, setTranscript] = useState<ProcessRunTranscriptEvent[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const runPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevConnectedRef = useRef(connected);
 
   const isActive = run.status === "running" || run.status === "pending";
 
@@ -79,6 +81,12 @@ function useRunPolling(initialRun: ProcessRun) {
   }, [run.process_id, run.run_id, fetchRuns]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    if (cachedEvents) {
+      setEvents(cachedEvents);
+    }
+  }, [cachedEvents]);
 
   useEffect(() => {
     const applyRunUsage = (content: {
@@ -123,6 +131,14 @@ function useRunPolling(initialRun: ProcessRun) {
       if (runPollRef.current) clearInterval(runPollRef.current);
     };
   }, [isActive, loadData, refreshRun]);
+
+  useEffect(() => {
+    if (connected && !prevConnectedRef.current) {
+      refreshRun();
+      loadData();
+    }
+    prevConnectedRef.current = connected;
+  }, [connected, loadData, refreshRun]);
 
   return { run, isActive, nodes, artifacts, events, transcript, loadData, refreshRun };
 }

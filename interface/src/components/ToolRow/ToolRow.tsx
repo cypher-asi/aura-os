@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import type { ToolCallEntry } from "../../types/stream";
 import { TOOL_LABELS, FILE_OPS } from "../../constants/tools";
@@ -44,8 +44,16 @@ export function ToolCallBlock({
   const isFileOp = FILE_OPS.has(entry.name);
   const autoExpand = isFileOp ? false : (defaultExpanded ?? (isSpec && !entry.pending && !entry.started));
   const [expanded, setExpanded] = useState(autoExpand);
+  const wasPendingRef = useRef(entry.pending);
   const label = TOOL_LABELS[entry.name] || entry.name;
   const inputSummary = (entry.started && !isTask) ? "" : summarizeInput(entry.name, entry.input);
+
+  useEffect(() => {
+    if (wasPendingRef.current && !entry.pending) {
+      setExpanded(false);
+    }
+    wasPendingRef.current = entry.pending;
+  }, [entry.pending]);
 
   const stateClass = entry.pending
     ? toolStyles.taskActive

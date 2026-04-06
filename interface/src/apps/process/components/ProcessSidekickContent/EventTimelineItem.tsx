@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../../stores/process-store";
+import { useEventStore } from "../../../../stores/event-store/index";
 import { processApi } from "../../../../api/process";
 import { formatTokensCompact as formatTokens } from "../../../../utils/format";
 import { EmptyState } from "../../../../components/EmptyState";
@@ -31,12 +32,22 @@ export interface EventTimelineItemProps {
 export function EventTimelineItem({ event, nodes, isLive }: EventTimelineItemProps) {
   const isRunning = event.status === "running";
   const [expanded, setExpanded] = useState(false);
+  const previousStatusRef = useRef(event.status);
 
   const nodeLabel = nodes.find((n) => n.node_id === event.node_id)?.label ?? event.node_id.slice(0, 8);
   const colors = EVENT_STATUS_COLORS[event.status] ?? EVENT_STATUS_COLORS.pending;
 
   const hasTokens = event.input_tokens != null || event.output_tokens != null;
   const totalTokens = (event.input_tokens ?? 0) + (event.output_tokens ?? 0);
+
+  useEffect(() => {
+    const wasActive = previousStatusRef.current === "running" || previousStatusRef.current === "pending";
+    const isActive = event.status === "running" || event.status === "pending";
+    if (wasActive && !isActive) {
+      setExpanded(false);
+    }
+    previousStatusRef.current = event.status;
+  }, [event.status]);
 
   return (
     <div
@@ -200,9 +211,15 @@ export function EventsTimeline({ processId }: { processId: string }) {
   const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
   const nodes = useProcessStore((s) => s.nodes[processId]) ?? EMPTY_NODES;
   const setStoreEvents = useProcessStore((s) => s.setEvents);
+  const connected = useEventStore((s) => s.connected);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevConnectedRef = useRef(connected);
 
-  const latestRun = runs[0];
+  const latestRun = useMemo(() => (
+    [...runs].sort(
+      (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+    )[0]
+  ), [runs]);
   const cachedEvents = useProcessStore((s) => latestRun ? s.events[latestRun.run_id] : undefined);
   const [events, setEvents] = useState<ProcessEvent[]>(cachedEvents ?? []);
   const [loading, setLoading] = useState(!cachedEvents?.length);
@@ -223,11 +240,25 @@ export function EventsTimeline({ processId }: { processId: string }) {
   }, [loadEvents]);
 
   useEffect(() => {
+    if (cachedEvents) {
+      setEvents(cachedEvents);
+      setLoading(false);
+    }
+  }, [cachedEvents]);
+
+  useEffect(() => {
     if (isRunActive) {
       intervalRef.current = setInterval(loadEvents, 4000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [isRunActive, loadEvents]);
+
+  useEffect(() => {
+    if (connected && !prevConnectedRef.current) {
+      void loadEvents();
+    }
+    prevConnectedRef.current = connected;
+  }, [connected, loadEvents]);
 
   if (!latestRun) return <EmptyState>No runs yet</EmptyState>;
   if (loading && events.length === 0) return <EmptyState>Loading events...</EmptyState>;

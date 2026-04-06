@@ -461,5 +461,34 @@ describe("stream/handlers", () => {
         expect(result).toEqual([]);
       }
     });
+
+    it("marks pending tools as successful on normal completion", () => {
+      const refs = makeRefs();
+      refs.toolCalls.current = [{ id: "tc-1", name: "write_file", input: {}, pending: true, started: true }];
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, false, { reason: "completed" });
+
+      expect(refs.toolCalls.current[0].pending).toBe(false);
+      expect(refs.toolCalls.current[0].isError).toBe(false);
+      expect(refs.toolCalls.current[0].result).toContain("Completed before an explicit tool result");
+    });
+
+    it("marks pending tools as failed with the provided message", () => {
+      const refs = makeRefs();
+      refs.toolCalls.current = [{ id: "tc-1", name: "write_file", input: {}, pending: true, started: true }];
+      const setters = makeSetters();
+      const abortRef = { current: null as AbortController | null };
+
+      finalizeStream(refs, setters, abortRef, false, {
+        reason: "failed",
+        message: "Harness timed out",
+      });
+
+      expect(refs.toolCalls.current[0].pending).toBe(false);
+      expect(refs.toolCalls.current[0].isError).toBe(true);
+      expect(refs.toolCalls.current[0].result).toBe("Harness timed out");
+    });
   });
 });

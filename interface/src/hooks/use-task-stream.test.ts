@@ -160,16 +160,21 @@ describe("useTaskStream", () => {
     );
 
     expect(finalizeStream).toHaveBeenCalled();
+    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({ reason: "completed" });
   });
 
   it("calls finalizeStream on TaskFailed", () => {
     renderHook(() => useTaskStream("task-1"));
 
     subscribeMap.get("task_failed")?.forEach((cb) =>
-      cb({ content: { task_id: "task-1" } }),
+      cb({ content: { task_id: "task-1", reason: "timeout" } }),
     );
 
     expect(finalizeStream).toHaveBeenCalled();
+    expect(vi.mocked(finalizeStream).mock.calls[0][4]).toEqual({
+      reason: "failed",
+      message: "timeout",
+    });
   });
 
   it("sets streaming eagerly when isActive is true", () => {
