@@ -38,14 +38,20 @@ function ProfileHeader({
 }: Pick<ProfileTabProps, "agent" | "isOwnAgent">) {
   return (
     <>
-      <div className={styles.profileImageBlock}>
-        <Avatar
-          avatarUrl={agent.icon ?? undefined}
-          name={agent.name}
-          type="agent"
-          size={80}
-        />
-      </div>
+      {agent.icon ? (
+        <div className={styles.profileCover}>
+          <img
+            src={agent.icon}
+            alt={agent.name}
+            className={styles.profileCoverImage}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </div>
+      ) : (
+        <div className={styles.profileImageBlock}>
+          <Avatar avatarUrl={undefined} name={agent.name} type="agent" size={80} />
+        </div>
+      )}
 
       <div className={styles.nameBlock}>
         <div className={styles.nameText}>
