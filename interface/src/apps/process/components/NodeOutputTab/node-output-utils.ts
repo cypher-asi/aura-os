@@ -15,6 +15,25 @@ export const monoBox: React.CSSProperties = {
 };
 
 /**
+ * Try to extract a valid JSON value from text that may have trailing
+ * punctuation (commas, semicolons) or surrounding prose.
+ */
+function tryParseJson(text: string): unknown | undefined {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return undefined;
+
+  // Try as-is first, then strip trailing non-JSON characters
+  for (const candidate of [trimmed, trimmed.replace(/[,;\s]+$/, "")]) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // continue
+    }
+  }
+  return undefined;
+}
+
+/**
  * Detect raw JSON strings and wrap them in a fenced code block so
  * downstream markdown renderers display them with proper formatting
  * and syntax highlighting. Non-JSON text is returned as-is.
@@ -23,17 +42,9 @@ export function formatOutputContent(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return text;
 
-  const looksLikeJson =
-    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-    (trimmed.startsWith("[") && trimmed.endsWith("]"));
-
-  if (looksLikeJson) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
-    } catch {
-      // not valid JSON – fall through
-    }
+  const parsed = tryParseJson(trimmed);
+  if (parsed !== undefined) {
+    return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
   }
 
   return text;
@@ -46,17 +57,11 @@ export function prettyPrintIfJson(text: string): string {
   const trimmed = text.trim();
   if (!trimmed) return text;
 
-  const looksLikeJson =
-    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-    (trimmed.startsWith("[") && trimmed.endsWith("]"));
-
-  if (looksLikeJson) {
-    try {
-      return JSON.stringify(JSON.parse(trimmed), null, 2);
-    } catch {
-      // not valid JSON
-    }
+  const parsed = tryParseJson(trimmed);
+  if (parsed !== undefined) {
+    return JSON.stringify(parsed, null, 2);
   }
+
   return text;
 }
 
