@@ -3,6 +3,7 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -760,6 +761,7 @@ fn execute_run<'a>(
                     timeout_secs, jwt.as_deref(), &executor.task_service,
                     agent_service, org_service, &upstream_context,
                     &executor.http_client, &executor.router_url,
+                    run_input_tokens, run_output_tokens, run_cost_usd,
                 ).await
             }
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
@@ -1267,6 +1269,9 @@ async fn execute_action_via_automaton(
     upstream_context: &str,
     http_client: &reqwest::Client,
     router_url: &str,
+    run_base_input: u64,
+    run_base_output: u64,
+    run_base_cost: f64,
 ) -> Result<NodeResult, ProcessError> {
     let proj_str = project_id.to_string();
     let pid_str = process_id.to_string();
@@ -1278,6 +1283,7 @@ async fn execute_action_via_automaton(
             node, task_id, project_id, process_id, run_id,
             automaton_client, store, broadcast, project_path,
             timeout_secs, token, task_service, agent_service, org_service,
+            run_base_input, run_base_output, run_base_cost,
         ).await;
     }
 
@@ -1326,6 +1332,7 @@ async fn execute_action_via_automaton(
             node, task_id, project_id, process_id, run_id,
             automaton_client, store, broadcast, project_path,
             timeout_secs, token, task_service, agent_service, org_service,
+            run_base_input, run_base_output, run_base_cost,
         ).await;
     }
 
@@ -1351,6 +1358,8 @@ async fn execute_action_via_automaton(
     let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
     let mut handles = Vec::with_capacity(sub_tasks.len());
     let transcript_store = store.clone();
+    let shared_node_in = Arc::new(AtomicU64::new(0));
+    let shared_node_out = Arc::new(AtomicU64::new(0));
 
     for (idx, sub_task) in sub_tasks.iter().enumerate() {
         let created_task = storage_client
@@ -1397,6 +1406,8 @@ async fn execute_action_via_automaton(
         let sub_title = sub_task.title.clone();
         let broadcast_tx = broadcast.cloned();
         let sub_store = transcript_store.clone();
+        let task_node_in = shared_node_in.clone();
+        let task_node_out = shared_node_out.clone();
         let model = {
             let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
                 agent_service.get_agent_local(aid).ok()
@@ -1444,6 +1455,26 @@ async fn execute_action_via_automaton(
                         if matches!(evt_type, "text_delta" | "thinking_delta"
                             | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
                             forward_process_event(&sub_store, tx, &fwd_proj, &fwd_tid, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
+                        }
+                        if matches!(evt_type, "token_usage" | "assistant_message_end") {
+                            let usage = evt.get("usage").unwrap_or(evt);
+                            if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                                task_node_in.fetch_add(inp, Ordering::Relaxed);
+                            }
+                            if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                                task_node_out.fetch_add(outp, Ordering::Relaxed);
+                            }
+                            let total_in = task_node_in.load(Ordering::Relaxed);
+                            let total_out = task_node_out.load(Ordering::Relaxed);
+                            let cost = estimate_cost_usd(None, total_in, total_out);
+                            emit_process_event(&sub_store, tx, serde_json::json!({
+                                "type": "process_run_progress",
+                                "process_id": &fwd_pid,
+                                "run_id": &fwd_rid,
+                                "total_input_tokens": run_base_input + total_in,
+                                "total_output_tokens": run_base_output + total_out,
+                                "cost_usd": run_base_cost + cost,
+                            }));
                         }
                     }
                 },
@@ -1602,6 +1633,9 @@ async fn execute_single_automaton(
     _task_service: &TaskService,
     agent_service: &AgentService,
     org_service: &OrgService,
+    run_base_input: u64,
+    run_base_output: u64,
+    run_base_cost: f64,
 ) -> Result<NodeResult, ProcessError> {
     let model = {
         let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
@@ -1656,6 +1690,9 @@ async fn execute_single_automaton(
     let nid = node.node_id.to_string();
     let tx = broadcast.cloned();
 
+    let mut node_in: u64 = 0;
+    let mut node_out: u64 = 0;
+
     let completion = collect_automaton_events(
         rx,
         Duration::from_secs(timeout_secs),
@@ -1664,6 +1701,24 @@ async fn execute_single_automaton(
                 if matches!(evt_type, "text_delta" | "thinking_delta"
                     | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
                     forward_process_event(store, tx, &proj, &tid, &pid, &rid, &nid, evt, None);
+                }
+                if matches!(evt_type, "token_usage" | "assistant_message_end") {
+                    let usage = evt.get("usage").unwrap_or(evt);
+                    if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                        node_in += inp;
+                    }
+                    if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                        node_out += outp;
+                    }
+                    let cost = estimate_cost_usd(None, node_in, node_out);
+                    emit_process_event(store, tx, serde_json::json!({
+                        "type": "process_run_progress",
+                        "process_id": &pid,
+                        "run_id": &rid,
+                        "total_input_tokens": run_base_input + node_in,
+                        "total_output_tokens": run_base_output + node_out,
+                        "cost_usd": run_base_cost + cost,
+                    }));
                 }
             }
         },
