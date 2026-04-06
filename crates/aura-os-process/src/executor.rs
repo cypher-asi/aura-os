@@ -56,6 +56,8 @@ struct SubTaskPlan {
 /// process-specific identifiers.  Only forwards streamable event types.
 fn forward_process_event(
     tx: &broadcast::Sender<serde_json::Value>,
+    project_id: &str,
+    task_id: &str,
     process_id: &str,
     run_id: &str,
     node_id: &str,
@@ -63,6 +65,8 @@ fn forward_process_event(
     sub_task: Option<&str>,
 ) {
     let mut v = serde_json::json!({
+        "project_id": project_id,
+        "task_id": task_id,
         "process_id": process_id,
         "run_id": run_id,
         "node_id": node_id,
@@ -77,12 +81,19 @@ fn forward_process_event(
     if let Some(sub) = sub_task {
         v["sub_task"] = sub.into();
     }
+    if let Some(t) = v.get("type").and_then(|t| t.as_str()).map(|t| t.to_string()) {
+        if t == "tool_call_started" {
+            v["type"] = "tool_use_start".into();
+        }
+    }
     let _ = tx.send(v);
 }
 
 /// Send a progress text message to the app broadcast with process context.
 fn send_process_text(
     tx: &broadcast::Sender<serde_json::Value>,
+    project_id: &str,
+    task_id: &str,
     process_id: &str,
     run_id: &str,
     node_id: &str,
@@ -91,6 +102,8 @@ fn send_process_text(
     let _ = tx.send(serde_json::json!({
         "type": "text_delta",
         "text": text,
+        "project_id": project_id,
+        "task_id": task_id,
         "process_id": process_id,
         "run_id": run_id,
         "node_id": node_id,
@@ -1005,6 +1018,7 @@ async fn execute_action_via_automaton(
     org_service: &OrgService,
     upstream_context: &str,
 ) -> Result<NodeResult, ProcessError> {
+    let proj_str = project_id.to_string();
     let pid_str = process_id.to_string();
     let rid_str = run_id.to_string();
     let nid_str = node.node_id.to_string();
@@ -1021,7 +1035,7 @@ async fn execute_action_via_automaton(
 
     if sub_tasks.len() <= 1 {
         if let Some(tx) = broadcast {
-            send_process_text(tx, &pid_str, &rid_str, &nid_str, "Single task — executing directly.\n\n");
+            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, "Single task — executing directly.\n\n");
         }
         return execute_single_automaton(
             node, task_id, project_id, process_id, run_id,
@@ -1037,7 +1051,7 @@ async fn execute_action_via_automaton(
     );
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
+        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n\nCreating {} sub-tasks...\n", sub_tasks.len()));
     }
 
     let max_concurrency = node
@@ -1080,7 +1094,7 @@ async fn execute_action_via_automaton(
         );
 
         if let Some(tx) = broadcast {
-            send_process_text(tx, &pid_str, &rid_str, &nid_str,
+            send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
                 &format!("  Creating task {}/{}... {}\n", idx + 1, sub_tasks.len(), sub_task.title));
         }
 
@@ -1109,8 +1123,10 @@ async fn execute_action_via_automaton(
                 ProcessError::Execution(format!("Semaphore error: {e}"))
             })?;
 
+            let authed_ac = ac.clone()
+                .with_auth(sub_token.clone());
             let (_start_result, events_tx) = start_and_connect(
-                &ac,
+                &authed_ac,
                 AutomatonStartParams {
                     project_id: sub_project_id.to_string(),
                     auth_token: sub_token.clone(),
@@ -1120,12 +1136,14 @@ async fn execute_action_via_automaton(
                     git_repo_url: None,
                     git_branch: None,
                 },
-                0,
+                2,
             )
             .await
             .map_err(|e| ProcessError::Execution(format!("Sub-task automaton failed: {e}")))?;
 
             let rx = events_tx.subscribe();
+            let fwd_proj = sub_project_id.to_string();
+            let fwd_tid = sub_task_id.clone();
             let fwd_pid = sub_process_id.to_string();
             let fwd_rid = sub_run_id.to_string();
             let fwd_nid = sub_node_id.to_string();
@@ -1136,8 +1154,9 @@ async fn execute_action_via_automaton(
                 Duration::from_secs(sub_timeout),
                 |evt, evt_type| {
                     if let Some(ref tx) = broadcast_tx {
-                        if matches!(evt_type, "text_delta" | "tool_use_start" | "tool_result") {
-                            forward_process_event(tx, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
+                        if matches!(evt_type, "text_delta" | "thinking_delta"
+                            | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
+                            forward_process_event(tx, &fwd_proj, &fwd_tid, &fwd_pid, &fwd_rid, &fwd_nid, evt, Some(&fwd_title));
                         }
                     }
                 },
@@ -1168,7 +1187,7 @@ async fn execute_action_via_automaton(
     }
 
     if let Some(tx) = broadcast {
-        send_process_text(tx, &pid_str, &rid_str, &nid_str,
+        send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
             &format!("\nExecuting {} sub-tasks (max {} concurrent)...\n\n", sub_tasks.len(), max_concurrency));
     }
 
@@ -1188,7 +1207,7 @@ async fn execute_action_via_automaton(
                     last_model = model;
                 }
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &pid_str, &rid_str, &nid_str,
+                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str,
                         &format!("\n--- Sub-task {}/{} completed: {} ({} bytes) ---\n", idx + 1, sub_tasks.len(), task_title, output.len()));
                 }
                 merged_parts.push(output);
@@ -1197,7 +1216,7 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) failed: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
                 merged_parts.push(format!("(sub-task #{} failed: {})", idx, e));
             }
@@ -1205,7 +1224,7 @@ async fn execute_action_via_automaton(
                 let msg = format!("Sub-task #{} ({}) panicked: {}", idx, task_title, e);
                 failures.push(msg.clone());
                 if let Some(tx) = broadcast {
-                    send_process_text(tx, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
+                    send_process_text(tx, &proj_str, task_id, &pid_str, &rid_str, &nid_str, &format!("\n--- {} ---\n", msg));
                 }
                 merged_parts.push(format!("(sub-task #{} panicked: {})", idx, e));
             }
@@ -1298,8 +1317,10 @@ async fn execute_single_automaton(
         effective_model(node, loaded_agent.as_ref(), ri.as_ref())
     };
 
+    let authed_client = automaton_client.clone()
+        .with_auth(token.map(|s| s.to_string()));
     let (start_result, events_tx) = start_and_connect(
-        automaton_client,
+        &authed_client,
         AutomatonStartParams {
             project_id: project_id.to_string(),
             auth_token: token.map(|s| s.to_string()),
@@ -1309,7 +1330,7 @@ async fn execute_single_automaton(
             git_repo_url: None,
             git_branch: None,
         },
-        0,
+        2,
     )
     .await
     .map_err(|e| ProcessError::Execution(format!("Failed to start automaton: {e}")))?;
@@ -1322,6 +1343,8 @@ async fn execute_single_automaton(
     );
 
     let rx = events_tx.subscribe();
+    let proj = project_id.to_string();
+    let tid = task_id.to_string();
     let pid = process_id.to_string();
     let rid = run_id.to_string();
     let nid = node.node_id.to_string();
@@ -1332,8 +1355,9 @@ async fn execute_single_automaton(
         Duration::from_secs(timeout_secs),
         |evt, evt_type| {
             if let Some(ref tx) = tx {
-                if matches!(evt_type, "text_delta" | "thinking_delta" | "tool_use_start" | "tool_result") {
-                    forward_process_event(tx, &pid, &rid, &nid, evt, None);
+                if matches!(evt_type, "text_delta" | "thinking_delta"
+                    | "tool_use_start" | "tool_call_started" | "tool_call_snapshot" | "tool_result") {
+                    forward_process_event(tx, &proj, &tid, &pid, &rid, &nid, evt, None);
                 }
             }
         },
