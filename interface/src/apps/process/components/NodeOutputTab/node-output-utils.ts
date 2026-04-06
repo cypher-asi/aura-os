@@ -14,6 +14,52 @@ export const monoBox: React.CSSProperties = {
   color: "var(--color-text)",
 };
 
+/**
+ * Detect raw JSON strings and wrap them in a fenced code block so
+ * downstream markdown renderers display them with proper formatting
+ * and syntax highlighting. Non-JSON text is returned as-is.
+ */
+export function formatOutputContent(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+
+  const looksLikeJson =
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"));
+
+  if (looksLikeJson) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```";
+    } catch {
+      // not valid JSON – fall through
+    }
+  }
+
+  return text;
+}
+
+/**
+ * Pretty-print a string if it looks like JSON, for monospace/pre-wrap blocks.
+ */
+export function prettyPrintIfJson(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return text;
+
+  const looksLikeJson =
+    (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+    (trimmed.startsWith("[") && trimmed.endsWith("]"));
+
+  if (looksLikeJson) {
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2);
+    } catch {
+      // not valid JSON
+    }
+  }
+  return text;
+}
+
 export function contentBlocksToTimeline(blocks: ProcessEventContentBlock[]): {
   timeline: TimelineItem[];
   toolCalls: ToolCallEntry[];
@@ -28,7 +74,7 @@ export function contentBlocksToTimeline(blocks: ProcessEventContentBlock[]): {
     if (block.type === "text" && block.text) {
       timeline.push({
         kind: "text",
-        content: block.text,
+        content: formatOutputContent(block.text),
         id: `text-${timeline.length}`,
       });
     } else if (block.type === "thinking" && block.thinking) {
