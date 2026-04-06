@@ -137,6 +137,7 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
         ...(connection.sourceHandle ? { sourceHandle: connection.sourceHandle } : {}),
         ...(connection.targetHandle ? { targetHandle: connection.targetHandle } : {}),
         animated: true,
+        type: "step",
       };
       setEdges((prev) => [...prev, optimisticEdge]);
       try {

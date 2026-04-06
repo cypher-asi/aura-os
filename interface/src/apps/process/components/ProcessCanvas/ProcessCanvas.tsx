@@ -166,7 +166,7 @@ function ProcessCanvasInner({
         fitView
         snapToGrid
         snapGrid={[GRID, GRID]}
-        defaultEdgeOptions={{ animated: true }}
+        defaultEdgeOptions={{ animated: true, type: "step" }}
         connectionLineStyle={{ stroke: "rgba(255, 255, 255, 0.55)", strokeWidth: 1 }}
         proOptions={{ hideAttribution: true }}
         selectionOnDrag

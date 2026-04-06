@@ -90,6 +90,7 @@ export function toFlowEdges(connections: ProcessNodeConnection[], nodes: Process
       target: c.target_node_id,
       ...(targetHandle ? { targetHandle } : {}),
       animated: true,
+      type: "step",
     };
   });
 }
