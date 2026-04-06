@@ -43,6 +43,12 @@ struct NodeResult {
     content_blocks: Option<Vec<serde_json::Value>>,
 }
 
+#[derive(Debug, Clone, serde::Deserialize)]
+struct SubTaskPlan {
+    title: String,
+    description: String,
+}
+
 struct DeltaForwarder<'a> {
     broadcast: &'a broadcast::Sender<serde_json::Value>,
     process_id: ProcessId,
@@ -619,9 +625,10 @@ fn execute_run<'a>(
                 let timeout_secs = node.config.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_HARNESS_TIMEOUT_SECS);
                 execute_action_via_automaton(
                     node, task_id, &project_id, &run.process_id, &run.run_id,
-                    &executor.automaton_client, store, Some(&fwd), &workspace_path,
+                    &executor.automaton_client, store, storage, &spec_id_for_run,
+                    Some(&fwd), &workspace_path,
                     timeout_secs, jwt.as_deref(), &executor.task_service,
-                    agent_service, org_service,
+                    agent_service, org_service, &upstream_context,
                 ).await
             }
             ProcessNodeType::Delay => execute_delay(node).await.map(|s| NodeResult {
@@ -911,8 +918,410 @@ async fn create_spec_and_tasks(
 // Automaton-based execution for Action nodes
 // ---------------------------------------------------------------------------
 
+async fn plan_sub_tasks(
+    node: &ProcessNode,
+    upstream_context: &str,
+    automaton_client: &AutomatonClient,
+    project_id: &ProjectId,
+    project_path: &str,
+    token: Option<&str>,
+    agent_service: &AgentService,
+    org_service: &OrgService,
+) -> Result<Vec<SubTaskPlan>, ProcessError> {
+    let model = {
+        let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
+            agent_service.get_agent_local(aid).ok()
+        });
+        let ri = loaded_agent.as_ref().and_then(|a| resolve_agent_integration(a, org_service));
+        effective_model(node, loaded_agent.as_ref(), ri.as_ref())
+    };
+
+    let _planning_prompt = format!(
+        "You are a task planner for an automated workflow.\n\n\
+         ## Node Task\n{}\n\n\
+         ## Upstream Context\n{}\n\n\
+         Break this task into independent sub-tasks that can be executed in parallel.\n\
+         Each sub-task should produce a self-contained section of the output.\n\n\
+         Output ONLY a JSON array, no other text:\n\
+         [{{\"title\": \"short title\", \"description\": \"what to do\"}}]\n\n\
+         Rules:\n\
+         - Each sub-task must be independently executable\n\
+         - 2-10 sub-tasks typically\n\
+         - If the task is simple or atomic, return a single-element array\n\
+         - The description should be specific enough for an agent to execute without additional context",
+        node.prompt, upstream_context
+    );
+
+    let start_result = automaton_client
+        .start(AutomatonStartParams {
+            project_id: project_id.to_string(),
+            auth_token: token.map(|s| s.to_string()),
+            model,
+            workspace_root: Some(project_path.to_string()),
+            task_id: None,
+            git_repo_url: None,
+            git_branch: None,
+        })
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Planning automaton failed to start: {e}")))?;
+
+    let event_tx = automaton_client
+        .connect_event_stream(
+            &start_result.automaton_id,
+            Some(&start_result.event_stream_url),
+        )
+        .await
+        .map_err(|e| ProcessError::Execution(format!("Planning event stream failed: {e}")))?;
+
+    let mut rx = event_tx.subscribe();
+    let mut output_text = String::new();
+    let deadline = Duration::from_secs(120);
+
+    let collect = async {
+        loop {
+            match rx.recv().await {
+                Ok(evt) => {
+                    let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                    match evt_type {
+                        "text_delta" => {
+                            if let Some(text) = evt.get("text").and_then(|t| t.as_str()) {
+                                output_text.push_str(text);
+                            }
+                        }
+                        "task_completed" | "done" | "task_failed" | "error" => break,
+                        _ => {}
+                    }
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+            }
+        }
+    };
+
+    if tokio::time::timeout(deadline, collect).await.is_err() {
+        warn!(node_id = %node.node_id, "Planning automaton timed out; using single-task fallback");
+        return Ok(vec![SubTaskPlan {
+            title: node.label.clone(),
+            description: node.prompt.clone(),
+        }]);
+    }
+
+    let trimmed = output_text.trim();
+    let json_start = trimmed.find('[');
+    let json_end = trimmed.rfind(']');
+
+    if let (Some(start), Some(end)) = (json_start, json_end) {
+        if end > start {
+            let json_str = &trimmed[start..=end];
+            if let Ok(plans) = serde_json::from_str::<Vec<SubTaskPlan>>(json_str) {
+                if !plans.is_empty() {
+                    info!(node_id = %node.node_id, sub_tasks = plans.len(), "Planning produced sub-tasks");
+                    return Ok(plans);
+                }
+            }
+        }
+    }
+
+    warn!(node_id = %node.node_id, "Planning output not valid JSON; using single-task fallback");
+    Ok(vec![SubTaskPlan {
+        title: node.label.clone(),
+        description: node.prompt.clone(),
+    }])
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn execute_action_via_automaton(
+    node: &ProcessNode,
+    task_id: &str,
+    project_id: &ProjectId,
+    process_id: &ProcessId,
+    run_id: &ProcessRunId,
+    automaton_client: &AutomatonClient,
+    store: &ProcessStore,
+    storage_client: &StorageClient,
+    spec_id: &str,
+    forwarder: Option<&DeltaForwarder<'_>>,
+    project_path: &str,
+    timeout_secs: u64,
+    token: Option<&str>,
+    task_service: &TaskService,
+    agent_service: &AgentService,
+    org_service: &OrgService,
+    upstream_context: &str,
+) -> Result<NodeResult, ProcessError> {
+    if node.node_type == ProcessNodeType::Condition {
+        return execute_single_automaton(
+            node, task_id, project_id, process_id, run_id,
+            automaton_client, store, forwarder, project_path,
+            timeout_secs, token, task_service, agent_service, org_service,
+        ).await;
+    }
+
+    let sub_tasks = plan_sub_tasks(
+        node, upstream_context, automaton_client, project_id,
+        project_path, token, agent_service, org_service,
+    ).await?;
+
+    if sub_tasks.len() <= 1 {
+        return execute_single_automaton(
+            node, task_id, project_id, process_id, run_id,
+            automaton_client, store, forwarder, project_path,
+            timeout_secs, token, task_service, agent_service, org_service,
+        ).await;
+    }
+
+    info!(
+        node_id = %node.node_id,
+        sub_task_count = sub_tasks.len(),
+        "Executing node with parallel sub-tasks"
+    );
+
+    let max_concurrency = node
+        .config
+        .get("max_concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(3) as usize;
+
+    let jwt = token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
+    let pid = project_id.to_string();
+
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
+    let mut handles = Vec::with_capacity(sub_tasks.len());
+
+    for (idx, sub_task) in sub_tasks.iter().enumerate() {
+        let created_task = storage_client
+            .create_task(
+                &pid,
+                jwt,
+                &aura_os_storage::CreateTaskRequest {
+                    spec_id: spec_id.to_string(),
+                    title: sub_task.title.clone(),
+                    org_id: None,
+                    description: Some(sub_task.description.clone()),
+                    status: Some("ready".to_string()),
+                    order_index: Some((idx + 100) as i32),
+                    dependency_ids: None,
+                    assigned_project_agent_id: None,
+                },
+            )
+            .await
+            .map_err(|e| ProcessError::Execution(format!("Failed to create sub-task: {e}")))?;
+
+        info!(
+            node_id = %node.node_id,
+            sub_task_idx = idx,
+            sub_task_id = %created_task.id,
+            title = %sub_task.title,
+            "Created sub-task"
+        );
+
+        let sem = semaphore.clone();
+        let ac = automaton_client.clone();
+        let sub_task_id = created_task.id.clone();
+        let sub_project_id = *project_id;
+        let _sub_process_id = *process_id;
+        let _sub_run_id = *run_id;
+        let sub_project_path = project_path.to_string();
+        let sub_token = token.map(|s| s.to_string());
+        let sub_timeout = timeout_secs;
+        let sub_node_id = node.node_id;
+        let model = {
+            let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
+                agent_service.get_agent_local(aid).ok()
+            });
+            let ri = loaded_agent.as_ref().and_then(|a| resolve_agent_integration(a, org_service));
+            effective_model(node, loaded_agent.as_ref(), ri.as_ref())
+        };
+
+        handles.push(tokio::spawn(async move {
+            let _permit = sem.acquire().await.map_err(|e| {
+                ProcessError::Execution(format!("Semaphore error: {e}"))
+            })?;
+
+            let start_result = ac
+                .start(AutomatonStartParams {
+                    project_id: sub_project_id.to_string(),
+                    auth_token: sub_token.clone(),
+                    model,
+                    workspace_root: Some(sub_project_path.clone()),
+                    task_id: Some(sub_task_id.clone()),
+                    git_repo_url: None,
+                    git_branch: None,
+                })
+                .await
+                .map_err(|e| ProcessError::Execution(format!("Sub-task automaton failed: {e}")))?;
+
+            let event_tx = ac
+                .connect_event_stream(
+                    &start_result.automaton_id,
+                    Some(&start_result.event_stream_url),
+                )
+                .await
+                .map_err(|e| ProcessError::Execution(format!("Sub-task event stream failed: {e}")))?;
+
+            let mut rx = event_tx.subscribe();
+            let mut output = String::new();
+            let mut input_tokens: u64 = 0;
+            let mut output_tokens: u64 = 0;
+            let mut model_name: Option<String> = None;
+            let mut failed = false;
+            let mut err_msg: Option<String> = None;
+            let deadline = Duration::from_secs(sub_timeout);
+
+            let collect = async {
+                loop {
+                    match rx.recv().await {
+                        Ok(evt) => {
+                            let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            match evt_type {
+                                "text_delta" => {
+                                    if let Some(text) = evt.get("text").and_then(|t| t.as_str()) {
+                                        output.push_str(text);
+                                    }
+                                }
+                                "usage" | "session_usage" => {
+                                    if let Some(inp) = evt.get("input_tokens").and_then(|v| v.as_u64()) {
+                                        input_tokens = inp;
+                                    }
+                                    if let Some(out) = evt.get("output_tokens").and_then(|v| v.as_u64()) {
+                                        output_tokens = out;
+                                    }
+                                    if let Some(m) = evt.get("model").and_then(|v| v.as_str()) {
+                                        model_name = Some(m.to_string());
+                                    }
+                                }
+                                "task_completed" | "done" => break,
+                                "task_failed" | "error" => {
+                                    failed = true;
+                                    err_msg = evt.get("message")
+                                        .or_else(|| evt.get("error"))
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string());
+                                    break;
+                                }
+                                _ => {}
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Closed) => break,
+                        Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    }
+                }
+            };
+
+            if tokio::time::timeout(deadline, collect).await.is_err() {
+                return Err(ProcessError::Execution(format!(
+                    "Sub-task timed out after {sub_timeout}s for node {sub_node_id}"
+                )));
+            }
+
+            if failed {
+                return Err(ProcessError::Execution(
+                    err_msg.unwrap_or_else(|| "Sub-task failed".to_string()),
+                ));
+            }
+
+            let output_file_path = Path::new(&sub_project_path).join(format!("output-{}.txt", sub_task_id));
+            let file_content = match tokio::fs::read_to_string(&output_file_path).await {
+                Ok(content) if !content.trim().is_empty() => Some(content),
+                _ => None,
+            };
+
+            let final_output = file_content.unwrap_or(output);
+
+            Ok((final_output, input_tokens, output_tokens, model_name))
+        }));
+    }
+
+    let mut merged_parts: Vec<String> = Vec::with_capacity(handles.len());
+    let mut total_input_tokens: u64 = 0;
+    let mut total_output_tokens: u64 = 0;
+    let mut last_model: Option<String> = None;
+    let mut failures: Vec<String> = Vec::new();
+
+    for (idx, handle) in handles.into_iter().enumerate() {
+        match handle.await {
+            Ok(Ok((output, inp, out, model))) => {
+                total_input_tokens += inp;
+                total_output_tokens += out;
+                if model.is_some() {
+                    last_model = model;
+                }
+                merged_parts.push(output);
+            }
+            Ok(Err(e)) => {
+                failures.push(format!("Sub-task #{} failed: {}", idx, e));
+                merged_parts.push(format!("(sub-task #{} failed: {})", idx, e));
+            }
+            Err(e) => {
+                failures.push(format!("Sub-task #{} panicked: {}", idx, e));
+                merged_parts.push(format!("(sub-task #{} panicked: {})", idx, e));
+            }
+        }
+    }
+
+    if !failures.is_empty() {
+        warn!(
+            node_id = %node.node_id,
+            failure_count = failures.len(),
+            total = sub_tasks.len(),
+            "Some sub-tasks failed"
+        );
+    }
+
+    let merged_output = merged_parts.join("\n\n---\n\n");
+
+    let output_file = node
+        .config
+        .get("output_file")
+        .and_then(|v| v.as_str())
+        .unwrap_or("output.txt");
+    let output_file_path = Path::new(project_path).join(output_file);
+    if let Err(e) = tokio::fs::write(&output_file_path, merged_output.as_bytes()).await {
+        warn!(node_id = %node.node_id, error = %e, "Failed to write merged output");
+    }
+
+    let rel_path = format!("process-workspaces/{}/{}/{}", process_id, run_id, output_file);
+    let artifact = ProcessArtifact {
+        artifact_id: ProcessArtifactId::new(),
+        process_id: *process_id,
+        run_id: *run_id,
+        node_id: node.node_id,
+        artifact_type: ArtifactType::Document,
+        name: output_file.to_string(),
+        file_path: rel_path,
+        size_bytes: merged_output.len() as u64,
+        metadata: serde_json::json!({}),
+        created_at: Utc::now(),
+    };
+    if let Err(e) = store.save_artifact(&artifact) {
+        warn!(node_id = %node.node_id, error = %e, "Failed to save merged artifact");
+    }
+
+    let display = format!(
+        "Executed {} sub-tasks in parallel ({} failures), {} total bytes",
+        sub_tasks.len(), failures.len(), merged_output.len()
+    );
+
+    let token_usage = if total_input_tokens > 0 || total_output_tokens > 0 {
+        Some(NodeTokenUsage {
+            input_tokens: total_input_tokens,
+            output_tokens: total_output_tokens,
+            model: last_model,
+        })
+    } else {
+        None
+    };
+
+    Ok(NodeResult {
+        downstream_output: merged_output,
+        display_output: Some(display),
+        token_usage,
+        content_blocks: None,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn execute_single_automaton(
     node: &ProcessNode,
     task_id: &str,
     project_id: &ProjectId,
