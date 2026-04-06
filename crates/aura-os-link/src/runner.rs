@@ -183,6 +183,11 @@ where
                         }));
                     }
                     "tool_result" => {
+                        let tool_use_id = evt
+                            .get("tool_use_id")
+                            .or_else(|| evt.get("id"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
                         let result_text =
                             evt.get("result").and_then(|v| v.as_str()).unwrap_or("");
@@ -190,6 +195,7 @@ where
                             evt.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
                         out.content_blocks.push(serde_json::json!({
                             "type": "tool_result",
+                            "tool_use_id": tool_use_id,
                             "name": name,
                             "result": result_text,
                             "is_error": is_error,

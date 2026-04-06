@@ -53,6 +53,12 @@ export function buildProcessEventDisplay(event: ProcessEvent): {
 
   const { timeline, toolCalls, thinkingText } = contentBlocksToTimeline(
     event.content_blocks!,
+    {
+      terminalStatus:
+        event.status === "completed" || event.status === "failed" || event.status === "skipped"
+          ? event.status
+          : undefined,
+    },
   );
   const blockRawText = collectBlockRawText(event.content_blocks);
 

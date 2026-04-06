@@ -1,6 +1,12 @@
 import type { ProcessEventContentBlock } from "../../../../types";
 import type { ToolCallEntry, TimelineItem } from "../../../../types/stream";
 
+type TerminalProcessStatus = "completed" | "failed" | "skipped";
+
+interface ContentBlocksToTimelineOptions {
+  terminalStatus?: TerminalProcessStatus;
+}
+
 export const monoBox: React.CSSProperties = {
   background: "var(--color-bg-input)",
   padding: 8,
@@ -65,7 +71,32 @@ export function prettyPrintIfJson(text: string): string {
   return text;
 }
 
-export function contentBlocksToTimeline(blocks: ProcessEventContentBlock[]): {
+function finalizePendingToolCalls(
+  toolCalls: ToolCallEntry[],
+  terminalStatus?: TerminalProcessStatus,
+): void {
+  if (!terminalStatus) return;
+
+  const fallbackResult =
+    terminalStatus === "failed"
+      ? "Run failed before a tool result was persisted"
+      : terminalStatus === "skipped"
+        ? "Run was skipped before a tool result was persisted"
+        : "Completed without a persisted tool result";
+
+  for (const toolCall of toolCalls) {
+    if (!toolCall.pending) continue;
+    toolCall.pending = false;
+    toolCall.started = false;
+    toolCall.isError = terminalStatus === "failed";
+    toolCall.result = toolCall.result ?? fallbackResult;
+  }
+}
+
+export function contentBlocksToTimeline(
+  blocks: ProcessEventContentBlock[],
+  options: ContentBlocksToTimelineOptions = {},
+): {
   timeline: TimelineItem[];
   toolCalls: ToolCallEntry[];
   thinkingText: string;
@@ -99,16 +130,21 @@ export function contentBlocksToTimeline(blocks: ProcessEventContentBlock[]): {
       toolCalls.push(entry);
       timeline.push({ kind: "tool", toolCallId: id, id: `tool-${id}` });
     } else if (block.type === "tool_result") {
-      const matchId = block.tool_use_id ?? "";
+      const matchId = block.tool_use_id ?? block.id ?? "";
       const entry =
-        toolCallMap.get(matchId) ?? toolCalls[toolCalls.length - 1];
+        (matchId ? toolCallMap.get(matchId) : undefined) ??
+        [...toolCalls].reverse().find((toolCall) => toolCall.pending && toolCall.name === block.name) ??
+        [...toolCalls].reverse().find((toolCall) => toolCall.pending);
       if (entry) {
         entry.result = block.result ?? "";
         entry.isError = block.is_error ?? false;
         entry.pending = false;
+        entry.started = false;
       }
     }
   }
+
+  finalizePendingToolCalls(toolCalls, options.terminalStatus);
 
   return { timeline, toolCalls, thinkingText };
 }
