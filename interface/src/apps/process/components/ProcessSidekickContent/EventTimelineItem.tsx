@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { Text } from "@cypher-asi/zui";
 import { useProcessStore } from "../../stores/process-store";
 import { processApi } from "../../../../api/process";
@@ -29,7 +30,7 @@ export interface EventTimelineItemProps {
 
 export function EventTimelineItem({ event, nodes, isLive }: EventTimelineItemProps) {
   const isRunning = event.status === "running";
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const nodeLabel = nodes.find((n) => n.node_id === event.node_id)?.label ?? event.node_id.slice(0, 8);
   const colors = EVENT_STATUS_COLORS[event.status] ?? EVENT_STATUS_COLORS.pending;
@@ -96,18 +97,38 @@ function EventTimelineItemHeader({
         width: "100%", textAlign: "left", color: "var(--color-text)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%" }}>
+        <span style={{
+          display: "flex", alignItems: "center", flexShrink: 0,
+          transition: "transform 0.2s ease",
+          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+          color: "var(--color-text-muted)",
+        }}>
+          <ChevronRight size={12} />
+        </span>
         <span style={{
           width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
           background: colors.fg,
           ...(isRunning ? { animation: "aura-pulse 1.5s ease-in-out infinite" } : {}),
         }} />
         <span style={{ flex: 1, fontWeight: 600 }}>{nodeLabel}</span>
-        <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
-          {expanded ? "\u25B2" : "\u25BC"}
-        </span>
+        {isRunning
+          ? <NodeElapsedBadge startedAt={event.started_at} />
+          : <span style={{
+              fontSize: 10, padding: "1px 6px", borderRadius: 0,
+              background: colors.bg, color: colors.fg, fontWeight: 600,
+            }}>
+              {event.status}
+            </span>
+        }
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, paddingLeft: 18, flexWrap: "wrap" }}>
+        {event.started_at && (
+          <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
+            {new Date(event.started_at).toLocaleString()}
+            {event.completed_at && ` \u2022 ${formatDuration(event.started_at, event.completed_at)}`}
+          </span>
+        )}
         {hasTokens && (
           <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
             {formatTokens(totalTokens)} tok
@@ -119,21 +140,6 @@ function EventTimelineItemHeader({
             background: "rgba(107,114,128,0.1)", color: "var(--color-text-muted)",
           }}>
             {event.model}
-          </span>
-        )}
-        {isRunning
-          ? <NodeElapsedBadge startedAt={event.started_at} />
-          : <span style={{
-              fontSize: 10, padding: "1px 6px", borderRadius: 0,
-              background: colors.bg, color: colors.fg, fontWeight: 600,
-            }}>
-              {event.status}
-            </span>
-        }
-        {event.started_at && (
-          <span style={{ fontSize: 10, color: "var(--color-text-muted)" }}>
-            {new Date(event.started_at).toLocaleString()}
-            {event.completed_at && ` \u2022 ${formatDuration(event.started_at, event.completed_at)}`}
           </span>
         )}
       </div>

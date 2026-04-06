@@ -140,7 +140,7 @@ export function ToolCallBlock({
         type="button"
       >
         <span className={toolStyles.taskCheck}>
-          {!entry.pending && !entry.isError && <Check size={10} strokeWidth={2.5} />}
+          {!entry.pending && !entry.isError && <Check size={12} strokeWidth={2.5} />}
         </span>
         <span className={toolStyles.toolName}>{label}</span>
         {entry.isError && entry.result ? (
