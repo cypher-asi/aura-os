@@ -1,12 +1,11 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { NodeResizeControl, type NodeProps } from "@xyflow/react";
-import { Layers } from "lucide-react";
+import { NodeResizer, type NodeProps } from "@xyflow/react";
 
 interface ProcessGroupNodeData {
   label: string;
   isRenaming?: boolean;
   onRenameSubmit?: (newLabel: string) => void;
-  onResizeStop?: (nodeId: string, width?: number, height?: number) => void;
+  onResizeStop?: (nodeId: string, x: number, y: number, width: number, height: number) => void;
 }
 
 function RenameInput({ value, onSubmit }: { value: string; onSubmit: (v: string) => void }) {
@@ -69,47 +68,15 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
         position: "relative",
       }}
     >
-      <NodeResizeControl
-        position="bottom-right"
-        variant="handle"
+      <NodeResizer
         minWidth={220}
         minHeight={150}
-        style={{
-          background: "transparent",
-          border: "none",
-          width: 16,
-          height: 16,
-          right: 0,
-          bottom: 0,
-        }}
+        handleStyle={{ width: 8, height: 8, borderRadius: 0, background: "transparent", border: "none" }}
+        lineStyle={{ borderColor: "transparent" }}
         onResizeEnd={(_, params) => {
-          data.onResizeStop?.(
-            id,
-            typeof params.width === "number" ? params.width : undefined,
-            typeof params.height === "number" ? params.height : undefined,
-          );
+          data.onResizeStop?.(id, params.x, params.y, params.width, params.height);
         }}
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 16 16"
-          style={{
-            position: "absolute",
-            right: 0,
-            bottom: 0,
-            opacity: 0.45,
-            cursor: "nwse-resize",
-            transition: "opacity 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.45"; }}
-        >
-          <line x1="14" y1="4" x2="4" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
-          <line x1="14" y1="8" x2="8" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
-          <line x1="14" y1="12" x2="12" y2="14" stroke="#38bdf8" strokeWidth="1.5" />
-        </svg>
-      </NodeResizeControl>
+      />
       <div
         className="nodrag"
         style={{
@@ -126,7 +93,6 @@ function ProcessGroupNodeInner({ id, data, selected }: NodeProps & { data: Proce
           maxWidth: "calc(100% - 16px)",
         }}
       >
-        <Layers size={12} style={{ color: "#38bdf8", flexShrink: 0 }} />
         <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, fontWeight: 600 }}>
           {data.isRenaming && data.onRenameSubmit ? (
             <RenameInput value={data.label} onSubmit={data.onRenameSubmit} />

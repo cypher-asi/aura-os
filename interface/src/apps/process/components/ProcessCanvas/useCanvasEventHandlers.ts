@@ -315,18 +315,22 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
   );
 
   const onGroupResizeStop = useCallback(
-    async (nodeId: string, width?: number, height?: number) => {
+    async (nodeId: string, x: number, y: number, width: number, height: number) => {
       const processNode = processNodes.find((n) => n.node_id === nodeId);
       if (!processNode || processNode.node_type !== "group") return;
-      const nextWidth = Math.max(220, snap(width ?? GROUP_DEFAULT_WIDTH));
-      const nextHeight = Math.max(150, snap(height ?? GROUP_DEFAULT_HEIGHT));
+      const nextWidth = Math.max(220, snap(width));
+      const nextHeight = Math.max(150, snap(height));
       const nextConfig: Record<string, unknown> = {
         ...((processNode.config as Record<string, unknown>) ?? {}),
         [GROUP_CONFIG_WIDTH_KEY]: nextWidth,
         [GROUP_CONFIG_HEIGHT_KEY]: nextHeight,
       };
       try {
-        await processApi.updateNode(processId, nodeId, { config: nextConfig });
+        await processApi.updateNode(processId, nodeId, {
+          position_x: snap(x),
+          position_y: snap(y),
+          config: nextConfig,
+        });
         fetchNodes(processId);
       } catch (e) {
         console.error("Failed to save group size:", e);

@@ -18,7 +18,7 @@ export interface RenameState {
   onRenameSubmit: (newLabel: string) => void;
 }
 
-export type GroupResizeStopHandler = (nodeId: string, width?: number, height?: number) => void;
+export type GroupResizeStopHandler = (nodeId: string, x: number, y: number, width: number, height: number) => void;
 
 export const GRID = 20;
 export const GROUP_CONFIG_ID_KEY = "group_id";
