@@ -864,7 +864,7 @@ async fn create_spec_and_tasks(
             &aura_os_storage::CreateSpecRequest {
                 title: format!("Process: {}", process.name),
                 org_id: None,
-                order_index: None,
+                order_index: Some(0),
                 markdown_contents: Some(process.description.clone()),
             },
         )

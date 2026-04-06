@@ -142,7 +142,7 @@ pub struct CreateSpecRequest {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub order_index: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub markdown_contents: Option<String>,
