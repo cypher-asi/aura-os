@@ -1,26 +1,40 @@
 import { useMemo } from "react";
 import type { ProcessEvent } from "../../../../types";
-import type { DisplaySessionEvent, TimelineItem } from "../../../../types/stream";
-import { MessageBubble } from "../../../../components/MessageBubble";
-import { contentBlocksToTimeline } from "../NodeOutputTab/node-output-utils";
+import type { TimelineItem, ToolCallEntry } from "../../../../types/stream";
+import { LLMOutput } from "../../../../components/LLMOutput";
+import { buildTimelineWithToolCalls } from "../../../../utils/build-timeline";
 
 interface Props {
   event: ProcessEvent;
 }
 
 export function ProcessEventOutput({ event }: Props) {
-  const message = useMemo(() => processEventToMessage(event), [event]);
-  if (!message) return null;
-  return <MessageBubble message={message} />;
+  const parsed = useMemo(() => parseProcessEvent(event), [event]);
+  if (!parsed) return null;
+  return (
+    <LLMOutput
+      content={parsed.content}
+      timeline={parsed.timeline}
+      toolCalls={parsed.toolCalls}
+      thinkingText={parsed.thinkingText}
+    />
+  );
 }
 
-function processEventToMessage(event: ProcessEvent): DisplaySessionEvent | null {
+function parseProcessEvent(event: ProcessEvent): {
+  content: string;
+  timeline: TimelineItem[];
+  toolCalls: ToolCallEntry[];
+  thinkingText: string;
+} | null {
   const hasBlocks = !!event.content_blocks && event.content_blocks.length > 0;
   const { timeline, toolCalls, thinkingText } = hasBlocks
-    ? contentBlocksToTimeline(event.content_blocks!)
-    : { timeline: [] as TimelineItem[], toolCalls: [], thinkingText: "" };
+    ? buildTimelineWithToolCalls(event.content_blocks!, {
+        fallbackContent: event.output || undefined,
+      })
+    : { timeline: [] as TimelineItem[], toolCalls: [] as ToolCallEntry[], thinkingText: "" };
 
-  // Ensure `event.output` still appears when blocks only contain tools/thinking.
+  // Ensure event.output still appears when blocks only contain tools/thinking.
   if (
     event.output &&
     timeline.length > 0 &&
@@ -37,11 +51,9 @@ function processEventToMessage(event: ProcessEvent): DisplaySessionEvent | null 
   if (!hasContent) return null;
 
   return {
-    id: event.event_id,
-    role: "assistant",
     content: event.output || "",
-    toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-    thinkingText: thinkingText || undefined,
-    timeline: timeline.length > 0 ? timeline : undefined,
+    timeline,
+    toolCalls,
+    thinkingText,
   };
 }
