@@ -241,14 +241,12 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
       closePreview: s.closePreview,
     })),
   );
-  const [iconFailed, setIconFailed] = useState(false);
   const [projectBindings, setProjectBindings] = useState<ProjectBinding[]>([]);
 
   const del = useDeleteAgent(selectedAgent, setSelectedAgent, navigate, requestDelete, closeDeleteConfirm);
   const rt = useRuntimeTest(selectedAgent);
 
   useEffect(() => {
-    setIconFailed(false);
     if (selectedAgent) {
       api.agents.listProjectBindings(selectedAgent.agent_id)
         .then(setProjectBindings)
@@ -265,7 +263,6 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
     ? integrations.find((i) => i.integration_id === a.integration_id) ?? null
     : null;
   const runtimeReadiness = describeRuntimeReadiness(a, selectedIntegration);
-  const imageUrl = a.icon && !iconFailed ? a.icon : undefined;
   const isOwnAgent = !!user?.network_user_id && user.network_user_id === a.user_id;
   const isMobileStandalone = variant === "mobileStandalone";
   const effectiveTab = isMobileStandalone ? "profile" : activeTab;
@@ -276,9 +273,7 @@ export function AgentInfoPanel({ variant = "default" }: AgentInfoPanelProps) {
         {effectiveTab === "profile" && (
           <ProfileTab
             agent={a}
-            imageUrl={imageUrl}
             isOwnAgent={isOwnAgent}
-            onIconError={() => setIconFailed(true)}
             runtimeTesting={rt.runtimeTesting}
             runtimeTestMessage={rt.runtimeTestMessage}
             runtimeTestDetails={rt.runtimeTestDetails}

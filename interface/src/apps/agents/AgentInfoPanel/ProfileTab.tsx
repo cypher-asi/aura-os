@@ -8,6 +8,7 @@ import {
   KeyRound,
   Zap,
 } from "lucide-react";
+import { Avatar } from "../../../components/Avatar";
 import { FollowEditButton } from "../../../components/FollowEditButton";
 import { api } from "../../../api/client";
 import {
@@ -21,9 +22,7 @@ import styles from "./AgentInfoPanel.module.css";
 
 export interface ProfileTabProps {
   agent: Agent;
-  imageUrl: string | undefined;
   isOwnAgent: boolean;
-  onIconError: () => void;
   runtimeTesting: boolean;
   runtimeTestMessage: string | null;
   runtimeTestDetails: string | null;
@@ -35,23 +34,18 @@ export interface ProfileTabProps {
 
 function ProfileHeader({
   agent,
-  imageUrl,
   isOwnAgent,
-  onIconError,
-}: Pick<ProfileTabProps, "agent" | "imageUrl" | "isOwnAgent" | "onIconError">) {
+}: Pick<ProfileTabProps, "agent" | "isOwnAgent">) {
   return (
     <>
-      {imageUrl ? (
-        <div className={styles.profileImageBlock}>
-          <img src={imageUrl} alt={agent.name} className={styles.profileImage} onError={onIconError} />
-        </div>
-      ) : (
-        <div className={styles.profileAvatarBlock}>
-          <span className={styles.profileInitial}>
-            {agent.name.charAt(0).toUpperCase()}
-          </span>
-        </div>
-      )}
+      <div className={styles.profileImageBlock}>
+        <Avatar
+          avatarUrl={agent.icon ?? undefined}
+          name={agent.name}
+          type="agent"
+          size={80}
+        />
+      </div>
 
       <div className={styles.nameBlock}>
         <div className={styles.nameText}>
@@ -229,9 +223,7 @@ export function ProfileTab(props: ProfileTabProps) {
     <>
       <ProfileHeader
         agent={agent}
-        imageUrl={props.imageUrl}
         isOwnAgent={props.isOwnAgent}
-        onIconError={props.onIconError}
       />
       <ProfileMetaGrid agent={agent} />
       <RuntimeSection
