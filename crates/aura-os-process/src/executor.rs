@@ -1164,15 +1164,20 @@ const PLANNING_MAX_TOKENS: u32 = 4096;
 const PLANNING_CONTEXT_CHAR_LIMIT: usize = 12_000;
 
 const PLANNING_SYSTEM_PROMPT: &str = "\
-You are a task planner. Given a task description and context, decompose the work \
-into independent sub-tasks that can be executed in parallel by separate AI agents. \
-Each sub-task must be self-contained with enough context to execute independently.\n\n\
+You are a task planner for an AI process engine. Each sub-task you produce will be \
+executed by a separate AI coding agent that has access to shell commands and file \
+read/write tools in an empty workspace directory.\n\n\
 Rules:\n\
 - If the work is genuinely a single atomic task, return a single-element array.\n\
-- Keep each sub-task focused enough that it can be completed within a single short session.\n\
-- Each description must include all context the executor needs (don't reference other sub-tasks).\n\n\
+- Each sub-task description MUST contain concrete, operational steps — not just a topic.\n\
+- Preserve any tool-specific references from the original prompt (CLI commands like `tvly`, \
+API calls, specific tools). The executing agent needs to know WHAT to run.\n\
+- Do NOT instruct agents to build software projects (no Cargo.toml, package.json, etc.). \
+Agents should run commands and write output files directly.\n\
+- Each sub-task writes its results to a file. Keep outputs as plain text or JSON.\n\
+- Sub-tasks must be independent and parallelizable — don't reference other sub-tasks.\n\n\
 Respond ONLY with a JSON array, no markdown fences:\n\
-[{\"title\": \"short title\", \"description\": \"full instructions for this sub-task\"}]";
+[{\"title\": \"short title\", \"description\": \"step-by-step instructions for this sub-task\"}]";
 
 async fn plan_sub_tasks_via_llm(
     http: &reqwest::Client,
@@ -1370,7 +1375,10 @@ async fn execute_action_via_automaton(
                     spec_id: spec_id.to_string(),
                     title: sub_task.title.clone(),
                     org_id: None,
-                    description: Some(sub_task.description.clone()),
+                    description: Some(format!(
+                        "Original task instructions:\n{}\n\n---\nSub-task:\n{}",
+                        node.prompt, sub_task.description,
+                    )),
                     status: Some("ready".to_string()),
                     order_index: Some((idx + 100) as i32),
                     dependency_ids: None,
@@ -1420,6 +1428,16 @@ async fn execute_action_via_automaton(
             let _permit = sem.acquire().await.map_err(|e| {
                 ProcessError::Execution(format!("Semaphore error: {e}"))
             })?;
+
+            let output_file = format!("output-{}.txt", sub_task_id);
+            let instructions = format!(
+                "Write your final deliverable to `{output_file}` in the workspace root.\n\
+                 This file is used as the sub-task's output for the next process step.\n\
+                 Do NOT create project scaffolding (no Cargo.toml, package.json, etc.).\n\
+                 Use shell commands and write files directly."
+            );
+            let instructions_path = Path::new(&sub_project_path).join(".process-instructions");
+            let _ = tokio::fs::write(&instructions_path, instructions.as_bytes()).await;
 
             let authed_ac = ac.clone()
                 .with_auth(sub_token.clone());
