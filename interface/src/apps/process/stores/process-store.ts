@@ -3,6 +3,45 @@ import type { Process, ProcessNode, ProcessNodeConnection, ProcessRun, ProcessEv
 import { processApi } from "../../../api/process";
 
 export const LAST_PROCESS_ID_KEY = "aura:lastProcessId";
+export const PROCESS_VIEWPORTS_KEY = "aura:processViewports";
+
+export interface ProcessViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+function loadStoredViewports(): Record<string, ProcessViewport> {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(PROCESS_VIEWPORTS_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, ProcessViewport] => {
+        const viewport = entry[1];
+        return !!viewport
+          && typeof viewport === "object"
+          && typeof viewport.x === "number"
+          && typeof viewport.y === "number"
+          && typeof viewport.zoom === "number";
+      }),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function persistViewports(viewports: Record<string, ProcessViewport>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PROCESS_VIEWPORTS_KEY, JSON.stringify(viewports));
+  } catch {
+    // Ignore storage failures so the in-memory store still works.
+  }
+}
 
 interface ProcessState {
   processes: Process[];
@@ -14,6 +53,7 @@ interface ProcessState {
   folders: ProcessFolder[];
   /** Tracks the last-viewed run per process so it can be restored on return. */
   lastViewedRunId: Record<string, string>;
+  viewports: Record<string, ProcessViewport>;
 
   fetchProcesses: () => Promise<void>;
   fetchNodes: (processId: string) => Promise<void>;
@@ -22,6 +62,7 @@ interface ProcessState {
   fetchEvents: (processId: string, runId: string) => Promise<void>;
   setEvents: (runId: string, events: ProcessEvent[]) => void;
   setLastViewedRunId: (processId: string, runId: string) => void;
+  setViewport: (processId: string, viewport: ProcessViewport) => void;
 
   addProcess: (process: Process) => void;
   updateProcess: (process: Process) => void;
@@ -42,6 +83,7 @@ export const useProcessStore = create<ProcessState>()((set) => ({
   events: {},
   folders: [],
   lastViewedRunId: {},
+  viewports: loadStoredViewports(),
 
   fetchProcesses: async () => {
     set({ loading: true });
@@ -84,15 +126,27 @@ export const useProcessStore = create<ProcessState>()((set) => ({
     set((s) => ({ events: { ...s.events, [runId]: events } })),
   setLastViewedRunId: (processId, runId) =>
     set((s) => ({ lastViewedRunId: { ...s.lastViewedRunId, [processId]: runId } })),
+  setViewport: (processId, viewport) =>
+    set((s) => {
+      const viewports = { ...s.viewports, [processId]: viewport };
+      persistViewports(viewports);
+      return { viewports };
+    }),
 
   addFolder: (folder) => set((s) => ({ folders: [folder, ...s.folders] })),
   addProcess: (process) => set((s) => ({ processes: [process, ...s.processes] })),
   updateProcess: (process) => set((s) => ({
     processes: s.processes.map((p) => p.process_id === process.process_id ? process : p),
   })),
-  removeProcess: (processId) => set((s) => ({
-    processes: s.processes.filter((p) => p.process_id !== processId),
-  })),
+  removeProcess: (processId) => set((s) => {
+    const viewports = { ...s.viewports };
+    delete viewports[processId];
+    persistViewports(viewports);
+    return {
+      processes: s.processes.filter((p) => p.process_id !== processId),
+      viewports,
+    };
+  }),
 
   setNodes: (processId, nodes) => set((s) => ({ nodes: { ...s.nodes, [processId]: nodes } })),
   setConnections: (processId, connections) =>

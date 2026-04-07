@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   ReactFlow,
@@ -23,7 +23,7 @@ import {
 import { Button, Menu, ModalConfirm } from "@cypher-asi/zui";
 import type { MenuItem } from "@cypher-asi/zui";
 import type { ProcessNodeType } from "../../../../types/enums";
-import { useProcessStore } from "../../stores/process-store";
+import { useProcessStore, type ProcessViewport } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { ProcessNodeCard } from "../ProcessNodeCard";
 import { ProcessGroupNode } from "../ProcessGroupNode";
@@ -38,6 +38,7 @@ import {
 import { useCanvasEventHandlers } from "./useCanvasEventHandlers";
 
 const nodeTypes = { processNode: ProcessNodeCard, groupNode: ProcessGroupNode };
+const DEFAULT_VIEWPORT: ProcessViewport = { x: 0, y: 0, zoom: 1 };
 
 const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
   prompt: <MessageSquare size={14} />,
@@ -89,9 +90,11 @@ const selectionCtxMenuItems: MenuItem[] = [
 ];
 
 export function ProcessCanvas(props: ProcessCanvasProps) {
+  const savedViewport = useProcessStore((s) => s.viewports[props.processId]);
+
   return (
-    <ReactFlowProvider>
-      <ProcessCanvasInner {...props} />
+    <ReactFlowProvider key={props.processId}>
+      <ProcessCanvasInner {...props} savedViewport={savedViewport} />
     </ReactFlowProvider>
   );
 }
@@ -104,20 +107,22 @@ function ProcessCanvasInner({
   onToggle,
   onStop,
   isEnabled,
-}: ProcessCanvasProps) {
-  const { screenToFlowPosition } = useReactFlow();
+  savedViewport,
+}: ProcessCanvasProps & { savedViewport?: ProcessViewport }) {
+  const { screenToFlowPosition, fitView } = useReactFlow();
   const fetchNodes = useProcessStore((s) => s.fetchNodes);
   const fetchConnections = useProcessStore((s) => s.fetchConnections);
+  const saveViewport = useProcessStore((s) => s.setViewport);
   const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
   const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);
   const isRunActive = runs.length > 0 && (runs[0].status === "running" || runs[0].status === "pending");
+  const hasAutoFitRef = useRef(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes, undefined, nodeStatuses));
   const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections, processNodes));
 
   const {
     renameState,
-    renamingNodeId,
     setRenamingNodeId,
     wrapperRef,
     onConnect,
@@ -190,11 +195,22 @@ function ProcessCanvasInner({
           : n;
       });
     });
-  }, [processNodes, setNodes, renamingNodeId, nodeStatuses, onGroupResizeStop]);
+  }, [processNodes, setNodes, renameState, nodeStatuses, onGroupResizeStop]);
 
   useEffect(() => {
     setEdges(toFlowEdges(processConnections, processNodes));
   }, [processConnections, processNodes, setEdges]);
+
+  useEffect(() => {
+    if (savedViewport || hasAutoFitRef.current || nodes.length === 0) return;
+
+    hasAutoFitRef.current = true;
+    const frameId = window.requestAnimationFrame(() => {
+      void fitView({ padding: 0.2 });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [savedViewport, nodes.length, fitView]);
 
   return (
     <div ref={wrapperRef} style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -213,10 +229,12 @@ function ProcessCanvasInner({
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
         onSelectionContextMenu={onSelectionContextMenu}
+        onMoveEnd={(_event, viewport) => saveViewport(processId, viewport)}
         nodeTypes={nodeTypes}
         deleteKeyCode={null}
         connectionMode={ConnectionMode.Strict}
-        fitView
+        defaultViewport={savedViewport ?? DEFAULT_VIEWPORT}
+        fitView={!savedViewport}
         snapToGrid
         snapGrid={[GRID, GRID]}
         defaultEdgeOptions={{ animated: true, type: "step" }}
