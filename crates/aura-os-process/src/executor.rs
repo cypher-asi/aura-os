@@ -60,6 +60,22 @@ struct ParentStreamMirrorContext {
     run_id: String,
     node_id: String,
     item_label: String,
+    progress_state: Arc<Mutex<ParentProgressMirrorState>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct ChildRunProgress {
+    input_tokens: u64,
+    output_tokens: u64,
+    cost_usd: f64,
+}
+
+#[derive(Debug, Default)]
+struct ParentProgressMirrorState {
+    base_input_tokens: u64,
+    base_output_tokens: u64,
+    base_cost_usd: f64,
+    child_runs: HashMap<String, ChildRunProgress>,
 }
 
 fn truncate_with_marker(input: &str, limit: usize) -> String {
@@ -249,6 +265,52 @@ fn is_child_run_terminal_event(
 ) -> bool {
     matches!(evt_type, "process_run_completed" | "process_run_failed")
         && evt.get("run_id").and_then(|v| v.as_str()) == Some(child_run_id)
+}
+
+fn emit_parent_progress_update(
+    store: &ProcessStore,
+    tx: &broadcast::Sender<serde_json::Value>,
+    parent: &ParentStreamMirrorContext,
+) {
+    let state = parent
+        .progress_state
+        .lock()
+        .expect("parent progress mirror state poisoned");
+    let total_input_tokens = state.base_input_tokens
+        + state
+            .child_runs
+            .values()
+            .map(|usage| usage.input_tokens)
+            .sum::<u64>();
+    let total_output_tokens = state.base_output_tokens
+        + state
+            .child_runs
+            .values()
+            .map(|usage| usage.output_tokens)
+            .sum::<u64>();
+    let cost_usd = state.base_cost_usd
+        + state
+            .child_runs
+            .values()
+            .map(|usage| usage.cost_usd)
+            .sum::<f64>();
+    drop(state);
+
+    emit_process_event(
+        store,
+        tx,
+        serde_json::json!({
+            "type": "process_run_progress",
+            "project_id": parent.project_id,
+            "task_id": parent.task_id,
+            "process_id": parent.process_id,
+            "run_id": parent.run_id,
+            "node_id": parent.node_id,
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": total_output_tokens,
+            "cost_usd": cost_usd,
+        }),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -792,6 +854,30 @@ impl ProcessExecutor {
                             ) {
                                 emit_process_event(&store, &tx, payload);
                             }
+                            if evt_type == "process_run_progress"
+                                && evt.get("run_id").and_then(|v| v.as_str()) == Some(&child_run_id)
+                            {
+                                let mut state = parent
+                                    .progress_state
+                                    .lock()
+                                    .expect("parent progress mirror state poisoned");
+                                let entry =
+                                    state.child_runs.entry(child_run_id.clone()).or_default();
+                                entry.input_tokens = evt
+                                    .get("total_input_tokens")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(entry.input_tokens);
+                                entry.output_tokens = evt
+                                    .get("total_output_tokens")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(entry.output_tokens);
+                                entry.cost_usd = evt
+                                    .get("cost_usd")
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(entry.cost_usd);
+                                drop(state);
+                                emit_parent_progress_update(&store, &tx, &parent);
+                            }
                             if is_child_run_terminal_event(&child_run_id, &evt, evt_type) {
                                 break;
                             }
@@ -847,6 +933,26 @@ impl ProcessExecutor {
             .into_iter()
             .find(|r| r.run_id == run.run_id)
             .ok_or_else(|| ProcessError::RunNotFound(run.run_id.to_string()))?;
+
+        if let Some(parent) = parent_mirror.as_ref() {
+            let mut state = parent
+                .progress_state
+                .lock()
+                .expect("parent progress mirror state poisoned");
+            let entry = state
+                .child_runs
+                .entry(completed_run.run_id.to_string())
+                .or_default();
+            entry.input_tokens = completed_run
+                .total_input_tokens
+                .unwrap_or(entry.input_tokens);
+            entry.output_tokens = completed_run
+                .total_output_tokens
+                .unwrap_or(entry.output_tokens);
+            entry.cost_usd = completed_run.cost_usd.unwrap_or(entry.cost_usd);
+            drop(state);
+            emit_parent_progress_update(self.store.as_ref(), &self.event_broadcast, parent);
+        }
 
         Ok(completed_run)
     }
@@ -1251,8 +1357,17 @@ fn execute_run<'a>(
                     execute_subprocess(node, &upstream_context, executor, &run.run_id).await
                 }
                 ProcessNodeType::ForEach => {
-                    execute_foreach(node, &upstream_context, executor, &project_id, &run.run_id)
-                        .await
+                    execute_foreach(
+                        node,
+                        &upstream_context,
+                        executor,
+                        &project_id,
+                        &run.run_id,
+                        run_input_tokens,
+                        run_output_tokens,
+                        run_cost_usd,
+                    )
+                    .await
                 }
                 ProcessNodeType::Merge => {
                     let display = format!(
@@ -2792,12 +2907,21 @@ fn parse_foreach_json_array(
         })
 }
 
+fn apply_foreach_max_items(items: &mut Vec<String>, max_items: Option<usize>) {
+    if let Some(limit) = max_items.filter(|limit| *limit > 0) {
+        items.truncate(limit);
+    }
+}
+
 async fn execute_foreach(
     node: &ProcessNode,
     upstream_context: &str,
     executor: &ProcessExecutor,
     project_id: &ProjectId,
     parent_run_id: &ProcessRunId,
+    run_base_input_tokens: u64,
+    run_base_output_tokens: u64,
+    run_base_cost_usd: f64,
 ) -> Result<NodeResult, ProcessError> {
     let child_process_id_str = node
         .config
@@ -2816,6 +2940,12 @@ async fn execute_foreach(
         .get("max_concurrency")
         .and_then(|v| v.as_u64())
         .unwrap_or(3) as usize;
+    let max_items = node
+        .config
+        .get("max_items")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as usize)
+        .filter(|v| *v > 0);
 
     let timeout_secs = node
         .config
@@ -2837,7 +2967,7 @@ async fn execute_foreach(
 
     let json_array_key = node.config.get("json_array_key").and_then(|v| v.as_str());
 
-    let items: Vec<String> = match iterator_mode {
+    let mut items: Vec<String> = match iterator_mode {
         "json_array" => {
             let parsed = parse_foreach_json_array(upstream_context, json_array_key)?;
             parsed
@@ -2870,6 +3000,7 @@ async fn execute_foreach(
                 .collect()
         }
     };
+    apply_foreach_max_items(&mut items, max_items);
 
     if items.is_empty() {
         return Ok(NodeResult {
@@ -2884,6 +3015,7 @@ async fn execute_foreach(
         node_id = %node.node_id,
         child_process_id = %child_process_id,
         items = items.len(),
+        max_items = max_items.map(|value| value as u64),
         max_concurrency,
         "ForEach: starting iteration"
     );
@@ -2892,6 +3024,12 @@ async fn execute_foreach(
     let executor = executor.clone();
     let parent_run_id = *parent_run_id;
     let prompt_template = node.prompt.clone();
+    let progress_state = Arc::new(Mutex::new(ParentProgressMirrorState {
+        base_input_tokens: run_base_input_tokens,
+        base_output_tokens: run_base_output_tokens,
+        base_cost_usd: run_base_cost_usd,
+        child_runs: HashMap::new(),
+    }));
 
     let mut handles = Vec::with_capacity(items.len());
 
@@ -2904,6 +3042,7 @@ async fn execute_foreach(
         let parent_process_id = node.process_id.to_string();
         let parent_run_id_str = parent_run_id.to_string();
         let parent_node_id = node.node_id.to_string();
+        let progress_state = progress_state.clone();
         let item = item.clone();
         let prompt = prompt_template.clone();
         let item_var = item_variable.to_string();
@@ -2932,6 +3071,7 @@ async fn execute_foreach(
                     run_id: parent_run_id_str,
                     node_id: parent_node_id,
                     item_label: format!("{item_var} #{}", idx + 1),
+                    progress_state: progress_state.clone(),
                 }),
             )
             .await
@@ -3262,13 +3402,15 @@ fn broadcast_node_status(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_parent_mirrored_process_event, build_workspace_instructions,
-        parse_foreach_json_array, resolve_action_plan_mode, ActionPlanMode,
-        ParentStreamMirrorContext,
+        apply_foreach_max_items, build_parent_mirrored_process_event, build_workspace_instructions,
+        emit_parent_progress_update, parse_foreach_json_array, resolve_action_plan_mode,
+        ActionPlanMode, ChildRunProgress, ParentProgressMirrorState, ParentStreamMirrorContext,
     };
     use crate::process_store::ProcessStore;
     use aura_os_store::RocksStore;
+    use std::collections::HashMap;
     use std::sync::Arc;
+    use std::sync::Mutex;
     use tempfile::TempDir;
     use tokio::sync::broadcast;
 
@@ -3367,6 +3509,28 @@ mod tests {
     }
 
     #[test]
+    fn foreach_max_items_truncates_to_first_n_items() {
+        let mut items = vec![
+            "first".to_string(),
+            "second".to_string(),
+            "third".to_string(),
+        ];
+
+        apply_foreach_max_items(&mut items, Some(2));
+
+        assert_eq!(items, vec!["first".to_string(), "second".to_string()]);
+    }
+
+    #[test]
+    fn foreach_max_items_ignores_zero_limit() {
+        let mut items = vec!["first".to_string(), "second".to_string()];
+
+        apply_foreach_max_items(&mut items, Some(0));
+
+        assert_eq!(items, vec!["first".to_string(), "second".to_string()]);
+    }
+
+    #[test]
     fn parent_mirror_rewrites_child_stream_context() {
         let parent = ParentStreamMirrorContext {
             project_id: "project-1".to_string(),
@@ -3375,6 +3539,7 @@ mod tests {
             run_id: "run-parent".to_string(),
             node_id: "node-parent".to_string(),
             item_label: "item #1".to_string(),
+            progress_state: Arc::new(Mutex::new(ParentProgressMirrorState::default())),
         };
 
         let child_event = serde_json::json!({
@@ -3427,5 +3592,52 @@ mod tests {
         assert_eq!(evt["node_id"], "33333333-3333-3333-3333-333333333333");
         assert_eq!(evt["sub_task"], "item #1");
         assert_eq!(evt["text"], "hello");
+    }
+
+    #[tokio::test]
+    async fn parent_progress_update_sums_base_and_child_usage() {
+        let parent = ParentStreamMirrorContext {
+            project_id: "project-1".to_string(),
+            task_id: "foreach:node-1".to_string(),
+            process_id: "process-1".to_string(),
+            run_id: "run-parent".to_string(),
+            node_id: "node-parent".to_string(),
+            item_label: "item #1".to_string(),
+            progress_state: Arc::new(Mutex::new(ParentProgressMirrorState {
+                base_input_tokens: 10,
+                base_output_tokens: 5,
+                base_cost_usd: 1.5,
+                child_runs: HashMap::from([
+                    (
+                        "child-1".to_string(),
+                        ChildRunProgress {
+                            input_tokens: 20,
+                            output_tokens: 7,
+                            cost_usd: 2.0,
+                        },
+                    ),
+                    (
+                        "child-2".to_string(),
+                        ChildRunProgress {
+                            input_tokens: 3,
+                            output_tokens: 4,
+                            cost_usd: 0.5,
+                        },
+                    ),
+                ]),
+            })),
+        };
+
+        let (store, _dir) = open_temp_process_store();
+        let (tx, mut rx) = broadcast::channel(8);
+        emit_parent_progress_update(&store, &tx, &parent);
+
+        let evt = rx.recv().await.unwrap();
+        assert_eq!(evt["type"], "process_run_progress");
+        assert_eq!(evt["run_id"], "run-parent");
+        assert_eq!(evt["node_id"], "node-parent");
+        assert_eq!(evt["total_input_tokens"], 33);
+        assert_eq!(evt["total_output_tokens"], 16);
+        assert_eq!(evt["cost_usd"], 4.0);
     }
 }

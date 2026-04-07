@@ -109,6 +109,9 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
   const [maxConcurrency, setMaxConcurrency] = useState(
     node.node_type === "for_each" ? String(cfg?.max_concurrency ?? "3") : "3",
   );
+  const [maxItems, setMaxItems] = useState(
+    node.node_type === "for_each" ? String(cfg?.max_items ?? "") : "",
+  );
   const [iteratorMode, setIteratorMode] = useState(
     node.node_type === "for_each" ? (cfg?.iterator_mode as string) ?? "json_array" : "json_array",
   );
@@ -191,6 +194,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       }
       if (node.node_type === "for_each") {
         setMaxConcurrency(String(c?.max_concurrency ?? "3"));
+        setMaxItems(c?.max_items == null ? "" : String(c?.max_items));
         setIteratorMode((c?.iterator_mode as string) ?? "json_array");
         setItemVariableName((c?.item_variable_name as string) ?? "item");
         setJsonArrayKey((c?.json_array_key as string) ?? "entries");
@@ -258,6 +262,8 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
       }
       if (node.node_type === "for_each") {
         config.max_concurrency = Number(maxConcurrency) || 3;
+        if (maxItems.trim() && Number(maxItems) > 0) config.max_items = Number(maxItems);
+        else delete config.max_items;
         config.iterator_mode = iteratorMode;
         if (itemVariableName) config.item_variable_name = itemVariableName;
         if (jsonArrayKey.trim()) config.json_array_key = jsonArrayKey.trim();
@@ -300,7 +306,7 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
     } finally {
       setSaving(false);
     }
-  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, iteratorMode, itemVariableName, jsonArrayKey, collectMode, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
+  }, [processId, node, label, prompt, agentId, schedule, conditionExpr, artifactMode, artifactType, artifactName, artifactData, delaySeconds, childProcessId, maxConcurrency, maxItems, iteratorMode, itemVariableName, jsonArrayKey, collectMode, outputFile, watchlist, model, timeoutSeconds, maxTurns, isPinned, pinnedOutput, fetchNodes, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!processId || node.node_type === "ignition") return;
@@ -469,6 +475,10 @@ export function NodeEditorModal({ isOpen, node, onClose }: NodeEditorModalProps)
               <EditField label="Max Concurrency">
                 <input style={inputStyle} type="number" min={1} max={20} value={maxConcurrency} onChange={(e) => setMaxConcurrency(e.target.value)} />
                 <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Maximum parallel child process runs.</Text>
+              </EditField>
+              <EditField label="Max Items">
+                <input style={inputStyle} type="number" min={1} value={maxItems} onChange={(e) => setMaxItems(e.target.value)} placeholder="Unlimited" />
+                <Text variant="secondary" size="xs" style={{ marginTop: 2 }}>Optionally stop after the first N parsed items.</Text>
               </EditField>
               <EditField label="Item Variable Name">
                 <input style={inputStyle} value={itemVariableName} onChange={(e) => setItemVariableName(e.target.value)} placeholder="item" />
