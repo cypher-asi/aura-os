@@ -18,7 +18,6 @@ aura-os-link = { path = "../../crates/aura-os-link" }
 aura-os-terminal = { path = "../../crates/aura-os-terminal" }
 aura-os-super-agent = { path = "../../crates/aura-os-super-agent" }
 aura-os-process = { path = "../../crates/aura-os-process" }
-aura-os-integrations = { path = "../../crates/aura-os-integrations" }
 aura-os-network = { path = "../../crates/aura-os-network" }
 aura-os-storage = { path = "../../crates/aura-os-storage" }
 reqwest = { version = "0.11", features = ["json"] }
