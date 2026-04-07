@@ -53,8 +53,31 @@ impl IntegrationsClient {
         })
     }
 
+    /// Create with an explicit base URL and internal token (e.g. for tests).
+    pub fn with_base_url(base_url: &str, internal_token: &str) -> Self {
+        Self {
+            http: build_http_client(),
+            base_url: base_url.trim_end_matches('/').to_string(),
+            internal_token: internal_token.to_string(),
+        }
+    }
+
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    pub async fn health_check(&self) -> Result<(), IntegrationsError> {
+        let url = format!("{}/health", self.base_url);
+        let resp = self.http.get(&url).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(IntegrationsError::Server {
+                status: status.as_u16(),
+                body,
+            });
+        }
+        Ok(())
     }
 
     // ── Public API (JWT auth) ──
