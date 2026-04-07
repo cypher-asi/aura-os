@@ -2,8 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
@@ -1136,7 +1135,35 @@ fn plan_sub_tasks(
 const PLANNING_MODEL: &str = "claude-haiku-4-5";
 const PLANNING_MAX_TOKENS: u32 = 4096;
 const PLANNING_CONTEXT_CHAR_LIMIT: usize = 12_000;
-const DECOMPOSED_SUBTASK_MAX_CONCURRENCY: usize = 1;
+
+fn build_subtask_workspace(parent_workspace: &Path, sub_task_id: &str) -> PathBuf {
+    parent_workspace.join("subtasks").join(sub_task_id)
+}
+
+fn merge_parallel_usage_totals(
+    usage_totals: &Mutex<HashMap<String, NodeTokenUsage>>,
+    sub_task_id: &str,
+    usage: &serde_json::Value,
+) -> (u64, u64, Option<String>) {
+    let mut totals = usage_totals
+        .lock()
+        .expect("parallel sub-task usage mutex poisoned");
+    let prev = totals.get(sub_task_id).cloned().unwrap_or_default();
+    let (next_in, next_out, usage_model) =
+        merge_usage_totals(usage, prev.input_tokens, prev.output_tokens);
+    let model = usage_model.or(prev.model);
+    totals.insert(
+        sub_task_id.to_string(),
+        NodeTokenUsage {
+            input_tokens: next_in,
+            output_tokens: next_out,
+            model: model.clone(),
+        },
+    );
+    let total_input = totals.values().map(|entry| entry.input_tokens).sum();
+    let total_output = totals.values().map(|entry| entry.output_tokens).sum();
+    (total_input, total_output, model)
+}
 
 const PLANNING_SYSTEM_PROMPT: &str = "\
 You are a task planner for an AI process engine. Each sub-task you produce will be \
@@ -1331,15 +1358,7 @@ async fn execute_action_via_automaton(
         .get("max_concurrency")
         .and_then(|v| v.as_u64())
         .unwrap_or(3) as usize;
-    let max_concurrency = requested_max_concurrency.min(DECOMPOSED_SUBTASK_MAX_CONCURRENCY);
-    if requested_max_concurrency > max_concurrency {
-        warn!(
-            node_id = %node.node_id,
-            requested_max_concurrency,
-            max_concurrency,
-            "Serializing decomposed sub-tasks to avoid shared workspace races"
-        );
-    }
+    let max_concurrency = requested_max_concurrency.max(1);
 
     let jwt = token.ok_or_else(|| ProcessError::Execution("No JWT for sub-task creation".into()))?;
     let pid = project_id.to_string();
@@ -1347,8 +1366,8 @@ async fn execute_action_via_automaton(
     let semaphore = Arc::new(tokio::sync::Semaphore::new(max_concurrency));
     let mut handles = Vec::with_capacity(sub_tasks.len());
     let transcript_store = store.clone();
-    let shared_node_in = Arc::new(AtomicU64::new(0));
-    let shared_node_out = Arc::new(AtomicU64::new(0));
+    let shared_usage_totals = Arc::new(Mutex::new(HashMap::<String, NodeTokenUsage>::new()));
+    let parent_workspace = PathBuf::from(project_path);
 
     for (idx, sub_task) in sub_tasks.iter().enumerate() {
         let created_task = storage_client
@@ -1391,15 +1410,14 @@ async fn execute_action_via_automaton(
         let sub_project_id = *project_id;
         let sub_process_id = *process_id;
         let sub_run_id = *run_id;
-        let sub_project_path = project_path.to_string();
+        let sub_workspace_dir = build_subtask_workspace(&parent_workspace, &sub_task_id);
         let sub_token = token.map(|s| s.to_string());
         let sub_timeout = timeout_secs;
         let sub_node_id = node.node_id;
         let sub_title = sub_task.title.clone();
         let broadcast_tx = broadcast.cloned();
         let sub_store = transcript_store.clone();
-        let task_node_in = shared_node_in.clone();
-        let task_node_out = shared_node_out.clone();
+        let task_usage_totals = shared_usage_totals.clone();
         let model = {
             let loaded_agent = node.agent_id.as_ref().and_then(|aid| {
                 agent_service.get_agent_local(aid).ok()
@@ -1413,6 +1431,12 @@ async fn execute_action_via_automaton(
                 ProcessError::Execution(format!("Semaphore error: {e}"))
             })?;
 
+            tokio::fs::create_dir_all(&sub_workspace_dir)
+                .await
+                .map_err(|e| ProcessError::Execution(format!(
+                    "Failed to create sub-task workspace for {sub_task_id}: {e}"
+                )))?;
+
             let output_file = format!("output-{}.txt", sub_task_id);
             let instructions = format!(
                 "Write your final deliverable to `{output_file}` in the workspace root.\n\
@@ -1420,8 +1444,9 @@ async fn execute_action_via_automaton(
                  Do NOT create project scaffolding (no Cargo.toml, package.json, etc.).\n\
                  Use shell commands and write files directly."
             );
-            let instructions_path = Path::new(&sub_project_path).join(".process-instructions");
+            let instructions_path = sub_workspace_dir.join(".process-instructions");
             let _ = tokio::fs::write(&instructions_path, instructions.as_bytes()).await;
+            let sub_workspace_path = sub_workspace_dir.to_string_lossy().to_string();
 
             let authed_ac = ac.clone()
                 .with_auth(sub_token.clone());
@@ -1431,7 +1456,7 @@ async fn execute_action_via_automaton(
                     project_id: sub_project_id.to_string(),
                     auth_token: sub_token.clone(),
                     model,
-                    workspace_root: Some(sub_project_path.clone()),
+                    workspace_root: Some(sub_workspace_path.clone()),
                     task_id: Some(sub_task_id.clone()),
                     git_repo_url: None,
                     git_branch: None,
@@ -1460,12 +1485,11 @@ async fn execute_action_via_automaton(
                         }
                         if matches!(evt_type, "token_usage" | "assistant_message_end") {
                             let usage = evt.get("usage").unwrap_or(evt);
-                            let prev_in = task_node_in.load(Ordering::Relaxed);
-                            let prev_out = task_node_out.load(Ordering::Relaxed);
-                            let (total_in, total_out, usage_model) =
-                                merge_usage_totals(usage, prev_in, prev_out);
-                            task_node_in.store(total_in, Ordering::Relaxed);
-                            task_node_out.store(total_out, Ordering::Relaxed);
+                            let (total_in, total_out, usage_model) = merge_parallel_usage_totals(
+                                &task_usage_totals,
+                                &fwd_tid,
+                                usage,
+                            );
                             let cost = estimate_cost_usd(usage_model.as_deref(), total_in, total_out);
                             emit_process_event(&sub_store, tx, serde_json::json!({
                                 "type": "process_run_progress",
@@ -1483,8 +1507,7 @@ async fn execute_action_via_automaton(
 
             match completion {
                 RunCompletion::Done(out) | RunCompletion::StreamClosed(out) => {
-                    let output_file_path = Path::new(&sub_project_path)
-                        .join(format!("output-{}.txt", sub_task_id));
+                    let output_file_path = sub_workspace_dir.join(format!("output-{}.txt", sub_task_id));
                     let file_content = match tokio::fs::read_to_string(&output_file_path).await {
                         Ok(content) if !content.trim().is_empty() => Some(content),
                         _ => None,
