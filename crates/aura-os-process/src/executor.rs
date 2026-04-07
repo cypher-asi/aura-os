@@ -106,6 +106,33 @@ struct SubTaskPlan {
     description: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ActionPlanMode {
+    /// Follow the same conservative pattern as project builds:
+    /// one planner, one executor, no decomposition unless explicitly enabled.
+    SinglePath,
+    /// Allow heuristic decomposition and optional LLM planning.
+    Decompose,
+}
+
+fn resolve_action_plan_mode(config: &serde_json::Value) -> ActionPlanMode {
+    let Some(mode) = config.get("plan_mode").and_then(|v| v.as_str()) else {
+        return ActionPlanMode::SinglePath;
+    };
+
+    match mode.trim().to_ascii_lowercase().as_str() {
+        "auto" | "on" | "llm" | "decompose" | "parallel" => ActionPlanMode::Decompose,
+        _ => ActionPlanMode::SinglePath,
+    }
+}
+
+fn single_sub_task(node: &ProcessNode, upstream_context: &str) -> SubTaskPlan {
+    SubTaskPlan {
+        title: node.label.clone(),
+        description: format!("{}\n\nContext:\n{}", node.prompt, upstream_context),
+    }
+}
+
 /// Forward a raw automaton event to the app broadcast, stamping it with
 /// process-specific identifiers.  Only forwards streamable event types.
 fn emit_process_event(
@@ -1122,10 +1149,7 @@ fn plan_sub_tasks(
     }
 
     // 4. Default: single task
-    vec![SubTaskPlan {
-        title: node.label.clone(),
-        description: format!("{}\n\nContext:\n{}", node.prompt, upstream_context),
-    }]
+    vec![single_sub_task(node, upstream_context)]
 }
 
 // ---------------------------------------------------------------------------
@@ -1294,13 +1318,14 @@ async fn execute_action_via_automaton(
         ).await;
     }
 
-    let plan_mode = node.config.get("plan_mode")
-        .and_then(|v| v.as_str())
-        .unwrap_or("auto");
+    let plan_mode = resolve_action_plan_mode(&node.config);
 
-    let mut sub_tasks = plan_sub_tasks(node, upstream_context);
+    let mut sub_tasks = match plan_mode {
+        ActionPlanMode::SinglePath => vec![single_sub_task(node, upstream_context)],
+        ActionPlanMode::Decompose => plan_sub_tasks(node, upstream_context),
+    };
 
-    if sub_tasks.len() <= 1 && plan_mode != "off" {
+    if sub_tasks.len() <= 1 && plan_mode == ActionPlanMode::Decompose {
         if let Some(jwt) = token {
             info!(node_id = %node.node_id, "Heuristic split found 1 task; attempting LLM-based planning");
             match plan_sub_tasks_via_llm(
@@ -2351,4 +2376,37 @@ fn broadcast_node_status(
         }
     }
     emit_process_event(store, broadcast, payload);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{resolve_action_plan_mode, ActionPlanMode};
+
+    #[test]
+    fn action_plan_mode_defaults_to_single_path() {
+        let config = serde_json::json!({});
+        assert_eq!(
+            resolve_action_plan_mode(&config),
+            ActionPlanMode::SinglePath
+        );
+    }
+
+    #[test]
+    fn action_plan_mode_requires_explicit_opt_in_for_decomposition() {
+        for disabled in ["off", "false", "disabled", ""] {
+            let config = serde_json::json!({ "plan_mode": disabled });
+            assert_eq!(
+                resolve_action_plan_mode(&config),
+                ActionPlanMode::SinglePath
+            );
+        }
+
+        for enabled in ["auto", "on", "llm", "decompose", "parallel"] {
+            let config = serde_json::json!({ "plan_mode": enabled });
+            assert_eq!(
+                resolve_action_plan_mode(&config),
+                ActionPlanMode::Decompose
+            );
+        }
+    }
 }
