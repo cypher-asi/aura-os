@@ -3,7 +3,10 @@ import type {
   ProcessRunTranscriptEvent,
 } from "../../../../types";
 import type { DisplaySessionEvent } from "../../../../types/stream";
-import { buildProcessSidekickCopyText } from "./process-output-utils";
+import {
+  buildProcessSidekickCopyText,
+  nodeTranscriptToEvents,
+} from "./process-output-utils";
 
 function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
   return {
@@ -122,5 +125,46 @@ describe("buildProcessSidekickCopyText", () => {
     expect(text).toContain("# Live Output: Draft reply");
     expect(text).toContain("Prior streamed chunk");
     expect(text).toContain("Current live chunk");
+  });
+
+  it("finalizes replayed tools that never received a persisted result", () => {
+    const transcript = [
+      makeTranscriptEntry("tool_use_start", {
+        node_id: "node-1",
+        type: "tool_use_start",
+        id: "tool-1",
+        name: "write_file",
+      }),
+      makeTranscriptEntry("tool_call_snapshot", {
+        node_id: "node-1",
+        type: "tool_call_snapshot",
+        id: "tool-1",
+        name: "write_file",
+        input: {
+          path: "notes.txt",
+          content: "hello",
+        },
+      }),
+      makeTranscriptEntry("process_node_executed", {
+        node_id: "node-1",
+        type: "process_node_executed",
+        status: "completed",
+      }),
+    ];
+
+    const [message] = nodeTranscriptToEvents(transcript);
+
+    expect(message?.toolCalls).toHaveLength(1);
+    expect(message?.toolCalls?.[0]).toMatchObject({
+      id: "tool-1",
+      name: "write_file",
+      pending: false,
+      started: false,
+      result: "Completed without a persisted tool result",
+      input: {
+        path: "notes.txt",
+        content: "hello",
+      },
+    });
   });
 });

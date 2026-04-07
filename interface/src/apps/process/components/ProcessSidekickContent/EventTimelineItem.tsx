@@ -165,14 +165,32 @@ interface BodyProps {
 }
 
 function EventTimelineItemBody({ isRunning, event, inputSnapshot }: BodyProps) {
+  const hasPersistedOutput = !!event.output?.trim() || !!event.content_blocks?.length;
+  const outputPlaceholder = isRunning
+    ? "Waiting for output..."
+    : "No output persisted for this node.";
+
   return (
     <div style={{ padding: "0 8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
-      {!isRunning && (
-        <div>
-          <div style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 2 }}>Output</div>
+      <div>
+        <div style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 2 }}>Output</div>
+        {hasPersistedOutput && !isRunning ? (
           <ProcessEventOutput event={event} />
-        </div>
-      )}
+        ) : (
+          <div style={{
+            background: "var(--color-bg-input)",
+            padding: 6,
+            borderRadius: "var(--radius-sm)",
+            whiteSpace: "pre-wrap",
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            lineHeight: 1.4,
+            color: "var(--color-text-muted)",
+          }}>
+            {outputPlaceholder}
+          </div>
+        )}
+      </div>
       {inputSnapshot && (
         <div>
           <div style={{ fontSize: 10, color: "var(--color-text-muted)", marginBottom: 2 }}>Input</div>

@@ -169,13 +169,7 @@ function useRunNodeTracking(
     for (const [nodeId, status] of Object.entries(nodeStatuses)) {
       if (status === "running") next.add(nodeId);
     }
-    if (next.size > 0) {
-      setRunningNodeIds((prev) => {
-        const merged = new Set(prev);
-        for (const id of next) merged.add(id);
-        return merged;
-      });
-    }
+    setRunningNodeIds(next);
   }, [nodeStatuses]);
 
   useEffect(() => {

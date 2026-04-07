@@ -17,6 +17,38 @@ function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
 }
 
 describe("buildProcessEventDisplay", () => {
+  it("preserves tool snapshot input for persisted file actions", () => {
+    const { message } = buildProcessEventDisplay(
+      makeEvent({
+        content_blocks: [
+          { type: "tool_use", id: "tool-1", name: "write_file" },
+          {
+            type: "tool_call_snapshot",
+            id: "tool-1",
+            name: "write_file",
+            input: {
+              path: "notes.txt",
+              content: "hello",
+            },
+          },
+          { type: "tool_result", tool_use_id: "tool-1", name: "write_file", result: "ok", is_error: false },
+        ],
+      }),
+    );
+
+    expect(message?.toolCalls).toHaveLength(1);
+    expect(message?.toolCalls?.[0]).toMatchObject({
+      id: "tool-1",
+      name: "write_file",
+      input: {
+        path: "notes.txt",
+        content: "hello",
+      },
+      pending: false,
+      result: "ok",
+    });
+  });
+
   it("matches persisted tool results to tool calls by name when ids are missing", () => {
     const { message } = buildProcessEventDisplay(
       makeEvent({

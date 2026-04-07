@@ -7,7 +7,10 @@ import type {
   TimelineItem,
   ToolCallEntry,
 } from "../../../../types/stream";
-import { prettyPrintIfJson } from "../NodeOutputTab/node-output-utils";
+import {
+  getPendingToolFallbackResult,
+  prettyPrintIfJson,
+} from "../NodeOutputTab/node-output-utils";
 import { buildProcessEventDisplay } from "../ProcessEventOutput/process-event-display";
 
 export interface ProcessNodeLabel {
@@ -160,9 +163,25 @@ export function nodeTranscriptToEvents(
   let eventIdx = 0;
   let itemIdx = 0;
   let hasThinkingItem = false;
+  let terminalStatus: "completed" | "failed" | "skipped" | undefined;
+
+  const finalizePendingTranscriptTools = (
+    toolCalls: ToolCallEntry[],
+    status: "completed" | "failed" | "skipped" = "completed",
+  ) => {
+    for (const toolCall of toolCalls) {
+      if (!toolCall.pending) continue;
+      toolCall.pending = false;
+      toolCall.started = false;
+      toolCall.isError = status === "failed";
+      toolCall.result = toolCall.result ?? getPendingToolFallbackResult(status);
+    }
+  };
 
   const flush = () => {
     if (!textBuf && !thinkingBuf && tools.length === 0) return;
+
+    finalizePendingTranscriptTools(tools, terminalStatus);
 
     result.push({
       id: `transcript-${eventIdx++}`,
@@ -178,6 +197,7 @@ export function nodeTranscriptToEvents(
     tools = [];
     timeline = [];
     itemIdx = 0;
+    terminalStatus = undefined;
   };
 
   for (const entry of entries) {
@@ -283,6 +303,11 @@ export function nodeTranscriptToEvents(
             ? payload.status.toLowerCase()
             : "";
         if (status && !status.includes("running")) {
+          terminalStatus = status.includes("failed")
+            ? "failed"
+            : status.includes("skipped")
+              ? "skipped"
+              : "completed";
           if (textBuf) {
             timeline.push({
               kind: "text",
@@ -301,12 +326,7 @@ export function nodeTranscriptToEvents(
     }
   }
 
-  for (const toolCall of tools) {
-    if (toolCall.pending) {
-      toolCall.pending = false;
-      toolCall.started = false;
-    }
-  }
+  finalizePendingTranscriptTools(tools);
 
   if (textBuf) {
     timeline.push({ kind: "text", content: textBuf, id: `tl-text-${itemIdx++}` });

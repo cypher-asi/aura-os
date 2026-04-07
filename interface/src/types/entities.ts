@@ -516,11 +516,12 @@ export interface ProcessRun {
 }
 
 export interface ProcessEventContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "thinking";
+  type: "text" | "tool_use" | "tool_call_snapshot" | "tool_result" | "thinking";
   text?: string;
   thinking?: string;
   name?: string;
   id?: string;
+  input?: Record<string, unknown>;
   tool_use_id?: string;
   result?: string;
   is_error?: boolean;

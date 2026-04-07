@@ -42,6 +42,36 @@ function makeEvent(overrides: Partial<ProcessEvent> = {}): ProcessEvent {
 }
 
 describe("EventTimelineItem", () => {
+  it("shows a waiting placeholder for running events without persisted output", () => {
+    render(
+      <EventTimelineItem
+        event={makeEvent({ input_snapshot: "" })}
+        nodes={[{ node_id: "node-1", label: "Draft reply" }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Draft reply/i }));
+
+    expect(screen.getByText("Waiting for output...")).toBeInTheDocument();
+  });
+
+  it("shows a no-output placeholder for completed events without persisted output", () => {
+    render(
+      <EventTimelineItem
+        event={makeEvent({
+          status: "completed",
+          input_snapshot: "",
+          completed_at: "2026-04-06T20:00:05.000Z",
+        })}
+        nodes={[{ node_id: "node-1", label: "Draft reply" }]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Draft reply/i }));
+
+    expect(screen.getByText("No output persisted for this node.")).toBeInTheDocument();
+  });
+
   it("collapses the detail view when an active event completes", async () => {
     const event = makeEvent();
     const { rerender } = render(

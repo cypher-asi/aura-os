@@ -71,18 +71,23 @@ export function prettyPrintIfJson(text: string): string {
   return text;
 }
 
+export function getPendingToolFallbackResult(
+  terminalStatus: TerminalProcessStatus,
+): string {
+  return terminalStatus === "failed"
+    ? "Run failed before a tool result was persisted"
+    : terminalStatus === "skipped"
+      ? "Run was skipped before a tool result was persisted"
+      : "Completed without a persisted tool result";
+}
+
 function finalizePendingToolCalls(
   toolCalls: ToolCallEntry[],
   terminalStatus?: TerminalProcessStatus,
 ): void {
   if (!terminalStatus) return;
 
-  const fallbackResult =
-    terminalStatus === "failed"
-      ? "Run failed before a tool result was persisted"
-      : terminalStatus === "skipped"
-        ? "Run was skipped before a tool result was persisted"
-        : "Completed without a persisted tool result";
+  const fallbackResult = getPendingToolFallbackResult(terminalStatus);
 
   for (const toolCall of toolCalls) {
     if (!toolCall.pending) continue;
@@ -129,6 +134,28 @@ export function contentBlocksToTimeline(
       toolCallMap.set(id, entry);
       toolCalls.push(entry);
       timeline.push({ kind: "tool", toolCallId: id, id: `tool-${id}` });
+    } else if (block.type === "tool_call_snapshot") {
+      const id = block.id ?? "";
+      const name = block.name ?? "tool";
+      const input = block.input ?? {};
+      const existing = id ? toolCallMap.get(id) : undefined;
+
+      if (existing) {
+        existing.name = name;
+        existing.input = { ...existing.input, ...input };
+      } else {
+        const newId = id || `tool-${timeline.length}`;
+        const entry: ToolCallEntry = {
+          id: newId,
+          name,
+          input,
+          pending: true,
+          started: true,
+        };
+        toolCallMap.set(newId, entry);
+        toolCalls.push(entry);
+        timeline.push({ kind: "tool", toolCallId: newId, id: `tool-${newId}` });
+      }
     } else if (block.type === "tool_result") {
       const matchId = block.tool_use_id ?? block.id ?? "";
       const entry =

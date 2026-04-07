@@ -139,21 +139,23 @@ where
     let mut pending_text = String::new();
     let mut failed_message: Option<String> = None;
     let deadline = tokio::time::Instant::now() + timeout;
-    let flush_pending_text =
-        |out: &mut CollectedOutput, pending_text: &mut String| {
-            if pending_text.is_empty() {
-                return;
-            }
-            let text = std::mem::take(pending_text);
-            out.content_blocks.push(serde_json::json!({
-                "type": "text",
-                "text": text,
-            }));
-        };
+    let flush_pending_text = |out: &mut CollectedOutput, pending_text: &mut String| {
+        if pending_text.is_empty() {
+            return;
+        }
+        let text = std::mem::take(pending_text);
+        out.content_blocks.push(serde_json::json!({
+            "type": "text",
+            "text": text,
+        }));
+    };
 
     let finish = |out: CollectedOutput, failed_message: Option<String>| -> RunCompletion {
         if let Some(msg) = failed_message {
-            RunCompletion::Failed { message: msg, output: out }
+            RunCompletion::Failed {
+                message: msg,
+                output: out,
+            }
         } else {
             RunCompletion::Done(out)
         }
@@ -166,7 +168,8 @@ where
                 on_event(&evt, evt_type);
                 match evt_type {
                     "text_delta" => {
-                        let text = evt.get("text")
+                        let text = evt
+                            .get("text")
                             .or_else(|| evt.get("delta"))
                             .and_then(|t| t.as_str());
                         if let Some(text) = text {
@@ -182,6 +185,20 @@ where
                             "type": "tool_use", "id": id, "name": name,
                         }));
                     }
+                    "tool_call_snapshot" => {
+                        let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                        let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let input = evt
+                            .get("input")
+                            .cloned()
+                            .unwrap_or_else(|| serde_json::json!({}));
+                        out.content_blocks.push(serde_json::json!({
+                            "type": "tool_call_snapshot",
+                            "id": id,
+                            "name": name,
+                            "input": input,
+                        }));
+                    }
                     "tool_result" => {
                         let tool_use_id = evt
                             .get("tool_use_id")
@@ -189,10 +206,11 @@ where
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                        let result_text =
-                            evt.get("result").and_then(|v| v.as_str()).unwrap_or("");
-                        let is_error =
-                            evt.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
+                        let result_text = evt.get("result").and_then(|v| v.as_str()).unwrap_or("");
+                        let is_error = evt
+                            .get("is_error")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
                         out.content_blocks.push(serde_json::json!({
                             "type": "tool_result",
                             "tool_use_id": tool_use_id,
@@ -201,17 +219,25 @@ where
                             "is_error": is_error,
                         }));
                     }
-                    "assistant_message_end" | "token_usage"
-                    | "usage" | "session_usage" => {
+                    "assistant_message_end" | "token_usage" | "usage" | "session_usage" => {
                         let usage = evt.get("usage").unwrap_or(&evt);
-                        if let Some(cum_in) = usage.get("cumulative_input_tokens").and_then(|v| v.as_u64()) {
+                        if let Some(cum_in) = usage
+                            .get("cumulative_input_tokens")
+                            .and_then(|v| v.as_u64())
+                        {
                             out.input_tokens = cum_in;
-                        } else if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64()) {
+                        } else if let Some(inp) = usage.get("input_tokens").and_then(|v| v.as_u64())
+                        {
                             out.input_tokens += inp;
                         }
-                        if let Some(cum_out) = usage.get("cumulative_output_tokens").and_then(|v| v.as_u64()) {
+                        if let Some(cum_out) = usage
+                            .get("cumulative_output_tokens")
+                            .and_then(|v| v.as_u64())
+                        {
                             out.output_tokens = cum_out;
-                        } else if let Some(outp) = usage.get("output_tokens").and_then(|v| v.as_u64()) {
+                        } else if let Some(outp) =
+                            usage.get("output_tokens").and_then(|v| v.as_u64())
+                        {
                             out.output_tokens += outp;
                         }
                         if let Some(m) = usage.get("model").and_then(|v| v.as_str()) {
@@ -262,5 +288,54 @@ where
                 return RunCompletion::Timeout(out);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{collect_automaton_events, RunCompletion};
+    use std::time::Duration;
+    use tokio::sync::broadcast;
+
+    #[tokio::test]
+    async fn collect_automaton_events_preserves_tool_snapshots() {
+        let (tx, rx) = broadcast::channel(16);
+
+        tx.send(serde_json::json!({
+            "type": "tool_use_start",
+            "id": "tool-1",
+            "name": "write_file",
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({
+            "type": "tool_call_snapshot",
+            "id": "tool-1",
+            "name": "write_file",
+            "input": {
+                "path": "notes.txt",
+                "content": "hello"
+            },
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({
+            "type": "tool_result",
+            "tool_use_id": "tool-1",
+            "name": "write_file",
+            "result": "ok",
+            "is_error": false,
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+        let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+        let output = match completion {
+            RunCompletion::Done(output) => output,
+            other => panic!("expected completed output, got {other:?}"),
+        };
+
+        assert_eq!(output.content_blocks.len(), 3);
+        assert_eq!(output.content_blocks[1]["type"], "tool_call_snapshot");
+        assert_eq!(output.content_blocks[1]["input"]["path"], "notes.txt");
+        assert_eq!(output.content_blocks[1]["input"]["content"], "hello");
     }
 }
