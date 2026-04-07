@@ -241,10 +241,11 @@ impl ToolRegistry {
     pub fn register_process_tools(
         &mut self,
         store: Arc<aura_os_process::ProcessStore>,
+        process_app: Arc<aura_os_process::ProcessApplicationService>,
         executor: Arc<aura_os_process::ProcessExecutor>,
     ) {
         self.register(Arc::new(process_tools::CreateProcessTool {
-            store: store.clone(),
+            process_app: process_app.clone(),
         }));
         self.register(Arc::new(process_tools::ListProcessesTool {
             store: store.clone(),

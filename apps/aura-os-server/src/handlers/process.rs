@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 use tracing::info;
 
 use aura_os_core::{
-    Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
-    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
-    ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTranscriptEvent, ProcessRunTrigger,
-    ProjectId,
+    OrgId, Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder,
+    ProcessFolderId, ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId,
+    ProcessNodeId, ProcessNodeType, ProcessRun, ProcessRunId, ProcessRunTranscriptEvent,
+    ProcessRunTrigger, ProjectId,
 };
+use aura_os_process::CreateProcessInput;
 use chrono::Utc;
 
 use crate::error::{ApiError, ApiResult};
@@ -108,48 +109,21 @@ pub(crate) async fn create_process(
         .parse()
         .map_err(|_| ApiError::bad_request("invalid project_id"))?;
 
-    let now = Utc::now();
-    let process = Process {
-        process_id: ProcessId::new(),
-        org_id: "default".parse().unwrap_or_default(),
+    let org_id: OrgId = "default".parse().unwrap_or_default();
+    let input = CreateProcessInput {
+        org_id,
         user_id,
-        project_id: Some(project_id),
         name: req.name,
         description: req.description.unwrap_or_default(),
-        enabled: true,
+        project_id: Some(project_id),
         folder_id: req.folder_id.and_then(|id| id.parse().ok()),
         schedule: req.schedule,
         tags: req.tags,
-        last_run_at: None,
-        next_run_at: None,
-        created_at: now,
-        updated_at: now,
     };
-
-    state
+    let process = state
         .super_agent_service
-        .process_store
-        .save_process(&process)
-        .map_err(|e| ApiError::internal(e.to_string()))?;
-
-    // Auto-create the Ignition node
-    let ignition = ProcessNode {
-        node_id: ProcessNodeId::new(),
-        process_id: process.process_id,
-        node_type: ProcessNodeType::Ignition,
-        label: "Ignition".to_string(),
-        agent_id: None,
-        prompt: String::new(),
-        config: serde_json::json!({}),
-        position_x: 250.0,
-        position_y: 50.0,
-        created_at: now,
-        updated_at: now,
-    };
-    state
-        .super_agent_service
-        .process_store
-        .save_node(&ignition)
+        .process_app
+        .create_process_with_default_graph(input)
         .map_err(|e| ApiError::internal(e.to_string()))?;
 
     info!(process_id = %process.process_id, name = %process.name, "Process created");

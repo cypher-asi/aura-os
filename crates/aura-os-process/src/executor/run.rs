@@ -1,3 +1,6 @@
+//! Process graph execution (large module; further splits planned).
+#![allow(clippy::too_many_arguments)]
+
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -28,12 +31,13 @@ use aura_os_tasks::TaskService;
 use crate::error::ProcessError;
 use crate::process_store::ProcessStore;
 
+use super::cost::{estimate_cost_usd, merge_usage_totals};
+use super::payload::{
+    sanitize_content_blocks, sanitize_process_payload, should_skip_streamed_process_event,
+    summarize_input_snapshot, truncate_for_artifact_context,
+};
+
 const DEFAULT_HARNESS_TIMEOUT_SECS: u64 = 600; // 10 minutes
-const MAX_PROCESS_INPUT_SNAPSHOT_CHARS: usize = 16_000;
-const MAX_PROCESS_TEXT_EVENT_CHARS: usize = 4_000;
-const MAX_PROCESS_TOOL_RESULT_CHARS: usize = 8_000;
-const MAX_PROCESS_WRITE_FILE_CONTENT_CHARS: usize = 4_000;
-const MAX_ARTIFACT_CONTEXT_CHARS: usize = 16_000;
 
 #[derive(Debug, Clone, Default)]
 struct NodeTokenUsage {
@@ -76,149 +80,6 @@ struct ParentProgressMirrorState {
     base_output_tokens: u64,
     base_cost_usd: f64,
     child_runs: HashMap<String, ChildRunProgress>,
-}
-
-fn truncate_with_marker(input: &str, limit: usize) -> String {
-    if input.chars().count() <= limit {
-        return input.to_string();
-    }
-
-    let truncated: String = input.chars().take(limit).collect();
-    format!("{truncated}\n[truncated]")
-}
-
-fn summarize_input_snapshot(input: &str) -> String {
-    truncate_with_marker(input, MAX_PROCESS_INPUT_SNAPSHOT_CHARS)
-}
-
-fn is_incomplete_write_input(input: &serde_json::Value) -> bool {
-    match input {
-        serde_json::Value::Null => true,
-        serde_json::Value::Object(map) => {
-            !matches!(map.get("content"), Some(serde_json::Value::String(_)))
-        }
-        _ => false,
-    }
-}
-
-fn should_skip_streamed_process_event(payload: &serde_json::Value) -> bool {
-    let event_type = payload
-        .get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
-    let tool_name = payload
-        .get("name")
-        .and_then(|v| v.as_str())
-        .unwrap_or_default();
-
-    if tool_name != "write_file" {
-        return false;
-    }
-
-    match event_type {
-        "tool_use_start" => true,
-        "tool_call_snapshot" => payload
-            .get("input")
-            .map(is_incomplete_write_input)
-            .unwrap_or(true),
-        _ => false,
-    }
-}
-
-fn truncate_object_string_field(
-    map: &mut serde_json::Map<String, serde_json::Value>,
-    key: &str,
-    limit: usize,
-) {
-    if let Some(serde_json::Value::String(value)) = map.get_mut(key) {
-        if value.chars().count() > limit {
-            *value = truncate_with_marker(value, limit);
-        }
-    }
-}
-
-fn sanitize_process_payload(mut payload: serde_json::Value) -> serde_json::Value {
-    let Some(map) = payload.as_object_mut() else {
-        return payload;
-    };
-
-    truncate_object_string_field(map, "text", MAX_PROCESS_TEXT_EVENT_CHARS);
-    truncate_object_string_field(map, "delta", MAX_PROCESS_TEXT_EVENT_CHARS);
-    truncate_object_string_field(map, "thinking", MAX_PROCESS_TEXT_EVENT_CHARS);
-    truncate_object_string_field(map, "result", MAX_PROCESS_TOOL_RESULT_CHARS);
-
-    if let Some(serde_json::Value::Object(input)) = map.get_mut("input") {
-        truncate_object_string_field(input, "content", MAX_PROCESS_WRITE_FILE_CONTENT_CHARS);
-    }
-
-    payload
-}
-
-fn sanitize_content_blocks(blocks: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    let mut sanitized = Vec::with_capacity(blocks.len());
-    let mut suppressed_tool_use_ids = HashSet::new();
-
-    for block in blocks {
-        let mut block = block.clone();
-        let block_type = block
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-
-        match block_type {
-            "tool_use" => {
-                let tool_id = block
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                let tool_name = block
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default();
-
-                if tool_name == "write_file"
-                    && block
-                        .get("input")
-                        .map(is_incomplete_write_input)
-                        .unwrap_or(true)
-                {
-                    if !tool_id.is_empty() {
-                        suppressed_tool_use_ids.insert(tool_id);
-                    }
-                    continue;
-                }
-
-                if let Some(serde_json::Value::Object(input)) = block.get_mut("input") {
-                    truncate_object_string_field(
-                        input,
-                        "content",
-                        MAX_PROCESS_WRITE_FILE_CONTENT_CHARS,
-                    );
-                }
-
-                sanitized.push(block);
-            }
-            "tool_result" => {
-                let tool_use_id = block
-                    .get("tool_use_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or_default();
-                if suppressed_tool_use_ids.contains(tool_use_id) {
-                    continue;
-                }
-                if let Some(serde_json::Value::String(result)) = block.get_mut("result") {
-                    if result.chars().count() > MAX_PROCESS_TOOL_RESULT_CHARS {
-                        *result = truncate_with_marker(result, MAX_PROCESS_TOOL_RESULT_CHARS);
-                    }
-                }
-                sanitized.push(block);
-            }
-            _ => sanitized.push(block),
-        }
-    }
-
-    sanitized
 }
 
 fn build_parent_mirrored_process_event(
@@ -311,70 +172,6 @@ fn emit_parent_progress_update(
             "cost_usd": cost_usd,
         }),
     );
-}
-
-// ---------------------------------------------------------------------------
-// Model-aware cost estimation (ported from dev_loop handler)
-// ---------------------------------------------------------------------------
-
-fn default_fee_schedule() -> [(&'static str, f64, f64); 3] {
-    [
-        ("claude-opus-4-6", 5.0, 25.0),
-        ("claude-sonnet-4-5", 3.0, 15.0),
-        ("claude-haiku-4-5", 0.80, 4.00),
-    ]
-}
-
-fn lookup_model_rates(model: &str) -> (f64, f64) {
-    let normalized = model.trim().to_ascii_lowercase();
-    for (candidate, input, output) in default_fee_schedule() {
-        if normalized == candidate
-            || normalized.starts_with(candidate)
-            || candidate.starts_with(&normalized)
-        {
-            return (input, output);
-        }
-    }
-    (3.0, 15.0)
-}
-
-fn estimate_cost_usd(model: Option<&str>, input_tokens: u64, output_tokens: u64) -> f64 {
-    let (input_rate, output_rate) = lookup_model_rates(model.unwrap_or("claude-sonnet-4-5"));
-    input_tokens as f64 * input_rate / 1_000_000.0
-        + output_tokens as f64 * output_rate / 1_000_000.0
-}
-
-fn merge_usage_totals(
-    usage: &serde_json::Value,
-    prev_input: u64,
-    prev_output: u64,
-) -> (u64, u64, Option<String>) {
-    let next_input = usage
-        .get("cumulative_input_tokens")
-        .and_then(|v| v.as_u64())
-        .unwrap_or_else(|| {
-            prev_input
-                + usage
-                    .get("input_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-        });
-    let next_output = usage
-        .get("cumulative_output_tokens")
-        .and_then(|v| v.as_u64())
-        .unwrap_or_else(|| {
-            prev_output
-                + usage
-                    .get("output_tokens")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-        });
-    let model = usage
-        .get("model")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-
-    (next_input, next_output, model)
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -3210,9 +3007,9 @@ async fn resolve_artifact_ref(
     let artifacts = store.list_artifacts_for_process(&source_process_id).ok()?;
 
     let matched = if let Some(name) = artifact_name {
-        artifacts.into_iter().filter(|a| a.name == name).last()
+        artifacts.into_iter().rfind(|a| a.name == name)
     } else {
-        artifacts.into_iter().last()
+        artifacts.into_iter().next_back()
     };
 
     let artifact = matched?;
@@ -3220,7 +3017,7 @@ async fn resolve_artifact_ref(
     tokio::fs::read_to_string(&file_path)
         .await
         .ok()
-        .map(|content| truncate_with_marker(&content, MAX_ARTIFACT_CONTEXT_CHARS))
+        .map(|content| truncate_for_artifact_context(&content))
 }
 
 /// If the run is still active (Pending/Running), mark it as Failed with the
@@ -3236,7 +3033,7 @@ fn mark_run_failed_if_active(
         .list_runs(&run.process_id)
         .ok()
         .and_then(|runs| runs.into_iter().find(|r| r.run_id == run.run_id));
-    let dominated = current.as_ref().map_or(true, |r| {
+    let dominated = current.as_ref().is_none_or(|r| {
         matches!(
             r.status,
             ProcessRunStatus::Pending | ProcessRunStatus::Running

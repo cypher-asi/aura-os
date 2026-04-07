@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::Utc;
 use serde_json::json;
 
-use aura_os_core::{
-    Process, ProcessId, ProcessNode, ProcessNodeId, ProcessNodeType, ProcessRunTrigger, ToolDomain,
+use aura_os_core::{OrgId, ProcessId, ProcessRunTrigger, ToolDomain};
+use aura_os_process::{
+    CreateProcessInput, ProcessApplicationService, ProcessExecutor, ProcessStore,
 };
-use aura_os_process::{ProcessExecutor, ProcessStore};
 
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
@@ -21,7 +20,7 @@ fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
 // ---------------------------------------------------------------------------
 
 pub struct CreateProcessTool {
-    pub store: Arc<ProcessStore>,
+    pub process_app: Arc<ProcessApplicationService>,
 }
 
 #[async_trait]
@@ -77,43 +76,20 @@ impl SuperAgentTool for CreateProcessTool {
                     .and_then(|ps| ps.first().map(|p| p.project_id))
             });
 
-        let now = Utc::now();
-        let process = Process {
-            process_id: ProcessId::new(),
-            org_id: ctx.org_id.parse().unwrap_or_default(),
+        let org_id: OrgId = ctx.org_id.parse().unwrap_or_default();
+        let create = CreateProcessInput {
+            org_id,
             user_id: ctx.user_id.clone(),
-            project_id,
             name: name.to_string(),
             description: description.to_string(),
-            enabled: true,
+            project_id,
             folder_id: None,
             schedule,
             tags: Vec::new(),
-            last_run_at: None,
-            next_run_at: None,
-            created_at: now,
-            updated_at: now,
         };
-
-        self.store
-            .save_process(&process)
-            .map_err(|e| tool_err("create_process", e))?;
-
-        let ignition = ProcessNode {
-            node_id: ProcessNodeId::new(),
-            process_id: process.process_id,
-            node_type: ProcessNodeType::Ignition,
-            label: "Ignition".to_string(),
-            agent_id: None,
-            prompt: String::new(),
-            config: json!({}),
-            position_x: 250.0,
-            position_y: 50.0,
-            created_at: now,
-            updated_at: now,
-        };
-        self.store
-            .save_node(&ignition)
+        let process = self
+            .process_app
+            .create_process_with_default_graph(create)
             .map_err(|e| tool_err("create_process", e))?;
 
         Ok(ToolResult {

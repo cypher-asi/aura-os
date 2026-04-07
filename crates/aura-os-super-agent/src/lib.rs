@@ -48,6 +48,7 @@ pub struct SuperAgentService {
     pub cron_store: Arc<cron_store::CronStore>,
     pub cron_executor: Arc<executor::CronJobExecutor>,
     pub process_store: Arc<aura_os_process::ProcessStore>,
+    pub process_app: Arc<aura_os_process::ProcessApplicationService>,
     pub process_executor: Arc<aura_os_process::ProcessExecutor>,
     project_service: Arc<ProjectService>,
     agent_service: Arc<AgentService>,
@@ -91,6 +92,9 @@ impl SuperAgentService {
         ));
 
         let process_store = Arc::new(aura_os_process::ProcessStore::new(store.clone()));
+        let process_app = Arc::new(aura_os_process::ProcessApplicationService::new(
+            process_store.clone(),
+        ));
         let process_executor = Arc::new(aura_os_process::ProcessExecutor::new(
             process_store.clone(),
             event_broadcast.clone(),
@@ -107,7 +111,11 @@ impl SuperAgentService {
 
         let mut tool_registry = ToolRegistry::with_tier1_tools();
         tool_registry.register_cron_tools(cron_store.clone(), cron_executor.clone());
-        tool_registry.register_process_tools(process_store.clone(), process_executor.clone());
+        tool_registry.register_process_tools(
+            process_store.clone(),
+            process_app.clone(),
+            process_executor.clone(),
+        );
 
         let event_listener = SuperAgentEventListener::new(100);
         event_listener.spawn(event_broadcast.subscribe());
@@ -120,6 +128,7 @@ impl SuperAgentService {
             cron_store,
             cron_executor,
             process_store,
+            process_app,
             process_executor,
             project_service,
             agent_service,
