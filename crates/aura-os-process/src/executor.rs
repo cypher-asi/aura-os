@@ -52,6 +52,16 @@ struct NodeResult {
     content_blocks: Option<Vec<serde_json::Value>>,
 }
 
+#[derive(Debug, Clone)]
+struct ParentStreamMirrorContext {
+    project_id: String,
+    task_id: String,
+    process_id: String,
+    run_id: String,
+    node_id: String,
+    item_label: String,
+}
+
 fn truncate_with_marker(input: &str, limit: usize) -> String {
     if input.chars().count() <= limit {
         return input.to_string();
@@ -193,6 +203,52 @@ fn sanitize_content_blocks(blocks: &[serde_json::Value]) -> Vec<serde_json::Valu
     }
 
     sanitized
+}
+
+fn build_parent_mirrored_process_event(
+    parent: &ParentStreamMirrorContext,
+    child_run_id: &str,
+    evt: &serde_json::Value,
+    evt_type: &str,
+) -> Option<serde_json::Value> {
+    if !matches!(
+        evt_type,
+        "text_delta"
+            | "thinking_delta"
+            | "tool_use_start"
+            | "tool_call_started"
+            | "tool_call_snapshot"
+            | "tool_result"
+    ) {
+        return None;
+    }
+
+    if evt.get("run_id").and_then(|v| v.as_str()) != Some(child_run_id) {
+        return None;
+    }
+
+    let mut mirrored = evt.clone();
+    let map = mirrored.as_object_mut()?;
+    map.insert("project_id".into(), parent.project_id.clone().into());
+    map.insert("task_id".into(), parent.task_id.clone().into());
+    map.insert("process_id".into(), parent.process_id.clone().into());
+    map.insert("run_id".into(), parent.run_id.clone().into());
+    map.insert("node_id".into(), parent.node_id.clone().into());
+    map.insert("child_run_id".into(), child_run_id.to_string().into());
+    map.insert("sub_task".into(), parent.item_label.clone().into());
+    if evt_type == "tool_call_started" {
+        map.insert("type".into(), "tool_use_start".into());
+    }
+    Some(mirrored)
+}
+
+fn is_child_run_terminal_event(
+    child_run_id: &str,
+    evt: &serde_json::Value,
+    evt_type: &str,
+) -> bool {
+    matches!(evt_type, "process_run_completed" | "process_run_failed")
+        && evt.get("run_id").and_then(|v| v.as_str()) == Some(child_run_id)
 }
 
 // ---------------------------------------------------------------------------
@@ -642,6 +698,24 @@ impl ProcessExecutor {
         input_override: Option<String>,
         parent_run_id: Option<ProcessRunId>,
     ) -> Result<ProcessRun, ProcessError> {
+        self.trigger_and_await_with_parent_mirror(
+            process_id,
+            trigger,
+            input_override,
+            parent_run_id,
+            None,
+        )
+        .await
+    }
+
+    async fn trigger_and_await_with_parent_mirror(
+        &self,
+        process_id: &ProcessId,
+        trigger: ProcessRunTrigger,
+        input_override: Option<String>,
+        parent_run_id: Option<ProcessRunId>,
+        parent_mirror: Option<ParentStreamMirrorContext>,
+    ) -> Result<ProcessRun, ProcessError> {
         let process = self
             .store
             .get_process(process_id)?
@@ -682,7 +756,48 @@ impl ProcessExecutor {
             "Child process run triggered (await)"
         );
 
-        if let Err(e) = execute_run(
+        let mirror_task = parent_mirror.clone().map(|parent| {
+            let store = self.store.as_ref().clone();
+            let tx = self.event_broadcast.clone();
+            let child_run_id = run.run_id.to_string();
+            send_process_text(
+                &store,
+                &tx,
+                &parent.project_id,
+                &parent.task_id,
+                &parent.process_id,
+                &parent.run_id,
+                &parent.node_id,
+                &format!("\n--- {} started ---\n", parent.item_label),
+            );
+
+            let mut rx = tx.subscribe();
+            tokio::spawn(async move {
+                loop {
+                    match rx.recv().await {
+                        Ok(evt) => {
+                            let evt_type =
+                                evt.get("type").and_then(|v| v.as_str()).unwrap_or_default();
+                            if let Some(payload) = build_parent_mirrored_process_event(
+                                &parent,
+                                &child_run_id,
+                                &evt,
+                                evt_type,
+                            ) {
+                                emit_process_event(&store, &tx, payload);
+                            }
+                            if is_child_run_terminal_event(&child_run_id, &evt, evt_type) {
+                                break;
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    }
+                }
+            })
+        });
+
+        let run_result = execute_run(
             self,
             &self.store,
             &self.event_broadcast,
@@ -692,8 +807,30 @@ impl ProcessExecutor {
             &self.agent_service,
             &self.org_service,
         )
-        .await
-        {
+        .await;
+
+        if let Some(handle) = mirror_task {
+            let _ = tokio::time::timeout(Duration::from_secs(1), handle).await;
+        }
+
+        if let Some(parent) = parent_mirror.as_ref() {
+            let marker = match &run_result {
+                Ok(_) => format!("\n--- {} completed ---\n", parent.item_label),
+                Err(error) => format!("\n--- {} failed: {} ---\n", parent.item_label, error),
+            };
+            send_process_text(
+                self.store.as_ref(),
+                &self.event_broadcast,
+                &parent.project_id,
+                &parent.task_id,
+                &parent.process_id,
+                &parent.run_id,
+                &parent.node_id,
+                &marker,
+            );
+        }
+
+        if let Err(e) = run_result {
             mark_run_failed_if_active(&self.store, &self.event_broadcast, &run, &e.to_string());
             return Err(e);
         }
@@ -1108,7 +1245,8 @@ fn execute_run<'a>(
                     execute_subprocess(node, &upstream_context, executor, &run.run_id).await
                 }
                 ProcessNodeType::ForEach => {
-                    execute_foreach(node, &upstream_context, executor, &run.run_id).await
+                    execute_foreach(node, &upstream_context, executor, &project_id, &run.run_id)
+                        .await
                 }
                 ProcessNodeType::Merge => {
                     let display = format!(
@@ -2652,6 +2790,7 @@ async fn execute_foreach(
     node: &ProcessNode,
     upstream_context: &str,
     executor: &ProcessExecutor,
+    project_id: &ProjectId,
     parent_run_id: &ProcessRunId,
 ) -> Result<NodeResult, ProcessError> {
     let child_process_id_str = node
@@ -2755,6 +2894,10 @@ async fn execute_foreach(
         let exec = executor.clone();
         let cpid = child_process_id;
         let prid = parent_run_id;
+        let parent_project_id = project_id.to_string();
+        let parent_process_id = node.process_id.to_string();
+        let parent_run_id_str = parent_run_id.to_string();
+        let parent_node_id = node.node_id.to_string();
         let item = item.clone();
         let prompt = prompt_template.clone();
         let item_var = item_variable.to_string();
@@ -2771,8 +2914,21 @@ async fn execute_foreach(
                 format!("## {item_var} (#{idx})\n\n{item}\n\n## Task\n\n{prompt}")
             };
 
-            exec.trigger_and_await(&cpid, ProcessRunTrigger::Manual, Some(input), Some(prid))
-                .await
+            exec.trigger_and_await_with_parent_mirror(
+                &cpid,
+                ProcessRunTrigger::Manual,
+                Some(input),
+                Some(prid),
+                Some(ParentStreamMirrorContext {
+                    project_id: parent_project_id,
+                    task_id: format!("foreach:{}", parent_node_id),
+                    process_id: parent_process_id,
+                    run_id: parent_run_id_str,
+                    node_id: parent_node_id,
+                    item_label: format!("{item_var} #{}", idx + 1),
+                }),
+            )
+            .await
         }));
     }
 
@@ -3100,8 +3256,9 @@ fn broadcast_node_status(
 #[cfg(test)]
 mod tests {
     use super::{
-        build_workspace_instructions, parse_foreach_json_array, resolve_action_plan_mode,
-        ActionPlanMode,
+        build_parent_mirrored_process_event, build_workspace_instructions,
+        parse_foreach_json_array, resolve_action_plan_mode, ActionPlanMode,
+        ParentStreamMirrorContext,
     };
 
     #[test]
@@ -3190,5 +3347,35 @@ mod tests {
         assert!(error.contains("items"));
         assert!(error.contains("entries"));
         assert!(error.contains("results"));
+    }
+
+    #[test]
+    fn parent_mirror_rewrites_child_stream_context() {
+        let parent = ParentStreamMirrorContext {
+            project_id: "project-1".to_string(),
+            task_id: "foreach:node-1".to_string(),
+            process_id: "process-1".to_string(),
+            run_id: "run-parent".to_string(),
+            node_id: "node-parent".to_string(),
+            item_label: "item #1".to_string(),
+        };
+
+        let child_event = serde_json::json!({
+            "type": "text_delta",
+            "run_id": "run-child",
+            "node_id": "child-node",
+            "text": "hello"
+        });
+
+        let mirrored =
+            build_parent_mirrored_process_event(&parent, "run-child", &child_event, "text_delta")
+                .unwrap();
+
+        assert_eq!(mirrored["run_id"], "run-parent");
+        assert_eq!(mirrored["node_id"], "node-parent");
+        assert_eq!(mirrored["process_id"], "process-1");
+        assert_eq!(mirrored["child_run_id"], "run-child");
+        assert_eq!(mirrored["sub_task"], "item #1");
+        assert_eq!(mirrored["text"], "hello");
     }
 }
