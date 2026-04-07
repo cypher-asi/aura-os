@@ -472,6 +472,12 @@ fn forward_process_event(
     if let Some(obj) = evt.as_object() {
         if let Some(map) = v.as_object_mut() {
             for (k, val) in obj {
+                if matches!(
+                    k.as_str(),
+                    "project_id" | "task_id" | "process_id" | "run_id" | "node_id" | "sub_task"
+                ) {
+                    continue;
+                }
                 map.insert(k.clone(), val.clone());
             }
         }
@@ -3260,6 +3266,17 @@ mod tests {
         parse_foreach_json_array, resolve_action_plan_mode, ActionPlanMode,
         ParentStreamMirrorContext,
     };
+    use crate::process_store::ProcessStore;
+    use aura_os_store::RocksStore;
+    use std::sync::Arc;
+    use tempfile::TempDir;
+    use tokio::sync::broadcast;
+
+    fn open_temp_process_store() -> (ProcessStore, TempDir) {
+        let dir = TempDir::new().expect("failed to create temp dir");
+        let rocks = Arc::new(RocksStore::open(dir.path()).expect("failed to open rocks store"));
+        (ProcessStore::new(rocks), dir)
+    }
 
     #[test]
     fn action_plan_mode_defaults_to_single_path() {
@@ -3377,5 +3394,38 @@ mod tests {
         assert_eq!(mirrored["child_run_id"], "run-child");
         assert_eq!(mirrored["sub_task"], "item #1");
         assert_eq!(mirrored["text"], "hello");
+    }
+
+    #[tokio::test]
+    async fn forward_process_event_preserves_stamped_identity_fields() {
+        let (store, _dir) = open_temp_process_store();
+        let (tx, mut rx) = broadcast::channel(8);
+        let raw = serde_json::json!({
+            "type": "text_delta",
+            "run_id": "harness-run",
+            "node_id": "harness-node",
+            "task_id": "harness-task",
+            "text": "hello",
+        });
+
+        super::forward_process_event(
+            &store,
+            &tx,
+            "project-parent",
+            "task-parent",
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222",
+            "33333333-3333-3333-3333-333333333333",
+            &raw,
+            Some("item #1"),
+        );
+
+        let evt = rx.recv().await.unwrap();
+        assert_eq!(evt["project_id"], "project-parent");
+        assert_eq!(evt["task_id"], "task-parent");
+        assert_eq!(evt["run_id"], "22222222-2222-2222-2222-222222222222");
+        assert_eq!(evt["node_id"], "33333333-3333-3333-3333-333333333333");
+        assert_eq!(evt["sub_task"], "item #1");
+        assert_eq!(evt["text"], "hello");
     }
 }
