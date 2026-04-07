@@ -17,9 +17,15 @@ pub struct ListOrgsTool;
 
 #[async_trait]
 impl SuperAgentTool for ListOrgsTool {
-    fn name(&self) -> &str { "list_orgs" }
-    fn description(&self) -> &str { "List all organizations the user belongs to" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "list_orgs"
+    }
+    fn description(&self) -> &str {
+        "List all organizations the user belongs to"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -29,7 +35,11 @@ impl SuperAgentTool for ListOrgsTool {
         })
     }
 
-    async fn execute(&self, _input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/orgs", &ctx.jwt).await
     }
@@ -43,9 +53,15 @@ pub struct CreateOrgTool;
 
 #[async_trait]
 impl SuperAgentTool for CreateOrgTool {
-    fn name(&self) -> &str { "create_org" }
-    fn description(&self) -> &str { "Create a new organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "create_org"
+    }
+    fn description(&self) -> &str {
+        "Create a new organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -58,7 +74,11 @@ impl SuperAgentTool for CreateOrgTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let mut body = json!({ "name": input["name"].as_str().unwrap_or_default() });
         if let Some(desc) = input["description"].as_str() {
@@ -76,9 +96,15 @@ pub struct GetOrgTool;
 
 #[async_trait]
 impl SuperAgentTool for GetOrgTool {
-    fn name(&self) -> &str { "get_org" }
-    fn description(&self) -> &str { "Get details of a specific organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "get_org"
+    }
+    fn description(&self) -> &str {
+        "Get details of a specific organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -90,7 +116,11 @@ impl SuperAgentTool for GetOrgTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         network_get(network, &format!("/api/orgs/{org_id}"), &ctx.jwt).await
@@ -105,9 +135,15 @@ pub struct UpdateOrgTool;
 
 #[async_trait]
 impl SuperAgentTool for UpdateOrgTool {
-    fn name(&self) -> &str { "update_org" }
-    fn description(&self) -> &str { "Update organization settings" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "update_org"
+    }
+    fn description(&self) -> &str {
+        "Update organization settings"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -121,7 +157,11 @@ impl SuperAgentTool for UpdateOrgTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let mut body = json!({});
@@ -143,9 +183,15 @@ pub struct ListMembersTool;
 
 #[async_trait]
 impl SuperAgentTool for ListMembersTool {
-    fn name(&self) -> &str { "list_members" }
-    fn description(&self) -> &str { "List all members of an organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "list_members"
+    }
+    fn description(&self) -> &str {
+        "List all members of an organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -157,7 +203,11 @@ impl SuperAgentTool for ListMembersTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         network_get(network, &format!("/api/orgs/{org_id}/members"), &ctx.jwt).await
@@ -172,9 +222,15 @@ pub struct UpdateMemberRoleTool;
 
 #[async_trait]
 impl SuperAgentTool for UpdateMemberRoleTool {
-    fn name(&self) -> &str { "update_member_role" }
-    fn description(&self) -> &str { "Update a member's role in the organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "update_member_role"
+    }
+    fn description(&self) -> &str {
+        "Update a member's role in the organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -188,13 +244,23 @@ impl SuperAgentTool for UpdateMemberRoleTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let user_id = require_str(&input, "user_id")?;
         let role = require_str(&input, "role")?;
         let body = json!({ "role": role });
-        network_put(network, &format!("/api/orgs/{org_id}/members/{user_id}"), &ctx.jwt, &body).await
+        network_put(
+            network,
+            &format!("/api/orgs/{org_id}/members/{user_id}"),
+            &ctx.jwt,
+            &body,
+        )
+        .await
     }
 }
 
@@ -206,9 +272,15 @@ pub struct RemoveMemberTool;
 
 #[async_trait]
 impl SuperAgentTool for RemoveMemberTool {
-    fn name(&self) -> &str { "remove_member" }
-    fn description(&self) -> &str { "Remove a member from the organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "remove_member"
+    }
+    fn description(&self) -> &str {
+        "Remove a member from the organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -221,11 +293,20 @@ impl SuperAgentTool for RemoveMemberTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let user_id = require_str(&input, "user_id")?;
-        network_delete(network, &format!("/api/orgs/{org_id}/members/{user_id}"), &ctx.jwt).await
+        network_delete(
+            network,
+            &format!("/api/orgs/{org_id}/members/{user_id}"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -237,9 +318,15 @@ pub struct ManageInvitesTool;
 
 #[async_trait]
 impl SuperAgentTool for ManageInvitesTool {
-    fn name(&self) -> &str { "manage_invites" }
-    fn description(&self) -> &str { "Manage organization invites: list, create, or revoke. Note: email-targeted invites are not yet supported; create generates a generic invite link." }
-    fn domain(&self) -> ToolDomain { ToolDomain::Org }
+    fn name(&self) -> &str {
+        "manage_invites"
+    }
+    fn description(&self) -> &str {
+        "Manage organization invites: list, create, or revoke. Note: email-targeted invites are not yet supported; create generates a generic invite link."
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Org
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -259,7 +346,11 @@ impl SuperAgentTool for ManageInvitesTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let org_id = require_str(&input, "org_id")?;
         let action = require_str(&input, "action")?;

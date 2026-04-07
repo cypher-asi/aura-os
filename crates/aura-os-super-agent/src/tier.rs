@@ -83,13 +83,7 @@ pub fn classify_intent(message: &str) -> Vec<ToolDomain> {
     if contains_any(
         &lower,
         &[
-            "process",
-            "workflow",
-            "node",
-            "ignition",
-            "pipeline",
-            "automate",
-            "trigger",
+            "process", "workflow", "node", "ignition", "pipeline", "automate", "trigger",
         ],
     ) {
         domains.push(ToolDomain::Process);

@@ -5,9 +5,7 @@ use serde_json::json;
 use tokio::sync::broadcast;
 use tracing::info;
 
-use aura_os_core::{
-    CronJob, CronJobRun, CronJobRunId, CronJobRunStatus, CronJobTrigger,
-};
+use aura_os_core::{CronJob, CronJobRun, CronJobRunId, CronJobRunStatus, CronJobTrigger};
 
 use crate::cron_store::CronStore;
 

@@ -103,7 +103,9 @@ pub(crate) async fn create_process(
         .map(|id| id.to_string())
         .unwrap_or_else(|| session.user_id.clone());
 
-    let project_id: ProjectId = req.project_id.parse()
+    let project_id: ProjectId = req
+        .project_id
+        .parse()
         .map_err(|_| ApiError::bad_request("invalid project_id"))?;
 
     let now = Utc::now();
@@ -205,17 +207,27 @@ pub(crate) async fn update_process(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("process not found"))?;
 
-    if let Some(name) = req.name { process.name = name; }
-    if let Some(desc) = req.description { process.description = desc; }
+    if let Some(name) = req.name {
+        process.name = name;
+    }
+    if let Some(desc) = req.description {
+        process.description = desc;
+    }
     if let Some(pid) = req.project_id {
         process.project_id = pid.and_then(|id| id.parse().ok());
     }
     if let Some(fid) = req.folder_id {
         process.folder_id = fid.and_then(|id| id.parse().ok());
     }
-    if let Some(sched) = req.schedule { process.schedule = Some(sched); }
-    if let Some(tags) = req.tags { process.tags = tags; }
-    if let Some(enabled) = req.enabled { process.enabled = enabled; }
+    if let Some(sched) = req.schedule {
+        process.schedule = Some(sched);
+    }
+    if let Some(tags) = req.tags {
+        process.tags = tags;
+    }
+    if let Some(enabled) = req.enabled {
+        process.enabled = enabled;
+    }
     process.updated_at = Utc::now();
 
     state
@@ -317,7 +329,11 @@ pub(crate) async fn create_node(
         label: req.label,
         agent_id: req.agent_id.and_then(|id| id.parse().ok()),
         prompt: req.prompt,
-        config: if req.config.is_null() { serde_json::json!({}) } else { req.config },
+        config: if req.config.is_null() {
+            serde_json::json!({})
+        } else {
+            req.config
+        },
         position_x: req.position_x,
         position_y: req.position_y,
         created_at: now,
@@ -354,14 +370,28 @@ pub(crate) async fn update_node(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("node not found"))?;
 
-    if let Some(label) = req.label { node.label = label; }
-    if let Some(agent_id) = req.agent_id {
-        node.agent_id = if agent_id.is_empty() { None } else { agent_id.parse().ok() };
+    if let Some(label) = req.label {
+        node.label = label;
     }
-    if let Some(prompt) = req.prompt { node.prompt = prompt; }
-    if let Some(config) = req.config { node.config = config; }
-    if let Some(x) = req.position_x { node.position_x = x; }
-    if let Some(y) = req.position_y { node.position_y = y; }
+    if let Some(agent_id) = req.agent_id {
+        node.agent_id = if agent_id.is_empty() {
+            None
+        } else {
+            agent_id.parse().ok()
+        };
+    }
+    if let Some(prompt) = req.prompt {
+        node.prompt = prompt;
+    }
+    if let Some(config) = req.config {
+        node.config = config;
+    }
+    if let Some(x) = req.position_x {
+        node.position_x = x;
+    }
+    if let Some(y) = req.position_y {
+        node.position_y = y;
+    }
     node.updated_at = Utc::now();
 
     state
@@ -438,9 +468,15 @@ pub(crate) async fn create_connection(
     let conn = ProcessNodeConnection {
         connection_id: ProcessNodeConnectionId::new(),
         process_id,
-        source_node_id: req.source_node_id.parse().map_err(|_| ApiError::bad_request("invalid source node ID"))?,
+        source_node_id: req
+            .source_node_id
+            .parse()
+            .map_err(|_| ApiError::bad_request("invalid source node ID"))?,
         source_handle: req.source_handle,
-        target_node_id: req.target_node_id.parse().map_err(|_| ApiError::bad_request("invalid target node ID"))?,
+        target_node_id: req
+            .target_node_id
+            .parse()
+            .map_err(|_| ApiError::bad_request("invalid target node ID"))?,
         target_handle: req.target_handle,
     };
 
@@ -673,7 +709,9 @@ pub(crate) async fn update_folder(
         .map_err(|e| ApiError::internal(e.to_string()))?
         .ok_or_else(|| ApiError::not_found("folder not found"))?;
 
-    if let Some(name) = req.name { folder.name = name; }
+    if let Some(name) = req.name {
+        folder.name = name;
+    }
     folder.updated_at = Utc::now();
 
     state
@@ -774,7 +812,9 @@ pub(crate) async fn get_artifact_path(
         .ok_or_else(|| ApiError::not_found("artifact not found"))?;
 
     let resolved = state.data_dir.join(&artifact.file_path);
-    Ok(Json(serde_json::json!({ "path": resolved.to_string_lossy() })))
+    Ok(Json(
+        serde_json::json!({ "path": resolved.to_string_lossy() }),
+    ))
 }
 
 pub(crate) async fn delete_folder(

@@ -1,9 +1,9 @@
 use axum::extract::{Path, State};
 use axum::Json;
-use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
-use serde_json::{json, Value};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 #[cfg(test)]
 use serde::Deserialize;
+use serde_json::{json, Value};
 #[cfg(test)]
 use std::sync::OnceLock;
 
@@ -121,31 +121,35 @@ async fn dispatch_app_provider_tool(
         AppProviderKind::Github => match tool_name {
             "github_list_repos" => github_list_repos(state, org_id, args).await,
             "github_create_issue" => github_create_issue(state, org_id, args).await,
-            other => Err(ApiError::not_found(format!("unknown github app tool `{other}`"))),
+            other => Err(ApiError::not_found(format!(
+                "unknown github app tool `{other}`"
+            ))),
         },
         AppProviderKind::Linear => match tool_name {
             "linear_list_teams" => linear_list_teams(state, org_id, args).await,
             "linear_create_issue" => linear_create_issue(state, org_id, args).await,
-            other => Err(ApiError::not_found(format!("unknown linear app tool `{other}`"))),
+            other => Err(ApiError::not_found(format!(
+                "unknown linear app tool `{other}`"
+            ))),
         },
         AppProviderKind::Slack => match tool_name {
             "slack_list_channels" => slack_list_channels(state, org_id, args).await,
             "slack_post_message" => slack_post_message(state, org_id, args).await,
-            other => Err(ApiError::not_found(format!("unknown slack app tool `{other}`"))),
+            other => Err(ApiError::not_found(format!(
+                "unknown slack app tool `{other}`"
+            ))),
         },
         AppProviderKind::Notion => match tool_name {
             "notion_search_pages" => notion_search_pages(state, org_id, args).await,
             "notion_create_page" => notion_create_page(state, org_id, args).await,
-            other => Err(ApiError::not_found(format!("unknown notion app tool `{other}`"))),
+            other => Err(ApiError::not_found(format!(
+                "unknown notion app tool `{other}`"
+            ))),
         },
     }
 }
 
-async fn list_org_integrations(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn list_org_integrations(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let provider = optional_string(args, &["provider"]);
     let integrations = state
         .org_service
@@ -174,11 +178,7 @@ async fn list_org_integrations(
     Ok(json!({ "integrations": filtered }))
 }
 
-async fn github_list_repos(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn github_list_repos(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "github", args)?;
     let url = format!(
         "{}/user/repos?per_page=20&sort=updated",
@@ -212,11 +212,7 @@ async fn github_list_repos(
     Ok(json!({ "repos": repos }))
 }
 
-async fn github_create_issue(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn github_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "github", args)?;
     let owner = required_string(args, &["owner"])?;
     let repo = required_string(args, &["repo"])?;
@@ -248,11 +244,7 @@ async fn github_create_issue(
     }))
 }
 
-async fn linear_list_teams(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn linear_list_teams(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "linear", args)?;
     let response = linear_graphql(
         state,
@@ -269,15 +261,19 @@ async fn linear_list_teams(
     Ok(json!({ "teams": teams }))
 }
 
-async fn linear_create_issue(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn linear_create_issue(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "linear", args)?;
     let team_id = required_string(args, &["team_id", "teamId"])?;
     let title = required_string(args, &["title"])?;
-    let description = optional_string(args, &["description", "body", "markdown_contents", "markdownContents"]);
+    let description = optional_string(
+        args,
+        &[
+            "description",
+            "body",
+            "markdown_contents",
+            "markdownContents",
+        ],
+    );
     let response = linear_graphql(
         state,
         &integration.secret,
@@ -296,11 +292,7 @@ async fn linear_create_issue(
     }))
 }
 
-async fn slack_list_channels(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn slack_list_channels(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "slack", args)?;
     let url = format!(
         "{}/conversations.list?types=public_channel,private_channel&exclude_archived=true&limit=100",
@@ -333,11 +325,7 @@ async fn slack_list_channels(
     Ok(json!({ "channels": channels }))
 }
 
-async fn slack_post_message(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn slack_post_message(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "slack", args)?;
     let channel_id = required_string(args, &["channel_id", "channelId"])?;
     let text = required_string(args, &["text", "message"])?;
@@ -366,11 +354,7 @@ async fn slack_post_message(
     }))
 }
 
-async fn notion_search_pages(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn notion_search_pages(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "notion", args)?;
     let query = required_string(args, &["query"])?;
     let url = format!(
@@ -406,15 +390,14 @@ async fn notion_search_pages(
     Ok(json!({ "pages": pages }))
 }
 
-async fn notion_create_page(
-    state: &AppState,
-    org_id: &OrgId,
-    args: &Value,
-) -> ApiResult<Value> {
+async fn notion_create_page(state: &AppState, org_id: &OrgId, args: &Value) -> ApiResult<Value> {
     let integration = resolve_org_integration(state, org_id, "notion", args)?;
     let parent_page_id = required_string(args, &["parent_page_id", "parentPageId"])?;
     let title = required_string(args, &["title"])?;
-    let content = optional_string(args, &["content", "body", "markdown_contents", "markdownContents"]);
+    let content = optional_string(
+        args,
+        &["content", "body", "markdown_contents", "markdownContents"],
+    );
     let url = format!(
         "{}/pages",
         provider_base_url("AURA_NOTION_API_BASE_URL", "https://api.notion.com/v1")
@@ -532,13 +515,14 @@ fn provider_headers(provider: &str, secret: &str) -> ApiResult<HeaderMap> {
                 .map_err(|e| ApiError::bad_request(format!("invalid auth header: {e}")))?;
             headers.insert(AUTHORIZATION, value);
             if provider == "notion" {
-                headers.insert(
-                    "Notion-Version",
-                    HeaderValue::from_static(NOTION_VERSION),
-                );
+                headers.insert("Notion-Version", HeaderValue::from_static(NOTION_VERSION));
             }
         }
-        other => return Err(ApiError::bad_request(format!("unsupported provider `{other}`"))),
+        other => {
+            return Err(ApiError::bad_request(format!(
+                "unsupported provider `{other}`"
+            )))
+        }
     }
 
     Ok(headers)
@@ -568,8 +552,7 @@ async fn provider_json_request(
     if !status.is_success() {
         return Err(ApiError::bad_gateway(format!(
             "provider request failed with {}: {}",
-            status,
-            text
+            status, text
         )));
     }
     serde_json::from_str(&text)
@@ -602,7 +585,9 @@ async fn linear_graphql(
                 .filter_map(|error| error.get("message").and_then(Value::as_str))
                 .collect::<Vec<_>>()
                 .join("; ");
-            return Err(ApiError::bad_gateway(format!("linear graphql error: {message}")));
+            return Err(ApiError::bad_gateway(format!(
+                "linear graphql error: {message}"
+            )));
         }
     }
     Ok(response)
@@ -714,7 +699,8 @@ mod tests {
                 .cloned()
                 .unwrap_or_default();
             assert_eq!(
-                actual, expected,
+                actual,
+                expected,
                 "shared app manifest drifted from the {} provider contract",
                 contract.kind.provider_id()
             );

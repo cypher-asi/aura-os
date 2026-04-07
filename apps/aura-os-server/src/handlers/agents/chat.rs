@@ -782,7 +782,10 @@ async fn collect_session_events(
         let mut failed = false;
 
         loop {
-            match storage.list_events(&session.id, jwt, Some(PAGE_SIZE), Some(offset)).await {
+            match storage
+                .list_events(&session.id, jwt, Some(PAGE_SIZE), Some(offset))
+                .await
+            {
                 Ok(page) => {
                     let page_len = page.len() as u32;
                     all_events.extend(page);
@@ -1047,7 +1050,9 @@ pub(crate) async fn get_or_create_chat_session(
     Ok((true, rx, commands_tx))
 }
 
-fn dto_attachments_to_protocol(atts: &Option<Vec<ChatAttachmentDto>>) -> Option<Vec<MessageAttachment>> {
+fn dto_attachments_to_protocol(
+    atts: &Option<Vec<ChatAttachmentDto>>,
+) -> Option<Vec<MessageAttachment>> {
     atts.as_ref().and_then(|v| {
         if v.is_empty() {
             None
@@ -1249,27 +1254,34 @@ async fn handle_super_agent_stream(
     );
 
     let content_for_run = user_content.clone();
-    let image_blocks_for_run: Option<Vec<serde_json::Value>> = attachments.as_ref().and_then(|atts| {
-        let blocks: Vec<serde_json::Value> = atts
-            .iter()
-            .filter(|a| a.type_ == "image")
-            .map(|a| {
-                serde_json::json!({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": a.media_type,
-                        "data": a.data,
-                    }
+    let image_blocks_for_run: Option<Vec<serde_json::Value>> =
+        attachments.as_ref().and_then(|atts| {
+            let blocks: Vec<serde_json::Value> = atts
+                .iter()
+                .filter(|a| a.type_ == "image")
+                .map(|a| {
+                    serde_json::json!({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": a.media_type,
+                            "data": a.data,
+                        }
+                    })
                 })
-            })
-            .collect();
-        if blocks.is_empty() { None } else { Some(blocks) }
-    });
+                .collect();
+            if blocks.is_empty() {
+                None
+            } else {
+                Some(blocks)
+            }
+        });
     let messages_cache = state.super_agent_messages.clone();
     let cache_key = session_key.clone();
     tokio::spawn(async move {
-        let messages = stream_handle.run(content_for_run, image_blocks_for_run).await;
+        let messages = stream_handle
+            .run(content_for_run, image_blocks_for_run)
+            .await;
         messages_cache.lock().await.insert(cache_key, messages);
     });
 

@@ -193,12 +193,8 @@ pub(crate) async fn list_feed(
         .await
         .map_err(map_network_error)?;
 
-    let profiles = resolve_profiles(
-        client,
-        events.iter().map(|e| e.profile_id.as_str()),
-        &jwt,
-    )
-    .await;
+    let profiles =
+        resolve_profiles(client, events.iter().map(|e| e.profile_id.as_str()), &jwt).await;
 
     Ok(Json(
         events
@@ -265,12 +261,8 @@ pub(crate) async fn get_profile_posts(
         .await
         .map_err(map_network_error)?;
 
-    let profiles = resolve_profiles(
-        client,
-        posts.iter().map(|e| e.profile_id.as_str()),
-        &jwt,
-    )
-    .await;
+    let profiles =
+        resolve_profiles(client, posts.iter().map(|e| e.profile_id.as_str()), &jwt).await;
 
     Ok(Json(
         posts
@@ -291,12 +283,8 @@ pub(crate) async fn list_comments(
         .await
         .map_err(map_network_error)?;
 
-    let profiles = resolve_profiles(
-        client,
-        comments.iter().map(|c| c.profile_id.as_str()),
-        &jwt,
-    )
-    .await;
+    let profiles =
+        resolve_profiles(client, comments.iter().map(|c| c.profile_id.as_str()), &jwt).await;
 
     Ok(Json(
         comments

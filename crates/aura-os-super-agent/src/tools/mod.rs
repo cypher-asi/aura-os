@@ -207,15 +207,34 @@ impl ToolRegistry {
         store: Arc<crate::cron_store::CronStore>,
         executor: Arc<crate::executor::CronJobExecutor>,
     ) {
-        self.register(Arc::new(cron_tools::CreateCronJobTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::ListCronJobsTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::UpdateCronJobTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::DeleteCronJobTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::PauseCronJobTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::ResumeCronJobTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::TriggerCronJobTool { store: store.clone(), executor }));
-        self.register(Arc::new(cron_tools::ListCronRunsTool { store: store.clone() }));
-        self.register(Arc::new(cron_tools::GetArtifactTool { store: store.clone() }));
+        self.register(Arc::new(cron_tools::CreateCronJobTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::ListCronJobsTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::UpdateCronJobTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::DeleteCronJobTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::PauseCronJobTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::ResumeCronJobTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::TriggerCronJobTool {
+            store: store.clone(),
+            executor,
+        }));
+        self.register(Arc::new(cron_tools::ListCronRunsTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(cron_tools::GetArtifactTool {
+            store: store.clone(),
+        }));
         self.register(Arc::new(cron_tools::ListArtifactsTool { store }));
     }
 
@@ -224,10 +243,19 @@ impl ToolRegistry {
         store: Arc<aura_os_process::ProcessStore>,
         executor: Arc<aura_os_process::ProcessExecutor>,
     ) {
-        self.register(Arc::new(process_tools::CreateProcessTool { store: store.clone() }));
-        self.register(Arc::new(process_tools::ListProcessesTool { store: store.clone() }));
-        self.register(Arc::new(process_tools::DeleteProcessTool { store: store.clone() }));
-        self.register(Arc::new(process_tools::TriggerProcessTool { store: store.clone(), executor }));
+        self.register(Arc::new(process_tools::CreateProcessTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(process_tools::ListProcessesTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(process_tools::DeleteProcessTool {
+            store: store.clone(),
+        }));
+        self.register(Arc::new(process_tools::TriggerProcessTool {
+            store: store.clone(),
+            executor,
+        }));
         self.register(Arc::new(process_tools::ListProcessRunsTool { store }));
     }
 

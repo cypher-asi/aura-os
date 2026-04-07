@@ -78,14 +78,8 @@ impl NetworkClient {
         Ok(())
     }
 
-    pub async fn get_access_code(
-        &self,
-        jwt: &str,
-    ) -> Result<serde_json::Value, NetworkError> {
-        self.get_authed(
-            &format!("{}/api/access-codes", self.base_url),
-            jwt,
-        )
-        .await
+    pub async fn get_access_code(&self, jwt: &str) -> Result<serde_json::Value, NetworkError> {
+        self.get_authed(&format!("{}/api/access-codes", self.base_url), jwt)
+            .await
     }
 }

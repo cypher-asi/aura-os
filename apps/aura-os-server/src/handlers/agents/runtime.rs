@@ -1242,7 +1242,10 @@ async fn build_external_project_mcp_config(
         env.insert("AURA_MCP_ORG_ID".to_string(), org_id.to_string());
     }
     if let Some(secrets_json) = mcp_server_secrets_json(state, agent) {
-        env.insert("AURA_MCP_INTEGRATION_SECRETS_JSON".to_string(), secrets_json);
+        env.insert(
+            "AURA_MCP_INTEGRATION_SECRETS_JSON".to_string(),
+            secrets_json,
+        );
     }
 
     Ok(ExternalProjectMcpConfig {
@@ -1348,7 +1351,9 @@ fn mcp_server_secrets_json(state: &AppState, agent: &Agent) -> Option<String> {
     let mut secrets = serde_json::Map::new();
 
     for integration in integrations {
-        if !integration.has_secret || integration.kind != aura_os_core::OrgIntegrationKind::McpServer {
+        if !integration.has_secret
+            || integration.kind != aura_os_core::OrgIntegrationKind::McpServer
+        {
             continue;
         }
         let secret = state
@@ -1585,11 +1590,12 @@ fn parse_gemini_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
         .or_else(|| parse_jsonl(stdout).into_iter().last())
         .ok_or_else(|| ApiError::bad_gateway("Gemini CLI produced no structured output"))?;
 
-    if let Some(message) = event
-        .get("error")
-        .and_then(Value::as_str)
-        .or_else(|| event.get("error").and_then(|error| error.get("message")).and_then(Value::as_str))
-    {
+    if let Some(message) = event.get("error").and_then(Value::as_str).or_else(|| {
+        event
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(Value::as_str)
+    }) {
         return Err(ApiError::bad_gateway(message));
     }
 
@@ -1631,7 +1637,10 @@ fn parse_gemini_output(stdout: &str, fallback_model: Option<String>) -> ApiResul
     )
 }
 
-fn parse_opencode_output(stdout: &str, fallback_model: Option<String>) -> ApiResult<RuntimeOutcome> {
+fn parse_opencode_output(
+    stdout: &str,
+    fallback_model: Option<String>,
+) -> ApiResult<RuntimeOutcome> {
     let parsed = parse_json_output(stdout).or_else(|| parse_jsonl(stdout).into_iter().last());
     let text = parsed
         .as_ref()
@@ -2072,9 +2081,11 @@ fn build_external_prompt(
 mod tests {
     use super::{
         claude_tool_results, claude_tool_use_starts, codex_tool_result, codex_tool_use_start,
-        codex_turn_usage, parse_gemini_output, parse_opencode_output, parse_cursor_output,
+        codex_turn_usage, parse_cursor_output, parse_gemini_output, parse_opencode_output,
     };
-    use crate::handlers::agents::workspace_tools::{shared_workspace_tools, WorkspaceToolSourceKind};
+    use crate::handlers::agents::workspace_tools::{
+        shared_workspace_tools, WorkspaceToolSourceKind,
+    };
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
 
@@ -2242,17 +2253,24 @@ mod tests {
                 signatures.insert(tool.prompt_signature.clone()),
                 "duplicate prompt signature"
             );
-            assert!(tool.input_schema.is_object(), "input schema must be an object");
+            assert!(
+                tool.input_schema.is_object(),
+                "input schema must be an object"
+            );
         }
     }
 
     #[test]
     fn workspace_tool_registry_tracks_source_kinds() {
         let tools = shared_workspace_tools();
-        assert!(tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative));
+        assert!(tools
+            .iter()
+            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AuraNative));
         assert!(tools
             .iter()
             .any(|tool| tool.source_kind == WorkspaceToolSourceKind::AppProvider));
-        assert!(!tools.iter().any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp));
+        assert!(!tools
+            .iter()
+            .any(|tool| tool.source_kind == WorkspaceToolSourceKind::Mcp));
     }
 }

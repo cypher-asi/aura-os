@@ -122,7 +122,9 @@ impl CronStore {
             .store
             .scan_cf_all(CF_CRON_ARTIFACTS)
             .map_err(|e| e.to_string())?;
-        Ok(all.into_iter().find(|a| a.artifact_id.to_string() == target))
+        Ok(all
+            .into_iter()
+            .find(|a| a.artifact_id.to_string() == target))
     }
 
     pub fn list_artifacts_for_job(&self, job_id: &CronJobId) -> Result<Vec<Artifact>, String> {

@@ -36,10 +36,8 @@ impl OrchestrationStore {
     }
 
     pub fn list(&self) -> Result<Vec<SuperAgentOrchestration>, String> {
-        let mut results: Vec<SuperAgentOrchestration> = self
-            .store
-            .scan_cf_all(CF_NAME)
-            .map_err(|e| e.to_string())?;
+        let mut results: Vec<SuperAgentOrchestration> =
+            self.store.scan_cf_all(CF_NAME).map_err(|e| e.to_string())?;
         results.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         Ok(results)
     }

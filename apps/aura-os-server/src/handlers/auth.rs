@@ -278,9 +278,7 @@ pub(crate) struct JwtIssuerResponse {
 /// GET /api/auth/jwt-issuer — return the issuer and suggested JWKS URL from the current
 /// session's JWT. Used to configure Orbit's TRUSTED_JWT_* without pasting the token into jwt.io.
 /// Returns only public claims (iss); the token itself is never sent.
-pub(crate) async fn get_jwt_issuer(
-    AuthJwt(jwt): AuthJwt,
-) -> ApiResult<Json<JwtIssuerResponse>> {
+pub(crate) async fn get_jwt_issuer(AuthJwt(jwt): AuthJwt) -> ApiResult<Json<JwtIssuerResponse>> {
     let token = jwt.trim();
     let parts: Vec<&str> = token.split('.').collect();
     let payload_b64 = parts

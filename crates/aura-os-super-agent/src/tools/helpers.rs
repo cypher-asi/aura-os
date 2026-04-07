@@ -14,7 +14,10 @@ pub fn tool_err(action: &str, e: impl std::fmt::Display) -> SuperAgentError {
     SuperAgentError::ToolError(format!("{action}: {e}"))
 }
 
-pub fn require_str<'a>(input: &'a serde_json::Value, field: &str) -> Result<&'a str, SuperAgentError> {
+pub fn require_str<'a>(
+    input: &'a serde_json::Value,
+    field: &str,
+) -> Result<&'a str, SuperAgentError> {
     input[field]
         .as_str()
         .ok_or_else(|| SuperAgentError::ToolError(format!("{field} is required")))

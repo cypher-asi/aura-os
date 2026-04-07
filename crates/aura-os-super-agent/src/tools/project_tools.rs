@@ -7,7 +7,9 @@ use aura_os_network::{CreateProjectRequest, UpdateProjectRequest};
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
 
-fn require_network(ctx: &SuperAgentContext) -> Result<&aura_os_network::NetworkClient, SuperAgentError> {
+fn require_network(
+    ctx: &SuperAgentContext,
+) -> Result<&aura_os_network::NetworkClient, SuperAgentError> {
     ctx.network_client
         .as_deref()
         .ok_or_else(|| SuperAgentError::Internal("network client not available".into()))
@@ -25,7 +27,11 @@ fn slugify(name: &str) -> String {
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
     let s = s.trim_matches('-').to_string();
-    if s.is_empty() { "project".to_string() } else { s }
+    if s.is_empty() {
+        "project".to_string()
+    } else {
+        s
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -36,9 +42,15 @@ pub struct CreateProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for CreateProjectTool {
-    fn name(&self) -> &str { "create_project" }
-    fn description(&self) -> &str { "Create a new project in the organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "create_project"
+    }
+    fn description(&self) -> &str {
+        "Create a new project in the organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -52,13 +64,14 @@ impl SuperAgentTool for CreateProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let name = input["name"].as_str().unwrap_or_default().to_string();
-        let org_id = input["org_id"]
-            .as_str()
-            .unwrap_or(&ctx.org_id)
-            .to_string();
+        let org_id = input["org_id"].as_str().unwrap_or(&ctx.org_id).to_string();
 
         let orbit_repo_slug = slugify(&name);
         let req = CreateProjectRequest {
@@ -91,9 +104,12 @@ impl SuperAgentTool for CreateProjectTool {
         {
             // Best-effort rollback: delete the project we just created.
             let _ = network.delete_project(&project.id, &ctx.jwt).await;
-            return Err(tool_err("create_project", format!(
-                "project created but Orbit repo creation failed (project rolled back): {e}"
-            )));
+            return Err(tool_err(
+                "create_project",
+                format!(
+                    "project created but Orbit repo creation failed (project rolled back): {e}"
+                ),
+            ));
         }
 
         Ok(ToolResult {
@@ -111,9 +127,15 @@ pub struct ImportProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for ImportProjectTool {
-    fn name(&self) -> &str { "import_project" }
-    fn description(&self) -> &str { "Import an existing project (e.g. from GitHub)" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "import_project"
+    }
+    fn description(&self) -> &str {
+        "Import an existing project (e.g. from GitHub)"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -127,7 +149,11 @@ impl SuperAgentTool for ImportProjectTool {
         })
     }
 
-    async fn execute(&self, _input: serde_json::Value, _ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        _ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         Ok(ToolResult {
             content: json!({ "message": "Project import is not yet supported via SuperAgent. Please use the web UI to import projects." }),
             is_error: false,
@@ -143,9 +169,15 @@ pub struct ListProjectsTool;
 
 #[async_trait]
 impl SuperAgentTool for ListProjectsTool {
-    fn name(&self) -> &str { "list_projects" }
-    fn description(&self) -> &str { "List all projects in the organization" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "list_projects"
+    }
+    fn description(&self) -> &str {
+        "List all projects in the organization"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -155,7 +187,11 @@ impl SuperAgentTool for ListProjectsTool {
         })
     }
 
-    async fn execute(&self, _input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         if let Some(network) = ctx.network_client.as_deref() {
             let projects = network
                 .list_projects_by_org(&ctx.org_id, &ctx.jwt)
@@ -187,9 +223,15 @@ pub struct GetProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for GetProjectTool {
-    fn name(&self) -> &str { "get_project" }
-    fn description(&self) -> &str { "Get details of a specific project" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "get_project"
+    }
+    fn description(&self) -> &str {
+        "Get details of a specific project"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -201,7 +243,11 @@ impl SuperAgentTool for GetProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let project_id_str = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
@@ -239,9 +285,15 @@ pub struct UpdateProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for UpdateProjectTool {
-    fn name(&self) -> &str { "update_project" }
-    fn description(&self) -> &str { "Update project settings (name, description, git config, etc.)" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "update_project"
+    }
+    fn description(&self) -> &str {
+        "Update project settings (name, description, git config, etc.)"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -257,7 +309,11 @@ impl SuperAgentTool for UpdateProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = input["project_id"]
             .as_str()
@@ -291,9 +347,15 @@ pub struct DeleteProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for DeleteProjectTool {
-    fn name(&self) -> &str { "delete_project" }
-    fn description(&self) -> &str { "Permanently delete a project" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "delete_project"
+    }
+    fn description(&self) -> &str {
+        "Permanently delete a project"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -305,7 +367,11 @@ impl SuperAgentTool for DeleteProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = input["project_id"]
             .as_str()
@@ -329,9 +395,15 @@ pub struct ArchiveProjectTool;
 
 #[async_trait]
 impl SuperAgentTool for ArchiveProjectTool {
-    fn name(&self) -> &str { "archive_project" }
-    fn description(&self) -> &str { "Archive a project (soft-delete)" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "archive_project"
+    }
+    fn description(&self) -> &str {
+        "Archive a project (soft-delete)"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -343,7 +415,11 @@ impl SuperAgentTool for ArchiveProjectTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let project_id_str = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
@@ -369,9 +445,15 @@ pub struct GetProjectStatsTool;
 
 #[async_trait]
 impl SuperAgentTool for GetProjectStatsTool {
-    fn name(&self) -> &str { "get_project_stats" }
-    fn description(&self) -> &str { "Get statistics for a project (tasks, agents, sessions)" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Project }
+    fn name(&self) -> &str {
+        "get_project_stats"
+    }
+    fn description(&self) -> &str {
+        "Get statistics for a project (tasks, agents, sessions)"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Project
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -383,7 +465,11 @@ impl SuperAgentTool for GetProjectStatsTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let project_id_str = input["project_id"]
             .as_str()
             .ok_or_else(|| SuperAgentError::ToolError("project_id is required".into()))?;
@@ -394,10 +480,7 @@ impl SuperAgentTool for GetProjectStatsTool {
                 .await
                 .map_err(|e| tool_err("get_project_stats", e))?;
 
-            let agents = network
-                .list_agents(&ctx.jwt)
-                .await
-                .unwrap_or_default();
+            let agents = network.list_agents(&ctx.jwt).await.unwrap_or_default();
 
             return Ok(ToolResult {
                 content: json!({
@@ -419,7 +502,11 @@ impl SuperAgentTool for GetProjectStatsTool {
             .get_project(&pid)
             .map_err(|e| tool_err("get_project_stats", e))?;
 
-        let agent_count = ctx.agent_service.list_agents().map(|a| a.len()).unwrap_or(0);
+        let agent_count = ctx
+            .agent_service
+            .list_agents()
+            .map(|a| a.len())
+            .unwrap_or(0);
 
         Ok(ToolResult {
             content: json!({

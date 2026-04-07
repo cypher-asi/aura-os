@@ -78,14 +78,26 @@ pub(crate) async fn list_facts(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts"), query, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/facts"),
+        query,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn get_fact(
     State(_state): State<AppState>,
     Path((agent_id, fact_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/facts/{fact_id}"),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn create_fact(
@@ -93,7 +105,13 @@ pub(crate) async fn create_fact(
     Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/facts"), None, Some(body)).await
+    proxy_to_harness(
+        Method::POST,
+        &format!("api/agents/{agent_id}/memory/facts"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 pub(crate) async fn update_fact(
@@ -101,21 +119,39 @@ pub(crate) async fn update_fact(
     Path((agent_id, fact_id)): Path<(AgentId, String)>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::PUT, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, Some(body)).await
+    proxy_to_harness(
+        Method::PUT,
+        &format!("api/agents/{agent_id}/memory/facts/{fact_id}"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 pub(crate) async fn delete_fact(
     State(_state): State<AppState>,
     Path((agent_id, fact_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/facts/{fact_id}"), None, None).await
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/memory/facts/{fact_id}"),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn get_fact_by_key(
     State(_state): State<AppState>,
     Path((agent_id, key)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/facts/by-key/{key}"), None, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/facts/by-key/{key}"),
+        None,
+        None,
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +163,13 @@ pub(crate) async fn list_events(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/events"), query, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/events"),
+        query,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn create_event(
@@ -135,14 +177,26 @@ pub(crate) async fn create_event(
     Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/events"), None, Some(body)).await
+    proxy_to_harness(
+        Method::POST,
+        &format!("api/agents/{agent_id}/memory/events"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 pub(crate) async fn delete_event(
     State(_state): State<AppState>,
     Path((agent_id, event_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/events/{event_id}"), None, None).await
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/memory/events/{event_id}"),
+        None,
+        None,
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------
@@ -154,14 +208,26 @@ pub(crate) async fn list_procedures(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/procedures"), query, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/procedures"),
+        query,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn get_procedure(
     State(_state): State<AppState>,
     Path((agent_id, proc_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn create_procedure(
@@ -169,7 +235,13 @@ pub(crate) async fn create_procedure(
     Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/procedures"), None, Some(body)).await
+    proxy_to_harness(
+        Method::POST,
+        &format!("api/agents/{agent_id}/memory/procedures"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 pub(crate) async fn update_procedure(
@@ -177,14 +249,26 @@ pub(crate) async fn update_procedure(
     Path((agent_id, proc_id)): Path<(AgentId, String)>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::PUT, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, Some(body)).await
+    proxy_to_harness(
+        Method::PUT,
+        &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 pub(crate) async fn delete_procedure(
     State(_state): State<AppState>,
     Path((agent_id, proc_id)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"), None, None).await
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/memory/procedures/{proc_id}"),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn list_procedures_by_skill(
@@ -214,14 +298,26 @@ pub(crate) async fn get_memory_snapshot(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory"), query, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory"),
+        query,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn wipe_memory(
     State(_state): State<AppState>,
     Path(agent_id): Path<AgentId>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/memory"), None, None).await
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/memory"),
+        None,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn get_memory_stats(
@@ -229,7 +325,13 @@ pub(crate) async fn get_memory_stats(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/memory/stats"), query, None).await
+    proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/memory/stats"),
+        query,
+        None,
+    )
+    .await
 }
 
 pub(crate) async fn trigger_consolidation(
@@ -237,7 +339,13 @@ pub(crate) async fn trigger_consolidation(
     Path(agent_id): Path<AgentId>,
     body: String,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::POST, &format!("api/agents/{agent_id}/memory/consolidate"), None, Some(body)).await
+    proxy_to_harness(
+        Method::POST,
+        &format!("api/agents/{agent_id}/memory/consolidate"),
+        None,
+        Some(body),
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------
@@ -335,13 +443,7 @@ pub(crate) async fn get_skill(
     State(_state): State<AppState>,
     Path(name): Path<String>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(
-        Method::GET,
-        &format!("api/skills/{name}"),
-        None,
-        None,
-    )
-    .await
+    proxy_to_harness(Method::GET, &format!("api/skills/{name}"), None, None).await
 }
 
 pub(crate) async fn activate_skill(
@@ -363,7 +465,13 @@ pub(crate) async fn list_agent_skills(
     Path(agent_id): Path<AgentId>,
     RawQuery(query): RawQuery,
 ) -> Result<Response, StatusCode> {
-    let resp = proxy_to_harness(Method::GET, &format!("api/agents/{agent_id}/skills"), query, None).await?;
+    let resp = proxy_to_harness(
+        Method::GET,
+        &format!("api/agents/{agent_id}/skills"),
+        query,
+        None,
+    )
+    .await?;
 
     if resp.status() == StatusCode::BAD_REQUEST {
         return Ok((
@@ -388,8 +496,14 @@ pub(crate) async fn install_agent_skill(
         .ok()
         .map(|v| {
             let name = v.get("name").and_then(|n| n.as_str()).unwrap_or_default();
-            let approved_paths = v.get("approved_paths").cloned().unwrap_or(serde_json::json!([]));
-            let approved_commands = v.get("approved_commands").cloned().unwrap_or(serde_json::json!([]));
+            let approved_paths = v
+                .get("approved_paths")
+                .cloned()
+                .unwrap_or(serde_json::json!([]));
+            let approved_commands = v
+                .get("approved_commands")
+                .cloned()
+                .unwrap_or(serde_json::json!([]));
             serde_json::json!({
                 "name": name,
                 "approved_paths": approved_paths,
@@ -406,7 +520,13 @@ pub(crate) async fn uninstall_agent_skill(
     State(_state): State<AppState>,
     Path((agent_id, name)): Path<(AgentId, String)>,
 ) -> Result<Response, StatusCode> {
-    proxy_to_harness(Method::DELETE, &format!("api/agents/{agent_id}/skills/{name}"), None, None).await
+    proxy_to_harness(
+        Method::DELETE,
+        &format!("api/agents/{agent_id}/skills/{name}"),
+        None,
+        None,
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------
@@ -434,15 +554,16 @@ pub(crate) async fn install_from_shop(
     let name = body.name.trim().to_lowercase().replace(' ', "-");
     if name.is_empty()
         || name.len() > 64
-        || !name
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-')
+        || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
     {
         return Err(StatusCode::BAD_REQUEST);
     }
 
     let content = if let Some(ref category) = body.category {
-        let local_path = skills_base_dir().join(category).join(&name).join("SKILL.md");
+        let local_path = skills_base_dir()
+            .join(category)
+            .join(&name)
+            .join("SKILL.md");
         std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?
     } else if let Some(ref source_url) = body.source_url {
         reqwest::Client::new()
@@ -499,9 +620,7 @@ pub(crate) async fn install_from_shop(
         .into_response())
 }
 
-pub(crate) async fn discover_skill_paths(
-    Path(name): Path<String>,
-) -> Result<Response, StatusCode> {
+pub(crate) async fn discover_skill_paths(Path(name): Path<String>) -> Result<Response, StatusCode> {
     let paths = match name.as_str() {
         "obsidian" => discover_obsidian_vaults(),
         _ => vec![],
@@ -567,7 +686,10 @@ pub(crate) async fn get_skill_content(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let local_path = skills_base_dir().join(&category).join(&name).join("SKILL.md");
+    let local_path = skills_base_dir()
+        .join(&category)
+        .join(&name)
+        .join("SKILL.md");
     let content = std::fs::read_to_string(&local_path).map_err(|_| StatusCode::NOT_FOUND)?;
 
     Ok((

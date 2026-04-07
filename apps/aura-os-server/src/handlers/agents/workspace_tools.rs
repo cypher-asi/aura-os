@@ -101,7 +101,9 @@ pub(crate) fn shared_workspace_tools() -> &'static [WorkspaceToolDefinition] {
 }
 
 pub(crate) fn workspace_tool(name: &str) -> Option<&'static WorkspaceToolDefinition> {
-    shared_workspace_tools().iter().find(|tool| tool.name == name)
+    shared_workspace_tools()
+        .iter()
+        .find(|tool| tool.name == name)
 }
 
 fn available_workspace_integration_providers(state: &AppState, agent: &Agent) -> HashSet<String> {

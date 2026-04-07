@@ -66,7 +66,10 @@ fn build_runtime_config(
 
     match (adapter_type.as_str(), auth_source.as_str()) {
         ("aura_harness", "aura_managed" | "org_integration") => {}
-        ("claude_code" | "codex" | "gemini_cli" | "opencode", "local_cli_auth" | "org_integration") => {}
+        (
+            "claude_code" | "codex" | "gemini_cli" | "opencode",
+            "local_cli_auth" | "org_integration",
+        ) => {}
         ("cursor", "local_cli_auth") => {}
         ("aura_harness", other) => {
             return Err(ApiError::bad_request(format!(

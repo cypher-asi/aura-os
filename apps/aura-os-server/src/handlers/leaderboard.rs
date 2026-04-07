@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use aura_os_core::OrgId;
-use aura_os_network::{LeaderboardEntry, MemberUsageStats, NetworkClient, NetworkProfile, PlatformStats, UsageStats};
+use aura_os_network::{
+    LeaderboardEntry, MemberUsageStats, NetworkClient, NetworkProfile, PlatformStats, UsageStats,
+};
 
 use crate::error::{map_network_error, ApiResult};
 use crate::state::{AppState, AuthJwt};
@@ -130,12 +132,7 @@ pub(crate) async fn get_leaderboard(
 
     let needs_resolution = entries.iter().any(|e| e.display_name.is_none());
     let profiles = if needs_resolution {
-        resolve_profiles(
-            client,
-            entries.iter().map(|e| e.profile_id.as_str()),
-            &jwt,
-        )
-        .await
+        resolve_profiles(client, entries.iter().map(|e| e.profile_id.as_str()), &jwt).await
     } else {
         HashMap::new()
     };

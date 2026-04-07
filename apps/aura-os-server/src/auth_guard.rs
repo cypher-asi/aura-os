@@ -65,10 +65,7 @@ fn extract_request_token(req: &Request) -> Option<String> {
     // Fallback: ?token= query param (WebSocket connections)
     req.uri()
         .query()
-        .and_then(|q| {
-            q.split('&')
-                .find_map(|pair| pair.strip_prefix("token="))
-        })
+        .and_then(|q| q.split('&').find_map(|pair| pair.strip_prefix("token=")))
         .map(|t| t.to_string())
 }
 
@@ -154,9 +151,9 @@ pub(crate) async fn require_verified_session(
 mod tests {
     use super::*;
     use aura_os_core::ZeroAuthSession;
-    use std::sync::OnceLock;
     use chrono::Utc;
     use std::sync::Arc;
+    use std::sync::OnceLock;
     use std::time::Instant;
 
     fn test_runtime() -> &'static tokio::runtime::Runtime {
@@ -331,15 +328,15 @@ mod tests {
         let id = COUNTER.fetch_add(1, Ordering::Relaxed);
         let _rt_guard = test_runtime().enter();
         let store = Arc::new(
-            aura_os_store::RocksStore::open(&std::env::temp_dir().join(format!(
-                "aura-test-guard-{}-{id}",
-                std::process::id()
-            )))
+            aura_os_store::RocksStore::open(
+                &std::env::temp_dir().join(format!("aura-test-guard-{}-{id}", std::process::id())),
+            )
             .unwrap(),
         );
         let (event_broadcast, _) = tokio::sync::broadcast::channel(16);
-        let local_harness: Arc<dyn aura_os_link::HarnessLink> =
-            Arc::new(aura_os_link::LocalHarness::new("http://localhost:8080".to_string()));
+        let local_harness: Arc<dyn aura_os_link::HarnessLink> = Arc::new(
+            aura_os_link::LocalHarness::new("http://localhost:8080".to_string()),
+        );
         let super_agent_service = Arc::new(aura_os_super_agent::SuperAgentService::new(
             "http://localhost:9998".to_string(),
             Arc::new(aura_os_projects::ProjectService::new(store.clone())),
@@ -351,7 +348,11 @@ mod tests {
                 None,
             )),
             Arc::new(aura_os_tasks::TaskService::new(store.clone(), None)),
-            Arc::new(aura_os_sessions::SessionService::new(store.clone(), 0.8, 200_000)),
+            Arc::new(aura_os_sessions::SessionService::new(
+                store.clone(),
+                0.8,
+                200_000,
+            )),
             Arc::new(aura_os_orgs::OrgService::new(store.clone())),
             Arc::new(aura_os_billing::BillingClient::new()),
             Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
@@ -379,7 +380,11 @@ mod tests {
                 Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
                 None,
             )),
-            session_service: Arc::new(aura_os_sessions::SessionService::new(store.clone(), 0.8, 200_000)),
+            session_service: Arc::new(aura_os_sessions::SessionService::new(
+                store.clone(),
+                0.8,
+                200_000,
+            )),
             local_harness: Arc::new(aura_os_link::LocalHarness::from_env()),
             swarm_harness: Arc::new(aura_os_link::SwarmHarness::from_env()),
             harness_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
@@ -397,7 +402,9 @@ mod tests {
             orbit_client: None,
             validation_cache: cache,
             super_agent_service,
-            super_agent_messages: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+            super_agent_messages: Arc::new(tokio::sync::Mutex::new(
+                std::collections::HashMap::new(),
+            )),
         }
     }
 

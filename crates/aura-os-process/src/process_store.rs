@@ -1,9 +1,10 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use aura_os_core::{
     Process, ProcessArtifact, ProcessArtifactId, ProcessEvent, ProcessFolder, ProcessFolderId,
-    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId, ProcessRun,
-    ProcessRunId, ProcessRunTranscriptEvent,
+    ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId, ProcessNodeId,
+    ProcessRun, ProcessRunId, ProcessRunTranscriptEvent,
 };
 use aura_os_store::RocksStore;
 
@@ -55,7 +56,8 @@ impl ProcessStore {
         let key = id.to_string();
         match self.store.get_cf_bytes(CF_PROCESSES, key.as_bytes()) {
             Ok(Some(bytes)) => {
-                let p = serde_json::from_slice(&bytes).map_err(|e| ProcessError::Store(e.to_string()))?;
+                let p = serde_json::from_slice(&bytes)
+                    .map_err(|e| ProcessError::Store(e.to_string()))?;
                 Ok(Some(p))
             }
             Ok(None) => Ok(None),
@@ -85,8 +87,7 @@ impl ProcessStore {
 
     pub fn save_folder(&self, folder: &ProcessFolder) -> Result<(), ProcessError> {
         let key = folder.folder_id.to_string();
-        let value =
-            serde_json::to_vec(folder).map_err(|e| ProcessError::Store(e.to_string()))?;
+        let value = serde_json::to_vec(folder).map_err(|e| ProcessError::Store(e.to_string()))?;
         self.store
             .put_cf_bytes(CF_PROCESS_FOLDERS, key.as_bytes(), &value)
             .map_err(|e| ProcessError::Store(e.to_string()))
@@ -148,7 +149,8 @@ impl ProcessStore {
         let key = format!("{process_id}:{node_id}");
         match self.store.get_cf_bytes(CF_PROCESS_NODES, key.as_bytes()) {
             Ok(Some(bytes)) => {
-                let n = serde_json::from_slice(&bytes).map_err(|e| ProcessError::Store(e.to_string()))?;
+                let n = serde_json::from_slice(&bytes)
+                    .map_err(|e| ProcessError::Store(e.to_string()))?;
                 Ok(Some(n))
             }
             Ok(None) => Ok(None),
@@ -162,11 +164,22 @@ impl ProcessStore {
         node_id: &ProcessNodeId,
     ) -> Result<(), ProcessError> {
         let key = format!("{process_id}:{node_id}");
+        let mut ops = vec![aura_os_store::BatchOp::Delete {
+            cf: CF_PROCESS_NODES.to_string(),
+            key,
+        }];
+
+        for conn in self.load_connections_for_process(process_id)? {
+            if conn.source_node_id == *node_id || conn.target_node_id == *node_id {
+                ops.push(aura_os_store::BatchOp::Delete {
+                    cf: CF_PROCESS_NODE_CONNECTIONS.to_string(),
+                    key: format!("{process_id}:{}", conn.connection_id),
+                });
+            }
+        }
+
         self.store
-            .write_batch(vec![aura_os_store::BatchOp::Delete {
-                cf: CF_PROCESS_NODES.to_string(),
-                key,
-            }])
+            .write_batch(ops)
             .map_err(|e| ProcessError::Store(e.to_string()))
     }
 
@@ -184,14 +197,31 @@ impl ProcessStore {
         &self,
         process_id: &ProcessId,
     ) -> Result<Vec<ProcessNodeConnection>, ProcessError> {
-        let all: Vec<ProcessNodeConnection> = self
-            .store
-            .scan_cf_all(CF_PROCESS_NODE_CONNECTIONS)
-            .map_err(|e| ProcessError::Store(e.to_string()))?;
-        Ok(all
+        let node_ids: HashSet<ProcessNodeId> = self
+            .list_nodes(process_id)?
             .into_iter()
-            .filter(|c| c.process_id == *process_id)
-            .collect())
+            .map(|node| node.node_id)
+            .collect();
+        let all = self.load_connections_for_process(process_id)?;
+
+        let (valid, dangling): (Vec<_>, Vec<_>) = all.into_iter().partition(|conn| {
+            node_ids.contains(&conn.source_node_id) && node_ids.contains(&conn.target_node_id)
+        });
+
+        if !dangling.is_empty() {
+            let ops = dangling
+                .iter()
+                .map(|conn| aura_os_store::BatchOp::Delete {
+                    cf: CF_PROCESS_NODE_CONNECTIONS.to_string(),
+                    key: format!("{process_id}:{}", conn.connection_id),
+                })
+                .collect();
+            self.store
+                .write_batch(ops)
+                .map_err(|e| ProcessError::Store(e.to_string()))?;
+        }
+
+        Ok(valid)
     }
 
     pub fn delete_connection(
@@ -239,7 +269,8 @@ impl ProcessStore {
         let key = format!("{process_id}:{run_id}");
         match self.store.get_cf_bytes(CF_PROCESS_RUNS, key.as_bytes()) {
             Ok(Some(bytes)) => {
-                let r = serde_json::from_slice(&bytes).map_err(|e| ProcessError::Store(e.to_string()))?;
+                let r = serde_json::from_slice(&bytes)
+                    .map_err(|e| ProcessError::Store(e.to_string()))?;
                 Ok(Some(r))
             }
             Ok(None) => Ok(None),
@@ -274,7 +305,10 @@ impl ProcessStore {
         Ok(filtered)
     }
 
-    pub fn delete_event(&self, event_id: &aura_os_core::ProcessEventId) -> Result<(), ProcessError> {
+    pub fn delete_event(
+        &self,
+        event_id: &aura_os_core::ProcessEventId,
+    ) -> Result<(), ProcessError> {
         let all: Vec<ProcessEvent> = self
             .store
             .scan_cf_all(CF_PROCESS_EVENTS)
@@ -332,9 +366,11 @@ impl ProcessStore {
     // -- Artifacts -----------------------------------------------------------
 
     pub fn save_artifact(&self, artifact: &ProcessArtifact) -> Result<(), ProcessError> {
-        let key = format!("{}:{}:{}", artifact.process_id, artifact.run_id, artifact.artifact_id);
-        let value =
-            serde_json::to_vec(artifact).map_err(|e| ProcessError::Store(e.to_string()))?;
+        let key = format!(
+            "{}:{}:{}",
+            artifact.process_id, artifact.run_id, artifact.artifact_id
+        );
+        let value = serde_json::to_vec(artifact).map_err(|e| ProcessError::Store(e.to_string()))?;
         self.store
             .put_cf_bytes(CF_PROCESS_ARTIFACTS, key.as_bytes(), &value)
             .map_err(|e| ProcessError::Store(e.to_string()))
@@ -370,5 +406,176 @@ impl ProcessStore {
         self.store
             .scan_cf_prefix(CF_PROCESS_ARTIFACTS, &prefix)
             .map_err(|e| ProcessError::Store(e.to_string()))
+    }
+
+    fn load_connections_for_process(
+        &self,
+        process_id: &ProcessId,
+    ) -> Result<Vec<ProcessNodeConnection>, ProcessError> {
+        let all: Vec<ProcessNodeConnection> = self
+            .store
+            .scan_cf_all(CF_PROCESS_NODE_CONNECTIONS)
+            .map_err(|e| ProcessError::Store(e.to_string()))?;
+        Ok(all
+            .into_iter()
+            .filter(|c| c.process_id == *process_id)
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use aura_os_core::{
+        OrgId, Process, ProcessId, ProcessNode, ProcessNodeConnection, ProcessNodeConnectionId,
+        ProcessNodeId, ProcessNodeType,
+    };
+    use aura_os_store::RocksStore;
+    use chrono::Utc;
+    use serde_json::json;
+    use tempfile::TempDir;
+
+    use super::ProcessStore;
+
+    fn open_temp_process_store() -> (ProcessStore, TempDir) {
+        let dir = TempDir::new().expect("failed to create temp dir");
+        let rocks = Arc::new(RocksStore::open(dir.path()).expect("failed to open rocks store"));
+        (ProcessStore::new(rocks), dir)
+    }
+
+    fn make_process(process_id: ProcessId) -> Process {
+        let now = Utc::now();
+        Process {
+            process_id,
+            org_id: OrgId::new(),
+            user_id: "user-1".to_string(),
+            project_id: None,
+            name: "Test Process".to_string(),
+            description: String::new(),
+            enabled: true,
+            folder_id: None,
+            schedule: None,
+            tags: vec![],
+            last_run_at: None,
+            next_run_at: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn make_node(
+        process_id: ProcessId,
+        node_id: ProcessNodeId,
+        node_type: ProcessNodeType,
+    ) -> ProcessNode {
+        let now = Utc::now();
+        ProcessNode {
+            node_id,
+            process_id,
+            node_type,
+            label: format!("{node_type:?}"),
+            agent_id: None,
+            prompt: String::new(),
+            config: json!({}),
+            position_x: 0.0,
+            position_y: 0.0,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn make_connection(
+        process_id: ProcessId,
+        connection_id: ProcessNodeConnectionId,
+        source_node_id: ProcessNodeId,
+        target_node_id: ProcessNodeId,
+    ) -> ProcessNodeConnection {
+        ProcessNodeConnection {
+            connection_id,
+            process_id,
+            source_node_id,
+            source_handle: None,
+            target_node_id,
+            target_handle: None,
+        }
+    }
+
+    #[test]
+    fn delete_node_removes_incident_connections() {
+        let (store, _dir) = open_temp_process_store();
+        let process_id = ProcessId::new();
+        let source_id = ProcessNodeId::new();
+        let target_id = ProcessNodeId::new();
+        let other_id = ProcessNodeId::new();
+
+        store.save_process(&make_process(process_id)).unwrap();
+        store
+            .save_node(&make_node(process_id, source_id, ProcessNodeType::Ignition))
+            .unwrap();
+        store
+            .save_node(&make_node(process_id, target_id, ProcessNodeType::Action))
+            .unwrap();
+        store
+            .save_node(&make_node(process_id, other_id, ProcessNodeType::Action))
+            .unwrap();
+
+        let deleted_conn = make_connection(
+            process_id,
+            ProcessNodeConnectionId::new(),
+            source_id,
+            target_id,
+        );
+        let kept_conn = make_connection(
+            process_id,
+            ProcessNodeConnectionId::new(),
+            target_id,
+            other_id,
+        );
+        store.save_connection(&deleted_conn).unwrap();
+        store.save_connection(&kept_conn).unwrap();
+
+        store.delete_node(&process_id, &source_id).unwrap();
+
+        let listed = store.list_connections(&process_id).unwrap();
+        assert_eq!(listed, vec![kept_conn]);
+    }
+
+    #[test]
+    fn list_connections_prunes_dangling_entries() {
+        let (store, _dir) = open_temp_process_store();
+        let process_id = ProcessId::new();
+        let source_id = ProcessNodeId::new();
+        let target_id = ProcessNodeId::new();
+        let missing_id = ProcessNodeId::new();
+
+        store.save_process(&make_process(process_id)).unwrap();
+        store
+            .save_node(&make_node(process_id, source_id, ProcessNodeType::Ignition))
+            .unwrap();
+        store
+            .save_node(&make_node(process_id, target_id, ProcessNodeType::Action))
+            .unwrap();
+
+        let valid_conn = make_connection(
+            process_id,
+            ProcessNodeConnectionId::new(),
+            source_id,
+            target_id,
+        );
+        let dangling_conn = make_connection(
+            process_id,
+            ProcessNodeConnectionId::new(),
+            source_id,
+            missing_id,
+        );
+        store.save_connection(&valid_conn).unwrap();
+        store.save_connection(&dangling_conn).unwrap();
+
+        let listed = store.list_connections(&process_id).unwrap();
+        assert_eq!(listed, vec![valid_conn.clone()]);
+
+        let listed_again = store.list_connections(&process_id).unwrap();
+        assert_eq!(listed_again, vec![valid_conn]);
     }
 }

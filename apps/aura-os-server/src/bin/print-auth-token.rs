@@ -35,7 +35,10 @@ fn main() {
     });
 
     let Some(jwt) = store.get_jwt() else {
-        eprintln!("No persisted Aura auth token found in {}", db_path.display());
+        eprintln!(
+            "No persisted Aura auth token found in {}",
+            db_path.display()
+        );
         std::process::exit(1);
     };
 

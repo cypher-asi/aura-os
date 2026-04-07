@@ -47,7 +47,6 @@ pub(crate) async fn get_remote_agent_state(
     AuthJwt(jwt): AuthJwt,
     Path(agent_id): Path<String>,
 ) -> ApiResult<Json<RemoteAgentStateResponse>> {
-
     let network = state.require_network_client()?;
     let net_agent = network
         .get_agent(&agent_id, &jwt)

@@ -3,7 +3,9 @@ use serde_json::json;
 
 use aura_os_core::ToolDomain;
 
-use super::helpers::{network_delete, network_get, network_post, network_put, require_network, require_str};
+use super::helpers::{
+    network_delete, network_get, network_post, network_put, require_network, require_str,
+};
 use super::{SuperAgentContext, SuperAgentTool, ToolResult};
 use crate::SuperAgentError;
 
@@ -15,9 +17,15 @@ pub struct ListTasksTool;
 
 #[async_trait]
 impl SuperAgentTool for ListTasksTool {
-    fn name(&self) -> &str { "list_tasks" }
-    fn description(&self) -> &str { "List all tasks for a project" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "list_tasks"
+    }
+    fn description(&self) -> &str {
+        "List all tasks for a project"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -29,10 +37,19 @@ impl SuperAgentTool for ListTasksTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
-        network_get(network, &format!("/api/projects/{project_id}/tasks"), &ctx.jwt).await
+        network_get(
+            network,
+            &format!("/api/projects/{project_id}/tasks"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -44,9 +61,15 @@ pub struct ListTasksBySpecTool;
 
 #[async_trait]
 impl SuperAgentTool for ListTasksBySpecTool {
-    fn name(&self) -> &str { "list_tasks_by_spec" }
-    fn description(&self) -> &str { "List all tasks for a specific specification" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "list_tasks_by_spec"
+    }
+    fn description(&self) -> &str {
+        "List all tasks for a specific specification"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -59,11 +82,20 @@ impl SuperAgentTool for ListTasksBySpecTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let spec_id = require_str(&input, "spec_id")?;
-        network_get(network, &format!("/api/projects/{project_id}/specs/{spec_id}/tasks"), &ctx.jwt).await
+        network_get(
+            network,
+            &format!("/api/projects/{project_id}/specs/{spec_id}/tasks"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -75,9 +107,15 @@ pub struct GetTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for GetTaskTool {
-    fn name(&self) -> &str { "get_task" }
-    fn description(&self) -> &str { "Get details of a specific task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "get_task"
+    }
+    fn description(&self) -> &str {
+        "Get details of a specific task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -90,11 +128,20 @@ impl SuperAgentTool for GetTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        network_get(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt).await
+        network_get(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -106,9 +153,15 @@ pub struct CreateTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for CreateTaskTool {
-    fn name(&self) -> &str { "create_task" }
-    fn description(&self) -> &str { "Create a new task in a project" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "create_task"
+    }
+    fn description(&self) -> &str {
+        "Create a new task in a project"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -124,7 +177,11 @@ impl SuperAgentTool for CreateTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let mut body = json!({
@@ -139,7 +196,13 @@ impl SuperAgentTool for CreateTaskTool {
         if let Some(status) = input["status"].as_str() {
             body["status"] = json!(status);
         }
-        network_post(network, &format!("/api/projects/{project_id}/tasks"), &ctx.jwt, &body).await
+        network_post(
+            network,
+            &format!("/api/projects/{project_id}/tasks"),
+            &ctx.jwt,
+            &body,
+        )
+        .await
     }
 }
 
@@ -152,9 +215,15 @@ pub struct UpdateTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for UpdateTaskTool {
-    fn name(&self) -> &str { "update_task" }
-    fn description(&self) -> &str { "Update an existing task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "update_task"
+    }
+    fn description(&self) -> &str {
+        "Update an existing task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -176,7 +245,11 @@ impl SuperAgentTool for UpdateTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
@@ -187,7 +260,13 @@ impl SuperAgentTool for UpdateTaskTool {
             "order_index": input.get("order_index").and_then(|value| value.as_i64()),
             "dependency_ids": input.get("dependency_ids"),
         });
-        network_put(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt, &body).await
+        network_put(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}"),
+            &ctx.jwt,
+            &body,
+        )
+        .await
     }
 }
 
@@ -199,9 +278,15 @@ pub struct DeleteTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for DeleteTaskTool {
-    fn name(&self) -> &str { "delete_task" }
-    fn description(&self) -> &str { "Delete an existing task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "delete_task"
+    }
+    fn description(&self) -> &str {
+        "Delete an existing task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -214,11 +299,20 @@ impl SuperAgentTool for DeleteTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        network_delete(network, &format!("/api/projects/{project_id}/tasks/{task_id}"), &ctx.jwt).await
+        network_delete(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -230,9 +324,15 @@ pub struct ExtractTasksTool;
 
 #[async_trait]
 impl SuperAgentTool for ExtractTasksTool {
-    fn name(&self) -> &str { "extract_tasks" }
-    fn description(&self) -> &str { "Auto-extract tasks from project specifications" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "extract_tasks"
+    }
+    fn description(&self) -> &str {
+        "Auto-extract tasks from project specifications"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -244,10 +344,20 @@ impl SuperAgentTool for ExtractTasksTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
-        network_post(network, &format!("/api/projects/{project_id}/tasks/extract"), &ctx.jwt, &json!({})).await
+        network_post(
+            network,
+            &format!("/api/projects/{project_id}/tasks/extract"),
+            &ctx.jwt,
+            &json!({}),
+        )
+        .await
     }
 }
 
@@ -259,9 +369,15 @@ pub struct TransitionTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for TransitionTaskTool {
-    fn name(&self) -> &str { "transition_task" }
-    fn description(&self) -> &str { "Transition a task to a new status (e.g. pending -> in_progress -> done)" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "transition_task"
+    }
+    fn description(&self) -> &str {
+        "Transition a task to a new status (e.g. pending -> in_progress -> done)"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -275,13 +391,23 @@ impl SuperAgentTool for TransitionTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
         let new_status = require_str(&input, "new_status")?;
         let body = json!({ "new_status": new_status });
-        network_post(network, &format!("/api/projects/{project_id}/tasks/{task_id}/transition"), &ctx.jwt, &body).await
+        network_post(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}/transition"),
+            &ctx.jwt,
+            &body,
+        )
+        .await
     }
 }
 
@@ -293,9 +419,15 @@ pub struct RetryTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for RetryTaskTool {
-    fn name(&self) -> &str { "retry_task" }
-    fn description(&self) -> &str { "Retry a failed task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "retry_task"
+    }
+    fn description(&self) -> &str {
+        "Retry a failed task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -308,11 +440,21 @@ impl SuperAgentTool for RetryTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        network_post(network, &format!("/api/projects/{project_id}/tasks/{task_id}/retry"), &ctx.jwt, &json!({})).await
+        network_post(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}/retry"),
+            &ctx.jwt,
+            &json!({}),
+        )
+        .await
     }
 }
 
@@ -324,9 +466,15 @@ pub struct RunTaskTool;
 
 #[async_trait]
 impl SuperAgentTool for RunTaskTool {
-    fn name(&self) -> &str { "run_task" }
-    fn description(&self) -> &str { "Execute a task by dispatching it to an agent" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "run_task"
+    }
+    fn description(&self) -> &str {
+        "Execute a task by dispatching it to an agent"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -339,11 +487,21 @@ impl SuperAgentTool for RunTaskTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        network_post(network, &format!("/api/projects/{project_id}/tasks/{task_id}/run"), &ctx.jwt, &json!({})).await
+        network_post(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}/run"),
+            &ctx.jwt,
+            &json!({}),
+        )
+        .await
     }
 }
 
@@ -355,9 +513,15 @@ pub struct GetTaskOutputTool;
 
 #[async_trait]
 impl SuperAgentTool for GetTaskOutputTool {
-    fn name(&self) -> &str { "get_task_output" }
-    fn description(&self) -> &str { "Get the output/result of a completed task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Task }
+    fn name(&self) -> &str {
+        "get_task_output"
+    }
+    fn description(&self) -> &str {
+        "Get the output/result of a completed task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Task
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -370,10 +534,19 @@ impl SuperAgentTool for GetTaskOutputTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let project_id = require_str(&input, "project_id")?;
         let task_id = require_str(&input, "task_id")?;
-        network_get(network, &format!("/api/projects/{project_id}/tasks/{task_id}/output"), &ctx.jwt).await
+        network_get(
+            network,
+            &format!("/api/projects/{project_id}/tasks/{task_id}/output"),
+            &ctx.jwt,
+        )
+        .await
     }
 }

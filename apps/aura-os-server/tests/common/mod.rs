@@ -17,7 +17,6 @@ use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::*;
 use aura_os_link::{AutomatonClient, HarnessLink, LocalHarness, SwarmHarness};
-use aura_os_super_agent::SuperAgentService;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -25,6 +24,7 @@ use aura_os_server::AppState;
 use aura_os_sessions::SessionService;
 use aura_os_storage::StorageClient;
 use aura_os_store::RocksStore;
+use aura_os_super_agent::SuperAgentService;
 use aura_os_tasks::TaskService;
 
 pub fn store_zero_auth_session(store: &RocksStore) {
@@ -48,12 +48,8 @@ pub fn store_zero_auth_session(store: &RocksStore) {
 }
 
 #[allow(dead_code)]
-pub async fn build_test_app_with_storage() -> (
-    Router,
-    AppState,
-    Arc<StorageClient>,
-    tempfile::TempDir,
-) {
+pub async fn build_test_app_with_storage(
+) -> (Router, AppState, Arc<StorageClient>, tempfile::TempDir) {
     let (storage_url, _db) = aura_os_storage::testutil::start_mock_storage().await;
     let storage = Arc::new(StorageClient::with_base_url(&storage_url));
 

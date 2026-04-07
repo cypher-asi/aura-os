@@ -154,4 +154,3 @@ pub(crate) async fn list_pending_events(
     let events = state.super_agent_service.event_listener.peek_events().await;
     Ok(Json(events))
 }
-

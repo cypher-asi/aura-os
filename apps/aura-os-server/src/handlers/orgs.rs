@@ -133,9 +133,9 @@ fn validate_mcp_server_config(
             "MCP server integrations must use the `mcp_server` provider.",
         ));
     }
-    let config = provider_config
-        .and_then(Value::as_object)
-        .ok_or_else(|| ApiError::bad_request("MCP server integrations require an object provider_config."))?;
+    let config = provider_config.and_then(Value::as_object).ok_or_else(|| {
+        ApiError::bad_request("MCP server integrations require an object provider_config.")
+    })?;
     let transport = config
         .get("transport")
         .and_then(Value::as_str)
@@ -158,7 +158,9 @@ fn validate_mcp_server_config(
                 ApiError::bad_request("HTTP MCP servers require a non-empty `url`.")
             })?;
             if Url::parse(url).is_err() {
-                return Err(ApiError::bad_request("HTTP MCP servers require a valid absolute `url`."));
+                return Err(ApiError::bad_request(
+                    "HTTP MCP servers require a valid absolute `url`.",
+                ));
             }
         }
         other => {
@@ -195,7 +197,9 @@ fn validate_mcp_server_config(
             ApiError::bad_request("MCP server `cwd` must be a string when provided.")
         })?;
         if cwd.is_empty() {
-            return Err(ApiError::bad_request("MCP server `cwd` cannot be empty when provided."));
+            return Err(ApiError::bad_request(
+                "MCP server `cwd` cannot be empty when provided.",
+            ));
         }
     }
 
@@ -343,7 +347,10 @@ pub(crate) async fn update_integration(
         .get_integration(&org_id, &integration_id)
         .map_err(map_org_err)?
         .ok_or_else(|| ApiError::not_found("integration not found"))?;
-    let provider = req.provider.clone().unwrap_or_else(|| existing.provider.clone());
+    let provider = req
+        .provider
+        .clone()
+        .unwrap_or_else(|| existing.provider.clone());
     let kind = req.kind.clone().unwrap_or_else(|| existing.kind.clone());
     let provider_config = match req.provider_config.clone() {
         Some(value) => value,

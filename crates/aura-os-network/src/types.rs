@@ -21,7 +21,12 @@ pub struct NetworkUser {
     pub zos_user_id: Option<String>,
     #[serde(alias = "display_name", alias = "name")]
     pub display_name: Option<String>,
-    #[serde(default, rename = "profileImage", alias = "avatar_url", alias = "avatarUrl")]
+    #[serde(
+        default,
+        rename = "profileImage",
+        alias = "avatar_url",
+        alias = "avatarUrl"
+    )]
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
     #[serde(default)]

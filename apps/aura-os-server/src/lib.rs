@@ -46,10 +46,7 @@ pub fn ensure_user_bins_on_path() {
                     {
                         continue;
                     }
-                    let base = entry
-                        .path()
-                        .join("LocalCache")
-                        .join("local-packages");
+                    let base = entry.path().join("LocalCache").join("local-packages");
                     if let Ok(inner) = std::fs::read_dir(&base) {
                         for ie in inner.flatten() {
                             if ie.file_name().to_string_lossy().starts_with("Python3") {
@@ -83,8 +80,7 @@ pub fn ensure_user_bins_on_path() {
     }
 
     let current = std::env::var_os("PATH").unwrap_or_default();
-    let existing: std::collections::HashSet<PathBuf> =
-        std::env::split_paths(&current).collect();
+    let existing: std::collections::HashSet<PathBuf> = std::env::split_paths(&current).collect();
 
     let new_dirs: Vec<&PathBuf> = extra.iter().filter(|d| !existing.contains(*d)).collect();
     if new_dirs.is_empty() {

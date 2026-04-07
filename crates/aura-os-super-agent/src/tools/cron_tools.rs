@@ -249,9 +249,7 @@ impl SuperAgentTool for UpdateCronJobTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("update_cron_job", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("update_cron_job", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("update_cron_job", e))?;
 
         let mut job = self
             .store
@@ -349,9 +347,7 @@ impl SuperAgentTool for DeleteCronJobTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("delete_cron_job", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("delete_cron_job", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("delete_cron_job", e))?;
 
         self.store
             .delete_job(&job_id)
@@ -402,9 +398,7 @@ impl SuperAgentTool for PauseCronJobTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("pause_cron_job", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("pause_cron_job", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("pause_cron_job", e))?;
 
         let mut job = self
             .store
@@ -463,9 +457,7 @@ impl SuperAgentTool for ResumeCronJobTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("resume_cron_job", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("resume_cron_job", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("resume_cron_job", e))?;
 
         let mut job = self
             .store
@@ -598,9 +590,7 @@ impl SuperAgentTool for ListCronRunsTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("list_cron_runs", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("list_cron_runs", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("list_cron_runs", e))?;
 
         let runs = self
             .store
@@ -666,9 +656,7 @@ impl SuperAgentTool for GetArtifactTool {
         let id_str = input["artifact_id"]
             .as_str()
             .ok_or_else(|| tool_err("get_artifact", "artifact_id is required"))?;
-        let artifact_id: ArtifactId = id_str
-            .parse()
-            .map_err(|e| tool_err("get_artifact", e))?;
+        let artifact_id: ArtifactId = id_str.parse().map_err(|e| tool_err("get_artifact", e))?;
 
         let artifact = self
             .store
@@ -734,9 +722,7 @@ impl SuperAgentTool for ListArtifactsTool {
         let id_str = input["cron_job_id"]
             .as_str()
             .ok_or_else(|| tool_err("list_artifacts", "cron_job_id is required"))?;
-        let job_id: CronJobId = id_str
-            .parse()
-            .map_err(|e| tool_err("list_artifacts", e))?;
+        let job_id: CronJobId = id_str.parse().map_err(|e| tool_err("list_artifacts", e))?;
 
         let artifacts = self
             .store

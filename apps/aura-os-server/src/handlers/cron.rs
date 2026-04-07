@@ -179,7 +179,11 @@ pub(crate) async fn update_cron_job(
         job.agent_id = if agent_id.is_empty() {
             None
         } else {
-            Some(agent_id.parse().map_err(|_| ApiError::bad_request("invalid agent ID"))?)
+            Some(
+                agent_id
+                    .parse()
+                    .map_err(|_| ApiError::bad_request("invalid agent ID"))?,
+            )
         };
     }
     if let Some(tags) = req.tags {

@@ -15,9 +15,15 @@ pub struct ListFeedTool;
 
 #[async_trait]
 impl SuperAgentTool for ListFeedTool {
-    fn name(&self) -> &str { "list_feed" }
-    fn description(&self) -> &str { "List the activity feed with optional filter" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "list_feed"
+    }
+    fn description(&self) -> &str {
+        "List the activity feed with optional filter"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -33,7 +39,11 @@ impl SuperAgentTool for ListFeedTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let filter = input["filter"].as_str().unwrap_or("everything");
         network_get(network, &format!("/api/feed?filter={filter}"), &ctx.jwt).await
@@ -48,9 +58,15 @@ pub struct CreatePostTool;
 
 #[async_trait]
 impl SuperAgentTool for CreatePostTool {
-    fn name(&self) -> &str { "create_post" }
-    fn description(&self) -> &str { "Create a new social post" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "create_post"
+    }
+    fn description(&self) -> &str {
+        "Create a new social post"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -63,7 +79,11 @@ impl SuperAgentTool for CreatePostTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let title = require_str(&input, "title")?;
         let mut body = json!({ "title": title });
@@ -82,9 +102,15 @@ pub struct GetPostTool;
 
 #[async_trait]
 impl SuperAgentTool for GetPostTool {
-    fn name(&self) -> &str { "get_post" }
-    fn description(&self) -> &str { "Get a specific post and its comments" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "get_post"
+    }
+    fn description(&self) -> &str {
+        "Get a specific post and its comments"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -96,7 +122,11 @@ impl SuperAgentTool for GetPostTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let post_id = require_str(&input, "post_id")?;
         network_get(network, &format!("/api/posts/{post_id}"), &ctx.jwt).await
@@ -111,9 +141,15 @@ pub struct AddCommentTool;
 
 #[async_trait]
 impl SuperAgentTool for AddCommentTool {
-    fn name(&self) -> &str { "add_comment" }
-    fn description(&self) -> &str { "Add a comment to a post" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "add_comment"
+    }
+    fn description(&self) -> &str {
+        "Add a comment to a post"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -126,12 +162,22 @@ impl SuperAgentTool for AddCommentTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let post_id = require_str(&input, "post_id")?;
         let content = require_str(&input, "content")?;
         let body = json!({ "content": content });
-        network_post(network, &format!("/api/posts/{post_id}/comments"), &ctx.jwt, &body).await
+        network_post(
+            network,
+            &format!("/api/posts/{post_id}/comments"),
+            &ctx.jwt,
+            &body,
+        )
+        .await
     }
 }
 
@@ -143,9 +189,15 @@ pub struct DeleteCommentTool;
 
 #[async_trait]
 impl SuperAgentTool for DeleteCommentTool {
-    fn name(&self) -> &str { "delete_comment" }
-    fn description(&self) -> &str { "Delete a comment" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "delete_comment"
+    }
+    fn description(&self) -> &str {
+        "Delete a comment"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -157,7 +209,11 @@ impl SuperAgentTool for DeleteCommentTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let comment_id = require_str(&input, "comment_id")?;
         network_delete(network, &format!("/api/comments/{comment_id}"), &ctx.jwt).await
@@ -172,9 +228,15 @@ pub struct FollowProfileTool;
 
 #[async_trait]
 impl SuperAgentTool for FollowProfileTool {
-    fn name(&self) -> &str { "follow_profile" }
-    fn description(&self) -> &str { "Follow another user or agent profile" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "follow_profile"
+    }
+    fn description(&self) -> &str {
+        "Follow another user or agent profile"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -186,7 +248,11 @@ impl SuperAgentTool for FollowProfileTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let target_profile_id = require_str(&input, "target_profile_id")?;
         let body = json!({ "target_profile_id": target_profile_id });
@@ -202,9 +268,15 @@ pub struct UnfollowProfileTool;
 
 #[async_trait]
 impl SuperAgentTool for UnfollowProfileTool {
-    fn name(&self) -> &str { "unfollow_profile" }
-    fn description(&self) -> &str { "Unfollow a user or agent profile" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "unfollow_profile"
+    }
+    fn description(&self) -> &str {
+        "Unfollow a user or agent profile"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -216,10 +288,19 @@ impl SuperAgentTool for UnfollowProfileTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         let target_profile_id = require_str(&input, "target_profile_id")?;
-        network_delete(network, &format!("/api/follows/{target_profile_id}"), &ctx.jwt).await
+        network_delete(
+            network,
+            &format!("/api/follows/{target_profile_id}"),
+            &ctx.jwt,
+        )
+        .await
     }
 }
 
@@ -231,9 +312,15 @@ pub struct ListFollowsTool;
 
 #[async_trait]
 impl SuperAgentTool for ListFollowsTool {
-    fn name(&self) -> &str { "list_follows" }
-    fn description(&self) -> &str { "List profiles the current user follows" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Social }
+    fn name(&self) -> &str {
+        "list_follows"
+    }
+    fn description(&self) -> &str {
+        "List profiles the current user follows"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Social
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -243,7 +330,11 @@ impl SuperAgentTool for ListFollowsTool {
         })
     }
 
-    async fn execute(&self, _input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        _input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let network = require_network(ctx)?;
         network_get(network, "/api/follows", &ctx.jwt).await
     }

@@ -95,12 +95,10 @@ impl AutomatonClient {
     ) -> Result<AutomatonStartResult, AutomatonStartError> {
         let url = format!("{}/automaton/start", self.http_base);
         let req = self.apply_auth(self.http.post(&url).json(&params));
-        let resp = req.send().await.map_err(|e| {
-            AutomatonStartError::Request {
-                message: format!("harness start request failed: {e}"),
-                is_connect: e.is_connect(),
-                is_timeout: e.is_timeout(),
-            }
+        let resp = req.send().await.map_err(|e| AutomatonStartError::Request {
+            message: format!("harness start request failed: {e}"),
+            is_connect: e.is_connect(),
+            is_timeout: e.is_timeout(),
         })?;
         let status = resp.status();
         let body = resp
@@ -202,7 +200,11 @@ impl AutomatonClient {
     ///
     /// Falls back to `{ws_base}/stream/automaton/{automaton_id}` (the local-
     /// harness convention) when no URL is supplied.
-    fn resolve_event_stream_url(&self, automaton_id: &str, event_stream_url: Option<&str>) -> String {
+    fn resolve_event_stream_url(
+        &self,
+        automaton_id: &str,
+        event_stream_url: Option<&str>,
+    ) -> String {
         match event_stream_url {
             Some(u) if u.starts_with("ws://") || u.starts_with("wss://") => u.to_string(),
             Some(u) => format!("{}/{}", self.ws_base(), u.trim_start_matches('/')),

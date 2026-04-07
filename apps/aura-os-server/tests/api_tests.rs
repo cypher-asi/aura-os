@@ -1,12 +1,12 @@
 mod common;
 
-use axum::Json;
 use axum::body::Body;
-use axum::routing::{get, post};
 use axum::http::{Request, StatusCode};
+use axum::routing::{get, post};
+use axum::Json;
 use axum::Router;
-use tower::ServiceExt;
 use tokio::net::TcpListener;
+use tower::ServiceExt;
 
 use aura_os_core::*;
 
@@ -198,7 +198,10 @@ async fn org_integrations_support_mcp_server_provider_config() {
     assert_eq!(created["kind"], "mcp_server");
     assert_eq!(created["provider"], "mcp_server");
     assert_eq!(created["provider_config"]["transport"], "stdio");
-    assert_eq!(created["provider_config"]["secretEnvVar"], "GITHUB_PERSONAL_ACCESS_TOKEN");
+    assert_eq!(
+        created["provider_config"]["secretEnvVar"],
+        "GITHUB_PERSONAL_ACCESS_TOKEN"
+    );
     assert_eq!(
         state
             .org_service
@@ -393,7 +396,10 @@ async fn org_tool_actions_use_saved_integrations() {
 
     unsafe {
         std::env::set_var("AURA_GITHUB_API_BASE_URL", format!("{provider_url}/github"));
-        std::env::set_var("AURA_LINEAR_API_BASE_URL", format!("{provider_url}/linear/graphql"));
+        std::env::set_var(
+            "AURA_LINEAR_API_BASE_URL",
+            format!("{provider_url}/linear/graphql"),
+        );
         std::env::set_var("AURA_SLACK_API_BASE_URL", format!("{provider_url}/slack"));
         std::env::set_var("AURA_NOTION_API_BASE_URL", format!("{provider_url}/notion"));
     }
@@ -569,7 +575,11 @@ async fn spec_routes_support_storage_backed_crud() {
     assert_eq!(listed.as_array().unwrap().len(), 1);
     assert_eq!(listed[0]["spec_id"], spec_id);
 
-    let req = json_request("GET", &format!("/api/projects/{project_id}/specs/{spec_id}"), None);
+    let req = json_request(
+        "GET",
+        &format!("/api/projects/{project_id}/specs/{spec_id}"),
+        None,
+    );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let fetched = response_json(resp).await;
@@ -661,7 +671,11 @@ async fn task_routes_support_storage_backed_crud_and_state_changes() {
     let listed = response_json(resp).await;
     assert_eq!(listed.as_array().unwrap().len(), 1);
 
-    let req = json_request("GET", &format!("/api/projects/{project_id}/tasks/{task_id}"), None);
+    let req = json_request(
+        "GET",
+        &format!("/api/projects/{project_id}/tasks/{task_id}"),
+        None,
+    );
     let resp = app.clone().oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
     let fetched = response_json(resp).await;

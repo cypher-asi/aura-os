@@ -11,11 +11,13 @@ use crate::state::{AppState, AuthJwt};
 
 use super::projects_helpers::{
     build_local_shadow, canonical_workspace_path, ensure_local_shadow, normalize_project_workspace,
-    project_from_network, to_project_input, write_imported_files, ListProjectsQuery,
-    slugify,
+    project_from_network, slugify, to_project_input, write_imported_files, ListProjectsQuery,
 };
 
-pub(crate) async fn list_all_projects_from_network(state: &AppState, jwt: &str) -> ApiResult<Vec<Project>> {
+pub(crate) async fn list_all_projects_from_network(
+    state: &AppState,
+    jwt: &str,
+) -> ApiResult<Vec<Project>> {
     let client = state.require_network_client()?;
     let orgs = client.list_orgs(&jwt).await.map_err(map_network_error)?;
     let mut projects = Vec::new();
@@ -194,7 +196,11 @@ pub(crate) async fn create_imported_project(
 
     tokio::fs::create_dir_all(&workspace_root)
         .await
-        .map_err(|e| ApiError::internal(format!("failed to create imported workspace directory: {e}")))?;
+        .map_err(|e| {
+            ApiError::internal(format!(
+                "failed to create imported workspace directory: {e}"
+            ))
+        })?;
     write_imported_files(&workspace_root, files).await?;
 
     Ok((status, Json(project)))

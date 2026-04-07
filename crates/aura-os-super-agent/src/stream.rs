@@ -168,7 +168,11 @@ impl SuperAgentStream {
     ///
     /// `image_blocks` is an optional list of pre-formatted Anthropic image
     /// content blocks (each `{ "type": "image", "source": { ... } }`).
-    pub async fn run(mut self, user_message: String, image_blocks: Option<Vec<Value>>) -> Vec<Value> {
+    pub async fn run(
+        mut self,
+        user_message: String,
+        image_blocks: Option<Vec<Value>>,
+    ) -> Vec<Value> {
         let user_content = match image_blocks {
             Some(images) if !images.is_empty() => {
                 let mut blocks: Vec<Value> = Vec::new();
@@ -261,12 +265,16 @@ impl SuperAgentStream {
                         consecutive = consecutive_truncations,
                         "Response truncated by max_tokens, continuing tool loop"
                     );
-                    let has_tool_results = self.messages.last()
+                    let has_tool_results = self
+                        .messages
+                        .last()
                         .and_then(|m| m.get("content"))
                         .and_then(|c| c.as_array())
-                        .map(|arr| arr.iter().any(|v| {
-                            v.get("type").and_then(|t| t.as_str()) == Some("tool_result")
-                        }))
+                        .map(|arr| {
+                            arr.iter().any(|v| {
+                                v.get("type").and_then(|t| t.as_str()) == Some("tool_result")
+                            })
+                        })
                         .unwrap_or(false);
                     if !has_tool_results {
                         self.messages.push(json!({
@@ -490,8 +498,7 @@ impl SuperAgentStream {
                     json_len = acc.input_json.len(),
                     "Stream ended with in-progress tool_use block — recovering partial tool call"
                 );
-                let input: Value =
-                    serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
+                let input: Value = serde_json::from_str(&acc.input_json).unwrap_or(json!({}));
                 assistant_content_blocks.push(json!({
                     "type": "tool_use",
                     "id": acc.id,

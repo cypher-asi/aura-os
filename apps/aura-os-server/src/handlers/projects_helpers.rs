@@ -105,7 +105,10 @@ pub(crate) fn normalize_project_workspace(state: &AppState, project: &Project) -
     project.clone()
 }
 
-pub(crate) fn canonical_workspace_path(data_dir: &std::path::Path, project_id: &ProjectId) -> PathBuf {
+pub(crate) fn canonical_workspace_path(
+    data_dir: &std::path::Path,
+    project_id: &ProjectId,
+) -> PathBuf {
     data_dir.join("workspaces").join(project_id.to_string())
 }
 
@@ -174,7 +177,9 @@ async fn resolve_project_tool_workspace_path(
     harness_mode: HarnessMode,
     agent_instance_id: Option<AgentInstanceId>,
 ) -> Option<String> {
-    if let Some(path) = resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await {
+    if let Some(path) =
+        resolve_agent_instance_workspace_path(state, project_id, agent_instance_id).await
+    {
         return Some(path);
     }
 
@@ -183,7 +188,12 @@ async fn resolve_project_tool_workspace_path(
         HarnessMode::Local => "local",
         HarnessMode::Swarm => "remote",
     };
-    resolve_project_workspace_path_for_machine(state, project_id, Some(project.name.as_str()), machine_type)
+    resolve_project_workspace_path_for_machine(
+        state,
+        project_id,
+        Some(project.name.as_str()),
+        machine_type,
+    )
 }
 
 /// Build a standard project tool session config with JWT propagation.

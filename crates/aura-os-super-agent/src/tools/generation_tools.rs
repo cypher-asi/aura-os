@@ -19,9 +19,15 @@ pub struct GenerateImageTool;
 
 #[async_trait]
 impl SuperAgentTool for GenerateImageTool {
-    fn name(&self) -> &str { "generate_image" }
-    fn description(&self) -> &str { "Generate an image from a text prompt using AI" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Generation }
+    fn name(&self) -> &str {
+        "generate_image"
+    }
+    fn description(&self) -> &str {
+        "Generate an image from a text prompt using AI"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Generation
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -34,7 +40,11 @@ impl SuperAgentTool for GenerateImageTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let prompt = require_str(&input, "prompt")?;
         let mut body = json!({ "prompt": prompt });
         if let Some(model) = input["model"].as_str() {
@@ -78,9 +88,15 @@ pub struct Generate3dModelTool;
 
 #[async_trait]
 impl SuperAgentTool for Generate3dModelTool {
-    fn name(&self) -> &str { "generate_3d_model" }
-    fn description(&self) -> &str { "Generate a 3D model from an image URL" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Generation }
+    fn name(&self) -> &str {
+        "generate_3d_model"
+    }
+    fn description(&self) -> &str {
+        "Generate a 3D model from an image URL"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Generation
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -92,7 +108,11 @@ impl SuperAgentTool for Generate3dModelTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let image_url = require_str(&input, "image_url")?;
         let body = json!({ "image_url": image_url });
 
@@ -133,9 +153,15 @@ pub struct Get3dStatusTool;
 
 #[async_trait]
 impl SuperAgentTool for Get3dStatusTool {
-    fn name(&self) -> &str { "get_3d_status" }
-    fn description(&self) -> &str { "Check the status of a 3D model generation task" }
-    fn domain(&self) -> ToolDomain { ToolDomain::Generation }
+    fn name(&self) -> &str {
+        "get_3d_status"
+    }
+    fn description(&self) -> &str {
+        "Check the status of a 3D model generation task"
+    }
+    fn domain(&self) -> ToolDomain {
+        ToolDomain::Generation
+    }
 
     fn parameters_schema(&self) -> serde_json::Value {
         json!({
@@ -147,7 +173,11 @@ impl SuperAgentTool for Get3dStatusTool {
         })
     }
 
-    async fn execute(&self, input: serde_json::Value, ctx: &SuperAgentContext) -> Result<ToolResult, SuperAgentError> {
+    async fn execute(
+        &self,
+        input: serde_json::Value,
+        ctx: &SuperAgentContext,
+    ) -> Result<ToolResult, SuperAgentError> {
         let task_id = require_str(&input, "task_id")?;
 
         let url = format!("{}/v1/generate-3d/{task_id}", router_url());

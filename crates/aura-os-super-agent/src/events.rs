@@ -124,10 +124,7 @@ fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
                 .get("job_name")
                 .and_then(|n| n.as_str())
                 .unwrap_or("unknown");
-            (
-                event_type.to_string(),
-                format!("Cron job started: {name}"),
-            )
+            (event_type.to_string(), format!("Cron job started: {name}"))
         }
         "cron_job_completed" => {
             let name = value
@@ -162,7 +159,10 @@ fn classify_event(value: &serde_json::Value) -> Option<SuperAgentEvent> {
                 .get("process_id")
                 .and_then(|p| p.as_str())
                 .unwrap_or("unknown");
-            (event_type.to_string(), format!("Process run started: {pid}"))
+            (
+                event_type.to_string(),
+                format!("Process run started: {pid}"),
+            )
         }
         "process_run_completed" => {
             let pid = value

@@ -22,8 +22,8 @@ pub(crate) use sessions::{
 };
 
 pub mod conversions_pub {
-    pub use super::conversions::events_to_session_history;
     pub(crate) use super::conversions::agent_from_network;
+    pub use super::conversions::events_to_session_history;
     pub(crate) use super::conversions::resolve_workspace_path;
 }
 pub mod chat_pub {

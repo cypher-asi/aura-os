@@ -71,7 +71,13 @@ impl NetworkClient {
         jwt: &str,
     ) -> Result<(), NetworkError> {
         let url = format!("{}/api/usage", self.base_url);
-        let resp = self.http.post(&url).bearer_auth(jwt).json(req).send().await?;
+        let resp = self
+            .http
+            .post(&url)
+            .bearer_auth(jwt)
+            .json(req)
+            .send()
+            .await?;
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();

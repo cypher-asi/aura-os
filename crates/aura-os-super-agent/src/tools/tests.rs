@@ -131,8 +131,14 @@ mod tests {
         let defs = registry.tool_definitions(&tools);
         for def in &defs {
             assert!(def["name"].is_string(), "Tool def missing 'name'");
-            assert!(def["description"].is_string(), "Tool def missing 'description'");
-            assert!(def["input_schema"].is_object(), "Tool def missing 'input_schema'");
+            assert!(
+                def["description"].is_string(),
+                "Tool def missing 'description'"
+            );
+            assert!(
+                def["input_schema"].is_object(),
+                "Tool def missing 'input_schema'"
+            );
         }
     }
 
@@ -146,20 +152,56 @@ mod tests {
         let ctx = build_test_ctx(store);
 
         let network_tools: &[&str] = &[
-            "list_orgs", "create_org", "get_org", "update_org",
-            "list_members", "update_member_role", "remove_member", "manage_invites",
-            "list_specs", "get_spec", "create_spec", "update_spec", "delete_spec",
-            "generate_specs", "generate_specs_summary",
-            "list_tasks", "list_tasks_by_spec", "get_task", "create_task", "update_task", "delete_task",
-            "transition_task", "retry_task",
-            "run_task", "get_task_output", "extract_tasks",
-            "get_leaderboard", "get_usage_stats", "list_sessions", "list_log_entries",
-            "get_transactions", "get_billing_account", "purchase_credits",
-            "list_feed", "create_post", "get_post", "add_comment", "delete_comment",
-            "follow_profile", "unfollow_profile", "list_follows",
-            "assign_agent_to_project", "list_agent_instances",
-            "update_agent_instance", "delete_agent_instance", "remote_agent_action",
-            "browse_files", "read_file", "get_environment_info", "get_remote_agent_state",
+            "list_orgs",
+            "create_org",
+            "get_org",
+            "update_org",
+            "list_members",
+            "update_member_role",
+            "remove_member",
+            "manage_invites",
+            "list_specs",
+            "get_spec",
+            "create_spec",
+            "update_spec",
+            "delete_spec",
+            "generate_specs",
+            "generate_specs_summary",
+            "list_tasks",
+            "list_tasks_by_spec",
+            "get_task",
+            "create_task",
+            "update_task",
+            "delete_task",
+            "transition_task",
+            "retry_task",
+            "run_task",
+            "get_task_output",
+            "extract_tasks",
+            "get_leaderboard",
+            "get_usage_stats",
+            "list_sessions",
+            "list_log_entries",
+            "get_transactions",
+            "get_billing_account",
+            "purchase_credits",
+            "list_feed",
+            "create_post",
+            "get_post",
+            "add_comment",
+            "delete_comment",
+            "follow_profile",
+            "unfollow_profile",
+            "list_follows",
+            "assign_agent_to_project",
+            "list_agent_instances",
+            "update_agent_instance",
+            "delete_agent_instance",
+            "remote_agent_action",
+            "browse_files",
+            "read_file",
+            "get_environment_info",
+            "get_remote_agent_state",
         ];
 
         let registry = ToolRegistry::with_all_tools();
@@ -308,7 +350,10 @@ mod tests {
         let project = ctx.project_service.create_project(input).unwrap();
 
         // Verify direct lookup works
-        let fetched = ctx.project_service.get_project(&project.project_id).unwrap();
+        let fetched = ctx
+            .project_service
+            .get_project(&project.project_id)
+            .unwrap();
         assert_eq!(fetched.name, "TestProject");
 
         // The tool without network should not error
@@ -333,7 +378,10 @@ mod tests {
 
         let tool = crate::tools::project_tools::GetProjectTool;
         let result = tool
-            .execute(json!({ "project_id": project.project_id.to_string() }), &ctx)
+            .execute(
+                json!({ "project_id": project.project_id.to_string() }),
+                &ctx,
+            )
             .await
             .unwrap();
         assert!(!result.is_error);
@@ -439,7 +487,10 @@ mod tests {
 
         let tool = crate::tools::project_tools::ArchiveProjectTool;
         let result = tool
-            .execute(json!({ "project_id": project.project_id.to_string() }), &ctx)
+            .execute(
+                json!({ "project_id": project.project_id.to_string() }),
+                &ctx,
+            )
             .await
             .unwrap();
         assert!(!result.is_error);

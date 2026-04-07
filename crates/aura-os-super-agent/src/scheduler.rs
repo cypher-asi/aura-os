@@ -64,9 +64,7 @@ impl CronScheduler {
                                 "Cron job execution failed"
                             );
                         }
-                        if let Ok(Some(mut updated_job)) =
-                            store.get_job(&job_clone.cron_job_id)
-                        {
+                        if let Ok(Some(mut updated_job)) = store.get_job(&job_clone.cron_job_id) {
                             if let Some(next) = compute_next_run(&updated_job.schedule) {
                                 updated_job.next_run_at = Some(next);
                                 let _ = store.save_job(&updated_job);

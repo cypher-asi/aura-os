@@ -17,10 +17,8 @@ use crate::state::{AppState, AuthJwt};
 type SseStream = Pin<Box<dyn futures_core::Stream<Item = Result<Event, Infallible>> + Send>>;
 type SseResponse = ([(&'static str, HeaderValue); 1], Sse<SseStream>);
 
-const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] = [(
-    "X-Accel-Buffering",
-    HeaderValue::from_static("no"),
-)];
+const SSE_NO_BUFFERING_HEADERS: [(&str, HeaderValue); 1] =
+    [("X-Accel-Buffering", HeaderValue::from_static("no"))];
 
 fn router_url(state: &AppState) -> String {
     state.super_agent_service.router_url.clone()
@@ -209,7 +207,10 @@ async fn proxy_sse_stream(
                             .event("done")
                             .json_data(&json!({}))
                             .unwrap_or_else(|_| Event::default().data("{}"));
-                        return Some((Ok::<_, Infallible>(done_evt), (stream, String::new(), true)));
+                        return Some((
+                            Ok::<_, Infallible>(done_evt),
+                            (stream, String::new(), true),
+                        ));
                     }
                 }
             }

@@ -8,12 +8,12 @@
 //! aura-storage service), accessed via `StorageClient::with_base_url`.
 
 use aura_os_storage::testutil::start_mock_storage;
+use aura_os_storage::types::UpdateSpecRequest;
 use aura_os_storage::{
     CreateProjectAgentRequest, CreateSessionEventRequest, CreateSessionRequest, CreateSpecRequest,
     CreateTaskRequest, StorageClient, StorageTaskFileChangeSummary, TransitionTaskRequest,
     UpdateProjectAgentRequest, UpdateSessionRequest, UpdateTaskRequest,
 };
-use aura_os_storage::types::UpdateSpecRequest;
 
 const JWT: &str = "test-token";
 
