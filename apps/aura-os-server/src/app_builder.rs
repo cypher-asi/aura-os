@@ -8,7 +8,9 @@ use tracing::{info, warn};
 use aura_os_agents::{AgentInstanceService, AgentService};
 use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
-use aura_os_link::{HarnessLink, LocalHarness, SwarmHarness};
+use aura_os_link::{local_harness_base_url, HarnessLink, LocalHarness, SwarmHarness};
+
+use crate::harness_gateway::HarnessHttpGateway;
 use aura_os_network::{NetworkClient, OrbitClient};
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -166,8 +168,7 @@ fn maybe_spawn_local_harness() {
         return;
     }
 
-    let harness_url =
-        std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let harness_url = local_harness_base_url();
 
     let Some(host_port) = parse_host_port(&harness_url) else {
         return;
@@ -419,9 +420,9 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
         cache
     };
 
-    let automaton_client = Arc::new(aura_os_link::AutomatonClient::new(
-        &std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:8080".to_string()),
-    ));
+    let harness_base = local_harness_base_url();
+    let automaton_client = Arc::new(aura_os_link::AutomatonClient::new(&harness_base));
+    let harness_http = Arc::new(HarnessHttpGateway::new(harness_base));
 
     let router_url = std::env::var("AURA_ROUTER_URL")
         .unwrap_or_else(|_| "https://aura-router.onrender.com".to_string());
@@ -501,6 +502,7 @@ pub fn build_app_state(db_path: &Path) -> Result<AppState, StoreError> {
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true),
         automaton_client,
+        harness_http,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url: env_opt("SWARM_BASE_URL"),
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),

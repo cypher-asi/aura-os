@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use tracing::info;
 
 use crate::harness::{HarnessLink, HarnessSession, SessionConfig};
+use crate::harness_url::local_harness_base_url;
 use crate::ws_bridge::spawn_ws_bridge;
 use aura_protocol::{InboundMessage, OutboundMessage, SessionInit};
 
@@ -16,9 +17,7 @@ impl LocalHarness {
     }
 
     pub fn from_env() -> Self {
-        let base_url = std::env::var("LOCAL_HARNESS_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string());
-        Self::new(base_url)
+        Self::new(local_harness_base_url())
     }
 
     fn ws_url(&self) -> String {

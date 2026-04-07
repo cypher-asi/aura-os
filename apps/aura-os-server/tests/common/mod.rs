@@ -254,11 +254,13 @@ pub fn build_test_app_from_store(
         "http://localhost:19800".to_string(),
         None,
     ));
-    let local_harness: Arc<dyn HarnessLink> =
-        Arc::new(LocalHarness::new("http://localhost:19080".to_string()));
+    let harness_base =
+        std::env::var("LOCAL_HARNESS_URL").unwrap_or_else(|_| "http://localhost:19080".to_string());
+    let local_harness: Arc<dyn HarnessLink> = Arc::new(LocalHarness::new(harness_base.clone()));
 
     let (event_broadcast, _) = broadcast::channel::<serde_json::Value>(256);
-    let automaton_client = Arc::new(AutomatonClient::new("http://localhost:19080"));
+    let automaton_client = Arc::new(AutomatonClient::new(&harness_base));
+    let harness_http = Arc::new(aura_os_server::HarnessHttpGateway::new(harness_base));
     let validation_cache = Arc::new(dashmap::DashMap::new());
     validation_cache.insert(
         TEST_JWT.to_string(),
@@ -291,7 +293,7 @@ pub fn build_test_app_from_store(
         session_service.clone(),
         org_service.clone(),
         billing_client.clone(),
-        Arc::new(AutomatonClient::new("http://localhost:19080")),
+        automaton_client.clone(),
         network_client.clone(),
         storage_client.clone(),
         None,
@@ -323,6 +325,7 @@ pub fn build_test_app_from_store(
         storage_client,
         require_zero_pro: false,
         automaton_client,
+        harness_http,
         automaton_registry: Arc::new(Mutex::new(HashMap::new())),
         swarm_base_url,
         task_output_cache: Arc::new(Mutex::new(HashMap::new())),

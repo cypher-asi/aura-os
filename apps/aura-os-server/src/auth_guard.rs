@@ -396,6 +396,7 @@ mod tests {
             chat_sessions: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             credit_cache: Arc::new(tokio::sync::Mutex::new(None)),
             automaton_client: Arc::new(aura_os_link::AutomatonClient::new("http://localhost:9999")),
+            harness_http: Arc::new(crate::HarnessHttpGateway::new("http://localhost:9999")),
             automaton_registry: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             swarm_base_url: None,
             task_output_cache: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),

@@ -111,7 +111,10 @@ pub(crate) async fn setup_super_agent(
     ];
     let agent_id_str = agent.agent_id.to_string();
     for skill in default_skills {
-        super::harness_proxy::install_skill_for_agent(&agent_id_str, skill).await;
+        state
+            .harness_http
+            .install_skill_for_agent(&agent_id_str, skill)
+            .await;
     }
 
     info!(agent_id = %agent.agent_id, "SuperAgent created");

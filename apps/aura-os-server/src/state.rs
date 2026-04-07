@@ -16,6 +16,8 @@ use aura_os_auth::AuthService;
 use aura_os_billing::BillingClient;
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, ZeroAuthSession};
 use aura_os_link::{AutomatonClient, HarnessInbound, HarnessLink, HarnessOutbound};
+
+use crate::harness_gateway::HarnessHttpGateway;
 use aura_os_network::NetworkClient;
 use aura_os_orgs::OrgService;
 use aura_os_projects::ProjectService;
@@ -285,6 +287,8 @@ pub struct AppState {
     pub credit_cache: CreditCacheRef,
     /// REST client for the harness automaton API.
     pub automaton_client: Arc<AutomatonClient>,
+    /// Shared JSON HTTP client for harness REST paths proxied by [`crate::handlers::harness_proxy`].
+    pub harness_http: Arc<HarnessHttpGateway>,
     /// Active automatons (dev loops, task runs) per agent instance.
     pub automaton_registry: AutomatonRegistry,
     /// Base URL for the aura-swarm gateway (e.g. `http://gateway:8080`).

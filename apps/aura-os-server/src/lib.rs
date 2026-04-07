@@ -5,6 +5,7 @@ pub(crate) mod channel_ext;
 pub(crate) mod dto;
 pub(crate) mod error;
 pub mod handlers;
+pub(crate) mod harness_gateway;
 mod network_bridge;
 
 pub(crate) mod persistence;
@@ -12,6 +13,7 @@ pub(crate) mod router;
 pub(crate) mod state;
 
 pub use app_builder::build_app_state;
+pub use harness_gateway::HarnessHttpGateway;
 pub use router::create_router_with_interface;
 pub use state::{AppState, CachedSession};
 
