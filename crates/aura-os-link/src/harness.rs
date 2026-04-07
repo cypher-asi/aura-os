@@ -3,6 +3,7 @@ use tokio::sync::{broadcast, mpsc};
 
 use aura_protocol::{ConversationMessage, InboundMessage, OutboundMessage, SessionProviderConfig};
 
+#[derive(Default)]
 pub struct SessionConfig {
     pub system_prompt: Option<String>,
     pub model: Option<String>,
@@ -26,28 +27,6 @@ pub struct SessionConfig {
     pub aura_org_id: Option<String>,
     /// Optional per-session provider override for Aura BYOK.
     pub provider_config: Option<SessionProviderConfig>,
-}
-
-impl Default for SessionConfig {
-    fn default() -> Self {
-        Self {
-            system_prompt: None,
-            model: None,
-            max_tokens: None,
-            max_turns: None,
-            workspace: None,
-            agent_id: None,
-            agent_name: None,
-            token: None,
-            conversation_messages: None,
-            project_id: None,
-            project_path: None,
-            installed_tools: None,
-            aura_session_id: None,
-            aura_org_id: None,
-            provider_config: None,
-        }
-    }
 }
 
 pub struct HarnessSession {

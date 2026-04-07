@@ -11,6 +11,8 @@ use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tracing::{info, warn};
 
+use crate::runner::automaton_event_kinds::DONE;
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AutomatonStartParams {
     pub project_id: String,
@@ -290,10 +292,7 @@ impl AutomatonClient {
         tokio::spawn(async move {
             let _keep_write = _write;
             if let Some(event) = buffered_event {
-                let is_done = event
-                    .get("type")
-                    .and_then(|t| t.as_str())
-                    .map_or(false, |t| t == "done");
+                let is_done = event.get("type").and_then(|t| t.as_str()) == Some(DONE);
                 let _ = tx.send(event);
                 if is_done {
                     info!(automaton_id = %aid, "Automaton event stream ended");
@@ -305,10 +304,8 @@ impl AutomatonClient {
                     Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
                         match serde_json::from_str::<serde_json::Value>(&text) {
                             Ok(event) => {
-                                let is_done = event
-                                    .get("type")
-                                    .and_then(|t| t.as_str())
-                                    .map_or(false, |t| t == "done");
+                                let is_done =
+                                    event.get("type").and_then(|t| t.as_str()) == Some(DONE);
                                 let _ = tx.send(event);
                                 if is_done {
                                     break;
