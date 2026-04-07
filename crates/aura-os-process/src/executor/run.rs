@@ -226,6 +226,82 @@ fn compact_node_output(
     compact_process_output(content, mode, max_chars)
 }
 
+fn resolve_foreach_item_projection(config: &serde_json::Value) -> Option<Vec<String>> {
+    let raw = config.get("item_projection")?;
+
+    let fields = match raw {
+        serde_json::Value::Array(items) => items
+            .iter()
+            .filter_map(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned)
+            .collect::<Vec<_>>(),
+        serde_json::Value::String(csv) => csv
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned)
+            .collect::<Vec<_>>(),
+        _ => Vec::new(),
+    };
+
+    if fields.is_empty() {
+        None
+    } else {
+        Some(fields)
+    }
+}
+
+fn project_foreach_item_value(
+    value: &serde_json::Value,
+    item_projection: Option<&[String]>,
+) -> serde_json::Value {
+    let Some(fields) = item_projection else {
+        return value.clone();
+    };
+
+    let Some(source) = value.as_object() else {
+        return value.clone();
+    };
+
+    let projected = fields
+        .iter()
+        .filter_map(|field| {
+            source
+                .get(field)
+                .cloned()
+                .map(|value| (field.clone(), value))
+        })
+        .collect::<serde_json::Map<String, serde_json::Value>>();
+
+    if projected.is_empty() {
+        value.clone()
+    } else {
+        serde_json::Value::Object(projected)
+    }
+}
+
+fn build_foreach_child_input(
+    item_variable: &str,
+    idx: usize,
+    item: &str,
+    prompt: &str,
+    compact_input_framing: bool,
+) -> String {
+    if compact_input_framing {
+        if prompt.is_empty() {
+            format!("{item_variable}[{idx}]={item}")
+        } else {
+            format!("{item_variable}[{idx}]={item}\nTask:{prompt}")
+        }
+    } else if prompt.is_empty() {
+        format!("## {item_variable} (#{idx})\n\n{item}")
+    } else {
+        format!("## {item_variable} (#{idx})\n\n{item}\n\n## Task\n\n{prompt}")
+    }
+}
+
 fn single_sub_task(node: &ProcessNode, upstream_context: &str) -> SubTaskPlan {
     SubTaskPlan {
         title: node.label.clone(),
@@ -2794,6 +2870,12 @@ async fn execute_foreach(
         .get("item_variable_name")
         .and_then(|v| v.as_str())
         .unwrap_or("item");
+    let item_projection = resolve_foreach_item_projection(&node.config);
+    let compact_input_framing = node
+        .config
+        .get("compact_input_framing")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
     let json_array_key = node.config.get("json_array_key").and_then(|v| v.as_str());
 
@@ -2803,10 +2885,11 @@ async fn execute_foreach(
             parsed
                 .iter()
                 .map(|v| {
-                    if let Some(s) = v.as_str() {
+                    let value = project_foreach_item_value(v, item_projection.as_deref());
+                    if let Some(s) = value.as_str() {
                         s.to_string()
                     } else {
-                        serde_json::to_string(v).unwrap_or_default()
+                        serde_json::to_string(&value).unwrap_or_default()
                     }
                 })
                 .collect()
@@ -2876,6 +2959,7 @@ async fn execute_foreach(
         let item = item.clone();
         let prompt = prompt_template.clone();
         let item_var = item_variable.to_string();
+        let compact_input_framing = compact_input_framing;
 
         handles.push(tokio::spawn(async move {
             let _permit = sem
@@ -2883,11 +2967,8 @@ async fn execute_foreach(
                 .await
                 .map_err(|e| ProcessError::Execution(format!("ForEach semaphore error: {e}")))?;
 
-            let input = if prompt.is_empty() {
-                format!("## {item_var} (#{idx})\n\n{item}")
-            } else {
-                format!("## {item_var} (#{idx})\n\n{item}\n\n## Task\n\n{prompt}")
-            };
+            let input =
+                build_foreach_child_input(&item_var, idx, &item, &prompt, compact_input_framing);
 
             exec.trigger_and_await_with_parent_mirror(
                 &cpid,
@@ -3237,10 +3318,11 @@ fn broadcast_node_status(
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_foreach_max_items, build_parent_mirrored_process_event, build_workspace_instructions,
-        compact_node_output, emit_parent_progress_update, parse_foreach_json_array,
-        resolve_action_plan_mode, ActionPlanMode, ChildRunProgress, OutputCompactionMode,
-        ParentProgressMirrorState, ParentStreamMirrorContext,
+        apply_foreach_max_items, build_foreach_child_input, build_parent_mirrored_process_event,
+        build_workspace_instructions, compact_node_output, emit_parent_progress_update,
+        parse_foreach_json_array, project_foreach_item_value, resolve_action_plan_mode,
+        ActionPlanMode, ChildRunProgress, OutputCompactionMode, ParentProgressMirrorState,
+        ParentStreamMirrorContext,
     };
     use crate::process_store::ProcessStore;
     use aura_os_store::RocksStore;
@@ -3394,6 +3476,33 @@ mod tests {
         );
 
         assert_eq!(compacted, "hello\n[truncated]");
+    }
+
+    #[test]
+    fn project_foreach_item_value_keeps_selected_fields() {
+        let value = serde_json::json!({
+            "name": "Aura",
+            "website": "https://example.com",
+            "pricing": "$20"
+        });
+        let projection = vec!["name".to_string(), "pricing".to_string()];
+
+        let projected = project_foreach_item_value(&value, Some(&projection));
+
+        assert_eq!(
+            projected,
+            serde_json::json!({
+                "name": "Aura",
+                "pricing": "$20"
+            })
+        );
+    }
+
+    #[test]
+    fn build_foreach_child_input_supports_compact_format() {
+        let input = build_foreach_child_input("item", 2, "{\"id\":1}", "summarize", true);
+
+        assert_eq!(input, "item[2]={\"id\":1}\nTask:summarize");
     }
 
     #[test]

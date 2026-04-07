@@ -4,11 +4,60 @@
 //! dev-loop task pipeline and the process executor can reuse the same
 //! automaton start → event-stream → collection logic without duplication.
 
+pub mod automaton_event_kinds;
+
 use std::time::Duration;
 use tokio::sync::broadcast;
 use tracing::warn;
 
+use automaton_event_kinds::{
+    is_usage_totals_event, DONE, ERROR, TASK_COMPLETED, TASK_FAILED, TEXT_DELTA,
+    TOOL_CALL_SNAPSHOT, TOOL_CALL_STARTED, TOOL_RESULT, TOOL_USE_START,
+};
+
+pub use automaton_event_kinds::{
+    is_process_progress_broadcast_event, is_process_stream_forward_event,
+    normalize_process_tool_type_field,
+};
+
 use crate::{AutomatonClient, AutomatonStartError, AutomatonStartParams, AutomatonStartResult};
+
+const MAX_COLLECTED_OUTPUT_TEXT_CHARS: usize = 16_000;
+const MAX_COLLECTED_TEXT_BLOCK_CHARS: usize = 4_000;
+const MAX_COLLECTED_TOOL_RESULT_CHARS: usize = 8_000;
+
+fn truncate_with_marker(input: &str, limit: usize) -> String {
+    if input.chars().count() <= limit {
+        return input.to_string();
+    }
+
+    force_truncate_with_marker(input, limit)
+}
+
+fn force_truncate_with_marker(input: &str, limit: usize) -> String {
+    let truncated: String = input.chars().take(limit).collect();
+    format!("{truncated}\n[truncated]")
+}
+
+fn append_truncated(buf: &mut String, text: &str, limit: usize) {
+    if buf.ends_with("\n[truncated]") || limit == 0 {
+        return;
+    }
+
+    let current_len = buf.chars().count();
+    if current_len >= limit {
+        *buf = force_truncate_with_marker(buf, limit);
+        return;
+    }
+
+    let remaining = limit - current_len;
+    let mut chars = text.chars();
+    let chunk: String = chars.by_ref().take(remaining).collect();
+    buf.push_str(&chunk);
+    if chars.next().is_some() {
+        *buf = force_truncate_with_marker(buf, limit);
+    }
+}
 
 /// Output collected from an automaton event stream.
 #[derive(Debug, Clone, Default)]
@@ -143,7 +192,10 @@ where
         if pending_text.is_empty() {
             return;
         }
-        let text = std::mem::take(pending_text);
+        let text = truncate_with_marker(
+            &std::mem::take(pending_text),
+            MAX_COLLECTED_TEXT_BLOCK_CHARS,
+        );
         out.content_blocks.push(serde_json::json!({
             "type": "text",
             "text": text,
@@ -167,17 +219,25 @@ where
                 let evt_type = evt.get("type").and_then(|t| t.as_str()).unwrap_or("");
                 on_event(&evt, evt_type);
                 match evt_type {
-                    "text_delta" => {
+                    TEXT_DELTA => {
                         let text = evt
                             .get("text")
                             .or_else(|| evt.get("delta"))
                             .and_then(|t| t.as_str());
                         if let Some(text) = text {
-                            out.output_text.push_str(text);
-                            pending_text.push_str(text);
+                            append_truncated(
+                                &mut out.output_text,
+                                text,
+                                MAX_COLLECTED_OUTPUT_TEXT_CHARS,
+                            );
+                            append_truncated(
+                                &mut pending_text,
+                                text,
+                                MAX_COLLECTED_TEXT_BLOCK_CHARS,
+                            );
                         }
                     }
-                    "tool_use_start" | "tool_call_started" => {
+                    TOOL_USE_START | TOOL_CALL_STARTED => {
                         flush_pending_text(&mut out, &mut pending_text);
                         let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -186,7 +246,7 @@ where
                             "input": serde_json::Value::Null,
                         }));
                     }
-                    "tool_call_snapshot" => {
+                    TOOL_CALL_SNAPSHOT => {
                         let id = evt.get("id").and_then(|v| v.as_str()).unwrap_or("");
                         let name = evt.get("name").and_then(|v| v.as_str()).unwrap_or("");
                         let input = evt
@@ -208,7 +268,7 @@ where
                             }));
                         }
                     }
-                    "tool_result" => {
+                    TOOL_RESULT => {
                         let tool_use_id = evt
                             .get("tool_use_id")
                             .or_else(|| evt.get("id"))
@@ -224,11 +284,14 @@ where
                             "type": "tool_result",
                             "tool_use_id": tool_use_id,
                             "name": name,
-                            "result": result_text,
+                            "result": truncate_with_marker(
+                                result_text,
+                                MAX_COLLECTED_TOOL_RESULT_CHARS,
+                            ),
                             "is_error": is_error,
                         }));
                     }
-                    "assistant_message_end" | "token_usage" | "usage" | "session_usage" => {
+                    ty if is_usage_totals_event(ty) => {
                         let usage = evt.get("usage").unwrap_or(&evt);
                         if let Some(cum_in) = usage
                             .get("cumulative_input_tokens")
@@ -253,10 +316,10 @@ where
                             out.model = Some(m.to_string());
                         }
                     }
-                    "task_completed" => {
+                    TASK_COMPLETED => {
                         flush_pending_text(&mut out, &mut pending_text);
                     }
-                    "task_failed" => {
+                    TASK_FAILED => {
                         flush_pending_text(&mut out, &mut pending_text);
                         let msg = evt
                             .get("reason")
@@ -267,11 +330,11 @@ where
                             .unwrap_or_else(|| "Automaton execution failed".into());
                         failed_message = Some(msg);
                     }
-                    "done" => {
+                    DONE => {
                         flush_pending_text(&mut out, &mut pending_text);
                         return finish(out, failed_message);
                     }
-                    "error" => {
+                    ERROR => {
                         flush_pending_text(&mut out, &mut pending_text);
                         let msg = evt
                             .get("message")
@@ -346,5 +409,56 @@ mod tests {
         assert_eq!(output.content_blocks[0]["type"], "tool_use");
         assert_eq!(output.content_blocks[0]["input"]["path"], "notes.txt");
         assert_eq!(output.content_blocks[0]["input"]["content"], "hello");
+    }
+
+    #[tokio::test]
+    async fn collect_automaton_events_truncates_large_text_output() {
+        let (tx, rx) = broadcast::channel(16);
+        tx.send(serde_json::json!({
+            "type": "text_delta",
+            "text": "x".repeat(20_000),
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+        let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+        let output = match completion {
+            RunCompletion::Done(output) => output,
+            other => panic!("expected completed output, got {other:?}"),
+        };
+
+        assert!(output.output_text.ends_with("\n[truncated]"));
+        assert_eq!(output.output_text.chars().count(), 16_012);
+        assert_eq!(output.content_blocks[0]["type"], "text");
+        assert!(output.content_blocks[0]["text"]
+            .as_str()
+            .unwrap_or_default()
+            .ends_with("\n[truncated]"));
+    }
+
+    #[tokio::test]
+    async fn collect_automaton_events_truncates_large_tool_result() {
+        let (tx, rx) = broadcast::channel(16);
+        tx.send(serde_json::json!({
+            "type": "tool_result",
+            "tool_use_id": "tool-1",
+            "name": "search",
+            "result": "y".repeat(9_000),
+            "is_error": false,
+        }))
+        .unwrap();
+        tx.send(serde_json::json!({ "type": "done" })).unwrap();
+
+        let completion = collect_automaton_events(rx, Duration::from_secs(1), |_evt, _ty| {}).await;
+        let output = match completion {
+            RunCompletion::Done(output) => output,
+            other => panic!("expected completed output, got {other:?}"),
+        };
+
+        let result = output.content_blocks[0]["result"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(result.ends_with("\n[truncated]"));
+        assert_eq!(result.chars().count(), 8_012);
     }
 }
