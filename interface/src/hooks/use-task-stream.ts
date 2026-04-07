@@ -6,6 +6,7 @@ import {
   handleTextDelta,
   handleThinkingDelta,
   handleToolCallStarted,
+  handleToolCallSnapshot,
   handleToolResult,
   handleAssistantTurnBoundary,
   resetStreamBuffers,
@@ -62,6 +63,16 @@ export function useTaskStream(taskId: string | undefined, isActive?: boolean): {
         handleToolCallStarted(refs, setters, {
           id: (c.id as string) ?? crypto.randomUUID(),
           name: (c.name as string) ?? "unknown",
+        });
+      }),
+
+      subscribe(EventType.ToolCallSnapshot, (e) => {
+        const c = e.content as unknown as Record<string, unknown>;
+        if (c.task_id !== taskId) return;
+        handleToolCallSnapshot(refs, setters, {
+          id: (c.id as string) ?? "",
+          name: (c.name as string) ?? "unknown",
+          input: (c.input as Record<string, unknown>) ?? {},
         });
       }),
 

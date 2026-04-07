@@ -32,6 +32,36 @@ function buildInputDisplay(entry: ToolCallEntry): Record<string, unknown> {
   };
 }
 
+function renderGenericBody(entry: ToolCallEntry, pendingMessage?: string) {
+  return (
+    <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
+      <div className={toolStyles.toolBody}>
+        <div className={toolStyles.section}>
+          <div className={toolStyles.sectionLabel}>Input</div>
+          <pre className={toolStyles.json}>
+            {JSON.stringify(buildInputDisplay(entry), null, 2)}
+          </pre>
+        </div>
+        {pendingMessage ? (
+          <div className={toolStyles.section}>
+            <div className={toolStyles.sectionLabel}>Status</div>
+            <pre className={toolStyles.json}>{pendingMessage}</pre>
+          </div>
+        ) : entry.result != null ? (
+          <div className={toolStyles.section}>
+            <div className={toolStyles.sectionLabel}>
+              {entry.isError ? "Error" : "Result"}
+            </div>
+            <pre className={`${toolStyles.json} ${entry.isError ? toolStyles.errorText : ""}`}>
+              {formatResult(entry.result)}
+            </pre>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function ToolCallBlock({
   entry,
   defaultExpanded,
@@ -75,7 +105,8 @@ export function ToolCallBlock({
           </div>
         );
       }
-      return null;
+      if (!expanded) return null;
+      return renderGenericBody(entry, "Waiting for the tool result.");
     }
     if (isTask) {
       if (!expanded) return null;
@@ -116,28 +147,7 @@ export function ToolCallBlock({
         </div>
       );
     }
-    return (
-      <div className={`${toolStyles.toolBodyWrap} ${toolStyles.toolBodyExpanded}`}>
-        <div className={toolStyles.toolBody}>
-          <div className={toolStyles.section}>
-            <div className={toolStyles.sectionLabel}>Input</div>
-            <pre className={toolStyles.json}>
-              {JSON.stringify(buildInputDisplay(entry), null, 2)}
-            </pre>
-          </div>
-          {entry.result != null && (
-            <div className={toolStyles.section}>
-              <div className={toolStyles.sectionLabel}>
-                {entry.isError ? "Error" : "Result"}
-              </div>
-              <pre className={`${toolStyles.json} ${entry.isError ? toolStyles.errorText : ""}`}>
-                {formatResult(entry.result)}
-              </pre>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+    return renderGenericBody(entry);
   };
 
   return (

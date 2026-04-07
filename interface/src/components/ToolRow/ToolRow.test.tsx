@@ -157,6 +157,23 @@ describe("ToolCallBlock", () => {
       expect(screen.getByText("Generating…")).toBeInTheDocument();
     });
 
+    it("shows pending input details when a non-spec action is expanded", () => {
+      render(
+        <ToolCallBlock
+          entry={makeEntry({
+            name: "list_files",
+            pending: true,
+            started: true,
+            input: { target_directory: "src" },
+          })}
+          defaultExpanded
+        />,
+      );
+
+      expect(screen.getByText(/"target_directory": "src"/)).toBeInTheDocument();
+      expect(screen.getByText("Waiting for the tool result.")).toBeInTheDocument();
+    });
+
     it("shows structured input context for empty input payloads", () => {
       render(
         <ToolCallBlock

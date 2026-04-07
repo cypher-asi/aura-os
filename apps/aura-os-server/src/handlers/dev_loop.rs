@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use aura_os_core::{AgentInstanceId, HarnessMode, ProjectId, SessionId, TaskId, TaskStatus};
-use aura_os_link::{AutomatonStartError, AutomatonStartParams, connect_with_retries};
+use aura_os_link::{connect_with_retries, AutomatonStartError, AutomatonStartParams};
 use aura_os_network::{NetworkClient, ReportUsageRequest};
 use aura_os_sessions::{CreateSessionParams, UpdateContextUsageParams};
 use aura_os_storage::StorageTaskFileChangeSummary;
@@ -74,6 +74,42 @@ fn emit_domain_event(
         }
     }
     let _ = broadcast_tx.send(event);
+}
+
+fn is_work_event_type(event_type: &str) -> bool {
+    matches!(
+        event_type,
+        "task_started"
+            | "text_delta"
+            | "thinking_delta"
+            | "tool_call_started"
+            | "tool_call_snapshot"
+            | "tool_result"
+            | "log_line"
+            | "progress"
+    )
+}
+
+fn map_passthrough_event_type(event_type: &str) -> Option<&'static str> {
+    match event_type {
+        "started" => Some("loop_started"),
+        "stopped" => Some("loop_stopped"),
+        "paused" => Some("loop_paused"),
+        "resumed" => Some("loop_resumed"),
+        "task_started" => Some("task_started"),
+        "task_retrying" => Some("task_retrying"),
+        "loop_finished" => Some("loop_finished"),
+        "token_usage" => Some("token_usage"),
+        "text_delta" => Some("text_delta"),
+        "thinking_delta" => Some("thinking_delta"),
+        "tool_call_started" => Some("tool_use_start"),
+        "tool_call_snapshot" => Some("tool_call_snapshot"),
+        "tool_result" => Some("tool_result"),
+        "progress" => Some("progress"),
+        "git_pushed" => Some("git_pushed"),
+        "git_committed" => Some("git_committed"),
+        _ => None,
+    }
 }
 
 fn automaton_is_active(status: &serde_json::Value) -> bool {
@@ -632,16 +668,7 @@ fn forward_automaton_events(params: ForwardParams) {
                         .get("type")
                         .and_then(|t| t.as_str())
                         .unwrap_or("unknown");
-                    let is_work = matches!(
-                        event_type,
-                        "task_started"
-                            | "text_delta"
-                            | "thinking_delta"
-                            | "tool_call_started"
-                            | "tool_result"
-                            | "log_line"
-                            | "progress"
-                    );
+                    let is_work = is_work_event_type(event_type);
 
                     // Keep trying to discover the active task_id until it is known.
                     // Some harness streams emit deltas before task_started, and if
@@ -913,11 +940,6 @@ fn forward_automaton_events(params: ForwardParams) {
                     }
 
                     let mapped_type = match event_type {
-                        "started" => Some("loop_started"),
-                        "stopped" => Some("loop_stopped"),
-                        "paused" => Some("loop_paused"),
-                        "resumed" => Some("loop_resumed"),
-                        "task_started" => Some("task_started"),
                         "task_completed" => {
                             // Persist accumulated output to storage.
                             let event_tid = event
@@ -1034,16 +1056,6 @@ fn forward_automaton_events(params: ForwardParams) {
                             }
                             Some("task_failed")
                         }
-                        "task_retrying" => Some("task_retrying"),
-                        "loop_finished" => Some("loop_finished"),
-                        "token_usage" => Some("token_usage"),
-                        "text_delta" => Some("text_delta"),
-                        "thinking_delta" => Some("thinking_delta"),
-                        "tool_call_started" => Some("tool_use_start"),
-                        "tool_result" => Some("tool_result"),
-                        "progress" => Some("progress"),
-                        "git_pushed" => Some("git_pushed"),
-                        "git_committed" => Some("git_committed"),
                         "done" => {
                             clear_active_automaton(
                                 automaton_registry.clone(),
@@ -1087,7 +1099,7 @@ fn forward_automaton_events(params: ForwardParams) {
                             );
                             break;
                         }
-                        _ => None,
+                        _ => map_passthrough_event_type(event_type),
                     };
 
                     let mut forwarded = event.clone();
@@ -1806,11 +1818,9 @@ pub(crate) async fn run_single_task(
     // Connect to the event stream as early as possible to minimise the window
     // between automaton start and WS attach.  Retry a few times because the
     // harness may reset the connection if the automaton isn't ready yet.
-    let events_tx = connect_with_retries(
-        &automaton_client, &automaton_id, &event_stream_url, 2,
-    )
-    .await
-    .ok();
+    let events_tx = connect_with_retries(&automaton_client, &automaton_id, &event_stream_url, 2)
+        .await
+        .ok();
 
     // Emit task_started immediately so the frontend gets the signal even if
     // early automaton events are lost in the race between start and WS connect.
@@ -1914,7 +1924,8 @@ async fn active_instances(state: &AppState, project_id: ProjectId) -> Vec<AgentI
 mod tests {
     use super::{
         classify_run_command_steps, estimate_usage_cost_usd, extract_files_changed,
-        extract_run_command, extract_turn_usage, VerificationStepKind,
+        extract_run_command, extract_turn_usage, is_work_event_type, map_passthrough_event_type,
+        VerificationStepKind,
     };
 
     #[test]
@@ -1994,6 +2005,19 @@ mod tests {
     }
 
     #[test]
+    fn treats_tool_call_snapshot_as_work() {
+        assert!(is_work_event_type("tool_call_snapshot"));
+    }
+
+    #[test]
+    fn maps_tool_call_snapshot_for_forwarding() {
+        assert_eq!(
+            map_passthrough_event_type("tool_call_snapshot"),
+            Some("tool_call_snapshot")
+        );
+    }
+
+    #[test]
     fn extracts_rich_turn_usage_from_assistant_message_end() {
         let event = serde_json::json!({
             "type": "assistant_message_end",
@@ -2068,4 +2092,3 @@ mod tests {
         assert!((exact - 3.0).abs() < 1e-9);
     }
 }
-

@@ -48,6 +48,7 @@ vi.mock("./use-stream-core", () => ({
   handleTextDelta: vi.fn(),
   handleThinkingDelta: vi.fn(),
   handleToolCallStarted: vi.fn(),
+  handleToolCallSnapshot: vi.fn(),
   handleToolResult: vi.fn(),
   handleAssistantTurnBoundary: vi.fn(),
   resetStreamBuffers: vi.fn(),
@@ -59,7 +60,14 @@ vi.mock("./stream/store", () => ({
 }));
 
 import { useTaskStream } from "./use-task-stream";
-import { resetStreamBuffers, finalizeStream, handleTextDelta, handleToolCallStarted, handleToolResult } from "./use-stream-core";
+import {
+  resetStreamBuffers,
+  finalizeStream,
+  handleTextDelta,
+  handleToolCallStarted,
+  handleToolCallSnapshot,
+  handleToolResult,
+} from "./use-stream-core";
 
 describe("useTaskStream", () => {
   beforeEach(() => {
@@ -86,6 +94,7 @@ describe("useTaskStream", () => {
     expect(subscribeMap.has("text_delta")).toBe(true);
     expect(subscribeMap.has("thinking_delta")).toBe(true);
     expect(subscribeMap.has("tool_use_start")).toBe(true);
+    expect(subscribeMap.has("tool_call_snapshot")).toBe(true);
     expect(subscribeMap.has("tool_result")).toBe(true);
     expect(subscribeMap.has("task_completed")).toBe(true);
     expect(subscribeMap.has("task_failed")).toBe(true);
@@ -140,6 +149,16 @@ describe("useTaskStream", () => {
     );
 
     expect(handleToolCallStarted).toHaveBeenCalled();
+  });
+
+  it("handles ToolCallSnapshot for matching taskId", () => {
+    renderHook(() => useTaskStream("task-1"));
+
+    subscribeMap.get("tool_call_snapshot")?.forEach((cb) =>
+      cb({ content: { task_id: "task-1", id: "tool-1", name: "bash", input: { command: "pwd" } } }),
+    );
+
+    expect(handleToolCallSnapshot).toHaveBeenCalled();
   });
 
   it("handles ToolResult for matching taskId", () => {
