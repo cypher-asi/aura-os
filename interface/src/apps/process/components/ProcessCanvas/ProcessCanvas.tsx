@@ -1,5 +1,3 @@
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,14 +13,6 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import styles from "./ProcessCanvas.module.css";
-import {
-  Play, Pause, Square, GitBranch, FileOutput, Timer, Merge, Pencil,
-  Trash2, Pin, PinOff, MessageSquare, Workflow, Repeat, Layers, Unplug,
-  Copy, Scissors, CopyPlus, ClipboardPaste,
-} from "lucide-react";
-import { Button, Menu, ModalConfirm } from "@cypher-asi/zui";
-import type { MenuItem } from "@cypher-asi/zui";
-import type { ProcessNodeType } from "../../../../types/enums";
 import { useProcessStore, type ProcessViewport } from "../../stores/process-store";
 import { useProcessSidekickStore } from "../../stores/process-sidekick-store";
 import { ProcessNodeCard } from "../ProcessNodeCard";
@@ -31,63 +21,16 @@ import {
   type ProcessCanvasProps,
   GRID,
   EMPTY_RUNS,
-  ADD_NODE_TYPES,
   toFlowNodes,
   toFlowEdges,
 } from "./process-canvas-utils";
 import { useCanvasEventHandlers } from "./useCanvasEventHandlers";
+import { useProcessCanvasFlowSync } from "./useProcessCanvasFlowSync";
+import { ProcessCanvasFloatingToolbar } from "./ProcessCanvasFloatingToolbar";
+import { ProcessCanvasContextMenus } from "./ProcessCanvasContextMenus";
 
 const nodeTypes = { processNode: ProcessNodeCard, groupNode: ProcessGroupNode };
 const DEFAULT_VIEWPORT: ProcessViewport = { x: 0, y: 0, zoom: 1 };
-
-const NODE_MENU_ICONS: Record<string, React.ReactNode> = {
-  prompt: <MessageSquare size={14} />,
-  action: <Play size={14} />,
-  condition: <GitBranch size={14} />,
-  artifact: <FileOutput size={14} />,
-  delay: <Timer size={14} />,
-  merge: <Merge size={14} />,
-  sub_process: <Workflow size={14} />,
-  for_each: <Repeat size={14} />,
-  group: <Layers size={14} />,
-};
-
-const nodeMenuItems: MenuItem[] = ADD_NODE_TYPES.map((item) => ({
-  id: item.type,
-  label: item.label,
-  icon: NODE_MENU_ICONS[item.type],
-}));
-
-const groupCtxMenuItems: MenuItem[] = [
-  { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
-  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
-  { id: "cut", label: "Cut", icon: <Scissors size={14} /> },
-  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} /> },
-  { type: "separator" },
-  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
-];
-
-const nodeCtxMenuItems = (isIgnition: boolean, isPinned: boolean, hasRuns: boolean, hasConnections: boolean): MenuItem[] => [
-  { id: "rename", label: "Rename", icon: <Pencil size={14} /> },
-  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
-  { id: "cut", label: "Cut", icon: <Scissors size={14} />, disabled: isIgnition },
-  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} />, disabled: isIgnition },
-  { type: "separator" as const },
-  isPinned
-    ? { id: "unpin", label: "Unpin Output", icon: <PinOff size={14} /> }
-    : { id: "pin", label: "Pin Output", icon: <Pin size={14} />, disabled: !hasRuns },
-  { id: "disconnect", label: "Disconnect", icon: <Unplug size={14} />, disabled: !hasConnections },
-  { type: "separator" as const },
-  { id: "delete", label: "Delete", icon: <Trash2 size={14} />, disabled: isIgnition },
-];
-
-const selectionCtxMenuItems: MenuItem[] = [
-  { id: "copy", label: "Copy", icon: <Copy size={14} /> },
-  { id: "cut", label: "Cut", icon: <Scissors size={14} /> },
-  { id: "duplicate", label: "Duplicate", icon: <CopyPlus size={14} /> },
-  { type: "separator" },
-  { id: "delete", label: "Delete", icon: <Trash2 size={14} /> },
-];
 
 export function ProcessCanvas(props: ProcessCanvasProps) {
   const savedViewport = useProcessStore((s) => s.viewports[props.processId]);
@@ -116,7 +59,6 @@ function ProcessCanvasInner({
   const runs = useProcessStore((s) => s.runs[processId]) ?? EMPTY_RUNS;
   const nodeStatuses = useProcessSidekickStore((s) => s.nodeStatuses);
   const isRunActive = runs.length > 0 && (runs[0].status === "running" || runs[0].status === "pending");
-  const hasAutoFitRef = useRef(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(toFlowNodes(processNodes, undefined, nodeStatuses));
   const [edges, setEdges, onEdgesChange] = useEdgesState(toFlowEdges(processConnections, processNodes));
@@ -175,42 +117,18 @@ function ProcessCanvasInner({
     fetchConnections,
   });
 
-  useEffect(() => {
-    setNodes((currentNodes) => {
-      const incomingWithResize = toFlowNodes(processNodes, renameState, nodeStatuses, onGroupResizeStop);
-      if (currentNodes.length === 0) return incomingWithResize;
-      const currentById = new Map(currentNodes.map((n) => [n.id, n]));
-      return incomingWithResize.map((n) => {
-        const existing = currentById.get(n.id);
-        return existing
-          ? {
-            ...existing,
-            type: n.type,
-            position: n.position,
-            parentId: n.parentId,
-            extent: n.extent,
-            style: n.style,
-            data: n.data,
-          }
-          : n;
-      });
-    });
-  }, [processNodes, setNodes, renameState, nodeStatuses, onGroupResizeStop]);
-
-  useEffect(() => {
-    setEdges(toFlowEdges(processConnections, processNodes));
-  }, [processConnections, processNodes, setEdges]);
-
-  useEffect(() => {
-    if (savedViewport || hasAutoFitRef.current || nodes.length === 0) return;
-
-    hasAutoFitRef.current = true;
-    const frameId = window.requestAnimationFrame(() => {
-      void fitView({ padding: 0.2 });
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [savedViewport, nodes.length, fitView]);
+  useProcessCanvasFlowSync({
+    processNodes,
+    processConnections,
+    renameState,
+    nodeStatuses,
+    onGroupResizeStop,
+    setNodes,
+    setEdges,
+    savedViewport,
+    nodeCount: nodes.length,
+    fitView,
+  });
 
   return (
     <div ref={wrapperRef} style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -268,156 +186,45 @@ function ProcessCanvasInner({
       </ReactFlow>
 
       {onTrigger && (
-        <div className={styles.floatingToolbar}>
-          <Button variant="ghost" size="sm" iconOnly icon={<Play size={14} />} title={isRunActive ? "Run in progress" : "Trigger"} onClick={onTrigger} disabled={isRunActive} />
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon={isEnabled ? <Pause size={14} /> : <Play size={14} />}
-            title={isEnabled ? "Pause" : "Resume"}
-            onClick={onToggle}
-          />
-          <Button variant="ghost" size="sm" iconOnly icon={<Square size={14} />} title="Stop" onClick={onStop} disabled={!isRunActive} />
-        </div>
+        <ProcessCanvasFloatingToolbar
+          isRunActive={isRunActive}
+          isEnabled={isEnabled}
+          onTrigger={onTrigger}
+          onToggle={onToggle}
+          onStop={onStop}
+        />
       )}
 
-      {/* Pane context menu (add node + paste) */}
-      {ctxMenu && createPortal(
-        <div
-          ref={ctxMenuRef}
-          style={{ position: "fixed", left: ctxMenu.x, top: ctxMenu.y, zIndex: 9999 }}
-        >
-          <Menu
-            items={[
-              ...(hasClipboard
-                ? [
-                  { id: "paste" as const, label: "Paste", icon: <ClipboardPaste size={14} /> },
-                  { type: "separator" as const },
-                ]
-                : []),
-              ...nodeMenuItems,
-            ]}
-            onChange={(id) => {
-              if (id === "paste") {
-                if (ctxMenu) pasteNodes({ x: ctxMenu.x, y: ctxMenu.y });
-                setCtxMenu(null);
-                return;
-              }
-              const item = ADD_NODE_TYPES.find((t) => t.type === id);
-              if (item) handleAddNode(item.type as ProcessNodeType, item.label);
-            }}
-            background="solid"
-            border="solid"
-            rounded="md"
-            width={180}
-            isOpen
-          />
-        </div>,
-        document.body,
-      )}
-
-      {/* Single-node context menu */}
-      {nodeCtxMenu && createPortal(
-        <div
-          ref={nodeCtxMenuRef}
-          style={{ position: "fixed", left: nodeCtxMenu.x, top: nodeCtxMenu.y, zIndex: 9999 }}
-        >
-          <Menu
-            items={(() => {
-              const node = processNodes.find((n) => n.node_id === nodeCtxMenu.nodeId);
-              if (node?.node_type === "group") return groupCtxMenuItems;
-              const hasConnections = edges.some(
-                (e) => e.source === nodeCtxMenu.nodeId || e.target === nodeCtxMenu.nodeId,
-              );
-              return nodeCtxMenuItems(
-                node?.node_type === "ignition",
-                !!node?.config?.pinned_output,
-                runs.length > 0,
-                hasConnections,
-              );
-            })()}
-            onChange={(id) => {
-              const targetId = nodeCtxMenu.nodeId;
-              setNodeCtxMenu(null);
-              if (id === "rename") setRenamingNodeId(targetId);
-              if (id === "copy") copyNodes([targetId]);
-              if (id === "cut") { copyNodes([targetId]); deleteNodes([targetId]); }
-              if (id === "duplicate") duplicateNodes([targetId]);
-              if (id === "pin" || id === "unpin") togglePinNode(targetId);
-              if (id === "disconnect") disconnectNode(targetId);
-              if (id === "delete") requestDeleteNodes([targetId]);
-            }}
-            background="solid"
-            border="solid"
-            rounded="md"
-            width={160}
-            isOpen
-          />
-        </div>,
-        document.body,
-      )}
-
-      {/* Edge context menu */}
-      {edgeCtxMenu && createPortal(
-        <div
-          ref={edgeCtxMenuRef}
-          style={{ position: "fixed", left: edgeCtxMenu.x, top: edgeCtxMenu.y, zIndex: 9999 }}
-        >
-          <Menu
-            items={[{ id: "delete", label: "Delete connection", icon: <Trash2 size={14} /> }]}
-            onChange={(id) => {
-              if (id === "delete") deleteConnection(edgeCtxMenu.edgeId);
-              setEdgeCtxMenu(null);
-            }}
-            background="solid"
-            border="solid"
-            rounded="md"
-            width={180}
-            isOpen
-          />
-        </div>,
-        document.body,
-      )}
-
-      {/* Multi-selection context menu */}
-      {selectionCtxMenu && createPortal(
-        <div
-          ref={selectionCtxMenuRef}
-          style={{ position: "fixed", left: selectionCtxMenu.x, top: selectionCtxMenu.y, zIndex: 9999 }}
-        >
-          <Menu
-            items={selectionCtxMenuItems}
-            onChange={(id) => {
-              const nodeIds = selectionCtxMenu.nodeIds;
-              setSelectionCtxMenu(null);
-              if (id === "copy") copyNodes(nodeIds);
-              if (id === "cut") { copyNodes(nodeIds); deleteNodes(nodeIds); }
-              if (id === "duplicate") duplicateNodes(nodeIds);
-              if (id === "delete") requestDeleteNodes(nodeIds);
-            }}
-            background="solid"
-            border="solid"
-            rounded="md"
-            width={160}
-            isOpen
-          />
-        </div>,
-        document.body,
-      )}
-
-      <ModalConfirm
-        isOpen={pendingDeleteNodeIds !== null && pendingDeleteNodeIds.length > 0}
-        onClose={cancelDeleteNodes}
-        onConfirm={confirmDeleteNodes}
-        title={pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1 ? "Delete Nodes" : "Delete Node"}
-        message={
-          pendingDeleteNodeIds && pendingDeleteNodeIds.length > 1
-            ? `Are you sure you want to delete these ${pendingDeleteNodeIds.length} nodes? This action cannot be undone.`
-            : "Are you sure you want to delete this node? This action cannot be undone."
-        }
-        confirmLabel="Delete"
-        danger
+      <ProcessCanvasContextMenus
+        processNodes={processNodes}
+        runs={runs}
+        edges={edges}
+        hasClipboard={hasClipboard}
+        ctxMenu={ctxMenu}
+        nodeCtxMenu={nodeCtxMenu}
+        edgeCtxMenu={edgeCtxMenu}
+        selectionCtxMenu={selectionCtxMenu}
+        ctxMenuRef={ctxMenuRef}
+        nodeCtxMenuRef={nodeCtxMenuRef}
+        edgeCtxMenuRef={edgeCtxMenuRef}
+        selectionCtxMenuRef={selectionCtxMenuRef}
+        setCtxMenu={setCtxMenu}
+        setNodeCtxMenu={setNodeCtxMenu}
+        setEdgeCtxMenu={setEdgeCtxMenu}
+        setSelectionCtxMenu={setSelectionCtxMenu}
+        setRenamingNodeId={setRenamingNodeId}
+        pasteNodes={pasteNodes}
+        handleAddNode={handleAddNode}
+        copyNodes={copyNodes}
+        deleteNodes={deleteNodes}
+        duplicateNodes={duplicateNodes}
+        requestDeleteNodes={requestDeleteNodes}
+        togglePinNode={togglePinNode}
+        disconnectNode={disconnectNode}
+        deleteConnection={deleteConnection}
+        pendingDeleteNodeIds={pendingDeleteNodeIds}
+        confirmDeleteNodes={confirmDeleteNodes}
+        cancelDeleteNodes={cancelDeleteNodes}
       />
     </div>
   );

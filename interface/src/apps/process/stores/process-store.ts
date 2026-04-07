@@ -11,6 +11,15 @@ export interface ProcessViewport {
   zoom: number;
 }
 
+function isProcessViewport(value: unknown): value is ProcessViewport {
+  if (!value || typeof value !== "object") return false;
+
+  const viewport = value as Record<string, unknown>;
+  return typeof viewport.x === "number"
+    && typeof viewport.y === "number"
+    && typeof viewport.zoom === "number";
+}
+
 function loadStoredViewports(): Record<string, ProcessViewport> {
   if (typeof window === "undefined") return {};
   try {
@@ -20,14 +29,9 @@ function loadStoredViewports(): Record<string, ProcessViewport> {
     if (!parsed || typeof parsed !== "object") return {};
 
     return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, ProcessViewport] => {
-        const viewport = entry[1];
-        return !!viewport
-          && typeof viewport === "object"
-          && typeof viewport.x === "number"
-          && typeof viewport.y === "number"
-          && typeof viewport.zoom === "number";
-      }),
+      Object.entries(parsed as Record<string, unknown>).filter(
+        (entry): entry is [string, ProcessViewport] => isProcessViewport(entry[1]),
+      ),
     );
   } catch {
     return {};
@@ -41,6 +45,10 @@ function persistViewports(viewports: Record<string, ProcessViewport>) {
   } catch {
     // Ignore storage failures so the in-memory store still works.
   }
+}
+
+function warnProcessStore(context: string, error: unknown) {
+  console.warn(`[process-store] ${context}`, error);
 }
 
 interface ProcessState {
@@ -90,7 +98,8 @@ export const useProcessStore = create<ProcessState>()((set) => ({
     try {
       const processes = await processApi.listProcesses();
       set({ processes, loading: false });
-    } catch {
+    } catch (e) {
+      warnProcessStore("fetchProcesses failed", e);
       set({ loading: false });
     }
   },
@@ -99,28 +108,36 @@ export const useProcessStore = create<ProcessState>()((set) => ({
     try {
       const nodes = await processApi.listNodes(processId);
       set((s) => ({ nodes: { ...s.nodes, [processId]: nodes } }));
-    } catch { /* ignore */ }
+    } catch (e) {
+      warnProcessStore(`fetchNodes failed (processId=${processId})`, e);
+    }
   },
 
   fetchConnections: async (processId: string) => {
     try {
       const connections = await processApi.listConnections(processId);
       set((s) => ({ connections: { ...s.connections, [processId]: connections } }));
-    } catch { /* ignore */ }
+    } catch (e) {
+      warnProcessStore(`fetchConnections failed (processId=${processId})`, e);
+    }
   },
 
   fetchRuns: async (processId: string) => {
     try {
       const runs = await processApi.listRuns(processId);
       set((s) => ({ runs: { ...s.runs, [processId]: runs } }));
-    } catch { /* ignore */ }
+    } catch (e) {
+      warnProcessStore(`fetchRuns failed (processId=${processId})`, e);
+    }
   },
 
   fetchEvents: async (processId: string, runId: string) => {
     try {
       const events = await processApi.listRunEvents(processId, runId);
       set((s) => ({ events: { ...s.events, [runId]: events } }));
-    } catch { /* ignore */ }
+    } catch (e) {
+      warnProcessStore(`fetchEvents failed (processId=${processId}, runId=${runId})`, e);
+    }
   },
   setEvents: (runId, events) =>
     set((s) => ({ events: { ...s.events, [runId]: events } })),
@@ -128,6 +145,10 @@ export const useProcessStore = create<ProcessState>()((set) => ({
     set((s) => ({ lastViewedRunId: { ...s.lastViewedRunId, [processId]: runId } })),
   setViewport: (processId, viewport) =>
     set((s) => {
+      if (!isProcessViewport(viewport)) {
+        warnProcessStore(`setViewport ignored invalid viewport (processId=${processId})`, viewport);
+        return s;
+      }
       const viewports = { ...s.viewports, [processId]: viewport };
       persistViewports(viewports);
       return { viewports };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Connection, Node, Edge } from "@xyflow/react";
 import type { ProcessNode, ProcessNodeConnection, ProcessRun } from "../../../../types";
@@ -15,6 +15,7 @@ import {
 } from "./process-canvas-utils";
 import { useCanvasHistory } from "./useCanvasHistory";
 import { useCanvasClipboard } from "./useCanvasClipboard";
+import { useCanvasMenuDismissEffect, useCanvasKeyboardShortcutsEffect } from "./useCanvasDocumentListeners";
 
 export interface UseCanvasEventHandlersParams {
   processId: string;
@@ -607,91 +608,28 @@ export function useCanvasEventHandlers(params: UseCanvasEventHandlersParams) {
     pushCommand, screenToFlowPosition,
   });
 
-  /* ── Menu dismiss + keyboard shortcuts ──────────────────── */
+  useCanvasMenuDismissEffect(
+    ctxMenu,
+    nodeCtxMenu,
+    edgeCtxMenu,
+    selectionCtxMenu,
+    ctxMenuRef,
+    nodeCtxMenuRef,
+    edgeCtxMenuRef,
+    selectionCtxMenuRef,
+    dismissMenus,
+  );
 
-  useEffect(() => {
-    const activeMenu = ctxMenu
-      ? ctxMenuRef
-      : nodeCtxMenu
-        ? nodeCtxMenuRef
-        : edgeCtxMenu
-          ? edgeCtxMenuRef
-          : selectionCtxMenu
-            ? selectionCtxMenuRef
-            : null;
-    if (!activeMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (activeMenu.current && !activeMenu.current.contains(e.target as HTMLElement)) dismissMenus();
-    };
-    const handleEscape = (e: KeyboardEvent) => { if (e.key === "Escape") dismissMenus(); };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [ctxMenu, nodeCtxMenu, edgeCtxMenu, selectionCtxMenu, dismissMenus]);
-
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const getPane = () => el.querySelector<HTMLElement>(".react-flow__pane");
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Shift") getPane()?.classList.add("dragging");
-
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-
-      if (e.key === "Delete" || e.key === "Backspace") {
-        const selected = nodes.filter((n) => n.selected).map((n) => n.id);
-        if (selected.length > 0) requestDeleteNodes(selected);
-        return;
-      }
-
-      const mod = e.ctrlKey || e.metaKey;
-      const key = e.key.toLowerCase();
-
-      if (mod && key === "c" && !e.shiftKey) {
-        copySelection();
-      } else if (mod && key === "x" && !e.shiftKey) {
-        e.preventDefault();
-        copySelection();
-        const sel = nodes.filter((n) => n.selected).map((n) => n.id);
-        if (sel.length > 0) deleteNodes(sel);
-      } else if (mod && key === "v" && !e.shiftKey) {
-        e.preventDefault();
-        pasteNodes();
-      } else if (mod && key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if (mod && ((e.shiftKey && key === "z") || (!e.shiftKey && key === "y"))) {
-        e.preventDefault();
-        redo();
-      }
-    };
-
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "Shift") getPane()?.classList.remove("dragging");
-    };
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button === 1) getPane()?.classList.add("dragging");
-    };
-    const onMouseUp = (e: MouseEvent) => {
-      if (e.button === 1) getPane()?.classList.remove("dragging");
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-    el.addEventListener("mousedown", onMouseDown);
-    el.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      el.removeEventListener("mousedown", onMouseDown);
-      el.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [nodes, requestDeleteNodes, copySelection, pasteNodes, undo, redo]);
+  useCanvasKeyboardShortcutsEffect(
+    wrapperRef,
+    nodes,
+    requestDeleteNodes,
+    copySelection,
+    pasteNodes,
+    deleteNodes,
+    undo,
+    redo,
+  );
 
   return {
     renameState,
