@@ -383,6 +383,9 @@ dependencies = [
 name = "aura-os-integrations"
 version = "0.1.0"
 dependencies = [
+ "aura-os-core",
+ "aura-os-link",
+ "chrono",
  "serde",
  "serde_json",
 ]
@@ -441,6 +444,7 @@ version = "0.1.0"
 dependencies = [
  "aura-os-agents",
  "aura-os-core",
+ "aura-os-integrations",
  "aura-os-link",
  "aura-os-orgs",
  "aura-os-storage",
